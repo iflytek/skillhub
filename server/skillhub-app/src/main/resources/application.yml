@@ -23,6 +23,25 @@ spring:
     password: skillhub_dev
     hikari:
       maximum-pool-size: 10
+  session:
+    store-type: redis
+    redis:
+      namespace: skillhub:session
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:placeholder}
+            scope: read:user,user:email
+        provider:
+          github:
+            user-info-uri: https://api.github.com/user
+
+skillhub:
+  access-policy:
+    mode: OPEN
 
 management:
   endpoints:

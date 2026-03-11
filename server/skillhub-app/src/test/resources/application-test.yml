@@ -18,3 +18,18 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: read:user,user:email
+        provider:
+          github:
+            user-info-uri: https://api.github.com/user
+
+skillhub:
+  access-policy:
+    mode: OPEN

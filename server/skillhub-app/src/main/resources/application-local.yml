@@ -13,6 +13,15 @@ spring:
     redis:
       host: localhost
       port: 6379
+  session:
+    store-type: redis
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID:local-placeholder}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
 
 logging:
   level:
