@@ -1,9 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
 import type { PublishResult } from '@/api/types'
-import createClient from 'openapi-fetch'
-import type { paths } from '@/api/generated/schema'
-
-const client = createClient<paths>({ baseUrl: '' })
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)
@@ -26,21 +22,18 @@ export function usePublishSkill() {
         ...(csrfToken && { 'X-XSRF-TOKEN': csrfToken }),
       }
 
-      const { data, error, response } = await client.POST('/api/v1/skills/{namespace}/publish' as any, {
-        params: {
-          path: {
-            namespace,
-          },
-        },
-        body: formData as any,
+      const res = await fetch(`/api/v1/skills/${namespace}/publish`, {
+        method: 'POST',
         headers,
+        body: formData,
       })
 
-      if (error || !data) {
-        throw new Error(`HTTP ${response.status}`)
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
       }
 
-      return data as unknown as PublishResult
+      const json = await res.json()
+      return json as PublishResult
     },
   })
 }
