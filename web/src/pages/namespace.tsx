@@ -16,7 +16,7 @@ export function NamespacePage() {
   })
 
   const handleSkillClick = (slug: string) => {
-    navigate({ to: `/@${namespace}/${slug}` })
+    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
   }
 
   if (isLoadingNamespace) {

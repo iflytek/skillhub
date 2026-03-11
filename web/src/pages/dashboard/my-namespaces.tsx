@@ -10,12 +10,12 @@ export function MyNamespacesPage() {
   const { data: namespaces, isLoading } = useMyNamespaces()
 
   const handleNamespaceClick = (slug: string) => {
-    navigate({ to: `/@${slug}` })
+    navigate({ to: '/@$namespace', params: { namespace: slug } })
   }
 
   const handleMembersClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: `/dashboard/namespaces/${slug}/members` })
+    navigate({ to: '/dashboard/namespaces/$slug/members', params: { slug } })
   }
 
   if (isLoading) {

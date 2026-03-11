@@ -13,48 +13,57 @@ async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSu
   }
 }
 
-async function getSkillDetail(_namespace: string, _slug: string): Promise<SkillDetail> {
+async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
   // TODO: Replace with actual API call
+  console.log('getSkillDetail', namespace, slug)
   throw new Error('Not implemented')
 }
 
-async function getSkillVersions(_skillId: number): Promise<SkillVersion[]> {
+async function getSkillVersions(skillId: number): Promise<SkillVersion[]> {
   // TODO: Replace with actual API call
+  console.log('getSkillVersions', skillId)
   return []
 }
 
-async function getSkillFiles(_versionId: number): Promise<SkillFile[]> {
+async function getSkillFiles(versionId: number): Promise<SkillFile[]> {
   // TODO: Replace with actual API call
+  console.log('getSkillFiles', versionId)
   return []
 }
 
-async function getSkillReadme(_versionId: number): Promise<string> {
+async function getSkillReadme(versionId: number): Promise<string> {
   // TODO: Replace with actual API call
+  console.log('getSkillReadme', versionId)
   return '# README\n\nNo content available.'
 }
 
 async function getMySkills(): Promise<SkillSummary[]> {
   // TODO: Replace with actual API call
+  console.log('getMySkills')
   return []
 }
 
 async function getMyNamespaces(): Promise<Namespace[]> {
   // TODO: Replace with actual API call
+  console.log('getMyNamespaces')
   return []
 }
 
-async function getNamespaceDetail(_slug: string): Promise<Namespace> {
+async function getNamespaceDetail(slug: string): Promise<Namespace> {
   // TODO: Replace with actual API call
+  console.log('getNamespaceDetail', slug)
   throw new Error('Not implemented')
 }
 
-async function getNamespaceMembers(_namespaceId: number): Promise<NamespaceMember[]> {
+async function getNamespaceMembers(namespaceId: number): Promise<NamespaceMember[]> {
   // TODO: Replace with actual API call
+  console.log('getNamespaceMembers', namespaceId)
   return []
 }
 
-async function publishSkill(_data: FormData): Promise<PublishResult> {
+async function publishSkill(data: FormData): Promise<PublishResult> {
   // TODO: Replace with actual API call
+  console.log('publishSkill', data)
   throw new Error('Not implemented')
 }
 
