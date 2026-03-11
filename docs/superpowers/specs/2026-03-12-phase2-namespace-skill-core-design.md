@@ -13,6 +13,8 @@
 | 架构模式 | 领域服务集中式（方案 A） | 与 Phase 1 一致，domain 模块包含领域服务 + 应用服务 |
 | Chunk 策略 | 后端先行（Chunk 1 后端，Chunk 2 前端） | API 稳定后再做前端，减少联调返工 |
 | 前端风格 | 现代产品风（Vercel/Linear 风格） | 使用 frontend-design 技能优化设计质量 |
+| CLI publish 接口 | Phase 2 去掉 `auto_submit` 参数，直接返回 PUBLISHED | 与 `05-business-flows.md` 有意偏差，Phase 3 回补 `auto_submit` 并调整默认 status |
+| Web publish 接口 | `POST /api/v1/skills/{namespace}/publish` | 与 CLI 分开路径但共用 service，`06-api-design.md` 未定义此路径，Phase 2 新增 |
 
 ## Tech Stack（沿用 Phase 1 + 新增）
 
@@ -115,6 +117,7 @@ Phase 1 已有表：`user_account`, `identity_binding`, `api_token`, `role`, `pe
 | id | BIGSERIAL PK | |
 | skill_id | BIGINT NOT NULL UNIQUE FK → skill | 一 skill 一条 |
 | namespace_id | BIGINT NOT NULL | 用于空间过滤 |
+| namespace_slug | VARCHAR(64) NOT NULL | 冗余，搜索结果直接返回无需 join |
 | owner_id | BIGINT NOT NULL | 用于 PRIVATE 可见性判定 |
 | title | VARCHAR(256) | |
 | summary | VARCHAR(512) | |
@@ -230,11 +233,14 @@ skillhub:
 
 Phase 1 已创建 `Namespace` 和 `NamespaceMember` 实体及 JPA Repository。Phase 2 新增领域服务。
 
+> **注意：Phase 1 实体补齐** — 现有 `Namespace.java` 缺少 `type`（NamespaceType 枚举：GLOBAL/TEAM）和 `avatar_url` 字段，`NamespaceMember.java` 缺少 `updatedAt` 字段，但 V1 数据库表已包含这些列。Phase 2 实现时需先补齐这些字段，确保 JPA 实体与数据库 schema 完全对齐。新增 `NamespaceType` 枚举。
+
 #### NamespaceService（`skillhub-domain`）
 
 ```
 createNamespace(slug, displayName, description, creatorUserId) → Namespace
   - slug 格式校验 + 保留词校验 + 唯一性校验
+  - type 固定为 TEAM（用户不可创建 GLOBAL 类型，GLOBAL 由 Flyway 预置）
   - 创建 namespace 记录
   - 创建者自动成为 OWNER（插入 namespace_member）
 
@@ -274,6 +280,8 @@ listMembers(namespaceId, page, size) → Page<NamespaceMember>
 getMemberRole(namespaceId, userId) → Optional<NamespaceRole>
 ```
 
+> **Repository 补充** — Phase 1 的 `NamespaceRepository` 需新增 `Page<Namespace> findByStatus(NamespaceStatus status, Pageable pageable)` 方法。`NamespaceMemberRepository` 需新增 `Page<NamespaceMember> findByNamespaceId(Long namespaceId, Pageable pageable)` 和 `void deleteByNamespaceIdAndUserId(Long namespaceId, Long userId)` 方法。
+
 ### 3.2 Slug 校验规则
 
 ```java
@@ -309,6 +317,8 @@ public class SlugValidator {
 
 权限判定复用 Phase 1 的 `RbacService`，新增 namespace 级别检查方法。
 
+> **SecurityConfig 更新** — Phase 1 的 `SecurityConfig` 中 `.requestMatchers("/api/v1/skills/**", "/api/v1/namespaces/**").permitAll()` 放行了所有 skills/namespaces 路径。Phase 2 新增了需要认证的写操作（publish、tag 管理等），需要细化安全配置：GET 请求 permitAll，POST/PUT/DELETE 请求 authenticated。具体做法：按 HTTP method + path 组合配置，或在 Controller 层通过 `@PreAuthorize` 注解做权限校验（推荐后者，更灵活）。
+
 ---
 
 ## 4. 技能发布核心链路
@@ -341,6 +351,7 @@ public interface SkillRepository {
     Page<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status, Pageable pageable);
     Skill save(Skill skill);
     List<Skill> findByOwnerId(Long ownerId);
+    void incrementDownloadCount(Long skillId);  // UPDATE skill SET download_count = download_count + 1 WHERE id = ?
 }
 
 public interface SkillVersionRepository {
@@ -484,7 +495,8 @@ publishSkill(namespaceSlug, zipInputStream, publisherId, visibility) → SkillVe
 ⑧ 写入对象存储
    - 逐文件上传到 skills/{skillId}/{versionId}/{filePath}
    - 计算每个文件的 SHA-256
-   - 生成 bundle.zip 到 packages/{skillId}/{versionId}/bundle.zip
+   - 生成 bundle.zip：在服务端内存中重新打包（仅包含通过校验的文件），而非直接使用用户上传的原始 zip
+   - bundle.zip 写入 packages/{skillId}/{versionId}/bundle.zip
 ⑨ 持久化
    - 创建 skill_version（status=PUBLISHED）
    - 批量创建 skill_file 记录
@@ -782,6 +794,13 @@ searchSkills(keyword, namespaceSlug, sortBy, page, size, currentUser) → Search
 ```
 GET /api/v1/skills?q=keyword&namespace=slug&sort=relevance&page=0&size=20
 
+q 参数为空时退化为列表查询（按 sort 字段排序，返回所有可见技能）。
+
+首页精选/热门/最新列表复用搜索接口：
+- 精选：GET /api/v1/skills?sort=relevance&size=6（无 q 参数，按综合排序）
+- 热门下载：GET /api/v1/skills?sort=downloads&size=6
+- 最新发布：GET /api/v1/skills?sort=newest&size=6
+
 Response:
 {
   "code": 0,
@@ -793,6 +812,7 @@ Response:
         "displayName": "Code Review",
         "summary": "...",
         "downloadCount": 1234,
+        "starCount": 56,
         "ratingAvg": 4.5,
         "ratingCount": 10,
         "latestVersion": "1.2.0",
@@ -897,6 +917,8 @@ public class AsyncConfig {
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("event-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(25);  // 配合 30s shutdown timeout 优雅停机
         executor.initialize();
         return executor;
     }
@@ -1261,7 +1283,8 @@ web/src/
 **验收标准：**
 
 1. `V2__phase2_skill_tables.sql` 迁移成功，所有新表和索引创建
-2. 对象存储 LocalFile 实现可用，S3 实现可用（Docker Compose MinIO）
+2. Phase 1 实体补齐：`Namespace.java` 补 type/avatarUrl，`NamespaceMember.java` 补 updatedAt，新增 `NamespaceType` 枚举
+3. 对象存储 LocalFile 实现可用，S3 实现可用（Docker Compose MinIO）
 3. 命名空间 CRUD + 成员管理 API 全部可用
 4. CLI 发布接口：上传 zip → 校验 → 存储 → PUBLISHED，返回版本信息
 5. 技能详情、版本列表、文件清单、文件内容 API 可用
