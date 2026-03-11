@@ -793,23 +793,26 @@ public class DeviceAuthController {
 }
 
 @RestController
-@RequestMapping("/device")
+@RequestMapping("/api/v1/device")
 public class DeviceAuthWebController {
-
-    @GetMapping
-    public String showDeviceAuthPage(Model model) {
-        return "device-auth";  // Thymeleaf 模板
-    }
 
     @PostMapping("/authorize")
     @PreAuthorize("isAuthenticated()")
-    public String authorizeDevice(@RequestParam String userCode,
-                                   @AuthenticationPrincipal PlatformPrincipal principal) {
-        deviceAuthService.authorizeDeviceCode(userCode, principal.getUserId());
-        return "device-auth-success";
+    public ResponseEntity<Void> authorizeDevice(
+            @RequestBody AuthorizeDeviceRequest request,
+            @AuthenticationPrincipal PlatformPrincipal principal) {
+        deviceAuthService.authorizeDeviceCode(request.userCode(), principal.getUserId());
+        return ResponseEntity.ok().build();
     }
 }
+
+public record AuthorizeDeviceRequest(String userCode) {}
 ```
+
+**说明：**
+- 前端是 React SPA，后端只提供 REST API 端点，不需要 Thymeleaf 模板
+- `/device` 路由由前端 React Router 处理
+- 后端只提供 `/api/v1/device/authorize` API 端点用于授权操作
 
 ### 4.2 CLI API 端点
 
@@ -1593,7 +1596,121 @@ public class IdempotencyCleanupTask {
 - 右上角显示收藏时间（相对时间）
 - 悬浮显示取消收藏按钮
 
-### 7.3 Token 管理页
+### 7.3 Device Auth 页面（CLI 授权）
+
+#### 路由：`/device`
+
+**权限要求：** 需要登录（未登录用户跳转到登录页）
+
+**页面布局：**
+
+```
+┌─────────────────────────────────────────┐
+│  skillhub Logo                          │
+│                                         │
+│  授权 CLI 设备访问                       │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │  请输入 CLI 显示的授权码：          │ │
+│  │                                   │ │
+│  │  ┌─────┐   ┌─────┐               │ │
+│  │  │ABCD │ - │1234 │               │ │
+│  │  └─────┘   └─────┘               │ │
+│  │                                   │ │
+│  │  [确认授权]                        │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  提示：授权后，CLI 将获得访问你账号的权限  │
+└─────────────────────────────────────────┘
+```
+
+**组件设计：**
+
+1. **User Code 输入表单**
+   - 两个输入框，分别输入 4 个字符
+   - 自动格式化为大写字母和数字
+   - 自动聚焦到第一个输入框
+   - 输入 4 个字符后自动跳转到第二个输入框
+   - 支持粘贴完整的 8 字符码（自动拆分）
+   - 实时校验：只允许字母和数字
+
+2. **确认授权按钮**
+   - 只有输入完整 8 字符后才启用
+   - 点击后弹出确认对话框
+
+3. **授权确认对话框**
+   ```
+   标题：确认授权 CLI 设备
+   内容：
+     - 授权码：ABCD-1234
+     - 设备信息：skillhub CLI
+     - 权限：读取和管理你的技能、命名空间
+     - 警告：请确认这是你正在使用的 CLI 设备
+   按钮：取消 / 确认授权
+   ```
+
+4. **授权成功页面**
+   ```
+   ┌─────────────────────────────────────────┐
+   │  ✓ 授权成功                              │
+   │                                         │
+   │  你的 CLI 设备已成功授权                  │
+   │                                         │
+   │  请返回 CLI 继续操作                      │
+   │                                         │
+   │  [关闭窗口]                              │
+   └─────────────────────────────────────────┘
+   ```
+
+5. **错误处理**
+
+   | 错误类型 | 提示信息 | 用户操作 |
+   |---------|---------|---------|
+   | 无效授权码 | "授权码无效，请检查后重试" | 重新输入 |
+   | 授权码已过期 | "授权码已过期（15 分钟有效期），请返回 CLI 重新获取" | 返回 CLI |
+   | 授权码已使用 | "授权码已被使用，请返回 CLI 重新获取" | 返回 CLI |
+   | 网络错误 | "网络错误，请稍后重试" | 重试按钮 |
+
+**交互流程：**
+
+```
+用户访问 /device
+    │
+    ▼
+检查登录状态
+    │
+    ├── 未登录 → 跳转到登录页（带 returnUrl=/device）
+    │
+    └── 已登录 → 显示授权页面
+            │
+            ▼
+        用户输入 user code
+            │
+            ▼
+        点击"确认授权"
+            │
+            ▼
+        弹出确认对话框
+            │
+            ▼
+        用户确认
+            │
+            ▼
+        调用后端 API：POST /device/authorize
+            │
+            ├── 成功 → 显示授权成功页面
+            │
+            └── 失败 → 显示错误提示
+```
+
+**前端实现文件：**
+- `web/src/pages/device-auth.tsx` - 主页面
+- `web/src/features/device-auth/user-code-input.tsx` - User Code 输入组件
+- `web/src/features/device-auth/authorize-confirm-dialog.tsx` - 授权确认对话框
+- `web/src/features/device-auth/authorize-success.tsx` - 授权成功页面
+- `web/src/features/device-auth/use-authorize-device.ts` - 授权 Hook
+
+### 7.4 Token 管理页
 
 #### 路由：`/dashboard/tokens`
 
@@ -1641,7 +1758,7 @@ public class IdempotencyCleanupTask {
 按钮：取消 / 确认吊销
 ```
 
-### 7.4 管理后台
+### 7.5 管理后台
 
 #### 路由结构
 
@@ -1743,11 +1860,12 @@ public class IdempotencyCleanupTask {
 - 语法高亮
 - 可复制
 
-### 7.5 前端文件结构（Phase 3 新增）
+### 7.6 前端文件结构（Phase 3 新增）
 
 ```
 web/src/
 ├── pages/
+│   ├── device-auth.tsx                     # Device Auth 授权页面
 │   ├── dashboard/
 │   │   ├── reviews.tsx                    # 审核任务列表
 │   │   ├── review-detail.tsx              # 审核详情
@@ -1762,6 +1880,11 @@ web/src/
 │       ├── roles.tsx                      # 角色管理
 │       └── audit-logs.tsx                 # 审计日志
 ├── features/
+│   ├── device-auth/
+│   │   ├── user-code-input.tsx            # User Code 输入组件
+│   │   ├── authorize-confirm-dialog.tsx   # 授权确认对话框
+│   │   ├── authorize-success.tsx          # 授权成功页面
+│   │   └── use-authorize-device.ts        # 授权 Hook
 │   ├── review/
 │   │   ├── review-task-table.tsx
 │   │   ├── review-detail-view.tsx
