@@ -1,0 +1,13 @@
+package com.iflytek.skillhub.storage;
+
+import java.io.InputStream;
+import java.util.List;
+
+public interface ObjectStorageService {
+    void putObject(String key, InputStream data, long size, String contentType);
+    InputStream getObject(String key);
+    void deleteObject(String key);
+    void deleteObjects(List<String> keys);
+    boolean exists(String key);
+    ObjectMetadata getMetadata(String key);
+}
