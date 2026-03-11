@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.skillhub</groupId>
+    <groupId>com.iflytek.skillhub</groupId>
     <artifactId>skillhub-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -36,27 +36,27 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.skillhub</groupId>
+                <groupId>com.iflytek.skillhub</groupId>
                 <artifactId>skillhub-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.skillhub</groupId>
+                <groupId>com.iflytek.skillhub</groupId>
                 <artifactId>skillhub-auth</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.skillhub</groupId>
+                <groupId>com.iflytek.skillhub</groupId>
                 <artifactId>skillhub-search</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.skillhub</groupId>
+                <groupId>com.iflytek.skillhub</groupId>
                 <artifactId>skillhub-storage</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.skillhub</groupId>
+                <groupId>com.iflytek.skillhub</groupId>
                 <artifactId>skillhub-infra</artifactId>
                 <version>${project.version}</version>
             </dependency>

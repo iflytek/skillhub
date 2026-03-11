@@ -16,5 +16,5 @@ spring:
 
 logging:
   level:
-    com.skillhub: DEBUG
+    com.iflytek.skillhub: DEBUG
     org.springframework.security: DEBUG

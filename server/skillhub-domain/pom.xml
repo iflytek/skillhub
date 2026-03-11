@@ -5,7 +5,7 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.skillhub</groupId>
+        <groupId>com.iflytek.skillhub</groupId>
         <artifactId>skillhub-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
