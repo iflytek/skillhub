@@ -92,15 +92,37 @@
 
 发布恢复为必须经审核，团队空间自治审核与全局空间平台审核生效，skillhub CLI Device Flow 可用，ClawHub CLI 通过兼容层可完成核心 registry 操作，评分收藏可用
 
-## Phase 4：运维增强 + 打磨
+## Phase 4：运维增强 + 打磨 + 开源就绪
 
-- 审计日志查询页面
-- 技能隐藏/恢复/版本撤回
-- Prometheus 指标暴露
-- Docker 镜像 + K8s 部署清单
-- 性能优化、安全加固
-- 文档完善
-- 后续 OAuth Provider 扩展准备（GitLab、Google 等）
+### 后端
+
+- 本地认证体系（用户名密码注册/登录 + BCrypt + 密码策略 + 账号锁定）
+- 多账号合并流程（发起 → 验证 → 确认 → 数据迁移）
+- 技能治理（隐藏/恢复 + 版本撤回 YANKED）
+- 审计日志查询 API（多条件筛选 + 分页）
+- Prometheus 指标暴露（Actuator + Micrometer 自定义业务指标）
+- 性能优化（数据库索引 + S3 预签名 URL + 连接池调优）
+- 安全加固（Session Cookie 安全 + 安全响应头 + XSS 防护）
+
+### 前端
+
+- 注册页、登录页扩展（用户名密码 + OAuth 双模式）
+- 密码修改页、账号合并页
+- 审计日志查询页
+- 技能隐藏/撤回操作（管理员可见）
+- 前端代码分割（TanStack Router lazy routes）
+- rehype-sanitize XSS 防护
+
+### 部署 & 开源
+
+- Docker 一键启动（多阶段 Dockerfile + docker-compose + 种子数据）
+- K8s 基础部署清单（Deployment + Service + Ingress）
+- README.md、CONTRIBUTING.md、GitHub Issue/PR 模板
+- LICENSE（Apache 2.0）、CODE_OF_CONDUCT.md
+
+### 验收
+
+本地认证可用，多账号合并可用，技能隐藏/撤回可用，审计日志可查询，Prometheus 指标可拉取，`docker compose up` 一键启动，K8s 清单可部署，开源基础设施齐全
 
 ## Phase 5：治理闭环 + 社交
 
@@ -108,7 +130,7 @@
 - 举报/标记机制（用户举报 → 管理员处理 → 隐藏/撤回）
 - 自动安全预检（`PrePublishValidator` 实现：敏感信息扫描、恶意脚本检测）
 - Webhook/事件通知（发布通知、审核结果通知）
-- 多 Provider 账号显式绑定/合并流程
+- 后续 OAuth Provider 扩展（GitLab、Google 等）
 
 ## 主要风险与应对
 
@@ -120,3 +142,9 @@
 | 前后端接口频繁变更 | OpenAPI spec 先行，类型自动生成 |
 | 新增 OAuth Provider | Spring Security OAuth2 原生多 Provider 支持，只需配置 + 属性映射 |
 | ClawHub CLI 协议细节与现有模型不完全一致 | 兼容层使用 `--` 双连字符 canonical slug 映射，独立 Controller 层适配，协议回归测试覆盖 |
+
+## 测试演进策略
+
+- 当前阶段（Phase 2 验证优先）：本地通过 `docker-compose.yml` 启动 PostgreSQL、Redis、MinIO，后端与集成测试直接连接真实依赖，优先验证发布、搜索、下载、限流等基础设施相关链路
+- 后续阶段（工程化收口）：逐步把后端集成测试迁移到 Testcontainers，由测试代码按需拉起 PostgreSQL、Redis、MinIO，减少对手工启动本地依赖的要求，并纳入 CI
+- 原则：单元测试可继续使用 mock/in-memory 替身，但 Phase 2/3 的核心验收必须保留一组基于真实中间件的集成测试，避免 Redis Lua、对象存储、Flyway、搜索 SQL 等问题被假实现掩盖

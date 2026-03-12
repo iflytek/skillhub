@@ -133,7 +133,8 @@ LocalAuthService.register():
   ② 检查 email 是否已被 OAuth 用户占用（user_account.email）
   ③ 密码强度校验（后端二次校验）
   ④ BCrypt 哈希密码（strength=12）
-  ⑤ 创建 user_account（status=ACTIVE，auth_method=LOCAL）
+  ⑤ 创建 user_account（status=ACTIVE）
+  — 认证方式通过 local_credential 表的存在性隐式判断，不在 user_account 新增字段
   ⑥ 创建 local_credential
   ⑦ 写入 audit_log（action=USER_REGISTERED）
     │
@@ -165,7 +166,7 @@ LocalAuthService.login():
      - 成功 → 重置 failed_attempts = 0，清除 locked_until
      - 失败 → failed_attempts++
        - failed_attempts >= 5 → locked_until = now + 15 分钟
-       - 返回 401 "用户名或密码错误（剩余 X 次尝试）"
+       - 返回 401 "用户名或密码错误"
   ④ 写入 audit_log（action=USER_LOGIN）
     │
     ▼
@@ -294,11 +295,11 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/account/merge/initiate` | 发起合并请求 |
-| POST | `/api/v1/account/merge/{id}/verify` | 验证副账号身份 |
-| POST | `/api/v1/account/merge/{id}/confirm` | 确认执行合并 |
-| POST | `/api/v1/account/merge/{id}/cancel` | 取消合并请求 |
-| GET | `/api/v1/account/merge/history` | 合并历史记录 |
+| POST | `/api/v1/auth/merge/initiate` | 发起合并请求 |
+| POST | `/api/v1/auth/merge/{id}/verify` | 验证副账号身份 |
+| POST | `/api/v1/auth/merge/{id}/confirm` | 确认执行合并 |
+| POST | `/api/v1/auth/merge/{id}/cancel` | 取消合并请求 |
+| GET | `/api/v1/auth/merge/history` | 合并历史记录 |
 
 ### 3.3 安全约束
 
@@ -756,6 +757,9 @@ public class SeedDataRunner implements ApplicationRunner {
     private final UserAccountRepository userRepo;
     private final RoleRepository roleRepo;
     private final PasswordEncoder passwordEncoder;
+    private final LocalCredentialRepository localCredentialRepo;
+    private final UserRoleBindingRepository userRoleBindingRepo;
+    private final NamespaceRepository namespaceRepo;
 
     @Override
     @Transactional
@@ -824,6 +828,13 @@ server {
     }
 
     location /login/oauth2/ {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # ClawHub CLI 兼容层服务发现
+    location /.well-known/ {
         proxy_pass http://backend:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -1030,6 +1041,13 @@ spec:
                   number: 8080
           - path: /actuator/prometheus
             pathType: Exact
+            backend:
+              service:
+                name: skillhub-backend
+                port:
+                  number: 8080
+          - path: /.well-known
+            pathType: Prefix
             backend:
               service:
                 name: skillhub-backend
@@ -1503,7 +1521,7 @@ deploy/k8s/secret.yaml
 
 | 风险 | 应对 |
 |------|------|
-| 本地认证与 OAuth Session 冲突 | 两种认证方式共享 Spring Session，通过 auth_method 字段区分来源 |
+| 本地认证与 OAuth Session 冲突 | 两种认证方式共享 Spring Session，通过 `local_credential` 表存在性判断认证来源，无需额外字段 |
 | 多账号合并数据不一致 | 合并操作在单个事务中执行，失败自动回滚；合并前生成数据摘要供用户确认 |
 | BCrypt 性能影响 | strength=12 约 250ms/次，登录接口限流 30 次/分钟/IP 防暴力破解 |
 | Docker 构建缓存失效 | 多阶段构建 + 依赖层分离，Maven/npm 依赖变更才触发重新下载 |
