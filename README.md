@@ -1,81 +1,58 @@
 # SkillHub
 
-AI Skill 共享平台 — 发布、发现、管理 AI 技能包。
+An enterprise-grade AI skill registry — publish, discover, and
+manage reusable skill packages across your organization.
 
-## 快速开始
+SkillHub is a self-hosted platform that gives teams a private,
+governed place to share AI skills. Publish a skill package, push
+it to a namespace, and let others find it through search or
+install it via CLI. Built for on-premise deployment behind your
+firewall, with the same polish you'd expect from a public registry.
 
-### 前置条件
+## Highlights
+
+- **Publish & Version** — Upload skill packages with semantic
+  versioning, custom tags (`beta`, `stable`), and automatic
+  `latest` tracking.
+- **Discover** — Full-text search with filters by namespace,
+  downloads, ratings, and recency. Visibility rules ensure
+  users only see what they should.
+- **Namespaces** — Organize skills under team or global scopes.
+  Each namespace has its own members, roles (Owner / Admin /
+  Member), and publishing policies.
+- **Review Workflow** — Team admins review within their namespace;
+  platform admins gate promotions to the global scope. Every
+  action is audit-logged.
+- **CLI-First** — Native REST API plus a compatibility layer for
+  existing ClawHub CLI tools — no client changes needed.
+- **Pluggable Storage** — Local filesystem for development, S3 for
+  production. Swap via config.
+
+## Quick Start
+
+### Prerequisites
 
 - Docker & Docker Compose
-- JDK 21+（开发模式）
-- Node.js 20+ / pnpm（前端开发）
 
-### 一键启动（生产模式）
+### One command
 
 ```bash
 make prod-up
 ```
 
-访问:
-- 前端: http://localhost
-- API: http://localhost:8080
-- 健康检查: http://localhost:8080/actuator/health
+Then open http://localhost in your browser.
 
-### 开发模式
+### Development
 
 ```bash
-# 启动基础设施（PostgreSQL + Redis + MinIO）
+# Start infrastructure (PostgreSQL, Redis, MinIO)
 make dev
 
-# 启动后端
+# Backend (in one terminal)
 make dev-server
 
-# 启动前端（另一个终端）
+# Frontend (in another terminal)
 make dev-web
 ```
 
-## 项目结构
-
-```
-skillhub/
-├── server/                  # Spring Boot 后端
-│   ├── skillhub-app/        # 应用层 (Controller, DTO, Config)
-│   ├── skillhub-domain/     # 领域层 (Entity, Service, Repository)
-│   ├── skillhub-auth/       # 认证授权模块
-│   ├── skillhub-search/     # 搜索模块 (PostgreSQL 全文检索)
-│   ├── skillhub-storage/    # 存储模块 (本地/S3)
-│   └── skillhub-infra/      # 基础设施层 (JPA 实现)
-├── web/                     # React 前端
-├── docker-compose.yml       # 开发环境（仅基础设施）
-├── docker-compose.prod.yml  # 生产环境（全栈）
-└── Makefile                 # 常用命令
-```
-
-## 常用命令
-
-```bash
-make help          # 查看所有命令
-make dev           # 启动开发基础设施
-make dev-server    # 启动后端开发服务器
-make dev-web       # 启动前端开发服务器
-make test          # 运行后端测试
-make test-web      # 运行前端测试
-make build         # 构建后端
-make build-web     # 构建前端
-make prod-up       # 一键启动全部服务
-make prod-down     # 停止全部服务
-make logs          # 查看后端日志
-make db-reset      # 重置数据库
-make clean         # 清理构建产物
-```
-
-## 技术栈
-
-- **后端:** Spring Boot 3, JDK 21, PostgreSQL 16, Redis 7, Flyway, Spring Security (OAuth2 + 本地认证)
-- **前端:** React 19, TypeScript, Vite, TanStack Router/Query, shadcn/ui, Tailwind CSS
-- **存储:** MinIO (S3 兼容) / 本地文件系统
-- **运维:** Docker, Nginx
-
-## License
-
-MIT
+Run `make help` to see all available commands.
