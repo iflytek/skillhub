@@ -1,0 +1,16 @@
+package com.iflytek.skillhub.domain.review;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.util.Optional;
+
+public interface ReviewTaskRepository {
+    ReviewTask save(ReviewTask reviewTask);
+    Optional<ReviewTask> findById(Long id);
+    Optional<ReviewTask> findBySkillVersionIdAndStatus(Long skillVersionId, ReviewTaskStatus status);
+    Page<ReviewTask> findByNamespaceIdAndStatus(Long namespaceId, ReviewTaskStatus status, Pageable pageable);
+    Page<ReviewTask> findBySubmittedByAndStatus(Long submittedBy, ReviewTaskStatus status, Pageable pageable);
+    void delete(ReviewTask reviewTask);
+    int updateStatusWithVersion(Long id, ReviewTaskStatus status, Long reviewedBy,
+                               String reviewComment, Integer expectedVersion);
+}
