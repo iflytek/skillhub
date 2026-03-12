@@ -1,14 +1,6 @@
 import createClient from 'openapi-fetch'
 import type { paths } from './generated/schema'
-import type {
-  ApiToken,
-  CreateTokenRequest,
-  CreateTokenResponse,
-  LocalLoginRequest,
-  LocalRegisterRequest,
-  OAuthProvider,
-  User,
-} from './types'
+import type { ApiToken, CreateTokenRequest, CreateTokenResponse, OAuthProvider, User } from './types'
 
 const client = createClient<paths>({ baseUrl: '' })
 
@@ -27,13 +19,6 @@ function withCsrf(headers?: HeadersInit): HeadersInit {
     ...headers,
     'X-XSRF-TOKEN': csrfToken,
   }
-}
-
-async function ensureCsrfHeaders(headers?: HeadersInit): Promise<HeadersInit> {
-  if (!getCsrfToken()) {
-    await client.GET('/api/v1/auth/providers')
-  }
-  return withCsrf(headers)
 }
 
 function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
@@ -123,26 +108,6 @@ export const authApi = {
 
   async getProviders(): Promise<OAuthProvider[]> {
     return unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers') as never)
-  },
-
-  async localLogin(request: LocalLoginRequest): Promise<User> {
-    return fetchJson<User>('/api/v1/auth/local/login', {
-      method: 'POST',
-      headers: await ensureCsrfHeaders({
-        'Content-Type': 'application/json',
-      }),
-      body: JSON.stringify(request),
-    })
-  },
-
-  async localRegister(request: LocalRegisterRequest): Promise<User> {
-    return fetchJson<User>('/api/v1/auth/local/register', {
-      method: 'POST',
-      headers: await ensureCsrfHeaders({
-        'Content-Type': 'application/json',
-      }),
-      body: JSON.stringify(request),
-    })
   },
 
   async logout(): Promise<void> {

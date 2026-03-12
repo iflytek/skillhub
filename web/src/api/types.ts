@@ -6,15 +6,6 @@ export type ApiToken = components['schemas']['ApiToken']
 export type CreateTokenRequest = components['schemas']['CreateTokenRequest']
 export type CreateTokenResponse = components['schemas']['CreateTokenResponse']
 
-export interface LocalLoginRequest {
-  username: string
-  password: string
-}
-
-export interface LocalRegisterRequest extends LocalLoginRequest {
-  email?: string
-}
-
 // Namespace types
 export interface Namespace {
   id: number
