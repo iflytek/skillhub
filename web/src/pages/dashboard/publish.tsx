@@ -10,25 +10,24 @@ import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queri
 export function PublishPage() {
   const navigate = useNavigate()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [namespaceId, setNamespaceId] = useState<string>('')
+  const [namespaceSlug, setNamespaceSlug] = useState<string>('')
   const [visibility, setVisibility] = useState<string>('PUBLIC')
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
 
   const handlePublish = async () => {
-    if (!selectedFile || !namespaceId) {
+    if (!selectedFile || !namespaceSlug) {
       alert('请选择命名空间和文件')
       return
     }
 
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    formData.append('namespaceId', namespaceId)
-    formData.append('visibility', visibility)
-
     try {
-      const result = await publishMutation.mutateAsync(formData)
+      const result = await publishMutation.mutateAsync({
+        namespace: namespaceSlug,
+        file: selectedFile,
+        visibility,
+      })
       alert(`发布成功: ${result.namespace}/${result.slug}@${result.version}`)
       navigate({ to: '/dashboard/skills' })
     } catch (error) {
@@ -52,12 +51,12 @@ export function PublishPage() {
           ) : (
             <Select
               id="namespace"
-              value={namespaceId}
-              onChange={(e) => setNamespaceId(e.target.value)}
+              value={namespaceSlug}
+              onChange={(e) => setNamespaceSlug(e.target.value)}
             >
               <option value="">选择命名空间</option>
               {namespaces?.map((ns) => (
-                <option key={ns.id} value={ns.id.toString()}>
+                <option key={ns.id} value={ns.slug}>
                   {ns.displayName} (@{ns.slug})
                 </option>
               ))}
@@ -97,7 +96,7 @@ export function PublishPage() {
         <Button
           className="w-full"
           onClick={handlePublish}
-          disabled={!selectedFile || !namespaceId || publishMutation.isPending}
+          disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
         >
           {publishMutation.isPending ? '发布中...' : '确认发布'}
         </Button>

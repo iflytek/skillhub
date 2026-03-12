@@ -8,7 +8,7 @@ export function NamespaceMembersPage() {
   const { slug } = useParams({ from: '/dashboard/namespaces/$slug/members' })
 
   const { data: namespace, isLoading: isLoadingNamespace } = useNamespaceDetail(slug)
-  const { data: members, isLoading: isLoadingMembers } = useNamespaceMembers(namespace?.id || 0)
+  const { data: members, isLoading: isLoadingMembers } = useNamespaceMembers(slug)
 
   if (isLoadingNamespace) {
     return <div className="animate-pulse">加载中...</div>

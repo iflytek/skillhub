@@ -49,7 +49,7 @@ export function HomePage() {
               <SkillCard
                 key={skill.id}
                 skill={skill}
-                onClick={() => handleSkillClick(skill.namespace.slug, skill.slug)}
+                onClick={() => handleSkillClick(skill.namespace, skill.slug)}
               />
             ))}
           </div>
@@ -67,7 +67,7 @@ export function HomePage() {
               <SkillCard
                 key={skill.id}
                 skill={skill}
-                onClick={() => handleSkillClick(skill.namespace.slug, skill.slug)}
+                onClick={() => handleSkillClick(skill.namespace, skill.slug)}
               />
             ))}
           </div>

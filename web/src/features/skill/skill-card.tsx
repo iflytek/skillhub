@@ -15,7 +15,7 @@ export function SkillCard({ skill, onClick }: SkillCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <h3 className="font-semibold text-lg">{skill.displayName}</h3>
-        <NamespaceBadge type={skill.namespace.type} name={skill.namespace.displayName} />
+        <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
       </div>
 
       {skill.summary && (

@@ -16,12 +16,12 @@ export interface Namespace {
   avatarUrl?: string
   status: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface NamespaceMember {
   id: number
-  namespaceId: number
-  userId: number
+  userId: string
   role: string
   createdAt: string
 }
@@ -37,7 +37,7 @@ export interface SkillSummary {
   ratingAvg?: number
   ratingCount: number
   latestVersion?: string
-  namespace: Namespace
+  namespace: string
   updatedAt: string
 }
 
@@ -51,7 +51,7 @@ export interface SkillDetail {
   downloadCount: number
   starCount: number
   latestVersion?: string
-  namespaceId: number
+  namespace: string
 }
 
 export interface SkillVersion {

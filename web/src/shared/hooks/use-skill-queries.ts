@@ -1,70 +1,67 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
+import { fetchJson, fetchText, getCsrfHeaders } from '@/api/client'
 
-// Mock API functions - replace with actual API calls
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
-  // TODO: Replace with actual API call
-  console.log('searchSkills', params)
-  return {
-    items: [],
-    total: 0,
-    page: params.page || 1,
-    size: params.size || 10,
-  }
+  const queryParams = new URLSearchParams()
+  if (params.q) queryParams.append('q', params.q)
+  if (params.namespace) queryParams.append('namespace', params.namespace)
+  if (params.sort) queryParams.append('sort', params.sort)
+  if (params.page !== undefined) queryParams.append('page', String(params.page))
+  if (params.size !== undefined) queryParams.append('size', String(params.size))
+
+  return fetchJson<PagedResponse<SkillSummary>>(`/api/v1/skills?${queryParams.toString()}`)
 }
 
 async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
-  // TODO: Replace with actual API call
-  console.log('getSkillDetail', namespace, slug)
-  throw new Error('Not implemented')
+  return fetchJson<SkillDetail>(`/api/v1/skills/${namespace}/${slug}`)
 }
 
-async function getSkillVersions(skillId: number): Promise<SkillVersion[]> {
-  // TODO: Replace with actual API call
-  console.log('getSkillVersions', skillId)
-  return []
+async function getSkillVersions(namespace: string, slug: string): Promise<SkillVersion[]> {
+  const page = await fetchJson<PagedResponse<SkillVersion>>(`/api/v1/skills/${namespace}/${slug}/versions`)
+  return page.items
 }
 
-async function getSkillFiles(versionId: number): Promise<SkillFile[]> {
-  // TODO: Replace with actual API call
-  console.log('getSkillFiles', versionId)
-  return []
+async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
+  return fetchJson<SkillFile[]>(`/api/v1/skills/${namespace}/${slug}/versions/${version}/files`)
 }
 
-async function getSkillReadme(versionId: number): Promise<string> {
-  // TODO: Replace with actual API call
-  console.log('getSkillReadme', versionId)
-  return '# README\n\nNo content available.'
+async function getSkillReadme(namespace: string, slug: string, version: string): Promise<string> {
+  try {
+    return await fetchText(`/api/v1/skills/${namespace}/${slug}/versions/${version}/file?path=SKILL.md`)
+  } catch {
+    return ''
+  }
 }
 
 async function getMySkills(): Promise<SkillSummary[]> {
-  // TODO: Replace with actual API call
-  console.log('getMySkills')
-  return []
+  return fetchJson<SkillSummary[]>('/api/v1/me/skills')
 }
 
 async function getMyNamespaces(): Promise<Namespace[]> {
-  // TODO: Replace with actual API call
-  console.log('getMyNamespaces')
-  return []
+  const page = await fetchJson<PagedResponse<Namespace>>('/api/v1/namespaces')
+  return page.items
 }
 
 async function getNamespaceDetail(slug: string): Promise<Namespace> {
-  // TODO: Replace with actual API call
-  console.log('getNamespaceDetail', slug)
-  throw new Error('Not implemented')
+  return fetchJson<Namespace>(`/api/v1/namespaces/${slug}`)
 }
 
-async function getNamespaceMembers(namespaceId: number): Promise<NamespaceMember[]> {
-  // TODO: Replace with actual API call
-  console.log('getNamespaceMembers', namespaceId)
-  return []
+async function getNamespaceMembers(slug: string): Promise<NamespaceMember[]> {
+  const page = await fetchJson<PagedResponse<NamespaceMember>>(`/api/v1/namespaces/${slug}/members`)
+  return page.items
 }
 
-async function publishSkill(data: FormData): Promise<PublishResult> {
-  // TODO: Replace with actual API call
-  console.log('publishSkill', data)
-  throw new Error('Not implemented')
+async function publishSkill(params: { namespace: string; file: File; visibility: string }): Promise<PublishResult> {
+  const formData = new FormData()
+  formData.append('file', params.file)
+  formData.append('visibility', params.visibility)
+
+  return fetchJson<PublishResult>(`/api/v1/skills/${params.namespace}/publish`, {
+    method: 'POST',
+    headers: getCsrfHeaders(),
+    body: formData,
+  })
 }
 
 // Hooks
@@ -83,27 +80,27 @@ export function useSkillDetail(namespace: string, slug: string) {
   })
 }
 
-export function useSkillVersions(skillId: number) {
+export function useSkillVersions(namespace: string, slug: string) {
   return useQuery({
-    queryKey: ['skills', skillId, 'versions'],
-    queryFn: () => getSkillVersions(skillId),
-    enabled: !!skillId,
+    queryKey: ['skills', namespace, slug, 'versions'],
+    queryFn: () => getSkillVersions(namespace, slug),
+    enabled: !!namespace && !!slug,
   })
 }
 
-export function useSkillFiles(versionId: number) {
+export function useSkillFiles(namespace: string, slug: string, version?: string) {
   return useQuery({
-    queryKey: ['skills', 'versions', versionId, 'files'],
-    queryFn: () => getSkillFiles(versionId),
-    enabled: !!versionId,
+    queryKey: ['skills', namespace, slug, 'versions', version, 'files'],
+    queryFn: () => getSkillFiles(namespace, slug, version!),
+    enabled: !!namespace && !!slug && !!version,
   })
 }
 
-export function useSkillReadme(versionId: number) {
+export function useSkillReadme(namespace: string, slug: string, version?: string) {
   return useQuery({
-    queryKey: ['skills', 'versions', versionId, 'readme'],
-    queryFn: () => getSkillReadme(versionId),
-    enabled: !!versionId,
+    queryKey: ['skills', namespace, slug, 'versions', version, 'readme'],
+    queryFn: () => getSkillReadme(namespace, slug, version!),
+    enabled: !!namespace && !!slug && !!version,
   })
 }
 
@@ -129,11 +126,11 @@ export function useNamespaceDetail(slug: string) {
   })
 }
 
-export function useNamespaceMembers(namespaceId: number) {
+export function useNamespaceMembers(slug: string) {
   return useQuery({
-    queryKey: ['namespaces', namespaceId, 'members'],
-    queryFn: () => getNamespaceMembers(namespaceId),
-    enabled: !!namespaceId,
+    queryKey: ['namespaces', slug, 'members'],
+    queryFn: () => getNamespaceMembers(slug),
+    enabled: !!slug,
   })
 }
 

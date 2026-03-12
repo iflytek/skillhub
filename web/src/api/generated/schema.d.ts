@@ -80,7 +80,7 @@ export interface paths {
 export interface components {
   schemas: {
     User: {
-      userId: number
+      userId: string
       displayName: string
       email: string
       avatarUrl: string

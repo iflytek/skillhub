@@ -34,7 +34,7 @@ export function MySkillsPage() {
             <Card
               key={skill.id}
               className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleSkillClick(skill.namespace.slug, skill.slug)}
+              onClick={() => handleSkillClick(skill.namespace, skill.slug)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -43,7 +43,7 @@ export function MySkillsPage() {
                     <p className="text-sm text-muted-foreground mb-2">{skill.summary}</p>
                   )}
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>@{skill.namespace.slug}</span>
+                    <span>@{skill.namespace}</span>
                     {skill.latestVersion && <span>v{skill.latestVersion}</span>}
                     <span>{skill.downloadCount} 下载</span>
                   </div>

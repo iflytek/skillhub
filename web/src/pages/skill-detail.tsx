@@ -17,10 +17,10 @@ export function SkillDetailPage() {
   const { namespace, slug } = useParams({ from: '/@$namespace/$slug' })
 
   const { data: skill, isLoading: isLoadingSkill } = useSkillDetail(namespace, slug)
-  const { data: versions } = useSkillVersions(skill?.id || 0)
+  const { data: versions } = useSkillVersions(namespace, slug)
   const latestVersion = versions?.[0]
-  const { data: files } = useSkillFiles(latestVersion?.id || 0)
-  const { data: readme } = useSkillReadme(latestVersion?.id || 0)
+  const { data: files } = useSkillFiles(namespace, slug, latestVersion?.version)
+  const { data: readme } = useSkillReadme(namespace, slug, latestVersion?.version)
 
   if (isLoadingSkill) {
     return <div className="animate-pulse">加载中...</div>
