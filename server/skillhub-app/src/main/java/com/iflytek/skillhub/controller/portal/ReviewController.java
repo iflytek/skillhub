@@ -74,7 +74,7 @@ public class ReviewController extends BaseApiController {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
         ReviewTask task = reviewService.approveReview(id, userId, comment,
                 userNsRoles != null ? userNsRoles : Map.of(), platformRoles);
-        return ok("response.success.update", toResponse(task));
+        return ok("response.success.updated", toResponse(task));
     }
 
     @PostMapping("/{id}/reject")
@@ -87,7 +87,7 @@ public class ReviewController extends BaseApiController {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
         ReviewTask task = reviewService.rejectReview(id, userId, comment,
                 userNsRoles != null ? userNsRoles : Map.of(), platformRoles);
-        return ok("response.success.update", toResponse(task));
+        return ok("response.success.updated", toResponse(task));
     }
 
     @PostMapping("/{id}/withdraw")
@@ -96,7 +96,7 @@ public class ReviewController extends BaseApiController {
             @RequestAttribute("userId") String userId) {
         ReviewTask task = reviewTaskRepository.findById(id).orElseThrow();
         reviewService.withdrawReview(task.getSkillVersionId(), userId);
-        return ok("response.success.update", null);
+        return ok("response.success.updated", null);
     }
 
     @GetMapping("/pending")

@@ -57,3 +57,9 @@ tmp/
 
 # Git worktrees
 .worktrees/
+
+# Local dev runtime
+.dev/
+
+# Superpowers (AI planning artifacts)
+docs/superpowers/

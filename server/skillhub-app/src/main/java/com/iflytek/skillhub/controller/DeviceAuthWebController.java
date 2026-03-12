@@ -28,7 +28,7 @@ public class DeviceAuthWebController extends BaseApiController {
         @AuthenticationPrincipal PlatformPrincipal principal
     ) {
         deviceAuthService.authorizeDeviceCode(request.userCode(), principal.userId());
-        return ok("response.success.update", new MessageResponse("Device authorized successfully"));
+        return ok("response.success.updated", new MessageResponse("Device authorized successfully"));
     }
 
     public record AuthorizeRequest(String userCode) {}

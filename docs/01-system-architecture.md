@@ -113,9 +113,8 @@ skillhub/
 ├── web/                  # React 前端
 │   ├── Dockerfile        # 前端多阶段构建
 │   └── nginx.conf        # Nginx 配置（SPA 路由 + API 反向代理）
-├── docker-compose.yml    # 本地开发（仅依赖服务：PostgreSQL/Redis/MinIO）
-├── docker-compose.prod.yml  # 完整部署（前后端 + 依赖服务）
-├── Makefile              # 顶层构建编排（dev / build / docker / deploy）
+├── docker-compose.yml    # 本地开发依赖服务（PostgreSQL/Redis/MinIO）
+├── Makefile              # 顶层开发编排（dev / dev-all / build）
 ├── docs/                 # 设计文档
 └── README.md
 ```

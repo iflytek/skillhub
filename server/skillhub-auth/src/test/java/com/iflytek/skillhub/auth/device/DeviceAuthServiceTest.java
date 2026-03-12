@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.auth.device;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,8 +84,8 @@ class DeviceAuthServiceTest {
 
         // When / Then
         assertThatThrownBy(() -> service.pollToken("expired123"))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("expired");
+            .isInstanceOf(DomainBadRequestException.class)
+            .hasMessageContaining("error.deviceAuth.deviceCode.invalid");
     }
 
     @Test

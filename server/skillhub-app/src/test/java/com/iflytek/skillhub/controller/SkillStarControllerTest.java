@@ -39,7 +39,7 @@ class SkillStarControllerTest {
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @Test
-    void star_skill_returns_204() throws Exception {
+    void star_skill_returns_envelope() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-42",
                 "tester",
@@ -57,13 +57,16 @@ class SkillStarControllerTest {
         mockMvc.perform(put("/api/v1/skills/10/star")
                         .with(authentication(auth))
                         .with(csrf()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
 
         verify(skillStarService).star(eq(10L), eq("user-42"));
     }
 
     @Test
-    void unstar_skill_returns_204() throws Exception {
+    void unstar_skill_returns_envelope() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-42",
                 "tester",
@@ -81,7 +84,10 @@ class SkillStarControllerTest {
         mockMvc.perform(delete("/api/v1/skills/10/star")
                         .with(authentication(auth))
                         .with(csrf()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
 
         verify(skillStarService).unstar(eq(10L), eq("user-42"));
     }

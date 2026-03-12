@@ -69,7 +69,7 @@ public class PromotionController extends BaseApiController {
         String comment = request != null ? request.comment() : null;
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
         PromotionRequest promotion = promotionService.approvePromotion(id, userId, comment, platformRoles);
-        return ok("response.success.update", toResponse(promotion));
+        return ok("response.success.updated", toResponse(promotion));
     }
 
     @PostMapping("/{id}/reject")
@@ -80,7 +80,7 @@ public class PromotionController extends BaseApiController {
         String comment = request != null ? request.comment() : null;
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
         PromotionRequest promotion = promotionService.rejectPromotion(id, userId, comment, platformRoles);
-        return ok("response.success.update", toResponse(promotion));
+        return ok("response.success.updated", toResponse(promotion));
     }
 
     @GetMapping("/pending")

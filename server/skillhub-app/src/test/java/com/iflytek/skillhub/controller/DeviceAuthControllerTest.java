@@ -47,11 +47,12 @@ class DeviceAuthControllerTest {
         mockMvc.perform(post("/api/v1/cli/auth/device/code")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.deviceCode").value("device_abc123"))
-            .andExpect(jsonPath("$.userCode").value("ABCD-1234"))
-            .andExpect(jsonPath("$.verificationUri").value("https://skillhub.example.com/device"))
-            .andExpect(jsonPath("$.expiresIn").value(900))
-            .andExpect(jsonPath("$.interval").value(5));
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.deviceCode").value("device_abc123"))
+            .andExpect(jsonPath("$.data.userCode").value("ABCD-1234"))
+            .andExpect(jsonPath("$.data.verificationUri").value("https://skillhub.example.com/device"))
+            .andExpect(jsonPath("$.data.expiresIn").value(900))
+            .andExpect(jsonPath("$.data.interval").value(5));
     }
 
     @Test
@@ -64,8 +65,9 @@ class DeviceAuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"deviceCode\": \"device_abc123\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.error").value("authorization_pending"))
-            .andExpect(jsonPath("$.accessToken").isEmpty())
-            .andExpect(jsonPath("$.tokenType").isEmpty());
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.error").value("authorization_pending"))
+            .andExpect(jsonPath("$.data.accessToken").isEmpty())
+            .andExpect(jsonPath("$.data.tokenType").isEmpty());
     }
 }

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.social;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.social.event.SkillRatedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,9 +46,9 @@ class SkillRatingServiceTest {
     @Test
     void rate_invalid_score_throws() {
         assertThatThrownBy(() -> service.rate(1L, "10", (short) 0))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(DomainBadRequestException.class);
         assertThatThrownBy(() -> service.rate(1L, "10", (short) 6))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(DomainBadRequestException.class);
     }
 
     @Test

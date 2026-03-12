@@ -5,7 +5,6 @@ import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.domain.social.SkillStarService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,19 +21,19 @@ public class SkillStarController extends BaseApiController {
     }
 
     @PutMapping("/{skillId}/star")
-    public ResponseEntity<Void> starSkill(
+    public ApiResponse<Void> starSkill(
             @PathVariable Long skillId,
             @AuthenticationPrincipal PlatformPrincipal principal) {
         skillStarService.star(skillId, principal.userId());
-        return ResponseEntity.noContent().build();
+        return ok("response.success.updated", null);
     }
 
     @DeleteMapping("/{skillId}/star")
-    public ResponseEntity<Void> unstarSkill(
+    public ApiResponse<Void> unstarSkill(
             @PathVariable Long skillId,
             @AuthenticationPrincipal PlatformPrincipal principal) {
         skillStarService.unstar(skillId, principal.userId());
-        return ResponseEntity.noContent().build();
+        return ok("response.success.updated", null);
     }
 
     @GetMapping("/{skillId}/star")
@@ -42,6 +41,6 @@ public class SkillStarController extends BaseApiController {
             @PathVariable Long skillId,
             @AuthenticationPrincipal PlatformPrincipal principal) {
         boolean starred = skillStarService.isStarred(skillId, principal.userId());
-        return ok("response.success.skill.star.check", starred);
+        return ok("response.success.read", starred);
     }
 }

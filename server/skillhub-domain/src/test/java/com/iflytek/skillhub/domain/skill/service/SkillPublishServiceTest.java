@@ -131,6 +131,70 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void testPublishFromEntries_ShouldSlugifyNameBeforeLookupAndResponse() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: Smoke Skill Two\ndescription: Test\nversion: 0.2.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("Smoke Skill Two", "Test", "0.2.0", "Body", Map.of());
+
+        Skill skill = new Skill(1L, "smoke-skill-two", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 2L);
+        SkillVersion version = new SkillVersion(2L, "0.2.0", publisherId);
+        setId(version, 20L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("smoke-skill-two"))).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("0.2.0"))).thenReturn(Optional.empty());
+        when(skillVersionRepository.save(any())).thenReturn(version);
+        when(skillRepository.save(any())).thenReturn(skill);
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug,
+                entries,
+                publisherId,
+                SkillVisibility.PUBLIC
+        );
+
+        assertEquals("smoke-skill-two", result.slug());
+        verify(skillRepository).findByNamespaceIdAndSlug(1L, "smoke-skill-two");
+    }
+
+    @Test
+    void testPublishFromEntries_ShouldRejectMissingVersionBeforePersistence() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", null, "Body", Map.of());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+
+        assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC));
+        verify(skillVersionRepository, never()).save(any());
+    }
+
+    @Test
     void testPublishFromEntries_NamespaceNotFound() {
         // Arrange
         String namespaceSlug = "nonexistent";

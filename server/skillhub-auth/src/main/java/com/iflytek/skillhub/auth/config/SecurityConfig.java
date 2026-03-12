@@ -67,10 +67,13 @@ public class SecurityConfig {
                     "/api/v1/auth/providers",
                     "/api/v1/auth/me",
                     "/api/v1/cli/auth/device/**",
+                    "/api/v1/cli/check",
                     "/actuator/health",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
-                    "/.well-known/**"
+                    "/.well-known/**",
+                    "/api/compat/v1/search",
+                    "/api/compat/v1/resolve/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/skills", "/api/v1/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/namespaces", "/api/v1/namespaces/*").permitAll()

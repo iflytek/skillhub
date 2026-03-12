@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.social;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.social.event.SkillRatedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class SkillRatingService {
     @Transactional
     public void rate(Long skillId, String userId, short score) {
         if (score < 1 || score > 5) {
-            throw new IllegalArgumentException("Score must be 1-5");
+            throw new DomainBadRequestException("error.rating.score.invalid");
         }
         Optional<SkillRating> existing = ratingRepository.findBySkillIdAndUserId(skillId, userId);
         if (existing.isPresent()) {

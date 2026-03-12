@@ -21,7 +21,7 @@ class RequestIdFilterTest {
 
     @Test
     void shouldGenerateRequestIdWhenNotProvided() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
+        mockMvc.perform(get("/api/v1/health"))
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Request-Id"));
     }
@@ -29,7 +29,7 @@ class RequestIdFilterTest {
     @Test
     void shouldPreserveProvidedRequestId() throws Exception {
         String requestId = "test-request-123";
-        mockMvc.perform(get("/actuator/health")
+        mockMvc.perform(get("/api/v1/health")
                         .header("X-Request-Id", requestId))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", requestId));

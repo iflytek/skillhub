@@ -313,6 +313,44 @@ class SkillQueryServiceTest {
         assertTrue(result.downloadUrl().contains("/versions/1.1.0/download"));
     }
 
+    @Test
+    void testResolveVersion_ShouldEncodeDownloadUrlPathSegments() throws Exception {
+        String namespaceSlug = "global";
+        String skillSlug = "smoke-skill-two";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Global", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PUBLIC);
+        setId(skill, 3L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion version = new SkillVersion(3L, "1.0.0 beta", "user-100");
+        setId(version, 11L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillFile file = new SkillFile(11L, "SKILL.md", 10L, "text/markdown", "hash", "key");
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, null, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(version));
+        when(skillVersionRepository.findBySkillIdAndStatus(3L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(version));
+        when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
+
+        SkillQueryService.ResolvedVersionDTO result = service.resolveVersion(
+                namespaceSlug,
+                skillSlug,
+                null,
+                null,
+                null,
+                null,
+                userNsRoles
+        );
+
+        assertEquals("/api/v1/skills/global/smoke-skill-two/versions/1.0.0%20beta/download", result.downloadUrl());
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);

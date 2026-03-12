@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.social;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -28,14 +29,14 @@ public class SkillRating {
     protected SkillRating() {}
 
     public SkillRating(Long skillId, String userId, short score) {
-        if (score < 1 || score > 5) throw new IllegalArgumentException("Score must be 1-5");
+        if (score < 1 || score > 5) throw new DomainBadRequestException("error.rating.score.invalid");
         this.skillId = skillId;
         this.userId = userId;
         this.score = score;
     }
 
     public void updateScore(short newScore) {
-        if (newScore < 1 || newScore > 5) throw new IllegalArgumentException("Score must be 1-5");
+        if (newScore < 1 || newScore > 5) throw new DomainBadRequestException("error.rating.score.invalid");
         this.score = newScore;
         this.updatedAt = LocalDateTime.now();
     }

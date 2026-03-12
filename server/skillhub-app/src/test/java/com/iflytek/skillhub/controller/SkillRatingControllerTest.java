@@ -41,7 +41,7 @@ class SkillRatingControllerTest {
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @Test
-    void rate_skill_returns_204() throws Exception {
+    void rate_skill_returns_envelope() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-42",
                 "tester",
@@ -61,7 +61,10 @@ class SkillRatingControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"score\": 4}"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
 
         verify(skillRatingService).rate(eq(10L), eq("user-42"), eq((short) 4));
     }
