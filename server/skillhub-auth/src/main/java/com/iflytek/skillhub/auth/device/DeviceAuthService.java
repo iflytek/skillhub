@@ -5,7 +5,10 @@ import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -76,24 +79,48 @@ public class DeviceAuthService {
     }
 
     public DeviceTokenResponse pollToken(String deviceCode) {
-        DeviceCodeData data = readDeviceCodeData(deviceCode);
+        String key = DEVICE_CODE_PREFIX + deviceCode;
+        DeviceCodeData consumed = redisTemplate.execute(new SessionCallback<>() {
+            @Override
+            public DeviceCodeData execute(RedisOperations operations) {
+                while (true) {
+                    operations.watch(key);
+                    DeviceCodeData data = readDeviceCodeData(operations.opsForValue(), deviceCode);
 
-        if (data == null) {
-            throw new DomainBadRequestException("error.deviceAuth.deviceCode.invalid");
+                    if (data == null) {
+                        operations.unwatch();
+                        throw new DomainBadRequestException("error.deviceAuth.deviceCode.invalid");
+                    }
+
+                    switch (data.getStatus()) {
+                        case PENDING -> {
+                            operations.unwatch();
+                            return null;
+                        }
+                        case USED -> {
+                            operations.unwatch();
+                            throw new DomainBadRequestException("error.deviceAuth.deviceCode.used");
+                        }
+                        case AUTHORIZED -> {
+                            data.setStatus(DeviceCodeStatus.USED);
+                            operations.multi();
+                            operations.opsForValue().set(key, data, 1, TimeUnit.MINUTES);
+                            if (operations.exec() != null) {
+                                return data;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (consumed == null) {
+            return DeviceTokenResponse.pending();
         }
 
-        return switch (data.getStatus()) {
-            case PENDING -> DeviceTokenResponse.pending();
-            case AUTHORIZED -> {
-                data.setStatus(DeviceCodeStatus.USED);
-                redisTemplate.opsForValue().set(
-                    DEVICE_CODE_PREFIX + deviceCode, data, 1, TimeUnit.MINUTES);
-                String token = apiTokenService.createToken(
-                        data.getUserId(), "device-auth", "[]").rawToken();
-                yield DeviceTokenResponse.success(token);
-            }
-            case USED -> throw new DomainBadRequestException("error.deviceAuth.deviceCode.used");
-        };
+        String token = apiTokenService.createToken(
+                consumed.getUserId(), "device-auth", "[]").rawToken();
+        return DeviceTokenResponse.success(token);
     }
 
     private String generateRandomDeviceCode() {
@@ -112,7 +139,11 @@ public class DeviceAuthService {
     }
 
     private DeviceCodeData readDeviceCodeData(String deviceCode) {
-        Object raw = redisTemplate.opsForValue().get(DEVICE_CODE_PREFIX + deviceCode);
+        return readDeviceCodeData(redisTemplate.opsForValue(), deviceCode);
+    }
+
+    private DeviceCodeData readDeviceCodeData(ValueOperations<String, Object> valueOperations, String deviceCode) {
+        Object raw = valueOperations.get(DEVICE_CODE_PREFIX + deviceCode);
         if (raw == null) {
             return null;
         }

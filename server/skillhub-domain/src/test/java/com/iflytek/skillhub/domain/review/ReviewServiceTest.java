@@ -106,11 +106,14 @@ class ReviewServiceTest {
         @Test
         void shouldSubmitReviewSuccessfully() {
             SkillVersion sv = createDraftSkillVersion();
+            Skill skill = createSkill();
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(permissionChecker.canSubmitForReview(eq(skill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
             ReviewTask savedTask = createPendingReviewTask();
             when(reviewTaskRepository.save(any(ReviewTask.class))).thenReturn(savedTask);
 
-            ReviewTask result = reviewService.submitReview(SKILL_VERSION_ID, NAMESPACE_ID, USER_ID);
+            ReviewTask result = reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of());
 
             assertNotNull(result);
             assertEquals(SkillVersionStatus.PENDING_REVIEW, sv.getStatus());
@@ -123,27 +126,33 @@ class ReviewServiceTest {
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.empty());
 
             assertThrows(DomainNotFoundException.class,
-                    () -> reviewService.submitReview(SKILL_VERSION_ID, NAMESPACE_ID, USER_ID));
+                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of()));
         }
 
         @Test
         void shouldThrowWhenStatusNotDraft() {
             SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(permissionChecker.canSubmitForReview(eq(skill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
 
             assertThrows(DomainBadRequestException.class,
-                    () -> reviewService.submitReview(SKILL_VERSION_ID, NAMESPACE_ID, USER_ID));
+                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of()));
         }
 
         @Test
         void shouldThrowOnDuplicateSubmission() {
             SkillVersion sv = createDraftSkillVersion();
+            Skill skill = createSkill();
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(permissionChecker.canSubmitForReview(eq(skill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
             when(reviewTaskRepository.save(any(ReviewTask.class)))
                     .thenThrow(new DataIntegrityViolationException("duplicate"));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> reviewService.submitReview(SKILL_VERSION_ID, NAMESPACE_ID, USER_ID));
+                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of()));
         }
     }
 

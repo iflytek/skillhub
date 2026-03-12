@@ -53,13 +53,15 @@ skillhub:
   access-policy:
     mode: OPEN
   storage:
-    type: local
+    provider: local
     local:
       base-path: ${STORAGE_BASE_PATH:/tmp/skillhub-storage}
   search:
     engine: postgres
     rebuild-on-startup: false
   publish:
+    max-file-count: 100
+    max-single-file-size: 1048576  # 1MB
     max-package-size: 104857600  # 100MB
     allowed-file-extensions: .py,.json,.yaml,.yml,.txt,.md,.sh
 

@@ -9,6 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -29,6 +31,8 @@ class DeviceAuthServiceTest {
 
     @Mock
     private ValueOperations<String, Object> valueOperations;
+    @Mock
+    private RedisOperations<String, Object> redisOperations;
 
     @Mock
     private ApiTokenService apiTokenService;
@@ -37,7 +41,10 @@ class DeviceAuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisOperations.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.execute(any(SessionCallback.class)))
+                .thenAnswer(invocation -> invocation.<SessionCallback<?>>getArgument(0).execute(redisOperations));
         service = new DeviceAuthService(redisTemplate, apiTokenService, "https://skillhub.example.com/device", new ObjectMapper());
     }
 
@@ -137,6 +144,7 @@ class DeviceAuthServiceTest {
         redisValue.put("status", "AUTHORIZED");
         redisValue.put("userId", "42");
         when(valueOperations.get("device:code:device123")).thenReturn(redisValue);
+        when(redisOperations.exec()).thenReturn(java.util.List.of("OK"));
         when(apiTokenService.createToken("42", "device-auth", "[]"))
                 .thenReturn(new ApiTokenService.TokenCreateResult("sk_device_token", null));
 
@@ -145,13 +153,17 @@ class DeviceAuthServiceTest {
         assertThat(response.error()).isNull();
         assertThat(response.accessToken()).isEqualTo("sk_device_token");
         assertThat(response.tokenType()).isEqualTo("Bearer");
+        verify(redisOperations).watch("device:code:device123");
+        verify(redisOperations).multi();
         verify(valueOperations).set(eq("device:code:device123"), any(DeviceCodeData.class), eq(1L), eq(TimeUnit.MINUTES));
+        verify(redisOperations).exec();
     }
 
     @Test
     void pollToken_returns_access_token_when_authorized() {
         DeviceCodeData data = new DeviceCodeData("device123", "ABCD-1234", DeviceCodeStatus.AUTHORIZED, "42");
         when(valueOperations.get("device:code:device123")).thenReturn(data);
+        when(redisOperations.exec()).thenReturn(java.util.List.of("OK"));
         when(apiTokenService.createToken("42", "device-auth", "[]"))
                 .thenReturn(new ApiTokenService.TokenCreateResult("sk_device_token", null));
 
@@ -160,6 +172,9 @@ class DeviceAuthServiceTest {
         assertThat(response.error()).isNull();
         assertThat(response.accessToken()).isEqualTo("sk_device_token");
         assertThat(response.tokenType()).isEqualTo("Bearer");
+        verify(redisOperations).watch("device:code:device123");
+        verify(redisOperations).multi();
         verify(valueOperations).set(eq("device:code:device123"), eq(data), eq(1L), eq(TimeUnit.MINUTES));
+        verify(redisOperations).exec();
     }
 }

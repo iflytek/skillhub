@@ -15,8 +15,15 @@ public class DomainBeanConfig {
     }
 
     @Bean
-    public SkillPackageValidator skillPackageValidator(SkillMetadataParser skillMetadataParser) {
-        return new SkillPackageValidator(skillMetadataParser);
+    public SkillPackageValidator skillPackageValidator(SkillMetadataParser skillMetadataParser,
+                                                       SkillPublishProperties skillPublishProperties) {
+        return new SkillPackageValidator(
+                skillMetadataParser,
+                skillPublishProperties.getMaxFileCount(),
+                skillPublishProperties.getMaxSingleFileSize(),
+                skillPublishProperties.getMaxPackageSize(),
+                skillPublishProperties.getAllowedFileExtensions()
+        );
     }
 
     @Bean

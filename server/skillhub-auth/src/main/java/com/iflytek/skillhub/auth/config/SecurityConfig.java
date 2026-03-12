@@ -75,7 +75,21 @@ public class SecurityConfig {
                     "/api/compat/v1/search",
                     "/api/compat/v1/resolve/**"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/skills", "/api/v1/skills/**").permitAll()
+                .requestMatchers(HttpMethod.GET,
+                    "/api/v1/skills",
+                    "/api/v1/skills/*/*",
+                    "/api/v1/skills/*/*/versions",
+                    "/api/v1/skills/*/*/versions/*",
+                    "/api/v1/skills/*/*/versions/*/files",
+                    "/api/v1/skills/*/*/versions/*/file",
+                    "/api/v1/skills/*/*/resolve",
+                    "/api/v1/skills/*/*/download",
+                    "/api/v1/skills/*/*/versions/*/download",
+                    "/api/v1/skills/*/*/tags",
+                    "/api/v1/skills/*/*/tags/*/files",
+                    "/api/v1/skills/*/*/tags/*/file",
+                    "/api/v1/skills/*/*/tags/*/download"
+                ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/namespaces", "/api/v1/namespaces/*").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "SKILL_ADMIN", "USER_ADMIN", "AUDITOR")
                 .anyRequest().authenticated()

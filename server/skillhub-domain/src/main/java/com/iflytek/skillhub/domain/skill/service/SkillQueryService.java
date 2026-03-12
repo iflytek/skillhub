@@ -230,8 +230,13 @@ public class SkillQueryService {
         return objectStorageService.getObject(file.getStorageKey());
     }
 
-    public Page<SkillVersion> listVersions(String namespaceSlug, String skillSlug, Pageable pageable) {
+    public Page<SkillVersion> listVersions(String namespaceSlug,
+                                           String skillSlug,
+                                           String currentUserId,
+                                           Map<Long, NamespaceRole> userNsRoles,
+                                           Pageable pageable) {
         Skill skill = findSkill(namespaceSlug, skillSlug);
+        assertPublishedAccessible(skill, currentUserId, userNsRoles);
 
         List<SkillVersion> publishedVersions = skillVersionRepository.findBySkillIdAndStatus(
                 skill.getId(), SkillVersionStatus.PUBLISHED);
