@@ -71,7 +71,9 @@ public class SecurityConfig {
                     "/actuator/health",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
-                    "/.well-known/**"
+                    "/.well-known/**",
+                    "/api/compat/v1/search",
+                    "/api/compat/v1/resolve/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/skills", "/api/v1/skills/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/namespaces", "/api/v1/namespaces/*").permitAll()
