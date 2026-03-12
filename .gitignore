@@ -8,6 +8,9 @@ Thumbs.db
 *.iml
 *.swp
 *.swo
+.classpath
+.project
+.settings/
 
 # Logs
 *.log
