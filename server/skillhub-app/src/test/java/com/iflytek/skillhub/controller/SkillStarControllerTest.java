@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.social.SkillStarService;
 import org.junit.jupiter.api.Test;
@@ -123,6 +124,35 @@ class SkillStarControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").value(true))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void check_starred_missing_skill_returns_404_envelope() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42",
+                "tester",
+                "tester@example.com",
+                "https://example.com/avatar.png",
+                "github",
+                Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        when(skillStarService.isStarred(eq(999L), eq("user-42")))
+                .thenThrow(new DomainNotFoundException("skill.not_found", 999L));
+
+        mockMvc.perform(get("/api/v1/skills/999/star")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.msg").value("Skill not found: 999"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
     }

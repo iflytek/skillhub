@@ -114,6 +114,9 @@ skillhub/
 │   ├── Dockerfile        # 前端多阶段构建
 │   └── nginx.conf        # Nginx 配置（SPA 路由 + API 反向代理）
 ├── docker-compose.yml    # 本地开发依赖服务（PostgreSQL/Redis/MinIO）
+├── compose.release.yml   # 单机运行时编排（发布镜像 + PostgreSQL + Redis）
+├── .env.release.example  # 单机运行时环境变量模板
+├── .github/workflows/    # GitHub Actions 镜像发布流程
 ├── Makefile              # 顶层开发编排（dev / dev-all / build）
 ├── docs/                 # 设计文档
 └── README.md
@@ -123,10 +126,20 @@ skillhub/
 
 ## 8. 部署架构
 
-同域部署，统一入口：
-- `https://skills.example.com/` → 前端静态资源
-- `https://skills.example.com/api/*` → 反向代理到 Spring Boot
-- 生产环境通过 Nginx 或网关统一接入
+部署模型收敛为两条路径：
+
+- 开发路径：`make dev-all`。前后端在宿主机运行，`docker-compose.yml` 只负责 PostgreSQL、Redis、MinIO。
+- 交付路径：GitHub Actions 构建并发布 `server` / `web` 镜像；用户通过 `compose.release.yml` 在本地一键拉起前后端容器和基础服务。
+- 发布镜像为多架构 manifest，至少覆盖 `linux/amd64` 与 `linux/arm64`。
+
+单机运行时统一入口：
+- `http://localhost/` → Web 容器（Nginx）
+- `http://localhost/api/*` → Web 容器反向代理到 Spring Boot
+- `http://localhost:8080/actuator/health` → 后端健康检查
+
+单机运行时使用 `local,docker` profile 组合：
+- `local` 提供 mock 登录和种子账号，保证拉起即用
+- `docker` 负责将数据库、Redis 地址切换到 Compose 网络
 
 ## 9. 分布式环境要求
 
@@ -148,3 +161,5 @@ skillhub/
 - 缓存/Session：Spring Session + Redis
 - 数据库迁移：Flyway
 - 认证：Spring Security OAuth2 Client（一期 GitHub）
+- 镜像发布：GitHub Actions 推送至 GHCR，默认维护 `edge` 与语义化版本标签
+- 运行时兼容：发布镜像默认输出 `linux/amd64` + `linux/arm64` 多架构 manifest

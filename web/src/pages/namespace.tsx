@@ -20,7 +20,12 @@ export function NamespacePage() {
   }
 
   if (isLoadingNamespace) {
-    return <div className="animate-pulse">加载中...</div>
+    return (
+      <div className="space-y-6 animate-fade-up">
+        <div className="h-12 w-48 animate-shimmer rounded-lg" />
+        <div className="h-6 w-96 animate-shimmer rounded-md" />
+      </div>
+    )
   }
 
   if (!namespaceData) {
@@ -28,21 +33,22 @@ export function NamespacePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       <NamespaceHeader namespace={namespaceData} />
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">技能列表</h2>
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold font-heading">技能列表</h2>
         {isLoadingSkills ? (
           <SkeletonList count={6} />
         ) : skillsData && skillsData.items.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {skillsData.items.map((skill) => (
-              <SkillCard
-                key={skill.id}
-                skill={skill}
-                onClick={() => handleSkillClick(skill.slug)}
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {skillsData.items.map((skill, idx) => (
+              <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
+                <SkillCard
+                  skill={skill}
+                  onClick={() => handleSkillClick(skill.slug)}
+                />
+              </div>
             ))}
           </div>
         ) : (

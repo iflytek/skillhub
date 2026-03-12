@@ -83,13 +83,13 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-3xl font-bold mb-2">用户管理</h1>
-        <p className="text-muted-foreground">管理平台用户和权限</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">用户管理</h1>
+        <p className="text-muted-foreground text-lg">管理平台用户和权限</p>
       </div>
 
-      <Card className="p-4">
+      <Card className="p-5">
         <div className="flex gap-4">
           <Input
             placeholder="搜索用户名或邮箱..."
@@ -106,7 +106,11 @@ export function AdminUsersPage() {
       </Card>
 
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">加载中...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 animate-shimmer rounded-lg" />
+          ))}
+        </div>
       ) : !data || data.items.length === 0 ? (
         <Card className="p-12 text-center">
           <p className="text-muted-foreground">暂无用户数据</p>
@@ -132,10 +136,10 @@ export function AdminUsersPage() {
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
                           user.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border-red-500/20'
                         }`}
                       >
                         {user.status === 'ACTIVE' ? '活跃' : '已禁用'}

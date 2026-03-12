@@ -14,9 +14,7 @@ help: ## 显示帮助
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 dev: ## 启动本地开发环境（仅依赖服务）
-	docker compose up -d
-	@echo "Waiting for services to be healthy..."
-	@sleep 5
+	docker compose up -d --wait --remove-orphans
 	@echo "Services ready."
 	@echo "Start backend with: make dev-server"
 	@echo "Start frontend with: make dev-web"
@@ -32,7 +30,7 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 		echo "Backend already running with PID $$(cat $(DEV_SERVER_PID))"; \
 	else \
 		echo "Starting backend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local >/dev/null; \
+		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
 	fi
 	@if [ -f $(DEV_WEB_PID) ] && kill -0 "$$(cat $(DEV_WEB_PID))" 2>/dev/null; then \
 		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
@@ -71,15 +69,18 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 	@echo "Local environment is ready:"
 	@echo "  Web UI:  $(DEV_WEB_URL)"
 	@echo "  Backend: $(DEV_API_URL)"
+	@echo "Mock auth users:"
+	@echo "  local-user  -> X-Mock-User-Id: local-user"
+	@echo "  local-admin -> X-Mock-User-Id: local-admin"
 	@echo "Logs:"
 	@echo "  Backend: $(DEV_SERVER_LOG)"
 	@echo "  Frontend: $(DEV_WEB_LOG)"
 
 dev-server: ## 启动后端开发服务器
-	cd server && ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local
+	cd server && /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local'
 
 dev-down: ## 停止本地开发环境
-	docker compose down
+	docker compose down --remove-orphans
 
 dev-all-down: ## 停止本地开发环境（依赖 + 后端 + 前端）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
@@ -89,7 +90,7 @@ dev-all-down: ## 停止本地开发环境（依赖 + 后端 + 前端）
 dev-all-reset: ## 重置本地开发环境（清理依赖数据卷后重新启动）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_WEB_PID)
-	docker compose down -v
+	docker compose down -v --remove-orphans
 	rm -rf $(DEV_DIR)
 	@$(MAKE) dev-all
 
@@ -127,8 +128,6 @@ lint-web: ## 前端代码检查
 	cd web && pnpm run lint
 
 db-reset: ## 重置数据库
-	docker compose down -v
-	docker compose up -d postgres
-	@echo "Waiting for postgres..."
-	@sleep 3
+	docker compose down -v --remove-orphans
+	docker compose up -d --wait --remove-orphans postgres
 	cd server && ./mvnw flyway:migrate -pl skillhub-app

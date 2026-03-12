@@ -48,6 +48,13 @@ Then open:
 - Web UI: `http://localhost:3000`
 - Backend API: `http://localhost:8080`
 
+Local profile seeds two mock-auth users automatically:
+
+- `local-user` for normal publishing and namespace operations
+- `local-admin` with `SUPER_ADMIN` for review and admin flows
+
+Use them with the `X-Mock-User-Id` header in local development.
+
 Stop everything with:
 
 ```bash
@@ -61,6 +68,57 @@ make dev-all-reset
 ```
 
 Run `make help` to see all available commands.
+
+### Container Runtime
+
+Published runtime images are built by GitHub Actions and pushed to GHCR.
+This is the supported path for anyone who wants a ready-to-use local
+environment without building the backend or frontend on their machine.
+Published images target both `linux/amd64` and `linux/arm64`.
+
+1. Copy the runtime environment template.
+2. Pick an image tag.
+3. Start the stack with Docker Compose.
+
+```bash
+cp .env.release.example .env.release
+```
+
+Recommended image tags:
+
+- `SKILLHUB_VERSION=edge` for the latest `main` build
+- `SKILLHUB_VERSION=vX.Y.Z` for a fixed release
+
+Start the runtime:
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml up -d
+```
+
+Then open:
+
+- Web UI: `http://localhost`
+- Backend API: `http://localhost:8080`
+
+Stop it with:
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml down
+```
+
+The runtime stack uses its own Compose project name, so it does not
+collide with containers from `make dev-all`.
+
+The runtime uses the existing `local,docker` profile combination so it
+is immediately usable with the same mock-auth flow as local development.
+Available seeded users:
+
+- `local-user`
+- `local-admin`
+
+Pass `X-Mock-User-Id` to the backend when you need an authenticated
+session without configuring GitHub OAuth. If the GHCR package remains
+private, run `docker login ghcr.io` before `docker compose up -d`.
 
 ## Architecture
 
@@ -82,7 +140,7 @@ Run `make help` to see all available commands.
               ┌────────────┼────────────┐
               │            │            │
        ┌──────▼───┐  ┌─────▼────┐  ┌───▼────┐
-       │PostgreSQL│  │  Redis   │  │ MinIO  │
+       │PostgreSQL│  │  Redis   │  │ Storage │
        └──────────┘  └──────────┘  └────────┘
 ```
 

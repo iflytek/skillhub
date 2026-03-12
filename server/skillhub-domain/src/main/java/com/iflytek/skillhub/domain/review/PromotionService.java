@@ -8,10 +8,12 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.*;
+import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ConcurrentModificationException;
 import java.util.List;
@@ -27,6 +29,7 @@ public class PromotionService {
     private final NamespaceRepository namespaceRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final EntityManager entityManager;
 
     public PromotionService(PromotionRequestRepository promotionRequestRepository,
                             SkillRepository skillRepository,
@@ -34,7 +37,8 @@ public class PromotionService {
                             SkillFileRepository skillFileRepository,
                             NamespaceRepository namespaceRepository,
                             ReviewPermissionChecker permissionChecker,
-                            ApplicationEventPublisher eventPublisher) {
+                            ApplicationEventPublisher eventPublisher,
+                            EntityManager entityManager) {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -42,6 +46,7 @@ public class PromotionService {
         this.namespaceRepository = namespaceRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -96,6 +101,11 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
+        entityManager.detach(request);
+        request.setStatus(ReviewTaskStatus.APPROVED);
+        request.setReviewedBy(reviewerId);
+        request.setReviewComment(comment);
+        request.setReviewedAt(Instant.now());
 
         Skill sourceSkill = skillRepository.findById(request.getSourceSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", request.getSourceSkillId()));
@@ -138,9 +148,12 @@ public class PromotionService {
                 .toList();
         skillFileRepository.saveAll(copiedFiles);
 
-        // Update promotion request with target skill id
+        int targetUpdated = promotionRequestRepository.updateStatusWithVersion(
+                promotionId, ReviewTaskStatus.APPROVED, reviewerId, comment, newSkill.getId(), request.getVersion() + 1);
+        if (targetUpdated == 0) {
+            throw new ConcurrentModificationException("Promotion request target skill was modified concurrently");
+        }
         request.setTargetSkillId(newSkill.getId());
-        promotionRequestRepository.save(request);
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 newSkill.getId(), newVersion.getId(), reviewerId));
@@ -167,7 +180,11 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
-
-        return promotionRequestRepository.findById(promotionId).orElse(request);
+        entityManager.detach(request);
+        request.setStatus(ReviewTaskStatus.REJECTED);
+        request.setReviewedBy(reviewerId);
+        request.setReviewComment(comment);
+        request.setReviewedAt(Instant.now());
+        return request;
     }
 }

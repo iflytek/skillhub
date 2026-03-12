@@ -12,6 +12,7 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
+import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -32,19 +33,22 @@ public class ReviewService {
     private final NamespaceRepository namespaceRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final EntityManager entityManager;
 
     public ReviewService(ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
                          SkillRepository skillRepository,
                          NamespaceRepository namespaceRepository,
                          ReviewPermissionChecker permissionChecker,
-                         ApplicationEventPublisher eventPublisher) {
+                         ApplicationEventPublisher eventPublisher,
+                         EntityManager entityManager) {
         this.reviewTaskRepository = reviewTaskRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -91,6 +95,11 @@ public class ReviewService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
+        entityManager.detach(task);
+        task.setStatus(ReviewTaskStatus.APPROVED);
+        task.setReviewedBy(reviewerId);
+        task.setReviewComment(comment);
+        task.setReviewedAt(Instant.now());
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
@@ -106,8 +115,7 @@ public class ReviewService {
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 skill.getId(), skillVersion.getId(), reviewerId));
 
-        // Reload to return updated state
-        return reviewTaskRepository.findById(reviewTaskId).orElse(task);
+        return task;
     }
 
     @Transactional
@@ -134,13 +142,18 @@ public class ReviewService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
+        entityManager.detach(task);
+        task.setStatus(ReviewTaskStatus.REJECTED);
+        task.setReviewedBy(reviewerId);
+        task.setReviewComment(comment);
+        task.setReviewedAt(Instant.now());
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
         skillVersion.setStatus(SkillVersionStatus.REJECTED);
         skillVersionRepository.save(skillVersion);
 
-        return reviewTaskRepository.findById(reviewTaskId).orElse(task);
+        return task;
     }
 
     @Transactional

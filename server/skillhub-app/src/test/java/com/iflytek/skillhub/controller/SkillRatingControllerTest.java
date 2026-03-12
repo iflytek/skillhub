@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.social.SkillRatingService;
 import org.junit.jupiter.api.Test;
@@ -106,5 +107,34 @@ class SkillRatingControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"score\": 4}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void get_user_rating_missing_skill_returns_404_envelope() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42",
+                "tester",
+                "tester@example.com",
+                "https://example.com/avatar.png",
+                "github",
+                Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        when(skillRatingService.getUserRating(eq(999L), eq("user-42")))
+                .thenThrow(new DomainNotFoundException("skill.not_found", 999L));
+
+        mockMvc.perform(get("/api/v1/skills/999/rating")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.msg").value("Skill not found: 999"))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 }

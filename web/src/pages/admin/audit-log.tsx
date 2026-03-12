@@ -30,13 +30,13 @@ export function AuditLogPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-3xl font-bold mb-2">审计日志</h1>
-        <p className="text-muted-foreground">查看系统操作记录</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">审计日志</h1>
+        <p className="text-muted-foreground text-lg">查看系统操作记录</p>
       </div>
 
-      <Card className="p-4">
+      <Card className="p-5">
         <div className="flex gap-4">
           <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="w-[200px]">
             <option value="">全部</option>
@@ -57,7 +57,11 @@ export function AuditLogPage() {
       </Card>
 
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">加载中...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 animate-shimmer rounded-lg" />
+          ))}
+        </div>
       ) : !data || data.items.length === 0 ? (
         <Card className="p-12 text-center">
           <p className="text-muted-foreground">暂无审计日志</p>

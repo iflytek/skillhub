@@ -30,10 +30,14 @@ public class ReviewPermissionChecker {
             return false;
         }
 
+        if (platformRoles.contains("SKILL_ADMIN")
+                || platformRoles.contains("SUPER_ADMIN")) {
+            return true;
+        }
+
         // Global namespace: only SKILL_ADMIN or SUPER_ADMIN
         if (namespaceType == NamespaceType.GLOBAL) {
-            return platformRoles.contains("SKILL_ADMIN")
-                    || platformRoles.contains("SUPER_ADMIN");
+            return false;
         }
 
         // Team namespace: namespace ADMIN or OWNER

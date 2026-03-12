@@ -41,38 +41,46 @@ export function SearchPage() {
   const totalPages = data ? Math.ceil(data.total / data.size) : 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       {/* Search Bar */}
-      <div className="max-w-2xl">
+      <div className="max-w-3xl mx-auto">
         <SearchBar defaultValue={q} onSearch={handleSearch} />
       </div>
 
       {/* Sort Selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">排序:</span>
-        <div className="flex gap-2">
-          <Button
-            variant={sort === 'relevance' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleSortChange('relevance')}
-          >
-            相关性
-          </Button>
-          <Button
-            variant={sort === 'downloads' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleSortChange('downloads')}
-          >
-            下载量
-          </Button>
-          <Button
-            variant={sort === 'newest' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleSortChange('newest')}
-          >
-            最新
-          </Button>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">排序:</span>
+          <div className="flex gap-2">
+            <Button
+              variant={sort === 'relevance' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSortChange('relevance')}
+            >
+              相关性
+            </Button>
+            <Button
+              variant={sort === 'downloads' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSortChange('downloads')}
+            >
+              下载量
+            </Button>
+            <Button
+              variant={sort === 'newest' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSortChange('newest')}
+            >
+              最新
+            </Button>
+          </div>
         </div>
+
+        {data && data.total > 0 && (
+          <div className="text-sm text-muted-foreground">
+            找到 <span className="text-primary font-semibold">{data.total}</span> 个结果
+          </div>
+        )}
       </div>
 
       {/* Results */}
@@ -80,16 +88,14 @@ export function SearchPage() {
         <SkeletonList count={12} />
       ) : data && data.items.length > 0 ? (
         <>
-          <div className="text-sm text-muted-foreground">
-            找到 {data.total} 个结果
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.items.map((skill) => (
-              <SkillCard
-                key={skill.id}
-                skill={skill}
-                onClick={() => handleSkillClick(skill.namespace, skill.slug)}
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {data.items.map((skill, idx) => (
+              <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
+                <SkillCard
+                  skill={skill}
+                  onClick={() => handleSkillClick(skill.namespace, skill.slug)}
+                />
+              </div>
             ))}
           </div>
           {totalPages > 1 && (

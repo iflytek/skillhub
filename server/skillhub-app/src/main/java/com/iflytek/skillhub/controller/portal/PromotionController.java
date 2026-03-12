@@ -58,7 +58,7 @@ public class PromotionController extends BaseApiController {
         PromotionRequest promotion = promotionService.submitPromotion(
                 request.sourceSkillId(), request.sourceVersionId(),
                 request.targetNamespaceId(), userId);
-        return ok("response.success.create", toResponse(promotion));
+        return ok("response.success.created", toResponse(promotion));
     }
 
     @PostMapping("/{id}/approve")

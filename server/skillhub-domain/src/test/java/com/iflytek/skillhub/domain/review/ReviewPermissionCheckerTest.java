@@ -66,9 +66,17 @@ class ReviewPermissionCheckerTest {
     @Test
     void skillAdminCannotReviewTeamSkill() {
         ReviewTask task = new ReviewTask(1L, 10L, "user-2");
-        assertFalse(checker.canReview(task, "user-1",
+        assertTrue(checker.canReview(task, "user-1",
                 NamespaceType.TEAM,
                 Map.of(), Set.of("SKILL_ADMIN")));
+    }
+
+    @Test
+    void superAdminCanReviewTeamSkill() {
+        ReviewTask task = new ReviewTask(1L, 10L, "user-2");
+        assertTrue(checker.canReview(task, "user-1",
+                NamespaceType.TEAM,
+                Map.of(), Set.of("SUPER_ADMIN")));
     }
 
     @Test

@@ -61,7 +61,7 @@ public class ReviewController extends BaseApiController {
                 .orElseThrow();
         Skill skill = skillRepository.findById(sv.getSkillId()).orElseThrow();
         ReviewTask task = reviewService.submitReview(request.skillVersionId(), skill.getNamespaceId(), userId);
-        return ok("response.success.create", toResponse(task));
+        return ok("response.success.created", toResponse(task));
     }
 
     @PostMapping("/{id}/approve")

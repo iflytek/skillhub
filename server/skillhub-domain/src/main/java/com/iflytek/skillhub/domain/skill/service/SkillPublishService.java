@@ -214,6 +214,9 @@ public class SkillPublishService {
         version.setTotalSize(totalSize);
         skillVersionRepository.save(version);
 
+        ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
+        reviewTaskRepository.save(reviewTask);
+
         // 12. Update skill
         skill.setLatestVersionId(version.getId());
         skill.setDisplayName(metadata.name());

@@ -86,10 +86,15 @@ export function DeviceAuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">设备授权</h1>
+    <div className="min-h-[70vh] flex items-center justify-center p-4 animate-fade-up">
+      <Card className="w-full max-w-md p-8 space-y-8">
+        <div className="text-center space-y-3">
+          <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent items-center justify-center shadow-glow mb-2 mx-auto">
+            <svg className="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold font-heading">设备授权</h1>
           <p className="text-muted-foreground">
             请输入设备上显示的 8 位用户码
           </p>
@@ -128,10 +133,10 @@ export function DeviceAuthPage() {
 
           {message && (
             <div
-              className={`p-4 rounded-md ${
+              className={`p-4 rounded-xl text-sm ${
                 message.type === 'success'
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
               }`}
             >
               {message.text}

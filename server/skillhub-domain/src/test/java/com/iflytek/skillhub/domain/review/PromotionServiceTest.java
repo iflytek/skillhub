@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import jakarta.persistence.EntityManager;
 
 import java.util.*;
 
@@ -34,6 +35,7 @@ class PromotionServiceTest {
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private EntityManager entityManager;
 
     private PromotionService promotionService;
 
@@ -50,7 +52,7 @@ class PromotionServiceTest {
     void setUp() {
         promotionService = new PromotionService(
                 promotionRequestRepository, skillRepository, skillVersionRepository,
-                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher);
+                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher, entityManager);
     }
 
     private static void setField(Object target, String fieldName, Object value) {
@@ -233,6 +235,9 @@ class PromotionServiceTest {
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", null, pr.getVersion()))
                     .thenReturn(1);
+            when(promotionRequestRepository.updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", NEW_SKILL_ID, pr.getVersion() + 1))
+                    .thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
             when(skillRepository.save(any(Skill.class))).thenAnswer(inv -> {
@@ -292,8 +297,9 @@ class PromotionServiceTest {
             assertEquals(NEW_VERSION_ID, event.versionId());
             assertEquals(REVIEWER_ID, event.publisherId());
 
-            // Verify targetSkillId updated on promotion request
-            verify(promotionRequestRepository).save(pr);
+            verify(entityManager).detach(pr);
+            verify(promotionRequestRepository).updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", NEW_SKILL_ID, pr.getVersion() + 1);
             assertEquals(NEW_SKILL_ID, pr.getTargetSkillId());
         }
 
@@ -346,6 +352,9 @@ class PromotionServiceTest {
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(any(), any(), any(), any(), any(), any())).thenReturn(1);
+            when(promotionRequestRepository.updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", NEW_SKILL_ID, pr.getVersion() + 1))
+                    .thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
             when(skillRepository.save(any(Skill.class))).thenAnswer(inv -> {
@@ -382,14 +391,15 @@ class PromotionServiceTest {
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion()))
                     .thenReturn(1);
-            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
-
             PromotionRequest result = promotionService.rejectPromotion(
                     PROMOTION_ID, REVIEWER_ID, "Not ready", Set.of("SKILL_ADMIN"));
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.REJECTED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
             verify(promotionRequestRepository).updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion());
+            verify(entityManager).detach(pr);
             verify(eventPublisher, never()).publishEvent(any());
         }
 

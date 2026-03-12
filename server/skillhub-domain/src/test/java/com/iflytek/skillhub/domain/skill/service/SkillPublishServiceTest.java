@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -128,6 +129,7 @@ class SkillPublishServiceTest {
         verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
         verify(skillFileRepository).saveAll(anyList());
         verify(objectStorageService, atLeastOnce()).putObject(anyString(), any(), anyLong(), anyString());
+        verify(reviewTaskRepository).save(any(ReviewTask.class));
     }
 
     @Test
@@ -168,6 +170,7 @@ class SkillPublishServiceTest {
 
         assertEquals("smoke-skill-two", result.slug());
         verify(skillRepository).findByNamespaceIdAndSlug(1L, "smoke-skill-two");
+        verify(reviewTaskRepository).save(any(ReviewTask.class));
     }
 
     @Test

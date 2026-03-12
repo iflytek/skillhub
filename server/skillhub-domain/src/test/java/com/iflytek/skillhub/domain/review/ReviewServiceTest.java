@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,7 @@ class ReviewServiceTest {
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private EntityManager entityManager;
 
     private ReviewService reviewService;
 
@@ -55,7 +57,7 @@ class ReviewServiceTest {
     void setUp() {
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher);
+                namespaceRepository, permissionChecker, eventPublisher, entityManager);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -164,13 +166,16 @@ class ReviewServiceTest {
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
-            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.approveReview(
                     REVIEW_TASK_ID, REVIEWER_ID, "LGTM",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.APPROVED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("LGTM", result.getReviewComment());
+            assertNotNull(result.getReviewedAt());
             assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
             assertNotNull(sv.getPublishedAt());
             assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
@@ -190,7 +195,6 @@ class ReviewServiceTest {
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
-            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
@@ -262,13 +266,16 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
-            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.rejectReview(
                     REVIEW_TASK_ID, REVIEWER_ID, "needs work",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.REJECTED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("needs work", result.getReviewComment());
+            assertNotNull(result.getReviewedAt());
             assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
             verify(skillVersionRepository).save(sv);
             verify(eventPublisher, never()).publishEvent(any(SkillPublishedEvent.class));
