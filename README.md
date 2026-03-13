@@ -24,10 +24,12 @@ firewall, with the same polish you'd expect from a public registry.
   Each namespace has its own members, roles (Owner / Admin /
   Member), and publishing policies.
 - **Review & Governance** — Team admins review within their namespace;
-  platform admins gate promotions to the global scope. Every
-  action is audit-logged for compliance.
+  platform admins gate promotions to the global scope. Governance
+  actions are audit-logged for compliance.
 - **CLI-First** — Native REST API plus a compatibility layer for
-  existing ClawHub CLI tools — no client changes needed.
+  existing ClawHub-style registry clients. Native CLI APIs are the
+  primary supported path while protocol compatibility continues to
+  expand.
 - **Pluggable Storage** — Local filesystem for development, S3 /
   MinIO for production. Swap via config.
 
@@ -70,6 +72,25 @@ make dev-all-reset
 ```
 
 Run `make help` to see all available commands.
+
+### API Contract Sync
+
+OpenAPI types for the web client are checked into the repository.
+When backend API contracts change, regenerate the SDK and commit the
+updated generated file:
+
+```bash
+make generate-api
+```
+
+For a stricter end-to-end drift check, run:
+
+```bash
+./scripts/check-openapi-generated.sh
+```
+
+This starts local dependencies, boots the backend, regenerates the
+frontend schema, and fails if the checked-in SDK is stale.
 
 ### Container Runtime
 
@@ -209,4 +230,4 @@ what you'd like to change.
 
 ## License
 
-MIT
+Apache License 2.0

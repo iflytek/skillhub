@@ -26,3 +26,8 @@ body:
     attributes:
       label: Impact
       description: Auth, API, migration, deployment, observability, or UX impact
+  - type: textarea
+    id: contract
+    attributes:
+      label: Contract Or SDK Impact
+      description: Note whether this proposal changes OpenAPI, generated SDKs, CLI protocol, or operator docs.

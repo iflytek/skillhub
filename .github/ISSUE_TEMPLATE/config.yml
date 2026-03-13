@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security Report
-    url: https://example.invalid/security-contact
+    url: https://github.com/iflytek/skillhub/security/advisories/new
     about: Do not file public issues for suspected vulnerabilities.

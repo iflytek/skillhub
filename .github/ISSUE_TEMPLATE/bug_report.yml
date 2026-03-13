@@ -30,6 +30,11 @@ body:
       label: Environment
       description: Branch, commit, runtime profile, browser, OS, etc.
   - type: textarea
+    id: api-impact
+    attributes:
+      label: API Contract Impact
+      description: If relevant, include the request path, response shape, and whether `web/src/api/generated/schema.d.ts` appears stale.
+  - type: textarea
     id: logs
     attributes:
       label: Logs Or Screenshots

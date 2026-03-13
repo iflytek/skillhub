@@ -29,5 +29,5 @@ project spaces.
 
 ## Reporting
 
-Report conduct issues privately to the maintainers through an internal contact
+Report conduct issues privately to the maintainers through a private maintainer
 channel. Do not use public issues for personal or sensitive reports.

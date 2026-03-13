@@ -32,6 +32,8 @@ Useful commands:
 make test
 make typecheck-web
 make build-web
+make generate-api
+./scripts/check-openapi-generated.sh
 ./scripts/smoke-test.sh
 ```
 
@@ -47,6 +49,8 @@ make dev-all-down
 - Follow existing module boundaries across `server/`, `web/`, and `docs/`.
 - Add or update tests when behavior changes.
 - Update docs when APIs, auth flows, deployment, or operator workflows change.
+- Regenerate and commit `web/src/api/generated/schema.d.ts` when backend OpenAPI
+  contracts change.
 - Prefer backward-compatible changes unless the issue explicitly allows a break.
 
 ## Pull Requests
@@ -56,6 +60,8 @@ Before opening a pull request, make sure:
 - The branch is rebased or merged cleanly from the target branch.
 - Relevant backend tests pass.
 - Frontend typecheck/build passes when frontend files changed.
+- `make generate-api` or `./scripts/check-openapi-generated.sh` has been run when
+  backend API contracts changed.
 - Smoke coverage is updated when operator-facing workflows change.
 - The pull request description explains motivation, scope, and rollout impact.
 
@@ -71,5 +77,5 @@ Conventional-style subjects are preferred, for example:
 
 Do not open public issues for suspected security vulnerabilities.
 
-Report them privately to the maintainers through your internal security process
-or a private maintainer contact channel.
+Use GitHub Security Advisories or your internal security process to report them
+privately to the maintainers.
