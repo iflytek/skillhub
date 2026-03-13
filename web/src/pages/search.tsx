@@ -35,7 +35,7 @@ export function SearchPage() {
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: `/@${namespace}/${slug}` })
+    navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   const totalPages = data ? Math.ceil(data.total / data.size) : 0

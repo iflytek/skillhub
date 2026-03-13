@@ -23,7 +23,7 @@ export function HomePage() {
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: `/@${namespace}/${slug}` })
+    navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   return (
