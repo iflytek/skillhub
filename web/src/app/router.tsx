@@ -89,7 +89,7 @@ const searchRoute = createRoute({
     return {
       q: (search.q as string) || '',
       sort: (search.sort as string) || 'relevance',
-      page: Number(search.page) || 1,
+      page: Number(search.page) || 0,
     }
   },
 })

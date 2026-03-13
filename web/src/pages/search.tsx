@@ -13,7 +13,7 @@ export function SearchPage() {
 
   const q = searchParams.q || ''
   const sort = searchParams.sort || 'relevance'
-  const page = searchParams.page || 1
+  const page = searchParams.page ?? 0
 
   const { data, isLoading } = useSearchSkills({
     q,
@@ -23,11 +23,11 @@ export function SearchPage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort, page: 1 } })
+    navigate({ to: '/search', search: { q: query, sort, page: 0 } })
   }
 
   const handleSortChange = (newSort: string) => {
-    navigate({ to: '/search', search: { q, sort: newSort, page: 1 } })
+    navigate({ to: '/search', search: { q, sort: newSort, page: 0 } })
   }
 
   const handlePageChange = (newPage: number) => {
