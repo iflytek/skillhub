@@ -5,6 +5,7 @@ import com.iflytek.skillhub.auth.oauth.OAuthClaims;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
@@ -20,13 +21,16 @@ public class IdentityBindingService {
     private final IdentityBindingRepository bindingRepo;
     private final UserAccountRepository userRepo;
     private final UserRoleBindingRepository roleBindingRepo;
+    private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
 
     public IdentityBindingService(IdentityBindingRepository bindingRepo,
-                                   UserAccountRepository userRepo,
-                                   UserRoleBindingRepository roleBindingRepo) {
+                                  UserAccountRepository userRepo,
+                                  UserRoleBindingRepository roleBindingRepo,
+                                  GlobalNamespaceMembershipService globalNamespaceMembershipService) {
         this.bindingRepo = bindingRepo;
         this.userRepo = userRepo;
         this.roleBindingRepo = roleBindingRepo;
+        this.globalNamespaceMembershipService = globalNamespaceMembershipService;
     }
 
     @Transactional
@@ -54,6 +58,9 @@ public class IdentityBindingService {
             );
             user.setStatus(initialStatus);
             user = userRepo.save(user);
+            if (initialStatus == UserStatus.ACTIVE) {
+                globalNamespaceMembershipService.ensureMember(user.getId());
+            }
 
             binding = new IdentityBinding(user.getId(), claims.provider(), claims.subject(), claims.providerLogin());
             bindingRepo.save(binding);
