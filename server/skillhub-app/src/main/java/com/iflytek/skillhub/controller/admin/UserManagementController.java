@@ -32,9 +32,9 @@ public class UserManagementController extends BaseApiController {
     public ApiResponse<PageResponse<AdminUserSummaryResponse>> listUsers(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ok("response.success.read", adminUserManagementService.listUsers(search, status, page, size));
+        return ok("response.success.read", adminUserManagementService.listUsers(search, status, Math.max(0, page - 1), size));
     }
 
     @PutMapping("/{userId}/role")

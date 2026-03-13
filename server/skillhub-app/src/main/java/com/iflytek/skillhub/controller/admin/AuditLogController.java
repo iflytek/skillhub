@@ -24,11 +24,11 @@ public class AuditLogController extends BaseApiController {
     @GetMapping
     @PreAuthorize("hasAnyRole('AUDITOR', 'SUPER_ADMIN')")
     public ApiResponse<PageResponse<AuditLogItemResponse>> listAuditLogs(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String action) {
-        var logs = auditLogQueryService.list(page, size, userId, action)
+        var logs = auditLogQueryService.list(Math.max(0, page - 1), size, userId, action)
             .map(log -> new AuditLogItemResponse(
                 String.valueOf(log.getId()),
                 log.getActorUserId(),

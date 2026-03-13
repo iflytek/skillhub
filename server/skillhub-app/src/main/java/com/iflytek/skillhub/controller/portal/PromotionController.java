@@ -106,7 +106,7 @@ public class PromotionController extends BaseApiController {
     @GetMapping
     public ApiResponse<PageResponse<PromotionResponseDto>> listPromotions(
             @RequestParam(defaultValue = "PENDING") String status,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute("userId") String userId) {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
@@ -115,13 +115,13 @@ public class PromotionController extends BaseApiController {
             throw new DomainForbiddenException("promotion.no_permission");
         }
         ReviewTaskStatus reviewStatus = ReviewTaskStatus.valueOf(status.toUpperCase());
-        Page<PromotionRequest> requests = promotionRequestRepository.findByStatus(reviewStatus, PageRequest.of(page, size));
+        Page<PromotionRequest> requests = promotionRequestRepository.findByStatus(reviewStatus, PageRequest.of(Math.max(0, page - 1), size));
         return ok("response.success.read", PageResponse.from(requests.map(this::toResponse)));
     }
 
     @GetMapping("/pending")
     public ApiResponse<PageResponse<PromotionResponseDto>> listPendingPromotions(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute("userId") String userId) {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
@@ -130,7 +130,7 @@ public class PromotionController extends BaseApiController {
             throw new DomainForbiddenException("promotion.no_permission");
         }
         Page<PromotionRequest> requests = promotionRequestRepository.findByStatus(
-                ReviewTaskStatus.PENDING, PageRequest.of(page, size));
+                ReviewTaskStatus.PENDING, PageRequest.of(Math.max(0, page - 1), size));
         return ok("response.success.read", PageResponse.from(requests.map(this::toResponse)));
     }
 

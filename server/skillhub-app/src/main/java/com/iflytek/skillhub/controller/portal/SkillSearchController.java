@@ -28,16 +28,17 @@ public class SkillSearchController extends BaseApiController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String namespace,
             @RequestParam(defaultValue = "newest") String sort,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
+        int zeroBasedPage = Math.max(0, page - 1);
         SkillSearchAppService.SearchResponse response = skillSearchAppService.search(
                 q,
                 namespace,
                 sort,
-                page,
+                zeroBasedPage,
                 size,
                 userId,
                 userNsRoles

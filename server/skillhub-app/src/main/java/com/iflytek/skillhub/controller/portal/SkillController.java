@@ -78,7 +78,7 @@ public class SkillController extends BaseApiController {
     public ApiResponse<PageResponse<SkillVersionResponse>> listVersions(
             @PathVariable String namespace,
             @PathVariable String slug,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
@@ -88,7 +88,7 @@ public class SkillController extends BaseApiController {
                 slug,
                 userId,
                 userNsRoles != null ? userNsRoles : Map.of(),
-                PageRequest.of(page, size));
+                PageRequest.of(Math.max(0, page - 1), size));
 
         PageResponse<SkillVersionResponse> response = PageResponse.from(versions.map(v -> new SkillVersionResponse(
                 v.getId(),
