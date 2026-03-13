@@ -71,6 +71,7 @@ export function Layout() {
             ) : (
               <Link
                 to="/login"
+                search={{ returnTo: '' }}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 activeProps={{ className: 'text-primary' }}
               >

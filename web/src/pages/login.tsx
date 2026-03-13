@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { LoginButton } from '@/features/auth/login-button'
 import { useLocalLogin } from '@/features/auth/use-local-auth'
@@ -7,15 +7,19 @@ import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
 export function LoginPage() {
+  const navigate = useNavigate()
+  const search = useSearch({ from: '/login' })
   const loginMutation = useLocalLogin()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+
+  const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     try {
       await loginMutation.mutateAsync({ username, password })
-      window.location.href = '/dashboard'
+      await navigate({ to: returnTo })
     } catch {
       // mutation state drives the error UI
     }
@@ -73,7 +77,11 @@ export function LoginPage() {
                 <p className="text-center text-sm text-muted-foreground">
                   还没有账号？
                   {' '}
-                  <Link to="/register" className="font-medium text-primary hover:underline">
+                  <Link
+                    to="/register"
+                    search={{ returnTo }}
+                    className="font-medium text-primary hover:underline"
+                  >
                     立即注册
                   </Link>
                 </p>

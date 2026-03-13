@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from '@tanstack/react-router'
+import { useParams, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
@@ -20,6 +20,7 @@ import {
 
 export function SkillDetailPage() {
   const navigate = useNavigate()
+  const location = useRouterState({ select: (s) => s.location })
   const queryClient = useQueryClient()
   const { namespace, slug } = useParams({ from: '/@$namespace/$slug' })
   const { user, hasRole } = useAuth()
@@ -53,7 +54,12 @@ export function SkillDetailPage() {
   })
 
   const requireLogin = () => {
-    navigate({ to: '/login' })
+    navigate({
+      to: '/login',
+      search: {
+        returnTo: `${location.pathname}${location.searchStr}${location.hash}`,
+      },
+    })
   }
 
   if (isLoadingSkill) {

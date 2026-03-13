@@ -42,10 +42,17 @@ const rootRoute = createRootRoute({
   component: Layout,
 })
 
-async function requireAuth() {
+function buildReturnTo(location: { pathname: string; searchStr?: string; hash?: string }) {
+  return `${location.pathname}${location.searchStr ?? ''}${location.hash ?? ''}`
+}
+
+async function requireAuth({ location }: { location: { pathname: string; searchStr?: string; hash?: string } }) {
   const user = await getCurrentUser()
   if (!user) {
-    throw redirect({ to: '/login' })
+    throw redirect({
+      to: '/login',
+      search: { returnTo: buildReturnTo(location) },
+    })
   }
   return { user }
 }
@@ -59,12 +66,18 @@ const skillsRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'login',
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : '',
+  }),
   component: LoginPage,
 })
 
 const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'register',
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : '',
+  }),
   component: RegisterPage,
 })
 
@@ -152,8 +165,8 @@ const dashboardReviewDetailRoute = createRoute({
 const dashboardPromotionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/promotions',
-  beforeLoad: async () => {
-    const { user } = await requireAuth()
+  beforeLoad: async (ctx) => {
+    const { user } = await requireAuth(ctx)
     if (!user.platformRoles?.includes('SKILL_ADMIN') && !user.platformRoles?.includes('SUPER_ADMIN')) {
       throw redirect({ to: '/dashboard' })
     }
@@ -199,8 +212,8 @@ const settingsAccountsRoute = createRoute({
 const adminUsersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin/users',
-  beforeLoad: async () => {
-    const { user } = await requireAuth()
+  beforeLoad: async (ctx) => {
+    const { user } = await requireAuth(ctx)
     if (!user.platformRoles?.includes('USER_ADMIN') && !user.platformRoles?.includes('SUPER_ADMIN')) {
       throw redirect({ to: '/dashboard' })
     }
@@ -212,8 +225,8 @@ const adminUsersRoute = createRoute({
 const adminAuditLogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin/audit-log',
-  beforeLoad: async () => {
-    const { user } = await requireAuth()
+  beforeLoad: async (ctx) => {
+    const { user } = await requireAuth(ctx)
     if (!user.platformRoles?.includes('AUDITOR') && !user.platformRoles?.includes('SUPER_ADMIN')) {
       throw redirect({ to: '/dashboard' })
     }
