@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.storage;
 
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.List;
 
 public interface ObjectStorageService {
@@ -10,4 +11,5 @@ public interface ObjectStorageService {
     void deleteObjects(List<String> keys);
     boolean exists(String key);
     ObjectMetadata getMetadata(String key);
+    String generatePresignedUrl(String key, Duration expiry);
 }

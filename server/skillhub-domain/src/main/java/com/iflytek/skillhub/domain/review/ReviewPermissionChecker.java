@@ -19,45 +19,63 @@ public class ReviewPermissionChecker {
                 || role == NamespaceRole.MEMBER;
     }
 
-    public boolean canManageNamespaceReviews(Long namespaceId,
-                                             NamespaceType namespaceType,
-                                             Map<Long, NamespaceRole> userNamespaceRoles,
-                                             Set<String> platformRoles) {
+    public boolean canReview(ReviewTask task,
+                             String userId,
+                             NamespaceType namespaceType,
+                             Map<Long, NamespaceRole> userNamespaceRoles,
+                             Set<String> platformRoles) {
+        if (task.getSubmittedBy().equals(userId)) {
+            return false;
+        }
+        return canReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canSubmitForReview(Skill skill,
+                                      String userId,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        if (skill.getOwnerId().equals(userId)) {
+            return true;
+        }
+        if (hasPlatformReviewRole(platformRoles)) {
+            return true;
+        }
+
+        NamespaceRole role = userNamespaceRoles.get(skill.getNamespaceId());
+        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
+    }
+
+    public boolean canViewReview(ReviewTask task,
+                                 String userId,
+                                 NamespaceType namespaceType,
+                                 Map<Long, NamespaceRole> userNamespaceRoles,
+                                 Set<String> platformRoles) {
+        if (task.getSubmittedBy().equals(userId)) {
+            return true;
+        }
+        return canReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canReviewNamespace(Long namespaceId,
+                                      NamespaceType namespaceType,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        if (hasPlatformReviewRole(platformRoles)) {
+            return true;
+        }
         if (namespaceType == NamespaceType.GLOBAL) {
-            return hasPlatformReviewRole(platformRoles);
+            return false;
         }
 
         NamespaceRole role = userNamespaceRoles.get(namespaceId);
         return role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN;
     }
 
-    /**
-     * Check if a user can review a ReviewTask.
-     *
-     * @param task               the review task
-     * @param userId             the reviewer's user ID
-     * @param namespaceType      the type of the namespace
-     * @param userNamespaceRoles user's roles keyed by namespace ID
-     * @param platformRoles      user's platform-level roles
-     * @return true if the user is allowed to review
-     */
-    public boolean canReview(ReviewTask task,
-                             String userId,
-                             NamespaceType namespaceType,
-                             Map<Long, NamespaceRole> userNamespaceRoles,
-                             Set<String> platformRoles) {
-        // Cannot review own submission
-        if (task.getSubmittedBy().equals(userId)) {
-            return false;
-        }
-
-        // Global namespace: only SKILL_ADMIN or SUPER_ADMIN
-        return canManageNamespaceReviews(
-                task.getNamespaceId(),
-                namespaceType,
-                userNamespaceRoles,
-                platformRoles
-        );
+    public boolean canManageNamespaceReviews(Long namespaceId,
+                                             NamespaceType namespaceType,
+                                             Map<Long, NamespaceRole> userNamespaceRoles,
+                                             Set<String> platformRoles) {
+        return canReviewNamespace(namespaceId, namespaceType, userNamespaceRoles, platformRoles);
     }
 
     public boolean canReadReview(ReviewTask task,
@@ -65,30 +83,22 @@ public class ReviewPermissionChecker {
                                  NamespaceType namespaceType,
                                  Map<Long, NamespaceRole> userNamespaceRoles,
                                  Set<String> platformRoles) {
-        return task.getSubmittedBy().equals(userId)
-                || canManageNamespaceReviews(
-                        task.getNamespaceId(),
-                        namespaceType,
-                        userNamespaceRoles,
-                        platformRoles
-                );
+        return canViewReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canSubmitPromotion(Skill sourceSkill,
+                                      String userId,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        return canSubmitForReview(sourceSkill, userId, userNamespaceRoles, platformRoles);
     }
 
     public boolean canSubmitPromotion(Skill sourceSkill,
                                       String userId,
                                       Map<Long, NamespaceRole> userNamespaceRoles) {
-        if (sourceSkill.getOwnerId().equals(userId)) {
-            return true;
-        }
-
-        NamespaceRole role = userNamespaceRoles.get(sourceSkill.getNamespaceId());
-        return role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN;
+        return canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, Set.of());
     }
 
-    /**
-     * Check if a user can review a PromotionRequest.
-     * Only SKILL_ADMIN or SUPER_ADMIN, and not own.
-     */
     public boolean canReviewPromotion(
             PromotionRequest request,
             String userId,
@@ -99,6 +109,15 @@ public class ReviewPermissionChecker {
         return hasPlatformReviewRole(platformRoles);
     }
 
+    public boolean canViewPromotion(PromotionRequest request,
+                                    String userId,
+                                    Set<String> platformRoles) {
+        if (request.getSubmittedBy().equals(userId)) {
+            return true;
+        }
+        return canReviewPromotion(request, userId, platformRoles);
+    }
+
     public boolean canListPendingPromotions(Set<String> platformRoles) {
         return hasPlatformReviewRole(platformRoles);
     }
@@ -106,8 +125,7 @@ public class ReviewPermissionChecker {
     public boolean canReadPromotion(PromotionRequest request,
                                     String userId,
                                     Set<String> platformRoles) {
-        return request.getSubmittedBy().equals(userId)
-                || canListPendingPromotions(platformRoles);
+        return canViewPromotion(request, userId, platformRoles);
     }
 
     private boolean hasPlatformReviewRole(Set<String> platformRoles) {

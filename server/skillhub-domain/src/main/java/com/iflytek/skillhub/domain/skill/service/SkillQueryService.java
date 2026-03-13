@@ -61,6 +61,9 @@ public class SkillQueryService {
             String status,
             Long downloadCount,
             Integer starCount,
+            java.math.BigDecimal ratingAvg,
+            Integer ratingCount,
+            boolean hidden,
             String latestVersion,
             Long namespaceId
     ) {}
@@ -120,6 +123,9 @@ public class SkillQueryService {
                 skill.getStatus().name(),
                 skill.getDownloadCount(),
                 skill.getStarCount(),
+                skill.getRatingAvg(),
+                skill.getRatingCount(),
+                skill.isHidden(),
                 latestVersion,
                 skill.getNamespaceId()
         );
@@ -230,8 +236,13 @@ public class SkillQueryService {
         return objectStorageService.getObject(file.getStorageKey());
     }
 
-    public Page<SkillVersion> listVersions(String namespaceSlug, String skillSlug, Pageable pageable) {
+    public Page<SkillVersion> listVersions(String namespaceSlug,
+                                           String skillSlug,
+                                           String currentUserId,
+                                           Map<Long, NamespaceRole> userNsRoles,
+                                           Pageable pageable) {
         Skill skill = findSkill(namespaceSlug, skillSlug);
+        assertPublishedAccessible(skill, currentUserId, userNsRoles);
 
         List<SkillVersion> publishedVersions = skillVersionRepository.findBySkillIdAndStatus(
                 skill.getId(), SkillVersionStatus.PUBLISHED);

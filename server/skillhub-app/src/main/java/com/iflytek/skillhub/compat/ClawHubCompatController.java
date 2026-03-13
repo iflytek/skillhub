@@ -1,15 +1,28 @@
 package com.iflytek.skillhub.compat;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.compat.dto.ClawHubPublishResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubSkillItem;
 import com.iflytek.skillhub.compat.dto.ClawHubResolveResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubSearchResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubWhoamiResponse;
+import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
+import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.MDC;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -19,10 +32,23 @@ public class ClawHubCompatController {
 
     private final CanonicalSlugMapper mapper;
     private final SkillSearchAppService skillSearchAppService;
+    private final SkillQueryService skillQueryService;
+    private final SkillPublishService skillPublishService;
+    private final ZipPackageExtractor zipPackageExtractor;
+    private final AuditLogService auditLogService;
 
-    public ClawHubCompatController(CanonicalSlugMapper mapper, SkillSearchAppService skillSearchAppService) {
+    public ClawHubCompatController(CanonicalSlugMapper mapper,
+                                   SkillSearchAppService skillSearchAppService,
+                                   SkillQueryService skillQueryService,
+                                   SkillPublishService skillPublishService,
+                                   ZipPackageExtractor zipPackageExtractor,
+                                   AuditLogService auditLogService) {
         this.mapper = mapper;
         this.skillSearchAppService = skillSearchAppService;
+        this.skillQueryService = skillQueryService;
+        this.skillPublishService = skillPublishService;
+        this.zipPackageExtractor = zipPackageExtractor;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/search")
@@ -56,12 +82,63 @@ public class ClawHubCompatController {
     @GetMapping("/resolve/{canonicalSlug}")
     public ClawHubResolveResponse resolve(
             @PathVariable String canonicalSlug,
-            @RequestParam(defaultValue = "latest") String version) {
+            @RequestParam(defaultValue = "latest") String version,
+            @RequestAttribute(value = "userId", required = false) String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
+        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
+                coord.namespace(),
+                coord.slug(),
+                "latest".equals(version) ? null : version,
+                "latest".equals(version) ? "latest" : null,
+                null,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of()
+        );
         return new ClawHubResolveResponse(
                 canonicalSlug,
-                version,
-                "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/download"
+                resolved.version(),
+                resolved.downloadUrl()
+        );
+    }
+
+    @GetMapping("/download/{canonicalSlug}")
+    public ResponseEntity<Void> download(@PathVariable String canonicalSlug,
+                                         @RequestParam(defaultValue = "latest") String version) {
+        SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
+        String location = "latest".equals(version)
+                ? "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/download"
+                : "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/versions/" + version + "/download";
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, location)
+                .build();
+    }
+
+    @PostMapping("/publish")
+    public ClawHubPublishResponse publish(@RequestParam("file") MultipartFile file,
+                                          @RequestParam("namespace") String namespace,
+                                          @RequestAttribute("userId") String userId,
+                                          HttpServletRequest request) throws IOException {
+        SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
+                namespace,
+                zipPackageExtractor.extract(file),
+                userId,
+                SkillVisibility.PUBLIC
+        );
+        auditLogService.record(
+                userId,
+                "COMPAT_PUBLISH",
+                "SKILL_VERSION",
+                result.version().getId(),
+                MDC.get("requestId"),
+                request.getRemoteAddr(),
+                request.getHeader("User-Agent"),
+                "{\"namespace\":\"" + namespace + "\"}"
+        );
+        return new ClawHubPublishResponse(
+                mapper.toCanonical(namespace, result.slug()),
+                result.version().getVersion(),
+                result.version().getStatus().name()
         );
     }
 

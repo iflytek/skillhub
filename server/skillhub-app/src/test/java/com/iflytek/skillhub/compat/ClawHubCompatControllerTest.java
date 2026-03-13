@@ -3,6 +3,7 @@ package com.iflytek.skillhub.compat;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,9 @@ class ClawHubCompatControllerTest {
     @MockBean
     private SkillSearchAppService skillSearchAppService;
 
+    @MockBean
+    private SkillQueryService skillQueryService;
+
     @Test
     void search_returns_mapped_results() throws Exception {
         when(skillSearchAppService.search("test", null, "relevance", 0, 20, null, null))
@@ -76,6 +80,9 @@ class ClawHubCompatControllerTest {
 
     @Test
     void resolve_returns_correct_downloadUrl() throws Exception {
+        when(skillQueryService.resolveVersion("global", "my-skill", null, "latest", null, null, java.util.Map.of()))
+                .thenReturn(new SkillQueryService.ResolvedVersionDTO(
+                        1L, "global", "my-skill", "latest", 2L, "sha", true, "/api/v1/skills/global/my-skill/download"));
         mockMvc.perform(get("/api/compat/v1/resolve/my-skill"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.canonicalSlug").value("my-skill"))
@@ -85,6 +92,9 @@ class ClawHubCompatControllerTest {
 
     @Test
     void resolve_with_namespace_returns_correct_downloadUrl() throws Exception {
+        when(skillQueryService.resolveVersion("team-ai", "my-skill", null, "latest", null, null, java.util.Map.of()))
+                .thenReturn(new SkillQueryService.ResolvedVersionDTO(
+                        1L, "team-ai", "my-skill", "latest", 2L, "sha", true, "/api/v1/skills/team-ai/my-skill/download"));
         mockMvc.perform(get("/api/compat/v1/resolve/team-ai--my-skill"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.canonicalSlug").value("team-ai--my-skill"))
@@ -94,6 +104,9 @@ class ClawHubCompatControllerTest {
 
     @Test
     void resolve_with_version_returns_specified_version() throws Exception {
+        when(skillQueryService.resolveVersion("global", "my-skill", "1.0.0", null, null, null, java.util.Map.of()))
+                .thenReturn(new SkillQueryService.ResolvedVersionDTO(
+                        1L, "global", "my-skill", "1.0.0", 2L, "sha", true, "/api/v1/skills/global/my-skill/download"));
         mockMvc.perform(get("/api/compat/v1/resolve/my-skill")
                         .param("version", "1.0.0"))
                 .andExpect(status().isOk())

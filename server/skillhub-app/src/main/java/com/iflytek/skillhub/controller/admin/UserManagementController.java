@@ -54,4 +54,22 @@ public class UserManagementController extends BaseApiController {
             @Valid @RequestBody AdminUserStatusUpdateRequest request) {
         return ok("response.success.updated", adminUserAppService.updateUserStatus(userId, request.status()));
     }
+
+    @PostMapping("/{userId}/approve")
+    @PreAuthorize("hasAnyRole('USER_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<AdminUserMutationResponse> approveUser(@PathVariable String userId) {
+        return ok("response.success.updated", adminUserAppService.updateUserStatus(userId, "ACTIVE"));
+    }
+
+    @PostMapping("/{userId}/disable")
+    @PreAuthorize("hasAnyRole('USER_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<AdminUserMutationResponse> disableUser(@PathVariable String userId) {
+        return ok("response.success.updated", adminUserAppService.updateUserStatus(userId, "DISABLED"));
+    }
+
+    @PostMapping("/{userId}/enable")
+    @PreAuthorize("hasAnyRole('USER_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<AdminUserMutationResponse> enableUser(@PathVariable String userId) {
+        return ok("response.success.updated", adminUserAppService.updateUserStatus(userId, "ACTIVE"));
+    }
 }

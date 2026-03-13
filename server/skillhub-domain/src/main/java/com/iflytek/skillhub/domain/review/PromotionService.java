@@ -49,6 +49,45 @@ public class PromotionService {
     @Transactional
     public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
                                             Long targetNamespaceId, String userId,
+                                            Map<Long, NamespaceRole> userNamespaceRoles,
+                                            Set<String> platformRoles) {
+        Skill sourceSkill = skillRepository.findById(sourceSkillId)
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
+
+        SkillVersion sourceVersion = skillVersionRepository.findById(sourceVersionId)
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", sourceVersionId));
+
+        if (!sourceVersion.getSkillId().equals(sourceSkillId)) {
+            throw new DomainBadRequestException("promotion.version_skill_mismatch", sourceVersionId, sourceSkillId);
+        }
+
+        if (sourceVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
+            throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
+        }
+
+        if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles)) {
+            throw new DomainForbiddenException("promotion.submit.no_permission");
+        }
+
+        Namespace targetNamespace = namespaceRepository.findById(targetNamespaceId)
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", targetNamespaceId));
+
+        if (targetNamespace.getType() != NamespaceType.GLOBAL) {
+            throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
+        }
+
+        promotionRequestRepository.findBySourceVersionIdAndStatus(sourceVersionId, ReviewTaskStatus.PENDING)
+                .ifPresent(existing -> {
+                    throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
+                });
+
+        PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
+        return promotionRequestRepository.save(request);
+    }
+
+    @Transactional
+    public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
+                                            Long targetNamespaceId, String userId,
                                             Map<Long, NamespaceRole> userNamespaceRoles) {
         Skill sourceSkill = skillRepository.findById(sourceSkillId)
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
@@ -176,5 +215,9 @@ public class PromotionService {
         }
 
         return promotionRequestRepository.findById(promotionId).orElse(request);
+    }
+
+    public boolean canViewPromotion(PromotionRequest request, String userId, Set<String> platformRoles) {
+        return permissionChecker.canViewPromotion(request, userId, platformRoles);
     }
 }

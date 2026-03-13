@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,6 +64,9 @@ public class SkillController extends BaseApiController {
                 detail.status(),
                 detail.downloadCount(),
                 detail.starCount(),
+                detail.ratingAvg(),
+                detail.ratingCount(),
+                detail.hidden(),
                 detail.latestVersion(),
                 namespace
         );
@@ -75,10 +79,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String namespace,
             @PathVariable String slug,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestAttribute(value = "userId", required = false) String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
         Page<SkillVersion> versions = skillQueryService.listVersions(
-                namespace, slug, PageRequest.of(page, size));
+                namespace,
+                slug,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                PageRequest.of(page, size));
 
         PageResponse<SkillVersionResponse> response = PageResponse.from(versions.map(v -> new SkillVersionResponse(
                 v.getId(),
@@ -272,11 +282,7 @@ public class SkillController extends BaseApiController {
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadLatest(
                 namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of());
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.filename() + "\"")
-                .contentType(MediaType.parseMediaType(result.contentType()))
-                .contentLength(result.contentLength())
-                .body(new InputStreamResource(result.content()));
+        return buildDownloadResponse(result);
     }
 
     @GetMapping("/{namespace}/{slug}/versions/{version}/download")
@@ -291,11 +297,7 @@ public class SkillController extends BaseApiController {
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadVersion(
                 namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of());
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.filename() + "\"")
-                .contentType(MediaType.parseMediaType(result.contentType()))
-                .contentLength(result.contentLength())
-                .body(new InputStreamResource(result.content()));
+        return buildDownloadResponse(result);
     }
 
     @GetMapping("/{namespace}/{slug}/tags/{tagName}/download")
@@ -309,6 +311,16 @@ public class SkillController extends BaseApiController {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadByTag(
                 namespace, slug, tagName, userId, userNsRoles != null ? userNsRoles : Map.of());
+
+        return buildDownloadResponse(result);
+    }
+
+    private ResponseEntity<InputStreamResource> buildDownloadResponse(SkillDownloadService.DownloadResult result) {
+        if (result.presignedUrl() != null) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, result.presignedUrl())
+                .build();
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.filename() + "\"")

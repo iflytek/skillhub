@@ -27,7 +27,13 @@ export function ReviewsPage() {
 
   const renderReviewTable = (reviews: typeof pendingReviews, isLoading: boolean, status: string) => {
     if (isLoading) {
-      return <div className="text-center py-8 text-muted-foreground">加载中...</div>
+      return (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-14 animate-shimmer rounded-lg" />
+          ))}
+        </div>
+      )
     }
 
     if (!reviews || reviews.length === 0) {
@@ -39,7 +45,7 @@ export function ReviewsPage() {
     }
 
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -55,21 +61,25 @@ export function ReviewsPage() {
             {reviews.map((review) => (
               <TableRow
                 key={review.id}
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer hover:bg-secondary/50 transition-colors"
                 onClick={() => handleRowClick(review.id)}
               >
-                <TableCell className="font-medium">
+                <TableCell className="font-medium font-heading">
                   {review.namespace}/{review.skillSlug}
                 </TableCell>
-                <TableCell>{review.version}</TableCell>
-                <TableCell>{review.submittedBy}</TableCell>
-                <TableCell>{formatDate(review.submittedAt)}</TableCell>
+                <TableCell>
+                  <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-secondary/60">
+                    {review.version}
+                  </span>
+                </TableCell>
+                <TableCell>{review.submittedByName || review.submittedBy}</TableCell>
+                <TableCell className="text-muted-foreground">{formatDate(review.submittedAt)}</TableCell>
                 {status !== 'PENDING' && (
-                  <TableCell>{review.reviewedBy || '-'}</TableCell>
+                  <TableCell>{review.reviewedByName || review.reviewedBy || '—'}</TableCell>
                 )}
                 {status !== 'PENDING' && (
-                  <TableCell>
-                    {review.reviewedAt ? formatDate(review.reviewedAt) : '-'}
+                  <TableCell className="text-muted-foreground">
+                    {review.reviewedAt ? formatDate(review.reviewedAt) : '—'}
                   </TableCell>
                 )}
               </TableRow>
@@ -81,10 +91,10 @@ export function ReviewsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-3xl font-bold mb-2">审核中心</h1>
-        <p className="text-muted-foreground">管理技能版本审核</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">审核中心</h1>
+        <p className="text-muted-foreground text-lg">管理技能版本审核</p>
       </div>
 
       <Tabs defaultValue="PENDING">
@@ -94,15 +104,15 @@ export function ReviewsPage() {
           <TabsTrigger value="REJECTED">已拒绝</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="PENDING" className="mt-4">
+        <TabsContent value="PENDING" className="mt-6">
           {renderReviewTable(pendingReviews, isPendingLoading, 'PENDING')}
         </TabsContent>
 
-        <TabsContent value="APPROVED" className="mt-4">
+        <TabsContent value="APPROVED" className="mt-6">
           {renderReviewTable(approvedReviews, isApprovedLoading, 'APPROVED')}
         </TabsContent>
 
-        <TabsContent value="REJECTED" className="mt-4">
+        <TabsContent value="REJECTED" className="mt-6">
           {renderReviewTable(rejectedReviews, isRejectedLoading, 'REJECTED')}
         </TabsContent>
       </Tabs>

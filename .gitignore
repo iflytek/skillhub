@@ -54,6 +54,8 @@ coverage/
 # Temporary files
 .tmp/
 tmp/
+__pycache__/
+*.py[cod]
 
 # Git worktrees
 .worktrees/

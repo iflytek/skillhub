@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 
@@ -11,7 +11,7 @@ interface SearchBarProps {
 export function SearchBar({ defaultValue = '', placeholder = '搜索技能...', onSearch }: SearchBarProps) {
   const [query, setQuery] = useState(defaultValue)
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (onSearch) {
       onSearch(query)
@@ -19,15 +19,32 @@ export function SearchBar({ defaultValue = '', placeholder = '搜索技能...', 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <Input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
-        className="flex-1"
-      />
-      <Button type="submit">搜索</Button>
+    <form onSubmit={handleSubmit} className="flex gap-3 glass-strong p-2 rounded-xl">
+      <div className="relative flex-1">
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <Input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          className="pl-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
+        />
+      </div>
+      <Button type="submit" size="lg" className="px-8">
+        搜索
+      </Button>
     </form>
   )
 }

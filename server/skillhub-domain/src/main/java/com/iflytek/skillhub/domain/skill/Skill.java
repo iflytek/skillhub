@@ -44,6 +44,15 @@ public class Skill {
     @Column(name = "download_count", nullable = false)
     private Long downloadCount = 0L;
 
+    @Column(nullable = false)
+    private boolean hidden = false;
+
+    @Column(name = "hidden_at")
+    private LocalDateTime hiddenAt;
+
+    @Column(name = "hidden_by", length = 128)
+    private String hiddenBy;
+
     @Column(name = "star_count", nullable = false)
     private Integer starCount = 0;
 
@@ -132,6 +141,18 @@ public class Skill {
         return downloadCount;
     }
 
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public LocalDateTime getHiddenAt() {
+        return hiddenAt;
+    }
+
+    public String getHiddenBy() {
+        return hiddenBy;
+    }
+
     public Integer getStarCount() {
         return starCount;
     }
@@ -191,5 +212,17 @@ public class Skill {
 
     public void setUpdatedBy(String updatedBy) {
         this.updatedBy = updatedBy;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public void setHiddenAt(LocalDateTime hiddenAt) {
+        this.hiddenAt = hiddenAt;
+    }
+
+    public void setHiddenBy(String hiddenBy) {
+        this.hiddenBy = hiddenBy;
     }
 }

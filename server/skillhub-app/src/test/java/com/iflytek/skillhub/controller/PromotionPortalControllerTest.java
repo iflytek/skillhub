@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -84,11 +85,15 @@ class PromotionPortalControllerTest {
     @MockBean
     private ReviewPermissionChecker permissionChecker;
 
+    @MockBean
+    private AuditLogService auditLogService;
+
     @Test
     void submitPromotion_passesNamespaceRolesToService() throws Exception {
         PromotionRequest request = createPromotionRequest(1L, "user-1");
         stubNamespaceRoles("user-1", List.of(new NamespaceMember(5L, "user-1", NamespaceRole.ADMIN)));
-        given(promotionService.submitPromotion(10L, 20L, 30L, "user-1", Map.of(5L, NamespaceRole.ADMIN)))
+        given(rbacService.getUserRoleCodes("user-1")).willReturn(Set.of());
+        given(promotionService.submitPromotion(10L, 20L, 30L, "user-1", Map.of(5L, NamespaceRole.ADMIN), Set.of()))
                 .willReturn(request);
         stubPromotionResponse(request);
 
@@ -121,7 +126,7 @@ class PromotionPortalControllerTest {
         stubNamespaceRoles("user-1", List.of());
         given(promotionRequestRepository.findById(1L)).willReturn(Optional.of(request));
         given(rbacService.getUserRoleCodes("user-1")).willReturn(Set.of());
-        given(permissionChecker.canReadPromotion(request, "user-1", Set.of())).willReturn(true);
+        given(promotionService.canViewPromotion(request, "user-1", Set.of())).willReturn(true);
         stubPromotionResponse(request);
 
         mockMvc.perform(get("/api/v1/promotions/1").with(auth("user-1")))
@@ -136,7 +141,7 @@ class PromotionPortalControllerTest {
         stubNamespaceRoles("user-9", List.of());
         given(promotionRequestRepository.findById(1L)).willReturn(Optional.of(request));
         given(rbacService.getUserRoleCodes("user-9")).willReturn(Set.of());
-        given(permissionChecker.canReadPromotion(request, "user-9", Set.of())).willReturn(false);
+        given(promotionService.canViewPromotion(request, "user-9", Set.of())).willReturn(false);
 
         mockMvc.perform(get("/api/v1/promotions/1").with(auth("user-9")))
                 .andExpect(status().isForbidden())

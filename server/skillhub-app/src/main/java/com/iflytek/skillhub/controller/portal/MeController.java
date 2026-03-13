@@ -34,4 +34,14 @@ public class MeController extends BaseApiController {
 
         return ok("response.success.read", mySkillAppService.listMySkills(principal.userId()));
     }
+
+    @GetMapping("/stars")
+    public ApiResponse<List<SkillSummaryResponse>> listMyStars(
+            @AuthenticationPrincipal PlatformPrincipal principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("error.auth.required");
+        }
+
+        return ok("response.success.read", mySkillAppService.listMyStars(principal.userId()));
+    }
 }

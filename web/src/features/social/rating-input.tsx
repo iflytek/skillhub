@@ -1,19 +1,26 @@
 import { useState } from 'react'
 import { Star } from 'lucide-react'
 import { useUserRating, useRate } from './use-rating'
+import { useAuth } from '@/features/auth/use-auth'
 
 interface RatingInputProps {
   skillId: number
+  onRequireLogin?: () => void
 }
 
-export function RatingInput({ skillId }: RatingInputProps) {
+export function RatingInput({ skillId, onRequireLogin }: RatingInputProps) {
   const { data: userRating, isLoading } = useUserRating(skillId)
   const rateMutation = useRate(skillId)
+  const { isAuthenticated } = useAuth()
   const [hoveredRating, setHoveredRating] = useState<number | null>(null)
 
-  const currentRating = userRating?.rating || 0
+  const currentRating = userRating?.rated ? userRating.score : 0
 
   const handleRate = (rating: number) => {
+    if (!isAuthenticated) {
+      onRequireLogin?.()
+      return
+    }
     rateMutation.mutate(rating)
   }
 

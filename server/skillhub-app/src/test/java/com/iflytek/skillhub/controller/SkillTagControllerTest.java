@@ -12,8 +12,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -35,7 +37,7 @@ class SkillTagControllerTest {
 
     @Test
     void list_tags_is_public() throws Exception {
-        when(skillTagService.listTags(eq("team"), eq("demo")))
+        when(skillTagService.listTags(eq("team"), eq("demo"), isNull(), eq(Map.of())))
                 .thenReturn(List.of(new SkillTag(1L, "latest", 2L, "user-1")));
 
         mockMvc.perform(get("/api/v1/skills/team/demo/tags"))

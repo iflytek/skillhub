@@ -11,43 +11,56 @@ export function NamespaceMembersPage() {
   const { data: members, isLoading: isLoadingMembers } = useNamespaceMembers(slug)
 
   if (isLoadingNamespace) {
-    return <div className="animate-pulse">加载中...</div>
+    return (
+      <div className="space-y-6 animate-fade-up">
+        <div className="h-12 w-48 animate-shimmer rounded-lg" />
+        <div className="h-6 w-96 animate-shimmer rounded-md" />
+      </div>
+    )
   }
 
   if (!namespace) {
-    return <div>命名空间不存在</div>
+    return (
+      <div className="text-center py-20 animate-fade-up">
+        <h2 className="text-2xl font-bold font-heading mb-2">命名空间不存在</h2>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       <NamespaceHeader namespace={namespace} />
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">成员管理</h2>
+          <h2 className="text-2xl font-bold font-heading">成员管理</h2>
           <Button disabled>添加成员</Button>
         </div>
 
         {isLoadingMembers ? (
-          <div className="animate-pulse">加载中...</div>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-14 animate-shimmer rounded-lg" />
+            ))}
+          </div>
         ) : members && members.length > 0 ? (
-          <Card>
+          <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium">用户 ID</th>
-                    <th className="text-left p-4 font-medium">角色</th>
-                    <th className="text-left p-4 font-medium">加入时间</th>
-                    <th className="text-right p-4 font-medium">操作</th>
+                  <tr className="border-b border-border/40">
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">用户 ID</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">角色</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">加入时间</th>
+                    <th className="text-right p-4 font-medium font-heading text-sm text-muted-foreground">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {members.map((member) => (
-                    <tr key={member.id} className="border-b last:border-b-0">
-                      <td className="p-4">{member.userId}</td>
+                    <tr key={member.id} className="border-b border-border/40 last:border-b-0 hover:bg-secondary/30 transition-colors">
+                      <td className="p-4 font-medium">{member.userId}</td>
                       <td className="p-4">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-accent/10 text-accent border border-accent/20">
                           {member.role}
                         </span>
                       </td>

@@ -75,7 +75,7 @@ const DialogOverlay = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
       <div
         ref={ref}
         className={cn(
-          'fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm',
           className
         )}
         onClick={() => onOpenChange(false)}
@@ -96,7 +96,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
           <div
             ref={ref}
             className={cn(
-              'relative z-50 grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg',
+              'relative z-50 grid w-full max-w-lg gap-4 border border-border/60 bg-card p-8 shadow-card rounded-2xl animate-fade-up',
               className
             )}
             onClick={(e) => e.stopPropagation()}
@@ -144,7 +144,7 @@ DialogFooter.displayName = 'DialogFooter'
 
 const DialogTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h2 ref={ref} className={cn('text-lg font-semibold leading-none tracking-tight', className)} {...props} />
+    <h2 ref={ref} className={cn('text-xl font-bold font-heading leading-none tracking-tight', className)} {...props} />
   )
 )
 DialogTitle.displayName = 'DialogTitle'

@@ -62,7 +62,11 @@ public class ApiToken {
     void prePersist() { this.createdAt = LocalDateTime.now(); }
 
     public Long getId() { return id; }
+    public String getSubjectType() { return subjectType; }
+    public String getSubjectId() { return subjectId; }
+    public void setSubjectId(String subjectId) { this.subjectId = subjectId; }
     public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public String getName() { return name; }
     public String getTokenPrefix() { return tokenPrefix; }
     public String getTokenHash() { return tokenHash; }

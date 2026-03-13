@@ -53,18 +53,27 @@ export function ReviewDetailPage() {
   }
 
   if (isLoading) {
-    return <div className="text-center py-8 text-muted-foreground">加载中...</div>
+    return (
+      <div className="space-y-6 max-w-3xl animate-fade-up">
+        <div className="h-10 w-48 animate-shimmer rounded-lg" />
+        <div className="h-64 animate-shimmer rounded-xl" />
+      </div>
+    )
   }
 
   if (!review) {
-    return <div className="text-center py-8 text-muted-foreground">审核任务不存在</div>
+    return (
+      <div className="text-center py-20 animate-fade-up">
+        <h2 className="text-2xl font-bold font-heading mb-2">审核任务不存在</h2>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-8 max-w-3xl animate-fade-up">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">审核详情</h1>
+          <h1 className="text-4xl font-bold font-heading mb-2">审核详情</h1>
           <p className="text-muted-foreground">审核 ID: {review.id}</p>
         </div>
         <Button variant="outline" onClick={() => navigate({ to: '/dashboard/reviews' })}>
@@ -72,66 +81,72 @@ export function ReviewDetailPage() {
         </Button>
       </div>
 
-      <Card className="p-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-muted-foreground">技能名称</Label>
-            <p className="font-medium">{review.skillName}</p>
+      <Card className="p-8 space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">命名空间/标识</Label>
+            <p className="font-semibold font-mono">{review.namespace}/{review.skillSlug}</p>
           </div>
-          <div>
-            <Label className="text-muted-foreground">命名空间/标识</Label>
-            <p className="font-medium">{review.namespace}/{review.skillSlug}</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">版本</Label>
-            <p className="font-medium">{review.version}</p>
-          </div>
-          <div>
-            <Label className="text-muted-foreground">状态</Label>
-            <p className="font-medium">
-              {review.status === 'PENDING' && '待审核'}
-              {review.status === 'APPROVED' && '已通过'}
-              {review.status === 'REJECTED' && '已拒绝'}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">版本</Label>
+            <p className="font-semibold">
+              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
+                {review.version}
+              </span>
             </p>
           </div>
-          <div>
-            <Label className="text-muted-foreground">提交者</Label>
-            <p className="font-medium">{review.submittedBy}</p>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">状态</Label>
+            <p className="font-semibold">
+              {review.status === 'PENDING' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-sm">待审核</span>
+              )}
+              {review.status === 'APPROVED' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-sm">已通过</span>
+              )}
+              {review.status === 'REJECTED' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-sm">已拒绝</span>
+              )}
+            </p>
           </div>
-          <div>
-            <Label className="text-muted-foreground">提交时间</Label>
-            <p className="font-medium">{formatDate(review.submittedAt)}</p>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">提交者</Label>
+            <p className="font-semibold">{review.submittedByName || review.submittedBy}</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">提交时间</Label>
+            <p className="font-semibold text-muted-foreground">{formatDate(review.submittedAt)}</p>
           </div>
           {review.reviewedBy && (
             <>
-              <div>
-                <Label className="text-muted-foreground">审核者</Label>
-                <p className="font-medium">{review.reviewedBy}</p>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">审核者</Label>
+                <p className="font-semibold">{review.reviewedByName || review.reviewedBy}</p>
               </div>
-              <div>
-                <Label className="text-muted-foreground">审核时间</Label>
-                <p className="font-medium">
-                  {review.reviewedAt ? formatDate(review.reviewedAt) : '-'}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">审核时间</Label>
+                <p className="font-semibold text-muted-foreground">
+                  {review.reviewedAt ? formatDate(review.reviewedAt) : '—'}
                 </p>
               </div>
             </>
           )}
         </div>
 
-        {review.comment && (
-          <div>
-            <Label className="text-muted-foreground">审核意见</Label>
-            <p className="mt-2 p-3 bg-muted rounded-md">{review.comment}</p>
+        {review.reviewComment && (
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">审核意见</Label>
+            <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.reviewComment}</p>
           </div>
         )}
       </Card>
 
       {review.status === 'PENDING' && (
-        <Card className="p-6 space-y-4">
-          <h2 className="text-xl font-semibold">审核操作</h2>
+        <Card className="p-8 space-y-6">
+          <h2 className="text-xl font-bold font-heading">审核操作</h2>
 
-          <div className="space-y-2">
-            <Label htmlFor="comment">审核意见（可选）</Label>
+          <div className="space-y-3">
+            <Label htmlFor="comment" className="text-sm font-semibold font-heading">审核意见（可选）</Label>
             <Textarea
               id="comment"
               placeholder="填写审核意见..."

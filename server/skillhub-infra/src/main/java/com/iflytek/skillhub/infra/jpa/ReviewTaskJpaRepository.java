@@ -17,6 +17,8 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
 
     Optional<ReviewTask> findBySkillVersionIdAndStatus(Long skillVersionId, ReviewTaskStatus status);
 
+    Page<ReviewTask> findByStatus(ReviewTaskStatus status, Pageable pageable);
+
     Page<ReviewTask> findByNamespaceIdAndStatus(Long namespaceId, ReviewTaskStatus status, Pageable pageable);
 
     Page<ReviewTask> findBySubmittedByAndStatus(String submittedBy, ReviewTaskStatus status, Pageable pageable);

@@ -3,11 +3,18 @@ import { fetchJson, getCsrfHeaders } from '@/api/client'
 
 interface StarStatus {
   starred: boolean
-  starCount: number
 }
 
 async function getStarStatus(skillId: number): Promise<StarStatus> {
-  return fetchJson<StarStatus>(`/api/v1/skills/${skillId}/star`)
+  try {
+    const starred = await fetchJson<boolean>(`/api/v1/skills/${skillId}/star`)
+    return { starred }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'HTTP 401') {
+      return { starred: false }
+    }
+    throw error
+  }
 }
 
 async function toggleStar(skillId: number, starred: boolean): Promise<void> {

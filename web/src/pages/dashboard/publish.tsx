@@ -36,18 +36,18 @@ export function PublishPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-3xl font-bold mb-2">发布技能</h1>
-        <p className="text-muted-foreground">上传技能包到 SkillHub</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">发布技能</h1>
+        <p className="text-muted-foreground text-lg">上传技能包到 SkillHub</p>
       </div>
 
-      <Card className="p-6 space-y-6">
+      <Card className="p-8 space-y-8">
         {/* Namespace Selector */}
-        <div className="space-y-2">
-          <Label htmlFor="namespace">命名空间</Label>
+        <div className="space-y-3">
+          <Label htmlFor="namespace" className="text-sm font-semibold font-heading">命名空间</Label>
           {isLoadingNamespaces ? (
-            <div className="text-sm text-muted-foreground">加载中...</div>
+            <div className="h-11 animate-shimmer rounded-lg" />
           ) : (
             <Select
               id="namespace"
@@ -65,8 +65,8 @@ export function PublishPage() {
         </div>
 
         {/* Visibility Selector */}
-        <div className="space-y-2">
-          <Label htmlFor="visibility">可见性</Label>
+        <div className="space-y-3">
+          <Label htmlFor="visibility" className="text-sm font-semibold font-heading">可见性</Label>
           <Select
             id="visibility"
             value={visibility}
@@ -79,15 +79,18 @@ export function PublishPage() {
         </div>
 
         {/* Upload Zone */}
-        <div className="space-y-2">
-          <Label>技能包文件</Label>
+        <div className="space-y-3">
+          <Label className="text-sm font-semibold font-heading">技能包文件</Label>
           <UploadZone
             onFileSelect={setSelectedFile}
             disabled={publishMutation.isPending}
           />
           {selectedFile && (
-            <div className="text-sm text-muted-foreground">
-              已选择: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
             </div>
           )}
         </div>
@@ -95,11 +98,11 @@ export function PublishPage() {
         {/* Publish Button */}
         <Button
           className="w-full"
+          size="lg"
           onClick={handlePublish}
           disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
         >
-          {publishMutation.isPending ? '发布中...' : '确认发布'}
-        </Button>
+          {publishMutation.isPending ? '发布中...' : '确认发布'}     </Button>
       </Card>
     </div>
   )

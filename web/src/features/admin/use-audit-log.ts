@@ -1,15 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchJson } from '@/api/client'
-
-export interface AuditLog {
-  id: number
-  action: string
-  userId: string
-  username?: string
-  details?: string
-  ipAddress?: string
-  timestamp: string
-}
+import { adminApi } from '@/api/client'
+import type { AuditLogItem } from '@/api/types'
 
 export interface AuditLogParams {
   action?: string
@@ -19,21 +10,14 @@ export interface AuditLogParams {
 }
 
 export interface PagedAuditLogs {
-  items: AuditLog[]
+  items: AuditLogItem[]
   total: number
   page: number
   size: number
 }
 
 async function getAuditLogs(params: AuditLogParams): Promise<PagedAuditLogs> {
-  const searchParams = new URLSearchParams()
-  if (params.action) searchParams.set('action', params.action)
-  if (params.userId) searchParams.set('userId', params.userId)
-  searchParams.set('page', String(params.page ?? 0))
-  searchParams.set('size', String(params.size ?? 20))
-
-  const url = `/api/v1/admin/audit-logs?${searchParams.toString()}`
-  return fetchJson<PagedAuditLogs>(url)
+  return adminApi.getAuditLogs(params)
 }
 
 export function useAuditLog(params: AuditLogParams) {

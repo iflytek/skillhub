@@ -43,6 +43,15 @@ public class SkillVersion {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    @Column(name = "yanked_at")
+    private LocalDateTime yankedAt;
+
+    @Column(name = "yanked_by", length = 128)
+    private String yankedBy;
+
+    @Column(name = "yank_reason", columnDefinition = "TEXT")
+    private String yankReason;
+
     @Column(name = "created_by", nullable = false)
     private String createdBy;
 
@@ -105,6 +114,18 @@ public class SkillVersion {
         return publishedAt;
     }
 
+    public LocalDateTime getYankedAt() {
+        return yankedAt;
+    }
+
+    public String getYankedBy() {
+        return yankedBy;
+    }
+
+    public String getYankReason() {
+        return yankReason;
+    }
+
     public String getCreatedBy() {
         return createdBy;
     }
@@ -140,5 +161,17 @@ public class SkillVersion {
 
     public void setPublishedAt(LocalDateTime publishedAt) {
         this.publishedAt = publishedAt;
+    }
+
+    public void setYankedAt(LocalDateTime yankedAt) {
+        this.yankedAt = yankedAt;
+    }
+
+    public void setYankedBy(String yankedBy) {
+        this.yankedBy = yankedBy;
+    }
+
+    public void setYankReason(String yankReason) {
+        this.yankReason = yankReason;
     }
 }

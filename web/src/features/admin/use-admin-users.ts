@@ -1,14 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchJson, getCsrfHeaders } from '@/api/client'
-
-export interface AdminUser {
-  id: string
-  username: string
-  email: string
-  status: 'ACTIVE' | 'DISABLED'
-  platformRoles: string[]
-  createdAt: string
-}
+import { adminApi } from '@/api/client'
+import type { AdminUser } from '@/api/types'
+export type { AdminUser } from '@/api/types'
 
 export interface AdminUsersParams {
   search?: string
@@ -25,30 +18,15 @@ export interface PagedAdminUsers {
 }
 
 async function getAdminUsers(params: AdminUsersParams): Promise<PagedAdminUsers> {
-  const searchParams = new URLSearchParams()
-  if (params.search) searchParams.set('search', params.search)
-  if (params.status) searchParams.set('status', params.status)
-  searchParams.set('page', String(params.page ?? 0))
-  searchParams.set('size', String(params.size ?? 20))
-
-  const url = `/api/v1/admin/users?${searchParams.toString()}`
-  return fetchJson<PagedAdminUsers>(url)
+  return adminApi.getUsers(params)
 }
 
 async function updateUserRole(userId: string, role: string): Promise<void> {
-  await fetchJson<void>(`/api/v1/admin/users/${userId}/role`, {
-    method: 'PUT',
-    headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ role }),
-  })
+  await adminApi.updateUserRole(userId, role)
 }
 
 async function updateUserStatus(userId: string, status: 'ACTIVE' | 'DISABLED'): Promise<void> {
-  await fetchJson<void>(`/api/v1/admin/users/${userId}/status`, {
-    method: 'PUT',
-    headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ status }),
-  })
+  await adminApi.updateUserStatus(userId, status)
 }
 
 export function useAdminUsers(params: AdminUsersParams) {
@@ -74,6 +52,36 @@ export function useUpdateUserStatus() {
   return useMutation({
     mutationFn: ({ userId, status }: { userId: string; status: 'ACTIVE' | 'DISABLED' }) =>
       updateUserStatus(userId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
+}
+
+export function useApproveUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => adminApi.approveUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
+}
+
+export function useDisableUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => adminApi.disableUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
+}
+
+export function useEnableUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => adminApi.enableUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
     },

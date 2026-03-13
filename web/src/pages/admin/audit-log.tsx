@@ -30,22 +30,22 @@ export function AuditLogPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-3xl font-bold mb-2">审计日志</h1>
-        <p className="text-muted-foreground">查看系统操作记录</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">审计日志</h1>
+        <p className="text-muted-foreground text-lg">查看系统操作记录</p>
       </div>
 
-      <Card className="p-4">
+      <Card className="p-5">
         <div className="flex gap-4">
           <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="w-[200px]">
             <option value="">全部</option>
-            <option value="USER_LOGIN">用户登录</option>
-            <option value="USER_LOGOUT">用户登出</option>
-            <option value="USER_ROLE_CHANGE">角色变更</option>
-            <option value="USER_STATUS_CHANGE">状态变更</option>
-            <option value="SKILL_PUBLISH">技能发布</option>
-            <option value="SKILL_REVIEW">技能审核</option>
+            <option value="CLI_PUBLISH">CLI 发布</option>
+            <option value="COMPAT_PUBLISH">Compat 发布</option>
+            <option value="REVIEW_APPROVE">审核通过</option>
+            <option value="REVIEW_REJECT">审核拒绝</option>
+            <option value="PROMOTION_APPROVE">提升通过</option>
+            <option value="YANK_SKILL_VERSION">版本撤回</option>
           </Select>
           <Input
             placeholder="用户 ID..."
@@ -57,7 +57,11 @@ export function AuditLogPage() {
       </Card>
 
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">加载中...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 animate-shimmer rounded-lg" />
+          ))}
+        </div>
       ) : !data || data.items.length === 0 ? (
         <Card className="p-12 text-center">
           <p className="text-muted-foreground">暂无审计日志</p>
@@ -81,11 +85,11 @@ export function AuditLogPage() {
                   <TableRow key={log.id}>
                     <TableCell>{formatDate(log.timestamp)}</TableCell>
                     <TableCell className="font-medium">{log.action}</TableCell>
-                    <TableCell>{log.userId}</TableCell>
-                    <TableCell>{log.username || '-'}</TableCell>
+                    <TableCell>{log.userId || '-'}</TableCell>
+                    <TableCell>{log.resourceType || '-'}</TableCell>
                     <TableCell>{log.ipAddress || '-'}</TableCell>
                     <TableCell className="max-w-md truncate">
-                      {log.details || '-'}
+                      {log.resourceId || '-'}
                     </TableCell>
                   </TableRow>
                 ))}

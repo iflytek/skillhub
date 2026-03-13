@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -84,11 +85,15 @@ class ReviewPortalControllerTest {
     @MockBean
     private ReviewPermissionChecker permissionChecker;
 
+    @MockBean
+    private AuditLogService auditLogService;
+
     @Test
     void submitReview_passesNamespaceRolesToService() throws Exception {
         ReviewTask task = createReviewTask(1L, 20L, "user-1");
         stubNamespaceRoles("user-1", List.of(new NamespaceMember(20L, "user-1", NamespaceRole.MEMBER)));
-        given(reviewService.submitReview(100L, "user-1", Map.of(20L, NamespaceRole.MEMBER))).willReturn(task);
+        given(rbacService.getUserRoleCodes("user-1")).willReturn(Set.of());
+        given(reviewService.submitReview(100L, "user-1", Map.of(20L, NamespaceRole.MEMBER), Set.of())).willReturn(task);
         stubReviewResponse(task);
 
         mockMvc.perform(post("/api/v1/reviews")
@@ -130,7 +135,7 @@ class ReviewPortalControllerTest {
         given(reviewTaskRepository.findById(1L)).willReturn(Optional.of(task));
         given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
         given(rbacService.getUserRoleCodes("user-1")).willReturn(Set.of());
-        given(permissionChecker.canReadReview(task, "user-1", namespace.getType(), Map.of(), Set.of())).willReturn(true);
+        given(reviewService.canViewReview(task, "user-1", namespace.getType(), Map.of(), Set.of())).willReturn(true);
         stubReviewResponse(task);
 
         mockMvc.perform(get("/api/v1/reviews/1").with(auth("user-1")))
@@ -147,7 +152,7 @@ class ReviewPortalControllerTest {
         given(reviewTaskRepository.findById(1L)).willReturn(Optional.of(task));
         given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
         given(rbacService.getUserRoleCodes("user-9")).willReturn(Set.of());
-        given(permissionChecker.canReadReview(task, "user-9", namespace.getType(), Map.of(), Set.of())).willReturn(false);
+        given(reviewService.canViewReview(task, "user-9", namespace.getType(), Map.of(), Set.of())).willReturn(false);
 
         mockMvc.perform(get("/api/v1/reviews/1").with(auth("user-9")))
                 .andExpect(status().isForbidden())
