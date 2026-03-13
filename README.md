@@ -1,6 +1,6 @@
 # SkillHub
 
-An enterprise-grade agent skill registry — publish, discover, and
+An enterprise-grade, open-source agent skill registry — publish, discover, and
 manage reusable skill packages across your organization.
 
 SkillHub is a self-hosted platform that gives teams a private,
@@ -8,6 +8,8 @@ governed place to share agent skills. Publish a skill package, push
 it to a namespace, and let others find it through search or
 install it via CLI. Built for on-premise deployment behind your
 firewall, with the same polish you'd expect from a public registry.
+
+**Version:** 0.1.0-beta.2
 
 ## Highlights
 
@@ -26,12 +28,19 @@ firewall, with the same polish you'd expect from a public registry.
 - **Review & Governance** — Team admins review within their namespace;
   platform admins gate promotions to the global scope. Governance
   actions are audit-logged for compliance.
+- **Social Features** — Star skills, rate them, and track downloads.
+  Build a community around your organization's best practices.
+- **Account Merging** — Consolidate multiple OAuth identities and
+  API tokens under a single user account.
+- **API Token Management** — Generate scoped tokens for CLI and
+  programmatic access with prefix-based secure hashing.
 - **CLI-First** — Native REST API plus a compatibility layer for
   existing ClawHub-style registry clients. Native CLI APIs are the
   primary supported path while protocol compatibility continues to
   expand.
 - **Pluggable Storage** — Local filesystem for development, S3 /
   MinIO for production. Swap via config.
+- **Internationalization** — Multi-language support with i18next.
 
 ## Quick Start
 
@@ -145,9 +154,8 @@ private, run `docker login ghcr.io` before `docker compose up -d`.
 
 ### Monitoring
 
-The Phase 4 monitoring stack lives under [`monitoring/`](./monitoring).
-It provides a local Prometheus + Grafana pair that scrapes the backend's
-Actuator Prometheus endpoint.
+A Prometheus + Grafana monitoring stack lives under [`monitoring/`](./monitoring).
+It scrapes the backend's Actuator Prometheus endpoint.
 
 Start it with:
 
@@ -201,6 +209,7 @@ Run it against a local backend:
 ```
 ┌─────────────┐     ┌─────────────┐     ┌──────────────┐
 │   Web UI    │     │  CLI Tools  │     │  REST API    │
+│  (React 19) │     │             │     │              │
 └──────┬──────┘     └──────┬──────┘     └──────┬───────┘
        │                   │                   │
        └───────────────────┼───────────────────┘
@@ -211,22 +220,35 @@ Run it against a local backend:
                            │
                     ┌──────▼──────┐
                     │ Spring Boot │  Auth · RBAC · Core Services
+                    │   (Java 21) │  OAuth2 · API Tokens · Audit
                     └──────┬──────┘
                            │
               ┌────────────┼────────────┐
               │            │            │
        ┌──────▼───┐  ┌─────▼────┐  ┌────▼────┐
        │PostgreSQL│  │  Redis   │  │ Storage │
+       │    16    │  │    7     │  │ S3/MinIO│
        └──────────┘  └──────────┘  └─────────┘
 ```
+
+**Backend (Spring Boot 3.2.3, Java 21):**
+- Multi-module Maven project with clean architecture
+- Modules: app, domain, auth, search, storage, infra
+- PostgreSQL 16 with Flyway migrations
+- Redis for session management
+- S3/MinIO for skill package storage
+
+**Frontend (React 19, TypeScript, Vite):**
+- TanStack Router for routing
+- TanStack Query for data fetching
+- Tailwind CSS + Radix UI for styling
+- OpenAPI TypeScript for type-safe API client
+- i18next for internationalization
 
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss
 what you'd like to change.
-
-- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 
 - Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
