@@ -127,7 +127,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 Then open:
 
-- Web UI: `http://localhost`
+- Web UI: `SKILLHUB_PUBLIC_BASE_URL` 对应的地址
 - Backend API: `http://localhost:8080`
 
 Stop it with:
@@ -139,16 +139,22 @@ docker compose --env-file .env.release -f compose.release.yml down
 The runtime stack uses its own Compose project name, so it does not
 collide with containers from `make dev-all`.
 
-The runtime uses the existing `local,docker` profile combination so it
-is immediately usable with the same mock-auth flow as local development.
-Available seeded users:
+The production Compose stack now defaults to the `docker` profile only.
+It does not enable local mock auth. Instead, the backend bootstraps a
+local admin account from environment variables for the first login:
 
-- `local-user`
-- `local-admin`
+- username: `BOOTSTRAP_ADMIN_USERNAME`
+- password: `BOOTSTRAP_ADMIN_PASSWORD`
 
-Pass `X-Mock-User-Id` to the backend when you need an authenticated
-session without configuring GitHub OAuth. If the GHCR package remains
-private, run `docker login ghcr.io` before `docker compose up -d`.
+Recommended production baseline:
+
+- set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
+- keep PostgreSQL / Redis bound to `127.0.0.1`
+- use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
+- rotate or disable the bootstrap admin after initial setup
+
+If the GHCR package remains private, run `docker login ghcr.io` before
+`docker compose up -d`.
 
 ### Monitoring
 

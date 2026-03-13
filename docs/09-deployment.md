@@ -38,31 +38,33 @@
 
 说明：
 - Web 容器提供静态资源，并将 `/api/*`、`/oauth2/*`、`/.well-known/*` 反代到后端
-- 后端运行 `local,docker` profile 组合
-- 技能包文件默认落在容器卷 `skillhub_storage`，保证单机环境开箱即用
+- 后端默认运行 `docker` profile，不再启用本地 mock 登录
+- PostgreSQL / Redis 默认只绑定 `127.0.0.1`
+- 对象存储推荐使用外部 S3 / OSS，通过环境变量注入
 
 ## 3 Profile 约定
 
 | Profile | 用途 | 说明 |
 |---------|------|------|
 | `local` | 本地源码开发能力 | 启用 mock 登录、开发种子账号、调试日志 |
-| `docker` | 容器网络适配 | 将数据库和 Redis 地址切换到 Compose 内网 |
+| `docker` | 容器运行时能力 | 启用容器内启动用管理员账号初始化等运行时行为 |
 
-单机交付环境使用 `SPRING_PROFILES_ACTIVE=local,docker`，原因很明确：
+单机交付环境使用 `SPRING_PROFILES_ACTIVE=docker`，原因如下：
 
-- 这是当前唯一能保证“镜像拉起后直接可用”的 profile 组合
-- 用户无需先配置 GitHub OAuth，先用 mock 身份即可浏览和联调主要流程
-- 后续如果引入专用 `runtime` / `demo` profile，可以替换这层组合，但当前方案不再新增第三条部署路径
+- 生产环境不应开启 `X-Mock-User-Id` 这一类本地开发旁路能力
+- 容器环境仍然可以通过 `docker` profile 初始化首个管理员账户
+- 数据库、Redis、OSS、站点公网地址全部改为环境变量优先
 
-默认可用账号：
+默认首登账号来源于环境变量：
 
-- `local-user`
-- `local-admin`
+- `BOOTSTRAP_ADMIN_USERNAME`
+- `BOOTSTRAP_ADMIN_PASSWORD`
 
-鉴权方式：
+建议：
 
-- 向后端请求携带 `X-Mock-User-Id: local-user`
-- 或 `X-Mock-User-Id: local-admin`
+- 完成首次登录后立即修改管理员密码
+- 如果已有外部身份源，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
+- `SKILLHUB_PUBLIC_BASE_URL` 应配置为最终 HTTPS 域名，避免 OAuth / Cookie / 设备码链接异常
 
 ## 4 开发环境
 
@@ -99,7 +101,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 默认访问地址：
 
-- Web UI: `http://localhost`
+- Web UI: `SKILLHUB_PUBLIC_BASE_URL`
 - Backend API: `http://localhost:8080`
 
 ### 5.2 关键文件
@@ -107,10 +109,11 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - `compose.release.yml`
   - 使用发布镜像，不在用户机器上执行本地构建
   - 负责拉起 PostgreSQL、Redis、server、web
-  - 使用独立 Compose project name，避免与开发环境容器互相污染
+  - PostgreSQL、Redis 默认只绑定到 `127.0.0.1`
+  - Web 和后端都支持运行时环境变量注入，不需要为每个环境重建镜像
 - `.env.release.example`
   - 运行时变量模板
-  - 包含镜像名、镜像版本、端口和数据库凭证
+  - 包含镜像名、镜像版本、端口、数据库凭证、外部 OSS、站点公网地址和首登管理员参数
 
 ### 5.3 镜像标签约定
 
@@ -160,6 +163,9 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 - 使用 `.env.release` 管理 Compose 变量
 - 如果 GHCR 包保持私有，用户需要先 `docker login ghcr.io`
+- 推荐将敏感变量放入 CI/CD Secret 或主机上的受控 `.env.release`
+- 外部对象存储通过 `SKILLHUB_STORAGE_S3_*` 注入
+- 前端反代和运行时 API 地址通过 `SKILLHUB_API_UPSTREAM` / `SKILLHUB_WEB_API_BASE_URL` 注入
 - 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
 
 ## 8 可观测性

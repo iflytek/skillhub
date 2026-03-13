@@ -1,0 +1,4 @@
+window.__SKILLHUB_RUNTIME_CONFIG__ = {
+  apiBaseUrl: "${SKILLHUB_WEB_API_BASE_URL}",
+  appBaseUrl: "${SKILLHUB_PUBLIC_BASE_URL}"
+};

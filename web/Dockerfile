@@ -8,7 +8,10 @@ RUN pnpm build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY runtime-config.js.template /usr/share/nginx/html/runtime-config.js.template
+COPY docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/30-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/30-runtime-config.sh
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s \
   CMD wget -qO- http://localhost/nginx-health || exit 1

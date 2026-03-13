@@ -23,7 +23,29 @@ import { ApiError } from '@/shared/lib/api-error'
 
 export { ApiError }
 
-const client = createClient<paths>({ baseUrl: '' })
+type RuntimeConfig = {
+  apiBaseUrl?: string
+  appBaseUrl?: string
+}
+
+declare global {
+  interface Window {
+    __SKILLHUB_RUNTIME_CONFIG__?: RuntimeConfig
+  }
+}
+
+function getRuntimeConfig(): RuntimeConfig {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  return window.__SKILLHUB_RUNTIME_CONFIG__ ?? {}
+}
+
+function getApiBaseUrl(): string {
+  return getRuntimeConfig().apiBaseUrl ?? ''
+}
+
+const client = createClient<paths>({ baseUrl: getApiBaseUrl() })
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)
@@ -95,7 +117,7 @@ type ApiEnvelope<T> = {
 export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(input, init)
+    response = await fetch(withBaseUrl(input), init)
   } catch {
     throw new ApiError('Network error', 0)
   }
@@ -119,11 +141,23 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit)
 }
 
 export async function fetchText(input: RequestInfo | URL, init?: RequestInit): Promise<string> {
-  const response = await fetch(input, init)
+  const response = await fetch(withBaseUrl(input), init)
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
   }
   return response.text()
+}
+
+function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
+  const baseUrl = getApiBaseUrl()
+  if (!baseUrl || typeof input !== 'string' || !input.startsWith('/')) {
+    return input
+  }
+  return new URL(input, ensureTrailingSlash(baseUrl))
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`
 }
 
 export async function getCurrentUser(): Promise<User | null> {
