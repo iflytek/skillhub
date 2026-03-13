@@ -137,8 +137,11 @@ export async function getCurrentUser(): Promise<User | null> {
 export const authApi = {
   getMe: getCurrentUser,
 
-  async getProviders(): Promise<OAuthProvider[]> {
-    const providers = await unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers') as never)
+  async getProviders(returnTo?: string): Promise<OAuthProvider[]> {
+    const params = returnTo
+      ? { query: { returnTo } }
+      : undefined
+    const providers = await unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers', params as never) as never)
     return providers
       .filter((provider) => provider.id && provider.name && provider.authorizationUrl)
       .map((provider) => ({
