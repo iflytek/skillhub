@@ -16,6 +16,7 @@ import type {
   AdminUser,
   AuditLogItem,
   SkillSummary,
+  AuthMethod,
   OAuthProvider,
   User,
 } from './types'
@@ -26,6 +27,11 @@ export { ApiError }
 type RuntimeConfig = {
   apiBaseUrl?: string
   appBaseUrl?: string
+  authDirectEnabled?: string
+  authDirectProvider?: string
+  authSessionBootstrapEnabled?: string
+  authSessionBootstrapProvider?: string
+  authSessionBootstrapAuto?: string
 }
 
 declare global {
@@ -43,6 +49,13 @@ function getRuntimeConfig(): RuntimeConfig {
 
 function getApiBaseUrl(): string {
   return getRuntimeConfig().apiBaseUrl ?? ''
+}
+
+function parseBooleanFlag(value: string | undefined): boolean {
+  if (!value) {
+    return false
+  }
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
 }
 
 const client = createClient<paths>({ baseUrl: getApiBaseUrl() })
@@ -104,6 +117,36 @@ async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response:
 
 export function getCsrfHeaders(headers?: HeadersInit): HeadersInit {
   return withCsrf(headers)
+}
+
+export type SessionBootstrapRuntimeConfig = {
+  enabled: boolean
+  provider?: string
+  auto: boolean
+}
+
+export type DirectAuthRuntimeConfig = {
+  enabled: boolean
+  provider?: string
+}
+
+export function getDirectAuthRuntimeConfig(): DirectAuthRuntimeConfig {
+  const config = getRuntimeConfig()
+  const provider = config.authDirectProvider?.trim()
+  return {
+    enabled: parseBooleanFlag(config.authDirectEnabled) && !!provider,
+    provider: provider || undefined,
+  }
+}
+
+export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfig {
+  const config = getRuntimeConfig()
+  const provider = config.authSessionBootstrapProvider?.trim()
+  return {
+    enabled: parseBooleanFlag(config.authSessionBootstrapEnabled) && !!provider,
+    provider: provider || undefined,
+    auto: parseBooleanFlag(config.authSessionBootstrapAuto),
+  }
 }
 
 type ApiEnvelope<T> = {
@@ -195,6 +238,21 @@ export const authApi = {
       }))
   },
 
+  async getMethods(returnTo?: string): Promise<AuthMethod[]> {
+    const query = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
+    const methods = await fetchJson<AuthMethod[]>(`/api/v1/auth/methods${query}`)
+    return methods
+      .filter((method) => method.id && method.methodType && method.provider && method.displayName && method.actionUrl)
+      .map((method) => ({
+        ...method,
+        id: method.id,
+        methodType: method.methodType,
+        provider: method.provider,
+        displayName: method.displayName,
+        actionUrl: method.actionUrl,
+      }))
+  },
+
   async localLogin(request: LocalLoginRequest): Promise<User> {
     return fetchJson<User>('/api/v1/auth/local/login', {
       method: 'POST',
@@ -233,6 +291,30 @@ export const authApi = {
     if (response.status !== 200 && response.status !== 204) {
       throw new Error(`HTTP ${response.status}`)
     }
+  },
+
+  async bootstrapSession(provider: string): Promise<User> {
+    return fetchJson<User>('/api/v1/auth/session/bootstrap', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ provider }),
+    })
+  },
+
+  async directLogin(provider: string, request: LocalLoginRequest): Promise<User> {
+    return fetchJson<User>('/api/v1/auth/direct/login', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        provider,
+        username: request.username,
+        password: request.password,
+      }),
+    })
   },
 }
 

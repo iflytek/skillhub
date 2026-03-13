@@ -72,7 +72,10 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/v1/health",
                     "/api/v1/auth/providers",
+                    "/api/v1/auth/methods",
                     "/api/v1/auth/me",
+                    "/api/v1/auth/session/bootstrap",
+                    "/api/v1/auth/direct/login",
                     "/api/v1/auth/local/**",
                     "/api/v1/cli/auth/device/**",
                     "/api/v1/cli/check",

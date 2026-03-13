@@ -107,7 +107,39 @@ window.location.href = "/oauth2/authorization/github"
 2. 跳转到对应的 `authorizationUrl`
 3. 回调后通过 `/api/v1/auth/me` 检测登录态
 
-### 4.2 登录态检测
+### 4.2 预留的被动会话引导
+
+为未来私有部署下的企业 SSO 兼容，前端可在登录页或应用初始化阶段显式调用：
+
+- `POST /api/v1/auth/session/bootstrap`
+
+该接口在开源版默认关闭；私有版启用后，前端可在检测到用户未登录时主动调用一次，以尝试将外部 SSO Cookie 换成 skillhub Session。该流程必须保持显式触发，不默认依赖全局透明拦截器。
+
+前端兼容接入层约束如下：
+
+- 默认不启用，运行时配置不打开时，登录页和全局行为与开源版完全一致
+- 账号密码登录兼容层与被动会话兼容层相互独立，可单独启用
+- 启用后，登录页会出现一个“企业 SSO”兼容入口
+- 启用密码兼容层后，登录页账号密码表单会改为调用通用直连认证接口
+- 前端应优先消费 `/api/v1/auth/methods` 作为统一登录方式目录；`/api/v1/auth/providers` 仅保留兼容
+- 可选自动尝试，但仍限定在登录页内执行，不在全站每次匿名访问时自动探测
+- bootstrap 失败时应静默回退到现有本地登录和 OAuth 登录，不打断正常流程
+
+前端运行时配置项：
+
+- `SKILLHUB_WEB_AUTH_DIRECT_ENABLED`
+- `SKILLHUB_WEB_AUTH_DIRECT_PROVIDER`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
+
+推荐策略：
+
+- 私有版密码直连：`auth_direct_enabled=true`，`auth_direct_provider=private-sso`
+- 私有版初期：`enabled=true`，`provider=private-sso`，`auto=false`
+- 验证稳定后：再评估是否切到 `auto=true`
+
+### 4.3 登录态检测
 
 ```
 页面加载 → GET /api/v1/auth/me

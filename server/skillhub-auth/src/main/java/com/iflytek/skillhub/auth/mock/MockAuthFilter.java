@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.mock;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import jakarta.servlet.FilterChain;
@@ -10,8 +11,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,11 +26,14 @@ public class MockAuthFilter extends OncePerRequestFilter {
 
     private final UserAccountRepository userRepo;
     private final UserRoleBindingRepository roleBindingRepo;
+    private final PlatformSessionService platformSessionService;
 
     public MockAuthFilter(UserAccountRepository userRepo,
-                          UserRoleBindingRepository roleBindingRepo) {
+                          UserRoleBindingRepository roleBindingRepo,
+                          PlatformSessionService platformSessionService) {
         this.userRepo = userRepo;
         this.roleBindingRepo = roleBindingRepo;
+        this.platformSessionService = platformSessionService;
     }
 
     @Override
@@ -50,12 +52,7 @@ public class MockAuthFilter extends OncePerRequestFilter {
                         user.getId(), user.getDisplayName(), user.getEmail(),
                         user.getAvatarUrl(), "mock", roles
                     );
-                    var authorities = roles.stream()
-                        .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                        .toList();
-                    var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                    request.getSession().setAttribute("platformPrincipal", principal);
+                    platformSessionService.establishSession(principal, request, false);
                 });
         }
         filterChain.doFilter(request, response);

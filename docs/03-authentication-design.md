@@ -16,6 +16,7 @@
 ┌─────────────────────────────┐
 │  Layer 1: OAuth2 Login      │  Spring Security OAuth2 Client
 │  (一期 GitHub，可扩展)        │  授权码模式 (Authorization Code)
+│  Layer 1b: Session Bootstrap│  显式被动会话引导（默认关闭）
 └─────────────┬───────────────┘
               │ OAuth2User
               ▼
@@ -141,7 +142,78 @@ AuthenticationSuccessHandler:
   ② 重定向到前端页面 (可配置的 redirect_uri)
 ```
 
-### 3.1 Spring Security 配置要点
+### 3.1 统一 Session 建立约束
+
+所有 Web 登录入口都必须通过统一的 `PlatformSessionService` 建立登录态，包括：
+
+- 本地用户名密码登录
+- OAuth 登录成功回调
+- `POST /api/v1/auth/direct/login`
+- `POST /api/v1/auth/session/bootstrap`
+- 本地开发态 `MockAuthFilter`
+
+统一约束如下：
+
+- 统一写入 `platformPrincipal`
+- 统一写入 `SPRING_SECURITY_CONTEXT`
+- 统一通过 `HttpSession` 持久化，确保 Spring Session Redis 能无差别接管
+- 交互式登录默认调用 `changeSessionId()`，降低 session fixation 风险
+- 已由 Spring Security 完成认证的入口可以复用现有 `Authentication`，避免重复构造认证结果
+
+这意味着未来私有版新增企业 SSO provider 时，只能扩展认证来源本身，不能绕开统一的 session 建立服务直接操作 Session。
+
+## 3.3 Session Bootstrap 扩展点
+
+为了兼容未来私有部署中的企业 SSO 被动登录，开源版预留显式会话引导协议：
+
+- 接口：`POST /api/v1/auth/session/bootstrap`
+- 用途：前端在同域场景下显式触发一次“读取外部会话并尝试换取 skillhub Session”的流程
+- 默认状态：关闭，开源版不提供任何 `PassiveSessionAuthenticator` 实现
+- 安全边界：默认不做全局自动登录 filter，避免匿名访问时隐式建会话、放大 CSRF 和审计复杂度
+
+扩展接口如下：
+
+```java
+public interface PassiveSessionAuthenticator {
+    String providerCode();
+    Optional<PlatformPrincipal> authenticate(HttpServletRequest request);
+}
+```
+
+约束如下：
+
+- `authenticate()` 只负责验证外部被动会话并返回平台登录所需主体
+- 是否允许启用该入口由 `skillhub.auth.session-bootstrap.enabled` 控制，默认 `false`
+- 未启用时接口返回 `403`
+- 启用但 provider 不受支持时返回 `400`
+- 启用但请求中不存在有效外部会话时返回 `401`
+- 成功时建立标准 Spring Security Session，并返回与 `/api/v1/auth/me` 一致的用户结构
+
+## 3.4 Direct Authentication 扩展点
+
+为兼容未来“前端收集用户名密码，后端调用企业 SSO / RPC 校验”的私有部署模式，开源版增加默认关闭的直连认证抽象：
+
+```java
+public interface DirectAuthProvider {
+    String providerCode();
+    PlatformPrincipal authenticate(DirectAuthRequest request);
+}
+```
+
+对应公共协议：
+
+- `POST /api/v1/auth/direct/login`
+
+约束如下：
+
+- 开源版默认关闭，由 `skillhub.auth.direct.enabled` 控制
+- 关闭时返回 `403`
+- provider 不受支持时返回 `400`
+- provider 认证失败时沿用 provider 自身的认证异常语义
+- 成功时建立标准 Session，并返回与 `/api/v1/auth/me` 一致的用户结构
+- 现有 `/api/v1/auth/local/login` 保持不变，兼容层只是新增可选入口
+
+### 3.5 Spring Security 配置要点
 
 ```java
 @Configuration
@@ -168,7 +240,7 @@ public class SecurityConfig {
 }
 ```
 
-### 3.2 OAuth2 Provider 扩展设计
+### 3.6 OAuth2 Provider 扩展设计
 
 一期只实现 GitHub，但架构支持后续扩展：
 
@@ -417,6 +489,7 @@ Session 中存储以下字段：
 
 统一约束：
 - `/api/v1/auth/me`、`/api/v1/auth/providers` 等 JSON 响应必须统一使用 `code/msg/data/timestamp/requestId` 外层结构。
+- `/api/v1/auth/session/bootstrap` 也必须遵守同一统一响应结构。
 - `msg` 必须走 Spring Boot 标准 `MessageSource` i18n 机制。
 - locale 必须通过请求上下文自动获取，不在 controller 中显式传递。
 - 认证失败返回 `401`，但 JSON 外层结构仍保持一致，例如 `{"code":401,"msg":"需要先登录","data":null,...}`。

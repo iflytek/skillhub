@@ -158,6 +158,28 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 ## 7 配置管理
 
+前端运行时配置通过 `web/runtime-config.js.template` 注入。与认证兼容层相关的新变量如下：
+
+- `SKILLHUB_WEB_AUTH_DIRECT_ENABLED`
+  - 是否在前端打开账号密码兼容接入层
+  - 默认应为 `false`
+- `SKILLHUB_WEB_AUTH_DIRECT_PROVIDER`
+  - 前端调用 `/api/v1/auth/direct/login` 时使用的 provider，例如 `private-sso`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED`
+  - 是否在前端打开企业 SSO 被动会话兼容入口
+  - 默认应为 `false`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER`
+  - 前端调用 `/api/v1/auth/session/bootstrap` 时使用的 provider，例如 `private-sso`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
+  - 是否在登录页加载后自动尝试一次 bootstrap
+  - 建议私有版初期保持 `false`
+
+注意：
+
+- 前端密码兼容层打开之前，后端仍必须同步打开 `skillhub.auth.direct.enabled=true`
+- 前端开关打开之前，后端仍必须同步打开 `skillhub.auth.session-bootstrap.enabled=true`
+- 前后端任一侧未开启，都不会破坏原有登录方式；只会使该兼容入口不可用或不显示
+
 开发环境：
 
 - 本地命令与 `docker-compose.yml`
