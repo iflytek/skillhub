@@ -22,24 +22,33 @@ public class SkillTagService {
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillTagRepository skillTagRepository;
+    private final VisibilityChecker visibilityChecker;
 
     public SkillTagService(
             NamespaceRepository namespaceRepository,
             NamespaceMemberRepository namespaceMemberRepository,
             SkillRepository skillRepository,
             SkillVersionRepository skillVersionRepository,
-            SkillTagRepository skillTagRepository) {
+            SkillTagRepository skillTagRepository,
+            VisibilityChecker visibilityChecker) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillTagRepository = skillTagRepository;
+        this.visibilityChecker = visibilityChecker;
     }
 
-    public List<SkillTag> listTags(String namespaceSlug, String skillSlug) {
+    public List<SkillTag> listTags(String namespaceSlug,
+                                   String skillSlug,
+                                   String currentUserId,
+                                   java.util.Map<Long, NamespaceRole> userNamespaceRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        if (!visibilityChecker.canAccess(skill, currentUserId, userNamespaceRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
+        }
 
         List<SkillTag> tags = new java.util.ArrayList<>(skillTagRepository.findBySkillId(skill.getId()));
         if (skill.getLatestVersionId() != null) {

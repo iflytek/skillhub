@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.review;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.skill.Skill;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -30,21 +31,52 @@ public class ReviewPermissionChecker {
             return false;
         }
 
+        return canReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canSubmitForReview(Skill skill,
+                                      String userId,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        if (skill.getOwnerId().equals(userId)) {
+            return true;
+        }
+
         if (platformRoles.contains("SKILL_ADMIN")
                 || platformRoles.contains("SUPER_ADMIN")) {
             return true;
         }
 
-        // Global namespace: only SKILL_ADMIN or SUPER_ADMIN
+        NamespaceRole role = userNamespaceRoles.get(skill.getNamespaceId());
+        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
+    }
+
+    public boolean canViewReview(ReviewTask task,
+                                 String userId,
+                                 NamespaceType namespaceType,
+                                 Map<Long, NamespaceRole> userNamespaceRoles,
+                                 Set<String> platformRoles) {
+        if (task.getSubmittedBy().equals(userId)) {
+            return true;
+        }
+        return canReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canReviewNamespace(Long namespaceId,
+                                      NamespaceType namespaceType,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        if (platformRoles.contains("SKILL_ADMIN")
+                || platformRoles.contains("SUPER_ADMIN")) {
+            return true;
+        }
+
         if (namespaceType == NamespaceType.GLOBAL) {
             return false;
         }
 
-        // Team namespace: namespace ADMIN or OWNER
-        NamespaceRole role = userNamespaceRoles.get(
-                task.getNamespaceId());
-        return role == NamespaceRole.ADMIN
-                || role == NamespaceRole.OWNER;
+        NamespaceRole role = userNamespaceRoles.get(namespaceId);
+        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
     }
 
     /**
@@ -60,5 +92,21 @@ public class ReviewPermissionChecker {
         }
         return platformRoles.contains("SKILL_ADMIN")
                 || platformRoles.contains("SUPER_ADMIN");
+    }
+
+    public boolean canSubmitPromotion(Skill skill,
+                                      String userId,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        return canSubmitForReview(skill, userId, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canViewPromotion(PromotionRequest request,
+                                    String userId,
+                                    Set<String> platformRoles) {
+        if (request.getSubmittedBy().equals(userId)) {
+            return true;
+        }
+        return canReviewPromotion(request, userId, platformRoles);
     }
 }

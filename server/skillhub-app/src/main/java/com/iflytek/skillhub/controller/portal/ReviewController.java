@@ -9,6 +9,8 @@ import com.iflytek.skillhub.domain.review.ReviewService;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -56,11 +58,14 @@ public class ReviewController extends BaseApiController {
     @PostMapping
     public ApiResponse<ReviewTaskResponse> submitReview(
             @RequestBody ReviewTaskRequest request,
-            @RequestAttribute("userId") String userId) {
-        SkillVersion sv = skillVersionRepository.findById(request.skillVersionId())
-                .orElseThrow();
-        Skill skill = skillRepository.findById(sv.getSkillId()).orElseThrow();
-        ReviewTask task = reviewService.submitReview(request.skillVersionId(), skill.getNamespaceId(), userId);
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        ReviewTask task = reviewService.submitReview(
+                request.skillVersionId(),
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                rbacService.getUserRoleCodes(userId)
+        );
         return ok("response.success.created", toResponse(task));
     }
 
@@ -104,7 +109,15 @@ public class ReviewController extends BaseApiController {
             @RequestParam Long namespaceId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestAttribute("userId") String userId) {
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        Namespace namespace = namespaceRepository.findById(namespaceId)
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", namespaceId));
+        ReviewTask probe = new ReviewTask(0L, namespaceId, "probe");
+        if (!reviewService.canReviewNamespace(probe, userId, namespace.getType(),
+                userNsRoles != null ? userNsRoles : Map.of(), rbacService.getUserRoleCodes(userId))) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
         Page<ReviewTask> tasks = reviewTaskRepository.findByNamespaceIdAndStatus(
                 namespaceId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
         return ok("response.success.read", PageResponse.from(tasks.map(this::toResponse)));
@@ -121,15 +134,27 @@ public class ReviewController extends BaseApiController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<ReviewTaskResponse> getReviewDetail(@PathVariable Long id) {
-        ReviewTask task = reviewTaskRepository.findById(id).orElseThrow();
+    public ApiResponse<ReviewTaskResponse> getReviewDetail(@PathVariable Long id,
+                                                           @RequestAttribute("userId") String userId,
+                                                           @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        ReviewTask task = reviewTaskRepository.findById(id)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", id));
+        Namespace namespace = namespaceRepository.findById(task.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", task.getNamespaceId()));
+        if (!reviewService.canViewReview(task, userId, namespace.getType(),
+                userNsRoles != null ? userNsRoles : Map.of(), rbacService.getUserRoleCodes(userId))) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
         return ok("response.success.read", toResponse(task));
     }
 
     private ReviewTaskResponse toResponse(ReviewTask task) {
-        SkillVersion sv = skillVersionRepository.findById(task.getSkillVersionId()).orElseThrow();
-        Skill skill = skillRepository.findById(sv.getSkillId()).orElseThrow();
-        Namespace ns = namespaceRepository.findById(skill.getNamespaceId()).orElseThrow();
+        SkillVersion sv = skillVersionRepository.findById(task.getSkillVersionId())
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
+        Skill skill = skillRepository.findById(sv.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sv.getSkillId()));
+        Namespace ns = namespaceRepository.findById(skill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
 
         String submittedByName = userAccountRepository.findById(task.getSubmittedBy())
                 .map(UserAccount::getDisplayName).orElse(null);

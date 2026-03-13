@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.SkillTag;
 import com.iflytek.skillhub.domain.skill.service.SkillTagService;
 import com.iflytek.skillhub.dto.ApiResponse;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,9 +31,16 @@ public class SkillTagController extends BaseApiController {
     @GetMapping
     public ApiResponse<List<TagResponse>> listTags(
             @PathVariable String namespace,
-            @PathVariable String slug) {
+            @PathVariable String slug,
+            @RequestAttribute(value = "userId", required = false) String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
-        List<SkillTag> tags = skillTagService.listTags(namespace, slug);
+        List<SkillTag> tags = skillTagService.listTags(
+                namespace,
+                slug,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of()
+        );
 
         List<TagResponse> response = tags.stream()
                 .map(TagResponse::from)

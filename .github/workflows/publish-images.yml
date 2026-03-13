@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/project-init
     tags:
       - "v*.*.*"
   workflow_dispatch:
@@ -59,7 +60,7 @@ jobs:
           images: ${{ matrix.image }}
           tags: |
             type=raw,value=edge,enable={{is_default_branch}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=ref,event=tag
             type=sha,format=short,prefix=sha-
             type=semver,pattern={{version}}

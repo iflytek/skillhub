@@ -4,10 +4,13 @@ import com.iflytek.skillhub.auth.rbac.RbacService;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.review.PromotionRequest;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.PromotionService;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -19,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -54,10 +58,13 @@ public class PromotionController extends BaseApiController {
     @PostMapping
     public ApiResponse<PromotionResponseDto> submitPromotion(
             @RequestBody PromotionRequestDto request,
-            @RequestAttribute("userId") String userId) {
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         PromotionRequest promotion = promotionService.submitPromotion(
                 request.sourceSkillId(), request.sourceVersionId(),
-                request.targetNamespaceId(), userId);
+                request.targetNamespaceId(), userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                rbacService.getUserRoleCodes(userId));
         return ok("response.success.created", toResponse(promotion));
     }
 
@@ -91,7 +98,7 @@ public class PromotionController extends BaseApiController {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
         boolean hasAdminRole = platformRoles.contains("SKILL_ADMIN") || platformRoles.contains("SUPER_ADMIN");
         if (!hasAdminRole) {
-            return ok("response.success.read", PageResponse.from(Page.empty()));
+            throw new DomainForbiddenException("promotion.no_permission");
         }
         Page<PromotionRequest> requests = promotionRequestRepository.findByStatus(
                 ReviewTaskStatus.PENDING, PageRequest.of(page, size));
@@ -99,16 +106,25 @@ public class PromotionController extends BaseApiController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<PromotionResponseDto> getPromotionDetail(@PathVariable Long id) {
-        PromotionRequest promotion = promotionRequestRepository.findById(id).orElseThrow();
+    public ApiResponse<PromotionResponseDto> getPromotionDetail(@PathVariable Long id,
+                                                                @RequestAttribute("userId") String userId) {
+        PromotionRequest promotion = promotionRequestRepository.findById(id)
+                .orElseThrow(() -> new DomainNotFoundException("promotion.not_found", id));
+        if (!promotionService.canViewPromotion(promotion, userId, rbacService.getUserRoleCodes(userId))) {
+            throw new DomainForbiddenException("promotion.no_permission");
+        }
         return ok("response.success.read", toResponse(promotion));
     }
 
     private PromotionResponseDto toResponse(PromotionRequest req) {
-        Skill sourceSkill = skillRepository.findById(req.getSourceSkillId()).orElseThrow();
-        SkillVersion sourceVersion = skillVersionRepository.findById(req.getSourceVersionId()).orElseThrow();
-        Namespace sourceNs = namespaceRepository.findById(sourceSkill.getNamespaceId()).orElseThrow();
-        Namespace targetNs = namespaceRepository.findById(req.getTargetNamespaceId()).orElseThrow();
+        Skill sourceSkill = skillRepository.findById(req.getSourceSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", req.getSourceSkillId()));
+        SkillVersion sourceVersion = skillVersionRepository.findById(req.getSourceVersionId())
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", req.getSourceVersionId()));
+        Namespace sourceNs = namespaceRepository.findById(sourceSkill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
+        Namespace targetNs = namespaceRepository.findById(req.getTargetNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", req.getTargetNamespaceId()));
 
         String submittedByName = userAccountRepository.findById(req.getSubmittedBy())
                 .map(UserAccount::getDisplayName).orElse(null);

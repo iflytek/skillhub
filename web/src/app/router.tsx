@@ -1,5 +1,6 @@
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
+import { LandingPage } from '@/pages/landing'
 import { HomePage } from '@/pages/home'
 import { LoginPage } from '@/pages/login'
 import { DashboardPage } from '@/pages/dashboard'
@@ -24,6 +25,12 @@ const rootRoute = createRootRoute({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  component: LandingPage,
+})
+
+const skillsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/skills',
   component: HomePage,
 })
 
@@ -189,6 +196,7 @@ const adminAuditLogRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   homeRoute,
+  skillsRoute,
   loginRoute,
   searchRoute,
   namespaceRoute,
