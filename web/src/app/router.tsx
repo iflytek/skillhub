@@ -15,7 +15,6 @@ function lazyRouteComponent<TModule extends Record<string, unknown>>(
   return LazyComponent
 }
 
-const LandingPage = lazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
 const HomePage = lazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = lazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
 const RegisterPage = lazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
@@ -41,12 +40,6 @@ const AuditLogPage = lazyRouteComponent(() => import('@/pages/admin/audit-log'),
 
 const rootRoute = createRootRoute({
   component: Layout,
-})
-
-const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: LandingPage,
 })
 
 const skillsRoute = createRoute({
@@ -303,7 +296,6 @@ const adminAuditLogRoute = createRoute({
 })
 
 const routeTree = rootRoute.addChildren([
-  homeRoute,
   skillsRoute,
   loginRoute,
   registerRoute,
