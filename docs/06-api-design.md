@@ -165,6 +165,11 @@ Public API 的可见性规则：
 - `fileCount`
 - `totalSize`
 
+发布状态约束：
+
+- 普通用户发布成功后，`status` 为 `PENDING_REVIEW`
+- 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/cli/publish`、`/api/compat/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
+
 ## 7.4 Token API（需登录）
 
 | 方法 | 路径 | 说明 |
@@ -178,7 +183,7 @@ Public API 的可见性规则：
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/v1/cli/whoami` | 当前 Bearer Token 对应的用户信息 |
-| POST | `/api/v1/cli/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流） |
+| POST | `/api/v1/cli/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流；`SUPER_ADMIN` 始终直发） |
 | GET | `/api/v1/cli/resolve/{namespace}/{slug}` | 解析版本 |
 | GET | `/api/v1/cli/check/{namespace}/{slug}/{version}` | 本地哈希与远端比对 |
 
@@ -333,7 +338,7 @@ GET /.well-known/clawhub.json
 | GET | `/api/compat/v1/search` | 搜索技能 |
 | GET | `/api/compat/v1/resolve` | 通过 slug + version 解析版本 |
 | GET | `/api/compat/v1/download/{slug}/{version}` | 下载技能 zip 包 |
-| POST | `/api/compat/v1/publish` | 发布技能（multipart/form-data） |
+| POST | `/api/compat/v1/publish` | 发布技能（multipart/form-data，`SUPER_ADMIN` 直发） |
 
 ### 兼容层请求/响应格式
 
