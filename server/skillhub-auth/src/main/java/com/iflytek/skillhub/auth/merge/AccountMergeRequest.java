@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class AccountMergeRequest {
 
     public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_VERIFIED = "VERIFIED";
     public static final String STATUS_COMPLETED = "COMPLETED";
     public static final String STATUS_CANCELLED = "CANCELLED";
 

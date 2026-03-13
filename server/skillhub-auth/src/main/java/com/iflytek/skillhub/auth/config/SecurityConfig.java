@@ -78,7 +78,8 @@ public class SecurityConfig {
                     "/swagger-ui/**",
                     "/.well-known/**",
                     "/api/compat/v1/search",
-                    "/api/compat/v1/resolve/**"
+                    "/api/compat/v1/resolve/**",
+                    "/api/compat/v1/download/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/v1/skills",

@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.cli;
 
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
@@ -10,6 +11,8 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PublishResponse;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.MDC;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,15 +26,18 @@ public class CliPublishController extends BaseApiController {
     private final SkillPublishService skillPublishService;
     private final ZipPackageExtractor zipPackageExtractor;
     private final SkillHubMetrics skillHubMetrics;
+    private final AuditLogService auditLogService;
 
     public CliPublishController(SkillPublishService skillPublishService,
                                 ZipPackageExtractor zipPackageExtractor,
                                 ApiResponseFactory responseFactory,
-                                SkillHubMetrics skillHubMetrics) {
+                                SkillHubMetrics skillHubMetrics,
+                                AuditLogService auditLogService) {
         super(responseFactory);
         this.skillPublishService = skillPublishService;
         this.zipPackageExtractor = zipPackageExtractor;
         this.skillHubMetrics = skillHubMetrics;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping("/publish")
@@ -40,7 +46,8 @@ public class CliPublishController extends BaseApiController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("namespace") String namespace,
             @RequestParam("visibility") String visibility,
-            @RequestAttribute("userId") String userId) throws IOException {
+            @RequestAttribute("userId") String userId,
+            HttpServletRequest request) throws IOException {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
 
@@ -63,6 +70,16 @@ public class CliPublishController extends BaseApiController {
                 publishResult.version().getTotalSize()
         );
         skillHubMetrics.incrementSkillPublish(namespace, publishResult.version().getStatus().name());
+        auditLogService.record(
+                userId,
+                "CLI_PUBLISH",
+                "SKILL_VERSION",
+                publishResult.version().getId(),
+                MDC.get("requestId"),
+                request.getRemoteAddr(),
+                request.getHeader("User-Agent"),
+                "{\"namespace\":\"" + namespace + "\"}"
+        );
 
         return ok("response.success.published", response);
     }

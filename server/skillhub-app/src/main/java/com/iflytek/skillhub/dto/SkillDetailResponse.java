@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.dto;
 
+import java.math.BigDecimal;
+
 public record SkillDetailResponse(
         Long id,
         String slug,
@@ -9,6 +11,9 @@ public record SkillDetailResponse(
         String status,
         Long downloadCount,
         Integer starCount,
+        BigDecimal ratingAvg,
+        Integer ratingCount,
+        boolean hidden,
         String latestVersion,
         String namespace
 ) {}

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -73,6 +74,27 @@ class AccountMergeControllerTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.message").value("Account merge verified"));
+
+        verify(accountMergeService).verify("usr_primary", 1L, "merge-token");
+    }
+
+    @Test
+    void confirm_returnsSuccessMessage() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal("usr_primary", "primary", "p@example.com", "", "local", Set.of());
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/account/merge/confirm")
+                .with(authentication(auth))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"mergeRequestId":1}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.message").value("Account merge completed"));
+
+        verify(accountMergeService).confirm("usr_primary", 1L);
     }
 }

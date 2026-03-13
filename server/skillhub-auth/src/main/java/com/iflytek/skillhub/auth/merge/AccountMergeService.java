@@ -100,7 +100,7 @@ public class AccountMergeService {
     }
 
     @Transactional
-    public void verifyAndComplete(String primaryUserId, Long mergeRequestId, String verificationToken) {
+    public void verify(String primaryUserId, Long mergeRequestId, String verificationToken) {
         AccountMergeRequest request = mergeRequestRepository.findByIdAndPrimaryUserId(mergeRequestId, primaryUserId)
             .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
         if (!AccountMergeRequest.STATUS_PENDING.equals(request.getStatus())) {
@@ -111,6 +111,23 @@ public class AccountMergeService {
         }
         if (!passwordEncoder.matches(verificationToken, request.getVerificationToken())) {
             throw new AuthFlowException(HttpStatus.UNAUTHORIZED, "error.auth.merge.invalidToken");
+        }
+
+        loadActiveUser(primaryUserId);
+        UserAccount secondaryUser = userAccountRepository.findById(request.getSecondaryUserId())
+            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.secondaryNotFound"));
+        validateMergePair(loadActiveUser(primaryUserId), secondaryUser);
+
+        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        mergeRequestRepository.save(request);
+    }
+
+    @Transactional
+    public void confirm(String primaryUserId, Long mergeRequestId) {
+        AccountMergeRequest request = mergeRequestRepository.findByIdAndPrimaryUserId(mergeRequestId, primaryUserId)
+            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
+        if (!AccountMergeRequest.STATUS_VERIFIED.equals(request.getStatus())) {
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.requestNotVerified");
         }
 
         UserAccount primaryUser = loadActiveUser(primaryUserId);

@@ -1,0 +1,100 @@
+package com.iflytek.skillhub.bootstrap;
+
+import com.iflytek.skillhub.auth.entity.Role;
+import com.iflytek.skillhub.auth.entity.UserRoleBinding;
+import com.iflytek.skillhub.auth.local.LocalCredential;
+import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
+import com.iflytek.skillhub.auth.repository.RoleRepository;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Seeds default admin account for Docker one-click startup.
+ * Idempotent: skips if admin credential already exists.
+ */
+@Component
+@Profile("docker")
+public class DockerSeedDataRunner implements ApplicationRunner {
+
+    private static final String ADMIN_USER_ID = "docker-admin";
+    private static final String ADMIN_USERNAME = "admin";
+    private static final String ADMIN_PASSWORD = "Admin@2026";
+
+    private static final Logger log = LoggerFactory.getLogger(DockerSeedDataRunner.class);
+
+    private final UserAccountRepository userAccountRepository;
+    private final LocalCredentialRepository localCredentialRepository;
+    private final RoleRepository roleRepository;
+    private final UserRoleBindingRepository userRoleBindingRepository;
+    private final NamespaceRepository namespaceRepository;
+    private final NamespaceMemberRepository namespaceMemberRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public DockerSeedDataRunner(UserAccountRepository userAccountRepository,
+                                LocalCredentialRepository localCredentialRepository,
+                                RoleRepository roleRepository,
+                                UserRoleBindingRepository userRoleBindingRepository,
+                                NamespaceRepository namespaceRepository,
+                                NamespaceMemberRepository namespaceMemberRepository,
+                                PasswordEncoder passwordEncoder) {
+        this.userAccountRepository = userAccountRepository;
+        this.localCredentialRepository = localCredentialRepository;
+        this.roleRepository = roleRepository;
+        this.userRoleBindingRepository = userRoleBindingRepository;
+        this.namespaceRepository = namespaceRepository;
+        this.namespaceMemberRepository = namespaceMemberRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    @Transactional
+    public void run(ApplicationArguments args) {
+        if (localCredentialRepository.existsByUsernameIgnoreCase(ADMIN_USERNAME)) {
+            log.info("Docker seed data already exists, skipping");
+            return;
+        }
+
+        // 1. Create admin user account
+        UserAccount admin = userAccountRepository.findById(ADMIN_USER_ID)
+                .orElseGet(() -> userAccountRepository.save(
+                        new UserAccount(ADMIN_USER_ID, "Admin", "admin@skillhub.dev", null)
+                ));
+
+        // 2. Create local credential (username/password)
+        localCredentialRepository.save(
+                new LocalCredential(admin.getId(), ADMIN_USERNAME, passwordEncoder.encode(ADMIN_PASSWORD))
+        );
+
+        // 3. Assign SUPER_ADMIN role
+        Role superAdmin = roleRepository.findByCode("SUPER_ADMIN")
+                .orElseThrow(() -> new IllegalStateException("Missing built-in role: SUPER_ADMIN"));
+        boolean hasRole = userRoleBindingRepository.findByUserId(admin.getId()).stream()
+                .anyMatch(b -> b.getRole().getCode().equals("SUPER_ADMIN"));
+        if (!hasRole) {
+            userRoleBindingRepository.save(new UserRoleBinding(admin.getId(), superAdmin));
+        }
+
+        // 4. Ensure global namespace + membership
+        Namespace globalNs = namespaceRepository.findBySlug("global")
+                .orElseThrow(() -> new IllegalStateException("Missing built-in global namespace"));
+        if (namespaceMemberRepository.findByNamespaceIdAndUserId(globalNs.getId(), admin.getId()).isEmpty()) {
+            namespaceMemberRepository.save(new NamespaceMember(globalNs.getId(), admin.getId(), NamespaceRole.OWNER));
+        }
+
+        log.info("Docker seed data initialized — admin account: {} / {}", ADMIN_USERNAME, ADMIN_PASSWORD);
+    }
+}

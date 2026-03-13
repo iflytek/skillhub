@@ -61,6 +61,9 @@ public class SkillQueryService {
             String status,
             Long downloadCount,
             Integer starCount,
+            java.math.BigDecimal ratingAvg,
+            Integer ratingCount,
+            boolean hidden,
             String latestVersion,
             Long namespaceId
     ) {}
@@ -120,6 +123,9 @@ public class SkillQueryService {
                 skill.getStatus().name(),
                 skill.getDownloadCount(),
                 skill.getStarCount(),
+                skill.getRatingAvg(),
+                skill.getRatingCount(),
+                skill.isHidden(),
                 latestVersion,
                 skill.getNamespaceId()
         );

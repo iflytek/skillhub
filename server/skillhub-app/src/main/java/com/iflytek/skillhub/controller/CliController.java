@@ -7,7 +7,10 @@ import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.CliWhoamiResponse;
+import com.iflytek.skillhub.dto.ResolveVersionResponse;
 import com.iflytek.skillhub.dto.SkillCheckResponse;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.iflytek.skillhub.exception.UnauthorizedException;
 import org.springframework.web.bind.annotation.*;
@@ -24,11 +27,14 @@ import java.util.zip.ZipInputStream;
 public class CliController extends BaseApiController {
 
     private final SkillPackageValidator skillPackageValidator;
+    private final SkillQueryService skillQueryService;
 
     public CliController(ApiResponseFactory responseFactory,
-                         SkillPackageValidator skillPackageValidator) {
+                         SkillPackageValidator skillPackageValidator,
+                         SkillQueryService skillQueryService) {
         super(responseFactory);
         this.skillPackageValidator = skillPackageValidator;
+        this.skillQueryService = skillQueryService;
     }
 
     @GetMapping("/whoami")
@@ -53,6 +59,35 @@ public class CliController extends BaseApiController {
         );
 
         return ok("response.success.validated", response);
+    }
+
+    @GetMapping("/resolve/{namespace}/{slug}")
+    public ApiResponse<ResolveVersionResponse> resolve(@PathVariable String namespace,
+                                                       @PathVariable String slug,
+                                                       @RequestParam(required = false) String version,
+                                                       @RequestParam(required = false) String tag,
+                                                       @RequestParam(required = false) String hash,
+                                                       @RequestAttribute(value = "userId", required = false) String userId,
+                                                       @RequestAttribute(value = "userNsRoles", required = false) java.util.Map<Long, NamespaceRole> userNsRoles) {
+        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
+            namespace,
+            slug,
+            version,
+            tag,
+            hash,
+            userId,
+            userNsRoles != null ? userNsRoles : java.util.Map.of()
+        );
+        return ok("response.success.read", new ResolveVersionResponse(
+            resolved.skillId(),
+            resolved.namespace(),
+            resolved.slug(),
+            resolved.version(),
+            resolved.versionId(),
+            resolved.fingerprint(),
+            resolved.matched(),
+            resolved.downloadUrl()
+        ));
     }
 
     private List<PackageEntry> extractZipEntries(MultipartFile file) throws IOException {

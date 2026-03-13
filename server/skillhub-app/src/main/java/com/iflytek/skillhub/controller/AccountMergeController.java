@@ -49,11 +49,23 @@ public class AccountMergeController extends BaseApiController {
         if (principal == null) {
             throw new UnauthorizedException("error.auth.required");
         }
-        accountMergeService.verifyAndComplete(
+        accountMergeService.verify(
             principal.userId(),
             request.mergeRequestId(),
             request.verificationToken()
         );
+        return ok("response.success.updated", new MessageResponse("Account merge verified"));
+    }
+
+    @PostMapping("/confirm")
+    public ApiResponse<MessageResponse> confirm(@AuthenticationPrincipal PlatformPrincipal principal,
+                                                @Valid @RequestBody ConfirmMergeRequest request) {
+        if (principal == null) {
+            throw new UnauthorizedException("error.auth.required");
+        }
+        accountMergeService.confirm(principal.userId(), request.mergeRequestId());
         return ok("response.success.updated", new MessageResponse("Account merge completed"));
     }
+
+    public record ConfirmMergeRequest(@jakarta.validation.constraints.NotNull Long mergeRequestId) {}
 }
