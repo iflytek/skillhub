@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tokenApi } from '@/api/client'
 import { Button } from '@/shared/ui/button'
@@ -10,10 +11,15 @@ import {
   TableRow,
 } from '@/shared/ui/table'
 import { CreateTokenDialog } from './create-token-dialog'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/lib/toast'
 import type { ApiToken } from '@/api/types'
 
 export function TokenList() {
   const queryClient = useQueryClient()
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; tokenId?: number; name?: string }>({
+    open: false,
+  })
 
   const { data: tokens, isLoading } = useQuery<ApiToken[]>({
     queryKey: ['tokens'],
@@ -24,12 +30,20 @@ export function TokenList() {
     mutationFn: (tokenId: number) => tokenApi.deleteToken(tokenId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
+      toast.success('Token 已删除')
+    },
+    onError: () => {
+      toast.error('删除失败')
     },
   })
 
   const handleDelete = (tokenId: number, name: string) => {
-    if (window.confirm(`确定要删除 Token "${name}" 吗？`)) {
-      deleteMutation.mutate(tokenId)
+    setDeleteDialog({ open: true, tokenId, name })
+  }
+
+  const confirmDelete = async () => {
+    if (deleteDialog.tokenId) {
+      deleteMutation.mutate(deleteDialog.tokenId)
     }
   }
 
@@ -97,6 +111,16 @@ export function TokenList() {
           </Table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+        title="删除 Token"
+        description={`确定要删除 Token "${deleteDialog.name}" 吗？此操作无法撤销。`}
+        confirmText="删除"
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

@@ -4,6 +4,8 @@ import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Textarea } from '@/shared/ui/textarea'
 import { Label } from '@/shared/ui/label'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/lib/toast'
 import { useReviewDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
 
 export function ReviewDetailPage() {
@@ -17,39 +19,45 @@ export function ReviewDetailPage() {
 
   const [comment, setComment] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
+  const [approveDialog, setApproveDialog] = useState(false)
+  const [rejectDialog, setRejectDialog] = useState(false)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('zh-CN')
   }
 
-  const handleApprove = () => {
-    if (window.confirm('确定要通过这个审核吗？')) {
-      approveMutation.mutate(
-        { taskId, comment: comment || undefined },
-        {
-          onSuccess: () => {
-            navigate({ to: '/dashboard/reviews' })
-          },
-        }
-      )
-    }
+  const handleApprove = async () => {
+    approveMutation.mutate(
+      { taskId, comment: comment || undefined },
+      {
+        onSuccess: () => {
+          toast.success('审核已通过')
+          navigate({ to: '/dashboard/reviews' })
+        },
+        onError: () => {
+          toast.error('审核失败')
+        },
+      }
+    )
   }
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!comment.trim()) {
-      alert('拒绝审核时必须填写原因')
+      toast.error('拒绝审核时必须填写原因')
       return
     }
-    if (window.confirm('确定要拒绝这个审核吗？')) {
-      rejectMutation.mutate(
-        { taskId, comment },
-        {
-          onSuccess: () => {
-            navigate({ to: '/dashboard/reviews' })
-          },
-        }
-      )
-    }
+    rejectMutation.mutate(
+      { taskId, comment },
+      {
+        onSuccess: () => {
+          toast.success('审核已拒绝')
+          navigate({ to: '/dashboard/reviews' })
+        },
+        onError: () => {
+          toast.error('拒绝失败')
+        },
+      }
+    )
   }
 
   if (isLoading) {
