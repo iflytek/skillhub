@@ -92,7 +92,7 @@ export function LoginPage() {
               <p className="text-sm text-muted-foreground">
                 使用 GitHub 登录时，认证完成后会自动返回当前站点。
               </p>
-              <LoginButton />
+              <LoginButton returnTo={returnTo} />
             </TabsContent>
           </Tabs>
         </div>
