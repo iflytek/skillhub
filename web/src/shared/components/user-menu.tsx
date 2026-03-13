@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { authApi } from '@/api/client'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +23,7 @@ interface UserMenuProps {
 export function UserMenu({ user }: UserMenuProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const hasRole = (role: string) => user.platformRoles?.includes(role) ?? false
   const isReviewer = hasRole('SKILL_ADMIN') || hasRole('NAMESPACE_ADMIN') || hasRole('SUPER_ADMIN')
@@ -30,9 +33,9 @@ export function UserMenu({ user }: UserMenuProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      await authApi.logout()
+      queryClient.setQueryData(['auth', 'me'], null)
       navigate({ to: '/' })
-      window.location.reload()
     } catch (error) {
       console.error('Logout failed:', error)
     }
