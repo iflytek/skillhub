@@ -14,4 +14,4 @@ COPY docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/30-runtime-co
 RUN chmod +x /docker-entrypoint.d/30-runtime-config.sh
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s \
-  CMD wget -qO- http://localhost/nginx-health || exit 1
+  CMD wget -qO- http://127.0.0.1/nginx-health || exit 1
