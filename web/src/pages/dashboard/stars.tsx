@@ -32,7 +32,7 @@ export function MyStarsPage() {
             <SkillCard
               key={skill.id}
               skill={skill}
-              onClick={() => navigate({ to: '/@$namespace/$slug', params: { namespace: skill.namespace, slug: skill.slug } })}
+              onClick={() => navigate({ to: `/@${skill.namespace}/${skill.slug}` })}
             />
           ))}
         </div>

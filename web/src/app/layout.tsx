@@ -1,9 +1,13 @@
 import { Suspense } from 'react'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { LandingPage } from '@/pages/landing'
+import { LanguageSwitcher } from '@/shared/components/language-switcher'
+import { UserMenu } from '@/shared/components/user-menu'
 
 export function Layout() {
+  const { t } = useTranslation()
   const { user, isLoading } = useAuth()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isLanding = pathname === '/'
@@ -31,43 +35,9 @@ export function Layout() {
           </Link>
 
           <nav className="flex items-center gap-6">
+            <LanguageSwitcher />
             {isLoading ? null : user ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  activeProps={{ className: 'text-primary' }}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  to="/settings/security"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  activeProps={{ className: 'text-primary' }}
-                >
-                  安全设置
-                </Link>
-                <Link
-                  to="/settings/accounts"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  activeProps={{ className: 'text-primary' }}
-                >
-                  账号合并
-                </Link>
-                <div className="flex items-center gap-3">
-                  {user.avatarUrl && (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.displayName}
-                      loading="lazy"
-                      className="w-8 h-8 rounded-full border border-border/60"
-                    />
-                  )}
-                  <span className="text-sm font-medium text-foreground">
-                    {user.displayName}
-                  </span>
-                </div>
-              </>
+              <UserMenu user={user} />
             ) : (
               <Link
                 to="/login"
@@ -75,7 +45,7 @@ export function Layout() {
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 activeProps={{ className: 'text-primary' }}
               >
-                登录
+                {t('nav.login')}
               </Link>
             )}
           </nav>
@@ -113,46 +83,46 @@ export function Layout() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold font-heading text-foreground mb-3">快速链接</h3>
+              <h3 className="text-sm font-semibold font-heading text-foreground mb-3">{t('nav.home')}</h3>
               <ul className="space-y-2">
                 <li>
                   <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    首页
+                    {t('nav.home')}
                   </Link>
                 </li>
                 <li>
                   <Link
                     to="/search"
-                    search={{ q: '', sort: 'relevance', page: 1 }}
+                    search={{ q: '', sort: 'relevance', page: 0 }}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
-                    搜索技能
+                    {t('nav.search')}
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    Dashboard
+                    {t('nav.dashboard')}
                   </Link>
                 </li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold font-heading text-foreground mb-3">资源</h3>
+              <h3 className="text-sm font-semibold font-heading text-foreground mb-3">{t('footer.resources')}</h3>
               <ul className="space-y-2">
                 <li>
                   <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    文档
+                    {t('footer.docs')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    API
+                    {t('footer.api')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    社区
+                    {t('footer.community')}
                   </a>
                 </li>
               </ul>
@@ -161,14 +131,14 @@ export function Layout() {
 
           <div className="pt-6 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">
-              © 2024 SkillHub. All rights reserved.
+              {t('footer.copyright')}
             </p>
             <div className="flex items-center gap-4">
               <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                隐私政策
+                {t('footer.privacy')}
               </a>
               <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                服务条款
+                {t('footer.terms')}
               </a>
             </div>
           </div>

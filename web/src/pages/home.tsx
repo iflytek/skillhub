@@ -19,11 +19,11 @@ export function HomePage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 1 } })
+    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0 } })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
+    navigate({ to: `/@${namespace}/${slug}` })
   }
 
   return (
@@ -47,7 +47,7 @@ export function HomePage() {
         </div>
 
         <div className="flex items-center justify-center gap-4 animate-fade-up delay-2">
-          <Button size="lg" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 1 } })}>
+          <Button size="lg" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })}>
             浏览技能
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate({ to: '/dashboard/publish' })}>
@@ -65,7 +65,7 @@ export function HomePage() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 1 } })}
+            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0 } })}
           >
             查看全部 →
           </Button>
@@ -95,7 +95,7 @@ export function HomePage() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 1 } })}
+            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0 } })}
           >
             查看全部 →
           </Button>

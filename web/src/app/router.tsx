@@ -89,20 +89,20 @@ const searchRoute = createRoute({
     return {
       q: (search.q as string) || '',
       sort: (search.sort as string) || 'relevance',
-      page: Number(search.page) || 1,
+      page: Number(search.page) || 0,
     }
   },
 })
 
 const namespaceRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '@$namespace',
+  path: '/$namespace',
   component: NamespacePage,
 })
 
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '@$namespace/$slug',
+  path: '/$namespace/$slug',
   component: SkillDetailPage,
 })
 

@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "home": "首页",
+    "search": "搜索技能",
+    "dashboard": "控制台",
+    "login": "登录"
+  },
+  "landing": {
+    "hero": {
+      "title": "发现与分享 AI 技能",
+      "subtitle": "使用社区驱动的技能构建强大的 AI 代理",
+      "searchPlaceholder": "搜索技能...",
+      "exploreSkills": "探索技能"
+    },
+    "features": {
+      "secure": {
+        "title": "安全私密",
+        "description": "企业级安全保护您的 AI 工作流"
+      },
+      "community": {
+        "title": "社区驱动",
+        "description": "与全球开发者分享和发现技能"
+      },
+      "integration": {
+        "title": "轻松集成",
+        "description": "无缝集成到您现有的工具中"
+      }
+    }
+  },
+  "search": {
+    "title": "搜索技能",
+    "placeholder": "搜索技能...",
+    "sort": {
+      "relevance": "相关性",
+      "downloads": "下载量",
+      "stars": "星标数",
+      "newest": "最新"
+    },
+    "noResults": "未找到技能",
+    "results": "找到 {{count}} 个技能"
+  },
+  "user": {
+    "menu": {
+      "dashboard": "控制台",
+      "mySkills": "我的技能",
+      "myNamespaces": "我的命名空间",
+      "stars": "我的星标",
+      "reviews": "审核管理",
+      "promotions": "推广管理",
+      "users": "用户管理",
+      "auditLog": "审计日志",
+      "security": "安全设置",
+      "accounts": "账号合并",
+      "logout": "退出登录"
+    }
+  },
+  "footer": {
+    "resources": "资源",
+    "docs": "文档",
+    "api": "API",
+    "community": "社区",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "copyright": "© 2024 SkillHub. 保留所有权利。"
+  },
+  "publish": {
+    "title": "发布技能",
+    "subtitle": "上传技能包到 SkillHub",
+    "reviewNotice": {
+      "title": "发布审核说明",
+      "description": "技能包提交后需要经过管理员审核才能正式发布。审核通过后，您的技能将对所有用户可见。"
+    },
+    "namespace": "命名空间",
+    "selectNamespace": "选择命名空间",
+    "visibility": "可见性",
+    "visibilityOptions": {
+      "public": "公开",
+      "namespaceOnly": "仅命名空间",
+      "private": "私有"
+    },
+    "file": "技能包文件",
+    "publishing": "发布中...",
+    "confirm": "确认发布",
+    "success": "发布成功",
+    "successDescription": "{{skill}} 已提交审核，等待管理员批准后即可使用",
+    "error": "发布失败",
+    "selectRequired": "请选择命名空间和文件"
+  },
+  "toast": {
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "信息"
+  },
+  "dialog": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "delete": "删除",
+    "close": "关闭"
+  }
+}

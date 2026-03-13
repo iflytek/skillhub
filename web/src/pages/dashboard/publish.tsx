@@ -6,6 +6,7 @@ import { Select } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queries'
+import { toast } from '@/shared/lib/toast'
 
 export function PublishPage() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export function PublishPage() {
 
   const handlePublish = async () => {
     if (!selectedFile || !namespaceSlug) {
-      alert('请选择命名空间和文件')
+      toast.error('请选择命名空间和文件')
       return
     }
 
@@ -28,10 +29,10 @@ export function PublishPage() {
         file: selectedFile,
         visibility,
       })
-      alert(`发布成功: ${result.namespace}/${result.slug}@${result.version}`)
+      toast.success('发布成功', `${result.namespace}/${result.slug}@${result.version} 已提交审核，等待管理员批准后即可使用`)
       navigate({ to: '/dashboard/skills' })
     } catch (error) {
-      alert('发布失败: ' + (error instanceof Error ? error.message : '未知错误'))
+      toast.error('发布失败', error instanceof Error ? error.message : '未知错误')
     }
   }
 
@@ -41,6 +42,21 @@ export function PublishPage() {
         <h1 className="text-4xl font-bold font-heading mb-2">发布技能</h1>
         <p className="text-muted-foreground text-lg">上传技能包到 SkillHub</p>
       </div>
+
+      {/* 审核提示 */}
+      <Card className="p-4 bg-blue-500/5 border-blue-500/20">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground mb-1">发布审核说明</h3>
+            <p className="text-sm text-muted-foreground">
+              技能包提交后需要经过管理员审核才能正式发布。审核通过后，您的技能将对所有用户可见。
+            </p>
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-8 space-y-8">
         {/* Namespace Selector */}

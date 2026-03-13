@@ -108,7 +108,9 @@ public class SkillPublishService {
         String skillMdContent = new String(skillMd.content());
         SkillMetadata metadata = skillMetadataParser.parse(skillMdContent);
         if (metadata.version() == null || metadata.version().isBlank()) {
-            throw new DomainBadRequestException("error.skill.metadata.requiredField.missing", "version");
+            String autoVersion = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"));
+            metadata = new SkillMetadata(metadata.name(), metadata.description(), autoVersion, metadata.body(), metadata.frontmatter());
         }
         String skillSlug = SlugValidator.slugify(metadata.name());
 

@@ -70,7 +70,7 @@ skillhub:
     max-file-count: 100
     max-single-file-size: 1048576  # 1MB
     max-package-size: 104857600  # 100MB
-    allowed-file-extensions: .py,.json,.yaml,.yml,.txt,.md,.sh
+    allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.js,.ts,.py,.sh,.png,.jpg,.svg
 
 management:
   endpoints:
