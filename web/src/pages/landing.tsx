@@ -163,7 +163,7 @@ export function LandingPage() {
           </div>
 
           <div className="space-y-6 max-w-5xl">
-            <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight animate-fade-up">
+            <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-normal animate-fade-up">
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400">
                 SkillHub
               </span>

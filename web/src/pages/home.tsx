@@ -33,7 +33,7 @@ export function HomePage() {
       {/* Hero Section */}
       <div className="text-center space-y-8 py-16 animate-fade-up">
         <div className="space-y-4">
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold font-display text-gradient-hero leading-tight">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold font-heading text-gradient-hero leading-tight">
             SkillHub
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground font-light max-w-2xl mx-auto">
