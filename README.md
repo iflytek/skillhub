@@ -9,8 +9,6 @@ it to a namespace, and let others find it through search or
 install it via CLI. Built for on-premise deployment behind your
 firewall, with the same polish you'd expect from a public registry.
 
-**Version:** 0.1.0-beta.2
-
 ## Highlights
 
 - **Self-Hosted & Private** — Deploy on your own infrastructure.
