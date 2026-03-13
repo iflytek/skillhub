@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -16,6 +17,7 @@ import com.iflytek.skillhub.domain.skill.validation.PrePublishValidator;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
 import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +52,7 @@ public class SkillPublishService {
     private final PrePublishValidator prePublishValidator;
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SkillPublishService(
             NamespaceRepository namespaceRepository,
@@ -62,7 +65,8 @@ public class SkillPublishService {
             SkillMetadataParser skillMetadataParser,
             PrePublishValidator prePublishValidator,
             ObjectMapper objectMapper,
-            ReviewTaskRepository reviewTaskRepository) {
+            ReviewTaskRepository reviewTaskRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.skillRepository = skillRepository;
@@ -74,6 +78,7 @@ public class SkillPublishService {
         this.prePublishValidator = prePublishValidator;
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -81,15 +86,20 @@ public class SkillPublishService {
             String namespaceSlug,
             List<PackageEntry> entries,
             String publisherId,
-            SkillVisibility visibility) {
+            SkillVisibility visibility,
+            java.util.Set<String> platformRoles) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
 
-        // 2. Check publisher is member
-        namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
+        boolean isSuperAdmin = platformRoles.contains("SUPER_ADMIN");
+
+        // 2. Check publisher is member unless SUPER_ADMIN short-circuits permission checks
+        if (!isSuperAdmin) {
+            namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
+                    .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
+        }
 
         // 3. Validate package
         ValidationResult packageValidation = skillPackageValidator.validate(entries);
@@ -139,7 +149,13 @@ public class SkillPublishService {
 
         // 8. Create SkillVersion
         SkillVersion version = new SkillVersion(skill.getId(), metadata.version(), publisherId);
-        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        boolean autoPublish = isSuperAdmin;
+        if (autoPublish) {
+            version.setStatus(SkillVersionStatus.PUBLISHED);
+            version.setPublishedAt(LocalDateTime.now());
+        } else {
+            version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        }
 
         // Store metadata as JSON
         try {
@@ -211,16 +227,25 @@ public class SkillPublishService {
         version.setTotalSize(totalSize);
         skillVersionRepository.save(version);
 
-        ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
-        reviewTaskRepository.save(reviewTask);
+        if (!autoPublish) {
+            ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
+            reviewTaskRepository.save(reviewTask);
+        }
 
-        // 12. Update skill metadata without moving the published pointer
+        // 12. Update skill metadata and move the published pointer for auto-publish flows
         skill.setDisplayName(metadata.name());
         skill.setSummary(metadata.description());
+        if (autoPublish) {
+            skill.setLatestVersionId(version.getId());
+        }
         skill.setUpdatedBy(publisherId);
         skillRepository.save(skill);
 
-        // 13. Return identifiers for the pending review version
+        if (autoPublish) {
+            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
+        }
+
+        // 13. Return identifiers for the created version
         return new PublishResult(skill.getId(), skill.getSlug(), version);
     }
 

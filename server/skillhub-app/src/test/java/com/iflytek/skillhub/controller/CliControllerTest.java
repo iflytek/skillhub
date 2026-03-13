@@ -3,6 +3,12 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -20,8 +26,11 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,6 +49,12 @@ class CliControllerTest {
 
     @MockBean
     private DeviceAuthService deviceAuthService;
+    @MockBean
+    private SkillPublishService skillPublishService;
+    @MockBean
+    private SkillHubMetrics skillHubMetrics;
+    @MockBean
+    private AuditLogService auditLogService;
 
     @Test
     void whoamiShouldReturnUnauthorizedForAnonymousRequest() throws Exception {
@@ -130,6 +145,53 @@ class CliControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.valid").value(false))
                 .andExpect(jsonPath("$.data.errors").isNotEmpty());
+    }
+
+    @Test
+    void publishShouldPassPlatformRolesToDomainService() throws Exception {
+        SkillVersion version = new SkillVersion(12L, "1.0.0", "user-7");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setFileCount(1);
+        version.setTotalSize(128L);
+
+        given(skillPublishService.publishFromEntries(
+                eq("global"),
+                anyList(),
+                eq("user-7"),
+                eq(SkillVisibility.PUBLIC),
+                eq(Set.of("SUPER_ADMIN"))))
+                .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-7",
+                "cli-user",
+                "cli@example.com",
+                "",
+                "api_token",
+                Set.of("SUPER_ADMIN")
+        );
+
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "skill.zip",
+                "application/zip",
+                createValidSkillZip()
+        );
+
+        mockMvc.perform(multipart("/api/v1/cli/publish")
+                        .file(file)
+                        .param("namespace", "global")
+                        .param("visibility", "PUBLIC")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
     }
 
     private byte[] createValidSkillZip() throws Exception {
