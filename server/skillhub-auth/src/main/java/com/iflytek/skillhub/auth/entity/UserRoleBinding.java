@@ -33,5 +33,6 @@ public class UserRoleBinding {
 
     public Long getId() { return id; }
     public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public Role getRole() { return role; }
 }

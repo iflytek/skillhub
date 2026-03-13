@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Outlet, Link } from '@tanstack/react-router'
 import { useAuth } from '@/features/auth/use-auth'
 
@@ -32,11 +33,26 @@ export function Layout() {
                 >
                   Dashboard
                 </Link>
+                <Link
+                  to="/settings/security"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  activeProps={{ className: 'text-primary' }}
+                >
+                  安全设置
+                </Link>
+                <Link
+                  to="/settings/accounts"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  activeProps={{ className: 'text-primary' }}
+                >
+                  账号合并
+                </Link>
                 <div className="flex items-center gap-3">
                   {user.avatarUrl && (
                     <img
                       src={user.avatarUrl}
                       alt={user.displayName}
+                      loading="lazy"
                       className="w-8 h-8 rounded-full border border-border/60"
                     />
                   )}
@@ -59,7 +75,17 @@ export function Layout() {
       </header>
 
       <main className="container mx-auto px-4 lg:px-8 py-12 relative z-10">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="space-y-4 animate-fade-up">
+              <div className="h-10 w-48 animate-shimmer rounded-lg" />
+              <div className="h-5 w-72 animate-shimmer rounded-md" />
+              <div className="h-64 animate-shimmer rounded-xl" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Footer */}

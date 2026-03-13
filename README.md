@@ -122,6 +122,59 @@ Pass `X-Mock-User-Id` to the backend when you need an authenticated
 session without configuring GitHub OAuth. If the GHCR package remains
 private, run `docker login ghcr.io` before `docker compose up -d`.
 
+### Monitoring
+
+The Phase 4 monitoring stack lives under [`monitoring/`](./monitoring).
+It provides a local Prometheus + Grafana pair that scrapes the backend's
+Actuator Prometheus endpoint.
+
+Start it with:
+
+```bash
+cd monitoring
+docker compose -f docker-compose.monitoring.yml up -d
+```
+
+Then open:
+
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001` (`admin` / `admin`)
+
+By default Prometheus scrapes `http://host.docker.internal:8080/actuator/prometheus`,
+so start the backend locally on port `8080` first.
+
+## Kubernetes
+
+Basic Kubernetes manifests are available under [`deploy/k8s/`](./deploy/k8s):
+
+- `configmap.yaml`
+- `secret.yaml.example`
+- `backend-deployment.yaml`
+- `frontend-deployment.yaml`
+- `services.yaml`
+- `ingress.yaml`
+
+Apply them after creating your own secret:
+
+```bash
+kubectl apply -f deploy/k8s/configmap.yaml
+kubectl apply -f deploy/k8s/secret.yaml
+kubectl apply -f deploy/k8s/backend-deployment.yaml
+kubectl apply -f deploy/k8s/frontend-deployment.yaml
+kubectl apply -f deploy/k8s/services.yaml
+kubectl apply -f deploy/k8s/ingress.yaml
+```
+
+## Smoke Test
+
+A lightweight smoke test script is available at [`scripts/smoke-test.sh`](./scripts/smoke-test.sh).
+
+Run it against a local backend:
+
+```bash
+./scripts/smoke-test.sh http://localhost:8080
+```
+
 ## Architecture
 
 ```

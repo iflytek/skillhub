@@ -1,6 +1,13 @@
 server:
   port: 8080
   shutdown: graceful
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+        max-age: 28800
 
 spring:
   messages:
@@ -69,10 +76,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: skillhub
+    export:
+      prometheus:
+        enabled: true
 
 ---
 # Docker profile

@@ -1,22 +1,39 @@
+import { lazy, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
-import { LandingPage } from '@/pages/landing'
-import { HomePage } from '@/pages/home'
-import { LoginPage } from '@/pages/login'
-import { DashboardPage } from '@/pages/dashboard'
-import { SearchPage } from '@/pages/search'
-import { NamespacePage } from '@/pages/namespace'
-import { SkillDetailPage } from '@/pages/skill-detail'
-import { PublishPage } from '@/pages/dashboard/publish'
-import { MySkillsPage } from '@/pages/dashboard/my-skills'
-import { MyNamespacesPage } from '@/pages/dashboard/my-namespaces'
-import { NamespaceMembersPage } from '@/pages/dashboard/namespace-members'
-import { ReviewsPage } from '@/pages/dashboard/reviews'
-import { ReviewDetailPage } from '@/pages/dashboard/review-detail'
-import { DeviceAuthPage } from '@/pages/device'
-import { AdminUsersPage } from '@/pages/admin/users'
-import { AuditLogPage } from '@/pages/admin/audit-log'
 import { getCurrentUser } from '@/api/client'
+
+function lazyRouteComponent<TModule extends Record<string, unknown>>(
+  importer: () => Promise<TModule>,
+  exportName: keyof TModule,
+) {
+  const LazyComponent = lazy(async () => {
+    const module = await importer()
+    return { default: module[exportName] as ComponentType }
+  })
+
+  return LazyComponent
+}
+
+const LandingPage = lazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
+const HomePage = lazyRouteComponent(() => import('@/pages/home'), 'HomePage')
+const LoginPage = lazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
+const RegisterPage = lazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
+const SearchPage = lazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
+const NamespacePage = lazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
+const SkillDetailPage = lazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
+const DashboardPage = lazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
+const MySkillsPage = lazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
+const PublishPage = lazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
+const MyNamespacesPage = lazyRouteComponent(() => import('@/pages/dashboard/my-namespaces'), 'MyNamespacesPage')
+const NamespaceMembersPage = lazyRouteComponent(() => import('@/pages/dashboard/namespace-members'), 'NamespaceMembersPage')
+const ReviewsPage = lazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
+const ReviewDetailPage = lazyRouteComponent(() => import('@/pages/dashboard/review-detail'), 'ReviewDetailPage')
+const DeviceAuthPage = lazyRouteComponent(() => import('@/pages/device'), 'DeviceAuthPage')
+const SecuritySettingsPage = lazyRouteComponent(() => import('@/pages/settings/security'), 'SecuritySettingsPage')
+const AccountSettingsPage = lazyRouteComponent(() => import('@/pages/settings/accounts'), 'AccountSettingsPage')
+const AdminUsersPage = lazyRouteComponent(() => import('@/pages/admin/users'), 'AdminUsersPage')
+const AuditLogPage = lazyRouteComponent(() => import('@/pages/admin/audit-log'), 'AuditLogPage')
 
 const rootRoute = createRootRoute({
   component: Layout,
@@ -38,6 +55,12 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   component: LoginPage,
+})
+
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/register',
+  component: RegisterPage,
 })
 
 const searchRoute = createRoute({
@@ -162,6 +185,32 @@ const deviceRoute = createRoute({
   component: DeviceAuthPage,
 })
 
+const settingsSecurityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/security',
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    return { user }
+  },
+  component: SecuritySettingsPage,
+})
+
+const settingsAccountsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/accounts',
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    return { user }
+  },
+  component: AccountSettingsPage,
+})
+
 const adminUsersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/users',
@@ -198,6 +247,7 @@ const routeTree = rootRoute.addChildren([
   homeRoute,
   skillsRoute,
   loginRoute,
+  registerRoute,
   searchRoute,
   namespaceRoute,
   skillDetailRoute,
@@ -209,6 +259,8 @@ const routeTree = rootRoute.addChildren([
   dashboardReviewsRoute,
   dashboardReviewDetailRoute,
   deviceRoute,
+  settingsSecurityRoute,
+  settingsAccountsRoute,
   adminUsersRoute,
   adminAuditLogRoute,
 ])
