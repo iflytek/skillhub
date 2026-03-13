@@ -17,6 +17,16 @@ def is_running(pid: int) -> bool:
     return True
 
 
+def is_process_group_running(pgid: int) -> bool:
+    try:
+        os.killpg(pgid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def read_pid(pid_file: Path) -> int | None:
     if not pid_file.exists():
         return None
@@ -39,7 +49,7 @@ def start_process(args: argparse.Namespace) -> int:
     log_file = Path(args.log_file)
     cwd = Path(args.cwd)
     existing_pid = read_pid(pid_file)
-    if existing_pid and is_running(existing_pid):
+    if existing_pid and is_process_group_running(existing_pid):
         print(existing_pid)
         return 0
 
@@ -76,19 +86,19 @@ def stop_process(args: argparse.Namespace) -> int:
     if not pid:
         return 0
 
-    if not is_running(pid):
+    if not is_process_group_running(pid):
         pid_file.unlink(missing_ok=True)
         return 0
 
-    os.kill(pid, signal.SIGTERM)
+    os.killpg(pid, signal.SIGTERM)
     deadline = time.time() + args.timeout
     while time.time() < deadline:
-        if not is_running(pid):
+        if not is_process_group_running(pid):
             pid_file.unlink(missing_ok=True)
             return 0
         time.sleep(0.2)
 
-    os.kill(pid, signal.SIGKILL)
+    os.killpg(pid, signal.SIGKILL)
     pid_file.unlink(missing_ok=True)
     return 0
 
@@ -98,7 +108,7 @@ def status_process(args: argparse.Namespace) -> int:
     pid = read_pid(pid_file)
     if not pid:
         return 1
-    if not is_running(pid):
+    if not is_process_group_running(pid):
         pid_file.unlink(missing_ok=True)
         return 1
     print(pid)
