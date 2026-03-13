@@ -1,5 +1,7 @@
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeSanitize from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
 
 interface MarkdownRendererProps {
   content: string
@@ -10,7 +12,8 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div className={className}>
       <ReactMarkdown
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize, rehypeHighlight]}
         components={{
           // @ts-ignore - react-markdown types issue
           div: ({ node, ...props }) => <div className="prose prose-sm dark:prose-invert max-w-none" {...props} />,

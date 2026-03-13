@@ -11,9 +11,13 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.InputStream;
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -22,6 +26,7 @@ public class S3StorageService implements ObjectStorageService {
     private static final Logger log = LoggerFactory.getLogger(S3StorageService.class);
     private final S3StorageProperties properties;
     private S3Client s3Client;
+    private S3Presigner s3Presigner;
 
     public S3StorageService(S3StorageProperties properties) { this.properties = properties; }
 
@@ -36,6 +41,14 @@ public class S3StorageService implements ObjectStorageService {
             builder.endpointOverride(URI.create(properties.getEndpoint()));
         }
         this.s3Client = builder.build();
+        var presignerBuilder = S3Presigner.builder()
+                .region(Region.of(properties.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
+        if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
+            presignerBuilder.endpointOverride(URI.create(properties.getEndpoint()));
+        }
+        this.s3Presigner = presignerBuilder.build();
         ensureBucketExists();
     }
 
@@ -73,5 +86,19 @@ public class S3StorageService implements ObjectStorageService {
     @Override public ObjectMetadata getMetadata(String key) {
         HeadObjectResponse resp = s3Client.headObject(HeadObjectRequest.builder().bucket(properties.getBucket()).key(key).build());
         return new ObjectMetadata(resp.contentLength(), resp.contentType(), resp.lastModified());
+    }
+
+    @Override
+    public String generatePresignedUrl(String key, Duration expiry) {
+        PresignedGetObjectRequest request = s3Presigner.presignGetObject(
+            GetObjectPresignRequest.builder()
+                .signatureDuration(expiry)
+                .getObjectRequest(GetObjectRequest.builder()
+                    .bucket(properties.getBucket())
+                    .key(key)
+                    .build())
+                .build()
+        );
+        return request.url().toString();
     }
 }

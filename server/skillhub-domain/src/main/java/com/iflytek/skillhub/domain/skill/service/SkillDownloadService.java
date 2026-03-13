@@ -13,6 +13,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Map;
 
 @Service
@@ -47,7 +48,8 @@ public class SkillDownloadService {
             InputStream content,
             String filename,
             long contentLength,
-            String contentType
+            String contentType,
+            String presignedUrl
     ) {}
 
     public DownloadResult downloadLatest(
@@ -137,14 +139,15 @@ public class SkillDownloadService {
         }
 
         ObjectMetadata metadata = objectStorageService.getMetadata(storageKey);
-        InputStream content = objectStorageService.getObject(storageKey);
+        String presignedUrl = objectStorageService.generatePresignedUrl(storageKey, Duration.ofMinutes(10));
+        InputStream content = presignedUrl == null ? objectStorageService.getObject(storageKey) : null;
 
         // Publish download event
         eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
 
         String filename = String.format("%s-%s.zip", skill.getSlug(), version.getVersion());
 
-        return new DownloadResult(content, filename, metadata.size(), metadata.contentType());
+        return new DownloadResult(content, filename, metadata.size(), metadata.contentType(), presignedUrl);
     }
 
     private Namespace findNamespace(String slug) {

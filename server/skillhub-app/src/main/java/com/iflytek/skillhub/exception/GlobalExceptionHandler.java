@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.exception;
 
+import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
@@ -30,6 +31,13 @@ public class GlobalExceptionHandler {
         HttpStatus status = ex.status();
         return ResponseEntity.status(status).body(
             apiResponseFactory.error(status.value(), ex.messageCode(), ex.messageArgs()));
+    }
+
+    @ExceptionHandler(AuthFlowException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthFlowException(AuthFlowException ex) {
+        HttpStatus status = ex.getStatus();
+        return ResponseEntity.status(status).body(
+            apiResponseFactory.error(status.value(), ex.getMessageCode(), ex.getMessageArgs()));
     }
 
     @ExceptionHandler(DomainBadRequestException.class)

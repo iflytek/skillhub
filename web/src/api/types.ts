@@ -6,6 +6,36 @@ export type ApiToken = components['schemas']['ApiToken']
 export type CreateTokenRequest = components['schemas']['CreateTokenRequest']
 export type CreateTokenResponse = components['schemas']['CreateTokenResponse']
 
+export interface LocalLoginRequest {
+  username: string
+  password: string
+}
+
+export interface LocalRegisterRequest extends LocalLoginRequest {
+  email?: string
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+export interface MergeInitiateRequest {
+  secondaryIdentifier: string
+}
+
+export interface MergeInitiateResponse {
+  mergeRequestId: number
+  secondaryUserId: string
+  verificationToken: string
+  expiresAt: string
+}
+
+export interface MergeVerifyRequest {
+  mergeRequestId: number
+  verificationToken: string
+}
+
 // Namespace types
 export interface Namespace {
   id: number

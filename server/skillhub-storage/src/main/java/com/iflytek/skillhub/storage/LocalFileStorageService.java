@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -56,6 +56,11 @@ public class LocalFileStorageService implements ObjectStorageService {
             BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
             return new ObjectMetadata(attrs.size(), Files.probeContentType(path), attrs.lastModifiedTime().toInstant());
         } catch (IOException e) { throw new UncheckedIOException("Failed to get metadata: " + key, e); }
+    }
+
+    @Override
+    public String generatePresignedUrl(String key, Duration expiry) {
+        return null;
     }
 
     private Path resolve(String key) {
