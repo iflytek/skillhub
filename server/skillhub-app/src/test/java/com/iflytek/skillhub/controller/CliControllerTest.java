@@ -132,6 +132,25 @@ class CliControllerTest {
                 .andExpect(jsonPath("$.data.errors").isNotEmpty());
     }
 
+    @Test
+    void checkShouldReturnInvalidForPathTraversalEntry() throws Exception {
+        byte[] zipBytes = createZipWithUnsafePath();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "skill.zip",
+                "application/zip",
+                zipBytes
+        );
+
+        mockMvc.perform(multipart("/api/v1/cli/check").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.valid").value(false))
+                .andExpect(jsonPath("$.data.errors[0]").value(org.hamcrest.Matchers.containsString("escapes package root")))
+                .andExpect(jsonPath("$.data.fileCount").value(0))
+                .andExpect(jsonPath("$.data.totalSize").value(0));
+    }
+
     private byte[] createValidSkillZip() throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
@@ -187,6 +206,17 @@ class CliControllerTest {
             ZipEntry exeEntry = new ZipEntry("malware.exe");
             zos.putNextEntry(exeEntry);
             zos.write("bad content".getBytes());
+            zos.closeEntry();
+        }
+        return baos.toByteArray();
+    }
+
+    private byte[] createZipWithUnsafePath() throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry unsafeEntry = new ZipEntry("../secrets.txt");
+            zos.putNextEntry(unsafeEntry);
+            zos.write("hidden".getBytes());
             zos.closeEntry();
         }
         return baos.toByteArray();

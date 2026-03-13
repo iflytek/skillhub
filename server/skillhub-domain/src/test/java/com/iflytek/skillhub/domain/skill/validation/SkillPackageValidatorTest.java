@@ -176,4 +176,49 @@ class SkillPackageValidatorTest {
         assertFalse(result.passed());
         assertTrue(result.errors().stream().anyMatch(e -> e.contains("Package too large")));
     }
+
+    @Test
+    void testPathTraversalEntryRejected() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"),
+            new PackageEntry("../secrets.txt", "hidden".getBytes(), 6, "text/plain")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("escapes package root")));
+    }
+
+    @Test
+    void testDuplicateNormalizedPathRejected() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"),
+            new PackageEntry("docs\\guide.md", "first".getBytes(), 5, "text/markdown"),
+            new PackageEntry("docs/guide.md", "second".getBytes(), 6, "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Duplicate package entry path: docs/guide.md")));
+    }
 }
