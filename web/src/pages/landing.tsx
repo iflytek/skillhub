@@ -282,7 +282,7 @@ export function LandingPage() {
       <div className="relative z-10 border-t border-slate-800/50 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-slate-400 text-sm">
-            <div>© 2026 SkillHub. MIT License.</div>
+            <div>{t('landing.footerLicense')}</div>
             <div className="flex items-center gap-6">
               <a href="#" className="hover:text-cyan-400 transition-colors">{t('landing.footerDocs')}</a>
               <a href="#" className="hover:text-cyan-400 transition-colors">{t('landing.footerGithub')}</a>
