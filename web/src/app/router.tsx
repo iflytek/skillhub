@@ -27,8 +27,12 @@ const MySkillsPage = lazyRouteComponent(() => import('@/pages/dashboard/my-skill
 const PublishPage = lazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
 const MyNamespacesPage = lazyRouteComponent(() => import('@/pages/dashboard/my-namespaces'), 'MyNamespacesPage')
 const NamespaceMembersPage = lazyRouteComponent(() => import('@/pages/dashboard/namespace-members'), 'NamespaceMembersPage')
+const NamespaceReviewsPage = lazyRouteComponent(() => import('@/pages/dashboard/namespace-reviews'), 'NamespaceReviewsPage')
 const ReviewsPage = lazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
 const ReviewDetailPage = lazyRouteComponent(() => import('@/pages/dashboard/review-detail'), 'ReviewDetailPage')
+const PromotionsPage = lazyRouteComponent(() => import('@/pages/dashboard/promotions'), 'PromotionsPage')
+const MyStarsPage = lazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage')
+const TokensPage = lazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage')
 const DeviceAuthPage = lazyRouteComponent(() => import('@/pages/device'), 'DeviceAuthPage')
 const SecuritySettingsPage = lazyRouteComponent(() => import('@/pages/settings/security'), 'SecuritySettingsPage')
 const AccountSettingsPage = lazyRouteComponent(() => import('@/pages/settings/accounts'), 'AccountSettingsPage')
@@ -153,6 +157,19 @@ const dashboardNamespaceMembersRoute = createRoute({
   component: NamespaceMembersPage,
 })
 
+const dashboardNamespaceReviewsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/namespaces/$slug/reviews',
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    return { user }
+  },
+  component: NamespaceReviewsPage,
+})
+
 const dashboardReviewsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/reviews',
@@ -177,6 +194,48 @@ const dashboardReviewDetailRoute = createRoute({
     return { user }
   },
   component: ReviewDetailPage,
+})
+
+const dashboardPromotionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/promotions',
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    if (!user.platformRoles?.includes('SKILL_ADMIN') && !user.platformRoles?.includes('SUPER_ADMIN')) {
+      throw redirect({ to: '/dashboard' })
+    }
+    return { user }
+  },
+  component: PromotionsPage,
+})
+
+const dashboardStarsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/stars',
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    return { user }
+  },
+  component: MyStarsPage,
+})
+
+const dashboardTokensRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/tokens',
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (!user) {
+      throw redirect({ to: '/login' })
+    }
+    return { user }
+  },
+  component: TokensPage,
 })
 
 const deviceRoute = createRoute({
@@ -256,8 +315,12 @@ const routeTree = rootRoute.addChildren([
   dashboardPublishRoute,
   dashboardNamespacesRoute,
   dashboardNamespaceMembersRoute,
+  dashboardNamespaceReviewsRoute,
   dashboardReviewsRoute,
   dashboardReviewDetailRoute,
+  dashboardPromotionsRoute,
+  dashboardStarsRoute,
+  dashboardTokensRoute,
   deviceRoute,
   settingsSecurityRoute,
   settingsAccountsRoute,

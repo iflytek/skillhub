@@ -1,7 +1,12 @@
-import { useParams } from '@tanstack/react-router'
+import { useParams, useNavigate } from '@tanstack/react-router'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
+import { RatingInput } from '@/features/social/rating-input'
+import { StarButton } from '@/features/social/star-button'
+import { useAuth } from '@/features/auth/use-auth'
+import { adminApi } from '@/api/client'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -14,13 +19,42 @@ import {
 } from '@/shared/hooks/use-skill-queries'
 
 export function SkillDetailPage() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { namespace, slug } = useParams({ from: '/@$namespace/$slug' })
+  const { user, hasRole } = useAuth()
 
   const { data: skill, isLoading: isLoadingSkill } = useSkillDetail(namespace, slug)
   const { data: versions } = useSkillVersions(namespace, slug)
   const latestVersion = versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, latestVersion?.version)
   const { data: readme } = useSkillReadme(namespace, slug, latestVersion?.version)
+  const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
+
+  const refreshSkill = () => {
+    queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
+    queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug, 'versions'] })
+    queryClient.invalidateQueries({ queryKey: ['skills'] })
+  }
+
+  const hideMutation = useMutation({
+    mutationFn: () => adminApi.hideSkill(skill!.id),
+    onSuccess: refreshSkill,
+  })
+
+  const unhideMutation = useMutation({
+    mutationFn: () => adminApi.unhideSkill(skill!.id),
+    onSuccess: refreshSkill,
+  })
+
+  const yankMutation = useMutation({
+    mutationFn: () => adminApi.yankVersion(latestVersion!.id),
+    onSuccess: refreshSkill,
+  })
+
+  const requireLogin = () => {
+    navigate({ to: '/login' })
+  }
 
   if (isLoadingSkill) {
     return (
@@ -139,8 +173,27 @@ export function SkillDetailPage() {
           <div className="h-px bg-border/40" />
 
           <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">评分</div>
+            <div className="font-semibold text-foreground">
+              {skill.ratingCount > 0 && skill.ratingAvg !== undefined ? `${skill.ratingAvg.toFixed(1)} / 5` : '暂无'}
+            </div>
+          </div>
+
+          <div className="h-px bg-border/40" />
+
+          <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">命名空间</div>
             <NamespaceBadge type="GLOBAL" name={`@${namespace}`} />
+          </div>
+
+          <div className="h-px bg-border/40" />
+
+          <div className="space-y-3">
+            <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
+            <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+            {!user && (
+              <p className="text-xs text-muted-foreground">登录后可以收藏和评分</p>
+            )}
           </div>
         </Card>
 
@@ -161,6 +214,28 @@ export function SkillDetailPage() {
           </svg>
           下载
         </Button>
+
+        {governanceVisible && (
+          <Card className="p-5 space-y-3">
+            <div className="text-sm font-semibold font-heading text-foreground">治理操作</div>
+            <div className="flex flex-col gap-3">
+              {!skill.hidden ? (
+                <Button variant="outline" onClick={() => hideMutation.mutate()} disabled={hideMutation.isPending}>
+                  {hideMutation.isPending ? '处理中...' : '隐藏技能'}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => unhideMutation.mutate()} disabled={unhideMutation.isPending}>
+                  {unhideMutation.isPending ? '处理中...' : '恢复技能'}
+                </Button>
+              )}
+              {latestVersion && (
+                <Button variant="destructive" onClick={() => yankMutation.mutate()} disabled={yankMutation.isPending}>
+                  {yankMutation.isPending ? '处理中...' : '撤回当前版本'}
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   )

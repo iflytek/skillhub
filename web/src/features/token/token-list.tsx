@@ -33,7 +33,7 @@ export function TokenList() {
     }
   }
 
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-'
     return new Date(dateString).toLocaleString('zh-CN')
   }

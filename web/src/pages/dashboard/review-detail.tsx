@@ -82,11 +82,7 @@ export function ReviewDetailPage() {
       </div>
 
       <Card className="p-8 space-y-6">
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">技能名称</Label>
-            <p className="font-semibold font-heading">{review.skillName}</p>
-          </div>
+          <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">命名空间/标识</Label>
             <p className="font-semibold font-mono">{review.namespace}/{review.skillSlug}</p>
@@ -115,7 +111,7 @@ export function ReviewDetailPage() {
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">提交者</Label>
-            <p className="font-semibold">{review.submittedBy}</p>
+            <p className="font-semibold">{review.submittedByName || review.submittedBy}</p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">提交时间</Label>
@@ -125,7 +121,7 @@ export function ReviewDetailPage() {
             <>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">审核者</Label>
-                <p className="font-semibold">{review.reviewedBy}</p>
+                <p className="font-semibold">{review.reviewedByName || review.reviewedBy}</p>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">审核时间</Label>
@@ -137,10 +133,10 @@ export function ReviewDetailPage() {
           )}
         </div>
 
-        {review.comment && (
+        {review.reviewComment && (
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">审核意见</Label>
-            <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.comment}</p>
+            <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.reviewComment}</p>
           </div>
         )}
       </Card>

@@ -1,29 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchJson, getCsrfHeaders } from '@/api/client'
-import type { ReviewTask } from './use-review-list'
+import { reviewApi } from '@/api/client'
+import type { ReviewTask } from '@/api/types'
 
 async function getReviewDetail(taskId: number): Promise<ReviewTask> {
-  return fetchJson<ReviewTask>(`/api/v1/reviews/${taskId}`)
+  return reviewApi.get(taskId)
 }
 
 async function approveReview(taskId: number, comment?: string): Promise<void> {
-  await fetchJson<void>(`/api/v1/reviews/${taskId}/approve`, {
-    method: 'POST',
-    headers: getCsrfHeaders({
-      'Content-Type': 'application/json',
-    }),
-    body: JSON.stringify({ comment }),
-  })
+  await reviewApi.approve(taskId, comment)
 }
 
 async function rejectReview(taskId: number, comment: string): Promise<void> {
-  await fetchJson<void>(`/api/v1/reviews/${taskId}/reject`, {
-    method: 'POST',
-    headers: getCsrfHeaders({
-      'Content-Type': 'application/json',
-    }),
-    body: JSON.stringify({ comment }),
-  })
+  await reviewApi.reject(taskId, comment)
 }
 
 export function useReviewDetail(taskId: number) {

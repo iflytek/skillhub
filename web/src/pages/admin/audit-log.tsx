@@ -40,12 +40,12 @@ export function AuditLogPage() {
         <div className="flex gap-4">
           <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="w-[200px]">
             <option value="">全部</option>
-            <option value="USER_LOGIN">用户登录</option>
-            <option value="USER_LOGOUT">用户登出</option>
-            <option value="USER_ROLE_CHANGE">角色变更</option>
-            <option value="USER_STATUS_CHANGE">状态变更</option>
-            <option value="SKILL_PUBLISH">技能发布</option>
-            <option value="SKILL_REVIEW">技能审核</option>
+            <option value="CLI_PUBLISH">CLI 发布</option>
+            <option value="COMPAT_PUBLISH">Compat 发布</option>
+            <option value="REVIEW_APPROVE">审核通过</option>
+            <option value="REVIEW_REJECT">审核拒绝</option>
+            <option value="PROMOTION_APPROVE">提升通过</option>
+            <option value="YANK_SKILL_VERSION">版本撤回</option>
           </Select>
           <Input
             placeholder="用户 ID..."
@@ -85,11 +85,11 @@ export function AuditLogPage() {
                   <TableRow key={log.id}>
                     <TableCell>{formatDate(log.timestamp)}</TableCell>
                     <TableCell className="font-medium">{log.action}</TableCell>
-                    <TableCell>{log.userId}</TableCell>
-                    <TableCell>{log.username || '-'}</TableCell>
+                    <TableCell>{log.userId || '-'}</TableCell>
+                    <TableCell>{log.resourceType || '-'}</TableCell>
                     <TableCell>{log.ipAddress || '-'}</TableCell>
                     <TableCell className="max-w-md truncate">
-                      {log.details || '-'}
+                      {log.resourceId || '-'}
                     </TableCell>
                   </TableRow>
                 ))}

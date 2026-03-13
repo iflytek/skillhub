@@ -2,12 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchJson, getCsrfHeaders } from '@/api/client'
 
 interface UserRating {
-  rating?: number
-  ratedAt?: string
+  score: number
+  rated: boolean
 }
 
 async function getUserRating(skillId: number): Promise<UserRating> {
-  return fetchJson<UserRating>(`/api/v1/skills/${skillId}/rating`)
+  try {
+    return await fetchJson<UserRating>(`/api/v1/skills/${skillId}/rating`)
+  } catch (error) {
+    if (error instanceof Error && error.message === 'HTTP 401') {
+      return { score: 0, rated: false }
+    }
+    throw error
+  }
 }
 
 async function rateSkill(skillId: number, rating: number): Promise<void> {
@@ -16,7 +23,7 @@ async function rateSkill(skillId: number, rating: number): Promise<void> {
     headers: getCsrfHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify({ rating }),
+    body: JSON.stringify({ score: rating }),
   })
 }
 

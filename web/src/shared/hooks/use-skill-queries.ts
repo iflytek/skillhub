@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
-import { fetchJson, fetchText, getCsrfHeaders } from '@/api/client'
+import { fetchJson, fetchText, getCsrfHeaders, meApi } from '@/api/client'
 
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
   const queryParams = new URLSearchParams()
@@ -36,6 +36,10 @@ async function getSkillReadme(namespace: string, slug: string, version: string):
 
 async function getMySkills(): Promise<SkillSummary[]> {
   return fetchJson<SkillSummary[]>('/api/v1/me/skills')
+}
+
+async function getMyStars(): Promise<SkillSummary[]> {
+  return meApi.getStars()
 }
 
 async function getMyNamespaces(): Promise<Namespace[]> {
@@ -108,6 +112,13 @@ export function useMySkills() {
   return useQuery({
     queryKey: ['skills', 'my'],
     queryFn: getMySkills,
+  })
+}
+
+export function useMyStars() {
+  return useQuery({
+    queryKey: ['skills', 'stars'],
+    queryFn: getMyStars,
   })
 }
 

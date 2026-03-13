@@ -1,10 +1,42 @@
 import type { components } from './generated/schema'
 
-export type User = components['schemas']['User']
-export type OAuthProvider = components['schemas']['OAuthProvider']
-export type ApiToken = components['schemas']['ApiToken']
-export type CreateTokenRequest = components['schemas']['CreateTokenRequest']
-export type CreateTokenResponse = components['schemas']['CreateTokenResponse']
+export type User = Omit<components['schemas']['AuthMeResponse'], 'userId' | 'displayName' | 'platformRoles'> & {
+  userId: string
+  displayName: string
+  email?: string
+  avatarUrl?: string
+  oauthProvider?: string
+  platformRoles: string[]
+}
+
+export type OAuthProvider = Omit<components['schemas']['AuthProviderResponse'], 'id' | 'name' | 'authorizationUrl'> & {
+  id: string
+  name: string
+  authorizationUrl: string
+}
+
+export type ApiToken = Omit<components['schemas']['TokenSummaryResponse'], 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
+  id: number
+  name: string
+  tokenPrefix: string
+  createdAt: string
+  expiresAt?: string
+  lastUsedAt?: string
+}
+
+export type CreateTokenRequest = Omit<components['schemas']['TokenCreateRequest'], 'name'> & {
+  name: string
+  scopes?: string[]
+}
+
+export type CreateTokenResponse = Omit<components['schemas']['TokenCreateResponse'], 'token' | 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
+  token: string
+  id: number
+  name: string
+  tokenPrefix: string
+  createdAt: string
+  expiresAt?: string
+}
 
 export interface LocalLoginRequest {
   username: string
@@ -34,6 +66,10 @@ export interface MergeInitiateResponse {
 export interface MergeVerifyRequest {
   mergeRequestId: number
   verificationToken: string
+}
+
+export interface MergeConfirmRequest {
+  mergeRequestId: number
 }
 
 // Namespace types
@@ -80,6 +116,9 @@ export interface SkillDetail {
   status: string
   downloadCount: number
   starCount: number
+  ratingAvg?: number
+  ratingCount: number
+  hidden: boolean
   latestVersion?: string
   namespace: string
 }
@@ -134,4 +173,57 @@ export interface PublishResult {
   status: string
   fileCount: number
   totalSize: number
+}
+
+export interface ReviewTask {
+  id: number
+  skillVersionId: number
+  namespace: string
+  skillSlug: string
+  version: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  submittedBy: string
+  submittedByName?: string
+  reviewedBy?: string
+  reviewedByName?: string
+  reviewComment?: string
+  submittedAt: string
+  reviewedAt?: string
+}
+
+export interface PromotionTask {
+  id: number
+  sourceSkillId: number
+  sourceNamespace: string
+  sourceSkillSlug: string
+  sourceVersion: string
+  targetNamespace: string
+  targetSkillId?: number
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  submittedBy: string
+  submittedByName?: string
+  reviewedBy?: string
+  reviewedByName?: string
+  reviewComment?: string
+  submittedAt: string
+  reviewedAt?: string
+}
+
+export interface AdminUser {
+  userId: string
+  username: string
+  email?: string
+  platformRoles: string[]
+  status: string
+  createdAt: string
+}
+
+export interface AuditLogItem {
+  id: string
+  userId?: string
+  action: string
+  resourceType?: string
+  resourceId?: string
+  timestamp: string
+  ipAddress?: string
 }

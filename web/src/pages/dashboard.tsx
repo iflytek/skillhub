@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/features/auth/use-auth'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -41,7 +42,7 @@ export function DashboardPage() {
             <div className="space-y-3">
               <div className="text-sm font-medium font-heading">平台角色</div>
               <div className="flex flex-wrap gap-2">
-                {user.platformRoles.map((role) => (
+                {user.platformRoles.map((role: string) => (
                   <span
                     key={role}
                     className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary border border-primary/20"
@@ -54,6 +55,27 @@ export function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-5">
+          <div className="text-sm text-muted-foreground">收藏与评分</div>
+          <Link to="/dashboard/stars" className="mt-2 inline-block font-semibold text-primary hover:underline">
+            查看我的收藏
+          </Link>
+        </Card>
+        <Card className="p-5">
+          <div className="text-sm text-muted-foreground">访问凭证</div>
+          <Link to="/dashboard/tokens" className="mt-2 inline-block font-semibold text-primary hover:underline">
+            打开 Token 页面
+          </Link>
+        </Card>
+        <Card className="p-5">
+          <div className="text-sm text-muted-foreground">审核与治理</div>
+          <Link to="/dashboard/promotions" className="mt-2 inline-block font-semibold text-primary hover:underline">
+            查看提升审核
+          </Link>
+        </Card>
+      </div>
 
       <TokenList />
     </div>

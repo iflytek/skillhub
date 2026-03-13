@@ -18,6 +18,11 @@ export function MyNamespacesPage() {
     navigate({ to: '/dashboard/namespaces/$slug/members', params: { slug } })
   }
 
+  const handleReviewsClick = (slug: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigate({ to: '/dashboard/namespaces/$slug/reviews', params: { slug } })
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-up">
@@ -66,15 +71,24 @@ export function MyNamespacesPage() {
                     <div className="text-sm text-muted-foreground font-mono">@{namespace.slug}</div>
                   </div>
                 </div>
-                {namespace.type === 'TEAM' && (
+                <div className="flex gap-3">
+                  {namespace.type === 'TEAM' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleMembersClick(namespace.slug, e)}
+                    >
+                      管理成员
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={(e) => handleMembersClick(namespace.slug, e)}
+                    onClick={(e) => handleReviewsClick(namespace.slug, e)}
                   >
-                    管理成员
+                    审核任务
                   </Button>
-                )}
+                </div>
               </div>
             </Card>
           ))}

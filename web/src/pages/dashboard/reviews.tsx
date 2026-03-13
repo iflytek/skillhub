@@ -72,10 +72,10 @@ export function ReviewsPage() {
                     {review.version}
                   </span>
                 </TableCell>
-                <TableCell>{review.submittedBy}</TableCell>
+                <TableCell>{review.submittedByName || review.submittedBy}</TableCell>
                 <TableCell className="text-muted-foreground">{formatDate(review.submittedAt)}</TableCell>
                 {status !== 'PENDING' && (
-                  <TableCell>{review.reviewedBy || '—'}</TableCell>
+                  <TableCell>{review.reviewedByName || review.reviewedBy || '—'}</TableCell>
                 )}
                 {status !== 'PENDING' && (
                   <TableCell className="text-muted-foreground">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useInitiateAccountMerge, useVerifyAccountMerge } from '@/features/auth/use-account-merge'
+import { useConfirmAccountMerge, useInitiateAccountMerge, useVerifyAccountMerge } from '@/features/auth/use-account-merge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -12,6 +12,7 @@ export function AccountSettingsPage() {
 
   const initiateMutation = useInitiateAccountMerge()
   const verifyMutation = useVerifyAccountMerge()
+  const confirmMutation = useConfirmAccountMerge()
 
   async function handleInitiate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -34,9 +35,19 @@ export function AccountSettingsPage() {
         mergeRequestId: Number(mergeRequestId),
         verificationToken,
       })
-      setStatusMessage('账号合并已完成')
+      setStatusMessage('验证成功，确认后将执行正式合并')
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '验证合并失败')
+    }
+  }
+
+  async function handleConfirm() {
+    setStatusMessage('')
+    try {
+      await confirmMutation.mutateAsync({ mergeRequestId: Number(mergeRequestId) })
+      setStatusMessage('账号合并已完成')
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : '确认合并失败')
     }
   }
 
@@ -68,7 +79,7 @@ export function AccountSettingsPage() {
       <Card className="glass-strong">
         <CardHeader>
           <CardTitle>验证并完成合并</CardTitle>
-          <CardDescription>发起后会返回一次性 token；在当前阶段直接复制该 token 完成验证。</CardDescription>
+          <CardDescription>先完成 token 验证，再单独确认执行数据迁移。</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleVerify}>
@@ -92,6 +103,11 @@ export function AccountSettingsPage() {
               {verifyMutation.isPending ? '验证中...' : '完成合并'}
             </Button>
           </form>
+          <div className="mt-4">
+            <Button type="button" onClick={handleConfirm} disabled={confirmMutation.isPending || !mergeRequestId}>
+              {confirmMutation.isPending ? '确认中...' : '确认并完成合并'}
+            </Button>
+          </div>
           {statusMessage ? <p className="mt-4 text-sm text-muted-foreground">{statusMessage}</p> : null}
         </CardContent>
       </Card>

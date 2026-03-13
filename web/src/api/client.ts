@@ -5,11 +5,17 @@ import type {
   ApiToken,
   CreateTokenRequest,
   CreateTokenResponse,
+  MergeConfirmRequest,
   LocalLoginRequest,
   LocalRegisterRequest,
   MergeInitiateRequest,
   MergeInitiateResponse,
   MergeVerifyRequest,
+  ReviewTask,
+  PromotionTask,
+  AdminUser,
+  AuditLogItem,
+  SkillSummary,
   OAuthProvider,
   User,
 } from './types'
@@ -113,7 +119,13 @@ export async function fetchText(input: RequestInfo | URL, init?: RequestInit): P
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    return await unwrap<User>(client.GET('/api/v1/auth/me') as never)
+    const user = await unwrap<User>(client.GET('/api/v1/auth/me') as never)
+    return {
+      ...user,
+      userId: user.userId ?? '',
+      displayName: user.displayName ?? '',
+      platformRoles: user.platformRoles ?? [],
+    }
   } catch (error) {
     if (error instanceof Error && error.message === 'HTTP 401') {
       return null
@@ -126,7 +138,15 @@ export const authApi = {
   getMe: getCurrentUser,
 
   async getProviders(): Promise<OAuthProvider[]> {
-    return unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers') as never)
+    const providers = await unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers') as never)
+    return providers
+      .filter((provider) => provider.id && provider.name && provider.authorizationUrl)
+      .map((provider) => ({
+        ...provider,
+        id: provider.id!,
+        name: provider.name!,
+        authorizationUrl: provider.authorizationUrl!,
+      }))
   },
 
   async localLogin(request: LocalLoginRequest): Promise<User> {
@@ -160,10 +180,11 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    const { response, error } = await client.POST('/api/v1/auth/logout', {
+    const response = await fetch('/api/v1/auth/logout', {
+      method: 'POST',
       headers: withCsrf(),
     })
-    if (error || (response.status !== 200 && response.status !== 204)) {
+    if (response.status !== 200 && response.status !== 204) {
       throw new Error(`HTTP ${response.status}`)
     }
   },
@@ -189,20 +210,50 @@ export const accountApi = {
       body: JSON.stringify(request),
     })
   },
+
+  async confirmMerge(request: MergeConfirmRequest): Promise<void> {
+    await fetchJson<void>('/api/v1/account/merge/confirm', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
 }
 
 export const tokenApi = {
   async getTokens(): Promise<ApiToken[]> {
-    return unwrap<ApiToken[]>(client.GET('/api/v1/tokens') as never)
+    const tokens = await unwrap<ApiToken[]>(client.GET('/api/v1/tokens') as never)
+    return tokens
+      .filter((token) => token.id !== undefined && token.name && token.tokenPrefix && token.createdAt)
+      .map((token) => ({
+        ...token,
+        id: token.id!,
+        name: token.name!,
+        tokenPrefix: token.tokenPrefix!,
+        createdAt: token.createdAt!,
+      }))
   },
 
   async createToken(request: CreateTokenRequest): Promise<CreateTokenResponse> {
-    return unwrap<CreateTokenResponse>(client.POST('/api/v1/tokens', {
+    const token = await unwrap<CreateTokenResponse>(client.POST('/api/v1/tokens', {
       headers: withCsrf({
         'Content-Type': 'application/json',
       }),
       body: request,
     }) as never)
+    if (!token.token || token.id === undefined || !token.name || !token.tokenPrefix || !token.createdAt) {
+      throw new Error('Invalid token creation response')
+    }
+    return {
+      ...token,
+      token: token.token,
+      id: token.id,
+      name: token.name,
+      tokenPrefix: token.tokenPrefix,
+      createdAt: token.createdAt,
+    }
   },
 
   async deleteToken(tokenId: number): Promise<void> {
@@ -217,5 +268,170 @@ export const tokenApi = {
     if (error || response.status !== 204) {
       throw new Error(`HTTP ${response.status}`)
     }
+  },
+}
+
+export const reviewApi = {
+  async list(params: { status: string; namespaceId?: number; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('status', params.status)
+    if (params.namespaceId !== undefined) {
+      searchParams.set('namespaceId', String(params.namespaceId))
+    }
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: ReviewTask[]; total: number; page: number; size: number }>(
+      `/api/v1/reviews?${searchParams.toString()}`,
+    )
+  },
+
+  async get(id: number): Promise<ReviewTask> {
+    return fetchJson<ReviewTask>(`/api/v1/reviews/${id}`)
+  },
+
+  async approve(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/reviews/${id}/approve`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+
+  async reject(id: number, comment: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/reviews/${id}/reject`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+}
+
+export const promotionApi = {
+  async list(params: { status?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('status', params.status ?? 'PENDING')
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: PromotionTask[]; total: number; page: number; size: number }>(
+      `/api/v1/promotions?${searchParams.toString()}`,
+    )
+  },
+
+  async get(id: number): Promise<PromotionTask> {
+    return fetchJson<PromotionTask>(`/api/v1/promotions/${id}`)
+  },
+
+  async approve(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/promotions/${id}/approve`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+
+  async reject(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/promotions/${id}/reject`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+}
+
+export const meApi = {
+  async getStars(): Promise<SkillSummary[]> {
+    return fetchJson<SkillSummary[]>('/api/v1/me/stars')
+  },
+}
+
+export const adminApi = {
+  async getUsers(params: { search?: string; status?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.search) searchParams.set('search', params.search)
+    if (params.status) searchParams.set('status', params.status)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: AdminUser[]; total: number; page: number; size: number }>(
+      `/api/v1/admin/users?${searchParams.toString()}`,
+    )
+  },
+
+  async updateUserRole(userId: string, role: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/users/${userId}/role`, {
+      method: 'PUT',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ role }),
+    })
+  },
+
+  async updateUserStatus(userId: string, status: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/users/${userId}/status`, {
+      method: 'PUT',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ status }),
+    })
+  },
+
+  async approveUser(userId: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/users/${userId}/approve`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async disableUser(userId: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/users/${userId}/disable`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async enableUser(userId: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/users/${userId}/enable`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async getAuditLogs(params: { action?: string; userId?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.action) searchParams.set('action', params.action)
+    if (params.userId) searchParams.set('userId', params.userId)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: AuditLogItem[]; total: number; page: number; size: number }>(
+      `/api/v1/admin/audit-logs?${searchParams.toString()}`,
+    )
+  },
+
+  async hideSkill(skillId: number, reason?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skills/${skillId}/hide`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ reason }),
+    })
+  },
+
+  async unhideSkill(skillId: number): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skills/${skillId}/unhide`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async yankVersion(versionId: number, reason?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skills/versions/${versionId}/yank`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ reason }),
+    })
   },
 }

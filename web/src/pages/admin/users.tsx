@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog'
 import { Label } from '@/shared/ui/label'
-import { useAdminUsers, useUpdateUserRole, useUpdateUserStatus } from '@/features/admin/use-admin-users'
+import { useAdminUsers, useApproveUser, useDisableUser, useEnableUser, useUpdateUserRole } from '@/features/admin/use-admin-users'
 import type { AdminUser } from '@/features/admin/use-admin-users'
 
 export function AdminUsersPage() {
@@ -41,7 +41,9 @@ export function AdminUsersPage() {
   })
 
   const updateRoleMutation = useUpdateUserRole()
-  const updateStatusMutation = useUpdateUserStatus()
+  const approveUserMutation = useApproveUser()
+  const disableUserMutation = useDisableUser()
+  const enableUserMutation = useEnableUser()
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('zh-CN')
@@ -62,7 +64,7 @@ export function AdminUsersPage() {
   const confirmRoleChange = async () => {
     if (!selectedUser) return
     try {
-      await updateRoleMutation.mutateAsync({ userId: selectedUser.id, role: newRole })
+      await updateRoleMutation.mutateAsync({ userId: selectedUser.userId, role: newRole })
       setRoleDialogOpen(false)
       setSelectedUser(null)
     } catch (error) {
@@ -73,8 +75,11 @@ export function AdminUsersPage() {
   const confirmStatusChange = async () => {
     if (!selectedUser) return
     try {
-      const newStatus = actionType === 'ban' ? 'DISABLED' : 'ACTIVE'
-      await updateStatusMutation.mutateAsync({ userId: selectedUser.id, status: newStatus })
+      if (actionType === 'ban') {
+        await disableUserMutation.mutateAsync(selectedUser.userId)
+      } else {
+        await enableUserMutation.mutateAsync(selectedUser.userId)
+      }
       setConfirmDialogOpen(false)
       setSelectedUser(null)
     } catch (error) {
@@ -100,6 +105,7 @@ export function AdminUsersPage() {
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">全部</option>
             <option value="ACTIVE">活跃</option>
+            <option value="PENDING">待审批</option>
             <option value="DISABLED">已禁用</option>
           </Select>
         </div>
@@ -131,18 +137,20 @@ export function AdminUsersPage() {
               </TableHeader>
               <TableBody>
                 {data.items.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.userId}>
                     <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.email || '-'}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
                           user.status === 'ACTIVE'
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : user.status === 'PENDING'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              : 'bg-red-500/10 text-red-400 border-red-500/20'
                         }`}
                       >
-                        {user.status === 'ACTIVE' ? '活跃' : '已禁用'}
+                        {user.status === 'ACTIVE' ? '活跃' : user.status === 'PENDING' ? '待审批' : '已禁用'}
                       </span>
                     </TableCell>
                     <TableCell>{user.platformRoles.join(', ')}</TableCell>
@@ -156,6 +164,15 @@ export function AdminUsersPage() {
                         >
                           修改角色
                         </Button>
+                        {user.status === 'PENDING' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => approveUserMutation.mutate(user.userId)}
+                          >
+                            审批通过
+                          </Button>
+                        )}
                         {user.status === 'ACTIVE' ? (
                           <Button
                             variant="outline"
@@ -251,7 +268,7 @@ export function AdminUsersPage() {
             <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={confirmStatusChange} disabled={updateStatusMutation.isPending}>
+            <Button onClick={confirmStatusChange} disabled={disableUserMutation.isPending || enableUserMutation.isPending}>
               确认
             </Button>
           </DialogFooter>
