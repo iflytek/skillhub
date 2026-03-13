@@ -15,8 +15,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize, rehypeHighlight]}
         components={{
-          // @ts-ignore - react-markdown types issue
-          div: ({ node, ...props }) => <div className="prose prose-sm dark:prose-invert max-w-none" {...props} />,
+          div: (props) => <div className="prose prose-sm dark:prose-invert max-w-none" {...props} />,
         }}
       >
         {content}
