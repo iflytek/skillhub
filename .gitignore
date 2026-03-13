@@ -50,6 +50,7 @@ coverage/
 .vite/
 .eslintcache
 *.tsbuildinfo
+package-lock.json
 
 # Temporary files
 .tmp/
