@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
@@ -14,21 +15,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 @RestController
 @RequestMapping("/api/v1/cli")
 public class CliController extends BaseApiController {
 
     private final SkillPackageValidator skillPackageValidator;
+    private final SkillPackageArchiveExtractor skillPackageArchiveExtractor;
 
     public CliController(ApiResponseFactory responseFactory,
-                         SkillPackageValidator skillPackageValidator) {
+                         SkillPackageValidator skillPackageValidator,
+                         SkillPackageArchiveExtractor skillPackageArchiveExtractor) {
         super(responseFactory);
         this.skillPackageValidator = skillPackageValidator;
+        this.skillPackageArchiveExtractor = skillPackageArchiveExtractor;
     }
 
     @GetMapping("/whoami")
@@ -42,7 +43,18 @@ public class CliController extends BaseApiController {
 
     @PostMapping("/check")
     public ApiResponse<SkillCheckResponse> check(@RequestParam("file") MultipartFile file) throws IOException {
-        List<PackageEntry> entries = extractZipEntries(file);
+        List<PackageEntry> entries;
+        try {
+            entries = skillPackageArchiveExtractor.extract(file);
+        } catch (IllegalArgumentException e) {
+            SkillCheckResponse response = new SkillCheckResponse(
+                    false,
+                    List.of(e.getMessage()),
+                    0,
+                    0L
+            );
+            return ok("response.success.validated", response);
+        }
         ValidationResult result = skillPackageValidator.validate(entries);
 
         SkillCheckResponse response = new SkillCheckResponse(
@@ -53,36 +65,5 @@ public class CliController extends BaseApiController {
         );
 
         return ok("response.success.validated", response);
-    }
-
-    private List<PackageEntry> extractZipEntries(MultipartFile file) throws IOException {
-        List<PackageEntry> entries = new ArrayList<>();
-
-        try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
-            ZipEntry zipEntry;
-            while ((zipEntry = zis.getNextEntry()) != null) {
-                if (!zipEntry.isDirectory()) {
-                    byte[] content = zis.readAllBytes();
-                    entries.add(new PackageEntry(
-                            zipEntry.getName(),
-                            content,
-                            content.length,
-                            determineContentType(zipEntry.getName())
-                    ));
-                }
-                zis.closeEntry();
-            }
-        }
-
-        return entries;
-    }
-
-    private String determineContentType(String filename) {
-        if (filename.endsWith(".py")) return "text/x-python";
-        if (filename.endsWith(".json")) return "application/json";
-        if (filename.endsWith(".yaml") || filename.endsWith(".yml")) return "application/x-yaml";
-        if (filename.endsWith(".txt")) return "text/plain";
-        if (filename.endsWith(".md")) return "text/markdown";
-        return "application/octet-stream";
     }
 }

@@ -61,4 +61,20 @@ class LocalFileStorageServiceTest {
         assertEquals(content.length, metadata.size());
         assertNotNull(metadata.lastModified());
     }
+
+    @Test void shouldRejectPathTraversalKeys() {
+        byte[] content = "data".getBytes(StandardCharsets.UTF_8);
+
+        IllegalArgumentException putError = assertThrows(
+            IllegalArgumentException.class,
+            () -> storageService.putObject("../escape.txt", new ByteArrayInputStream(content), content.length, "text/plain")
+        );
+        assertEquals("Invalid storage key: ../escape.txt", putError.getMessage());
+
+        IllegalArgumentException getError = assertThrows(
+            IllegalArgumentException.class,
+            () -> storageService.getObject("..\\escape.txt")
+        );
+        assertEquals("Invalid storage key: ..\\escape.txt", getError.getMessage());
+    }
 }
