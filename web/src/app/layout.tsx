@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useAuth } from '@/features/auth/use-auth'
+import { LandingPage } from '@/pages/landing'
 
 export function Layout() {
   const { user, isLoading } = useAuth()
@@ -8,11 +9,7 @@ export function Layout() {
   const isLanding = pathname === '/'
 
   if (isLanding) {
-    return (
-      <Suspense fallback={null}>
-        <Outlet />
-      </Suspense>
-    )
+    return <LandingPage />
   }
 
   return (
