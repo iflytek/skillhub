@@ -3,10 +3,14 @@ import { authApi } from '@/api/client'
 import { Button } from '@/shared/ui/button'
 import type { OAuthProvider } from '@/api/types'
 
-export function LoginButton() {
+interface LoginButtonProps {
+  returnTo?: string
+}
+
+export function LoginButton({ returnTo }: LoginButtonProps) {
   const { data, isLoading } = useQuery<OAuthProvider[]>({
-    queryKey: ['auth', 'providers'],
-    queryFn: authApi.getProviders,
+    queryKey: ['auth', 'providers', returnTo ?? ''],
+    queryFn: () => authApi.getProviders(returnTo),
   })
 
   const providers = data ?? []

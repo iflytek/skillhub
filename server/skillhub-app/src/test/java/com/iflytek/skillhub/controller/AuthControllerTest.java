@@ -10,11 +10,13 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,6 +27,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+    "spring.security.oauth2.client.registration.github.client-name=GitHub",
+    "spring.security.oauth2.client.registration.gitee.client-id=placeholder",
+    "spring.security.oauth2.client.registration.gitee.client-secret=placeholder",
+    "spring.security.oauth2.client.registration.gitee.provider=gitee",
+    "spring.security.oauth2.client.registration.gitee.authorization-grant-type=authorization_code",
+    "spring.security.oauth2.client.registration.gitee.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}",
+    "spring.security.oauth2.client.registration.gitee.scope=user_info",
+    "spring.security.oauth2.client.registration.gitee.client-name=Gitee",
+    "spring.security.oauth2.client.provider.gitee.authorization-uri=https://gitee.com/oauth/authorize",
+    "spring.security.oauth2.client.provider.gitee.token-uri=https://gitee.com/oauth/token",
+    "spring.security.oauth2.client.provider.gitee.user-info-uri=https://gitee.com/api/v5/user",
+    "spring.security.oauth2.client.provider.gitee.user-name-attribute=id"
+})
 class AuthControllerTest {
 
     @Autowired
@@ -79,9 +95,23 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.msg").isNotEmpty())
-            .andExpect(jsonPath("$.data[0].id").value("github"))
-            .andExpect(jsonPath("$.data[0].authorizationUrl").value("/oauth2/authorization/github"))
+            .andExpect(jsonPath("$.data.length()").value(2))
+            .andExpect(jsonPath("$.data[*].id", hasItems("github", "gitee")))
+            .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
+                "/oauth2/authorization/github",
+                "/oauth2/authorization/gitee"
+            )))
             .andExpect(jsonPath("$.timestamp").isNotEmpty())
             .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void providersShouldAppendReturnToWhenRequested() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/providers").param("returnTo", "/dashboard/publish"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
+                "/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish",
+                "/oauth2/authorization/gitee?returnTo=%2Fdashboard%2Fpublish"
+            )));
     }
 }

@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
@@ -15,7 +16,7 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
     public OAuth2LoginSuccessHandler() {
-        setDefaultTargetUrl("/");
+        setDefaultTargetUrl(OAuthLoginRedirectSupport.DEFAULT_TARGET_URL);
     }
 
     @Override
@@ -27,6 +28,21 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
                 request.getSession().setAttribute("platformPrincipal", principal);
             }
         }
+        String returnTo = consumeReturnTo(request.getSession(false));
+        if (returnTo != null) {
+            getRedirectStrategy().sendRedirect(request, response, returnTo);
+            clearAuthenticationAttributes(request);
+            return;
+        }
         super.onAuthenticationSuccess(request, response, authentication);
+    }
+
+    private String consumeReturnTo(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        Object value = session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
+        session.removeAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
+        return value instanceof String str ? OAuthLoginRedirectSupport.sanitizeReturnTo(str) : null;
     }
 }
