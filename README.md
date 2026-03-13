@@ -267,6 +267,40 @@ Run it against a local backend:
 - OpenAPI TypeScript for type-safe API client
 - i18next for internationalization
 
+## Usage with Agent Platforms
+
+SkillHub works as a skill registry backend for several agent platforms. Point any of the clients below at your SkillHub instance to publish, discover, and install skills.
+
+### [openclaw](https://github.com/openclaw/openclaw)
+
+[openclaw](https://github.com/openclaw/openclaw) is an open-source agent skill CLI. Configure it to use your SkillHub endpoint as the registry:
+
+```bash
+# Log in to your SkillHub instance
+openclaw login --registry https://<your-skillhub-host>
+
+# Publish a skill
+openclaw push <skill-package>
+
+# Search and install skills
+openclaw search <keyword>
+openclaw install <namespace>/<skill>
+```
+
+### [AstronClaw](https://agent.xfyun.cn/astron-claw)
+
+[AstronClaw](https://agent.xfyun.cn/astron-claw) is the skill marketplace provided by iFlytek's Astron platform. You can connect it to a self-hosted SkillHub registry to manage and distribute private skills within your organization, or browse publicly shared skills on the Astron platform.
+
+### [astron-agent](https://github.com/iflytek/astron-agent)
+
+[astron-agent](https://github.com/iflytek/astron-agent) is the iFlytek Astron agent framework. Skills stored in SkillHub can be referenced and loaded directly by astron-agent, enabling a governed, versioned skill lifecycle from development to production.
+
+---
+
+> 🌟 **Show & Tell** — Have you built something with SkillHub? We'd love to hear about it!
+> Share your use case, integration, or deployment story in the
+> [**Discussions → Show and Tell**](https://github.com/iflytek/skillhub/discussions/categories/show-and-tell) category.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss
