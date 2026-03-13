@@ -99,7 +99,7 @@ export function RegisterPage() {
               <p className="text-sm text-muted-foreground">
                 直接使用现有 OAuth 账户进入平台，无需再创建本地密码。
               </p>
-              <LoginButton />
+              <LoginButton returnTo={returnTo} />
             </TabsContent>
           </Tabs>
         </CardContent>
