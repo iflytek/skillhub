@@ -3,6 +3,7 @@ package com.iflytek.skillhub.auth.local;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
@@ -28,17 +29,20 @@ public class LocalAuthService {
     private final LocalCredentialRepository credentialRepository;
     private final UserAccountRepository userAccountRepository;
     private final UserRoleBindingRepository userRoleBindingRepository;
+    private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
                             UserRoleBindingRepository userRoleBindingRepository,
+                            GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
+        this.globalNamespaceMembershipService = globalNamespaceMembershipService;
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
     }
@@ -76,6 +80,7 @@ public class LocalAuthService {
             normalizedUsername,
             passwordEncoder.encode(password)
         ));
+        globalNamespaceMembershipService.ensureMember(user.getId());
 
         return buildPrincipal(user);
     }

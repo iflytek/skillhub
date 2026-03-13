@@ -11,6 +11,7 @@ import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
@@ -39,6 +40,9 @@ class LocalAuthServiceTest {
     private UserRoleBindingRepository userRoleBindingRepository;
 
     @Mock
+    private GlobalNamespaceMembershipService globalNamespaceMembershipService;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private LocalAuthService service;
@@ -49,6 +53,7 @@ class LocalAuthServiceTest {
             credentialRepository,
             userAccountRepository,
             userRoleBindingRepository,
+            globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
             passwordEncoder
         );
@@ -70,6 +75,7 @@ class LocalAuthServiceTest {
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.email()).isEqualTo("alice@example.com");
         verify(credentialRepository).save(any(LocalCredential.class));
+        verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
     }
 
     @Test
