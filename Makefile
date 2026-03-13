@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -142,3 +142,6 @@ db-reset: ## 重置数据库
 	docker compose down -v --remove-orphans
 	docker compose up -d --wait --remove-orphans postgres
 	cd server && ./mvnw flyway:migrate -pl skillhub-app
+
+validate-release-config: ## 校验发布环境变量文件（默认 .env.release）
+	./scripts/validate-release-config.sh .env.release

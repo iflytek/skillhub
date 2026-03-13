@@ -96,6 +96,7 @@ make dev-all-reset
 
 ```bash
 cp .env.release.example .env.release
+make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d
 ```
 
@@ -114,6 +115,9 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - `.env.release.example`
   - 运行时变量模板
   - 包含镜像名、镜像版本、端口、数据库凭证、外部 OSS、站点公网地址和首登管理员参数
+- `scripts/validate-release-config.sh`
+  - 在启动前校验 `.env.release`
+  - 可提前拦截占位值、URL 格式错误、缺失的 OSS 凭据、危险的明文默认值
 
 ### 5.3 镜像标签约定
 
@@ -168,7 +172,32 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - 前端反代和运行时 API 地址通过 `SKILLHUB_API_UPSTREAM` / `SKILLHUB_WEB_API_BASE_URL` 注入
 - 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
 
-## 8 可观测性
+## 8 裸金属上线清单
+
+推荐顺序：
+
+1. 准备服务器基础环境
+   - 安装 Docker Engine 与 Docker Compose Plugin
+   - 配置公网 HTTPS 入口，确保最终访问域名已经确定
+   - 打开 `80` / `443`，避免直接暴露 `5432` / `6379`
+2. 填写 `.env.release`
+   - `SKILLHUB_PUBLIC_BASE_URL` 填最终 HTTPS 域名，且不要带尾部 `/`
+   - `SKILLHUB_STORAGE_PROVIDER=s3`
+   - 按云厂商 OSS / S3 兼容参数填写 `SKILLHUB_STORAGE_S3_*`
+   - 设置非默认的 `POSTGRES_PASSWORD` 与 `BOOTSTRAP_ADMIN_PASSWORD`
+3. 启动前校验
+   - 运行 `make validate-release-config`
+   - 确认没有 `replace-me`、`change-this-*`、`ChangeMe!2026` 之类的占位值
+4. 首次启动
+   - 运行 `docker compose --env-file .env.release -f compose.release.yml up -d`
+   - 检查 `docker compose --env-file .env.release -f compose.release.yml ps`
+   - 检查 `curl -i http://127.0.0.1:8080/actuator/health`
+5. 首登收尾
+   - 使用 `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` 登录
+   - 立即修改管理员密码
+   - 如果后续完全走 OAuth，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
+
+## 9 可观测性
 
 | 维度 | 方案 |
 |------|------|
@@ -176,7 +205,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 | 日志 | 容器 stdout / stderr |
 | 指标 | Spring Boot Actuator，后续可接 Prometheus |
 
-## 9 数据迁移
+## 10 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

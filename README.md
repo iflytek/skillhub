@@ -122,6 +122,7 @@ Recommended image tags:
 Start the runtime:
 
 ```bash
+make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d
 ```
 
@@ -152,6 +153,7 @@ Recommended production baseline:
 - keep PostgreSQL / Redis bound to `127.0.0.1`
 - use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
 - rotate or disable the bootstrap admin after initial setup
+- run `make validate-release-config` before `docker compose up -d`
 
 If the GHCR package remains private, run `docker login ghcr.io` before
 `docker compose up -d`.
