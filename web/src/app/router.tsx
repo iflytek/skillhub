@@ -96,13 +96,13 @@ const searchRoute = createRoute({
 
 const namespaceRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/$namespace',
+  path: '/space/$namespace',
   component: NamespacePage,
 })
 
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/$namespace/$slug',
+  path: '/space/$namespace/$slug',
   component: SkillDetailPage,
 })
 

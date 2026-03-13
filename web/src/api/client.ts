@@ -19,6 +19,9 @@ import type {
   OAuthProvider,
   User,
 } from './types'
+import { ApiError } from '@/shared/lib/api-error'
+
+export { ApiError }
 
 const client = createClient<paths>({ baseUrl: '' })
 
@@ -57,17 +60,17 @@ function hasDataProperty<T>(value: unknown): value is { data: T } {
 async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
   const { data, error, response } = await promise
   if (response.status === 401) {
-    throw new Error('HTTP 401')
+    throw new ApiError('HTTP 401', 401)
   }
   if (error) {
-    throw new Error(`HTTP ${response.status}`)
+    throw new ApiError(`HTTP ${response.status}`, response.status)
   }
   if (data === undefined) {
-    throw new Error(`HTTP ${response.status}`)
+    throw new ApiError(`HTTP ${response.status}`, response.status)
   }
   if (isApiEnvelope<T>(data)) {
     if (data.code !== 0) {
-      throw new Error(data.msg || `HTTP ${response.status}`)
+      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg)
     }
     return data.data
   }
@@ -90,20 +93,26 @@ type ApiEnvelope<T> = {
 }
 
 export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init)
+  let response: Response
+  try {
+    response = await fetch(input, init)
+  } catch {
+    throw new ApiError('Network error', 0)
+  }
+
   let json: ApiEnvelope<T> | null = null
 
   try {
     json = (await response.json()) as ApiEnvelope<T>
   } catch {
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      throw new ApiError(`HTTP ${response.status}`, response.status)
     }
-    throw new Error('Invalid JSON response')
+    throw new ApiError('Invalid JSON response', response.status)
   }
 
   if (!response.ok || json.code !== 0) {
-    throw new Error(json.msg || `HTTP ${response.status}`)
+    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg)
   }
 
   return json.data
@@ -127,7 +136,7 @@ export async function getCurrentUser(): Promise<User | null> {
       platformRoles: user.platformRoles ?? [],
     }
   } catch (error) {
-    if (error instanceof Error && error.message === 'HTTP 401') {
+    if (error instanceof ApiError && error.status === 401) {
       return null
     }
     throw error

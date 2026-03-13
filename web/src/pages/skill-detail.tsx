@@ -22,7 +22,7 @@ export function SkillDetailPage() {
   const navigate = useNavigate()
   const location = useRouterState({ select: (s) => s.location })
   const queryClient = useQueryClient()
-  const { namespace, slug } = useParams({ from: '/$namespace/$slug' })
+  const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
   const { data: skill, isLoading: isLoadingSkill } = useSkillDetail(namespace, slug)

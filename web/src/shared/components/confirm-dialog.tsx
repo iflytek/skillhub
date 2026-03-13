@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -25,11 +26,14 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmText = '确认',
-  cancelText = '取消',
+  confirmText,
+  cancelText,
   variant = 'default',
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation()
+  const resolvedConfirmText = confirmText ?? t('dialog.confirm')
+  const resolvedCancelText = cancelText ?? t('dialog.cancel')
   const handleConfirm = async () => {
     await onConfirm()
     onOpenChange(false)
@@ -44,10 +48,10 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {cancelText}
+            {resolvedCancelText}
           </Button>
           <Button variant={variant} onClick={handleConfirm}>
-            {confirmText}
+            {resolvedConfirmText}
           </Button>
         </DialogFooter>
       </DialogContent>
