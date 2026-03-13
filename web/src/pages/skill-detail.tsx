@@ -53,6 +53,15 @@ export function SkillDetailPage() {
     onSuccess: refreshSkill,
   })
 
+  const handleDownload = () => {
+    if (!latestVersion) {
+      return
+    }
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    const downloadUrl = `/api/v1/skills/${cleanNamespace}/${slug}/versions/${latestVersion.version}/download`
+    window.open(downloadUrl, '_blank')
+  }
+
   const requireLogin = () => {
     navigate({
       to: '/login',
@@ -87,7 +96,7 @@ export function SkillDetailPage() {
       <div className="lg:col-span-2 space-y-8">
         <div className="space-y-3">
           <div className="flex items-center gap-3 mb-1">
-            <NamespaceBadge type="GLOBAL" name={`@${namespace}`} />
+            <NamespaceBadge type="GLOBAL" name={namespace} />
           </div>
           <h1 className="text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
           {skill.summary && (
@@ -189,7 +198,7 @@ export function SkillDetailPage() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">命名空间</div>
-            <NamespaceBadge type="GLOBAL" name={`@${namespace}`} />
+            <NamespaceBadge type="GLOBAL" name={namespace} />
           </div>
 
           <div className="h-px bg-border/40" />
@@ -214,7 +223,13 @@ export function SkillDetailPage() {
           </Card>
         )}
 
-        <Button className="w-full" variant="outline" size="lg">
+        <Button
+          className="w-full"
+          variant="outline"
+          size="lg"
+          onClick={handleDownload}
+          disabled={!latestVersion}
+        >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
           </svg>
