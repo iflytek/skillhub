@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -16,6 +17,7 @@ import com.iflytek.skillhub.domain.skill.validation.PrePublishValidator;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
 import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,7 @@ public class SkillPublishService {
     private final SkillPackageValidator skillPackageValidator;
     private final SkillMetadataParser skillMetadataParser;
     private final PrePublishValidator prePublishValidator;
+    private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
 
@@ -61,6 +64,7 @@ public class SkillPublishService {
             SkillPackageValidator skillPackageValidator,
             SkillMetadataParser skillMetadataParser,
             PrePublishValidator prePublishValidator,
+            ApplicationEventPublisher eventPublisher,
             ObjectMapper objectMapper,
             ReviewTaskRepository reviewTaskRepository) {
         this.namespaceRepository = namespaceRepository;
@@ -72,6 +76,7 @@ public class SkillPublishService {
         this.skillPackageValidator = skillPackageValidator;
         this.skillMetadataParser = skillMetadataParser;
         this.prePublishValidator = prePublishValidator;
+        this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
     }
@@ -212,13 +217,17 @@ public class SkillPublishService {
         ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
         reviewTaskRepository.save(reviewTask);
 
-        // 12. Update skill metadata without moving the published pointer
+        // 12. Update skill
+        skill.setLatestVersionId(version.getId());
         skill.setDisplayName(metadata.name());
         skill.setSummary(metadata.description());
         skill.setUpdatedBy(publisherId);
         skillRepository.save(skill);
 
-        // 13. Return identifiers for the pending review version
+        // 13. Publish SkillPublishedEvent
+        eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
+
+        // 14. Return published identifiers
         return new PublishResult(skill.getId(), skill.getSlug(), version);
     }
 

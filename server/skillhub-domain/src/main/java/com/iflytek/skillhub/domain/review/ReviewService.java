@@ -52,18 +52,9 @@ public class ReviewService {
     }
 
     @Transactional
-    public ReviewTask submitReview(Long skillVersionId,
-                                   String userId,
-                                   Map<Long, NamespaceRole> userNamespaceRoles,
-                                   Set<String> platformRoles) {
+    public ReviewTask submitReview(Long skillVersionId, Long namespaceId, String userId) {
         SkillVersion skillVersion = skillVersionRepository.findById(skillVersionId)
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", skillVersionId));
-        Skill skill = skillRepository.findById(skillVersion.getSkillId())
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
-
-        if (!permissionChecker.canSubmitForReview(skill, userId, userNamespaceRoles, platformRoles)) {
-            throw new DomainForbiddenException("review.submit.no_permission");
-        }
 
         if (skillVersion.getStatus() != SkillVersionStatus.DRAFT) {
             throw new DomainBadRequestException("review.submit.not_draft", skillVersionId);
@@ -72,7 +63,7 @@ public class ReviewService {
         skillVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
         skillVersionRepository.save(skillVersion);
 
-        ReviewTask task = new ReviewTask(skillVersionId, skill.getNamespaceId(), userId);
+        ReviewTask task = new ReviewTask(skillVersionId, namespaceId, userId);
         try {
             return reviewTaskRepository.save(task);
         } catch (DataIntegrityViolationException e) {
@@ -181,21 +172,5 @@ public class ReviewService {
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", skillVersionId));
         skillVersion.setStatus(SkillVersionStatus.DRAFT);
         skillVersionRepository.save(skillVersion);
-    }
-
-    public boolean canReviewNamespace(ReviewTask task,
-                                      String userId,
-                                      com.iflytek.skillhub.domain.namespace.NamespaceType namespaceType,
-                                      Map<Long, NamespaceRole> userNamespaceRoles,
-                                      Set<String> platformRoles) {
-        return permissionChecker.canReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles, platformRoles);
-    }
-
-    public boolean canViewReview(ReviewTask task,
-                                 String userId,
-                                 com.iflytek.skillhub.domain.namespace.NamespaceType namespaceType,
-                                 Map<Long, NamespaceRole> userNamespaceRoles,
-                                 Set<String> platformRoles) {
-        return permissionChecker.canViewReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);
     }
 }

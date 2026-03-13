@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -54,6 +56,8 @@ class SkillPublishServiceTest {
     @Mock
     private PrePublishValidator prePublishValidator;
     @Mock
+    private ApplicationEventPublisher eventPublisher;
+    @Mock
     private ReviewTaskRepository reviewTaskRepository;
 
     private SkillPublishService service;
@@ -72,6 +76,7 @@ class SkillPublishServiceTest {
                 skillPackageValidator,
                 skillMetadataParser,
                 prePublishValidator,
+                eventPublisher,
                 objectMapper,
                 reviewTaskRepository
         );
@@ -121,6 +126,7 @@ class SkillPublishServiceTest {
         assertEquals(1L, result.skillId());
         assertEquals("test-skill", result.slug());
         assertEquals("1.0.0", result.version().getVersion());
+        verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
         verify(skillFileRepository).saveAll(anyList());
         verify(objectStorageService, atLeastOnce()).putObject(anyString(), any(), anyLong(), anyString());
         verify(reviewTaskRepository).save(any(ReviewTask.class));

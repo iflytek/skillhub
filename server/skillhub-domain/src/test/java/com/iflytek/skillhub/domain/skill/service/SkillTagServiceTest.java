@@ -35,8 +35,6 @@ class SkillTagServiceTest {
     private SkillVersionRepository skillVersionRepository;
     @Mock
     private SkillTagRepository skillTagRepository;
-    @Mock
-    private VisibilityChecker visibilityChecker;
 
     private SkillTagService service;
 
@@ -47,8 +45,7 @@ class SkillTagServiceTest {
                 namespaceMemberRepository,
                 skillRepository,
                 skillVersionRepository,
-                skillTagRepository,
-                visibilityChecker
+                skillTagRepository
         );
     }
 
@@ -177,10 +174,9 @@ class SkillTagServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
         when(skillTagRepository.findBySkillId(1L)).thenReturn(List.of(tag1, tag2));
-        when(visibilityChecker.canAccess(eq(skill), isNull(), eq(java.util.Map.of()))).thenReturn(true);
 
         // Act
-        List<SkillTag> result = service.listTags(namespaceSlug, skillSlug, null, java.util.Map.of());
+        List<SkillTag> result = service.listTags(namespaceSlug, skillSlug);
 
         // Assert
         assertEquals(2, result.size());

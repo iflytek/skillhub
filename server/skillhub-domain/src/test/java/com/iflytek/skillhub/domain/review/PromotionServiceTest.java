@@ -2,7 +2,6 @@ package com.iflytek.skillhub.domain.review;
 
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
-import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
@@ -21,6 +20,7 @@ import jakarta.persistence.EntityManager;
 
 import java.util.*;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -123,7 +123,6 @@ class PromotionServiceTest {
 
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
-            when(permissionChecker.canSubmitPromotion(eq(sourceSkill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.of(globalNs));
             when(promotionRequestRepository.findBySourceVersionIdAndStatus(SOURCE_VERSION_ID, ReviewTaskStatus.PENDING))
                     .thenReturn(Optional.empty());
@@ -135,8 +134,7 @@ class PromotionServiceTest {
                     });
 
             PromotionRequest result = promotionService.submitPromotion(
-                    SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID,
-                    Map.of(5L, NamespaceRole.OWNER), Set.of());
+                    SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID);
 
             assertNotNull(result);
             assertEquals(SOURCE_SKILL_ID, result.getSourceSkillId());
@@ -151,7 +149,7 @@ class PromotionServiceTest {
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.empty());
 
             assertThrows(DomainNotFoundException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
 
         @Test
@@ -160,7 +158,7 @@ class PromotionServiceTest {
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.empty());
 
             assertThrows(DomainNotFoundException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
 
         @Test
@@ -173,7 +171,7 @@ class PromotionServiceTest {
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sv));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
 
         @Test
@@ -186,42 +184,39 @@ class PromotionServiceTest {
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sv));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
 
         @Test
         void shouldThrowWhenTargetNamespaceNotFound() {
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(createSourceSkill()));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(createPublishedVersion()));
-            when(permissionChecker.canSubmitPromotion(any(), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.empty());
 
             assertThrows(DomainNotFoundException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
 
         @Test
         void shouldThrowWhenTargetNamespaceNotGlobal() {
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(createSourceSkill()));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(createPublishedVersion()));
-            when(permissionChecker.canSubmitPromotion(any(), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.of(createTeamNamespace()));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
 
         @Test
         void shouldThrowWhenDuplicatePendingExists() {
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(createSourceSkill()));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(createPublishedVersion()));
-            when(permissionChecker.canSubmitPromotion(any(), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.of(createGlobalNamespace()));
             when(promotionRequestRepository.findBySourceVersionIdAndStatus(SOURCE_VERSION_ID, ReviewTaskStatus.PENDING))
                     .thenReturn(Optional.of(createPendingPromotion()));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of(), Set.of()));
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID));
         }
     }
 

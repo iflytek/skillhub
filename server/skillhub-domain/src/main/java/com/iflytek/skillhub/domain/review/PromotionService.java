@@ -3,7 +3,6 @@ package com.iflytek.skillhub.domain.review;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
-import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -52,9 +51,7 @@ public class PromotionService {
 
     @Transactional
     public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
-                                            Long targetNamespaceId, String userId,
-                                            java.util.Map<Long, NamespaceRole> userNamespaceRoles,
-                                            Set<String> platformRoles) {
+                                            Long targetNamespaceId, String userId) {
         Skill sourceSkill = skillRepository.findById(sourceSkillId)
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
 
@@ -67,10 +64,6 @@ public class PromotionService {
 
         if (sourceVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
             throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
-        }
-
-        if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles)) {
-            throw new DomainForbiddenException("promotion.submit.no_permission");
         }
 
         Namespace targetNamespace = namespaceRepository.findById(targetNamespaceId)
@@ -193,9 +186,5 @@ public class PromotionService {
         request.setReviewComment(comment);
         request.setReviewedAt(Instant.now());
         return request;
-    }
-
-    public boolean canViewPromotion(PromotionRequest request, String userId, Set<String> platformRoles) {
-        return permissionChecker.canViewPromotion(request, userId, platformRoles);
     }
 }

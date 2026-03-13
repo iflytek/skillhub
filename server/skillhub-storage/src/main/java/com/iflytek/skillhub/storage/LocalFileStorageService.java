@@ -15,7 +15,7 @@ public class LocalFileStorageService implements ObjectStorageService {
     private final Path basePath;
 
     public LocalFileStorageService(StorageProperties properties) {
-        this.basePath = Paths.get(properties.getLocal().getBasePath()).toAbsolutePath().normalize();
+        this.basePath = Paths.get(properties.getLocal().getBasePath());
     }
 
     @Override
@@ -58,11 +58,5 @@ public class LocalFileStorageService implements ObjectStorageService {
         } catch (IOException e) { throw new UncheckedIOException("Failed to get metadata: " + key, e); }
     }
 
-    private Path resolve(String key) {
-        Path resolved = basePath.resolve(key).normalize();
-        if (!resolved.startsWith(basePath)) {
-            throw new IllegalArgumentException("Resolved path escapes storage base path: " + key);
-        }
-        return resolved;
-    }
+    private Path resolve(String key) { return basePath.resolve(key); }
 }

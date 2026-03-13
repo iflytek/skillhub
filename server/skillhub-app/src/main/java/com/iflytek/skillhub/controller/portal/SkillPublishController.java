@@ -1,7 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
-import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
@@ -13,21 +12,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @RestController
 @RequestMapping("/api/v1/skills")
 public class SkillPublishController extends BaseApiController {
 
     private final SkillPublishService skillPublishService;
-    private final ZipPackageExtractor zipPackageExtractor;
 
     public SkillPublishController(SkillPublishService skillPublishService,
-                                  ZipPackageExtractor zipPackageExtractor,
                                   ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.skillPublishService = skillPublishService;
-        this.zipPackageExtractor = zipPackageExtractor;
     }
 
     @PostMapping("/{namespace}/publish")
@@ -40,7 +39,7 @@ public class SkillPublishController extends BaseApiController {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
 
-        List<PackageEntry> entries = zipPackageExtractor.extract(file);
+        List<PackageEntry> entries = extractZipEntries(file);
 
         SkillPublishService.PublishResult publishResult = skillPublishService.publishFromEntries(
                 namespace,
@@ -60,5 +59,36 @@ public class SkillPublishController extends BaseApiController {
         );
 
         return ok("response.success.published", response);
+    }
+
+    private List<PackageEntry> extractZipEntries(MultipartFile file) throws IOException {
+        List<PackageEntry> entries = new ArrayList<>();
+
+        try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
+            ZipEntry zipEntry;
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                if (!zipEntry.isDirectory()) {
+                    byte[] content = zis.readAllBytes();
+                    entries.add(new PackageEntry(
+                            zipEntry.getName(),
+                            content,
+                            content.length,
+                            determineContentType(zipEntry.getName())
+                    ));
+                }
+                zis.closeEntry();
+            }
+        }
+
+        return entries;
+    }
+
+    private String determineContentType(String filename) {
+        if (filename.endsWith(".py")) return "text/x-python";
+        if (filename.endsWith(".json")) return "application/json";
+        if (filename.endsWith(".yaml") || filename.endsWith(".yml")) return "application/x-yaml";
+        if (filename.endsWith(".txt")) return "text/plain";
+        if (filename.endsWith(".md")) return "text/markdown";
+        return "application/octet-stream";
     }
 }
