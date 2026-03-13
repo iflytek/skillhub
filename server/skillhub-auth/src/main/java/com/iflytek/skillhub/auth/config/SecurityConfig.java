@@ -3,6 +3,7 @@ package com.iflytek.skillhub.auth.config;
 import com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
+import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
 import com.iflytek.skillhub.auth.mock.MockAuthFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenAuthenticationFilter;
 import org.springframework.beans.factory.ObjectProvider;
@@ -30,6 +31,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver;
     private final OAuth2LoginSuccessHandler successHandler;
     private final OAuth2LoginFailureHandler failureHandler;
     private final ApiTokenAuthenticationFilter apiTokenAuthenticationFilter;
@@ -38,6 +40,7 @@ public class SecurityConfig {
     private final ObjectProvider<MockAuthFilter> mockAuthFilterProvider;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
+                          SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
                           OAuth2LoginSuccessHandler successHandler,
                           OAuth2LoginFailureHandler failureHandler,
                           ApiTokenAuthenticationFilter apiTokenAuthenticationFilter,
@@ -45,6 +48,7 @@ public class SecurityConfig {
                           AccessDeniedHandler apiAccessDeniedHandler,
                           ObjectProvider<MockAuthFilter> mockAuthFilterProvider) {
         this.customOAuth2UserService = customOAuth2UserService;
+        this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
         this.apiTokenAuthenticationFilter = apiTokenAuthenticationFilter;
@@ -101,6 +105,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequestResolver))
                 .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                 .successHandler(successHandler)
                 .failureHandler(failureHandler)
