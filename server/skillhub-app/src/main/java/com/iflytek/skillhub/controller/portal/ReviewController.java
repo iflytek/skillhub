@@ -123,13 +123,12 @@ public class ReviewController extends BaseApiController {
     public ApiResponse<PageResponse<ReviewTaskResponse>> listReviews(
             @RequestParam String status,
             @RequestParam(required = false) Long namespaceId,
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute("userId") String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         ReviewTaskStatus reviewStatus = ReviewTaskStatus.valueOf(status.toUpperCase());
         Map<Long, NamespaceRole> namespaceRoles = userNsRoles != null ? userNsRoles : Map.of();
-        int zeroBasedPage = Math.max(0, page - 1);
 
         Page<ReviewTask> tasks;
         if (namespaceId != null) {
@@ -139,9 +138,9 @@ public class ReviewController extends BaseApiController {
             if (!reviewService.canReviewNamespace(probe, userId, namespace.getType(), namespaceRoles, rbacService.getUserRoleCodes(userId))) {
                 throw new DomainForbiddenException("review.no_permission");
             }
-            tasks = reviewTaskRepository.findByNamespaceIdAndStatus(namespaceId, reviewStatus, PageRequest.of(zeroBasedPage, size));
+            tasks = reviewTaskRepository.findByNamespaceIdAndStatus(namespaceId, reviewStatus, PageRequest.of(page, size));
         } else {
-            tasks = reviewTaskRepository.findByStatus(reviewStatus, PageRequest.of(zeroBasedPage, size));
+            tasks = reviewTaskRepository.findByStatus(reviewStatus, PageRequest.of(page, size));
         }
 
         java.util.List<ReviewTaskResponse> visibleItems = tasks.getContent().stream()
@@ -155,7 +154,7 @@ public class ReviewController extends BaseApiController {
     @GetMapping("/pending")
     public ApiResponse<PageResponse<ReviewTaskResponse>> listPendingReviews(
             @RequestParam Long namespaceId,
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute("userId") String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
@@ -167,17 +166,17 @@ public class ReviewController extends BaseApiController {
             throw new DomainForbiddenException("review.no_permission");
         }
         Page<ReviewTask> tasks = reviewTaskRepository.findByNamespaceIdAndStatus(
-                namespaceId, ReviewTaskStatus.PENDING, PageRequest.of(Math.max(0, page - 1), size));
+                namespaceId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
         return ok("response.success.read", PageResponse.from(tasks.map(this::toResponse)));
     }
 
     @GetMapping("/my-submissions")
     public ApiResponse<PageResponse<ReviewTaskResponse>> listMySubmissions(
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute("userId") String userId) {
         Page<ReviewTask> tasks = reviewTaskRepository.findBySubmittedByAndStatus(
-                userId, ReviewTaskStatus.PENDING, PageRequest.of(Math.max(0, page - 1), size));
+                userId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
         return ok("response.success.read", PageResponse.from(tasks.map(this::toResponse)));
     }
 
