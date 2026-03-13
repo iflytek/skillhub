@@ -19,7 +19,9 @@ import java.util.Set;
 import static org.hamcrest.Matchers.hasItems;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -113,5 +115,42 @@ class AuthControllerTest {
                 "/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish",
                 "/oauth2/authorization/gitee?returnTo=%2Fdashboard%2Fpublish"
             )));
+    }
+
+    @Test
+    void methodsShouldExposeStandardLoginCatalog() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/methods").param("returnTo", "/dashboard/publish"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "oauth-github", "oauth-gitee")))
+            .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
+            .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
+                .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
+    }
+
+    @Test
+    void sessionBootstrapShouldBeForbiddenWhenFeatureIsDisabled() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/session/bootstrap")
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"provider":"private-sso"}
+                    """))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value(403))
+            .andExpect(jsonPath("$.msg").isNotEmpty());
+    }
+
+    @Test
+    void directLoginShouldBeForbiddenWhenFeatureIsDisabled() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/direct/login")
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"provider":"private-sso","username":"alice","password":"secret"}
+                    """))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value(403))
+            .andExpect(jsonPath("$.msg").isNotEmpty());
     }
 }

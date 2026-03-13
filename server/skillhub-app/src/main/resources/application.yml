@@ -59,6 +59,11 @@ spring:
       max-request-size: 100MB
 
 skillhub:
+  auth:
+    direct:
+      enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
+    session-bootstrap:
+      enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:

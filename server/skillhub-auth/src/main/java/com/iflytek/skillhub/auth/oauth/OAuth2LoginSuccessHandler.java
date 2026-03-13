@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.oauth;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,7 +16,10 @@ import java.io.IOException;
 @Component
 public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
-    public OAuth2LoginSuccessHandler() {
+    private final PlatformSessionService platformSessionService;
+
+    public OAuth2LoginSuccessHandler(PlatformSessionService platformSessionService) {
+        this.platformSessionService = platformSessionService;
         setDefaultTargetUrl(OAuthLoginRedirectSupport.DEFAULT_TARGET_URL);
     }
 
@@ -25,7 +29,7 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
         if (authentication.getPrincipal() instanceof OAuth2User oAuth2User) {
             PlatformPrincipal principal = (PlatformPrincipal) oAuth2User.getAttributes().get("platformPrincipal");
             if (principal != null) {
-                request.getSession().setAttribute("platformPrincipal", principal);
+                platformSessionService.attachToAuthenticatedSession(principal, authentication, request);
             }
         }
         String returnTo = consumeReturnTo(request.getSession(false));

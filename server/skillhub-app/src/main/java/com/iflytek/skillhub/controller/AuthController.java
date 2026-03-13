@@ -4,31 +4,42 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.AuthMeResponse;
+import com.iflytek.skillhub.dto.AuthMethodResponse;
 import com.iflytek.skillhub.dto.AuthProviderResponse;
-import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties;
+import com.iflytek.skillhub.dto.DirectLoginRequest;
+import com.iflytek.skillhub.dto.SessionBootstrapRequest;
+import com.iflytek.skillhub.service.AuthMethodCatalog;
+import com.iflytek.skillhub.service.DirectAuthService;
+import com.iflytek.skillhub.service.SessionBootstrapService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.iflytek.skillhub.exception.UnauthorizedException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController extends BaseApiController {
 
-    private final OAuth2ClientProperties oAuth2ClientProperties;
+    private final AuthMethodCatalog authMethodCatalog;
+    private final SessionBootstrapService sessionBootstrapService;
+    private final DirectAuthService directAuthService;
 
     public AuthController(ApiResponseFactory responseFactory,
-                          OAuth2ClientProperties oAuth2ClientProperties) {
+                          AuthMethodCatalog authMethodCatalog,
+                          SessionBootstrapService sessionBootstrapService,
+                          DirectAuthService directAuthService) {
         super(responseFactory);
-        this.oAuth2ClientProperties = oAuth2ClientProperties;
+        this.authMethodCatalog = authMethodCatalog;
+        this.sessionBootstrapService = sessionBootstrapService;
+        this.directAuthService = directAuthService;
     }
 
     @GetMapping("/me")
@@ -43,25 +54,38 @@ public class AuthController extends BaseApiController {
     @GetMapping("/providers")
     public ApiResponse<List<AuthProviderResponse>> providers(
             @RequestParam(name = "returnTo", required = false) String returnTo) {
-        String sanitizedReturnTo = com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport.sanitizeReturnTo(returnTo);
-        List<AuthProviderResponse> providers = new ArrayList<>(oAuth2ClientProperties.getRegistration().entrySet().stream()
-            .sorted(Comparator.comparing(entry -> entry.getKey()))
-            .map(entry -> new AuthProviderResponse(
-                entry.getKey(),
-                entry.getValue().getClientName() != null && !entry.getValue().getClientName().isBlank()
-                    ? entry.getValue().getClientName()
-                    : entry.getKey(),
-                buildAuthorizationUrl(entry.getKey(), sanitizedReturnTo)
-            ))
-            .toList());
-        return ok("response.success.read", providers);
+        return ok("response.success.read", authMethodCatalog.listOAuthProviders(returnTo));
     }
 
-    private String buildAuthorizationUrl(String registrationId, String returnTo) {
-        String baseUrl = "/oauth2/authorization/" + registrationId;
-        if (returnTo == null) {
-            return baseUrl;
-        }
-        return baseUrl + "?returnTo=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
+    @GetMapping("/methods")
+    public ApiResponse<List<AuthMethodResponse>> methods(
+            @RequestParam(name = "returnTo", required = false) String returnTo) {
+        return ok("response.success.read", authMethodCatalog.listMethods(returnTo));
     }
+
+    @PostMapping("/session/bootstrap")
+    public ApiResponse<AuthMeResponse> bootstrapSession(@Valid @RequestBody SessionBootstrapRequest request,
+                                                        HttpServletRequest httpRequest) {
+        return ok(
+            "response.success.read",
+            AuthMeResponse.from(sessionBootstrapService.bootstrap(request.provider(), httpRequest))
+        );
+    }
+
+    @PostMapping("/direct/login")
+    public ApiResponse<AuthMeResponse> directLogin(@Valid @RequestBody DirectLoginRequest request,
+                                                   HttpServletRequest httpRequest) {
+        return ok(
+            "response.success.read",
+            AuthMeResponse.from(
+                directAuthService.authenticate(
+                    request.provider(),
+                    request.username(),
+                    request.password(),
+                    httpRequest
+                )
+            )
+        );
+    }
+
 }
