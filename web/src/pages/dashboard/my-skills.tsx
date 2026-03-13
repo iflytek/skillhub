@@ -9,7 +9,7 @@ export function MySkillsPage() {
   const { data: skills, isLoading } = useMySkills()
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
+    navigate({ to: `/@${namespace}/${slug}` })
   }
 
   if (isLoading) {

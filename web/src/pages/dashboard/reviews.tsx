@@ -22,7 +22,7 @@ export function ReviewsPage() {
   }
 
   const handleRowClick = (reviewId: number) => {
-    navigate({ to: '/dashboard/reviews/$id', params: { id: String(reviewId) } })
+    navigate({ to: `/dashboard/reviews/${reviewId}` })
   }
 
   const renderReviewTable = (reviews: typeof pendingReviews, isLoading: boolean, status: string) => {

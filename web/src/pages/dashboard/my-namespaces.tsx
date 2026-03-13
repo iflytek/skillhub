@@ -10,17 +10,17 @@ export function MyNamespacesPage() {
   const { data: namespaces, isLoading } = useMyNamespaces()
 
   const handleNamespaceClick = (slug: string) => {
-    navigate({ to: '/@$namespace', params: { namespace: slug } })
+    navigate({ to: `/@${slug}` })
   }
 
   const handleMembersClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: '/dashboard/namespaces/$slug/members', params: { slug } })
+    navigate({ to: `/dashboard/namespaces/${slug}/members` })
   }
 
   const handleReviewsClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: '/dashboard/namespaces/$slug/reviews', params: { slug } })
+    navigate({ to: `/dashboard/namespaces/${slug}/reviews` })
   }
 
   if (isLoading) {
