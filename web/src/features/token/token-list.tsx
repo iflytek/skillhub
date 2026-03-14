@@ -28,9 +28,12 @@ export function TokenList() {
     open: false,
   })
 
-  const { data: tokenPage, isLoading } = useQuery<{ items: ApiToken[]; total: number; page: number; size: number }>({
+  const { data: tokenPage, isLoading, isError, error } = useQuery<{ items: ApiToken[]; total: number; page: number; size: number }>({
     queryKey: ['tokens', page, PAGE_SIZE],
     queryFn: () => tokenApi.getTokens({ page, size: PAGE_SIZE }),
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
   })
 
   const deleteMutation = useMutation({
@@ -64,6 +67,22 @@ export function TokenList() {
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">{t('token.loading')}</div>
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">{t('token.title')}</h2>
+          <CreateTokenDialog existingNames={[]}>
+            <Button>{t('token.createNew')}</Button>
+          </CreateTokenDialog>
+        </div>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-6 text-sm text-destructive">
+          {error instanceof Error ? error.message : t('apiError.unknown')}
+        </div>
+      </div>
+    )
   }
 
   return (
