@@ -62,7 +62,7 @@ export function TokenList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t('token.title')}</h2>
-        <CreateTokenDialog>
+        <CreateTokenDialog existingNames={(tokens ?? []).map((token) => token.name)}>
           <Button>{t('token.createNew')}</Button>
         </CreateTokenDialog>
       </div>

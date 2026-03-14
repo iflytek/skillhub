@@ -11,4 +11,5 @@ public interface ApiTokenRepository extends JpaRepository<ApiToken, Long> {
     Optional<ApiToken> findByTokenHash(String tokenHash);
     List<ApiToken> findByUserId(String userId);
     List<ApiToken> findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(String userId);
+    boolean existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase(String userId, String name);
 }
