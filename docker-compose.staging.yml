@@ -1,0 +1,76 @@
+# Staging environment: hybrid mode
+# - Backend: locally built Docker image
+# - Frontend: locally built static files mounted into Nginx
+# - Dependencies: reuses docker-compose.yml (postgres, redis, minio)
+#
+# Usage: make staging
+# Do NOT use directly — use the make target which handles build + deps + cleanup.
+# NOTE: postgres, redis, minio services are defined in docker-compose.yml.
+# When invoked via "docker compose -f docker-compose.yml -f docker-compose.staging.yml",
+# Docker Compose merges both files so these services are available by hostname.
+
+services:
+  server:
+    image: skillhub-server:staging
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/skillhub
+      SPRING_DATASOURCE_USERNAME: skillhub
+      SPRING_DATASOURCE_PASSWORD: skillhub_dev
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SESSION_COOKIE_SECURE: "false"
+      SKILLHUB_PUBLIC_BASE_URL: "http://localhost"
+      DEVICE_AUTH_VERIFICATION_URI: "http://localhost/api/device/activate"
+      SKILLHUB_STORAGE_PROVIDER: s3
+      STORAGE_BASE_PATH: /var/lib/skillhub/storage
+      SKILLHUB_STORAGE_S3_ENDPOINT: http://minio:9000
+      SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT: http://localhost:9000
+      SKILLHUB_STORAGE_S3_BUCKET: skillhub
+      SKILLHUB_STORAGE_S3_ACCESS_KEY: minioadmin
+      SKILLHUB_STORAGE_S3_SECRET_KEY: minioadmin
+      SKILLHUB_STORAGE_S3_REGION: us-east-1
+      SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE: "true"
+      SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET: "true"
+      BOOTSTRAP_ADMIN_ENABLED: "true"
+      BOOTSTRAP_ADMIN_USER_ID: staging-admin
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD: "Admin@staging2026"
+      BOOTSTRAP_ADMIN_DISPLAY_NAME: Admin
+      BOOTSTRAP_ADMIN_EMAIL: admin@skillhub.local
+      OAUTH2_GITHUB_CLIENT_ID: local-placeholder
+      OAUTH2_GITHUB_CLIENT_SECRET: local-placeholder
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./web/dist:/usr/share/nginx/html:ro
+      - ./web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      SKILLHUB_API_UPSTREAM: http://server:8080
+      SKILLHUB_WEB_API_BASE_URL: ""
+      SKILLHUB_PUBLIC_BASE_URL: ""
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s

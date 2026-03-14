@@ -17,7 +17,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("SkillHub API")
                         .description("Skills Registry Platform")
-                        .version("0.1.0-beta.2"))
+                        .version("0.1.0-beta.7"))
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Local development")
                 ));

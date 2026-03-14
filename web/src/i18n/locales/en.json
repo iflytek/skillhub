@@ -1,0 +1,540 @@
+{
+  "nav": {
+    "home": "Home",
+    "explore": "Explore Skills",
+    "search": "Search Skills",
+    "dashboard": "Dashboard",
+    "login": "Login"
+  },
+  "landing": {
+    "hero": {
+      "title": "Discover & Share AI Skills",
+      "subtitle": "Build powerful AI agents with community-driven skills",
+      "searchPlaceholder": "Search skills...",
+      "exploreSkills": "Explore Skills"
+    },
+    "features": {
+      "secure": {
+        "title": "Secure & Private",
+        "description": "Enterprise-grade security for your AI workflows"
+      },
+      "community": {
+        "title": "Community Driven",
+        "description": "Share and discover skills from developers worldwide"
+      },
+      "integration": {
+        "title": "Easy Integration",
+        "description": "Seamlessly integrate with your existing tools"
+      }
+    },
+    "badge": "Enterprise Skill Registry",
+    "tagline": "Publish, Discover, Manage",
+    "taglineHighlight": " Agent Skills",
+    "description": "Self-hosted private skill registry, providing secure and efficient skill sharing and collaboration for teams",
+    "publishSkill": "Publish Skill",
+    "statsSkills": "Skills",
+    "statsDownloads": "Downloads",
+    "statsTeams": "Teams",
+    "whyTitle": "Why Choose",
+    "whyDescription": "Enterprise-grade skill management platform with complete publishing, discovery, and governance capabilities",
+    "featuresList": {
+      "privateDeploy": {
+        "title": "Private Deployment",
+        "description": "Fully self-hosted with data sovereignty. One-click deploy to your infrastructure, running securely behind your firewall."
+      },
+      "versionControl": {
+        "title": "Version Control",
+        "description": "Semantic versioning, custom tags (beta, stable), automatic latest version tracking."
+      },
+      "smartSearch": {
+        "title": "Smart Search",
+        "description": "Full-text search with multi-dimensional filtering by namespace, downloads, ratings, and time."
+      },
+      "teamwork": {
+        "title": "Team Collaboration",
+        "description": "Namespace management, role-based access control (Owner/Admin/Member), publishing policy configuration."
+      },
+      "governance": {
+        "title": "Review & Governance",
+        "description": "Team-level review, platform-level approval, full audit trail, meeting compliance requirements."
+      },
+      "cliFirst": {
+        "title": "CLI First",
+        "description": "Native REST API, compatible with existing ClawHub CLI tools, no client-side changes needed."
+      }
+    },
+    "ctaTitle": "Ready to Get Started?",
+    "ctaDescription": "Start your local development environment with a single command and experience the complete skill management workflow",
+    "ctaButton": "Try Now",
+    "footerLicense": "© 2026 SkillHub. Apache License 2.0.",
+    "footerDocs": "Docs",
+    "footerGithub": "GitHub",
+    "footerCommunity": "Community"
+  },
+  "home": {
+    "subtitle": "Modern Skill Registry",
+    "description": "Efficient skill management, distribution, and collaboration platform for developers",
+    "browseSkills": "Browse Skills",
+    "publishSkill": "Publish Skill",
+    "popularTitle": "Popular Downloads",
+    "popularDescription": "Most popular skills in the community",
+    "latestTitle": "Latest Releases",
+    "latestDescription": "Freshly published skills",
+    "viewAll": "View All →"
+  },
+  "search": {
+    "title": "Search Skills",
+    "placeholder": "Search skills...",
+    "sort": {
+      "label": "Sort:",
+      "relevance": "Relevance",
+      "downloads": "Downloads",
+      "stars": "Stars",
+      "newest": "Newest"
+    },
+    "noResults": "No results found",
+    "noResultsFor": "No skills found matching \"{{q}}\"",
+    "enterKeyword": "Please enter a search keyword",
+    "results": "{{count}} skills found",
+    "resultCount": "Found <1>{{count}}</1> results"
+  },
+  "searchBar": {
+    "placeholder": "Search skills...",
+    "button": "Search"
+  },
+  "login": {
+    "title": "Login to SkillHub",
+    "subtitle": "Choose a method to continue",
+    "tabPassword": "Password",
+    "tabOAuth": "GitHub",
+    "username": "Username",
+    "password": "Password",
+    "usernamePlaceholder": "Enter username",
+    "passwordPlaceholder": "Enter password",
+    "submitting": "Logging in...",
+    "submit": "Login",
+    "noAccount": "Don't have an account?",
+    "register": "Sign up now",
+    "oauthHint": "After GitHub authentication, you will be automatically redirected back to this site.",
+    "passwordCompatHint": "This deployment has the password compatibility layer enabled. The form will route to the configured direct authentication provider instead of the fixed local account endpoint.",
+    "enterpriseSsoTitle": "Enterprise SSO",
+    "enterpriseSsoHint": "This deployment has the compatibility layer enabled. If your browser already has an enterprise SSO session, you can try establishing a SkillHub session directly.",
+    "enterpriseSsoAutoHint": "This deployment has automatic enterprise SSO probing enabled. If it does not succeed, you can continue with the standard login methods.",
+    "enterpriseSsoAction": "Try Enterprise SSO",
+    "enterpriseSsoSubmitting": "Trying enterprise SSO...",
+    "agreementPrefix": "By logging in, you agree to our",
+    "terms": "Terms of Service",
+    "and": "and",
+    "privacy": "Privacy Policy"
+  },
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Register locally or sign in directly with OAuth.",
+    "tabLocal": "Local Account",
+    "tabOAuth": "OAuth",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "usernamePlaceholder": "3-64 characters: letters, numbers, or underscores",
+    "emailPlaceholder": "Optional, for account identification",
+    "passwordPlaceholder": "At least 8 characters with 3 character types",
+    "submitting": "Registering...",
+    "submit": "Register & Login",
+    "hasAccount": "Already have an account?",
+    "login": "Back to login",
+    "oauthHint": "Sign in directly with your existing OAuth account, no local password needed."
+  },
+  "device": {
+    "title": "Device Authorization",
+    "subtitle": "Enter the 8-digit user code shown on your device",
+    "codeLabel": "User Code",
+    "codeHint": "Format: XXXX-XXXX (paste supported)",
+    "incompleteCode": "Please enter the complete 8-digit user code",
+    "success": "Device authorized successfully!",
+    "defaultError": "Authorization failed, please check the user code",
+    "submitting": "Authorizing...",
+    "submit": "Authorize Device",
+    "notice": "After authorization, the device will have access to your account"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Manage your account and API Tokens",
+    "userInfo": "User Info",
+    "userInfoDesc": "Your account details",
+    "loginVia": "Logged in via {{provider}}",
+    "platformRoles": "Platform Roles",
+    "starsAndRatings": "Stars & Ratings",
+    "viewStars": "View My Stars",
+    "credentials": "Credentials",
+    "openTokens": "Open Token Page",
+    "governanceTitle": "Review & Governance",
+    "viewPromotions": "View Promotions"
+  },
+  "mySkills": {
+    "title": "My Skills",
+    "subtitle": "Manage your published skills",
+    "publishNew": "Publish New Skill",
+    "emptyTitle": "No skills yet",
+    "emptyDescription": "Start publishing your first skill",
+    "publishSkill": "Publish Skill"
+  },
+  "myNamespaces": {
+    "title": "My Namespaces",
+    "subtitle": "Manage your namespaces and teams",
+    "create": "Create Namespace",
+    "typeGlobal": "Global",
+    "typeTeam": "Team",
+    "manageMembers": "Manage Members",
+    "reviewTasks": "Review Tasks",
+    "emptyTitle": "No namespaces yet",
+    "emptyDescription": "Create a namespace to organize your skills"
+  },
+  "tokens": {
+    "pageTitle": "Token Management",
+    "pageSubtitle": "Manage access credentials for CLI and API"
+  },
+  "reviews": {
+    "title": "Review Center",
+    "subtitle": "Manage skill version reviews",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabRejected": "Rejected",
+    "empty": "No review tasks",
+    "colSkill": "Skill",
+    "colVersion": "Version",
+    "colSubmitter": "Submitted By",
+    "colSubmitTime": "Submitted At",
+    "colReviewer": "Reviewed By",
+    "colReviewTime": "Reviewed At"
+  },
+  "stars": {
+    "title": "My Stars",
+    "subtitle": "View your starred skills",
+    "empty": "No starred skills yet"
+  },
+  "promotions": {
+    "title": "Promotion Review",
+    "subtitle": "Review team skill promotion requests to global namespace",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabRejected": "Rejected",
+    "commentPlaceholder": "Review comment (optional)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "empty": "No promotion requests"
+  },
+  "adminUsers": {
+    "title": "User Management",
+    "subtitle": "Manage platform users and permissions",
+    "searchPlaceholder": "Search username or email...",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "filterPending": "Pending",
+    "filterDisabled": "Disabled",
+    "empty": "No user data",
+    "colUsername": "Username",
+    "colEmail": "Email",
+    "colStatus": "Status",
+    "colRole": "Role",
+    "colCreatedAt": "Created At",
+    "colActions": "Actions",
+    "statusActive": "Active",
+    "statusPending": "Pending",
+    "statusDisabled": "Disabled",
+    "changeRole": "Change Role",
+    "approveUser": "Approve",
+    "disable": "Disable",
+    "enable": "Enable",
+    "totalRecords": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "changeRoleTitle": "Change User Role",
+    "changeRoleDesc": "Assign a new role to user {{username}}",
+    "roleLabel": "Role",
+    "selectRole": "Select role",
+    "roleUser": "User",
+    "roleReviewer": "Reviewer",
+    "roleUserAdmin": "User Admin",
+    "roleAuditor": "Auditor",
+    "roleSuperAdmin": "Super Admin",
+    "confirmAction": "Confirm Action",
+    "confirmDisable": "Are you sure you want to disable user {{username}}?",
+    "confirmEnable": "Are you sure you want to enable user {{username}}?"
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "subtitle": "View system operation records",
+    "filterAll": "All",
+    "filterCliPublish": "CLI Publish",
+    "filterCompatPublish": "Compat Publish",
+    "filterReviewApprove": "Review Approved",
+    "filterReviewReject": "Review Rejected",
+    "filterPromotionApprove": "Promotion Approved",
+    "filterYankVersion": "Version Yanked",
+    "userIdPlaceholder": "User ID...",
+    "empty": "No audit logs",
+    "colTime": "Time",
+    "colAction": "Action",
+    "colUserId": "User ID",
+    "colUsername": "Username",
+    "colIp": "IP Address",
+    "colDetail": "Details",
+    "totalRecords": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next"
+  },
+  "security": {
+    "title": "Security Settings",
+    "subtitle": "Update your password when local account login is enabled.",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "success": "Password changed successfully",
+    "defaultError": "Failed to change password",
+    "submitting": "Submitting...",
+    "submit": "Update Password"
+  },
+  "accounts": {
+    "initiateTitle": "Initiate Account Merge",
+    "initiateDesc": "Enter the secondary account identifier. Supports local username or `provider:subject` format for external identities.",
+    "secondaryLabel": "Secondary Identifier",
+    "secondaryPlaceholder": "e.g.: other_user or github:123456",
+    "initiating": "Initiating...",
+    "initiate": "Initiate Merge",
+    "initiateSuccess": "Merge request created, secondary={{secondaryUserId}}",
+    "initiateError": "Failed to initiate merge",
+    "verifyTitle": "Verify & Complete Merge",
+    "verifyDesc": "Complete token verification first, then confirm to execute data migration.",
+    "mergeRequestId": "Merge Request ID",
+    "verificationToken": "Verification Token",
+    "verifying": "Verifying...",
+    "verify": "Complete Merge",
+    "verifySuccess": "Verification successful, confirm to execute the merge",
+    "verifyError": "Merge verification failed",
+    "confirming": "Confirming...",
+    "confirm": "Confirm & Complete Merge",
+    "confirmSuccess": "Account merge completed",
+    "confirmError": "Merge confirmation failed"
+  },
+  "namespace": {
+    "notFound": "Namespace not found",
+    "skillList": "Skills",
+    "emptyTitle": "No skills",
+    "emptyDescription": "No skills have been published in this namespace yet"
+  },
+  "skillDetail": {
+    "notFound": "Skill not found",
+    "notFoundDesc": "This skill may have been deleted or never existed",
+    "loginRequired": "Login Required",
+    "loginRequiredDesc": "This skill is private. Please login to view details.",
+    "accessDenied": "Access Denied",
+    "accessDeniedDesc": "You don't have permission to view this skill",
+    "tabReadme": "README",
+    "tabFiles": "Files",
+    "tabVersions": "Versions",
+    "noReadme": "No README",
+    "noFiles": "No files",
+    "noVersions": "No versions",
+    "fileCount": "{{count}} files",
+    "version": "Version",
+    "downloads": "Downloads",
+    "rating": "Rating",
+    "ratingNone": "None",
+    "namespaceLabel": "Namespace",
+    "loginToRate": "Login to star and rate",
+    "install": "Install",
+    "download": "Download",
+    "governance": "Governance",
+    "processing": "Processing...",
+    "hideSkill": "Hide Skill",
+    "unhideSkill": "Unhide Skill",
+    "yankVersion": "Yank Current Version"
+  },
+  "members": {
+    "title": "Member Management",
+    "addMember": "Add Member",
+    "colUserId": "User ID",
+    "colRole": "Role",
+    "colJoinedAt": "Joined At",
+    "colActions": "Actions",
+    "remove": "Remove",
+    "empty": "No members",
+    "namespaceNotFound": "Namespace not found"
+  },
+  "upload": {
+    "dropHint": "Drop to upload...",
+    "dragHint": "Drag a ZIP file here, or click to select",
+    "formatHint": "Only .zip format supported"
+  },
+  "layout": {
+    "footerDescription": "Modern skill registry, providing efficient skill management and distribution for developers."
+  },
+  "nsReviews": {
+    "title": "Namespace Reviews",
+    "loadingNamespace": "Loading namespace info",
+    "reviewsFor": "Review tasks for {{name}}",
+    "empty": "No review records",
+    "version": "Version {{version}}",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabRejected": "Rejected"
+  },
+  "fileTree": {
+    "title": "Files ({{count}})"
+  },
+  "loginButton": {
+    "loading": "Loading...",
+    "loginWith": "Login with {{name}}"
+  },
+  "ratingInput": {
+    "yourRating": "Your rating: {{score}} stars"
+  },
+  "createToken": {
+    "title": "Create API Token",
+    "description": "Create a new API Token for CLI or API access",
+    "nameLabel": "Token Name",
+    "namePlaceholder": "e.g.: my-cli-token",
+    "creating": "Creating...",
+    "create": "Create",
+    "successTitle": "Token Created",
+    "successDescription": "Copy and save this token now. It will only be shown once.",
+    "tokenLabel": "Token",
+    "nameDisplay": "Name",
+    "copyToken": "Copy Token",
+    "copySuccess": "Token copied to clipboard",
+    "copyFailed": "Failed to copy token. Please try again."
+  },
+  "starButton": {
+    "starred": "Starred",
+    "star": "Star"
+  },
+  "copyButton": {
+    "copied": "Copied",
+    "copy": "Copy"
+  },
+  "pagination": {
+    "prev": "Previous",
+    "next": "Next",
+    "pagePrefix": "Page",
+    "pageSuffix": ""
+  },
+  "user": {
+    "menu": {
+      "dashboard": "Dashboard",
+      "mySkills": "My Skills",
+      "myNamespaces": "My Namespaces",
+      "stars": "Starred",
+      "reviews": "Review Management",
+      "promotions": "Promotion Management",
+      "users": "User Management",
+      "auditLog": "Audit Log",
+      "security": "Security Settings",
+      "accounts": "Account Merge",
+      "logout": "Logout"
+    }
+  },
+  "footer": {
+    "resources": "Resources",
+    "docs": "Documentation",
+    "api": "API",
+    "community": "Community",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "copyright": "© 2024 SkillHub. All rights reserved."
+  },
+  "publish": {
+    "title": "Publish Skill",
+    "subtitle": "Upload skill package to SkillHub",
+    "reviewNotice": {
+      "title": "Review Notice",
+      "description": "Submitted skill packages require admin review before publication. Once approved, your skill will be visible to all users."
+    },
+    "namespace": "Namespace",
+    "selectNamespace": "Select namespace",
+    "visibility": "Visibility",
+    "visibilityOptions": {
+      "public": "Public",
+      "namespaceOnly": "Namespace Only",
+      "private": "Private"
+    },
+    "file": "Skill Package File",
+    "publishing": "Publishing...",
+    "confirm": "Confirm Publish",
+    "success": "Published Successfully",
+    "successDescription": "{{skill}} has been submitted for review and will be available after admin approval",
+    "error": "Publish Failed",
+    "selectRequired": "Please select namespace and file"
+  },
+  "toast": {
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "dialog": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close"
+  },
+  "review": {
+    "detail": "Review Detail",
+    "id": "Review ID",
+    "backToList": "Back to List",
+    "namespace": "Namespace / Slug",
+    "version": "Version",
+    "status": "Status",
+    "statusPending": "Pending",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "submitter": "Submitted By",
+    "submitTime": "Submitted At",
+    "reviewer": "Reviewed By",
+    "reviewTime": "Reviewed At",
+    "reviewComment": "Review Comment",
+    "actions": "Review Actions",
+    "commentLabel": "Comment (optional)",
+    "commentPlaceholder": "Enter review comment...",
+    "approve": "Approve",
+    "reject": "Reject",
+    "confirmReject": "Confirm Reject",
+    "cancelReject": "Cancel",
+    "rejectReasonRequired": "A reason is required when rejecting",
+    "approveTitle": "Approve Review",
+    "approveDescription": "Are you sure you want to approve this review?",
+    "approveConfirm": "Approve",
+    "rejectTitle": "Reject Review",
+    "rejectDescription": "Are you sure you want to reject this review?",
+    "rejectConfirm": "Reject",
+    "approveSuccess": "Review approved",
+    "approveFailed": "Approval failed",
+    "rejectSuccess": "Review rejected",
+    "rejectFailed": "Rejection failed",
+    "notFound": "Review task not found"
+  },
+  "token": {
+    "title": "API Tokens",
+    "createNew": "Create Token",
+    "empty": "No tokens created yet",
+    "emptyHint": "Click the button above to create your first token",
+    "name": "Name",
+    "prefix": "Token Prefix",
+    "createdAt": "Created At",
+    "lastUsed": "Last Used",
+    "expiresAt": "Expires At",
+    "actions": "Actions",
+    "delete": "Delete",
+    "deleteTitle": "Delete Token",
+    "deleteDescription": "Are you sure you want to delete token \"{{name}}\"? This action cannot be undone.",
+    "deleteSuccess": "Token deleted",
+    "deleteFailed": "Delete failed",
+    "loading": "Loading..."
+  },
+  "apiError": {
+    "unauthorized": "Session expired, please log in again",
+    "forbidden": "You don't have permission for this action",
+    "notFound": "The requested resource was not found",
+    "serverError": "Server error, please try again later",
+    "networkError": "Network connection failed, please check your network",
+    "unknown": "Operation failed"
+  }
+}

@@ -1,13 +1,29 @@
-# SkillHub
+<div align="center">
+  <img src="./skillhub-logo.svg" alt="SkillHub Logo" width="120" height="120" />
+  <h1>SkillHub</h1>
+  <p>An enterprise-grade, open-source agent skill registry — publish, discover, and manage reusable skill packages across your organization.</p>
+</div>
 
-An enterprise-grade agent skill registry — publish, discover, and
-manage reusable skill packages across your organization.
+<div align="center">
+
+[![Docs](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
+[![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
+[![Java](https://img.shields.io/badge/java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+
+</div>
+
+---
 
 SkillHub is a self-hosted platform that gives teams a private,
 governed place to share agent skills. Publish a skill package, push
 it to a namespace, and let others find it through search or
 install it via CLI. Built for on-premise deployment behind your
 firewall, with the same polish you'd expect from a public registry.
+
+📖 **[Full Documentation →](https://zread.ai/iflytek/skillhub)**
 
 ## Highlights
 
@@ -26,12 +42,19 @@ firewall, with the same polish you'd expect from a public registry.
 - **Review & Governance** — Team admins review within their namespace;
   platform admins gate promotions to the global scope. Governance
   actions are audit-logged for compliance.
+- **Social Features** — Star skills, rate them, and track downloads.
+  Build a community around your organization's best practices.
+- **Account Merging** — Consolidate multiple OAuth identities and
+  API tokens under a single user account.
+- **API Token Management** — Generate scoped tokens for CLI and
+  programmatic access with prefix-based secure hashing.
 - **CLI-First** — Native REST API plus a compatibility layer for
   existing ClawHub-style registry clients. Native CLI APIs are the
   primary supported path while protocol compatibility continues to
   expand.
 - **Pluggable Storage** — Local filesystem for development, S3 /
   MinIO for production. Swap via config.
+- **Internationalization** — Multi-language support with i18next.
 
 ## Quick Start
 
@@ -72,6 +95,8 @@ make dev-all-reset
 ```
 
 Run `make help` to see all available commands.
+
+For the full development workflow (local dev → staging → PR), see [docs/dev-workflow.md](docs/dev-workflow.md).
 
 ### API Contract Sync
 
@@ -115,12 +140,13 @@ Recommended image tags:
 Start the runtime:
 
 ```bash
+make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d
 ```
 
 Then open:
 
-- Web UI: `http://localhost`
+- Web UI: `SKILLHUB_PUBLIC_BASE_URL` 对应的地址
 - Backend API: `http://localhost:8080`
 
 Stop it with:
@@ -132,22 +158,28 @@ docker compose --env-file .env.release -f compose.release.yml down
 The runtime stack uses its own Compose project name, so it does not
 collide with containers from `make dev-all`.
 
-The runtime uses the existing `local,docker` profile combination so it
-is immediately usable with the same mock-auth flow as local development.
-Available seeded users:
+The production Compose stack now defaults to the `docker` profile only.
+It does not enable local mock auth. Instead, the backend bootstraps a
+local admin account from environment variables for the first login:
 
-- `local-user`
-- `local-admin`
+- username: `BOOTSTRAP_ADMIN_USERNAME`
+- password: `BOOTSTRAP_ADMIN_PASSWORD`
 
-Pass `X-Mock-User-Id` to the backend when you need an authenticated
-session without configuring GitHub OAuth. If the GHCR package remains
-private, run `docker login ghcr.io` before `docker compose up -d`.
+Recommended production baseline:
+
+- set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
+- keep PostgreSQL / Redis bound to `127.0.0.1`
+- use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
+- rotate or disable the bootstrap admin after initial setup
+- run `make validate-release-config` before `docker compose up -d`
+
+If the GHCR package remains private, run `docker login ghcr.io` before
+`docker compose up -d`.
 
 ### Monitoring
 
-The Phase 4 monitoring stack lives under [`monitoring/`](./monitoring).
-It provides a local Prometheus + Grafana pair that scrapes the backend's
-Actuator Prometheus endpoint.
+A Prometheus + Grafana monitoring stack lives under [`monitoring/`](./monitoring).
+It scrapes the backend's Actuator Prometheus endpoint.
 
 Start it with:
 
@@ -201,6 +233,7 @@ Run it against a local backend:
 ```
 ┌─────────────┐     ┌─────────────┐     ┌──────────────┐
 │   Web UI    │     │  CLI Tools  │     │  REST API    │
+│  (React 19) │     │             │     │              │
 └──────┬──────┘     └──────┬──────┘     └──────┬───────┘
        │                   │                   │
        └───────────────────┼───────────────────┘
@@ -211,22 +244,69 @@ Run it against a local backend:
                            │
                     ┌──────▼──────┐
                     │ Spring Boot │  Auth · RBAC · Core Services
+                    │   (Java 21) │  OAuth2 · API Tokens · Audit
                     └──────┬──────┘
                            │
               ┌────────────┼────────────┐
               │            │            │
        ┌──────▼───┐  ┌─────▼────┐  ┌────▼────┐
        │PostgreSQL│  │  Redis   │  │ Storage │
+       │    16    │  │    7     │  │ S3/MinIO│
        └──────────┘  └──────────┘  └─────────┘
 ```
+
+**Backend (Spring Boot 3.2.3, Java 21):**
+- Multi-module Maven project with clean architecture
+- Modules: app, domain, auth, search, storage, infra
+- PostgreSQL 16 with Flyway migrations
+- Redis for session management
+- S3/MinIO for skill package storage
+
+**Frontend (React 19, TypeScript, Vite):**
+- TanStack Router for routing
+- TanStack Query for data fetching
+- Tailwind CSS + Radix UI for styling
+- OpenAPI TypeScript for type-safe API client
+- i18next for internationalization
+
+## Usage with Agent Platforms
+
+SkillHub works as a skill registry backend for several agent platforms. Point any of the clients below at your SkillHub instance to publish, discover, and install skills.
+
+### [openclaw](https://github.com/openclaw/openclaw)
+
+[openclaw](https://github.com/openclaw/openclaw) is an open-source agent skill CLI. Configure it to use your SkillHub endpoint as the registry:
+
+```bash
+# Log in to your SkillHub instance
+openclaw login --registry https://<your-skillhub-host>
+
+# Publish a skill
+openclaw push <skill-package>
+
+# Search and install skills
+openclaw search <keyword>
+openclaw install <namespace>/<skill>
+```
+
+### [AstronClaw](https://agent.xfyun.cn/astron-claw)
+
+[AstronClaw](https://agent.xfyun.cn/astron-claw) is the skill marketplace provided by iFlytek's Astron platform. You can connect it to a self-hosted SkillHub registry to manage and distribute private skills within your organization, or browse publicly shared skills on the Astron platform.
+
+### [astron-agent](https://github.com/iflytek/astron-agent)
+
+[astron-agent](https://github.com/iflytek/astron-agent) is the iFlytek Astron agent framework. Skills stored in SkillHub can be referenced and loaded directly by astron-agent, enabling a governed, versioned skill lifecycle from development to production.
+
+---
+
+> 🌟 **Show & Tell** — Have you built something with SkillHub? We'd love to hear about it!
+> Share your use case, integration, or deployment story in the
+> [**Discussions → Show and Tell**](https://github.com/iflytek/skillhub/discussions/categories/show-and-tell) category.
 
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss
 what you'd like to change.
-
-- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 
 - Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)

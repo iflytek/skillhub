@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDropzone } from 'react-dropzone'
 import { cn } from '@/shared/lib/utils'
 
@@ -8,6 +9,7 @@ interface UploadZoneProps {
 }
 
 export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
+  const { t } = useTranslation()
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
@@ -57,11 +59,11 @@ export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
           </svg>
         </div>
         {isDragActive ? (
-          <p className="text-sm text-primary font-medium">放开以上传文件...</p>
+          <p className="text-sm text-primary font-medium">{t('upload.dropHint')}</p>
         ) : (
           <>
-            <p className="text-sm font-medium text-foreground">拖拽 ZIP 文件到此处，或点击选择</p>
-            <p className="text-xs text-muted-foreground">仅支持 .zip 格式</p>
+            <p className="text-sm font-medium text-foreground">{t('upload.dragHint')}</p>
+            <p className="text-xs text-muted-foreground">{t('upload.formatHint')}</p>
           </>
         )}
       </div>

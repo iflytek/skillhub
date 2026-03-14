@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useApprovePromotion, usePromotionList, useRejectPromotion } from '@/features/promotion/use-promotion-list'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
@@ -6,6 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
 function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECTED' }) {
+  const { t, i18n } = useTranslation()
   const { data: items, isLoading } = usePromotionList(status)
   const approveMutation = useApprovePromotion()
   const rejectMutation = useRejectPromotion()
@@ -16,7 +18,7 @@ function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECT
   }
 
   if (!items || items.length === 0) {
-    return <Card className="p-10 text-center text-muted-foreground">暂无提升申请</Card>
+    return <Card className="p-10 text-center text-muted-foreground">{t('promotions.empty')}</Card>
   }
 
   return (
@@ -30,12 +32,12 @@ function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECT
                 {item.sourceVersion} {'->'} @{item.targetNamespace}
               </div>
             </div>
-            <div className="text-sm text-muted-foreground">{new Date(item.submittedAt).toLocaleString('zh-CN')}</div>
+            <div className="text-sm text-muted-foreground">{new Date(item.submittedAt).toLocaleString(i18n.language)}</div>
           </div>
           {status === 'PENDING' ? (
             <>
               <Input
-                placeholder="审核意见（可选）"
+                placeholder={t('promotions.commentPlaceholder')}
                 value={commentById[item.id] ?? ''}
                 onChange={(event) => setCommentById((prev) => ({ ...prev, [item.id]: event.target.value }))}
               />
@@ -44,14 +46,14 @@ function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECT
                   onClick={() => approveMutation.mutate({ id: item.id, comment: commentById[item.id] })}
                   disabled={approveMutation.isPending || rejectMutation.isPending}
                 >
-                  通过
+                  {t('promotions.approve')}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => rejectMutation.mutate({ id: item.id, comment: commentById[item.id] })}
                   disabled={approveMutation.isPending || rejectMutation.isPending}
                 >
-                  拒绝
+                  {t('promotions.reject')}
                 </Button>
               </div>
             </>
@@ -65,17 +67,18 @@ function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECT
 }
 
 export function PromotionsPage() {
+  const { t } = useTranslation()
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">提升审核</h1>
-        <p className="text-muted-foreground text-lg">审核团队技能提升到全局空间的申请</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">{t('promotions.title')}</h1>
+        <p className="text-muted-foreground text-lg">{t('promotions.subtitle')}</p>
       </div>
       <Tabs defaultValue="PENDING">
         <TabsList>
-          <TabsTrigger value="PENDING">待审核</TabsTrigger>
-          <TabsTrigger value="APPROVED">已通过</TabsTrigger>
-          <TabsTrigger value="REJECTED">已拒绝</TabsTrigger>
+          <TabsTrigger value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
+          <TabsTrigger value="APPROVED">{t('promotions.tabApproved')}</TabsTrigger>
+          <TabsTrigger value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
         </TabsList>
         <TabsContent value="PENDING" className="mt-6"><PromotionSection status="PENDING" /></TabsContent>
         <TabsContent value="APPROVED" className="mt-6"><PromotionSection status="APPROVED" /></TabsContent>

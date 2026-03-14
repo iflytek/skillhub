@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 
 def is_running(pid: int) -> bool:
@@ -17,7 +18,7 @@ def is_running(pid: int) -> bool:
     return True
 
 
-def read_pid(pid_file: Path) -> int | None:
+def read_pid(pid_file: Path) -> Optional[int]:
     if not pid_file.exists():
         return None
     content = pid_file.read_text(encoding="utf-8").strip()

@@ -117,16 +117,17 @@ public class ClawHubCompatController {
     @PostMapping("/publish")
     public ClawHubPublishResponse publish(@RequestParam("file") MultipartFile file,
                                           @RequestParam("namespace") String namespace,
-                                          @RequestAttribute("userId") String userId,
+                                          @AuthenticationPrincipal PlatformPrincipal principal,
                                           HttpServletRequest request) throws IOException {
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 zipPackageExtractor.extract(file),
-                userId,
-                SkillVisibility.PUBLIC
+                principal.userId(),
+                SkillVisibility.PUBLIC,
+                principal.platformRoles()
         );
         auditLogService.record(
-                userId,
+                principal.userId(),
                 "COMPAT_PUBLISH",
                 "SKILL_VERSION",
                 result.version().getId(),

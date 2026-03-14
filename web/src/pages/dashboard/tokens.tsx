@@ -1,11 +1,13 @@
+import { useTranslation } from 'react-i18next'
 import { TokenList } from '@/features/token/token-list'
 
 export function TokensPage() {
+  const { t } = useTranslation()
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">Token 管理</h1>
-        <p className="text-muted-foreground text-lg">管理 CLI 和 API 使用的访问凭证</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">{t('tokens.pageTitle')}</h1>
+        <p className="text-muted-foreground text-lg">{t('tokens.pageSubtitle')}</p>
       </div>
       <TokenList />
     </div>

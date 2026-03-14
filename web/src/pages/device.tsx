@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -16,6 +17,7 @@ async function authorizeDevice(userCode: string): Promise<void> {
 }
 
 export function DeviceAuthPage() {
+  const { t } = useTranslation()
   const [part1, setPart1] = useState('')
   const [part2, setPart2] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -61,7 +63,7 @@ export function DeviceAuthPage() {
     e.preventDefault()
 
     if (part1.length !== 4 || part2.length !== 4) {
-      setMessage({ type: 'error', text: '请输入完整的 8 位用户码' })
+      setMessage({ type: 'error', text: t('device.incompleteCode') })
       return
     }
 
@@ -71,14 +73,14 @@ export function DeviceAuthPage() {
 
     try {
       await authorizeDevice(userCode)
-      setMessage({ type: 'success', text: '设备授权成功！' })
+      setMessage({ type: 'success', text: t('device.success') })
       setPart1('')
       setPart2('')
       input1Ref.current?.focus()
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : '授权失败，请检查用户码是否正确'
+        text: error instanceof Error ? error.message : t('device.defaultError')
       })
     } finally {
       setIsSubmitting(false)
@@ -94,15 +96,15 @@ export function DeviceAuthPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold font-heading">设备授权</h1>
+          <h1 className="text-3xl font-bold font-heading">{t('device.title')}</h1>
           <p className="text-muted-foreground">
-            请输入设备上显示的 8 位用户码
+            {t('device.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label>用户码</Label>
+            <Label>{t('device.codeLabel')}</Label>
             <div className="flex items-center gap-3">
               <Input
                 ref={input1Ref}
@@ -127,7 +129,7 @@ export function DeviceAuthPage() {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              格式: XXXX-XXXX (支持粘贴)
+              {t('device.codeHint')}
             </p>
           </div>
 
@@ -148,12 +150,12 @@ export function DeviceAuthPage() {
             className="w-full"
             disabled={isSubmitting || part1.length !== 4 || part2.length !== 4}
           >
-            {isSubmitting ? '授权中...' : '授权设备'}
+            {isSubmitting ? t('device.submitting') : t('device.submit')}
           </Button>
         </form>
 
         <div className="text-center text-sm text-muted-foreground">
-          <p>授权后，设备将可以访问你的账户</p>
+          <p>{t('device.notice')}</p>
         </div>
       </Card>
     </div>

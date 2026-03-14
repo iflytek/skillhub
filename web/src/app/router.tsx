@@ -30,7 +30,9 @@ function createLazyRouteComponent<TModule extends Record<string, unknown>>(
 const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
 const RegisterPage = createLazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
+const PrivacyPolicyPage = createLazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
 const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
+const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
 const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
@@ -114,6 +116,12 @@ const registerRoute = createRoute({
   component: RegisterPage,
 })
 
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'privacy',
+  component: PrivacyPolicyPage,
+})
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'search',
@@ -122,20 +130,26 @@ const searchRoute = createRoute({
     return {
       q: (search.q as string) || '',
       sort: (search.sort as string) || 'relevance',
-      page: Number(search.page) || 1,
+      page: Number(search.page) || 0,
     }
   },
 })
 
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'terms',
+  component: TermsOfServicePage,
+})
+
 const namespaceRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '@$namespace',
+  path: '/space/$namespace',
   component: NamespacePage,
 })
 
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '@$namespace/$slug',
+  path: '/space/$namespace/$slug',
   component: SkillDetailPage,
 })
 
@@ -272,7 +286,9 @@ const routeTree = rootRoute.addChildren([
   skillsRoute,
   loginRoute,
   registerRoute,
+  privacyRoute,
   searchRoute,
+  termsRoute,
   namespaceRoute,
   skillDetailRoute,
   dashboardRoute,

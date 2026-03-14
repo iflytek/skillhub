@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 
 interface CopyButtonProps {
@@ -7,6 +8,7 @@ interface CopyButtonProps {
 }
 
 export function CopyButton({ text, className }: CopyButtonProps) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -26,7 +28,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
       onClick={handleCopy}
       className={className}
     >
-      {copied ? '已复制' : '复制'}
+      {copied ? t('copyButton.copied') : t('copyButton.copy')}
     </Button>
   )
 }

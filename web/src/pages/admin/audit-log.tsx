@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
@@ -14,6 +15,7 @@ import {
 import { useAuditLog } from '@/features/admin/use-audit-log'
 
 export function AuditLogPage() {
+  const { t, i18n } = useTranslation()
   const [actionFilter, setActionFilter] = useState<string>('')
   const [userIdFilter, setUserIdFilter] = useState('')
   const [page, setPage] = useState(0)
@@ -26,29 +28,29 @@ export function AuditLogPage() {
   })
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN')
+    return new Date(dateString).toLocaleString(i18n.language)
   }
 
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">审计日志</h1>
-        <p className="text-muted-foreground text-lg">查看系统操作记录</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">{t('auditLog.title')}</h1>
+        <p className="text-muted-foreground text-lg">{t('auditLog.subtitle')}</p>
       </div>
 
       <Card className="p-5">
         <div className="flex gap-4">
           <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="w-[200px]">
-            <option value="">全部</option>
-            <option value="CLI_PUBLISH">CLI 发布</option>
-            <option value="COMPAT_PUBLISH">Compat 发布</option>
-            <option value="REVIEW_APPROVE">审核通过</option>
-            <option value="REVIEW_REJECT">审核拒绝</option>
-            <option value="PROMOTION_APPROVE">提升通过</option>
-            <option value="YANK_SKILL_VERSION">版本撤回</option>
+            <option value="">{t('auditLog.filterAll')}</option>
+            <option value="CLI_PUBLISH">{t('auditLog.filterCliPublish')}</option>
+            <option value="COMPAT_PUBLISH">{t('auditLog.filterCompatPublish')}</option>
+            <option value="REVIEW_APPROVE">{t('auditLog.filterReviewApprove')}</option>
+            <option value="REVIEW_REJECT">{t('auditLog.filterReviewReject')}</option>
+            <option value="PROMOTION_APPROVE">{t('auditLog.filterPromotionApprove')}</option>
+            <option value="YANK_SKILL_VERSION">{t('auditLog.filterYankVersion')}</option>
           </Select>
           <Input
-            placeholder="用户 ID..."
+            placeholder={t('auditLog.userIdPlaceholder')}
             value={userIdFilter}
             onChange={(e) => setUserIdFilter(e.target.value)}
             className="w-[200px]"
@@ -64,7 +66,7 @@ export function AuditLogPage() {
         </div>
       ) : !data || data.items.length === 0 ? (
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">暂无审计日志</p>
+          <p className="text-muted-foreground">{t('auditLog.empty')}</p>
         </Card>
       ) : (
         <>
@@ -72,12 +74,12 @@ export function AuditLogPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>时间</TableHead>
-                  <TableHead>操作</TableHead>
-                  <TableHead>用户 ID</TableHead>
-                  <TableHead>用户名</TableHead>
-                  <TableHead>IP 地址</TableHead>
-                  <TableHead>详情</TableHead>
+                  <TableHead>{t('auditLog.colTime')}</TableHead>
+                  <TableHead>{t('auditLog.colAction')}</TableHead>
+                  <TableHead>{t('auditLog.colUserId')}</TableHead>
+                  <TableHead>{t('auditLog.colUsername')}</TableHead>
+                  <TableHead>{t('auditLog.colIp')}</TableHead>
+                  <TableHead>{t('auditLog.colDetail')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -99,7 +101,7 @@ export function AuditLogPage() {
 
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              共 {data.total} 条记录，第 {page + 1} 页
+              {t('auditLog.totalRecords', { total: data.total, page: page + 1 })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -108,7 +110,7 @@ export function AuditLogPage() {
                 disabled={page === 0}
                 onClick={() => setPage(page - 1)}
               >
-                上一页
+                {t('auditLog.prevPage')}
               </Button>
               <Button
                 variant="outline"
@@ -116,7 +118,7 @@ export function AuditLogPage() {
                 disabled={(page + 1) * 20 >= data.total}
                 onClick={() => setPage(page + 1)}
               >
-                下一页
+                {t('auditLog.nextPage')}
               </Button>
             </div>
           </div>

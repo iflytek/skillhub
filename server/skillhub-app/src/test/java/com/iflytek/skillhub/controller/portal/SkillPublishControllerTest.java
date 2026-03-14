@@ -67,7 +67,12 @@ class SkillPublishControllerTest {
         version.setTotalSize(128L);
         ReflectionTestUtils.setField(version, "id", 34L);
 
-        given(skillPublishService.publishFromEntries(eq("global"), anyList(), eq("usr_1"), eq(SkillVisibility.PUBLIC)))
+        given(skillPublishService.publishFromEntries(
+            eq("global"),
+            anyList(),
+            eq("usr_1"),
+            eq(SkillVisibility.PUBLIC),
+            eq(Set.of("SUPER_ADMIN"))))
             .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
 
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -94,7 +99,6 @@ class SkillPublishControllerTest {
         mockMvc.perform(multipart("/api/v1/skills/global/publish")
                 .file(file)
                 .param("visibility", "PUBLIC")
-                .requestAttr("userId", "usr_1")
                 .with(authentication(auth))
                 .with(csrf()))
             .andExpect(status().isOk())

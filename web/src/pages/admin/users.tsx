@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
@@ -24,6 +25,7 @@ import { useAdminUsers, useApproveUser, useDisableUser, useEnableUser, useUpdate
 import type { AdminUser } from '@/features/admin/use-admin-users'
 
 export function AdminUsersPage() {
+  const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [page, setPage] = useState(0)
@@ -46,7 +48,7 @@ export function AdminUsersPage() {
   const enableUserMutation = useEnableUser()
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN')
+    return new Date(dateString).toLocaleString(i18n.language)
   }
 
   const handleChangeRole = (user: AdminUser) => {
@@ -90,23 +92,23 @@ export function AdminUsersPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">用户管理</h1>
-        <p className="text-muted-foreground text-lg">管理平台用户和权限</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">{t('adminUsers.title')}</h1>
+        <p className="text-muted-foreground text-lg">{t('adminUsers.subtitle')}</p>
       </div>
 
       <Card className="p-5">
         <div className="flex gap-4">
           <Input
-            placeholder="搜索用户名或邮箱..."
+            placeholder={t('adminUsers.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1"
           />
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">全部</option>
-            <option value="ACTIVE">活跃</option>
-            <option value="PENDING">待审批</option>
-            <option value="DISABLED">已禁用</option>
+            <option value="">{t('adminUsers.filterAll')}</option>
+            <option value="ACTIVE">{t('adminUsers.filterActive')}</option>
+            <option value="PENDING">{t('adminUsers.filterPending')}</option>
+            <option value="DISABLED">{t('adminUsers.filterDisabled')}</option>
           </Select>
         </div>
       </Card>
@@ -119,7 +121,7 @@ export function AdminUsersPage() {
         </div>
       ) : !data || data.items.length === 0 ? (
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">暂无用户数据</p>
+          <p className="text-muted-foreground">{t('adminUsers.empty')}</p>
         </Card>
       ) : (
         <>
@@ -127,12 +129,12 @@ export function AdminUsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>用户名</TableHead>
-                  <TableHead>邮箱</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>角色</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
+                  <TableHead>{t('adminUsers.colUsername')}</TableHead>
+                  <TableHead>{t('adminUsers.colEmail')}</TableHead>
+                  <TableHead>{t('adminUsers.colStatus')}</TableHead>
+                  <TableHead>{t('adminUsers.colRole')}</TableHead>
+                  <TableHead>{t('adminUsers.colCreatedAt')}</TableHead>
+                  <TableHead>{t('adminUsers.colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -150,7 +152,7 @@ export function AdminUsersPage() {
                               : 'bg-red-500/10 text-red-400 border-red-500/20'
                         }`}
                       >
-                        {user.status === 'ACTIVE' ? '活跃' : user.status === 'PENDING' ? '待审批' : '已禁用'}
+                        {user.status === 'ACTIVE' ? t('adminUsers.statusActive') : user.status === 'PENDING' ? t('adminUsers.statusPending') : t('adminUsers.statusDisabled')}
                       </span>
                     </TableCell>
                     <TableCell>{user.platformRoles.join(', ')}</TableCell>
@@ -162,7 +164,7 @@ export function AdminUsersPage() {
                           size="sm"
                           onClick={() => handleChangeRole(user)}
                         >
-                          修改角色
+                          {t('adminUsers.changeRole')}
                         </Button>
                         {user.status === 'PENDING' && (
                           <Button
@@ -170,7 +172,7 @@ export function AdminUsersPage() {
                             size="sm"
                             onClick={() => approveUserMutation.mutate(user.userId)}
                           >
-                            审批通过
+                            {t('adminUsers.approveUser')}
                           </Button>
                         )}
                         {user.status === 'ACTIVE' ? (
@@ -179,7 +181,7 @@ export function AdminUsersPage() {
                             size="sm"
                             onClick={() => handleToggleStatus(user, 'ban')}
                           >
-                            禁用
+                            {t('adminUsers.disable')}
                           </Button>
                         ) : (
                           <Button
@@ -187,7 +189,7 @@ export function AdminUsersPage() {
                             size="sm"
                             onClick={() => handleToggleStatus(user, 'unban')}
                           >
-                            启用
+                            {t('adminUsers.enable')}
                           </Button>
                         )}
                       </div>
@@ -200,7 +202,7 @@ export function AdminUsersPage() {
 
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              共 {data.total} 条记录，第 {page + 1} 页
+              {t('adminUsers.totalRecords', { total: data.total, page: page + 1 })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -209,7 +211,7 @@ export function AdminUsersPage() {
                 disabled={page === 0}
                 onClick={() => setPage(page - 1)}
               >
-                上一页
+                {t('adminUsers.prevPage')}
               </Button>
               <Button
                 variant="outline"
@@ -217,7 +219,7 @@ export function AdminUsersPage() {
                 disabled={(page + 1) * 20 >= data.total}
                 onClick={() => setPage(page + 1)}
               >
-                下一页
+                {t('adminUsers.nextPage')}
               </Button>
             </div>
           </div>
@@ -227,30 +229,30 @@ export function AdminUsersPage() {
    <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>修改用户角色</DialogTitle>
+            <DialogTitle>{t('adminUsers.changeRoleTitle')}</DialogTitle>
             <DialogDescription>
-              为用户 {selectedUser?.username} 分配新角色
+              {t('adminUsers.changeRoleDesc', { username: selectedUser?.username })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="role">角色</Label>
+              <Label htmlFor="role">{t('adminUsers.roleLabel')}</Label>
               <Select id="role" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                <option value="">选择角色</option>
-                <option value="USER">普通用户</option>
-                <option value="REVIEWER">审核员</option>
-                <option value="USER_ADMIN">用户管理员</option>
-                <option value="AUDITOR">审计员</option>
-                <option value="SUPER_ADMIN">超级管理员</option>
+                <option value="">{t('adminUsers.selectRole')}</option>
+                <option value="USER">{t('adminUsers.roleUser')}</option>
+                <option value="REVIEWER">{t('adminUsers.roleReviewer')}</option>
+                <option value="USER_ADMIN">{t('adminUsers.roleUserAdmin')}</option>
+                <option value="AUDITOR">{t('adminUsers.roleAuditor')}</option>
+                <option value="SUPER_ADMIN">{t('adminUsers.roleSuperAdmin')}</option>
               </Select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
-              取消
+              {t('dialog.cancel')}
             </Button>
             <Button onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
-              确认
+              {t('dialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -259,17 +261,17 @@ export function AdminUsersPage() {
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认操作</DialogTitle>
+            <DialogTitle>{t('adminUsers.confirmAction')}</DialogTitle>
             <DialogDescription>
-              确定要{actionType === 'ban' ? '禁用' : '启用'}用户 {selectedUser?.username} 吗？
+              {actionType === 'ban' ? t('adminUsers.confirmDisable', { username: selectedUser?.username }) : t('adminUsers.confirmEnable', { username: selectedUser?.username })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
-              取消
+              {t('dialog.cancel')}
             </Button>
             <Button onClick={confirmStatusChange} disabled={disableUserMutation.isPending || enableUserMutation.isPending}>
-              确认
+              {t('dialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

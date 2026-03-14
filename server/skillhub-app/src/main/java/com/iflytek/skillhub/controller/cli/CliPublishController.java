@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.cli;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
@@ -14,6 +15,7 @@ import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,7 +49,7 @@ public class CliPublishController extends BaseApiController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("namespace") String namespace,
             @RequestParam("visibility") String visibility,
-            @RequestAttribute("userId") String userId,
+            @AuthenticationPrincipal PlatformPrincipal principal,
             HttpServletRequest request) throws IOException {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
@@ -62,8 +64,9 @@ public class CliPublishController extends BaseApiController {
         SkillPublishService.PublishResult publishResult = skillPublishService.publishFromEntries(
                 namespace,
                 entries,
-                userId,
-                skillVisibility
+                principal.userId(),
+                skillVisibility,
+                principal.platformRoles()
         );
 
         PublishResponse response = new PublishResponse(
@@ -77,7 +80,7 @@ public class CliPublishController extends BaseApiController {
         );
         skillHubMetrics.incrementSkillPublish(namespace, publishResult.version().getStatus().name());
         auditLogService.record(
-                userId,
+                principal.userId(),
                 "CLI_PUBLISH",
                 "SKILL_VERSION",
                 publishResult.version().getId(),

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 
@@ -8,7 +9,8 @@ interface SearchBarProps {
   onSearch?: (query: string) => void
 }
 
-export function SearchBar({ defaultValue = '', placeholder = '搜索技能...', onSearch }: SearchBarProps) {
+export function SearchBar({ defaultValue = '', placeholder, onSearch }: SearchBarProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState(defaultValue)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,12 +40,12 @@ export function SearchBar({ defaultValue = '', placeholder = '搜索技能...', 
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder || t('searchBar.placeholder')}
           className="pl-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
         />
       </div>
       <Button type="submit" size="lg" className="px-8">
-        搜索
+        {t('searchBar.button')}
       </Button>
     </form>
   )

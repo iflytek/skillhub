@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { UploadZone } from '@/features/publish/upload-zone'
 import { Button } from '@/shared/ui/button'
 import { Select } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queries'
+import { toast } from '@/shared/lib/toast'
 
 export function PublishPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [namespaceSlug, setNamespaceSlug] = useState<string>('')
@@ -18,7 +21,7 @@ export function PublishPage() {
 
   const handlePublish = async () => {
     if (!selectedFile || !namespaceSlug) {
-      alert('请选择命名空间和文件')
+      toast.error(t('publish.selectRequired'))
       return
     }
 
@@ -28,24 +31,40 @@ export function PublishPage() {
         file: selectedFile,
         visibility,
       })
-      alert(`发布成功: ${result.namespace}/${result.slug}@${result.version}`)
+      toast.success(
+        t('publish.success'),
+        t('publish.successDescription', {
+          skill: `${result.namespace}/${result.slug}@${result.version}`,
+        })
+      )
       navigate({ to: '/dashboard/skills' })
     } catch (error) {
-      alert('发布失败: ' + (error instanceof Error ? error.message : '未知错误'))
+      toast.error(t('publish.error'), error instanceof Error ? error.message : '')
     }
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">发布技能</h1>
-        <p className="text-muted-foreground text-lg">上传技能包到 SkillHub</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">{t('publish.title')}</h1>
+        <p className="text-muted-foreground text-lg">{t('publish.subtitle')}</p>
       </div>
 
+      <Card className="p-4 bg-blue-500/5 border-blue-500/20">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground mb-1">{t('publish.reviewNotice.title')}</h3>
+            <p className="text-sm text-muted-foreground">{t('publish.reviewNotice.description')}</p>
+          </div>
+        </div>
+      </Card>
+
       <Card className="p-8 space-y-8">
-        {/* Namespace Selector */}
         <div className="space-y-3">
-          <Label htmlFor="namespace" className="text-sm font-semibold font-heading">命名空间</Label>
+          <Label htmlFor="namespace" className="text-sm font-semibold font-heading">{t('publish.namespace')}</Label>
           {isLoadingNamespaces ? (
             <div className="h-11 animate-shimmer rounded-lg" />
           ) : (
@@ -54,7 +73,7 @@ export function PublishPage() {
               value={namespaceSlug}
               onChange={(e) => setNamespaceSlug(e.target.value)}
             >
-              <option value="">选择命名空间</option>
+              <option value="">{t('publish.selectNamespace')}</option>
               {namespaces?.map((ns) => (
                 <option key={ns.id} value={ns.slug}>
                   {ns.displayName} (@{ns.slug})
@@ -64,23 +83,21 @@ export function PublishPage() {
           )}
         </div>
 
-        {/* Visibility Selector */}
         <div className="space-y-3">
-          <Label htmlFor="visibility" className="text-sm font-semibold font-heading">可见性</Label>
+          <Label htmlFor="visibility" className="text-sm font-semibold font-heading">{t('publish.visibility')}</Label>
           <Select
             id="visibility"
             value={visibility}
             onChange={(e) => setVisibility(e.target.value)}
           >
-            <option value="PUBLIC">公开</option>
-            <option value="NAMESPACE_ONLY">仅命名空间</option>
-            <option value="PRIVATE">私有</option>
+            <option value="PUBLIC">{t('publish.visibilityOptions.public')}</option>
+            <option value="NAMESPACE_ONLY">{t('publish.visibilityOptions.namespaceOnly')}</option>
+            <option value="PRIVATE">{t('publish.visibilityOptions.private')}</option>
           </Select>
         </div>
 
-        {/* Upload Zone */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold font-heading">技能包文件</Label>
+          <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           <UploadZone
             onFileSelect={setSelectedFile}
             disabled={publishMutation.isPending}
@@ -95,14 +112,14 @@ export function PublishPage() {
           )}
         </div>
 
-        {/* Publish Button */}
         <Button
           className="w-full"
           size="lg"
           onClick={handlePublish}
           disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
         >
-          {publishMutation.isPending ? '发布中...' : '确认发布'}     </Button>
+          {publishMutation.isPending ? t('publish.publishing') : t('publish.confirm')}
+        </Button>
       </Card>
     </div>
   )

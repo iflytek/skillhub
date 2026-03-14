@@ -7,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 @Entity
@@ -38,7 +40,8 @@ public class AuditLog {
     @Column(name = "user_agent", length = 512)
     private String userAgent;
 
-    @Column(name = "detail_json", columnDefinition = "jsonb")
+    @Column(name = "detail_json")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String detailJson;
 
     @Column(name = "created_at", nullable = false, updatable = false)

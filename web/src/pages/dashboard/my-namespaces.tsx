@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
@@ -7,20 +8,21 @@ import { useMyNamespaces } from '@/shared/hooks/use-skill-queries'
 
 export function MyNamespacesPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { data: namespaces, isLoading } = useMyNamespaces()
 
   const handleNamespaceClick = (slug: string) => {
-    navigate({ to: '/@$namespace', params: { namespace: slug } })
+    navigate({ to: `/space/${slug}` })
   }
 
   const handleMembersClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: '/dashboard/namespaces/$slug/members', params: { slug } })
+    navigate({ to: `/dashboard/namespaces/${slug}/members` })
   }
 
   const handleReviewsClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: '/dashboard/namespaces/$slug/reviews', params: { slug } })
+    navigate({ to: `/dashboard/namespaces/${slug}/reviews` })
   }
 
   if (isLoading) {
@@ -37,10 +39,10 @@ export function MyNamespacesPage() {
     <div className="space-y-8 animate-fade-up">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold font-heading mb-2">我的命名空间</h1>
-          <p className="text-muted-foreground text-lg">管理你的命名空间和团队</p>
+          <h1 className="text-4xl font-bold font-heading mb-2">{t('myNamespaces.title')}</h1>
+          <p className="text-muted-foreground text-lg">{t('myNamespaces.subtitle')}</p>
         </div>
-        <Button disabled>创建命名空间</Button>
+        <Button disabled>{t('myNamespaces.create')}</Button>
       </div>
 
       {namespaces && namespaces.length > 0 ? (
@@ -60,7 +62,7 @@ export function MyNamespacesPage() {
                       </h3>
                       <NamespaceBadge
                         type={namespace.type}
-                        name={namespace.type === 'GLOBAL' ? '全局' : '团队'}
+                        name={namespace.type === 'GLOBAL' ? t('myNamespaces.typeGlobal') : t('myNamespaces.typeTeam')}
                       />
                     </div>
                     {namespace.description && (
@@ -78,7 +80,7 @@ export function MyNamespacesPage() {
                       size="sm"
                       onClick={(e) => handleMembersClick(namespace.slug, e)}
                     >
-                      管理成员
+                      {t('myNamespaces.manageMembers')}
                     </Button>
                   )}
                   <Button
@@ -86,7 +88,7 @@ export function MyNamespacesPage() {
                     size="sm"
                     onClick={(e) => handleReviewsClick(namespace.slug, e)}
                   >
-                    审核任务
+                    {t('myNamespaces.reviewTasks')}
                   </Button>
                 </div>
               </div>
@@ -95,9 +97,9 @@ export function MyNamespacesPage() {
         </div>
       ) : (
         <EmptyState
-          title="还没有命名空间"
-          description="创建一个命名空间来组织你的技能"
-          action={<Button disabled>创建命名空间</Button>}
+          title={t('myNamespaces.emptyTitle')}
+          description={t('myNamespaces.emptyDescription')}
+          action={<Button disabled>{t('myNamespaces.create')}</Button>}
         />
       )}
     </div>
