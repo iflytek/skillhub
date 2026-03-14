@@ -118,7 +118,7 @@ export function PublishPage() {
         </div>
 
         <Button
-          className="w-full"
+          className="w-full text-primary-foreground disabled:text-primary-foreground"
           size="lg"
           onClick={handlePublish}
           disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
