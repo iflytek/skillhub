@@ -13,19 +13,24 @@ import {
 } from '@/shared/ui/table'
 import { CreateTokenDialog } from './create-token-dialog'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { Pagination } from '@/shared/components/pagination'
 import { toast } from '@/shared/lib/toast'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import type { ApiToken } from '@/api/types'
 
+const PAGE_SIZE = 10
+
 export function TokenList() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
+  const [page, setPage] = useState(0)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; tokenId?: number; name?: string }>({
     open: false,
   })
 
-  const { data: tokens, isLoading } = useQuery<ApiToken[]>({
-    queryKey: ['tokens'],
-    queryFn: tokenApi.getTokens,
+  const { data: tokenPage, isLoading } = useQuery<{ items: ApiToken[]; total: number; page: number; size: number }>({
+    queryKey: ['tokens', page, PAGE_SIZE],
+    queryFn: () => tokenApi.getTokens({ page, size: PAGE_SIZE }),
   })
 
   const deleteMutation = useMutation({
@@ -51,8 +56,11 @@ export function TokenList() {
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-'
-    return new Date(dateString).toLocaleString('zh-CN')
+    return formatLocalDateTime(dateString, i18n.language)
   }
+
+  const tokens = tokenPage?.items ?? []
+  const totalPages = tokenPage ? Math.max(Math.ceil(tokenPage.total / tokenPage.size), 1) : 1
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">{t('token.loading')}</div>
@@ -62,12 +70,12 @@ export function TokenList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t('token.title')}</h2>
-        <CreateTokenDialog existingNames={(tokens ?? []).map((token) => token.name)}>
+        <CreateTokenDialog existingNames={tokens.map((token) => token.name)}>
           <Button>{t('token.createNew')}</Button>
         </CreateTokenDialog>
       </div>
 
-      {!tokens || tokens.length === 0 ? (
+      {!tokenPage || tokenPage.total === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p>{t('token.empty')}</p>
           <p className="text-sm mt-2">{t('token.emptyHint')}</p>
@@ -113,6 +121,10 @@ export function TokenList() {
           </Table>
         </div>
       )}
+
+      {tokenPage && tokenPage.total > PAGE_SIZE ? (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      ) : null}
 
       <ConfirmDialog
         open={deleteDialog.open}

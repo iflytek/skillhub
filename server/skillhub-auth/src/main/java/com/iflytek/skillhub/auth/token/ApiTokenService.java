@@ -3,6 +3,8 @@ package com.iflytek.skillhub.auth.token;
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +71,12 @@ public class ApiTokenService {
 
     public List<ApiToken> listActiveTokens(String userId) {
         return tokenRepo.findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(userId);
+    }
+
+    public Page<ApiToken> listActiveTokens(String userId, int page, int size) {
+        int resolvedPage = Math.max(page, 0);
+        int resolvedSize = Math.max(size, 1);
+        return tokenRepo.findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(userId, PageRequest.of(resolvedPage, resolvedSize));
     }
 
     @Transactional

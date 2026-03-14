@@ -19,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Set;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -27,6 +29,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -87,5 +90,42 @@ class TokenControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.msg").value("Token 名称最多 64 个字符"));
+    }
+
+    @Test
+    void list_returns_paginated_tokens() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "tester", "tester@example.com", "", "github", Set.of("USER")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        var tokenPage = new PageImpl<>(
+                List.of(
+                        new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]"),
+                        new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "deploy", "sk_654321", "hash-2", "[]")
+                ),
+                PageRequest.of(1, 10),
+                12
+        );
+        var first = tokenPage.getContent().get(0);
+        var second = tokenPage.getContent().get(1);
+        org.springframework.test.util.ReflectionTestUtils.setField(first, "id", 7L);
+        org.springframework.test.util.ReflectionTestUtils.setField(first, "createdAt", java.time.LocalDateTime.of(2026, 3, 14, 10, 0));
+        org.springframework.test.util.ReflectionTestUtils.setField(second, "id", 8L);
+        org.springframework.test.util.ReflectionTestUtils.setField(second, "createdAt", java.time.LocalDateTime.of(2026, 3, 14, 11, 0));
+
+        given(apiTokenService.listActiveTokens("user-42", 1, 10)).willReturn(tokenPage);
+
+        mockMvc.perform(get("/api/v1/tokens")
+                        .with(authentication(auth))
+                        .param("page", "1")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].name").value("cli"))
+                .andExpect(jsonPath("$.data.items[1].name").value("deploy"))
+                .andExpect(jsonPath("$.data.total").value(12))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(10));
     }
 }

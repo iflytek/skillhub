@@ -372,19 +372,28 @@ export const accountApi = {
 }
 
 export const tokenApi = {
-  async getTokens(): Promise<ApiToken[]> {
-    const tokens = await unwrap<ApiToken[]>(client.GET('/api/v1/tokens', {
+  async getTokens(params?: { page?: number, size?: number }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
+    const page = await unwrap<{ items: ApiToken[], total: number, page: number, size: number }>(client.GET('/api/v1/tokens', {
+      params: {
+        query: {
+          page: params?.page ?? 0,
+          size: params?.size ?? 10,
+        },
+      },
       headers: withRequestHeaders(),
     } as never) as never)
-    return tokens
-      .filter((token) => token.id !== undefined && token.name && token.tokenPrefix && token.createdAt)
-      .map((token) => ({
-        ...token,
-        id: token.id!,
-        name: token.name!,
-        tokenPrefix: token.tokenPrefix!,
-        createdAt: token.createdAt!,
-      }))
+    return {
+      ...page,
+      items: page.items
+        .filter((token) => token.id !== undefined && token.name && token.tokenPrefix && token.createdAt)
+        .map((token) => ({
+          ...token,
+          id: token.id!,
+          name: token.name!,
+          tokenPrefix: token.tokenPrefix!,
+          createdAt: token.createdAt!,
+        })),
+    }
   },
 
   async createToken(request: CreateTokenRequest): Promise<CreateTokenResponse> {
