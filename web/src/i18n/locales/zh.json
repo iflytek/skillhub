@@ -1,6 +1,7 @@
 {
   "nav": {
     "home": "首页",
+    "explore": "探索",
     "search": "搜索技能",
     "dashboard": "控制台",
     "login": "登录"
