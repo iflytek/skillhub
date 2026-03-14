@@ -81,7 +81,7 @@ public class AuthMethodCatalog {
                     "direct-" + provider.providerCode(),
                     "DIRECT_PASSWORD",
                     provider.providerCode(),
-                    provider.providerCode(),
+                    provider.displayName(),
                     "/api/v1/auth/direct/login"
                 )));
         }
@@ -93,7 +93,7 @@ public class AuthMethodCatalog {
                     "bootstrap-" + provider.providerCode(),
                     "SESSION_BOOTSTRAP",
                     provider.providerCode(),
-                    provider.providerCode(),
+                    provider.displayName(),
                     "/api/v1/auth/session/bootstrap"
                 )));
         }
