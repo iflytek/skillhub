@@ -178,8 +178,9 @@ validate-release-config: ## 校验发布环境变量文件（默认 .env.release
 	./scripts/validate-release-config.sh .env.release
 
 staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：后端镜像 + 前端静态文件）
-	@echo "=== [1/5] Building backend Docker image ==="
-	docker build -t $(STAGING_SERVER_IMAGE) -f server/Dockerfile server
+	@echo "=== [1/5] Building backend JAR and Docker image ==="
+	cd server && ./mvnw package -DskipTests -B -q
+	docker build -t $(STAGING_SERVER_IMAGE) -f server/Dockerfile.dev server
 	@echo "=== [2/5] Building frontend static files ==="
 	cd web && pnpm run build
 	@echo "=== [3/5] Starting dependency services ==="
