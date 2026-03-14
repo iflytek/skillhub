@@ -167,6 +167,7 @@ private-sso
 
 - `DirectAuthProvider.providerCode()` 和 `PassiveSessionAuthenticator.providerCode()` 返回同一个值
 - 不要为“用户名密码登录”和“Cookie 登录”定义两个不同 provider code
+- 如需更友好的登录页文案，请同时覆盖 provider 的 `displayName()`，避免前端再维护一份私有显示名映射
 
 #### 步骤 2：封装 SSO 客户端
 

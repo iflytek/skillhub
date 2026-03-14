@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getDirectAuthRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
+import { useAuthMethods } from '@/features/auth/use-auth-methods'
 import { usePasswordLogin } from '@/features/auth/use-password-login'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -18,8 +19,14 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
+  const { data: authMethods } = useAuthMethods(search.returnTo)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
+  const directMethod = directAuthConfig.provider
+    ? authMethods?.find((method) =>
+      method.methodType === 'DIRECT_PASSWORD' && method.provider === directAuthConfig.provider)
+    : undefined
+  const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -47,6 +54,7 @@ export function LoginPage() {
         <div className="glass-strong p-8 rounded-2xl">
           <div className="space-y-6">
             <SessionBootstrapEntry
+              methodDisplayName={bootstrapMethod?.displayName}
               onAuthenticated={() => navigate({ to: returnTo })}
             />
 
@@ -60,7 +68,9 @@ export function LoginPage() {
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   {directAuthConfig.enabled ? (
                     <p className="text-sm text-muted-foreground">
-                      {t('login.passwordCompatHint')}
+                      {t('login.passwordCompatHint', {
+                        name: directMethod?.displayName ?? directAuthConfig.provider,
+                      })}
                     </p>
                   ) : null}
                   <div className="space-y-2">

@@ -21,6 +21,7 @@ import type {
   User,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
+import i18n from '@/i18n/config'
 
 export { ApiError }
 
@@ -65,21 +66,31 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+function withRequestHeaders(headers?: HeadersInit): Headers {
+  const merged = new Headers(headers)
+  const language = i18n.resolvedLanguage?.trim()
+  if (language) {
+    merged.set('Accept-Language', language)
+  }
+  return merged
+}
+
 function withCsrf(headers?: HeadersInit): HeadersInit {
+  const merged = withRequestHeaders(headers)
   const csrfToken = getCsrfToken()
   if (!csrfToken) {
-    return headers ?? {}
+    return merged
   }
 
-  return {
-    ...headers,
-    'X-XSRF-TOKEN': csrfToken,
-  }
+  merged.set('X-XSRF-TOKEN', csrfToken)
+  return merged
 }
 
 async function ensureCsrfHeaders(headers?: HeadersInit): Promise<HeadersInit> {
   if (!getCsrfToken()) {
-    await client.GET('/api/v1/auth/providers')
+    await client.GET('/api/v1/auth/providers', {
+      headers: withRequestHeaders(),
+    } as never)
   }
   return withCsrf(headers)
 }
@@ -94,11 +105,13 @@ function hasDataProperty<T>(value: unknown): value is { data: T } {
 
 async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
   const { data, error, response } = await promise
-  if (response.status === 401) {
-    throw new ApiError('HTTP 401', 401)
+  const envelope = isApiEnvelope<T>(data) ? data : isApiEnvelope<T>(error) ? error : null
+
+  if (!response.ok) {
+    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
   }
   if (error) {
-    throw new ApiError(`HTTP ${response.status}`, response.status)
+    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
   }
   if (data === undefined) {
     throw new ApiError(`HTTP ${response.status}`, response.status)
@@ -160,7 +173,10 @@ type ApiEnvelope<T> = {
 export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(withBaseUrl(input), init)
+    response = await fetch(withBaseUrl(input), {
+      ...init,
+      headers: withRequestHeaders(init?.headers),
+    })
   } catch {
     throw new ApiError('Network error', 0)
   }
@@ -184,7 +200,10 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit)
 }
 
 export async function fetchText(input: RequestInfo | URL, init?: RequestInit): Promise<string> {
-  const response = await fetch(withBaseUrl(input), init)
+  const response = await fetch(withBaseUrl(input), {
+    ...init,
+    headers: withRequestHeaders(init?.headers),
+  })
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
   }
@@ -205,7 +224,9 @@ function ensureTrailingSlash(value: string): string {
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const user = await unwrap<User>(client.GET('/api/v1/auth/me') as never)
+    const user = await unwrap<User>(client.GET('/api/v1/auth/me', {
+      headers: withRequestHeaders(),
+    } as never) as never)
     return {
       ...user,
       userId: user.userId ?? '',
@@ -224,10 +245,10 @@ export const authApi = {
   getMe: getCurrentUser,
 
   async getProviders(returnTo?: string): Promise<OAuthProvider[]> {
-    const params = returnTo
-      ? { query: { returnTo } }
-      : undefined
-    const providers = await unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers', params as never) as never)
+    const providers = await unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers', {
+      ...(returnTo ? { query: { returnTo } } : {}),
+      headers: withRequestHeaders(),
+    } as never) as never)
     return providers
       .filter((provider) => provider.id && provider.name && provider.authorizationUrl)
       .map((provider) => ({
@@ -352,7 +373,9 @@ export const accountApi = {
 
 export const tokenApi = {
   async getTokens(): Promise<ApiToken[]> {
-    const tokens = await unwrap<ApiToken[]>(client.GET('/api/v1/tokens') as never)
+    const tokens = await unwrap<ApiToken[]>(client.GET('/api/v1/tokens', {
+      headers: withRequestHeaders(),
+    } as never) as never)
     return tokens
       .filter((token) => token.id !== undefined && token.name && token.tokenPrefix && token.createdAt)
       .map((token) => ({

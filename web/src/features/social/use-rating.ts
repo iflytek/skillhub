@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchJson, getCsrfHeaders } from '@/api/client'
+import { ApiError, fetchJson, getCsrfHeaders } from '@/api/client'
 
 interface UserRating {
   score: number
@@ -10,7 +10,7 @@ async function getUserRating(skillId: number): Promise<UserRating> {
   try {
     return await fetchJson<UserRating>(`/api/v1/skills/${skillId}/rating`)
   } catch (error) {
-    if (error instanceof Error && error.message === 'HTTP 401') {
+    if (error instanceof ApiError && error.status === 401) {
       return { score: 0, rated: false }
     }
     throw error
