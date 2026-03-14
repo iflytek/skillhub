@@ -167,7 +167,7 @@
     "viewStars": "查看我的收藏",
     "credentials": "访问凭证",
     "openTokens": "打开 Token 页面",
-    "governanceTitle": "审核与治理",
+    "governanceTitle": "查看提交审核",
     "viewPromotions": "查看提升审核"
   },
   "mySkills": {
@@ -420,7 +420,7 @@
       "dashboard": "控制台",
       "mySkills": "我的技能",
       "myNamespaces": "我的命名空间",
-      "stars": "我的星标",
+      "stars": "我的收藏",
       "reviews": "审核管理",
       "promotions": "推广管理",
       "users": "用户管理",
