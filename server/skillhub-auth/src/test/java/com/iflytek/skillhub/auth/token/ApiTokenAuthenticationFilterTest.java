@@ -58,7 +58,7 @@ class ApiTokenAuthenticationFilterTest {
         when(role.getCode()).thenReturn("SKILL_ADMIN");
 
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/api/v1/cli/whoami");
+        request.setRequestURI("/api/v1/whoami");
         request.addHeader("Authorization", "Bearer raw-token");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
@@ -84,7 +84,7 @@ class ApiTokenAuthenticationFilterTest {
         when(userAccountRepository.findById("user-2")).thenReturn(Optional.of(user));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/api/v1/cli/publish");
+        request.setRequestURI("/api/v1/publish");
         request.addHeader("Authorization", "Bearer raw-token");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());

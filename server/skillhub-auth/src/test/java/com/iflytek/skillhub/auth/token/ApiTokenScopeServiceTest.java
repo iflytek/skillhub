@@ -24,7 +24,7 @@ class ApiTokenScopeServiceTest {
     void authorizeShouldAllowCliWhoamiWithoutScope() {
         ApiTokenScopeService.AuthorizationDecision decision = scopeService.authorize(
             "GET",
-            "/api/v1/cli/whoami",
+            "/api/v1/whoami",
             Set.of()
         );
 

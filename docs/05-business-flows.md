@@ -54,7 +54,7 @@ Phase 3 在不改变发布入口的前提下，把后半段切换为“创建 DR
 - 审核通过后才转为 `PUBLISHED`
 - 审核拒绝后转为 `REJECTED`
 - 例外：提交人持有 `SUPER_ADMIN` 平台角色时，发布入口直接创建 `skill_version(status=PUBLISHED)`，跳过 `review_task` 创建，同时不再要求其必须是目标 namespace 成员
-- 上述例外必须对 Web、`/api/v1/cli/publish`、`/api/compat/v1/publish` 保持一致
+- 上述例外必须对 Web、`/api/v1/publish`、`/api/compat/v1/publish` 保持一致
 
 ### 对象存储写入策略
 
@@ -67,7 +67,7 @@ Phase 3 在不改变发布入口的前提下，把后半段切换为“创建 DR
 ### CLI publish 请求规范
 
 ```
-POST /api/v1/cli/publish
+POST /api/v1/publish
 Content-Type: multipart/form-data
 Parts:
   - file: zip 包（必需）
@@ -81,7 +81,7 @@ Phase 3 CLI 默认行为：上传 → 创建 DRAFT → 自动提交审核。
 如果调用方持有 `SUPER_ADMIN`，则直接发布为 `PUBLISHED`。
 Web 端可保留“发布后再提交审核”的两段式体验，但这属于 Phase 3 能力。
 
-`/api/v1/cli/publish` 响应：
+`/api/v1/publish` 响应：
 
 ```json
 {
