@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { useStar, useToggleStar } from './use-star'
 import { Star } from 'lucide-react'
@@ -10,6 +11,7 @@ interface StarButtonProps {
 }
 
 export function StarButton({ skillId, starCount, onRequireLogin }: StarButtonProps) {
+  const { t } = useTranslation()
   const { data: starStatus, isLoading } = useStar(skillId)
   const toggleMutation = useToggleStar(skillId)
   const { isAuthenticated } = useAuth()
@@ -36,7 +38,7 @@ export function StarButton({ skillId, starCount, onRequireLogin }: StarButtonPro
       disabled={toggleMutation.isPending}
     >
       <Star className={`w-4 h-4 mr-2 ${starStatus.starred ? 'fill-current' : ''}`} />
-      {starStatus.starred ? '已收藏' : '收藏'} ({starCount})
+      {starStatus.starred ? t('starButton.starred') : t('starButton.star')} ({starCount})
     </Button>
   )
 }

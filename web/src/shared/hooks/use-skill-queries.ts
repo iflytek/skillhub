@@ -5,7 +5,10 @@ import { fetchJson, fetchText, getCsrfHeaders, meApi } from '@/api/client'
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
   const queryParams = new URLSearchParams()
   if (params.q) queryParams.append('q', params.q)
-  if (params.namespace) queryParams.append('namespace', params.namespace)
+  if (params.namespace) {
+    const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
+    queryParams.append('namespace', cleanNamespace)
+  }
   if (params.sort) queryParams.append('sort', params.sort)
   if (params.page !== undefined) queryParams.append('page', String(params.page))
   if (params.size !== undefined) queryParams.append('size', String(params.size))
@@ -14,21 +17,25 @@ async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSu
 }
 
 async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
-  return fetchJson<SkillDetail>(`/api/v1/skills/${namespace}/${slug}`)
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillDetail>(`/api/v1/skills/${cleanNamespace}/${slug}`)
 }
 
 async function getSkillVersions(namespace: string, slug: string): Promise<SkillVersion[]> {
-  const page = await fetchJson<PagedResponse<SkillVersion>>(`/api/v1/skills/${namespace}/${slug}/versions`)
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  const page = await fetchJson<PagedResponse<SkillVersion>>(`/api/v1/skills/${cleanNamespace}/${slug}/versions`)
   return page.items
 }
 
 async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
-  return fetchJson<SkillFile[]>(`/api/v1/skills/${namespace}/${slug}/versions/${version}/files`)
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillFile[]>(`/api/v1/skills/${cleanNamespace}/${slug}/versions/${version}/files`)
 }
 
 async function getSkillReadme(namespace: string, slug: string, version: string): Promise<string> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   try {
-    return await fetchText(`/api/v1/skills/${namespace}/${slug}/versions/${version}/file?path=SKILL.md`)
+    return await fetchText(`/api/v1/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=SKILL.md`)
   } catch {
     return ''
   }
@@ -48,20 +55,23 @@ async function getMyNamespaces(): Promise<Namespace[]> {
 }
 
 async function getNamespaceDetail(slug: string): Promise<Namespace> {
-  return fetchJson<Namespace>(`/api/v1/namespaces/${slug}`)
+  const cleanSlug = slug.startsWith('@') ? slug.slice(1) : slug
+  return fetchJson<Namespace>(`/api/v1/namespaces/${cleanSlug}`)
 }
 
 async function getNamespaceMembers(slug: string): Promise<NamespaceMember[]> {
-  const page = await fetchJson<PagedResponse<NamespaceMember>>(`/api/v1/namespaces/${slug}/members`)
+  const cleanSlug = slug.startsWith('@') ? slug.slice(1) : slug
+  const page = await fetchJson<PagedResponse<NamespaceMember>>(`/api/v1/namespaces/${cleanSlug}/members`)
   return page.items
 }
 
 async function publishSkill(params: { namespace: string; file: File; visibility: string }): Promise<PublishResult> {
+  const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
   const formData = new FormData()
   formData.append('file', params.file)
   formData.append('visibility', params.visibility)
 
-  return fetchJson<PublishResult>(`/api/v1/skills/${params.namespace}/publish`, {
+  return fetchJson<PublishResult>(`/api/v1/skills/${cleanNamespace}/publish`, {
     method: 'POST',
     headers: getCsrfHeaders(),
     body: formData,

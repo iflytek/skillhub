@@ -5,6 +5,7 @@ Thumbs.db
 # Editors / IDEs
 .idea/
 .vscode/
+.claude/
 *.iml
 *.swp
 *.swo
@@ -50,6 +51,7 @@ coverage/
 .vite/
 .eslintcache
 *.tsbuildinfo
+package-lock.json
 
 # Temporary files
 .tmp/
@@ -66,3 +68,4 @@ __pycache__/
 # Superpowers (AI planning artifacts)
 docs/superpowers/
 docs/review/
+CLAUDE.md

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,7 @@ public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRep
     List<Skill> findByOwnerId(String ownerId);
 
     @Modifying
+    @Transactional
     @Query("UPDATE Skill s SET s.downloadCount = s.downloadCount + 1 WHERE s.id = :skillId")
     void incrementDownloadCount(@Param("skillId") Long skillId);
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { SkillFile } from '@/api/types'
 
 interface FileTreeProps {
@@ -12,10 +13,11 @@ function formatFileSize(bytes: number): string {
 }
 
 export function FileTree({ files, onFileClick }: FileTreeProps) {
+  const { t } = useTranslation()
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="bg-muted px-4 py-2 text-sm font-medium">
-        文件列表 ({files.length})
+        {t('fileTree.title', { count: files.length })}
       </div>
       <div className="divide-y">
         {files.map((file) => (

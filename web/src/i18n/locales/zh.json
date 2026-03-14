@@ -1,0 +1,540 @@
+{
+  "nav": {
+    "home": "首页",
+    "explore": "探索",
+    "search": "搜索技能",
+    "dashboard": "控制台",
+    "login": "登录"
+  },
+  "landing": {
+    "hero": {
+      "title": "发现与分享 AI 技能",
+      "subtitle": "使用社区驱动的技能构建强大的 AI 代理",
+      "searchPlaceholder": "搜索技能...",
+      "exploreSkills": "探索技能"
+    },
+    "features": {
+      "secure": {
+        "title": "安全私密",
+        "description": "企业级安全保护您的 AI 工作流"
+      },
+      "community": {
+        "title": "社区驱动",
+        "description": "与全球开发者分享和发现技能"
+      },
+      "integration": {
+        "title": "轻松集成",
+        "description": "无缝集成到您现有的工具中"
+      }
+    },
+    "badge": "企业级技能注册中心",
+    "tagline": "发布、发现、管理",
+    "taglineHighlight": " Agent 技能包",
+    "description": "自托管的私有技能注册平台，为团队提供安全、高效的技能共享与协作空间",
+    "publishSkill": "发布技能",
+    "statsSkills": "技能包",
+    "statsDownloads": "下载量",
+    "statsTeams": "团队",
+    "whyTitle": "为什么选择",
+    "whyDescription": "专为企业打造的技能管理平台，提供完整的发布、发现、治理能力",
+    "featuresList": {
+      "privateDeploy": {
+        "title": "私有部署",
+        "description": "完全自托管，数据主权在您手中。一键部署到您的基础设施，防火墙后安全运行。"
+      },
+      "versionControl": {
+        "title": "版本管理",
+        "description": "语义化版本控制，自定义标签（beta、stable），自动追踪 latest 版本。"
+      },
+      "smartSearch": {
+        "title": "智能搜索",
+        "description": "全文搜索，支持命名空间、下载量、评分、时间等多维度筛选。"
+      },
+      "teamwork": {
+        "title": "团队协作",
+        "description": "命名空间管理，角色权限控制（Owner/Admin/Member），发布策略配置。"
+      },
+      "governance": {
+        "title": "审核治理",
+        "description": "团队内审核，平台级审批，全流程审计日志，满足合规要求。"
+      },
+      "cliFirst": {
+        "title": "CLI 优先",
+        "description": "原生 REST API，兼容现有 ClawHub CLI 工具，无需客户端改动。"
+      }
+    },
+    "ctaTitle": "准备好开始了吗？",
+    "ctaDescription": "一条命令即可启动本地开发环境，体验完整的技能管理流程",
+    "ctaButton": "立即体验",
+    "footerLicense": "© 2026 SkillHub。Apache License 2.0。",
+    "footerDocs": "文档",
+    "footerGithub": "GitHub",
+    "footerCommunity": "社区"
+  },
+  "home": {
+    "subtitle": "现代化的技能注册中心",
+    "description": "为开发者提供高效的技能管理、分发和协作平台",
+    "browseSkills": "浏览技能",
+    "publishSkill": "发布技能",
+    "popularTitle": "热门下载",
+    "popularDescription": "社区最受欢迎的技能",
+    "latestTitle": "最新发布",
+    "latestDescription": "刚刚发布的新技能",
+    "viewAll": "查看全部 →"
+  },
+  "search": {
+    "title": "搜索技能",
+    "placeholder": "搜索技能...",
+    "sort": {
+      "label": "排序:",
+      "relevance": "相关性",
+      "downloads": "下载量",
+      "stars": "星标数",
+      "newest": "最新"
+    },
+    "noResults": "未找到结果",
+    "noResultsFor": "没有找到与 \"{{q}}\" 相关的技能",
+    "enterKeyword": "请输入搜索关键词",
+    "results": "找到 {{count}} 个技能",
+    "resultCount": "找到 <1>{{count}}</1> 个结果"
+  },
+  "searchBar": {
+    "placeholder": "搜索技能...",
+    "button": "搜索"
+  },
+  "login": {
+    "title": "登录 SkillHub",
+    "subtitle": "选择一个方式登录以继续",
+    "tabPassword": "账号密码",
+    "tabOAuth": "GitHub",
+    "username": "用户名",
+    "password": "密码",
+    "usernamePlaceholder": "输入用户名",
+    "passwordPlaceholder": "输入密码",
+    "submitting": "登录中...",
+    "submit": "登录",
+    "noAccount": "还没有账号？",
+    "register": "立即注册",
+    "oauthHint": "使用 GitHub 登录时，认证完成后会自动返回当前站点。",
+    "passwordCompatHint": "当前部署已启用账号密码兼容接入层。表单将路由到配置的直连认证提供方，而不是固定使用本地账号接口。",
+    "enterpriseSsoTitle": "企业单点登录",
+    "enterpriseSsoHint": "当前部署已启用兼容接入层。若浏览器中已存在企业 SSO 会话，可直接尝试建立 SkillHub 登录态。",
+    "enterpriseSsoAutoHint": "当前部署已启用自动企业单点登录探测。若未成功，你仍可继续使用现有登录方式。",
+    "enterpriseSsoAction": "尝试企业 SSO 登录",
+    "enterpriseSsoSubmitting": "正在尝试企业 SSO 登录...",
+    "agreementPrefix": "登录即表示你同意我们的",
+    "terms": "服务条款",
+    "and": "和",
+    "privacy": "隐私政策"
+  },
+  "register": {
+    "title": "创建账号",
+    "subtitle": "支持本地注册，也可以直接使用 OAuth 登录进入平台。",
+    "tabLocal": "本地账号",
+    "tabOAuth": "OAuth",
+    "username": "用户名",
+    "email": "邮箱",
+    "password": "密码",
+    "usernamePlaceholder": "3-64 位字母、数字或下划线",
+    "emailPlaceholder": "可选，用于后续账号识别",
+    "passwordPlaceholder": "至少 8 位，包含 3 种字符类型",
+    "submitting": "注册中...",
+    "submit": "注册并登录",
+    "hasAccount": "已有账号？",
+    "login": "返回登录",
+    "oauthHint": "直接使用现有 OAuth 账户进入平台，无需再创建本地密码。"
+  },
+  "device": {
+    "title": "设备授权",
+    "subtitle": "请输入设备上显示的 8 位用户码",
+    "codeLabel": "用户码",
+    "codeHint": "格式: XXXX-XXXX (支持粘贴)",
+    "incompleteCode": "请输入完整的 8 位用户码",
+    "success": "设备授权成功！",
+    "defaultError": "授权失败，请检查用户码是否正确",
+    "submitting": "授权中...",
+    "submit": "授权设备",
+    "notice": "授权后，设备将可以访问你的账户"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "管理你的账户和 API Tokens",
+    "userInfo": "用户信息",
+    "userInfoDesc": "你的账户详情",
+    "loginVia": "通过 {{provider}} 登录",
+    "platformRoles": "平台角色",
+    "starsAndRatings": "收藏与评分",
+    "viewStars": "查看我的收藏",
+    "credentials": "访问凭证",
+    "openTokens": "打开 Token 页面",
+    "governanceTitle": "审核与治理",
+    "viewPromotions": "查看提升审核"
+  },
+  "mySkills": {
+    "title": "我的技能",
+    "subtitle": "管理你发布的技能",
+    "publishNew": "发布新技能",
+    "emptyTitle": "还没有技能",
+    "emptyDescription": "开始发布你的第一个技能吧",
+    "publishSkill": "发布技能"
+  },
+  "myNamespaces": {
+    "title": "我的命名空间",
+    "subtitle": "管理你的命名空间和团队",
+    "create": "创建命名空间",
+    "typeGlobal": "全局",
+    "typeTeam": "团队",
+    "manageMembers": "管理成员",
+    "reviewTasks": "审核任务",
+    "emptyTitle": "还没有命名空间",
+    "emptyDescription": "创建一个命名空间来组织你的技能"
+  },
+  "tokens": {
+    "pageTitle": "Token 管理",
+    "pageSubtitle": "管理 CLI 和 API 使用的访问凭证"
+  },
+  "reviews": {
+    "title": "审核中心",
+    "subtitle": "管理技能版本审核",
+    "tabPending": "待审核",
+    "tabApproved": "已通过",
+    "tabRejected": "已拒绝",
+    "empty": "暂无审核任务",
+    "colSkill": "技能",
+    "colVersion": "版本",
+    "colSubmitter": "提交者",
+    "colSubmitTime": "提交时间",
+    "colReviewer": "审核者",
+    "colReviewTime": "审核时间"
+  },
+  "stars": {
+    "title": "我的收藏",
+    "subtitle": "查看你标记过的技能",
+    "empty": "还没有收藏任何技能"
+  },
+  "promotions": {
+    "title": "提升审核",
+    "subtitle": "审核团队技能提升到全局空间的申请",
+    "tabPending": "待审核",
+    "tabApproved": "已通过",
+    "tabRejected": "已拒绝",
+    "commentPlaceholder": "审核意见（可选）",
+    "approve": "通过",
+    "reject": "拒绝",
+    "empty": "暂无提升申请"
+  },
+  "adminUsers": {
+    "title": "用户管理",
+    "subtitle": "管理平台用户和权限",
+    "searchPlaceholder": "搜索用户名或邮箱...",
+    "filterAll": "全部",
+    "filterActive": "活跃",
+    "filterPending": "待审批",
+    "filterDisabled": "已禁用",
+    "empty": "暂无用户数据",
+    "colUsername": "用户名",
+    "colEmail": "邮箱",
+    "colStatus": "状态",
+    "colRole": "角色",
+    "colCreatedAt": "创建时间",
+    "colActions": "操作",
+    "statusActive": "活跃",
+    "statusPending": "待审批",
+    "statusDisabled": "已禁用",
+    "changeRole": "修改角色",
+    "approveUser": "审批通过",
+    "disable": "禁用",
+    "enable": "启用",
+    "totalRecords": "共 {{total}} 条记录，第 {{page}} 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "changeRoleTitle": "修改用户角色",
+    "changeRoleDesc": "为用户 {{username}} 分配新角色",
+    "roleLabel": "角色",
+    "selectRole": "选择角色",
+    "roleUser": "普通用户",
+    "roleReviewer": "审核员",
+    "roleUserAdmin": "用户管理员",
+    "roleAuditor": "审计员",
+    "roleSuperAdmin": "超级管理员",
+    "confirmAction": "确认操作",
+    "confirmDisable": "确定要禁用用户 {{username}} 吗？",
+    "confirmEnable": "确定要启用用户 {{username}} 吗？"
+  },
+  "auditLog": {
+    "title": "审计日志",
+    "subtitle": "查看系统操作记录",
+    "filterAll": "全部",
+    "filterCliPublish": "CLI 发布",
+    "filterCompatPublish": "Compat 发布",
+    "filterReviewApprove": "审核通过",
+    "filterReviewReject": "审核拒绝",
+    "filterPromotionApprove": "提升通过",
+    "filterYankVersion": "版本撤回",
+    "userIdPlaceholder": "用户 ID...",
+    "empty": "暂无审计日志",
+    "colTime": "时间",
+    "colAction": "操作",
+    "colUserId": "用户 ID",
+    "colUsername": "用户名",
+    "colIp": "IP 地址",
+    "colDetail": "详情",
+    "totalRecords": "共 {{total}} 条记录，第 {{page}} 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页"
+  },
+  "security": {
+    "title": "安全设置",
+    "subtitle": "已启用本地账号密码登录时，可以在这里更新密码。",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "success": "密码修改成功",
+    "defaultError": "修改密码失败",
+    "submitting": "提交中...",
+    "submit": "更新密码"
+  },
+  "accounts": {
+    "initiateTitle": "发起账号合并",
+    "initiateDesc": "输入 secondary 账号标识。支持本地用户名，或 `provider:subject` 格式的外部身份。",
+    "secondaryLabel": "Secondary 标识",
+    "secondaryPlaceholder": "例如：other_user 或 github:123456",
+    "initiating": "发起中...",
+    "initiate": "发起合并",
+    "initiateSuccess": "已创建合并请求，secondary={{secondaryUserId}}",
+    "initiateError": "发起合并失败",
+    "verifyTitle": "验证并完成合并",
+    "verifyDesc": "先完成 token 验证，再单独确认执行数据迁移。",
+    "mergeRequestId": "Merge Request ID",
+    "verificationToken": "Verification Token",
+    "verifying": "验证中...",
+    "verify": "完成合并",
+    "verifySuccess": "验证成功，确认后将执行正式合并",
+    "verifyError": "验证合并失败",
+    "confirming": "确认中...",
+    "confirm": "确认并完成合并",
+    "confirmSuccess": "账号合并已完成",
+    "confirmError": "确认合并失败"
+  },
+  "namespace": {
+    "notFound": "命名空间不存在",
+    "skillList": "技能列表",
+    "emptyTitle": "暂无技能",
+    "emptyDescription": "该命名空间下还没有发布任何技能"
+  },
+  "skillDetail": {
+    "notFound": "技能不存在",
+    "notFoundDesc": "该技能可能已被删除或从未存在",
+    "loginRequired": "需要登录",
+    "loginRequiredDesc": "该技能为私有技能，请登录后查看详情",
+    "accessDenied": "访问被拒绝",
+    "accessDeniedDesc": "您没有权限查看该技能",
+    "tabReadme": "README",
+    "tabFiles": "文件",
+    "tabVersions": "版本",
+    "noReadme": "暂无 README",
+    "noFiles": "暂无文件",
+    "noVersions": "暂无版本",
+    "fileCount": "{{count}} 个文件",
+    "version": "版本",
+    "downloads": "下载量",
+    "rating": "评分",
+    "ratingNone": "暂无",
+    "namespaceLabel": "命名空间",
+    "loginToRate": "登录后可以收藏和评分",
+    "install": "安装",
+    "download": "下载",
+    "governance": "治理操作",
+    "processing": "处理中...",
+    "hideSkill": "隐藏技能",
+    "unhideSkill": "恢复技能",
+    "yankVersion": "撤回当前版本"
+  },
+  "members": {
+    "title": "成员管理",
+    "addMember": "添加成员",
+    "colUserId": "用户 ID",
+    "colRole": "角色",
+    "colJoinedAt": "加入时间",
+    "colActions": "操作",
+    "remove": "移除",
+    "empty": "暂无成员",
+    "namespaceNotFound": "命名空间不存在"
+  },
+  "upload": {
+    "dropHint": "放开以上传文件...",
+    "dragHint": "拖拽 ZIP 文件到此处，或点击选择",
+    "formatHint": "仅支持 .zip 格式"
+  },
+  "layout": {
+    "footerDescription": "现代化的技能注册中心，为开发者提供高效的技能管理和分发平台。"
+  },
+  "nsReviews": {
+    "title": "命名空间审核",
+    "loadingNamespace": "加载命名空间信息中",
+    "reviewsFor": "{{name}} 的审核任务",
+    "empty": "暂无审核记录",
+    "version": "版本 {{version}}",
+    "tabPending": "待审核",
+    "tabApproved": "已通过",
+    "tabRejected": "已拒绝"
+  },
+  "fileTree": {
+    "title": "文件列表 ({{count}})"
+  },
+  "loginButton": {
+    "loading": "加载中...",
+    "loginWith": "使用 {{name}} 登录"
+  },
+  "ratingInput": {
+    "yourRating": "你的评分: {{score}} 星"
+  },
+  "createToken": {
+    "title": "创建 API Token",
+    "description": "创建一个新的 API Token 用于 CLI 或 API 访问",
+    "nameLabel": "Token 名称",
+    "namePlaceholder": "例如: my-cli-token",
+    "creating": "创建中...",
+    "create": "创建",
+    "successTitle": "Token 创建成功",
+    "successDescription": "请立即复制并保存此 Token，它只会显示一次",
+    "tokenLabel": "Token",
+    "nameDisplay": "名称",
+    "copyToken": "复制 Token",
+    "copySuccess": "Token 已复制到剪贴板",
+    "copyFailed": "复制 Token 失败，请重试"
+  },
+  "starButton": {
+    "starred": "已收藏",
+    "star": "收藏"
+  },
+  "copyButton": {
+    "copied": "已复制",
+    "copy": "复制"
+  },
+  "pagination": {
+    "prev": "上一页",
+    "next": "下一页",
+    "pagePrefix": "第",
+    "pageSuffix": "页"
+  },
+  "user": {
+    "menu": {
+      "dashboard": "控制台",
+      "mySkills": "我的技能",
+      "myNamespaces": "我的命名空间",
+      "stars": "我的收藏",
+      "reviews": "审核管理",
+      "promotions": "推广管理",
+      "users": "用户管理",
+      "auditLog": "审计日志",
+      "security": "安全设置",
+      "accounts": "账号合并",
+      "logout": "退出登录"
+    }
+  },
+  "footer": {
+    "resources": "资源",
+    "docs": "文档",
+    "api": "API",
+    "community": "社区",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "copyright": "© 2024 SkillHub. 保留所有权利。"
+  },
+  "publish": {
+    "title": "发布技能",
+    "subtitle": "上传技能包到 SkillHub",
+    "reviewNotice": {
+      "title": "发布审核说明",
+      "description": "技能包提交后需要经过管理员审核才能正式发布。审核通过后，您的技能将对所有用户可见。"
+    },
+    "namespace": "命名空间",
+    "selectNamespace": "选择命名空间",
+    "visibility": "可见性",
+    "visibilityOptions": {
+      "public": "公开",
+      "namespaceOnly": "仅命名空间",
+      "private": "私有"
+    },
+    "file": "技能包文件",
+    "publishing": "发布中...",
+    "confirm": "确认发布",
+    "success": "发布成功",
+    "successDescription": "{{skill}} 已提交审核，等待管理员批准后即可使用",
+    "error": "发布失败",
+    "selectRequired": "请选择命名空间和文件"
+  },
+  "toast": {
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "信息"
+  },
+  "dialog": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "delete": "删除",
+    "close": "关闭"
+  },
+  "review": {
+    "detail": "审核详情",
+    "id": "审核 ID",
+    "backToList": "返回列表",
+    "namespace": "命名空间/标识",
+    "version": "版本",
+    "status": "状态",
+    "statusPending": "待审核",
+    "statusApproved": "已通过",
+    "statusRejected": "已拒绝",
+    "submitter": "提交者",
+    "submitTime": "提交时间",
+    "reviewer": "审核者",
+    "reviewTime": "审核时间",
+    "reviewComment": "审核意见",
+    "actions": "审核操作",
+    "commentLabel": "审核意见（可选）",
+    "commentPlaceholder": "填写审核意见...",
+    "approve": "通过审核",
+    "reject": "拒绝审核",
+    "confirmReject": "确认拒绝",
+    "cancelReject": "取消",
+    "rejectReasonRequired": "拒绝审核时必须填写原因",
+    "approveTitle": "通过审核",
+    "approveDescription": "确定要通过这个审核吗？",
+    "approveConfirm": "通过",
+    "rejectTitle": "拒绝审核",
+    "rejectDescription": "确定要拒绝这个审核吗？",
+    "rejectConfirm": "拒绝",
+    "approveSuccess": "审核已通过",
+    "approveFailed": "审核失败",
+    "rejectSuccess": "审核已拒绝",
+    "rejectFailed": "拒绝失败",
+    "notFound": "审核任务不存在"
+  },
+  "token": {
+    "title": "API Tokens",
+    "createNew": "创建新 Token",
+    "empty": "还没有创建任何 Token",
+    "emptyHint": "点击上方按钮创建第一个 Token",
+    "name": "名称",
+    "prefix": "Token 前缀",
+    "createdAt": "创建时间",
+    "lastUsed": "最后使用",
+    "expiresAt": "过期时间",
+    "actions": "操作",
+    "delete": "删除",
+    "deleteTitle": "删除 Token",
+    "deleteDescription": "确定要删除 Token \"{{name}}\" 吗？此操作无法撤销。",
+    "deleteSuccess": "Token 已删除",
+    "deleteFailed": "删除失败",
+    "loading": "加载中..."
+  },
+  "apiError": {
+    "unauthorized": "登录已过期，请重新登录",
+    "forbidden": "没有权限执行此操作",
+    "notFound": "请求的资源不存在",
+    "serverError": "服务器错误，请稍后重试",
+    "networkError": "网络连接失败，请检查网络",
+    "unknown": "操作失败"
+  }
+}

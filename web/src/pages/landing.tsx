@@ -1,10 +1,16 @@
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
+import { useAuth } from '@/features/auth/use-auth'
+import { LanguageSwitcher } from '@/shared/components/language-switcher'
+import { UserMenu } from '@/shared/components/user-menu'
 import { Button } from '@/shared/ui/button'
 import { useEffect, useRef, useState } from 'react'
 
 export function LandingPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
+  const { user, isLoading } = useAuth()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [stats] = useState({
     skills: '1000+',
@@ -106,44 +112,66 @@ export function LandingPage() {
   }, [])
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 1 } })
+    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0 } })
   }
 
   const features = [
     {
       icon: '🔒',
-      title: '私有部署',
-      description: '完全自托管，数据主权在您手中。一键部署到您的基础设施，防火墙后安全运行。',
+      title: t('landing.featuresList.privateDeploy.title'),
+      description: t('landing.featuresList.privateDeploy.description'),
     },
     {
       icon: '📦',
-      title: '版本管理',
-      description: '语义化版本控制，自定义标签（beta、stable），自动追踪 latest 版本。',
+      title: t('landing.featuresList.versionControl.title'),
+      description: t('landing.featuresList.versionControl.description'),
     },
     {
       icon: '🔍',
-      title: '智能搜索',
-      description: '全文搜索，支持命名空间、下载量、评分、时间等多维度筛选。',
+      title: t('landing.featuresList.smartSearch.title'),
+      description: t('landing.featuresList.smartSearch.description'),
     },
     {
       icon: '👥',
-      title: '团队协作',
-      description: '命名空间管理，角色权限控制（Owner/Admin/Member），发布策略配置。',
+      title: t('landing.featuresList.teamwork.title'),
+      description: t('landing.featuresList.teamwork.description'),
     },
     {
       icon: '✅',
-      title: '审核治理',
-      description: '团队内审核，平台级审批，全流程审计日志，满足合规要求。',
+      title: t('landing.featuresList.governance.title'),
+      description: t('landing.featuresList.governance.description'),
     },
     {
       icon: '⚡',
-      title: 'CLI 优先',
-      description: '原生 REST API，兼容现有 ClawHub CLI 工具，无需客户端改动。',
+      title: t('landing.featuresList.cliFirst.title'),
+      description: t('landing.featuresList.cliFirst.description'),
     },
   ]
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
+      <header className="sticky top-0 z-50 border-b border-slate-700/30 bg-slate-950/60 backdrop-blur-lg">
+        <div className="container mx-auto flex items-center justify-between px-6 py-3">
+          <Link to="/" className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+            SkillHub
+          </Link>
+          <nav className="flex items-center gap-4 [&_button]:text-slate-200 [&_button:hover]:text-cyan-300 [&_svg]:text-slate-300">
+            <LanguageSwitcher />
+            {isLoading ? null : user ? (
+              <UserMenu user={user} />
+            ) : (
+              <Link
+                to="/login"
+                search={{ returnTo: '' }}
+                className="text-sm text-slate-200 hover:text-cyan-400 transition-colors"
+              >
+                {t('nav.login')}
+              </Link>
+            )}
+          </nav>
+        </div>
+      </header>
+
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"
@@ -157,21 +185,21 @@ export function LandingPage() {
         <div className="flex flex-col items-center text-center space-y-12 pt-20 pb-32">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 backdrop-blur-sm animate-fade-in">
             <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-sm text-cyan-300 font-medium">企业级技能注册中心</span>
+            <span className="text-sm text-cyan-300 font-medium">{t('landing.badge')}</span>
           </div>
 
           <div className="space-y-6 max-w-5xl">
-            <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight animate-fade-up">
+            <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-normal animate-fade-up">
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400">
                 SkillHub
               </span>
             </h1>
             <p className="text-2xl md:text-3xl text-slate-300 font-light leading-relaxed animate-fade-up delay-1">
-              发布、发现、管理
-              <span className="text-cyan-400 font-medium"> Agent 技能包</span>
+              {t('landing.tagline')}
+              <span className="text-cyan-400 font-medium">{t('landing.taglineHighlight')}</span>
             </p>
             <p className="text-lg text-slate-400 max-w-2xl mx-auto animate-fade-up delay-2">
-              自托管的私有技能注册平台，为团队提供安全、高效的技能共享与协作空间
+              {t('landing.description')}
             </p>
           </div>
 
@@ -188,9 +216,9 @@ export function LandingPage() {
             <Button
               size="lg"
               className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 hover:scale-105"
-              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 1 } })}
+              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })}
             >
-              探索技能
+              {t('landing.hero.exploreSkills')}
             </Button>
             <Button
               size="lg"
@@ -198,7 +226,7 @@ export function LandingPage() {
               className="border-2 border-slate-600 hover:border-cyan-500 text-slate-200 hover:text-cyan-300 font-semibold px-8 py-6 text-lg rounded-xl backdrop-blur-sm bg-slate-800/30 hover:bg-slate-800/50 transition-all duration-300"
               onClick={() => navigate({ to: '/dashboard/publish' })}
             >
-              发布技能
+              {t('landing.publishSkill')}
             </Button>
           </div>
 
@@ -209,9 +237,9 @@ export function LandingPage() {
                   {value}
                 </div>
                 <div className="text-sm md:text-base text-slate-400 mt-2 capitalize">
-                  {key === 'skills' && '技能包'}
-                  {key === 'downloads' && '下载量'}
-                  {key === 'teams' && '团队'}
+                  {key === 'skills' && t('landing.statsSkills')}
+                  {key === 'downloads' && t('landing.statsDownloads')}
+                  {key === 'teams' && t('landing.statsTeams')}
                 </div>
               </div>
             ))}
@@ -221,10 +249,10 @@ export function LandingPage() {
         <div className="py-20 space-y-16">
           <div className="text-center space-y-4 animate-fade-up">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-100">
-              为什么选择 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-400">SkillHub</span>
+              {t('landing.whyTitle')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-400">SkillHub</span>
             </h2>
             <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-              专为企业打造的技能管理平台，提供完整的发布、发现、治理能力
+              {t('landing.whyDescription')}
             </p>
           </div>
 
@@ -250,41 +278,21 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="py-20">
-          <div className="relative max-w-4xl mx-auto p-12 rounded-3xl bg-gradient-to-br from-cyan-500/10 to-violet-500/10 backdrop-blur-sm border border-cyan-500/30 text-center space-y-8 animate-fade-up">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 rounded-3xl blur-xl" />
-            <div className="relative space-y-6">
-              <h2 className="text-4xl md:text-5xl font-bold text-slate-100">
-                准备好开始了吗？
-              </h2>
-              <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-                一条命令即可启动本地开发环境，体验完整的技能管理流程
-              </p>
-              <div className="inline-block p-4 rounded-xl bg-slate-900/80 backdrop-blur-sm border border-slate-700/50">
-                <code className="text-cyan-400 text-lg font-mono">make dev-all</code>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 hover:scale-105"
-                  onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 1 } })}
-                >
-                  立即体验
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="relative z-10 border-t border-slate-800/50 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-slate-400 text-sm">
-            <div>© 2026 SkillHub. MIT License.</div>
+            <div>{t('landing.footerLicense')}</div>
             <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-cyan-400 transition-colors">文档</a>
-              <a href="#" className="hover:text-cyan-400 transition-colors">GitHub</a>
-              <a href="#" className="hover:text-cyan-400 transition-colors">社区</a>
+              <a
+                href="https://github.com/iflytek/skillhub"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-cyan-400 transition-colors"
+              >
+                {t('landing.footerGithub')}
+              </a>
             </div>
           </div>
         </div>

@@ -29,13 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @Profile("docker")
 public class DockerSeedDataRunner implements ApplicationRunner {
-
-    private static final String ADMIN_USER_ID = "docker-admin";
-    private static final String ADMIN_USERNAME = "admin";
-    private static final String ADMIN_PASSWORD = "Admin@2026";
-
     private static final Logger log = LoggerFactory.getLogger(DockerSeedDataRunner.class);
 
+    private final BootstrapAdminProperties bootstrapAdminProperties;
     private final UserAccountRepository userAccountRepository;
     private final LocalCredentialRepository localCredentialRepository;
     private final RoleRepository roleRepository;
@@ -44,13 +40,15 @@ public class DockerSeedDataRunner implements ApplicationRunner {
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DockerSeedDataRunner(UserAccountRepository userAccountRepository,
+    public DockerSeedDataRunner(BootstrapAdminProperties bootstrapAdminProperties,
+                                UserAccountRepository userAccountRepository,
                                 LocalCredentialRepository localCredentialRepository,
                                 RoleRepository roleRepository,
                                 UserRoleBindingRepository userRoleBindingRepository,
                                 NamespaceRepository namespaceRepository,
                                 NamespaceMemberRepository namespaceMemberRepository,
                                 PasswordEncoder passwordEncoder) {
+        this.bootstrapAdminProperties = bootstrapAdminProperties;
         this.userAccountRepository = userAccountRepository;
         this.localCredentialRepository = localCredentialRepository;
         this.roleRepository = roleRepository;
@@ -63,20 +61,36 @@ public class DockerSeedDataRunner implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (localCredentialRepository.existsByUsernameIgnoreCase(ADMIN_USERNAME)) {
+        if (!bootstrapAdminProperties.isEnabled()) {
+            log.info("Docker bootstrap admin is disabled");
+            return;
+        }
+        if (localCredentialRepository.existsByUsernameIgnoreCase(bootstrapAdminProperties.getUsername())) {
             log.info("Docker seed data already exists, skipping");
             return;
         }
 
         // 1. Create admin user account
-        UserAccount admin = userAccountRepository.findById(ADMIN_USER_ID)
+        UserAccount admin = userAccountRepository.findById(bootstrapAdminProperties.getUserId())
                 .orElseGet(() -> userAccountRepository.save(
-                        new UserAccount(ADMIN_USER_ID, "Admin", "admin@skillhub.dev", null)
+                        new UserAccount(
+                                bootstrapAdminProperties.getUserId(),
+                                bootstrapAdminProperties.getDisplayName(),
+                                bootstrapAdminProperties.getEmail(),
+                                null
+                        )
                 ));
+        admin.setDisplayName(bootstrapAdminProperties.getDisplayName());
+        admin.setEmail(bootstrapAdminProperties.getEmail());
+        admin = userAccountRepository.save(admin);
 
         // 2. Create local credential (username/password)
         localCredentialRepository.save(
-                new LocalCredential(admin.getId(), ADMIN_USERNAME, passwordEncoder.encode(ADMIN_PASSWORD))
+                new LocalCredential(
+                        admin.getId(),
+                        bootstrapAdminProperties.getUsername(),
+                        passwordEncoder.encode(bootstrapAdminProperties.getPassword())
+                )
         );
 
         // 3. Assign SUPER_ADMIN role
@@ -95,6 +109,6 @@ public class DockerSeedDataRunner implements ApplicationRunner {
             namespaceMemberRepository.save(new NamespaceMember(globalNs.getId(), admin.getId(), NamespaceRole.OWNER));
         }
 
-        log.info("Docker seed data initialized — admin account: {} / {}", ADMIN_USERNAME, ADMIN_PASSWORD);
+        log.info("Docker seed data initialized for admin account: {}", bootstrapAdminProperties.getUsername());
     }
 }

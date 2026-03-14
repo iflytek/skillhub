@@ -1,7 +1,7 @@
 {
   "name": "skillhub-web",
   "private": true,
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.7",
   "type": "module",
   "scripts": {
     "install:ci": "pnpm install --frozen-lockfile",
@@ -13,19 +13,24 @@
     "generate-api": "openapi-typescript http://localhost:8080/v3/api-docs -o src/api/generated/schema.d.ts"
   },
   "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@tanstack/react-query": "^5.64.0",
     "@tanstack/react-router": "^1.95.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "i18next": "^25.8.18",
+    "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^0.344.0",
     "openapi-fetch": "^0.13.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^15.0.0",
+    "react-i18next": "^16.5.8",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^2.2.1",
     "zustand": "^5.0.11"
   },

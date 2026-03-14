@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { tokenApi } from '@/api/client'
 import {
@@ -13,6 +14,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
+import { toast } from '@/shared/lib/toast'
 import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
 
 interface CreateTokenDialogProps {
@@ -20,6 +22,7 @@ interface CreateTokenDialogProps {
 }
 
 export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [createdToken, setCreatedToken] = useState<CreateTokenResponse | null>(null)
@@ -46,6 +49,18 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
     createMutation.reset()
   }
 
+  const handleCopyToken = async () => {
+    if (!createdToken) return
+
+    try {
+      await navigator.clipboard.writeText(createdToken.token)
+      toast.success(t('createToken.copySuccess'))
+    } catch (error) {
+      console.error('Failed to copy token:', error)
+      toast.error(t('createToken.copyFailed'))
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -53,17 +68,17 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
         {!createdToken ? (
           <>
             <DialogHeader>
-              <DialogTitle>创建 API Token</DialogTitle>
+              <DialogTitle>{t('createToken.title')}</DialogTitle>
               <DialogDescription>
-                创建一个新的 API Token 用于 CLI 或 API 访问
+                {t('createToken.description')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="token-name">Token 名称</Label>
+                <Label htmlFor="token-name">{t('createToken.nameLabel')}</Label>
                 <Input
                   id="token-name"
-                  placeholder="例如: my-cli-token"
+                  placeholder={t('createToken.namePlaceholder')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => {
@@ -76,46 +91,42 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
-                取消
+                {t('dialog.cancel')}
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={!name.trim() || createMutation.isPending}
               >
-                {createMutation.isPending ? '创建中...' : '创建'}
+                {createMutation.isPending ? t('createToken.creating') : t('createToken.create')}
               </Button>
             </DialogFooter>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Token 创建成功</DialogTitle>
+              <DialogTitle>{t('createToken.successTitle')}</DialogTitle>
               <DialogDescription>
-                请立即复制并保存此 Token，它只会显示一次
+                {t('createToken.successDescription')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Token</Label>
+                <Label>{t('createToken.tokenLabel')}</Label>
                 <div className="rounded-md bg-muted p-3 font-mono text-sm break-all">
                   {createdToken.token}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>名称</Label>
+                <Label>{t('createToken.nameDisplay')}</Label>
                 <div className="text-sm">{createdToken.name}</div>
               </div>
             </div>
             <DialogFooter>
-              <Button
-                onClick={() => {
-                  navigator.clipboard.writeText(createdToken.token)
-                }}
-              >
-                复制 Token
+              <Button onClick={handleCopyToken}>
+                {t('createToken.copyToken')}
               </Button>
               <Button variant="outline" onClick={handleClose}>
-                关闭
+                {t('dialog.close')}
               </Button>
             </DialogFooter>
           </>

@@ -1,4 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
@@ -8,12 +9,13 @@ import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { Button } from '@/shared/ui/button'
 
 export function SearchPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const searchParams = useSearch({ from: '/search' })
 
   const q = searchParams.q || ''
   const sort = searchParams.sort || 'relevance'
-  const page = searchParams.page || 1
+  const page = searchParams.page ?? 0
 
   const { data, isLoading } = useSearchSkills({
     q,
@@ -23,11 +25,11 @@ export function SearchPage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort, page: 1 } })
+    navigate({ to: '/search', search: { q: query, sort, page: 0 } })
   }
 
   const handleSortChange = (newSort: string) => {
-    navigate({ to: '/search', search: { q, sort: newSort, page: 1 } })
+    navigate({ to: '/search', search: { q, sort: newSort, page: 0 } })
   }
 
   const handlePageChange = (newPage: number) => {
@@ -35,7 +37,7 @@ export function SearchPage() {
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
+    navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   const totalPages = data ? Math.ceil(data.total / data.size) : 0
@@ -50,35 +52,35 @@ export function SearchPage() {
       {/* Sort Selector */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">排序:</span>
+          <span className="text-sm font-medium text-muted-foreground">{t('search.sort.label')}</span>
           <div className="flex gap-2">
             <Button
               variant={sort === 'relevance' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSortChange('relevance')}
             >
-              相关性
+              {t('search.sort.relevance')}
             </Button>
             <Button
               variant={sort === 'downloads' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSortChange('downloads')}
             >
-              下载量
+              {t('search.sort.downloads')}
             </Button>
             <Button
               variant={sort === 'newest' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleSortChange('newest')}
             >
-              最新
+              {t('search.sort.newest')}
             </Button>
           </div>
         </div>
 
         {data && data.total > 0 && (
           <div className="text-sm text-muted-foreground">
-            找到 <span className="text-primary font-semibold">{data.total}</span> 个结果
+            {t('search.results', { count: data.total })}
           </div>
         )}
       </div>
@@ -108,8 +110,8 @@ export function SearchPage() {
         </>
       ) : (
         <EmptyState
-          title="未找到结果"
-          description={q ? `没有找到与 "${q}" 相关的技能` : '请输入搜索关键词'}
+          title={t('search.noResults')}
+          description={q ? t('search.noResultsFor', { q }) : t('search.enterKeyword')}
         />
       )}
     </div>

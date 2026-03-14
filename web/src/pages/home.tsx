@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
@@ -6,6 +7,7 @@ import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { Button } from '@/shared/ui/button'
 
 export function HomePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
@@ -19,11 +21,11 @@ export function HomePage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 1 } })
+    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0 } })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
+    navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   return (
@@ -31,14 +33,14 @@ export function HomePage() {
       {/* Hero Section */}
       <div className="text-center space-y-8 py-16 animate-fade-up">
         <div className="space-y-4">
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold font-display text-gradient-hero leading-tight">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold font-heading text-gradient-hero leading-tight">
             SkillHub
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground font-light max-w-2xl mx-auto">
-            现代化的技能注册中心
+            {t('home.subtitle')}
           </p>
           <p className="text-base text-muted-foreground/80 max-w-xl mx-auto">
-            为开发者提供高效的技能管理、分发和协作平台
+            {t('home.description')}
           </p>
         </div>
 
@@ -47,11 +49,11 @@ export function HomePage() {
         </div>
 
         <div className="flex items-center justify-center gap-4 animate-fade-up delay-2">
-          <Button size="lg" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 1 } })}>
-            浏览技能
+          <Button size="lg" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })}>
+            {t('home.browseSkills')}
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate({ to: '/dashboard/publish' })}>
-            发布技能
+            {t('home.publishSkill')}
           </Button>
         </div>
       </div>
@@ -60,14 +62,14 @@ export function HomePage() {
       <section className="space-y-6 animate-fade-up delay-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold font-heading text-foreground mb-2">热门下载</h2>
-            <p className="text-muted-foreground">社区最受欢迎的技能</p>
+            <h2 className="text-3xl font-bold font-heading text-foreground mb-2">{t('home.popularTitle')}</h2>
+            <p className="text-muted-foreground">{t('home.popularDescription')}</p>
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 1 } })}
+            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0 } })}
           >
-            查看全部 →
+            {t('home.viewAll')}
           </Button>
         </div>
         {isLoadingPopular ? (
@@ -90,14 +92,14 @@ export function HomePage() {
       <section className="space-y-6 animate-fade-up delay-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold font-heading text-foreground mb-2">最新发布</h2>
-            <p className="text-muted-foreground">刚刚发布的新技能</p>
+            <h2 className="text-3xl font-bold font-heading text-foreground mb-2">{t('home.latestTitle')}</h2>
+            <p className="text-muted-foreground">{t('home.latestDescription')}</p>
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 1 } })}
+            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0 } })}
           >
-            查看全部 →
+            {t('home.viewAll')}
           </Button>
         </div>
         {isLoadingLatest ? (

@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.controller.portal;
 
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,7 +54,9 @@ class SkillControllerDownloadTest {
                 "https://download.example/presigned"
             ));
 
-        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download"))
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .with(user("test-user"))
+                .with(csrf()))
             .andExpect(status().isFound())
             .andExpect(header().string("Location", "https://download.example/presigned"));
     }
@@ -68,8 +72,21 @@ class SkillControllerDownloadTest {
                 null
             ));
 
-        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download"))
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .with(user("test-user"))
+                .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-1.0.0.zip\""));
+    }
+
+    @Test
+    void downloadVersion_requiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .with(csrf()))
+            .andDo(result -> {
+                System.out.println("Status: " + result.getResponse().getStatus());
+                System.out.println("Body: " + result.getResponse().getContentAsString());
+            })
+            .andExpect(status().isUnauthorized());
     }
 }

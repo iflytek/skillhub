@@ -95,7 +95,7 @@ Public API 的可见性规则：
 - `parsedMetadataJson`：`SKILL.md` frontmatter 的完整 JSON 序列化结果
 - `manifestJson`：版本文件清单摘要 JSON
 
-## 7.2 Auth API（OAuth2 登录相关）
+## 7.2 Auth API（登录与会话相关）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -104,6 +104,9 @@ Public API 的可见性规则：
 | GET | `/api/v1/auth/me` | 当前用户信息（未登录返回 401） |
 | POST | `/api/v1/auth/logout` | 登出（清除 Session） |
 | GET | `/api/v1/auth/providers` | 可用的 OAuth Provider 列表（前端渲染登录按钮用） |
+| GET | `/api/v1/auth/methods` | 统一登录方式目录（密码/OAuth/direct/bootstrap 元数据） |
+| POST | `/api/v1/auth/direct/login` | 显式走直连认证 provider 的兼容登录入口（默认关闭） |
+| POST | `/api/v1/auth/session/bootstrap` | 显式尝试用外部被动会话换取 skillhub Session（默认关闭） |
 
 `/api/v1/auth/providers` 响应示例：
 
@@ -120,6 +123,74 @@ Public API 的可见性规则：
 ```
 
 前端根据此接口动态渲染登录按钮，新增 Provider 无需改前端代码。
+
+`/api/v1/auth/methods` 返回统一登录方式目录。典型项包括：
+
+- `PASSWORD`：现有本地账号密码登录
+- `OAUTH_REDIRECT`：OAuth 跳转登录
+- `DIRECT_PASSWORD`：默认关闭的直连认证兼容入口
+- `SESSION_BOOTSTRAP`：默认关闭的被动会话引导入口
+
+示例：
+
+```json
+{
+  "code": 0,
+  "msg": "获取成功",
+  "data": [
+    {
+      "id": "local-password",
+      "methodType": "PASSWORD",
+      "provider": "local",
+      "displayName": "Local Account",
+      "actionUrl": "/api/v1/auth/local/login"
+    },
+    {
+      "id": "oauth-github",
+      "methodType": "OAUTH_REDIRECT",
+      "provider": "github",
+      "displayName": "GitHub",
+      "actionUrl": "/oauth2/authorization/github"
+    }
+  ],
+  "timestamp": "2026-03-12T06:00:00Z",
+  "requestId": "req-123"
+}
+```
+
+`/api/v1/auth/session/bootstrap` 请求示例：
+
+```json
+{
+  "provider": "private-sso"
+}
+```
+
+`/api/v1/auth/session/bootstrap` 协议约束：
+
+- 开源版默认关闭，需显式开启 `skillhub.auth.session-bootstrap.enabled=true`
+- 关闭时返回 `403`
+- provider 不存在时返回 `400`
+- 外部会话不存在或校验失败时返回 `401`
+- 成功时返回与 `/api/v1/auth/me` 相同的用户结构，并建立标准 Session
+
+`/api/v1/auth/direct/login` 请求示例：
+
+```json
+{
+  "provider": "private-sso",
+  "username": "alice",
+  "password": "secret"
+}
+```
+
+`/api/v1/auth/direct/login` 协议约束：
+
+- 开源版默认关闭，需显式开启 `skillhub.auth.direct.enabled=true`
+- 关闭时返回 `403`
+- provider 不存在时返回 `400`
+- 成功时返回与 `/api/v1/auth/me` 相同的用户结构，并建立标准 Session
+- `/api/v1/auth/local/login` 继续保留，作为现有本地账号入口
 
 ## 7.3 Authenticated API（需登录）
 
@@ -165,6 +236,11 @@ Public API 的可见性规则：
 - `fileCount`
 - `totalSize`
 
+发布状态约束：
+
+- 普通用户发布成功后，`status` 为 `PENDING_REVIEW`
+- 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/cli/publish`、`/api/compat/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
+
 ## 7.4 Token API（需登录）
 
 | 方法 | 路径 | 说明 |
@@ -178,7 +254,7 @@ Public API 的可见性规则：
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/v1/cli/whoami` | 当前 Bearer Token 对应的用户信息 |
-| POST | `/api/v1/cli/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流） |
+| POST | `/api/v1/cli/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流；`SUPER_ADMIN` 始终直发） |
 | GET | `/api/v1/cli/resolve/{namespace}/{slug}` | 解析版本 |
 | GET | `/api/v1/cli/check/{namespace}/{slug}/{version}` | 本地哈希与远端比对 |
 
@@ -333,7 +409,7 @@ GET /.well-known/clawhub.json
 | GET | `/api/compat/v1/search` | 搜索技能 |
 | GET | `/api/compat/v1/resolve` | 通过 slug + version 解析版本 |
 | GET | `/api/compat/v1/download/{slug}/{version}` | 下载技能 zip 包 |
-| POST | `/api/compat/v1/publish` | 发布技能（multipart/form-data） |
+| POST | `/api/compat/v1/publish` | 发布技能（multipart/form-data，`SUPER_ADMIN` 直发） |
 
 ### 兼容层请求/响应格式
 

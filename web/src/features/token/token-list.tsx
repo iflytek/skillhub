@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { tokenApi } from '@/api/client'
 import { Button } from '@/shared/ui/button'
 import {
@@ -10,10 +12,16 @@ import {
   TableRow,
 } from '@/shared/ui/table'
 import { CreateTokenDialog } from './create-token-dialog'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/lib/toast'
 import type { ApiToken } from '@/api/types'
 
 export function TokenList() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; tokenId?: number; name?: string }>({
+    open: false,
+  })
 
   const { data: tokens, isLoading } = useQuery<ApiToken[]>({
     queryKey: ['tokens'],
@@ -24,12 +32,20 @@ export function TokenList() {
     mutationFn: (tokenId: number) => tokenApi.deleteToken(tokenId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
+      toast.success(t('token.deleteSuccess'))
+    },
+    onError: () => {
+      toast.error(t('token.deleteFailed'))
     },
   })
 
   const handleDelete = (tokenId: number, name: string) => {
-    if (window.confirm(`确定要删除 Token "${name}" 吗？`)) {
-      deleteMutation.mutate(tokenId)
+    setDeleteDialog({ open: true, tokenId, name })
+  }
+
+  const confirmDelete = async () => {
+    if (deleteDialog.tokenId) {
+      deleteMutation.mutate(deleteDialog.tokenId)
     }
   }
 
@@ -39,34 +55,34 @@ export function TokenList() {
   }
 
   if (isLoading) {
-    return <div className="text-center py-8 text-muted-foreground">加载中...</div>
+    return <div className="text-center py-8 text-muted-foreground">{t('token.loading')}</div>
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">API Tokens</h2>
+        <h2 className="text-xl font-semibold">{t('token.title')}</h2>
         <CreateTokenDialog>
-          <Button>创建新 Token</Button>
+          <Button>{t('token.createNew')}</Button>
         </CreateTokenDialog>
       </div>
 
       {!tokens || tokens.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>还没有创建任何 Token</p>
-          <p className="text-sm mt-2">点击上方按钮创建第一个 Token</p>
+          <p>{t('token.empty')}</p>
+          <p className="text-sm mt-2">{t('token.emptyHint')}</p>
         </div>
       ) : (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>名称</TableHead>
-                <TableHead>Token 前缀</TableHead>
-                <TableHead>创建时间</TableHead>
-                <TableHead>最后使用</TableHead>
-                <TableHead>过期时间</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead>{t('token.name')}</TableHead>
+                <TableHead>{t('token.prefix')}</TableHead>
+                <TableHead>{t('token.createdAt')}</TableHead>
+                <TableHead>{t('token.lastUsed')}</TableHead>
+                <TableHead>{t('token.expiresAt')}</TableHead>
+                <TableHead className="text-right">{t('token.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -88,7 +104,7 @@ export function TokenList() {
                       onClick={() => handleDelete(token.id, token.name)}
                       disabled={deleteMutation.isPending}
                     >
-                      删除
+                      {t('token.delete')}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -97,6 +113,16 @@ export function TokenList() {
           </Table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+        title={t('token.deleteTitle')}
+        description={t('token.deleteDescription', { name: deleteDialog.name })}
+        confirmText={t('dialog.delete')}
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

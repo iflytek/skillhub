@@ -16,11 +16,49 @@ import type {
   AdminUser,
   AuditLogItem,
   SkillSummary,
+  AuthMethod,
   OAuthProvider,
   User,
 } from './types'
+import { ApiError } from '@/shared/lib/api-error'
 
-const client = createClient<paths>({ baseUrl: '' })
+export { ApiError }
+
+type RuntimeConfig = {
+  apiBaseUrl?: string
+  appBaseUrl?: string
+  authDirectEnabled?: string
+  authDirectProvider?: string
+  authSessionBootstrapEnabled?: string
+  authSessionBootstrapProvider?: string
+  authSessionBootstrapAuto?: string
+}
+
+declare global {
+  interface Window {
+    __SKILLHUB_RUNTIME_CONFIG__?: RuntimeConfig
+  }
+}
+
+function getRuntimeConfig(): RuntimeConfig {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  return window.__SKILLHUB_RUNTIME_CONFIG__ ?? {}
+}
+
+function getApiBaseUrl(): string {
+  return getRuntimeConfig().apiBaseUrl ?? ''
+}
+
+function parseBooleanFlag(value: string | undefined): boolean {
+  if (!value) {
+    return false
+  }
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+const client = createClient<paths>({ baseUrl: getApiBaseUrl() })
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)
@@ -57,17 +95,17 @@ function hasDataProperty<T>(value: unknown): value is { data: T } {
 async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
   const { data, error, response } = await promise
   if (response.status === 401) {
-    throw new Error('HTTP 401')
+    throw new ApiError('HTTP 401', 401)
   }
   if (error) {
-    throw new Error(`HTTP ${response.status}`)
+    throw new ApiError(`HTTP ${response.status}`, response.status)
   }
   if (data === undefined) {
-    throw new Error(`HTTP ${response.status}`)
+    throw new ApiError(`HTTP ${response.status}`, response.status)
   }
   if (isApiEnvelope<T>(data)) {
     if (data.code !== 0) {
-      throw new Error(data.msg || `HTTP ${response.status}`)
+      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg)
     }
     return data.data
   }
@@ -81,6 +119,36 @@ export function getCsrfHeaders(headers?: HeadersInit): HeadersInit {
   return withCsrf(headers)
 }
 
+export type SessionBootstrapRuntimeConfig = {
+  enabled: boolean
+  provider?: string
+  auto: boolean
+}
+
+export type DirectAuthRuntimeConfig = {
+  enabled: boolean
+  provider?: string
+}
+
+export function getDirectAuthRuntimeConfig(): DirectAuthRuntimeConfig {
+  const config = getRuntimeConfig()
+  const provider = config.authDirectProvider?.trim()
+  return {
+    enabled: parseBooleanFlag(config.authDirectEnabled) && !!provider,
+    provider: provider || undefined,
+  }
+}
+
+export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfig {
+  const config = getRuntimeConfig()
+  const provider = config.authSessionBootstrapProvider?.trim()
+  return {
+    enabled: parseBooleanFlag(config.authSessionBootstrapEnabled) && !!provider,
+    provider: provider || undefined,
+    auto: parseBooleanFlag(config.authSessionBootstrapAuto),
+  }
+}
+
 type ApiEnvelope<T> = {
   code: number
   msg: string
@@ -90,31 +158,49 @@ type ApiEnvelope<T> = {
 }
 
 export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init)
+  let response: Response
+  try {
+    response = await fetch(withBaseUrl(input), init)
+  } catch {
+    throw new ApiError('Network error', 0)
+  }
+
   let json: ApiEnvelope<T> | null = null
 
   try {
     json = (await response.json()) as ApiEnvelope<T>
   } catch {
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      throw new ApiError(`HTTP ${response.status}`, response.status)
     }
-    throw new Error('Invalid JSON response')
+    throw new ApiError('Invalid JSON response', response.status)
   }
 
   if (!response.ok || json.code !== 0) {
-    throw new Error(json.msg || `HTTP ${response.status}`)
+    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg)
   }
 
   return json.data
 }
 
 export async function fetchText(input: RequestInfo | URL, init?: RequestInit): Promise<string> {
-  const response = await fetch(input, init)
+  const response = await fetch(withBaseUrl(input), init)
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
   }
   return response.text()
+}
+
+function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
+  const baseUrl = getApiBaseUrl()
+  if (!baseUrl || typeof input !== 'string' || !input.startsWith('/')) {
+    return input
+  }
+  return new URL(input, ensureTrailingSlash(baseUrl))
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`
 }
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -127,7 +213,7 @@ export async function getCurrentUser(): Promise<User | null> {
       platformRoles: user.platformRoles ?? [],
     }
   } catch (error) {
-    if (error instanceof Error && error.message === 'HTTP 401') {
+    if (error instanceof ApiError && error.status === 401) {
       return null
     }
     throw error
@@ -149,6 +235,21 @@ export const authApi = {
         id: provider.id!,
         name: provider.name!,
         authorizationUrl: provider.authorizationUrl!,
+      }))
+  },
+
+  async getMethods(returnTo?: string): Promise<AuthMethod[]> {
+    const query = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
+    const methods = await fetchJson<AuthMethod[]>(`/api/v1/auth/methods${query}`)
+    return methods
+      .filter((method) => method.id && method.methodType && method.provider && method.displayName && method.actionUrl)
+      .map((method) => ({
+        ...method,
+        id: method.id,
+        methodType: method.methodType,
+        provider: method.provider,
+        displayName: method.displayName,
+        actionUrl: method.actionUrl,
       }))
   },
 
@@ -190,6 +291,30 @@ export const authApi = {
     if (response.status !== 200 && response.status !== 204) {
       throw new Error(`HTTP ${response.status}`)
     }
+  },
+
+  async bootstrapSession(provider: string): Promise<User> {
+    return fetchJson<User>('/api/v1/auth/session/bootstrap', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ provider }),
+    })
+  },
+
+  async directLogin(provider: string, request: LocalLoginRequest): Promise<User> {
+    return fetchJson<User>('/api/v1/auth/direct/login', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        provider,
+        username: request.username,
+        password: request.password,
+      }),
+    })
   },
 }
 
@@ -260,17 +385,14 @@ export const tokenApi = {
   },
 
   async deleteToken(tokenId: number): Promise<void> {
-    const { response, error } = await client.DELETE('/api/v1/tokens/{id}', {
+    await unwrap(client.DELETE('/api/v1/tokens/{id}', {
       params: {
         path: {
           id: tokenId,
         },
       },
       headers: withCsrf(),
-    })
-    if (error || response.status !== 204) {
-      throw new Error(`HTTP ${response.status}`)
-    }
+    }) as never)
   },
 }
 

@@ -1,11 +1,16 @@
 import { useParams } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { useNamespaceDetail, useNamespaceMembers } from '@/shared/hooks/use-skill-queries'
 
 export function NamespaceMembersPage() {
-  const { slug } = useParams({ from: '/dashboard/namespaces/$slug/members' })
+  const translation = useTranslation()
+  const t = translation.t
+  const language = translation.i18n.language
+  const params = useParams({ from: '/dashboard/namespaces/$slug/members' })
+  const slug = params.slug
 
   const { data: namespace, isLoading: isLoadingNamespace } = useNamespaceDetail(slug)
   const { data: members, isLoading: isLoadingMembers } = useNamespaceMembers(slug)
@@ -22,7 +27,7 @@ export function NamespaceMembersPage() {
   if (!namespace) {
     return (
       <div className="text-center py-20 animate-fade-up">
-        <h2 className="text-2xl font-bold font-heading mb-2">命名空间不存在</h2>
+        <h2 className="text-2xl font-bold font-heading mb-2">{t('members.namespaceNotFound')}</h2>
       </div>
     )
   }
@@ -33,8 +38,8 @@ export function NamespaceMembersPage() {
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold font-heading">成员管理</h2>
-          <Button disabled>添加成员</Button>
+          <h2 className="text-2xl font-bold font-heading">{t('members.title')}</h2>
+          <Button disabled>{t('members.addMember')}</Button>
         </div>
 
         {isLoadingMembers ? (
@@ -49,10 +54,10 @@ export function NamespaceMembersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border/40">
-                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">用户 ID</th>
-                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">角色</th>
-                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">加入时间</th>
-                    <th className="text-right p-4 font-medium font-heading text-sm text-muted-foreground">操作</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colUserId')}</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colRole')}</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colJoinedAt')}</th>
+                    <th className="text-right p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -65,11 +70,11 @@ export function NamespaceMembersPage() {
                         </span>
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
-                        {new Date(member.createdAt).toLocaleDateString('zh-CN')}
+                        {new Date(member.createdAt).toLocaleDateString(language)}
                       </td>
                       <td className="p-4 text-right">
                         <Button variant="destructive" size="sm" disabled>
-                          移除
+                          {t('members.remove')}
                         </Button>
                       </td>
                     </tr>
@@ -80,7 +85,7 @@ export function NamespaceMembersPage() {
           </Card>
         ) : (
           <Card className="p-6 text-center text-muted-foreground">
-            暂无成员
+            {t('members.empty')}
           </Card>
         )}
       </div>

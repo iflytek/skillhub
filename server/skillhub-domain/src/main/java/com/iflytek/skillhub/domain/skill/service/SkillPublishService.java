@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -49,9 +50,9 @@ public class SkillPublishService {
     private final SkillPackageValidator skillPackageValidator;
     private final SkillMetadataParser skillMetadataParser;
     private final PrePublishValidator prePublishValidator;
-    private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SkillPublishService(
             NamespaceRepository namespaceRepository,
@@ -63,9 +64,9 @@ public class SkillPublishService {
             SkillPackageValidator skillPackageValidator,
             SkillMetadataParser skillMetadataParser,
             PrePublishValidator prePublishValidator,
-            ApplicationEventPublisher eventPublisher,
             ObjectMapper objectMapper,
-            ReviewTaskRepository reviewTaskRepository) {
+            ReviewTaskRepository reviewTaskRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.skillRepository = skillRepository;
@@ -75,9 +76,9 @@ public class SkillPublishService {
         this.skillPackageValidator = skillPackageValidator;
         this.skillMetadataParser = skillMetadataParser;
         this.prePublishValidator = prePublishValidator;
-        this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -85,15 +86,20 @@ public class SkillPublishService {
             String namespaceSlug,
             List<PackageEntry> entries,
             String publisherId,
-            SkillVisibility visibility) {
+            SkillVisibility visibility,
+            java.util.Set<String> platformRoles) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
 
-        // 2. Check publisher is member
-        namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
+        boolean isSuperAdmin = platformRoles.contains("SUPER_ADMIN");
+
+        // 2. Check publisher is member unless SUPER_ADMIN short-circuits permission checks
+        if (!isSuperAdmin) {
+            namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
+                    .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
+        }
 
         // 3. Validate package
         ValidationResult packageValidation = skillPackageValidator.validate(entries);
@@ -112,7 +118,9 @@ public class SkillPublishService {
         String skillMdContent = new String(skillMd.content());
         SkillMetadata metadata = skillMetadataParser.parse(skillMdContent);
         if (metadata.version() == null || metadata.version().isBlank()) {
-            throw new DomainBadRequestException("error.skill.metadata.requiredField.missing", "version");
+            String autoVersion = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"));
+            metadata = new SkillMetadata(metadata.name(), metadata.description(), autoVersion, metadata.body(), metadata.frontmatter());
         }
         String skillSlug = SlugValidator.slugify(metadata.name());
 
@@ -141,7 +149,13 @@ public class SkillPublishService {
 
         // 8. Create SkillVersion
         SkillVersion version = new SkillVersion(skill.getId(), metadata.version(), publisherId);
-        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        boolean autoPublish = isSuperAdmin;
+        if (autoPublish) {
+            version.setStatus(SkillVersionStatus.PUBLISHED);
+            version.setPublishedAt(LocalDateTime.now());
+        } else {
+            version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        }
 
         // Store metadata as JSON
         try {
@@ -213,8 +227,25 @@ public class SkillPublishService {
         version.setTotalSize(totalSize);
         skillVersionRepository.save(version);
 
-        // 12. Return published identifiers. Published-facing skill metadata is
-        // advanced only when review approval promotes this version to PUBLISHED.
+        if (!autoPublish) {
+            ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
+            reviewTaskRepository.save(reviewTask);
+        }
+
+        // 12. Update skill metadata and move the published pointer for auto-publish flows
+        skill.setDisplayName(metadata.name());
+        skill.setSummary(metadata.description());
+        if (autoPublish) {
+            skill.setLatestVersionId(version.getId());
+        }
+        skill.setUpdatedBy(publisherId);
+        skillRepository.save(skill);
+
+        if (autoPublish) {
+            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
+        }
+
+        // 13. Return identifiers for the created version
         return new PublishResult(skill.getId(), skill.getSlug(), version);
     }
 

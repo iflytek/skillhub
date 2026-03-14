@@ -1,6 +1,7 @@
 server:
   port: 8080
   shutdown: graceful
+  forward-headers-strategy: framework
   servlet:
     session:
       cookie:
@@ -27,19 +28,20 @@ spring:
     enabled: true
     locations: classpath:db/migration
   datasource:
-    url: jdbc:postgresql://localhost:5432/skillhub
-    username: skillhub
-    password: skillhub_dev
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/skillhub}
+    username: ${SPRING_DATASOURCE_USERNAME:skillhub}
+    password: ${SPRING_DATASOURCE_PASSWORD:skillhub_dev}
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: ${SPRING_DATA_REDIS_HOST:${REDIS_HOST:localhost}}
+      port: ${SPRING_DATA_REDIS_PORT:${REDIS_PORT:6379}}
+      password: ${SPRING_DATA_REDIS_PASSWORD:${REDIS_PASSWORD:}}
   session:
     store-type: redis
     redis:
-      namespace: skillhub:session
+      namespace: ${SESSION_REDIS_NAMESPACE:skillhub:session}
   security:
     oauth2:
       client:
@@ -57,12 +59,29 @@ spring:
       max-request-size: 100MB
 
 skillhub:
+  auth:
+    direct:
+      enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
+    session-bootstrap:
+      enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
+  public:
+    base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
     mode: OPEN
   storage:
-    provider: local
+    provider: ${SKILLHUB_STORAGE_PROVIDER:local}
     local:
       base-path: ${STORAGE_BASE_PATH:/tmp/skillhub-storage}
+    s3:
+      endpoint: ${SKILLHUB_STORAGE_S3_ENDPOINT:}
+      public-endpoint: ${SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT:}
+      bucket: ${SKILLHUB_STORAGE_S3_BUCKET:skillhub}
+      access-key: ${SKILLHUB_STORAGE_S3_ACCESS_KEY:}
+      secret-key: ${SKILLHUB_STORAGE_S3_SECRET_KEY:}
+      region: ${SKILLHUB_STORAGE_S3_REGION:us-east-1}
+      force-path-style: ${SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE:true}
+      auto-create-bucket: ${SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET:false}
+      presign-expiry: ${SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY:PT10M}
   search:
     engine: postgres
     rebuild-on-startup: false
@@ -70,7 +89,17 @@ skillhub:
     max-file-count: 100
     max-single-file-size: 1048576  # 1MB
     max-package-size: 104857600  # 100MB
-    allowed-file-extensions: .py,.json,.yaml,.yml,.txt,.md,.sh
+    allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.js,.ts,.py,.sh,.png,.jpg,.svg
+  device-auth:
+    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+      user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
+      username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
+      display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:Admin}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
 
 management:
   endpoints:
@@ -86,18 +115,3 @@ management:
     export:
       prometheus:
         enabled: true
-
----
-# Docker profile
-spring:
-  config:
-    activate:
-      on-profile: docker
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:skillhub}
-    username: ${DB_USER:skillhub}
-    password: ${DB_PASS:skillhub_dev}
-  data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}

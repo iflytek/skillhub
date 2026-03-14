@@ -13,7 +13,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://server:8080;
+        proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -21,24 +21,33 @@ server {
     }
 
     location /oauth2/ {
-        proxy_pass http://server:8080;
+        proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /login/oauth2/ {
-        proxy_pass http://server:8080;
+        proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /.well-known/ {
-        proxy_pass http://server:8080;
+        proxy_pass ${SKILLHUB_API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+    }
+
+    location = /runtime-config.js {
+        add_header Cache-Control "no-store";
+        try_files $uri =404;
     }
 
     location /nginx-health {

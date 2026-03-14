@@ -15,6 +15,14 @@ export type OAuthProvider = Omit<components['schemas']['AuthProviderResponse'], 
   authorizationUrl: string
 }
 
+export interface AuthMethod {
+  id: string
+  methodType: 'PASSWORD' | 'OAUTH_REDIRECT' | 'DIRECT_PASSWORD' | 'SESSION_BOOTSTRAP' | string
+  provider: string
+  displayName: string
+  actionUrl: string
+}
+
 export type ApiToken = Omit<components['schemas']['TokenSummaryResponse'], 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
   id: number
   name: string

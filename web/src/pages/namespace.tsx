@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
@@ -6,8 +7,9 @@ import { EmptyState } from '@/shared/components/empty-state'
 import { useNamespaceDetail, useSearchSkills } from '@/shared/hooks/use-skill-queries'
 
 export function NamespacePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const { namespace } = useParams({ from: '/@$namespace' })
+  const { namespace } = useParams({ from: '/space/$namespace' })
 
   const { data: namespaceData, isLoading: isLoadingNamespace } = useNamespaceDetail(namespace)
   const { data: skillsData, isLoading: isLoadingSkills } = useSearchSkills({
@@ -16,7 +18,7 @@ export function NamespacePage() {
   })
 
   const handleSkillClick = (slug: string) => {
-    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
+    navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   if (isLoadingNamespace) {
@@ -29,7 +31,7 @@ export function NamespacePage() {
   }
 
   if (!namespaceData) {
-    return <EmptyState title="命名空间不存在" />
+    return <EmptyState title={t('namespace.notFound')} />
   }
 
   return (
@@ -37,7 +39,7 @@ export function NamespacePage() {
       <NamespaceHeader namespace={namespaceData} />
 
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold font-heading">技能列表</h2>
+        <h2 className="text-2xl font-bold font-heading">{t('namespace.skillList')}</h2>
         {isLoadingSkills ? (
           <SkeletonList count={6} />
         ) : skillsData && skillsData.items.length > 0 ? (
@@ -53,8 +55,8 @@ export function NamespacePage() {
           </div>
         ) : (
           <EmptyState
-            title="暂无技能"
-            description="该命名空间下还没有发布任何技能"
+            title={t('namespace.emptyTitle')}
+            description={t('namespace.emptyDescription')}
           />
         )}
       </div>

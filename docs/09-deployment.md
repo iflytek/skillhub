@@ -38,31 +38,33 @@
 
 说明：
 - Web 容器提供静态资源，并将 `/api/*`、`/oauth2/*`、`/.well-known/*` 反代到后端
-- 后端运行 `local,docker` profile 组合
-- 技能包文件默认落在容器卷 `skillhub_storage`，保证单机环境开箱即用
+- 后端默认运行 `docker` profile，不再启用本地 mock 登录
+- PostgreSQL / Redis 默认只绑定 `127.0.0.1`
+- 对象存储推荐使用外部 S3 / OSS，通过环境变量注入
 
 ## 3 Profile 约定
 
 | Profile | 用途 | 说明 |
 |---------|------|------|
 | `local` | 本地源码开发能力 | 启用 mock 登录、开发种子账号、调试日志 |
-| `docker` | 容器网络适配 | 将数据库和 Redis 地址切换到 Compose 内网 |
+| `docker` | 容器运行时能力 | 启用容器内启动用管理员账号初始化等运行时行为 |
 
-单机交付环境使用 `SPRING_PROFILES_ACTIVE=local,docker`，原因很明确：
+单机交付环境使用 `SPRING_PROFILES_ACTIVE=docker`，原因如下：
 
-- 这是当前唯一能保证“镜像拉起后直接可用”的 profile 组合
-- 用户无需先配置 GitHub OAuth，先用 mock 身份即可浏览和联调主要流程
-- 后续如果引入专用 `runtime` / `demo` profile，可以替换这层组合，但当前方案不再新增第三条部署路径
+- 生产环境不应开启 `X-Mock-User-Id` 这一类本地开发旁路能力
+- 容器环境仍然可以通过 `docker` profile 初始化首个管理员账户
+- 数据库、Redis、OSS、站点公网地址全部改为环境变量优先
 
-默认可用账号：
+默认首登账号来源于环境变量：
 
-- `local-user`
-- `local-admin`
+- `BOOTSTRAP_ADMIN_USERNAME`
+- `BOOTSTRAP_ADMIN_PASSWORD`
 
-鉴权方式：
+建议：
 
-- 向后端请求携带 `X-Mock-User-Id: local-user`
-- 或 `X-Mock-User-Id: local-admin`
+- 完成首次登录后立即修改管理员密码
+- 如果已有外部身份源，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
+- `SKILLHUB_PUBLIC_BASE_URL` 应配置为最终 HTTPS 域名，避免 OAuth / Cookie / 设备码链接异常
 
 ## 4 开发环境
 
@@ -94,12 +96,13 @@ make dev-all-reset
 
 ```bash
 cp .env.release.example .env.release
+make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d
 ```
 
 默认访问地址：
 
-- Web UI: `http://localhost`
+- Web UI: `SKILLHUB_PUBLIC_BASE_URL`
 - Backend API: `http://localhost:8080`
 
 ### 5.2 关键文件
@@ -107,10 +110,14 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - `compose.release.yml`
   - 使用发布镜像，不在用户机器上执行本地构建
   - 负责拉起 PostgreSQL、Redis、server、web
-  - 使用独立 Compose project name，避免与开发环境容器互相污染
+  - PostgreSQL、Redis 默认只绑定到 `127.0.0.1`
+  - Web 和后端都支持运行时环境变量注入，不需要为每个环境重建镜像
 - `.env.release.example`
   - 运行时变量模板
-  - 包含镜像名、镜像版本、端口和数据库凭证
+  - 包含镜像名、镜像版本、端口、数据库凭证、外部 OSS、站点公网地址和首登管理员参数
+- `scripts/validate-release-config.sh`
+  - 在启动前校验 `.env.release`
+  - 可提前拦截占位值、URL 格式错误、缺失的 OSS 凭据、危险的明文默认值
 
 ### 5.3 镜像标签约定
 
@@ -151,6 +158,28 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 ## 7 配置管理
 
+前端运行时配置通过 `web/runtime-config.js.template` 注入。与认证兼容层相关的新变量如下：
+
+- `SKILLHUB_WEB_AUTH_DIRECT_ENABLED`
+  - 是否在前端打开账号密码兼容接入层
+  - 默认应为 `false`
+- `SKILLHUB_WEB_AUTH_DIRECT_PROVIDER`
+  - 前端调用 `/api/v1/auth/direct/login` 时使用的 provider，例如 `private-sso`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED`
+  - 是否在前端打开企业 SSO 被动会话兼容入口
+  - 默认应为 `false`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER`
+  - 前端调用 `/api/v1/auth/session/bootstrap` 时使用的 provider，例如 `private-sso`
+- `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
+  - 是否在登录页加载后自动尝试一次 bootstrap
+  - 建议私有版初期保持 `false`
+
+注意：
+
+- 前端密码兼容层打开之前，后端仍必须同步打开 `skillhub.auth.direct.enabled=true`
+- 前端开关打开之前，后端仍必须同步打开 `skillhub.auth.session-bootstrap.enabled=true`
+- 前后端任一侧未开启，都不会破坏原有登录方式；只会使该兼容入口不可用或不显示
+
 开发环境：
 
 - 本地命令与 `docker-compose.yml`
@@ -160,9 +189,37 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 - 使用 `.env.release` 管理 Compose 变量
 - 如果 GHCR 包保持私有，用户需要先 `docker login ghcr.io`
+- 推荐将敏感变量放入 CI/CD Secret 或主机上的受控 `.env.release`
+- 外部对象存储通过 `SKILLHUB_STORAGE_S3_*` 注入
+- 前端反代和运行时 API 地址通过 `SKILLHUB_API_UPSTREAM` / `SKILLHUB_WEB_API_BASE_URL` 注入
 - 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
 
-## 8 可观测性
+## 8 裸金属上线清单
+
+推荐顺序：
+
+1. 准备服务器基础环境
+   - 安装 Docker Engine 与 Docker Compose Plugin
+   - 配置公网 HTTPS 入口，确保最终访问域名已经确定
+   - 打开 `80` / `443`，避免直接暴露 `5432` / `6379`
+2. 填写 `.env.release`
+   - `SKILLHUB_PUBLIC_BASE_URL` 填最终 HTTPS 域名，且不要带尾部 `/`
+   - `SKILLHUB_STORAGE_PROVIDER=s3`
+   - 按云厂商 OSS / S3 兼容参数填写 `SKILLHUB_STORAGE_S3_*`
+   - 设置非默认的 `POSTGRES_PASSWORD` 与 `BOOTSTRAP_ADMIN_PASSWORD`
+3. 启动前校验
+   - 运行 `make validate-release-config`
+   - 确认没有 `replace-me`、`change-this-*`、`ChangeMe!2026` 之类的占位值
+4. 首次启动
+   - 运行 `docker compose --env-file .env.release -f compose.release.yml up -d`
+   - 检查 `docker compose --env-file .env.release -f compose.release.yml ps`
+   - 检查 `curl -i http://127.0.0.1:8080/actuator/health`
+5. 首登收尾
+   - 使用 `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` 登录
+   - 立即修改管理员密码
+   - 如果后续完全走 OAuth，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
+
+## 9 可观测性
 
 | 维度 | 方案 |
 |------|------|
@@ -170,7 +227,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 | 日志 | 容器 stdout / stderr |
 | 指标 | Spring Boot Actuator，后续可接 Prometheus |
 
-## 9 数据迁移
+## 10 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

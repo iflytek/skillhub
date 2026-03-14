@@ -37,6 +37,9 @@ public class SkillRatingController extends BaseApiController {
     public ApiResponse<SkillRatingStatusResponse> getUserRating(
             @PathVariable Long skillId,
             @AuthenticationPrincipal PlatformPrincipal principal) {
+        if (principal == null) {
+            return ok("response.success.read", new SkillRatingStatusResponse((short) 0, false));
+        }
         Optional<Short> rating = skillRatingService.getUserRating(skillId, principal.userId());
         return ok(
                 "response.success.read",

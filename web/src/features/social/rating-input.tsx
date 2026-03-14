@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Star } from 'lucide-react'
 import { useUserRating, useRate } from './use-rating'
 import { useAuth } from '@/features/auth/use-auth'
@@ -9,6 +10,7 @@ interface RatingInputProps {
 }
 
 export function RatingInput({ skillId, onRequireLogin }: RatingInputProps) {
+  const { t } = useTranslation()
   const { data: userRating, isLoading } = useUserRating(skillId)
   const rateMutation = useRate(skillId)
   const { isAuthenticated } = useAuth()
@@ -56,7 +58,7 @@ export function RatingInput({ skillId, onRequireLogin }: RatingInputProps) {
       </div>
       {currentRating > 0 && (
         <span className="text-sm text-muted-foreground">
-          你的评分: {currentRating} 星
+          {t('ratingInput.yourRating', { score: currentRating })}
         </span>
       )}
     </div>

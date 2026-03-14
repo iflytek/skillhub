@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/components/empty-state'
@@ -6,10 +7,11 @@ import { useMySkills } from '@/shared/hooks/use-skill-queries'
 
 export function MySkillsPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { data: skills, isLoading } = useMySkills()
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: '/@$namespace/$slug', params: { namespace, slug } })
+    navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   if (isLoading) {
@@ -26,11 +28,11 @@ export function MySkillsPage() {
     <div className="space-y-8 animate-fade-up">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold font-heading mb-2">我的技能</h1>
-          <p className="text-muted-foreground text-lg">管理你发布的技能</p>
+          <h1 className="text-4xl font-bold font-heading mb-2">{t('mySkills.title')}</h1>
+          <p className="text-muted-foreground text-lg">{t('mySkills.subtitle')}</p>
         </div>
         <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
-          发布新技能
+          {t('mySkills.publishNew')}
         </Button>
       </div>
 
@@ -72,11 +74,11 @@ export function MySkillsPage() {
         </div>
       ) : (
         <EmptyState
-          title="还没有技能"
-          description="开始发布你的第一个技能吧"
+          title={t('mySkills.emptyTitle')}
+          description={t('mySkills.emptyDescription')}
           action={
             <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
-              发布技能
+              {t('mySkills.publishSkill')}
             </Button>
           }
         />

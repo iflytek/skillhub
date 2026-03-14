@@ -24,7 +24,10 @@ WORKDIR /app
 
 COPY --from=build /app/skillhub-app/target/*.jar app.jar
 
-RUN chown -R app:app /app
+# Create storage directory and set permissions
+RUN mkdir -p /var/lib/skillhub/storage && \
+    chown -R app:app /app /var/lib/skillhub/storage
+
 USER app
 
 EXPOSE 8080

@@ -36,7 +36,7 @@ public class S3StorageService implements ObjectStorageService {
                 .region(Region.of(properties.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())))
-                .forcePathStyle(true);
+                .forcePathStyle(properties.isForcePathStyle());
         if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
             builder.endpointOverride(URI.create(properties.getEndpoint()));
         }
@@ -45,7 +45,9 @@ public class S3StorageService implements ObjectStorageService {
                 .region(Region.of(properties.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
-        if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
+        if (properties.getPublicEndpoint() != null && !properties.getPublicEndpoint().isBlank()) {
+            presignerBuilder.endpointOverride(URI.create(properties.getPublicEndpoint()));
+        } else if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
             presignerBuilder.endpointOverride(URI.create(properties.getEndpoint()));
         }
         this.s3Presigner = presignerBuilder.build();
@@ -53,6 +55,10 @@ public class S3StorageService implements ObjectStorageService {
     }
 
     private void ensureBucketExists() {
+        if (!properties.isAutoCreateBucket()) {
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(properties.getBucket()).build());
+            return;
+        }
         try { s3Client.headBucket(HeadBucketRequest.builder().bucket(properties.getBucket()).build()); }
         catch (NoSuchBucketException e) {
             log.info("Bucket '{}' does not exist, creating...", properties.getBucket());
@@ -90,9 +96,10 @@ public class S3StorageService implements ObjectStorageService {
 
     @Override
     public String generatePresignedUrl(String key, Duration expiry) {
+        Duration signatureDuration = expiry != null ? expiry : properties.getPresignExpiry();
         PresignedGetObjectRequest request = s3Presigner.presignGetObject(
             GetObjectPresignRequest.builder()
-                .signatureDuration(expiry)
+                .signatureDuration(signatureDuration)
                 .getObjectRequest(GetObjectRequest.builder()
                     .bucket(properties.getBucket())
                     .key(key)

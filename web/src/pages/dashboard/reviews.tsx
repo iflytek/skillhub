@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import {
@@ -12,17 +13,18 @@ import {
 import { useReviewList } from '@/features/review/use-review-list'
 
 export function ReviewsPage() {
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { data: pendingReviews, isLoading: isPendingLoading } = useReviewList('PENDING')
   const { data: approvedReviews, isLoading: isApprovedLoading } = useReviewList('APPROVED')
   const { data: rejectedReviews, isLoading: isRejectedLoading } = useReviewList('REJECTED')
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN')
+    return new Date(dateString).toLocaleString(i18n.language)
   }
 
   const handleRowClick = (reviewId: number) => {
-    navigate({ to: '/dashboard/reviews/$id', params: { id: String(reviewId) } })
+    navigate({ to: `/dashboard/reviews/${reviewId}` })
   }
 
   const renderReviewTable = (reviews: typeof pendingReviews, isLoading: boolean, status: string) => {
@@ -39,7 +41,7 @@ export function ReviewsPage() {
     if (!reviews || reviews.length === 0) {
       return (
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground">暂无审核任务</p>
+          <p className="text-muted-foreground">{t('reviews.empty')}</p>
         </Card>
       )
     }
@@ -49,12 +51,12 @@ export function ReviewsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>技能</TableHead>
-              <TableHead>版本</TableHead>
-              <TableHead>提交者</TableHead>
-              <TableHead>提交时间</TableHead>
-              {status !== 'PENDING' && <TableHead>审核者</TableHead>}
-              {status !== 'PENDING' && <TableHead>审核时间</TableHead>}
+              <TableHead>{t('reviews.colSkill')}</TableHead>
+              <TableHead>{t('reviews.colVersion')}</TableHead>
+              <TableHead>{t('reviews.colSubmitter')}</TableHead>
+              <TableHead>{t('reviews.colSubmitTime')}</TableHead>
+              {status !== 'PENDING' && <TableHead>{t('reviews.colReviewer')}</TableHead>}
+              {status !== 'PENDING' && <TableHead>{t('reviews.colReviewTime')}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -93,15 +95,15 @@ export function ReviewsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">审核中心</h1>
-        <p className="text-muted-foreground text-lg">管理技能版本审核</p>
+        <h1 className="text-4xl font-bold font-heading mb-2">{t('reviews.title')}</h1>
+        <p className="text-muted-foreground text-lg">{t('reviews.subtitle')}</p>
       </div>
 
       <Tabs defaultValue="PENDING">
         <TabsList>
-          <TabsTrigger value="PENDING">待审核</TabsTrigger>
-          <TabsTrigger value="APPROVED">已通过</TabsTrigger>
-          <TabsTrigger value="REJECTED">已拒绝</TabsTrigger>
+          <TabsTrigger value="PENDING">{t('reviews.tabPending')}</TabsTrigger>
+          <TabsTrigger value="APPROVED">{t('reviews.tabApproved')}</TabsTrigger>
+          <TabsTrigger value="REJECTED">{t('reviews.tabRejected')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="PENDING" className="mt-6">

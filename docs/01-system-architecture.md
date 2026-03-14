@@ -112,7 +112,8 @@ skillhub/
 │   └── Dockerfile        # 后端多阶段构建
 ├── web/                  # React 前端
 │   ├── Dockerfile        # 前端多阶段构建
-│   └── nginx.conf        # Nginx 配置（SPA 路由 + API 反向代理）
+│   ├── nginx.conf.template        # Nginx 运行时模板
+│   └── runtime-config.js.template # 前端运行时环境变量模板
 ├── docker-compose.yml    # 本地开发依赖服务（PostgreSQL/Redis/MinIO）
 ├── compose.release.yml   # 单机运行时编排（发布镜像 + PostgreSQL + Redis）
 ├── .env.release.example  # 单机运行时环境变量模板
@@ -137,9 +138,10 @@ skillhub/
 - `http://localhost/api/*` → Web 容器反向代理到 Spring Boot
 - `http://localhost:8080/actuator/health` → 后端健康检查
 
-单机运行时使用 `local,docker` profile 组合：
-- `local` 提供 mock 登录和种子账号，保证拉起即用
-- `docker` 负责将数据库、Redis 地址切换到 Compose 网络
+单机运行时默认使用 `docker` profile：
+- `docker` 负责容器运行时初始化，例如首个管理员账户
+- 数据库、Redis、对象存储、站点公网地址都通过环境变量注入
+- 生产环境不启用 `local` profile，因此不会暴露 mock 登录旁路
 
 ## 9. 分布式环境要求
 
