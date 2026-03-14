@@ -323,6 +323,10 @@
   "skillDetail": {
     "notFound": "技能不存在",
     "notFoundDesc": "该技能可能已被删除或从未存在",
+    "loginRequired": "需要登录",
+    "loginRequiredDesc": "该技能为私有技能，请登录后查看详情",
+    "accessDenied": "访问被拒绝",
+    "accessDeniedDesc": "您没有权限查看该技能",
     "tabReadme": "README",
     "tabFiles": "文件",
     "tabVersions": "版本",
