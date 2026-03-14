@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -7,6 +7,9 @@ DEV_SERVER_LOG := $(DEV_DIR)/server.log
 DEV_WEB_LOG := $(DEV_DIR)/web.log
 DEV_WEB_URL := http://localhost:3000
 DEV_API_URL := http://localhost:8080
+STAGING_API_URL := http://localhost:8080
+STAGING_WEB_URL := http://localhost
+STAGING_SERVER_IMAGE := skillhub-server:staging
 DEV_PROCESS := python3 scripts/dev_process.py
 
 help: ## 显示帮助
@@ -173,3 +176,76 @@ db-reset: ## 重置数据库
 
 validate-release-config: ## 校验发布环境变量文件（默认 .env.release）
 	./scripts/validate-release-config.sh .env.release
+
+staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：后端镜像 + 前端静态文件）
+	@echo "=== [1/5] Building backend Docker image ==="
+	docker build -t $(STAGING_SERVER_IMAGE) -f server/Dockerfile server
+	@echo "=== [2/5] Building frontend static files ==="
+	cd web && pnpm run build
+	@echo "=== [3/5] Starting dependency services ==="
+	docker compose up -d --wait
+	@echo "=== [4/5] Starting staging services ==="
+	docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --wait server web
+	@echo "=== [5/5] Running smoke tests ==="
+	@if bash scripts/smoke-test.sh $(STAGING_API_URL); then \
+		echo ""; \
+		echo "Staging passed. Environment is running:"; \
+		echo "  Web UI:  $(STAGING_WEB_URL)"; \
+		echo "  Backend: $(STAGING_API_URL)"; \
+		echo ""; \
+		echo "Run 'make staging-down' to stop."; \
+		echo "Run 'make pr' to create a pull request."; \
+	else \
+		echo ""; \
+		echo "Smoke tests FAILED. Printing logs..."; \
+		docker compose -f docker-compose.yml -f docker-compose.staging.yml logs server; \
+		$(MAKE) staging-down; \
+		exit 1; \
+	fi
+
+staging-down: ## 停止 staging 环境
+	docker compose -f docker-compose.yml -f docker-compose.staging.yml down --remove-orphans
+
+staging-logs: ## 查看 staging 服务日志（SERVICE=server|web，默认 server）
+	@SERVICE=$${SERVICE:-server}; \
+	docker compose -f docker-compose.yml -f docker-compose.staging.yml logs -f $$SERVICE
+
+pr: ## 推送当前分支并创建 Pull Request（需要 gh CLI，仅限交互式终端）
+	@if ! command -v gh >/dev/null 2>&1; then \
+		echo "Error: gh CLI not found. Install from https://cli.github.com/"; \
+		exit 1; \
+	fi
+	@if ! gh auth status >/dev/null 2>&1; then \
+		echo "Error: gh CLI not authenticated. Run: gh auth login"; \
+		exit 1; \
+	fi
+	@BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	if [ "$$BRANCH" = "main" ] || [ "$$BRANCH" = "master" ]; then \
+		echo "Error: Cannot create PR from main/master branch."; \
+		exit 1; \
+	fi
+	@if ! git diff --quiet || ! git diff --cached --quiet; then \
+		echo "You have uncommitted changes:"; \
+		git status --short; \
+		echo ""; \
+		printf "Commit all changes before creating PR? [y/N] "; \
+		read -r answer; \
+		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+			git add -A; \
+			git commit -m "chore: pre-PR commit"; \
+		else \
+			echo "Aborted. Commit or stash your changes first."; \
+			exit 1; \
+		fi; \
+	fi
+	@BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	echo "Pushing branch $$BRANCH to origin..."; \
+	git push -u origin "$$BRANCH"
+	@echo "Creating pull request..."
+	@if gh pr view >/dev/null 2>&1; then \
+		echo "A pull request already exists for this branch:"; \
+		gh pr view --json url -q '.url'; \
+		exit 0; \
+	fi
+	@gh pr create --fill --web || gh pr create --fill
+
