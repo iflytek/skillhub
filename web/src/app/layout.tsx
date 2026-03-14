@@ -150,12 +150,12 @@ export function Layout() {
               {t('footer.copyright')}
             </p>
             <div className="flex items-center gap-4">
-              <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors">
                 {t('footer.privacy')}
-              </a>
-              <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              </Link>
+              <Link to="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors">
                 {t('footer.terms')}
-              </a>
+              </Link>
             </div>
           </div>
         </div>
