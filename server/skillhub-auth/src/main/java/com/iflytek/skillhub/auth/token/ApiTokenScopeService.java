@@ -19,9 +19,9 @@ public class ApiTokenScopeService {
         ScopeRule.allow(null, "/api/v1/health"),
         ScopeRule.allow(null, "/api/v1/auth/providers"),
         ScopeRule.allow(null, "/api/v1/auth/me"),
-        ScopeRule.allow(null, "/api/v1/cli/auth/device/**"),
-        ScopeRule.allow(null, "/api/v1/cli/check"),
-        ScopeRule.allow("GET", "/api/v1/cli/whoami"),
+        ScopeRule.allow(null, "/api/v1/auth/device/**"),
+        ScopeRule.allow(null, "/api/v1/check"),
+        ScopeRule.allow("GET", "/api/v1/whoami"),
         ScopeRule.allow("GET", "/api/v1/skills"),
         ScopeRule.allow("GET", "/api/v1/skills/**"),
         ScopeRule.allow("GET", "/api/v1/namespaces"),
@@ -39,7 +39,7 @@ public class ApiTokenScopeService {
         ScopeRule.require(null, "/api/v1/tokens", "token:manage"),
         ScopeRule.require(null, "/api/v1/tokens/**", "token:manage"),
         ScopeRule.require("POST", "/api/v1/skills/*/publish", "skill:publish"),
-        ScopeRule.require("POST", "/api/v1/cli/publish", "skill:publish"),
+        ScopeRule.require("POST", "/api/v1/publish", "skill:publish"),
         ScopeRule.require("POST", "/api/compat/v1/publish", "skill:publish")
     );
 

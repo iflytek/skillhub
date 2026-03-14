@@ -43,7 +43,7 @@ class CliControllerTest {
 
     @Test
     void whoamiShouldReturnUnauthorizedForAnonymousRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/cli/whoami"))
+        mockMvc.perform(get("/api/v1/whoami"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -66,7 +66,7 @@ class CliControllerTest {
             List.of(new SimpleGrantedAuthority("ROLE_SKILL_ADMIN"))
         );
 
-        mockMvc.perform(get("/api/v1/cli/whoami").with(authentication(auth)))
+        mockMvc.perform(get("/api/v1/whoami").with(authentication(auth)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.msg").isNotEmpty())
@@ -88,7 +88,7 @@ class CliControllerTest {
                 zipBytes
         );
 
-        mockMvc.perform(multipart("/api/v1/cli/check").file(file))
+        mockMvc.perform(multipart("/api/v1/check").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.valid").value(true))
@@ -107,7 +107,7 @@ class CliControllerTest {
                 zipBytes
         );
 
-        mockMvc.perform(multipart("/api/v1/cli/check").file(file))
+        mockMvc.perform(multipart("/api/v1/check").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.valid").value(false))
@@ -125,7 +125,7 @@ class CliControllerTest {
                 zipBytes
         );
 
-        mockMvc.perform(multipart("/api/v1/cli/check").file(file))
+        mockMvc.perform(multipart("/api/v1/check").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.valid").value(false))
@@ -142,7 +142,7 @@ class CliControllerTest {
                 zipBytes
         );
 
-        mockMvc.perform(multipart("/api/v1/cli/check").file(file))
+        mockMvc.perform(multipart("/api/v1/check").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.valid").value(false))

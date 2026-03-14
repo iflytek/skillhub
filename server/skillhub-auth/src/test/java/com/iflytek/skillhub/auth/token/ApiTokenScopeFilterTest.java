@@ -59,7 +59,7 @@ class ApiTokenScopeFilterTest {
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/cli/publish");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/publish");
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = mock(FilterChain.class);
 

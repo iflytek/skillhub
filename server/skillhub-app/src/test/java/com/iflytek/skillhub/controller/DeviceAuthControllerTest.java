@@ -44,7 +44,7 @@ class DeviceAuthControllerTest {
 
         given(deviceAuthService.generateDeviceCode()).willReturn(response);
 
-        mockMvc.perform(post("/api/v1/cli/auth/device/code")
+        mockMvc.perform(post("/api/v1/auth/device/code")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
@@ -61,7 +61,7 @@ class DeviceAuthControllerTest {
 
         given(deviceAuthService.pollToken("device_abc123")).willReturn(response);
 
-        mockMvc.perform(post("/api/v1/cli/auth/device/token")
+        mockMvc.perform(post("/api/v1/auth/device/token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"deviceCode\": \"device_abc123\"}"))
             .andExpect(status().isOk())
@@ -77,7 +77,7 @@ class DeviceAuthControllerTest {
 
         given(deviceAuthService.pollToken("device_abc123")).willReturn(response);
 
-        mockMvc.perform(post("/api/v1/cli/auth/device/token")
+        mockMvc.perform(post("/api/v1/auth/device/token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"deviceCode\": \"device_abc123\"}"))
             .andExpect(status().isOk())

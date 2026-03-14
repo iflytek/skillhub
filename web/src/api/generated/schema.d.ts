@@ -308,7 +308,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cli/publish": {
+    "/api/v1/publish": {
         parameters: {
             query?: never;
             header?: never;
@@ -324,7 +324,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cli/check": {
+    "/api/v1/check": {
         parameters: {
             query?: never;
             header?: never;
@@ -340,7 +340,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cli/auth/device/token": {
+    "/api/v1/auth/device/token": {
         parameters: {
             query?: never;
             header?: never;
@@ -356,7 +356,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cli/auth/device/code": {
+    "/api/v1/auth/device/code": {
         parameters: {
             query?: never;
             header?: never;
@@ -916,7 +916,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cli/whoami": {
+    "/api/v1/whoami": {
         parameters: {
             query?: never;
             header?: never;
@@ -932,7 +932,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cli/resolve/{namespace}/{slug}": {
+    "/api/v1/resolve/{namespace}/{slug}": {
         parameters: {
             query?: never;
             header?: never;

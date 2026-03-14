@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/cli/auth/device")
+@RequestMapping("/api/v1/auth/device")
 public class DeviceAuthController extends BaseApiController {
 
     private final DeviceAuthService deviceAuthService;

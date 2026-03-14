@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/cli")
+@RequestMapping("/api/v1")
 public class CliPublishController extends BaseApiController {
 
     private final SkillPublishService skillPublishService;

@@ -239,7 +239,7 @@ Public API 的可见性规则：
 发布状态约束：
 
 - 普通用户发布成功后，`status` 为 `PENDING_REVIEW`
-- 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/cli/publish`、`/api/compat/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
+- 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/publish`、`/api/compat/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
 
 ## 7.4 Token API（需登录）
 
@@ -253,10 +253,10 @@ Public API 的可见性规则：
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/cli/whoami` | 当前 Bearer Token 对应的用户信息 |
-| POST | `/api/v1/cli/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流；`SUPER_ADMIN` 始终直发） |
-| GET | `/api/v1/cli/resolve/{namespace}/{slug}` | 解析版本 |
-| GET | `/api/v1/cli/check/{namespace}/{slug}/{version}` | 本地哈希与远端比对 |
+| GET | `/api/v1/whoami` | 当前 Bearer Token 对应的用户信息 |
+| POST | `/api/v1/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流；`SUPER_ADMIN` 始终直发） |
+| GET | `/api/v1/resolve/{namespace}/{slug}` | 解析版本 |
+| GET | `/api/v1/check/{namespace}/{slug}/{version}` | 本地哈希与远端比对 |
 
 ### ClawHub CLI 协议兼容层
 
@@ -266,7 +266,7 @@ Public API 的可见性规则：
 - 范围：一期聚焦覆盖 ClawHub CLI 所依赖的核心接口：查询、版本解析、下载、发布、whoami
 - 要求：兼容层优先保持 ClawHub CLI 既有请求/响应语义；若内部领域模型不同，通过 adapter 层完成协议转换，而不是要求客户端适配 skillhub 私有协议
 - 要求：兼容层纳入 OpenAPI 或独立兼容协议文档，并作为正式对外契约维护
-- 要求：兼容层与 skillhub 自有 `/api/v1/cli/**` 并存，二者共享同一套权限、审计、限流与领域服务
+- 要求：兼容层与 skillhub 自有 `/api/v1/**` 并存，二者共享同一套权限、审计、限流与领域服务
 - 非目标：前端页面不直接依赖兼容层；兼容层用于服务已有 ClawHub CLI 和相关自动化脚本
 
 兼容层最少需要覆盖的能力类别：
