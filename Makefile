@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -104,6 +104,34 @@ dev-all-reset: ## 重置本地开发环境（清理依赖数据卷后重新启�
 	docker compose down -v --remove-orphans
 	rm -rf $(DEV_DIR)
 	@$(MAKE) dev-all
+
+dev-status: ## 查看本地开发服务状态
+	@echo "=== Dependency Services ==="
+	@docker compose ps
+	@echo ""
+	@echo "=== Backend ==="
+	@if $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
+		echo "  Running (PID $$(cat $(DEV_SERVER_PID)))"; \
+	else \
+		echo "  Not running"; \
+	fi
+	@echo "=== Frontend ==="
+	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
+		echo "  Running (PID $$(cat $(DEV_WEB_PID)))"; \
+	else \
+		echo "  Not running"; \
+	fi
+
+dev-logs: ## 实时查看开发服务日志（backend/frontend，默认 backend）
+	@SERVICE=$${SERVICE:-backend}; \
+	if [ "$$SERVICE" = "backend" ]; then \
+		tail -f $(DEV_SERVER_LOG); \
+	elif [ "$$SERVICE" = "frontend" ]; then \
+		tail -f $(DEV_WEB_LOG); \
+	else \
+		echo "Unknown service: $$SERVICE. Use SERVICE=backend or SERVICE=frontend"; \
+		exit 1; \
+	fi
 
 build: ## 构建后端
 	cd server && ./mvnw clean package -DskipTests
