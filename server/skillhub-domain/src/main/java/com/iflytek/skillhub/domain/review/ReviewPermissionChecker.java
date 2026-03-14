@@ -11,27 +11,22 @@ import java.util.Set;
 @Component
 public class ReviewPermissionChecker {
 
-    /**
-     * Check if a user can review a ReviewTask.
-     *
-     * @param task               the review task
-     * @param userId             the reviewer's user ID
-     * @param namespaceType      the type of the namespace
-     * @param userNamespaceRoles user's roles keyed by namespace ID
-     * @param platformRoles      user's platform-level roles
-     * @return true if the user is allowed to review
-     */
+    public boolean canSubmitReview(Long namespaceId,
+                                   Map<Long, NamespaceRole> userNamespaceRoles) {
+        NamespaceRole role = userNamespaceRoles.get(namespaceId);
+        return role == NamespaceRole.OWNER
+                || role == NamespaceRole.ADMIN
+                || role == NamespaceRole.MEMBER;
+    }
+
     public boolean canReview(ReviewTask task,
                              String userId,
                              NamespaceType namespaceType,
                              Map<Long, NamespaceRole> userNamespaceRoles,
                              Set<String> platformRoles) {
-        // Admins can review their own submissions
         if (task.getSubmittedBy().equals(userId)) {
-            return platformRoles.contains("SKILL_ADMIN")
-                    || platformRoles.contains("SUPER_ADMIN");
+            return false;
         }
-
         return canReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles, platformRoles);
     }
 
@@ -42,9 +37,7 @@ public class ReviewPermissionChecker {
         if (skill.getOwnerId().equals(userId)) {
             return true;
         }
-
-        if (platformRoles.contains("SKILL_ADMIN")
-                || platformRoles.contains("SUPER_ADMIN")) {
+        if (hasPlatformReviewRole(platformRoles)) {
             return true;
         }
 
@@ -67,23 +60,45 @@ public class ReviewPermissionChecker {
                                       NamespaceType namespaceType,
                                       Map<Long, NamespaceRole> userNamespaceRoles,
                                       Set<String> platformRoles) {
-        if (platformRoles.contains("SKILL_ADMIN")
-                || platformRoles.contains("SUPER_ADMIN")) {
+        if (hasPlatformReviewRole(platformRoles)) {
             return true;
         }
-
         if (namespaceType == NamespaceType.GLOBAL) {
             return false;
         }
 
         NamespaceRole role = userNamespaceRoles.get(namespaceId);
-        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
+        return role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN;
     }
 
-    /**
-     * Check if a user can review a PromotionRequest.
-     * Only SKILL_ADMIN or SUPER_ADMIN, and not own.
-     */
+    public boolean canManageNamespaceReviews(Long namespaceId,
+                                             NamespaceType namespaceType,
+                                             Map<Long, NamespaceRole> userNamespaceRoles,
+                                             Set<String> platformRoles) {
+        return canReviewNamespace(namespaceId, namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canReadReview(ReviewTask task,
+                                 String userId,
+                                 NamespaceType namespaceType,
+                                 Map<Long, NamespaceRole> userNamespaceRoles,
+                                 Set<String> platformRoles) {
+        return canViewReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canSubmitPromotion(Skill sourceSkill,
+                                      String userId,
+                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                      Set<String> platformRoles) {
+        return canSubmitForReview(sourceSkill, userId, userNamespaceRoles, platformRoles);
+    }
+
+    public boolean canSubmitPromotion(Skill sourceSkill,
+                                      String userId,
+                                      Map<Long, NamespaceRole> userNamespaceRoles) {
+        return canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, Set.of());
+    }
+
     public boolean canReviewPromotion(
             PromotionRequest request,
             String userId,
@@ -91,15 +106,7 @@ public class ReviewPermissionChecker {
         if (request.getSubmittedBy().equals(userId)) {
             return false;
         }
-        return platformRoles.contains("SKILL_ADMIN")
-                || platformRoles.contains("SUPER_ADMIN");
-    }
-
-    public boolean canSubmitPromotion(Skill skill,
-                                      String userId,
-                                      Map<Long, NamespaceRole> userNamespaceRoles,
-                                      Set<String> platformRoles) {
-        return canSubmitForReview(skill, userId, userNamespaceRoles, platformRoles);
+        return hasPlatformReviewRole(platformRoles);
     }
 
     public boolean canViewPromotion(PromotionRequest request,
@@ -109,5 +116,20 @@ public class ReviewPermissionChecker {
             return true;
         }
         return canReviewPromotion(request, userId, platformRoles);
+    }
+
+    public boolean canListPendingPromotions(Set<String> platformRoles) {
+        return hasPlatformReviewRole(platformRoles);
+    }
+
+    public boolean canReadPromotion(PromotionRequest request,
+                                    String userId,
+                                    Set<String> platformRoles) {
+        return canViewPromotion(request, userId, platformRoles);
+    }
+
+    private boolean hasPlatformReviewRole(Set<String> platformRoles) {
+        return platformRoles.contains("SKILL_ADMIN")
+                || platformRoles.contains("SUPER_ADMIN");
     }
 }

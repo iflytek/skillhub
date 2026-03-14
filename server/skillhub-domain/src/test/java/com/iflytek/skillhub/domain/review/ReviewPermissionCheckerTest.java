@@ -2,6 +2,8 @@ package com.iflytek.skillhub.domain.review;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -24,18 +26,18 @@ class ReviewPermissionCheckerTest {
     }
 
     @Test
-    void skillAdminCanReviewOwnSubmission() {
+    void skillAdminCannotReviewOwnSubmission() {
         String userId = "user-1";
         ReviewTask task = new ReviewTask(1L, 10L, userId);
-        assertTrue(checker.canReview(task, userId,
+        assertFalse(checker.canReview(task, userId,
                 NamespaceType.TEAM, Map.of(), Set.of("SKILL_ADMIN")));
     }
 
     @Test
-    void superAdminCanReviewOwnSubmission() {
+    void superAdminCannotReviewOwnSubmission() {
         String userId = "user-1";
         ReviewTask task = new ReviewTask(1L, 10L, userId);
-        assertTrue(checker.canReview(task, userId,
+        assertFalse(checker.canReview(task, userId,
                 NamespaceType.TEAM, Map.of(), Set.of("SUPER_ADMIN")));
     }
 
@@ -104,6 +106,53 @@ class ReviewPermissionCheckerTest {
     }
 
     // --- canReviewPromotion tests ---
+
+    @Test
+    void memberCanSubmitReview() {
+        assertTrue(checker.canSubmitReview(10L, Map.of(10L, NamespaceRole.MEMBER)));
+    }
+
+    @Test
+    void outsiderCannotSubmitReview() {
+        assertFalse(checker.canSubmitReview(10L, Map.of()));
+    }
+
+    @Test
+    void teamAdminCanManagePendingReviewList() {
+        assertTrue(checker.canManageNamespaceReviews(
+                10L, NamespaceType.TEAM, Map.of(10L, NamespaceRole.ADMIN), Set.of()));
+    }
+
+    @Test
+    void submitterCanReadOwnReview() {
+        ReviewTask task = new ReviewTask(1L, 10L, "user-1");
+        assertTrue(checker.canReadReview(task, "user-1",
+                NamespaceType.TEAM, Map.of(), Set.of()));
+    }
+
+    @Test
+    void ownerCanSubmitPromotion() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-1", SkillVisibility.PUBLIC);
+        assertTrue(checker.canSubmitPromotion(sourceSkill, "user-1", Map.of()));
+    }
+
+    @Test
+    void teamAdminCanSubmitPromotionForForeignSkill() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-2", SkillVisibility.PUBLIC);
+        assertTrue(checker.canSubmitPromotion(sourceSkill, "user-1",
+                Map.of(10L, NamespaceRole.ADMIN)));
+    }
+
+    @Test
+    void submitterCanReadOwnPromotion() {
+        PromotionRequest req = new PromotionRequest(1L, 1L, 1L, "user-1");
+        assertTrue(checker.canReadPromotion(req, "user-1", Set.of()));
+    }
+
+    @Test
+    void skillAdminCanListPendingPromotions() {
+        assertTrue(checker.canListPendingPromotions(Set.of("SKILL_ADMIN")));
+    }
 
     @Test
     void skillAdminCanReviewPromotion() {

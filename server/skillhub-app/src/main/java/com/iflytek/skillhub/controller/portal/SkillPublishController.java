@@ -2,7 +2,8 @@ package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
-import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
+import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
@@ -23,16 +24,16 @@ import java.util.List;
 public class SkillPublishController extends BaseApiController {
 
     private final SkillPublishService skillPublishService;
-    private final ZipPackageExtractor zipPackageExtractor;
+    private final SkillPackageArchiveExtractor skillPackageArchiveExtractor;
     private final SkillHubMetrics skillHubMetrics;
 
     public SkillPublishController(SkillPublishService skillPublishService,
-                                  ZipPackageExtractor zipPackageExtractor,
+                                  SkillPackageArchiveExtractor skillPackageArchiveExtractor,
                                   ApiResponseFactory responseFactory,
                                   SkillHubMetrics skillHubMetrics) {
         super(responseFactory);
         this.skillPublishService = skillPublishService;
-        this.zipPackageExtractor = zipPackageExtractor;
+        this.skillPackageArchiveExtractor = skillPackageArchiveExtractor;
         this.skillHubMetrics = skillHubMetrics;
     }
 
@@ -46,7 +47,12 @@ public class SkillPublishController extends BaseApiController {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
 
-        List<PackageEntry> entries = zipPackageExtractor.extract(file);
+        List<PackageEntry> entries;
+        try {
+            entries = skillPackageArchiveExtractor.extract(file);
+        } catch (IllegalArgumentException e) {
+            throw new DomainBadRequestException("error.skill.publish.package.invalid", e.getMessage());
+        }
 
         SkillPublishService.PublishResult publishResult = skillPublishService.publishFromEntries(
                 namespace,

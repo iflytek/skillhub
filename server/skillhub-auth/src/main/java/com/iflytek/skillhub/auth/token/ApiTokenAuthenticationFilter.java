@@ -16,6 +16,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,13 +31,16 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
     private final ApiTokenService apiTokenService;
     private final UserAccountRepository userRepo;
     private final UserRoleBindingRepository roleBindingRepo;
+    private final ApiTokenScopeService apiTokenScopeService;
 
     public ApiTokenAuthenticationFilter(ApiTokenService apiTokenService,
-                                         UserAccountRepository userRepo,
-                                         UserRoleBindingRepository roleBindingRepo) {
+                                        UserAccountRepository userRepo,
+                                        UserRoleBindingRepository roleBindingRepo,
+                                        ApiTokenScopeService apiTokenScopeService) {
         this.apiTokenService = apiTokenService;
         this.userRepo = userRepo;
         this.roleBindingRepo = roleBindingRepo;
+        this.apiTokenScopeService = apiTokenScopeService;
     }
 
     @Override
@@ -44,20 +50,28 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             String rawToken = authHeader.substring(BEARER_PREFIX.length());
             apiTokenService.validateToken(rawToken).ifPresent(token -> {
-                apiTokenService.touchLastUsed(token);
                 userRepo.findById(token.getUserId()).ifPresent(user -> {
+                    if (!user.isActive()) {
+                        return;
+                    }
                     Set<String> roles = roleBindingRepo.findByUserId(user.getId()).stream()
                         .map(rb -> rb.getRole().getCode())
                         .collect(Collectors.toSet());
+                    Set<String> scopes = apiTokenScopeService.parseScopes(token.getScopeJson());
                     PlatformPrincipal principal = new PlatformPrincipal(
                         user.getId(), user.getDisplayName(), user.getEmail(),
                         user.getAvatarUrl(), "api_token", roles
                     );
-                    var authorities = roles.stream()
+                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                    authorities.addAll(roles.stream()
                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                        .toList();
+                        .toList());
+                    authorities.addAll(scopes.stream()
+                        .map(scope -> new SimpleGrantedAuthority("SCOPE_" + scope))
+                        .toList());
                     var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(auth);
+                    apiTokenService.touchLastUsed(token);
                 });
             });
         }

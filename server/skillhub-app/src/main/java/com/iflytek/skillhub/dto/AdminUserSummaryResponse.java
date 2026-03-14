@@ -4,11 +4,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record AdminUserSummaryResponse(
-        String userId,
+        String id,
         String username,
         String email,
-        List<String> platformRoles,
         String status,
+        List<String> platformRoles,
         LocalDateTime createdAt
 ) {
 }

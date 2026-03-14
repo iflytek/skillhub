@@ -1,44 +1,77 @@
-import { lazy, type ComponentType } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
 
-function lazyRouteComponent<TModule extends Record<string, unknown>>(
+function createLazyRouteComponent<TModule extends Record<string, unknown>>(
   importer: () => Promise<TModule>,
   exportName: keyof TModule,
 ) {
   const LazyComponent = lazy(async () => {
     const module = await importer()
-    return { default: module[exportName] as ComponentType }
+    return { default: module[exportName] as ComponentType<any> }
   })
 
-  return LazyComponent
+  return function LazyRouteComponent(props: Record<string, unknown>) {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+            Loading...
+          </div>
+        }
+      >
+        <LazyComponent {...props} />
+      </Suspense>
+    )
+  }
 }
 
-const HomePage = lazyRouteComponent(() => import('@/pages/home'), 'HomePage')
-const LoginPage = lazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
-const RegisterPage = lazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
-const PrivacyPolicyPage = lazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
-const SearchPage = lazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
-const TermsOfServicePage = lazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
-const NamespacePage = lazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
-const SkillDetailPage = lazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
-const DashboardPage = lazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
-const MySkillsPage = lazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
-const PublishPage = lazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
-const MyNamespacesPage = lazyRouteComponent(() => import('@/pages/dashboard/my-namespaces'), 'MyNamespacesPage')
-const NamespaceMembersPage = lazyRouteComponent(() => import('@/pages/dashboard/namespace-members'), 'NamespaceMembersPage')
-const NamespaceReviewsPage = lazyRouteComponent(() => import('@/pages/dashboard/namespace-reviews'), 'NamespaceReviewsPage')
-const ReviewsPage = lazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
-const ReviewDetailPage = lazyRouteComponent(() => import('@/pages/dashboard/review-detail'), 'ReviewDetailPage')
-const PromotionsPage = lazyRouteComponent(() => import('@/pages/dashboard/promotions'), 'PromotionsPage')
-const MyStarsPage = lazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage')
-const TokensPage = lazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage')
-const DeviceAuthPage = lazyRouteComponent(() => import('@/pages/device'), 'DeviceAuthPage')
-const SecuritySettingsPage = lazyRouteComponent(() => import('@/pages/settings/security'), 'SecuritySettingsPage')
-const AccountSettingsPage = lazyRouteComponent(() => import('@/pages/settings/accounts'), 'AccountSettingsPage')
-const AdminUsersPage = lazyRouteComponent(() => import('@/pages/admin/users'), 'AdminUsersPage')
-const AuditLogPage = lazyRouteComponent(() => import('@/pages/admin/audit-log'), 'AuditLogPage')
+const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
+const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
+const RegisterPage = createLazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
+const PrivacyPolicyPage = createLazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
+const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
+const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
+const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
+const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
+const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
+const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
+const PublishPage = createLazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
+const MyNamespacesPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/my-namespaces'),
+  'MyNamespacesPage',
+)
+const NamespaceMembersPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/namespace-members'),
+  'NamespaceMembersPage',
+)
+const NamespaceReviewsPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/namespace-reviews'),
+  'NamespaceReviewsPage',
+)
+const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
+const ReviewDetailPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/review-detail'),
+  'ReviewDetailPage',
+)
+const PromotionsPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/promotions'),
+  'PromotionsPage',
+)
+const MyStarsPage = createLazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage')
+const TokensPage = createLazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage')
+const DeviceAuthPage = createLazyRouteComponent(() => import('@/pages/device'), 'DeviceAuthPage')
+const SecuritySettingsPage = createLazyRouteComponent(
+  () => import('@/pages/settings/security'),
+  'SecuritySettingsPage',
+)
+const AccountSettingsPage = createLazyRouteComponent(
+  () => import('@/pages/settings/accounts'),
+  'AccountSettingsPage',
+)
+const AdminUsersPage = createLazyRouteComponent(() => import('@/pages/admin/users'), 'AdminUsersPage')
+const AuditLogPage = createLazyRouteComponent(() => import('@/pages/admin/audit-log'), 'AuditLogPage')
 
 const rootRoute = createRootRoute({
   component: Layout,

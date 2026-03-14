@@ -66,7 +66,7 @@ public class LocalFileStorageService implements ObjectStorageService {
     private Path resolve(String key) {
         Path resolved = basePath.resolve(key).normalize();
         if (!resolved.startsWith(basePath)) {
-            throw new IllegalArgumentException("Resolved path escapes storage base path: " + key);
+            throw new IllegalArgumentException("Invalid storage key: " + key);
         }
         return resolved;
     }

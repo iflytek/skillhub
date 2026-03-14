@@ -3,12 +3,12 @@ package com.iflytek.skillhub.dto;
 import java.time.Instant;
 
 public record AuditLogItemResponse(
-        String id,
-        String userId,
+        Long id,
         String action,
-        String resourceType,
-        String resourceId,
-        Instant timestamp,
-        String ipAddress
+        String userId,
+        String username,
+        String details,
+        String ipAddress,
+        Instant timestamp
 ) {
 }

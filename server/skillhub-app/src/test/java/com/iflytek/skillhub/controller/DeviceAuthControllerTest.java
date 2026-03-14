@@ -70,4 +70,20 @@ class DeviceAuthControllerTest {
             .andExpect(jsonPath("$.data.accessToken").isEmpty())
             .andExpect(jsonPath("$.data.tokenType").isEmpty());
     }
+
+    @Test
+    void pollToken_returns_access_token_when_authorized() throws Exception {
+        DeviceTokenResponse response = DeviceTokenResponse.success("sk_device_flow_token");
+
+        given(deviceAuthService.pollToken("device_abc123")).willReturn(response);
+
+        mockMvc.perform(post("/api/v1/cli/auth/device/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"deviceCode\": \"device_abc123\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.accessToken").value("sk_device_flow_token"))
+            .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.data.error").isEmpty());
+    }
 }

@@ -4,11 +4,11 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
-import com.iflytek.skillhub.dto.MessageResponse;
 import com.iflytek.skillhub.dto.TokenCreateRequest;
 import com.iflytek.skillhub.dto.TokenCreateResponse;
 import com.iflytek.skillhub.dto.TokenSummaryResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,10 +59,10 @@ public class TokenController extends BaseApiController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<MessageResponse> revoke(
+    public ResponseEntity<Void> revoke(
             @AuthenticationPrincipal PlatformPrincipal principal,
             @PathVariable Long id) {
         apiTokenService.revokeToken(id, principal.userId());
-        return ok("response.success.revoked", new MessageResponse("Token revoked"));
+        return ResponseEntity.noContent().build();
     }
 }

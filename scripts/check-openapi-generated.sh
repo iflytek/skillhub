@@ -6,7 +6,18 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_DIR="$ROOT_DIR/server"
 WEB_DIR="$ROOT_DIR/web"
 API_LOG="${TMPDIR:-/tmp}/skillhub-openapi-check.log"
+BUILD_LOG="${TMPDIR:-/tmp}/skillhub-openapi-build.log"
 SERVER_PID=""
+OPENAPI_URL="http://127.0.0.1:8080/v3/api-docs"
+
+print_log_tail() {
+  local log_file="$1"
+
+  if [[ -f "$log_file" ]]; then
+    echo "--- Last 50 lines of $log_file ---" >&2
+    tail -n 50 "$log_file" >&2 || true
+  fi
+}
 
 cleanup() {
   if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -23,19 +34,36 @@ docker compose up -d --wait postgres redis
 
 (
   cd "$SERVER_DIR"
+  ./mvnw -pl skillhub-app -am -DskipTests install
+) >"$BUILD_LOG" 2>&1 || {
+  echo "Failed to prepare backend modules. See $BUILD_LOG" >&2
+  print_log_tail "$BUILD_LOG"
+  exit 1
+}
+
+(
+  cd "$SERVER_DIR"
   SPRING_PROFILES_ACTIVE=local ./mvnw -pl skillhub-app spring-boot:run
 ) >"$API_LOG" 2>&1 &
 SERVER_PID=$!
 
 for _ in $(seq 1 90); do
-  if curl -fsS "http://127.0.0.1:8080/v3/api-docs" >/dev/null 2>&1; then
+  if curl -fsS "$OPENAPI_URL" >/dev/null 2>&1; then
     break
   fi
+
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "Backend exited before exposing /v3/api-docs. See $API_LOG" >&2
+    print_log_tail "$API_LOG"
+    exit 1
+  fi
+
   sleep 2
 done
 
-if ! curl -fsS "http://127.0.0.1:8080/v3/api-docs" >/dev/null 2>&1; then
+if ! curl -fsS "$OPENAPI_URL" >/dev/null 2>&1; then
   echo "Backend did not expose /v3/api-docs. See $API_LOG" >&2
+  print_log_tail "$API_LOG"
   exit 1
 fi
 

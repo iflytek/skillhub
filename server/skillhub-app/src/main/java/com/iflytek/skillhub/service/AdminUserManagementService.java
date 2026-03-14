@@ -110,8 +110,8 @@ public class AdminUserManagementService {
             user.getId(),
             user.getDisplayName(),
             user.getEmail(),
-            List.copyOf(roles),
             user.getStatus().name(),
+            List.copyOf(roles),
             user.getCreatedAt()
         );
     }

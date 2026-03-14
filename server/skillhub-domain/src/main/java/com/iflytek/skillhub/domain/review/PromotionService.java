@@ -9,15 +9,14 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.*;
-import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ConcurrentModificationException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -30,7 +29,6 @@ public class PromotionService {
     private final NamespaceRepository namespaceRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
-    private final EntityManager entityManager;
 
     public PromotionService(PromotionRequestRepository promotionRequestRepository,
                             SkillRepository skillRepository,
@@ -38,8 +36,7 @@ public class PromotionService {
                             SkillFileRepository skillFileRepository,
                             NamespaceRepository namespaceRepository,
                             ReviewPermissionChecker permissionChecker,
-                            ApplicationEventPublisher eventPublisher,
-                            EntityManager entityManager) {
+                            ApplicationEventPublisher eventPublisher) {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -47,13 +44,12 @@ public class PromotionService {
         this.namespaceRepository = namespaceRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
-        this.entityManager = entityManager;
     }
 
     @Transactional
     public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
                                             Long targetNamespaceId, String userId,
-                                            java.util.Map<Long, NamespaceRole> userNamespaceRoles,
+                                            Map<Long, NamespaceRole> userNamespaceRoles,
                                             Set<String> platformRoles) {
         Skill sourceSkill = skillRepository.findById(sourceSkillId)
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
@@ -70,6 +66,44 @@ public class PromotionService {
         }
 
         if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles)) {
+            throw new DomainForbiddenException("promotion.submit.no_permission");
+        }
+
+        Namespace targetNamespace = namespaceRepository.findById(targetNamespaceId)
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", targetNamespaceId));
+
+        if (targetNamespace.getType() != NamespaceType.GLOBAL) {
+            throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
+        }
+
+        promotionRequestRepository.findBySourceVersionIdAndStatus(sourceVersionId, ReviewTaskStatus.PENDING)
+                .ifPresent(existing -> {
+                    throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
+                });
+
+        PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
+        return promotionRequestRepository.save(request);
+    }
+
+    @Transactional
+    public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
+                                            Long targetNamespaceId, String userId,
+                                            Map<Long, NamespaceRole> userNamespaceRoles) {
+        Skill sourceSkill = skillRepository.findById(sourceSkillId)
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
+
+        SkillVersion sourceVersion = skillVersionRepository.findById(sourceVersionId)
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", sourceVersionId));
+
+        if (!sourceVersion.getSkillId().equals(sourceSkillId)) {
+            throw new DomainBadRequestException("promotion.version_skill_mismatch", sourceVersionId, sourceSkillId);
+        }
+
+        if (sourceVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
+            throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
+        }
+
+        if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles)) {
             throw new DomainForbiddenException("promotion.submit.no_permission");
         }
 
@@ -108,11 +142,6 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
-        entityManager.detach(request);
-        request.setStatus(ReviewTaskStatus.APPROVED);
-        request.setReviewedBy(reviewerId);
-        request.setReviewComment(comment);
-        request.setReviewedAt(Instant.now());
 
         Skill sourceSkill = skillRepository.findById(request.getSourceSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", request.getSourceSkillId()));
@@ -155,12 +184,9 @@ public class PromotionService {
                 .toList();
         skillFileRepository.saveAll(copiedFiles);
 
-        int targetUpdated = promotionRequestRepository.updateStatusWithVersion(
-                promotionId, ReviewTaskStatus.APPROVED, reviewerId, comment, newSkill.getId(), request.getVersion() + 1);
-        if (targetUpdated == 0) {
-            throw new ConcurrentModificationException("Promotion request target skill was modified concurrently");
-        }
+        // Update promotion request with target skill id
         request.setTargetSkillId(newSkill.getId());
+        promotionRequestRepository.save(request);
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 newSkill.getId(), newVersion.getId(), reviewerId));
@@ -187,12 +213,8 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
-        entityManager.detach(request);
-        request.setStatus(ReviewTaskStatus.REJECTED);
-        request.setReviewedBy(reviewerId);
-        request.setReviewComment(comment);
-        request.setReviewedAt(Instant.now());
-        return request;
+
+        return promotionRequestRepository.findById(promotionId).orElse(request);
     }
 
     public boolean canViewPromotion(PromotionRequest request, String userId, Set<String> platformRoles) {

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -12,13 +13,12 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
-import jakarta.persistence.EntityManager;
+import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ConcurrentModificationException;
 import java.util.Map;
@@ -33,7 +33,7 @@ public class ReviewService {
     private final NamespaceRepository namespaceRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
-    private final EntityManager entityManager;
+    private final ObjectMapper objectMapper;
 
     public ReviewService(ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
@@ -41,14 +41,14 @@ public class ReviewService {
                          NamespaceRepository namespaceRepository,
                          ReviewPermissionChecker permissionChecker,
                          ApplicationEventPublisher eventPublisher,
-                         EntityManager entityManager) {
+                         ObjectMapper objectMapper) {
         this.reviewTaskRepository = reviewTaskRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
-        this.entityManager = entityManager;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -58,6 +58,7 @@ public class ReviewService {
                                    Set<String> platformRoles) {
         SkillVersion skillVersion = skillVersionRepository.findById(skillVersionId)
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", skillVersionId));
+
         Skill skill = skillRepository.findById(skillVersion.getSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
 
@@ -67,6 +68,35 @@ public class ReviewService {
 
         if (skillVersion.getStatus() != SkillVersionStatus.DRAFT) {
             throw new DomainBadRequestException("review.submit.not_draft", skillVersionId);
+        }
+
+        skillVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        skillVersionRepository.save(skillVersion);
+
+        ReviewTask task = new ReviewTask(skillVersionId, skill.getNamespaceId(), userId);
+        try {
+            return reviewTaskRepository.save(task);
+        } catch (DataIntegrityViolationException e) {
+            throw new DomainBadRequestException("review.submit.duplicate", skillVersionId);
+        }
+    }
+
+    @Transactional
+    public ReviewTask submitReview(Long skillVersionId,
+                                   String userId,
+                                   Map<Long, NamespaceRole> userNamespaceRoles) {
+        SkillVersion skillVersion = skillVersionRepository.findById(skillVersionId)
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", skillVersionId));
+
+        Skill skill = skillRepository.findById(skillVersion.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
+
+        if (skillVersion.getStatus() != SkillVersionStatus.DRAFT) {
+            throw new DomainBadRequestException("review.submit.not_draft", skillVersionId);
+        }
+
+        if (!permissionChecker.canSubmitReview(skill.getNamespaceId(), userNamespaceRoles)) {
+            throw new DomainForbiddenException("review.submit.no_permission");
         }
 
         skillVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
@@ -104,11 +134,6 @@ public class ReviewService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
-        entityManager.detach(task);
-        task.setStatus(ReviewTaskStatus.APPROVED);
-        task.setReviewedBy(reviewerId);
-        task.setReviewComment(comment);
-        task.setReviewedAt(Instant.now());
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
@@ -119,12 +144,15 @@ public class ReviewService {
         Skill skill = skillRepository.findById(skillVersion.getSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
         skill.setLatestVersionId(skillVersion.getId());
+        applyPublishedMetadata(skill, skillVersion);
+        skill.setUpdatedBy(reviewerId);
         skillRepository.save(skill);
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 skill.getId(), skillVersion.getId(), reviewerId));
 
-        return task;
+        // Reload to return updated state
+        return reviewTaskRepository.findById(reviewTaskId).orElse(task);
     }
 
     @Transactional
@@ -151,18 +179,13 @@ public class ReviewService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
-        entityManager.detach(task);
-        task.setStatus(ReviewTaskStatus.REJECTED);
-        task.setReviewedBy(reviewerId);
-        task.setReviewComment(comment);
-        task.setReviewedAt(Instant.now());
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
         skillVersion.setStatus(SkillVersionStatus.REJECTED);
         skillVersionRepository.save(skillVersion);
 
-        return task;
+        return reviewTaskRepository.findById(reviewTaskId).orElse(task);
     }
 
     @Transactional
@@ -197,5 +220,20 @@ public class ReviewService {
                                  Map<Long, NamespaceRole> userNamespaceRoles,
                                  Set<String> platformRoles) {
         return permissionChecker.canViewReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);
+    }
+
+    private void applyPublishedMetadata(Skill skill, SkillVersion skillVersion) {
+        String metadataJson = skillVersion.getParsedMetadataJson();
+        if (metadataJson == null || metadataJson.isBlank()) {
+            return;
+        }
+
+        try {
+            SkillMetadata metadata = objectMapper.readValue(metadataJson, SkillMetadata.class);
+            skill.setDisplayName(metadata.name());
+            skill.setSummary(metadata.description());
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to deserialize skill metadata", e);
+        }
     }
 }

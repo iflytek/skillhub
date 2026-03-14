@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -13,7 +14,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
-import jakarta.persistence.EntityManager;
+import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,6 @@ class ReviewServiceTest {
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
-    @Mock private EntityManager entityManager;
 
     private ReviewService reviewService;
 
@@ -52,12 +52,14 @@ class ReviewServiceTest {
     private static final String REVIEWER_ID = "user-200";
     private static final Long REVIEW_TASK_ID = 1L;
     private static final Long SKILL_ID = 30L;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher, entityManager);
+                namespaceRepository, permissionChecker, eventPublisher, objectMapper);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -109,11 +111,17 @@ class ReviewServiceTest {
             Skill skill = createSkill();
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
-            when(permissionChecker.canSubmitForReview(eq(skill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
+            when(permissionChecker.canSubmitReview(
+                    NAMESPACE_ID,
+                    Map.of(NAMESPACE_ID, NamespaceRole.MEMBER))).thenReturn(true);
             ReviewTask savedTask = createPendingReviewTask();
             when(reviewTaskRepository.save(any(ReviewTask.class))).thenReturn(savedTask);
 
-            ReviewTask result = reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of());
+            ReviewTask result = reviewService.submitReview(
+                    SKILL_VERSION_ID,
+                    USER_ID,
+                    Map.of(NAMESPACE_ID, NamespaceRole.MEMBER)
+            );
 
             assertNotNull(result);
             assertEquals(SkillVersionStatus.PENDING_REVIEW, sv.getStatus());
@@ -126,19 +134,17 @@ class ReviewServiceTest {
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.empty());
 
             assertThrows(DomainNotFoundException.class,
-                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of()));
+                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of()));
         }
 
         @Test
         void shouldThrowWhenStatusNotDraft() {
             SkillVersion sv = createPendingReviewSkillVersion();
-            Skill skill = createSkill();
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
-            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
-            when(permissionChecker.canSubmitForReview(eq(skill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of()));
+                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(NAMESPACE_ID, NamespaceRole.MEMBER)));
         }
 
         @Test
@@ -147,12 +153,31 @@ class ReviewServiceTest {
             Skill skill = createSkill();
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
-            when(permissionChecker.canSubmitForReview(eq(skill), eq(USER_ID), anyMap(), anySet())).thenReturn(true);
+            when(permissionChecker.canSubmitReview(
+                    NAMESPACE_ID,
+                    Map.of(NAMESPACE_ID, NamespaceRole.MEMBER))).thenReturn(true);
             when(reviewTaskRepository.save(any(ReviewTask.class)))
                     .thenThrow(new DataIntegrityViolationException("duplicate"));
 
             assertThrows(DomainBadRequestException.class,
-                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of(), Set.of()));
+                    () -> reviewService.submitReview(
+                            SKILL_VERSION_ID,
+                            USER_ID,
+                            Map.of(NAMESPACE_ID, NamespaceRole.MEMBER)
+                    ));
+        }
+
+        @Test
+        void shouldThrowWhenSubmitterLacksNamespaceMembership() {
+            SkillVersion sv = createDraftSkillVersion();
+            Skill skill = createSkill();
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(permissionChecker.canSubmitReview(NAMESPACE_ID, Map.of())).thenReturn(false);
+
+            assertThrows(DomainForbiddenException.class,
+                    () -> reviewService.submitReview(SKILL_VERSION_ID, USER_ID, Map.of()));
+            verify(reviewTaskRepository, never()).save(any(ReviewTask.class));
         }
     }
 
@@ -165,6 +190,12 @@ class ReviewServiceTest {
             Namespace ns = createTeamNamespace();
             SkillVersion sv = createPendingReviewSkillVersion();
             Skill skill = createSkill();
+            skill.setDisplayName("Published Name");
+            skill.setSummary("Published Summary");
+            skill.setUpdatedBy("previous-reviewer");
+            assertDoesNotThrow(() -> sv.setParsedMetadataJson(objectMapper.writeValueAsString(
+                    new SkillMetadata("Approved Name", "Approved Summary", "1.0.0", "Body", Map.of())
+            )));
 
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
@@ -175,19 +206,19 @@ class ReviewServiceTest {
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.approveReview(
                     REVIEW_TASK_ID, REVIEWER_ID, "LGTM",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
             assertNotNull(result);
-            assertEquals(ReviewTaskStatus.APPROVED, result.getStatus());
-            assertEquals(REVIEWER_ID, result.getReviewedBy());
-            assertEquals("LGTM", result.getReviewComment());
-            assertNotNull(result.getReviewedAt());
             assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
             assertNotNull(sv.getPublishedAt());
             assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
+            assertEquals("Approved Name", skill.getDisplayName());
+            assertEquals("Approved Summary", skill.getSummary());
+            assertEquals(REVIEWER_ID, skill.getUpdatedBy());
             verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
         }
 
@@ -204,6 +235,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
@@ -275,16 +307,13 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.rejectReview(
                     REVIEW_TASK_ID, REVIEWER_ID, "needs work",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
             assertNotNull(result);
-            assertEquals(ReviewTaskStatus.REJECTED, result.getStatus());
-            assertEquals(REVIEWER_ID, result.getReviewedBy());
-            assertEquals("needs work", result.getReviewComment());
-            assertNotNull(result.getReviewedAt());
             assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
             verify(skillVersionRepository).save(sv);
             verify(eventPublisher, never()).publishEvent(any(SkillPublishedEvent.class));

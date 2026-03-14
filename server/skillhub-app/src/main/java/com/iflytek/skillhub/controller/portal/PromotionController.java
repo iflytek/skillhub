@@ -18,15 +18,27 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
-import com.iflytek.skillhub.dto.*;
+import com.iflytek.skillhub.dto.ApiResponse;
+import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.PromotionActionRequest;
+import com.iflytek.skillhub.dto.PromotionRequestDto;
+import com.iflytek.skillhub.dto.PromotionResponseDto;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.MDC;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 import java.util.Set;
-import org.slf4j.MDC;
 
 @RestController
 @RequestMapping("/api/v1/promotions")
@@ -62,56 +74,57 @@ public class PromotionController extends BaseApiController {
     }
 
     @PostMapping
-    public ApiResponse<PromotionResponseDto> submitPromotion(
-            @RequestBody PromotionRequestDto request,
-            @RequestAttribute("userId") String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
-            HttpServletRequest httpRequest) {
+    public ApiResponse<PromotionResponseDto> submitPromotion(@RequestBody PromotionRequestDto request,
+                                                             @RequestAttribute("userId") String userId,
+                                                             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                             HttpServletRequest httpRequest) {
         PromotionRequest promotion = promotionService.submitPromotion(
-                request.sourceSkillId(), request.sourceVersionId(),
-                request.targetNamespaceId(), userId,
+                request.sourceSkillId(),
+                request.sourceVersionId(),
+                request.targetNamespaceId(),
+                userId,
                 userNsRoles != null ? userNsRoles : Map.of(),
-                rbacService.getUserRoleCodes(userId));
-        recordAudit("PROMOTION_SUBMIT", userId, promotion.getId(), httpRequest,
-                "{\"sourceSkillId\":" + request.sourceSkillId() + ",\"sourceVersionId\":" + request.sourceVersionId() + "}");
+                rbacService.getUserRoleCodes(userId)
+        );
+        recordAudit(
+                "PROMOTION_SUBMIT",
+                userId,
+                promotion.getId(),
+                httpRequest,
+                "{\"sourceSkillId\":" + request.sourceSkillId() + ",\"sourceVersionId\":" + request.sourceVersionId() + "}"
+        );
         return ok("response.success.created", toResponse(promotion));
     }
 
     @PostMapping("/{id}/approve")
-    public ApiResponse<PromotionResponseDto> approvePromotion(
-            @PathVariable Long id,
-            @RequestBody(required = false) PromotionActionRequest request,
-            @RequestAttribute("userId") String userId,
-            HttpServletRequest httpRequest) {
+    public ApiResponse<PromotionResponseDto> approvePromotion(@PathVariable Long id,
+                                                              @RequestBody(required = false) PromotionActionRequest request,
+                                                              @RequestAttribute("userId") String userId,
+                                                              HttpServletRequest httpRequest) {
         String comment = request != null ? request.comment() : null;
-        Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
-        PromotionRequest promotion = promotionService.approvePromotion(id, userId, comment, platformRoles);
+        PromotionRequest promotion = promotionService.approvePromotion(id, userId, comment, rbacService.getUserRoleCodes(userId));
         recordAudit("PROMOTION_APPROVE", userId, promotion.getId(), httpRequest, detailWithComment(comment));
         return ok("response.success.updated", toResponse(promotion));
     }
 
     @PostMapping("/{id}/reject")
-    public ApiResponse<PromotionResponseDto> rejectPromotion(
-            @PathVariable Long id,
-            @RequestBody(required = false) PromotionActionRequest request,
-            @RequestAttribute("userId") String userId,
-            HttpServletRequest httpRequest) {
+    public ApiResponse<PromotionResponseDto> rejectPromotion(@PathVariable Long id,
+                                                             @RequestBody(required = false) PromotionActionRequest request,
+                                                             @RequestAttribute("userId") String userId,
+                                                             HttpServletRequest httpRequest) {
         String comment = request != null ? request.comment() : null;
-        Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
-        PromotionRequest promotion = promotionService.rejectPromotion(id, userId, comment, platformRoles);
+        PromotionRequest promotion = promotionService.rejectPromotion(id, userId, comment, rbacService.getUserRoleCodes(userId));
         recordAudit("PROMOTION_REJECT", userId, promotion.getId(), httpRequest, detailWithComment(comment));
         return ok("response.success.updated", toResponse(promotion));
     }
 
     @GetMapping
-    public ApiResponse<PageResponse<PromotionResponseDto>> listPromotions(
-            @RequestParam(defaultValue = "PENDING") String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestAttribute("userId") String userId) {
+    public ApiResponse<PageResponse<PromotionResponseDto>> listPromotions(@RequestParam(defaultValue = "PENDING") String status,
+                                                                          @RequestParam(defaultValue = "0") int page,
+                                                                          @RequestParam(defaultValue = "20") int size,
+                                                                          @RequestAttribute("userId") String userId) {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
-        boolean hasAdminRole = platformRoles.contains("SKILL_ADMIN") || platformRoles.contains("SUPER_ADMIN");
-        if (!hasAdminRole) {
+        if (!platformRoles.contains("SKILL_ADMIN") && !platformRoles.contains("SUPER_ADMIN")) {
             throw new DomainForbiddenException("promotion.no_permission");
         }
         ReviewTaskStatus reviewStatus = ReviewTaskStatus.valueOf(status.toUpperCase());
@@ -120,13 +133,11 @@ public class PromotionController extends BaseApiController {
     }
 
     @GetMapping("/pending")
-    public ApiResponse<PageResponse<PromotionResponseDto>> listPendingPromotions(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestAttribute("userId") String userId) {
+    public ApiResponse<PageResponse<PromotionResponseDto>> listPendingPromotions(@RequestParam(defaultValue = "0") int page,
+                                                                                 @RequestParam(defaultValue = "20") int size,
+                                                                                 @RequestAttribute("userId") String userId) {
         Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
-        boolean hasAdminRole = platformRoles.contains("SKILL_ADMIN") || platformRoles.contains("SUPER_ADMIN");
-        if (!hasAdminRole) {
+        if (!platformRoles.contains("SKILL_ADMIN") && !platformRoles.contains("SUPER_ADMIN")) {
             throw new DomainForbiddenException("promotion.no_permission");
         }
         Page<PromotionRequest> requests = promotionRequestRepository.findByStatus(
@@ -145,40 +156,39 @@ public class PromotionController extends BaseApiController {
         return ok("response.success.read", toResponse(promotion));
     }
 
-    private PromotionResponseDto toResponse(PromotionRequest req) {
-        Skill sourceSkill = skillRepository.findById(req.getSourceSkillId())
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", req.getSourceSkillId()));
-        SkillVersion sourceVersion = skillVersionRepository.findById(req.getSourceVersionId())
-                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", req.getSourceVersionId()));
-        Namespace sourceNs = namespaceRepository.findById(sourceSkill.getNamespaceId())
+    private PromotionResponseDto toResponse(PromotionRequest request) {
+        Skill sourceSkill = skillRepository.findById(request.getSourceSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", request.getSourceSkillId()));
+        SkillVersion sourceVersion = skillVersionRepository.findById(request.getSourceVersionId())
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", request.getSourceVersionId()));
+        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
-        Namespace targetNs = namespaceRepository.findById(req.getTargetNamespaceId())
-                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", req.getTargetNamespaceId()));
+        Namespace targetNamespace = namespaceRepository.findById(request.getTargetNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", request.getTargetNamespaceId()));
 
-        String submittedByName = userAccountRepository.findById(req.getSubmittedBy())
-                .map(UserAccount::getDisplayName).orElse(null);
-
-        String reviewedByName = req.getReviewedBy() != null
-                ? userAccountRepository.findById(req.getReviewedBy())
-                        .map(UserAccount::getDisplayName).orElse(null)
+        String submittedByName = userAccountRepository.findById(request.getSubmittedBy())
+                .map(UserAccount::getDisplayName)
+                .orElse(null);
+        String reviewedByName = request.getReviewedBy() != null
+                ? userAccountRepository.findById(request.getReviewedBy()).map(UserAccount::getDisplayName).orElse(null)
                 : null;
 
         return new PromotionResponseDto(
-                req.getId(),
-                req.getSourceSkillId(),
-                sourceNs.getSlug(),
+                request.getId(),
+                request.getSourceSkillId(),
+                sourceNamespace.getSlug(),
                 sourceSkill.getSlug(),
                 sourceVersion.getVersion(),
-                targetNs.getSlug(),
-                req.getTargetSkillId(),
-                req.getStatus().name(),
-                req.getSubmittedBy(),
+                targetNamespace.getSlug(),
+                request.getTargetSkillId(),
+                request.getStatus().name(),
+                request.getSubmittedBy(),
                 submittedByName,
-                req.getReviewedBy(),
+                request.getReviewedBy(),
                 reviewedByName,
-                req.getReviewComment(),
-                req.getSubmittedAt(),
-                req.getReviewedAt()
+                request.getReviewComment(),
+                request.getSubmittedAt(),
+                request.getReviewedAt()
         );
     }
 

@@ -57,6 +57,10 @@ public class SkillTagService {
         return tags;
     }
 
+    public List<SkillTag> listTags(String namespaceSlug, String skillSlug) {
+        return listTags(namespaceSlug, skillSlug, null, java.util.Map.of());
+    }
+
     @Transactional
     public SkillTag createOrMoveTag(
             String namespaceSlug,
