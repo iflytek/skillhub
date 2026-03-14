@@ -26,18 +26,18 @@ class ReviewPermissionCheckerTest {
     }
 
     @Test
-    void skillAdminCanReviewOwnSubmission() {
+    void skillAdminCannotReviewOwnSubmission() {
         String userId = "user-1";
         ReviewTask task = new ReviewTask(1L, 10L, userId);
-        assertTrue(checker.canReview(task, userId,
+        assertFalse(checker.canReview(task, userId,
                 NamespaceType.TEAM, Map.of(), Set.of("SKILL_ADMIN")));
     }
 
     @Test
-    void superAdminCanReviewOwnSubmission() {
+    void superAdminCannotReviewOwnSubmission() {
         String userId = "user-1";
         ReviewTask task = new ReviewTask(1L, 10L, userId);
-        assertTrue(checker.canReview(task, userId,
+        assertFalse(checker.canReview(task, userId,
                 NamespaceType.TEAM, Map.of(), Set.of("SUPER_ADMIN")));
     }
 
