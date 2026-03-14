@@ -170,15 +170,54 @@ type ApiEnvelope<T> = {
   requestId: string
 }
 
-export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+type RequestWithTimeout = RequestInit & {
+  timeoutMs?: number
+}
+
+function createRequestSignal(init?: RequestWithTimeout): { signal?: AbortSignal, cleanup: () => void } {
+  if (!init?.timeoutMs && !init?.signal) {
+    return { signal: init?.signal ?? undefined, cleanup: () => {} }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = init?.timeoutMs ? window.setTimeout(() => controller.abort('timeout'), init.timeoutMs) : undefined
+  const abortListener = () => controller.abort()
+
+  if (init?.signal) {
+    if (init.signal.aborted) {
+      controller.abort()
+    } else {
+      init.signal.addEventListener('abort', abortListener, { once: true })
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      init?.signal?.removeEventListener('abort', abortListener)
+    },
+  }
+}
+
+export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithTimeout): Promise<T> {
+  const { signal, cleanup } = createRequestSignal(init)
   let response: Response
   try {
     response = await fetch(withBaseUrl(input), {
       ...init,
+      signal,
       headers: withRequestHeaders(init?.headers),
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError('error.request.timeout', 408)
+    }
     throw new ApiError('Network error', 0)
+  } finally {
+    cleanup()
   }
 
   let json: ApiEnvelope<T> | null = null
@@ -372,19 +411,28 @@ export const accountApi = {
 }
 
 export const tokenApi = {
-  async getTokens(): Promise<ApiToken[]> {
-    const tokens = await unwrap<ApiToken[]>(client.GET('/api/v1/tokens', {
+  async getTokens(params?: { page?: number, size?: number }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
+    const page = await unwrap<{ items: ApiToken[], total: number, page: number, size: number }>(client.GET('/api/v1/tokens', {
+      params: {
+        query: {
+          page: params?.page ?? 0,
+          size: params?.size ?? 10,
+        },
+      },
       headers: withRequestHeaders(),
     } as never) as never)
-    return tokens
-      .filter((token) => token.id !== undefined && token.name && token.tokenPrefix && token.createdAt)
-      .map((token) => ({
-        ...token,
-        id: token.id!,
-        name: token.name!,
-        tokenPrefix: token.tokenPrefix!,
-        createdAt: token.createdAt!,
-      }))
+    return {
+      ...page,
+      items: page.items
+        .filter((token) => token.id !== undefined && token.name && token.tokenPrefix && token.createdAt)
+        .map((token) => ({
+          ...token,
+          id: token.id!,
+          name: token.name!,
+          tokenPrefix: token.tokenPrefix!,
+          createdAt: token.createdAt!,
+        })),
+    }
   },
 
   async createToken(request: CreateTokenRequest): Promise<CreateTokenResponse> {
@@ -408,14 +456,23 @@ export const tokenApi = {
   },
 
   async deleteToken(tokenId: number): Promise<void> {
-    await unwrap(client.DELETE('/api/v1/tokens/{id}', {
+    const { error, response } = await client.DELETE('/api/v1/tokens/{id}', {
       params: {
         path: {
           id: tokenId,
         },
       },
       headers: withCsrf(),
-    }) as never)
+    } as never)
+
+    if (response.status === 204) {
+      return
+    }
+
+    const envelope = (error && isApiEnvelope<void>(error) ? error : null) as { msg?: string } | null
+    if (!response.ok || error) {
+      throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+    }
   },
 }
 

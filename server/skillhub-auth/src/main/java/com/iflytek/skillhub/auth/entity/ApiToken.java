@@ -21,7 +21,7 @@ public class ApiToken {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(nullable = false, length = 128)
+    @Column(nullable = false, length = 64)
     private String name;
 
     @Column(name = "token_prefix", nullable = false, length = 16)

@@ -12,6 +12,7 @@ import java.util.Set;
 
 @Service
 public class PostgresFullTextQueryService implements SearchQueryService {
+    private static final int SHORT_KEYWORD_LENGTH = 2;
 
     private final EntityManager entityManager;
 
@@ -21,6 +22,9 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
     @Override
     public SearchResult search(SearchQuery query) {
+        String normalizedKeyword = normalizeKeyword(query.keyword());
+        boolean hasKeyword = normalizedKeyword != null;
+        boolean useShortKeywordFallback = hasKeyword && normalizedKeyword.length() <= SHORT_KEYWORD_LENGTH;
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
@@ -48,8 +52,17 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         // Full-text search
-        if (query.keyword() != null && !query.keyword().isBlank()) {
-            sql.append("AND search_vector @@ plainto_tsquery('simple', :keyword) ");
+        if (hasKeyword) {
+            if (useShortKeywordFallback) {
+                sql.append("AND (");
+                sql.append("LOWER(title) LIKE LOWER(:keywordLike) ");
+                sql.append("OR LOWER(summary) LIKE LOWER(:keywordLike) ");
+                sql.append("OR LOWER(keywords) LIKE LOWER(:keywordLike) ");
+                sql.append("OR LOWER(search_text) LIKE LOWER(:keywordLike)");
+                sql.append(") ");
+            } else {
+                sql.append("AND search_vector @@ plainto_tsquery('simple', :keyword) ");
+            }
         }
 
         // Sorting
@@ -59,7 +72,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("ORDER BY (SELECT rating_avg FROM skill WHERE id = skill_id) DESC ");
         } else if ("newest".equals(query.sortBy())) {
             sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC ");
-        } else if ("relevance".equals(query.sortBy()) && query.keyword() != null && !query.keyword().isBlank()) {
+        } else if ("relevance".equals(query.sortBy()) && hasKeyword && !useShortKeywordFallback) {
             sql.append("ORDER BY ts_rank(search_vector, plainto_tsquery('simple', :keyword)) DESC ");
         } else {
             sql.append("ORDER BY updated_at DESC ");
@@ -80,8 +93,12 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             nativeQuery.setParameter("namespaceId", query.namespaceId());
         }
 
-        if (query.keyword() != null && !query.keyword().isBlank()) {
-            nativeQuery.setParameter("keyword", query.keyword());
+        if (hasKeyword) {
+            if (useShortKeywordFallback) {
+                nativeQuery.setParameter("keywordLike", "%" + normalizedKeyword + "%");
+            } else {
+                nativeQuery.setParameter("keyword", normalizedKeyword);
+            }
         }
 
         nativeQuery.setParameter("limit", query.size());
@@ -115,12 +132,23 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             countQuery.setParameter("namespaceId", query.namespaceId());
         }
 
-        if (query.keyword() != null && !query.keyword().isBlank()) {
-            countQuery.setParameter("keyword", query.keyword());
+        if (hasKeyword) {
+            if (useShortKeywordFallback) {
+                countQuery.setParameter("keywordLike", "%" + normalizedKeyword + "%");
+            } else {
+                countQuery.setParameter("keyword", normalizedKeyword);
+            }
         }
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
 
         return new SearchResult(skillIds, total, query.page(), query.size());
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
     }
 }

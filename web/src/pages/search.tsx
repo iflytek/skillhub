@@ -1,3 +1,4 @@
+import { startTransition, useEffect, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
@@ -16,6 +17,11 @@ export function SearchPage() {
   const q = searchParams.q || ''
   const sort = searchParams.sort || 'relevance'
   const page = searchParams.page ?? 0
+  const [queryInput, setQueryInput] = useState(q)
+
+  useEffect(() => {
+    setQueryInput(q)
+  }, [q])
 
   const { data, isLoading } = useSearchSkills({
     q,
@@ -24,8 +30,34 @@ export function SearchPage() {
     size: 12,
   })
 
+  useEffect(() => {
+    const normalizedQuery = queryInput.trim()
+    if (normalizedQuery === q) {
+      return
+    }
+
+    if (!normalizedQuery) {
+      startTransition(() => {
+        navigate({ to: '/search', search: { q: '', sort, page: 0 }, replace: page === 0 })
+      })
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      startTransition(() => {
+        navigate({ to: '/search', search: { q: normalizedQuery, sort, page: 0 }, replace: true })
+      })
+    }, 250)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [navigate, page, q, queryInput, sort])
+
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort, page: 0 } })
+    const normalizedQuery = query.trim()
+    setQueryInput(query)
+    startTransition(() => {
+      navigate({ to: '/search', search: { q: normalizedQuery, sort, page: 0 }, replace: true })
+    })
   }
 
   const handleSortChange = (newSort: string) => {
@@ -46,7 +78,7 @@ export function SearchPage() {
     <div className="space-y-8 animate-fade-up">
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
-        <SearchBar defaultValue={q} onSearch={handleSearch} />
+        <SearchBar value={queryInput} onChange={setQueryInput} onSearch={handleSearch} />
       </div>
 
       {/* Sort Selector */}
@@ -92,7 +124,7 @@ export function SearchPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {data.items.map((skill, idx) => (
-              <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
+              <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
                 <SkillCard
                   skill={skill}
                   onClick={() => handleSkillClick(skill.namespace, skill.slug)}

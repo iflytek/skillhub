@@ -111,6 +111,10 @@
     "password": "密码",
     "usernamePlaceholder": "输入用户名",
     "passwordPlaceholder": "输入密码",
+    "usernameRequired": "请输入用户名",
+    "passwordRequired": "请输入密码",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
     "submitting": "登录中...",
     "submit": "登录",
     "noAccount": "还没有账号？",
@@ -322,6 +326,7 @@
     "emptyDescription": "该命名空间下还没有发布任何技能"
   },
   "skillDetail": {
+    "back": "返回上一页",
     "notFound": "技能不存在",
     "notFoundDesc": "该技能可能已被删除或从未存在",
     "loginRequired": "需要登录",
@@ -393,6 +398,9 @@
     "description": "创建一个新的 API Token 用于 CLI 或 API 访问",
     "nameLabel": "Token 名称",
     "namePlaceholder": "例如: my-cli-token",
+    "nameRequired": "请输入 Token 名称",
+    "nameTooLong": "Token 名称最多 {{max}} 个字符",
+    "nameDuplicate": "你已经有同名 Token",
     "creating": "创建中...",
     "create": "创建",
     "successTitle": "Token 创建成功",
@@ -462,6 +470,10 @@
     "success": "发布成功",
     "successDescription": "{{skill}} 已提交审核，等待管理员批准后即可使用",
     "error": "发布失败",
+    "timeoutTitle": "发布请求超时",
+    "timeoutDescription": "本次发布等待时间过长，请稍后到技能列表确认结果，或重新尝试发布。",
+    "versionExistsTitle": "版本号已存在",
+    "versionExistsDescription": "当前技能版本已经发布过，请修改 SKILL.md 中的 version 后重新打包上传。",
     "selectRequired": "请选择命名空间和文件"
   },
   "toast": {
