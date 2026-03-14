@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/cli")
+@RequestMapping("/api/v1")
 public class CliController extends BaseApiController {
 
     private final SkillPackageValidator skillPackageValidator;

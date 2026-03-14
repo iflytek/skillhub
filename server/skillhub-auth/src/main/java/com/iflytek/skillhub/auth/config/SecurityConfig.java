@@ -70,7 +70,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)
-                .ignoringRequestMatchers("/api/v1/cli/**", "/api/compat/**")
+                .ignoringRequestMatchers("/api/v1/**", "/api/compat/**")
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
@@ -81,8 +81,8 @@ public class SecurityConfig {
                     "/api/v1/auth/session/bootstrap",
                     "/api/v1/auth/direct/login",
                     "/api/v1/auth/local/**",
-                    "/api/v1/cli/auth/device/**",
-                    "/api/v1/cli/check",
+                    "/api/v1/auth/device/**",
+                    "/api/v1/check",
                     "/actuator/health",
                     "/actuator/prometheus",
                     "/v3/api-docs/**",

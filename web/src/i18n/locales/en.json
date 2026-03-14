@@ -85,6 +85,9 @@
   "search": {
     "title": "Search Skills",
     "placeholder": "Search skills...",
+    "filters": {
+      "label": "Filter:"
+    },
     "sort": {
       "label": "Sort:",
       "relevance": "Relevance",
@@ -94,6 +97,10 @@
     },
     "noResults": "No results found",
     "noResultsFor": "No skills found matching \"{{q}}\"",
+    "filterStarred": "Starred only",
+    "noStarredResults": "No starred skills found",
+    "noStarredResultsFor": "No starred skills match \"{{q}}\"",
+    "noStarredSkills": "You have not starred any skills yet",
     "enterKeyword": "Please enter a search keyword",
     "results": "{{count}} skills found",
     "resultCount": "Found <1>{{count}}</1> results"
@@ -414,6 +421,13 @@
   "starButton": {
     "starred": "Starred",
     "star": "Star"
+  },
+  "skillCard": {
+    "starred": "Starred",
+    "starredAction": "Click to unstar",
+    "unstarTitle": "Remove from starred",
+    "unstarDescription": "Are you sure you want to remove \"{{name}}\" from your starred skills?",
+    "unstarConfirm": "Remove"
   },
   "copyButton": {
     "copied": "Copied",
