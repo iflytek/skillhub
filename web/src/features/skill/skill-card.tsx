@@ -10,13 +10,13 @@ interface SkillCardProps {
 export function SkillCard({ skill, onClick }: SkillCardProps) {
   return (
     <Card
-      className="p-5 cursor-pointer group relative overflow-hidden"
+      className="h-full p-5 cursor-pointer group relative overflow-hidden"
       onClick={onClick}
     >
       {/* Hover gradient border effect */}
       <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 pointer-events-none" />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex h-full flex-col">
         <div className="flex items-start justify-between mb-3">
           <h3 className="font-semibold font-heading text-lg text-foreground group-hover:text-primary transition-colors">
             {skill.displayName}
@@ -30,7 +30,7 @@ export function SkillCard({ skill, onClick }: SkillCardProps) {
           </p>
         )}
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground">
           {skill.latestVersion && (
             <span className="px-2.5 py-1 rounded-full bg-secondary/60 font-mono">
               v{skill.latestVersion}

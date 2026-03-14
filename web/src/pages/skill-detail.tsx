@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
@@ -8,6 +9,7 @@ import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi } from '@/api/client'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -77,6 +79,14 @@ export function SkillDetailPage() {
     })
   }
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back()
+      return
+    }
+    navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })
+  }
+
   if (isLoadingSkill) {
     return (
       <div className="space-y-6 animate-fade-up">
@@ -122,6 +132,15 @@ export function SkillDetailPage() {
       {/* Main Content */}
       <div className="lg:col-span-2 space-y-8">
         <div className="space-y-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 px-0 text-muted-foreground hover:text-foreground"
+            onClick={handleBack}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t('skillDetail.back')}
+          </Button>
           <div className="flex items-center gap-3 mb-1">
             <NamespaceBadge type="GLOBAL" name={namespace} />
           </div>
@@ -173,7 +192,7 @@ export function SkillDetailPage() {
                           </span>
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(version.publishedAt).toLocaleDateString(i18n.language)}
+                          {formatLocalDateTime(version.publishedAt, i18n.language)}
                         </span>
                       </div>
                       {version.changelog && (

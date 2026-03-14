@@ -1,17 +1,17 @@
-import { toast as sonnerToast } from 'sonner'
+import { toast as sonnerToast, type ExternalToast } from 'sonner'
 
 export const toast = {
-  success: (message: string, description?: string) => {
-    sonnerToast.success(message, { description })
+  success: (message: string, description?: string, options?: ExternalToast) => {
+    sonnerToast.success(message, { description, ...options })
   },
-  error: (message: string, description?: string) => {
-    sonnerToast.error(message, { description })
+  error: (message: string, description?: string, options?: ExternalToast) => {
+    sonnerToast.error(message, { description, ...options })
   },
-  warning: (message: string, description?: string) => {
-    sonnerToast.warning(message, { description })
+  warning: (message: string, description?: string, options?: ExternalToast) => {
+    sonnerToast.warning(message, { description, ...options })
   },
-  info: (message: string, description?: string) => {
-    sonnerToast.info(message, { description })
+  info: (message: string, description?: string, options?: ExternalToast) => {
+    sonnerToast.info(message, { description, ...options })
   },
   promise: <T,>(
     promise: Promise<T>,

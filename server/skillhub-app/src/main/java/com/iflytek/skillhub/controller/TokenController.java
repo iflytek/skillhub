@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.TokenCreateRequest;
 import com.iflytek.skillhub.dto.TokenCreateResponse;
 import com.iflytek.skillhub.dto.TokenSummaryResponse;
@@ -45,17 +46,20 @@ public class TokenController extends BaseApiController {
     }
 
     @GetMapping
-    public ApiResponse<List<TokenSummaryResponse>> list(@AuthenticationPrincipal PlatformPrincipal principal) {
-        var tokens = apiTokenService.listActiveTokens(principal.userId());
-        var result = tokens.stream().map(t -> new TokenSummaryResponse(
+    public ApiResponse<PageResponse<TokenSummaryResponse>> list(
+            @AuthenticationPrincipal PlatformPrincipal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        var tokens = apiTokenService.listActiveTokens(principal.userId(), page, size);
+        var result = tokens.map(t -> new TokenSummaryResponse(
             t.getId(),
             t.getName(),
             t.getTokenPrefix(),
             t.getCreatedAt().toString(),
             t.getExpiresAt() != null ? t.getExpiresAt().toString() : "",
             t.getLastUsedAt() != null ? t.getLastUsedAt().toString() : ""
-        )).toList();
-        return ok("response.success.read", result);
+        ));
+        return ok("response.success.read", PageResponse.from(result));
     }
 
     @DeleteMapping("/{id}")

@@ -96,6 +96,23 @@ class LocalAuthControllerTest {
     }
 
     @Test
+    void register_rejectsInvalidEmailFormat() throws Exception {
+        given(localAuthService.register("bob", "Abcd123!", "not-an-email"))
+            .willThrow(new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.invalid"));
+
+        mockMvc.perform(post("/api/v1/auth/local/register")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"bob","password":"Abcd123!","email":"not-an-email"}
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.msg").value("邮箱格式不正确"));
+
+        verify(localAuthService).register("bob", "Abcd123!", "not-an-email");
+    }
+
+    @Test
     void login_failure_recordsFailureMetric() throws Exception {
         given(localAuthService.login("alice", "wrong"))
             .willThrow(new AuthFlowException(HttpStatus.UNAUTHORIZED, "error.auth.local.invalidCredentials"));

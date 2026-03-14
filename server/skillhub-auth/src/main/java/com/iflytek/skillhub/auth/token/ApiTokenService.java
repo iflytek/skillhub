@@ -2,6 +2,10 @@ package com.iflytek.skillhub.auth.token;
 
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,7 @@ public class ApiTokenService {
 
     private static final String TOKEN_PREFIX = "sk_";
     private static final int TOKEN_BYTES = 32;
+    private static final int MAX_NAME_LENGTH = 64;
     private final SecureRandom secureRandom = new SecureRandom();
     private final ApiTokenRepository tokenRepo;
 
@@ -31,14 +36,21 @@ public class ApiTokenService {
 
     @Transactional
     public TokenCreateResult createToken(String userId, String name, String scopeJson) {
+        String normalizedName = normalizeName(name);
+        validateTokenName(userId, normalizedName);
+
         byte[] randomBytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(randomBytes);
         String rawToken = TOKEN_PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
         String tokenHash = sha256(rawToken);
         String prefix = rawToken.substring(0, Math.min(rawToken.length(), 8));
 
-        ApiToken token = new ApiToken(userId, name, prefix, tokenHash, scopeJson);
-        token = tokenRepo.save(token);
+        ApiToken token = new ApiToken(userId, normalizedName, prefix, tokenHash, scopeJson);
+        try {
+            token = tokenRepo.save(token);
+        } catch (DataIntegrityViolationException ex) {
+            throw new DomainBadRequestException("error.token.name.duplicate");
+        }
         return new TokenCreateResult(rawToken, token);
     }
 
@@ -61,6 +73,12 @@ public class ApiTokenService {
         return tokenRepo.findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(userId);
     }
 
+    public Page<ApiToken> listActiveTokens(String userId, int page, int size) {
+        int resolvedPage = Math.max(page, 0);
+        int resolvedSize = Math.max(size, 1);
+        return tokenRepo.findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(userId, PageRequest.of(resolvedPage, resolvedSize));
+    }
+
     @Transactional
     public void touchLastUsed(ApiToken token) {
         token.setLastUsedAt(LocalDateTime.now());
@@ -74,6 +92,25 @@ public class ApiTokenService {
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);
+        }
+    }
+
+    private String normalizeName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.trim();
+    }
+
+    private void validateTokenName(String userId, String name) {
+        if (name.isBlank()) {
+            throw new DomainBadRequestException("validation.token.name.notBlank");
+        }
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new DomainBadRequestException("validation.token.name.size");
+        }
+        if (tokenRepo.existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase(userId, name)) {
+            throw new DomainBadRequestException("error.token.name.duplicate");
         }
     }
 }

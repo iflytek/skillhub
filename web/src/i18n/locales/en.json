@@ -111,6 +111,10 @@
     "password": "Password",
     "usernamePlaceholder": "Enter username",
     "passwordPlaceholder": "Enter password",
+    "usernameRequired": "Username is required",
+    "passwordRequired": "Password is required",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "submitting": "Logging in...",
     "submit": "Login",
     "noAccount": "Don't have an account?",
@@ -322,6 +326,7 @@
     "emptyDescription": "No skills have been published in this namespace yet"
   },
   "skillDetail": {
+    "back": "Back",
     "notFound": "Skill not found",
     "notFoundDesc": "This skill may have been deleted or never existed",
     "loginRequired": "Login Required",
@@ -393,6 +398,9 @@
     "description": "Create a new API Token for CLI or API access",
     "nameLabel": "Token Name",
     "namePlaceholder": "e.g.: my-cli-token",
+    "nameRequired": "Token name is required",
+    "nameTooLong": "Token name must be at most {{max}} characters",
+    "nameDuplicate": "You already have a token with this name",
     "creating": "Creating...",
     "create": "Create",
     "successTitle": "Token Created",
@@ -462,6 +470,10 @@
     "success": "Published Successfully",
     "successDescription": "{{skill}} has been submitted for review and will be available after admin approval",
     "error": "Publish Failed",
+    "timeoutTitle": "Publish timed out",
+    "timeoutDescription": "The publish request took too long. Please check the skill list later or try again.",
+    "versionExistsTitle": "Version already exists",
+    "versionExistsDescription": "This skill version has already been published. Update the version in SKILL.md, rebuild the package, and upload it again.",
     "selectRequired": "Please select namespace and file"
   },
   "toast": {

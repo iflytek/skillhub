@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LocalAuthService {
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,64}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
 
@@ -57,6 +58,7 @@ public class LocalAuthService {
         }
 
         String normalizedEmail = normalizeEmail(email);
+        validateEmail(normalizedEmail);
         if (normalizedEmail != null && userAccountRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
             throw new AuthFlowException(HttpStatus.CONFLICT, "error.auth.local.email.exists");
         }
@@ -188,6 +190,15 @@ public class LocalAuthService {
     private void validateUsername(String username) {
         if (!USERNAME_PATTERN.matcher(username).matches()) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.local.username.invalid");
+        }
+    }
+
+    private void validateEmail(String email) {
+        if (email == null) {
+            return;
+        }
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.invalid");
         }
     }
 }

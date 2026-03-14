@@ -8,6 +8,17 @@ import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queries'
 import { toast } from '@/shared/lib/toast'
+import { ApiError } from '@/api/client'
+
+function isVersionExistsMessage(message?: string): boolean {
+  if (!message) {
+    return false
+  }
+
+  return message.includes('error.skill.version.exists')
+    || message.includes('Version already exists')
+    || message.includes('版本已存在')
+}
 
 export function PublishPage() {
   const { t } = useTranslation()
@@ -39,6 +50,19 @@ export function PublishPage() {
       )
       navigate({ to: '/dashboard/skills' })
     } catch (error) {
+      if (error instanceof ApiError && error.status === 408) {
+        toast.error(t('publish.timeoutTitle'), t('publish.timeoutDescription'))
+        return
+      }
+
+      if (error instanceof ApiError && isVersionExistsMessage(error.serverMessage || error.message)) {
+        toast.error(
+          t('publish.versionExistsTitle'),
+          t('publish.versionExistsDescription'),
+        )
+        return
+      }
+
       toast.error(t('publish.error'), error instanceof Error ? error.message : '')
     }
   }
@@ -113,7 +137,7 @@ export function PublishPage() {
         </div>
 
         <Button
-          className="w-full"
+          className="w-full text-primary-foreground disabled:text-primary-foreground"
           size="lg"
           onClick={handlePublish}
           disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}

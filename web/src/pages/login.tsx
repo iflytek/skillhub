@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Eye, EyeOff } from 'lucide-react'
 import { getDirectAuthRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
@@ -18,6 +19,8 @@ export function LoginPage() {
   const directAuthConfig = getDirectAuthRuntimeConfig()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const { data: authMethods } = useAuthMethods(search.returnTo)
 
@@ -30,8 +33,23 @@ export function LoginPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const trimmedUsername = username.trim()
+    const nextFieldErrors: { username?: string, password?: string } = {}
+
+    if (!trimmedUsername) {
+      nextFieldErrors.username = t('login.usernameRequired')
+    }
+    if (!password) {
+      nextFieldErrors.password = t('login.passwordRequired')
+    }
+    if (nextFieldErrors.username || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors)
+      return
+    }
+
+    setFieldErrors({})
     try {
-      await loginMutation.mutateAsync({ username, password })
+      await loginMutation.mutateAsync({ username: trimmedUsername, password })
       await navigate({ to: returnTo })
     } catch {
       // mutation state drives the error UI
@@ -79,20 +97,50 @@ export function LoginPage() {
                       id="username"
                       autoComplete="username"
                       value={username}
-                      onChange={(event) => setUsername(event.target.value)}
+                      onChange={(event) => {
+                        setUsername(event.target.value)
+                        if (fieldErrors.username) {
+                          setFieldErrors((current) => ({ ...current, username: undefined }))
+                        }
+                      }}
                       placeholder={t('login.usernamePlaceholder')}
+                      aria-invalid={fieldErrors.username ? 'true' : 'false'}
                     />
+                    {fieldErrors.username ? (
+                      <p className="text-sm text-red-600">{fieldErrors.username}</p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="password">{t('login.password')}</label>
-                    <Input
-                      id="password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder={t('login.passwordPlaceholder')}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(event) => {
+                          setPassword(event.target.value)
+                          if (fieldErrors.password) {
+                            setFieldErrors((current) => ({ ...current, password: undefined }))
+                          }
+                        }}
+                        placeholder={t('login.passwordPlaceholder')}
+                        className="pr-12"
+                        aria-invalid={fieldErrors.password ? 'true' : 'false'}
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                        aria-pressed={showPassword}
+                        onClick={() => setShowPassword((current) => !current)}
+                        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {fieldErrors.password ? (
+                      <p className="text-sm text-red-600">{fieldErrors.password}</p>
+                    ) : null}
                   </div>
                   {loginMutation.error ? (
                     <p className="text-sm text-red-600">{loginMutation.error.message}</p>

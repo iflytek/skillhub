@@ -19,33 +19,57 @@ import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
 
 interface CreateTokenDialogProps {
   children: React.ReactNode
+  existingNames?: string[]
 }
 
-export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
+const MAX_TOKEN_NAME_LENGTH = 64
+
+export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenDialogProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [createdToken, setCreatedToken] = useState<CreateTokenResponse | null>(null)
+  const [nameError, setNameError] = useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  const normalizedName = name.trim()
+  const hasDuplicateName = existingNames.some(
+    (existingName) => existingName.trim().toLocaleLowerCase() === normalizedName.toLocaleLowerCase()
+  )
 
   const createMutation = useMutation({
     mutationFn: (request: CreateTokenRequest) => tokenApi.createToken(request),
     onSuccess: (data) => {
       setCreatedToken(data)
       setName('')
+      setNameError(null)
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
     },
   })
 
   const handleCreate = () => {
-    if (!name.trim()) return
-    createMutation.mutate({ name: name.trim() })
+    if (!normalizedName) {
+      setNameError(t('createToken.nameRequired'))
+      return
+    }
+    if (normalizedName.length > MAX_TOKEN_NAME_LENGTH) {
+      setNameError(t('createToken.nameTooLong', { max: MAX_TOKEN_NAME_LENGTH }))
+      return
+    }
+    if (hasDuplicateName) {
+      setNameError(t('createToken.nameDuplicate'))
+      return
+    }
+
+    setNameError(null)
+    createMutation.mutate({ name: normalizedName })
   }
 
   const handleClose = () => {
     setOpen(false)
     setCreatedToken(null)
     setName('')
+    setNameError(null)
     createMutation.reset()
   }
 
@@ -54,10 +78,22 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
 
     try {
       await navigator.clipboard.writeText(createdToken.token)
-      toast.success(t('createToken.copySuccess'))
+      toast.success(t('createToken.copySuccess'), undefined, {
+        position: 'top-center',
+        classNames: {
+          title: 'text-center font-semibold',
+          description: 'text-center',
+        },
+      })
     } catch (error) {
       console.error('Failed to copy token:', error)
-      toast.error(t('createToken.copyFailed'))
+      toast.error(t('createToken.copyFailed'), undefined, {
+        position: 'top-center',
+        classNames: {
+          title: 'text-center font-semibold',
+          description: 'text-center',
+        },
+      })
     }
   }
 
@@ -80,22 +116,40 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
                   id="token-name"
                   placeholder={t('createToken.namePlaceholder')}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  maxLength={MAX_TOKEN_NAME_LENGTH}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    if (nameError) {
+                      setNameError(null)
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleCreate()
                     }
                   }}
+                  aria-invalid={nameError || hasDuplicateName ? 'true' : 'false'}
                 />
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-red-600">
+                    {nameError ?? (hasDuplicateName && normalizedName ? t('createToken.nameDuplicate') : '')}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {normalizedName.length}/{MAX_TOKEN_NAME_LENGTH}
+                  </span>
+                </div>
               </div>
             </div>
+            {createMutation.error ? (
+              <p className="text-sm text-red-600">{createMutation.error.message}</p>
+            ) : null}
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
                 {t('dialog.cancel')}
               </Button>
               <Button
                 onClick={handleCreate}
-                disabled={!name.trim() || createMutation.isPending}
+                disabled={!normalizedName || hasDuplicateName || createMutation.isPending}
               >
                 {createMutation.isPending ? t('createToken.creating') : t('createToken.create')}
               </Button>

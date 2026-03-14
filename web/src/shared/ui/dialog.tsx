@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/shared/lib/utils'
 
 interface DialogContextValue {
@@ -26,6 +27,20 @@ const Dialog = ({ open: controlledOpen, onOpenChange, children }: DialogProps) =
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const open = controlledOpen ?? uncontrolledOpen
   const handleOpenChange = onOpenChange ?? setUncontrolledOpen
+
+  React.useEffect(() => {
+    if (!open || typeof document === 'undefined') {
+      return undefined
+    }
+
+    const { body } = document
+    const previousOverflow = body.style.overflow
+    body.style.overflow = 'hidden'
+
+    return () => {
+      body.style.overflow = previousOverflow
+    }
+  }, [open])
 
   return (
     <DialogContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
@@ -65,7 +80,10 @@ DialogTrigger.displayName = 'DialogTrigger'
 const DialogPortal = ({ children }: { children: React.ReactNode }) => {
   const { open } = useDialog()
   if (!open) return null
-  return <>{children}</>
+  if (typeof document === 'undefined') {
+    return null
+  }
+  return createPortal(children, document.body)
 }
 
 const DialogOverlay = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -92,39 +110,37 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
     return (
       <DialogPortal>
         <DialogOverlay />
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            ref={ref}
-            className={cn(
-              'relative z-50 grid w-full max-w-lg gap-4 border border-border/60 bg-card p-8 shadow-card rounded-2xl animate-fade-up',
-              className
-            )}
-            onClick={(e) => e.stopPropagation()}
-            {...props}
+        <div
+          ref={ref}
+          className={cn(
+            'fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),32rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl border border-border/60 bg-card p-8 shadow-card animate-fade-up',
+            className
+          )}
+          onClick={(e) => e.stopPropagation()}
+          {...props}
+        >
+          {children}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
           >
-            {children}
-            <button
-              onClick={() => onOpenChange(false)}
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            <span className="sr-only">Close</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
             >
-              <span className="sr-only">Close</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-          </div>
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
       </DialogPortal>
     )
