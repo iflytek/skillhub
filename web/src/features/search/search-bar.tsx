@@ -1,22 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 
 interface SearchBarProps {
   defaultValue?: string
+  value?: string
   placeholder?: string
+  onChange?: (query: string) => void
   onSearch?: (query: string) => void
 }
 
-export function SearchBar({ defaultValue = '', placeholder, onSearch }: SearchBarProps) {
+export function SearchBar({ defaultValue = '', value, placeholder, onChange, onSearch }: SearchBarProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(defaultValue)
+  const isControlled = value !== undefined
+  const currentQuery = isControlled ? value : query
+
+  useEffect(() => {
+    if (!isControlled) {
+      setQuery(defaultValue)
+    }
+  }, [defaultValue, isControlled])
+
+  const handleChange = (nextQuery: string) => {
+    if (!isControlled) {
+      setQuery(nextQuery)
+    }
+    onChange?.(nextQuery)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (onSearch) {
-      onSearch(query)
+      onSearch(currentQuery)
     }
   }
 
@@ -38,8 +55,8 @@ export function SearchBar({ defaultValue = '', placeholder, onSearch }: SearchBa
         </svg>
         <Input
           type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={currentQuery}
+          onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder || t('searchBar.placeholder')}
           className="pl-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
         />
