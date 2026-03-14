@@ -54,10 +54,22 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
 
     try {
       await navigator.clipboard.writeText(createdToken.token)
-      toast.success(t('createToken.copySuccess'))
+      toast.success(t('createToken.copySuccess'), undefined, {
+        position: 'top-center',
+        classNames: {
+          title: 'text-center font-semibold',
+          description: 'text-center',
+        },
+      })
     } catch (error) {
       console.error('Failed to copy token:', error)
-      toast.error(t('createToken.copyFailed'))
+      toast.error(t('createToken.copyFailed'), undefined, {
+        position: 'top-center',
+        classNames: {
+          title: 'text-center font-semibold',
+          description: 'text-center',
+        },
+      })
     }
   }
 
