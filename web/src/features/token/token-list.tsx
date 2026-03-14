@@ -19,6 +19,7 @@ import { formatLocalDateTime } from '@/shared/lib/date-time'
 import type { ApiToken } from '@/api/types'
 
 const PAGE_SIZE = 10
+type TokenPage = { items: ApiToken[]; total: number; page: number; size: number }
 
 export function TokenList() {
   const { t, i18n } = useTranslation()
@@ -28,7 +29,7 @@ export function TokenList() {
     open: false,
   })
 
-  const { data: tokenPage, isLoading, isError, error } = useQuery<{ items: ApiToken[]; total: number; page: number; size: number }>({
+  const { data: tokenPage, isLoading, isError, error } = useQuery<TokenPage>({
     queryKey: ['tokens', page, PAGE_SIZE],
     queryFn: () => tokenApi.getTokens({ page, size: PAGE_SIZE }),
     meta: {
@@ -38,11 +39,41 @@ export function TokenList() {
 
   const deleteMutation = useMutation({
     mutationFn: (tokenId: number) => tokenApi.deleteToken(tokenId),
+    onMutate: async (tokenId) => {
+      await queryClient.cancelQueries({ queryKey: ['tokens'] })
+
+      const previousPages = queryClient.getQueriesData<TokenPage>({ queryKey: ['tokens'] })
+      queryClient.setQueriesData<TokenPage>({ queryKey: ['tokens'] }, (current) => {
+        if (!current) {
+          return current
+        }
+
+        const nextItems = current.items.filter((token) => token.id !== tokenId)
+        if (nextItems.length === current.items.length) {
+          return current
+        }
+
+        return {
+          ...current,
+          items: nextItems,
+          total: Math.max(current.total - 1, 0),
+        }
+      })
+
+      return { previousPages }
+    },
     onSuccess: () => {
+      if (tokenPage && tokenPage.items.length === 1 && page > 0) {
+        setPage(page - 1)
+      }
+      setDeleteDialog({ open: false })
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
       toast.success(t('token.deleteSuccess'))
     },
-    onError: () => {
+    onError: (_error, _tokenId, context) => {
+      context?.previousPages.forEach(([queryKey, previousPage]) => {
+        queryClient.setQueryData(queryKey, previousPage)
+      })
       toast.error(t('token.deleteFailed'))
     },
   })
@@ -53,7 +84,7 @@ export function TokenList() {
 
   const confirmDelete = async () => {
     if (deleteDialog.tokenId) {
-      deleteMutation.mutate(deleteDialog.tokenId)
+      await deleteMutation.mutateAsync(deleteDialog.tokenId)
     }
   }
 

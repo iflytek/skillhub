@@ -456,14 +456,23 @@ export const tokenApi = {
   },
 
   async deleteToken(tokenId: number): Promise<void> {
-    await unwrap(client.DELETE('/api/v1/tokens/{id}', {
+    const { error, response } = await client.DELETE('/api/v1/tokens/{id}', {
       params: {
         path: {
           id: tokenId,
         },
       },
       headers: withCsrf(),
-    }) as never)
+    } as never)
+
+    if (response.status === 204) {
+      return
+    }
+
+    const envelope = (error && isApiEnvelope<void>(error) ? error : null) as { msg?: string } | null
+    if (!response.ok || error) {
+      throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+    }
   },
 }
 
