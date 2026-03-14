@@ -1,12 +1,8 @@
 name: Publish Images
 
 on:
-  push:
-    branches:
-      - main
-      - feature/project-init
-    tags:
-      - "v*.*.*"
+  release:
+    types: [published]
   workflow_dispatch:
 
 concurrency:
