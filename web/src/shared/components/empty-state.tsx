@@ -26,7 +26,9 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
       </div>
       <h3 className="text-lg font-semibold font-heading text-foreground mb-2">{title}</h3>
       {description && (
-        <p className="text-sm text-muted-foreground max-w-md mb-6">{description}</p>
+        <p className="text-sm text-muted-foreground max-w-md mb-6 break-words [overflow-wrap:anywhere]">
+          {description}
+        </p>
       )}
       {action && <div>{action}</div>}
     </div>
