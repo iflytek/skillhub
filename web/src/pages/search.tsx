@@ -92,7 +92,7 @@ export function SearchPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {data.items.map((skill, idx) => (
-              <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
+              <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
                 <SkillCard
                   skill={skill}
                   onClick={() => handleSkillClick(skill.namespace, skill.slug)}
