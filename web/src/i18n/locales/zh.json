@@ -536,5 +536,25 @@
     "serverError": "服务器错误，请稍后重试",
     "networkError": "网络连接失败，请检查网络",
     "unknown": "操作失败"
+  },
+  "error": {
+    "auth": {
+      "local": {
+        "invalidCredentials": "用户名或密码错误",
+        "accountDisabled": "该账号已被禁用",
+        "accountPending": "该账号尚未激活",
+        "accountMerged": "该账号已合并，不能再用于登录",
+        "locked": "连续失败次数过多，请稍后再试"
+      },
+      "direct": {
+        "disabled": "直连认证兼容层未启用",
+        "providerUnsupported": "当前登录方式不受支持"
+      },
+      "sessionBootstrap": {
+        "disabled": "会话引导能力未启用",
+        "providerUnsupported": "当前 SSO 会话引导方式不受支持",
+        "notAuthenticated": "未检测到可用的外部登录会话"
+      }
+    }
   }
 }

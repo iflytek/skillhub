@@ -536,5 +536,25 @@
     "serverError": "Server error, please try again later",
     "networkError": "Network connection failed, please check your network",
     "unknown": "Operation failed"
+  },
+  "error": {
+    "auth": {
+      "local": {
+        "invalidCredentials": "Incorrect username or password",
+        "accountDisabled": "This account has been disabled",
+        "accountPending": "This account is pending activation",
+        "accountMerged": "This account has been merged and can no longer be used to log in",
+        "locked": "Too many failed attempts. Please try again later"
+      },
+      "direct": {
+        "disabled": "Direct authentication compatibility is disabled",
+        "providerUnsupported": "This login method is not supported"
+      },
+      "sessionBootstrap": {
+        "disabled": "Session bootstrap is disabled",
+        "providerUnsupported": "This SSO bootstrap method is not supported",
+        "notAuthenticated": "No authenticated external session was found"
+      }
+    }
   }
 }
