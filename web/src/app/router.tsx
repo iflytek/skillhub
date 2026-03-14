@@ -131,6 +131,7 @@ const searchRoute = createRoute({
       q: (search.q as string) || '',
       sort: (search.sort as string) || 'relevance',
       page: Number(search.page) || 0,
+      starredOnly: search.starredOnly === true || search.starredOnly === 'true',
     }
   },
 })

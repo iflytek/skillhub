@@ -40,7 +40,7 @@ export function Layout() {
             <nav className="hidden md:flex items-center gap-6">
               <Link
                 to="/search"
-                search={{ q: '', sort: 'relevance', page: 0 }}
+                search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 activeProps={{ className: 'text-primary' }}
               >
@@ -109,7 +109,7 @@ export function Layout() {
                 <li>
                   <Link
                     to="/search"
-                    search={{ q: '', sort: 'relevance', page: 0 }}
+                    search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     {t('nav.search')}

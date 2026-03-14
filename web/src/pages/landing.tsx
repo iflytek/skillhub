@@ -112,7 +112,7 @@ export function LandingPage() {
   }, [])
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0 } })
+    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0, starredOnly: false } })
   }
 
   const features = [
@@ -216,7 +216,7 @@ export function LandingPage() {
             <Button
               size="lg"
               className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 hover:scale-105"
-              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })}
+              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })}
             >
               {t('landing.hero.exploreSkills')}
             </Button>

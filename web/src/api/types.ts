@@ -163,6 +163,7 @@ export interface SearchParams {
   sort?: string
   page?: number
   size?: number
+  starredOnly?: boolean
 }
 
 export interface PagedResponse<T> {

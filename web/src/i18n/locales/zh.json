@@ -94,6 +94,10 @@
     },
     "noResults": "未找到结果",
     "noResultsFor": "没有找到与 \"{{q}}\" 相关的技能",
+    "filterStarred": "只看已收藏",
+    "noStarredResults": "未找到已收藏技能",
+    "noStarredResultsFor": "已收藏技能中没有与 \"{{q}}\" 相关的结果",
+    "noStarredSkills": "你还没有收藏任何技能",
     "enterKeyword": "请输入搜索关键词",
     "results": "找到 {{count}} 个技能",
     "resultCount": "找到 <1>{{count}}</1> 个结果"
