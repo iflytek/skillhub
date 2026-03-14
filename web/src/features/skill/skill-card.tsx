@@ -32,14 +32,20 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             <h3 className="font-semibold font-heading text-lg text-foreground group-hover:text-primary transition-colors">
               {skill.displayName}
             </h3>
+          </div>
+          <div className="flex items-center gap-2">
             {showStarredBadge ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
-                <Bookmark className="h-3 w-3 fill-current" />
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/12 px-2.5 py-1 text-[11px] font-semibold text-primary shadow-sm"
+                aria-label={t('skillCard.starred')}
+                title={t('skillCard.starred')}
+              >
+                <Bookmark className="h-3.5 w-3.5 fill-current" />
                 {t('skillCard.starred')}
               </span>
             ) : null}
+            <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
           </div>
-          <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
         </div>
 
         {skill.summary && (
@@ -60,10 +66,11 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             </svg>
             {skill.downloadCount}
           </span>
-          <span className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-4-7 4V5z" />
-            </svg>
+          <span
+            className={`flex items-center gap-1 ${showStarredBadge ? 'font-semibold text-primary' : ''}`}
+            aria-label={showStarredBadge ? t('skillCard.starred') : undefined}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${showStarredBadge ? 'fill-current' : ''}`} />
             {skill.starCount}
           </span>
           {skill.ratingAvg !== undefined && skill.ratingCount > 0 && (
