@@ -66,6 +66,8 @@ make parallel-init TASK=legal-pages
 
 That creates dedicated Claude, Codex, and integration worktrees as sibling directories. Keep `localhost:3000` reserved for the integration worktree only.
 
+Legacy aliases `agent-worktrees` and `agent-sync` still work for now, but all new examples use the `parallel-*` naming.
+
 If these workflow helpers are not merged into `origin/main` yet, create the worktrees from your current branch instead:
 
 ```bash
@@ -91,7 +93,7 @@ make parallel-sync
 make dev-all
 ```
 
-See [13-agent-parallel-workflow.md](./13-agent-parallel-workflow.md) for the full workflow, responsibilities, merge rules, and recovery guidance.
+See [13-parallel-workflow.md](./13-parallel-workflow.md) for the full workflow, responsibilities, merge rules, and recovery guidance.
 
 ## Stage 2: Staging Regression (pre-PR validation)
 

@@ -14,7 +14,7 @@ Syncs Claude and Codex into the integration worktree, then starts `make dev-all`
 Arguments:
   task-slug      Optional task identifier. When omitted, infer it from the
                  current integration branch.
-  source-branch  Optional source branches passed through to sync-agent-integration.sh
+  source-branch  Optional source branches passed through to parallel-sync.sh
 
 Examples:
   cd ../skillhub-integration-legal-pages && ./scripts/parallel-up.sh
@@ -42,8 +42,7 @@ if [ ! -e "$INTEGRATION_DIR/.git" ]; then
   fail "Integration worktree not found: $INTEGRATION_DIR"
 fi
 
-PARALLEL_WORKTREE_ROOT="$(worktree_root "$REPO_ROOT")" "$REPO_ROOT/scripts/sync-agent-integration.sh" "$TASK_SLUG" "$@"
-
+PARALLEL_WORKTREE_ROOT="$(worktree_root "$REPO_ROOT")" "$REPO_ROOT/scripts/parallel-sync.sh" "$TASK_SLUG" "$@"
 info "Starting integration stack in $INTEGRATION_DIR"
 make -C "$INTEGRATION_DIR" dev-all
 
@@ -58,5 +57,5 @@ Next steps:
   1. Open http://localhost:3000
   2. Verify the merged behavior
   3. Stop when done:
-       make -C "$INTEGRATION_DIR" dev-all-down
+       make -C "$INTEGRATION_DIR" parallel-down
 EOF
