@@ -470,6 +470,8 @@
     "success": "Published Successfully",
     "successDescription": "{{skill}} has been submitted for review and will be available after admin approval",
     "error": "Publish Failed",
+    "timeoutTitle": "Publish timed out",
+    "timeoutDescription": "The publish request took too long. Please check the skill list later or try again.",
     "selectRequired": "Please select namespace and file"
   },
   "toast": {

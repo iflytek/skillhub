@@ -470,6 +470,8 @@
     "success": "发布成功",
     "successDescription": "{{skill}} 已提交审核，等待管理员批准后即可使用",
     "error": "发布失败",
+    "timeoutTitle": "发布请求超时",
+    "timeoutDescription": "本次发布等待时间过长，请稍后到技能列表确认结果，或重新尝试发布。",
     "selectRequired": "请选择命名空间和文件"
   },
   "toast": {

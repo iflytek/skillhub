@@ -170,15 +170,54 @@ type ApiEnvelope<T> = {
   requestId: string
 }
 
-export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+type RequestWithTimeout = RequestInit & {
+  timeoutMs?: number
+}
+
+function createRequestSignal(init?: RequestWithTimeout): { signal?: AbortSignal, cleanup: () => void } {
+  if (!init?.timeoutMs && !init?.signal) {
+    return { signal: init?.signal ?? undefined, cleanup: () => {} }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = init?.timeoutMs ? window.setTimeout(() => controller.abort('timeout'), init.timeoutMs) : undefined
+  const abortListener = () => controller.abort()
+
+  if (init?.signal) {
+    if (init.signal.aborted) {
+      controller.abort()
+    } else {
+      init.signal.addEventListener('abort', abortListener, { once: true })
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      init?.signal?.removeEventListener('abort', abortListener)
+    },
+  }
+}
+
+export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithTimeout): Promise<T> {
+  const { signal, cleanup } = createRequestSignal(init)
   let response: Response
   try {
     response = await fetch(withBaseUrl(input), {
       ...init,
+      signal,
       headers: withRequestHeaders(init?.headers),
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError('error.request.timeout', 408)
+    }
     throw new ApiError('Network error', 0)
+  } finally {
+    cleanup()
   }
 
   let json: ApiEnvelope<T> | null = null
