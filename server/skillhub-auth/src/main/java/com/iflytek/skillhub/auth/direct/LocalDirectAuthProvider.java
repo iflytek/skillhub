@@ -19,6 +19,11 @@ public class LocalDirectAuthProvider implements DirectAuthProvider {
     }
 
     @Override
+    public String displayName() {
+        return "Local Account";
+    }
+
+    @Override
     public PlatformPrincipal authenticate(DirectAuthRequest request) {
         return localAuthService.login(request.username(), request.password());
     }

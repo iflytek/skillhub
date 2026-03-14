@@ -12,5 +12,9 @@ public interface PassiveSessionAuthenticator {
 
     String providerCode();
 
+    default String displayName() {
+        return providerCode();
+    }
+
     Optional<PlatformPrincipal> authenticate(HttpServletRequest request);
 }

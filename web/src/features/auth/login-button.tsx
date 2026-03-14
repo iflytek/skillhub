@@ -1,8 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { authApi } from '@/api/client'
 import { Button } from '@/shared/ui/button'
-import type { AuthMethod } from '@/api/types'
+import { useAuthMethods } from './use-auth-methods'
 
 interface LoginButtonProps {
   returnTo?: string
@@ -10,10 +8,7 @@ interface LoginButtonProps {
 
 export function LoginButton({ returnTo }: LoginButtonProps) {
   const { t } = useTranslation()
-  const { data, isLoading } = useQuery<AuthMethod[]>({
-    queryKey: ['auth', 'methods', returnTo ?? ''],
-    queryFn: () => authApi.getMethods(returnTo),
-  })
+  const { data, isLoading } = useAuthMethods(returnTo)
 
   const providers = (data ?? []).filter((method) => method.methodType === 'OAUTH_REDIRECT')
 

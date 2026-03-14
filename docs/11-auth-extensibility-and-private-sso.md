@@ -88,6 +88,12 @@ public interface DirectAuthProvider {
 - `private-sso-cookie`：读取共享 Cookie 并向 SSO 校验
 - 后续如果需要，也可以补“用户名密码直连认证 provider”扩展点
 
+为减少私有 fork 的前端硬编码，扩展 provider 可额外声明展示名称：
+
+- `DirectAuthProvider.displayName()` 默认回退为 `providerCode()`
+- `PassiveSessionAuthenticator.displayName()` 默认回退为 `providerCode()`
+- `GET /api/v1/auth/methods` 会返回该展示名称，供登录页直接渲染
+
 ## 4. 本轮已落地内容
 
 - 新增 `PassiveSessionAuthenticator` SPI

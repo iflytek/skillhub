@@ -9,5 +9,9 @@ public interface DirectAuthProvider {
 
     String providerCode();
 
+    default String displayName() {
+        return providerCode();
+    }
+
     PlatformPrincipal authenticate(DirectAuthRequest request);
 }
