@@ -18,7 +18,9 @@ function lazyRouteComponent<TModule extends Record<string, unknown>>(
 const HomePage = lazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = lazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
 const RegisterPage = lazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
+const PrivacyPolicyPage = lazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
 const SearchPage = lazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
+const TermsOfServicePage = lazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = lazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = lazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
 const DashboardPage = lazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
@@ -81,6 +83,12 @@ const registerRoute = createRoute({
   component: RegisterPage,
 })
 
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'privacy',
+  component: PrivacyPolicyPage,
+})
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'search',
@@ -92,6 +100,12 @@ const searchRoute = createRoute({
       page: Number(search.page) || 0,
     }
   },
+})
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'terms',
+  component: TermsOfServicePage,
 })
 
 const namespaceRoute = createRoute({
@@ -239,7 +253,9 @@ const routeTree = rootRoute.addChildren([
   skillsRoute,
   loginRoute,
   registerRoute,
+  privacyRoute,
   searchRoute,
+  termsRoute,
   namespaceRoute,
   skillDetailRoute,
   dashboardRoute,

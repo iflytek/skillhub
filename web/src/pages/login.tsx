@@ -10,13 +10,14 @@ import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
 export function LoginPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const search = useSearch({ from: '/login' })
   const loginMutation = usePasswordLogin()
   const directAuthConfig = getDirectAuthRuntimeConfig()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
 
@@ -115,9 +116,16 @@ export function LoginPage() {
 
         <p className="text-center text-xs text-muted-foreground">
           {t('login.agreementPrefix')}
-          <a href="#" className="text-primary hover:underline ml-1">{t('login.terms')}</a>
+          {isChinese ? null : ' '}
+          <Link to="/terms" className="text-primary hover:underline">
+            {t('login.terms')}
+          </Link>
+          {isChinese ? null : ' '}
           {t('login.and')}
-          <a href="#" className="text-primary hover:underline ml-1">{t('login.privacy')}</a>
+          {isChinese ? null : ' '}
+          <Link to="/privacy" className="text-primary hover:underline">
+            {t('login.privacy')}
+          </Link>
         </p>
       </div>
     </div>
