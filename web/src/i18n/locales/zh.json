@@ -416,7 +416,11 @@
     "star": "收藏"
   },
   "skillCard": {
-    "starred": "已收藏"
+    "starred": "已收藏",
+    "starredAction": "点击取消收藏",
+    "unstarTitle": "取消收藏",
+    "unstarDescription": "确定要取消收藏技能“{{name}}”吗？",
+    "unstarConfirm": "取消收藏"
   },
   "copyButton": {
     "copied": "已复制",
