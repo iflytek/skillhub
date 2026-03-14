@@ -167,7 +167,7 @@
     "viewStars": "查看我的收藏",
     "credentials": "访问凭证",
     "openTokens": "打开 Token 页面",
-    "governanceTitle": "查看提交审核",
+    "governanceTitle": "审核与治理",
     "viewPromotions": "查看提升审核"
   },
   "mySkills": {
@@ -399,7 +399,9 @@
     "successDescription": "请立即复制并保存此 Token，它只会显示一次",
     "tokenLabel": "Token",
     "nameDisplay": "名称",
-    "copyToken": "复制 Token"
+    "copyToken": "复制 Token",
+    "copySuccess": "Token 已复制到剪贴板",
+    "copyFailed": "复制 Token 失败，请重试"
   },
   "starButton": {
     "starred": "已收藏",

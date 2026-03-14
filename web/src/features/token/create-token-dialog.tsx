@@ -14,6 +14,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
+import { toast } from '@/shared/lib/toast'
 import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
 
 interface CreateTokenDialogProps {
@@ -46,6 +47,18 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
     setCreatedToken(null)
     setName('')
     createMutation.reset()
+  }
+
+  const handleCopyToken = async () => {
+    if (!createdToken) return
+
+    try {
+      await navigator.clipboard.writeText(createdToken.token)
+      toast.success(t('createToken.copySuccess'))
+    } catch (error) {
+      console.error('Failed to copy token:', error)
+      toast.error(t('createToken.copyFailed'))
+    }
   }
 
   return (
@@ -109,11 +122,7 @@ export function CreateTokenDialog({ children }: CreateTokenDialogProps) {
               </div>
             </div>
             <DialogFooter>
-              <Button
-                onClick={() => {
-                  navigator.clipboard.writeText(createdToken.token)
-                }}
-              >
+              <Button onClick={handleCopyToken}>
                 {t('createToken.copyToken')}
               </Button>
               <Button variant="outline" onClick={handleClose}>
