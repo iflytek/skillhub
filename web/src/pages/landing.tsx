@@ -155,7 +155,7 @@ export function LandingPage() {
           <Link to="/" className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
             SkillHub
           </Link>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-4 [&_button]:text-slate-200 [&_button:hover]:text-cyan-300 [&_svg]:text-slate-300">
             <LanguageSwitcher />
             {isLoading ? null : user ? (
               <UserMenu user={user} />
@@ -163,7 +163,7 @@ export function LandingPage() {
               <Link
                 to="/login"
                 search={{ returnTo: '' }}
-                className="text-sm text-slate-300 hover:text-cyan-400 transition-colors"
+                className="text-sm text-slate-200 hover:text-cyan-400 transition-colors"
               >
                 {t('nav.login')}
               </Link>
