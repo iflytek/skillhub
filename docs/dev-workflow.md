@@ -24,6 +24,8 @@ This starts:
 - Backend (Spring Boot) directly on your machine at http://localhost:8080
 - Frontend (Vite) directly on your machine at http://localhost:3000
 
+SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `5432`, `6379`, and `9000`.
+
 ### Hot reload
 
 **Frontend:** Vite HMR is enabled by default. Save a file and the browser updates instantly.
@@ -53,6 +55,28 @@ Two mock users are available in local mode (no password needed):
 | `SERVICE=frontend make dev-logs` | Tail frontend logs               |
 | `make dev-all-reset`             | Full reset (clears data volumes) |
 | `make db-reset`                  | Reset database only              |
+
+### Claude + Codex parallel workflow
+
+When two agents need to work in parallel, do not point both of them at the same checkout. Create isolated task worktrees instead:
+
+```bash
+make agent-worktrees TASK=legal-pages
+```
+
+That creates dedicated Claude, Codex, and integration worktrees as sibling directories. Keep `localhost:3000` reserved for the integration worktree only:
+
+```bash
+make agent-sync TASK=legal-pages
+cd ../skillhub-integration-legal-pages
+make dev-all
+```
+
+Then verify the merged result at http://localhost:3000.
+
+Because all worktrees share the same local dependency project, you only need one set of Postgres, Redis, and MinIO containers for all of them.
+
+See [13-agent-parallel-workflow.md](./13-agent-parallel-workflow.md) for the full workflow, responsibilities, merge rules, and recovery guidance.
 
 ## Stage 2: Staging Regression (pre-PR validation)
 
