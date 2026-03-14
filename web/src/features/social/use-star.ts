@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchJson, getCsrfHeaders } from '@/api/client'
+import { ApiError, fetchJson, getCsrfHeaders } from '@/api/client'
 
 interface StarStatus {
   starred: boolean
@@ -10,7 +10,7 @@ async function getStarStatus(skillId: number): Promise<StarStatus> {
     const starred = await fetchJson<boolean>(`/api/v1/skills/${skillId}/star`)
     return { starred }
   } catch (error) {
-    if (error instanceof Error && error.message === 'HTTP 401') {
+    if (error instanceof ApiError && error.status === 401) {
       return { starred: false }
     }
     throw error

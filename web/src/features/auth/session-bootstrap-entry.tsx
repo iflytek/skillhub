@@ -6,13 +6,15 @@ import { useSessionBootstrap } from './use-session-bootstrap'
 
 interface SessionBootstrapEntryProps {
   onAuthenticated: () => Promise<void>
+  methodDisplayName?: string
 }
 
-export function SessionBootstrapEntry({ onAuthenticated }: SessionBootstrapEntryProps) {
+export function SessionBootstrapEntry({ onAuthenticated, methodDisplayName }: SessionBootstrapEntryProps) {
   const { t } = useTranslation()
   const config = getSessionBootstrapRuntimeConfig()
   const bootstrapMutation = useSessionBootstrap()
   const attemptedRef = useRef(false)
+  const providerName = methodDisplayName || t('login.enterpriseSsoTitle')
 
   useEffect(() => {
     if (!config.enabled || !config.provider || !config.auto || attemptedRef.current) {
@@ -43,10 +45,12 @@ export function SessionBootstrapEntry({ onAuthenticated }: SessionBootstrapEntry
     <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
       <div className="space-y-1">
         <p className="text-sm font-medium text-foreground">
-          {t('login.enterpriseSsoTitle')}
+          {providerName}
         </p>
         <p className="text-sm text-muted-foreground">
-          {config.auto ? t('login.enterpriseSsoAutoHint') : t('login.enterpriseSsoHint')}
+          {config.auto
+            ? t('login.enterpriseSsoAutoHint', { name: providerName })
+            : t('login.enterpriseSsoHint', { name: providerName })}
         </p>
       </div>
 
@@ -66,7 +70,9 @@ export function SessionBootstrapEntry({ onAuthenticated }: SessionBootstrapEntry
           })
         }}
       >
-        {bootstrapMutation.isPending ? t('login.enterpriseSsoSubmitting') : t('login.enterpriseSsoAction')}
+        {bootstrapMutation.isPending
+          ? t('login.enterpriseSsoSubmitting', { name: providerName })
+          : t('login.enterpriseSsoAction', { name: providerName })}
       </Button>
 
       {manualError ? (

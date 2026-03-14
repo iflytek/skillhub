@@ -1,14 +1,23 @@
 import i18n from '@/i18n/config'
 import { toast } from './toast'
 
+function resolveLocalizedMessage(message?: string): string | undefined {
+  if (!message) {
+    return undefined
+  }
+
+  return i18n.exists(message) ? i18n.t(message) : message
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
     public serverMessage?: string,
   ) {
-    super(message)
+    super(resolveLocalizedMessage(message) || message)
     this.name = 'ApiError'
+    this.serverMessage = resolveLocalizedMessage(serverMessage) || serverMessage
   }
 }
 

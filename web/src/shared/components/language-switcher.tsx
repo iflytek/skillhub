@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
+import { cn } from '@/shared/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +9,11 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { Globe } from 'lucide-react'
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  className?: string
+}
+
+export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const { i18n } = useTranslation()
 
   const languages = [
@@ -27,9 +32,13 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn('gap-2 text-muted-foreground hover:text-foreground', className)}
+        >
           <Globe className="h-4 w-4" />
-          <span className="text-sm">{currentLanguage.name}</span>
+          <span className="text-sm text-inherit">{currentLanguage.name}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
