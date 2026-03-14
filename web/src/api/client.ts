@@ -385,17 +385,14 @@ export const tokenApi = {
   },
 
   async deleteToken(tokenId: number): Promise<void> {
-    const { response, error } = await client.DELETE('/api/v1/tokens/{id}', {
+    await unwrap(client.DELETE('/api/v1/tokens/{id}', {
       params: {
         path: {
           id: tokenId,
         },
       },
       headers: withCsrf(),
-    })
-    if (error || response.status !== 204) {
-      throw new Error(`HTTP ${response.status}`)
-    }
+    }) as never)
   },
 }
 

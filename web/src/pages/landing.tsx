@@ -1,12 +1,16 @@
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
+import { useAuth } from '@/features/auth/use-auth'
+import { LanguageSwitcher } from '@/shared/components/language-switcher'
+import { UserMenu } from '@/shared/components/user-menu'
 import { Button } from '@/shared/ui/button'
 import { useEffect, useRef, useState } from 'react'
 
 export function LandingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { user, isLoading } = useAuth()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [stats] = useState({
     skills: '1000+',
@@ -146,6 +150,28 @@ export function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
+      <header className="sticky top-0 z-50 border-b border-slate-700/30 bg-slate-950/60 backdrop-blur-lg">
+        <div className="container mx-auto flex items-center justify-between px-6 py-3">
+          <Link to="/" className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+            SkillHub
+          </Link>
+          <nav className="flex items-center gap-4 [&_button]:text-slate-200 [&_button:hover]:text-cyan-300 [&_svg]:text-slate-300">
+            <LanguageSwitcher />
+            {isLoading ? null : user ? (
+              <UserMenu user={user} />
+            ) : (
+              <Link
+                to="/login"
+                search={{ returnTo: '' }}
+                className="text-sm text-slate-200 hover:text-cyan-400 transition-colors"
+              >
+                {t('nav.login')}
+              </Link>
+            )}
+          </nav>
+        </div>
+      </header>
+
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"

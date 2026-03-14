@@ -399,7 +399,9 @@
     "successDescription": "Copy and save this token now. It will only be shown once.",
     "tokenLabel": "Token",
     "nameDisplay": "Name",
-    "copyToken": "Copy Token"
+    "copyToken": "Copy Token",
+    "copySuccess": "Token copied to clipboard",
+    "copyFailed": "Failed to copy token. Please try again."
   },
   "starButton": {
     "starred": "Starred",
