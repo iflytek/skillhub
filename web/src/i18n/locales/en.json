@@ -323,6 +323,10 @@
   "skillDetail": {
     "notFound": "Skill not found",
     "notFoundDesc": "This skill may have been deleted or never existed",
+    "loginRequired": "Login Required",
+    "loginRequiredDesc": "This skill is private. Please login to view details.",
+    "accessDenied": "Access Denied",
+    "accessDeniedDesc": "You don't have permission to view this skill",
     "tabReadme": "README",
     "tabFiles": "Files",
     "tabVersions": "Versions",

@@ -27,7 +27,7 @@ export function SkillDetailPage() {
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
-  const { data: skill, isLoading: isLoadingSkill } = useSkillDetail(namespace, slug)
+  const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(namespace, slug)
   const { data: versions } = useSkillVersions(namespace, slug)
   const latestVersion = versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, latestVersion?.version)
@@ -79,6 +79,27 @@ export function SkillDetailPage() {
         <div className="h-10 w-64 animate-shimmer rounded-lg" />
         <div className="h-5 w-96 animate-shimmer rounded-md" />
         <div className="h-64 animate-shimmer rounded-xl" />
+      </div>
+    )
+  }
+
+  if (skillError) {
+    const isForbidden = skillError instanceof Error && skillError.message.includes('403')
+
+    if (isForbidden && !user) {
+      return (
+        <div className="text-center py-20 animate-fade-up">
+          <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.loginRequired')}</h2>
+          <p className="text-muted-foreground mb-6">{t('skillDetail.loginRequiredDesc')}</p>
+          <Button onClick={requireLogin}>{t('common.login')}</Button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="text-center py-20 animate-fade-up">
+        <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.accessDenied')}</h2>
+        <p className="text-muted-foreground">{t('skillDetail.accessDeniedDesc')}</p>
       </div>
     )
   }
