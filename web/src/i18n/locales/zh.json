@@ -324,6 +324,7 @@
     "emptyDescription": "该命名空间下还没有发布任何技能"
   },
   "skillDetail": {
+    "back": "返回上一页",
     "notFound": "技能不存在",
     "notFoundDesc": "该技能可能已被删除或从未存在",
     "loginRequired": "需要登录",

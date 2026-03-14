@@ -324,6 +324,7 @@
     "emptyDescription": "No skills have been published in this namespace yet"
   },
   "skillDetail": {
+    "back": "Back",
     "notFound": "Skill not found",
     "notFoundDesc": "This skill may have been deleted or never existed",
     "loginRequired": "Login Required",
