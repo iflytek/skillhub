@@ -127,6 +127,7 @@ export function SearchPage() {
               <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
                 <SkillCard
                   skill={skill}
+                  highlightStarred
                   onClick={() => handleSkillClick(skill.namespace, skill.slug)}
                 />
               </div>

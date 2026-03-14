@@ -415,6 +415,12 @@
     "starred": "Starred",
     "star": "Star"
   },
+  "skillCard": {
+    "starred": "Starred",
+    "downloads": "{{count}} downloads",
+    "stars": "{{count}} stars",
+    "rating": "Rating {{score}} ({{count}})"
+  },
   "copyButton": {
     "copied": "Copied",
     "copy": "Copy"
