@@ -40,6 +40,9 @@ public class SkillStarController extends BaseApiController {
     public ApiResponse<Boolean> checkStarred(
             @PathVariable Long skillId,
             @AuthenticationPrincipal PlatformPrincipal principal) {
+        if (principal == null) {
+            return ok("response.success.read", false);
+        }
         boolean starred = skillStarService.isStarred(skillId, principal.userId());
         return ok("response.success.read", starred);
     }

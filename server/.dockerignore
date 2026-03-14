@@ -1,4 +1,7 @@
-**/target/
+# Exclude target for multi-stage build (Dockerfile)
+# But allow it for runtime build (Dockerfile.runtime) which needs pre-built JAR
+# **/target/
+
 **/.idea/
 **/*.iml
 .git/

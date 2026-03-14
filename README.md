@@ -96,6 +96,8 @@ make dev-all-reset
 
 Run `make help` to see all available commands.
 
+For the full development workflow (local dev → staging → PR), see [docs/dev-workflow.md](docs/dev-workflow.md).
+
 ### API Contract Sync
 
 OpenAPI types for the web client are checked into the repository.
