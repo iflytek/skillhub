@@ -415,6 +415,12 @@
     "starred": "已收藏",
     "star": "收藏"
   },
+  "skillCard": {
+    "starred": "已收藏",
+    "downloads": "下载 {{count}}",
+    "stars": "收藏 {{count}}",
+    "rating": "评分 {{score}} ({{count}})"
+  },
   "copyButton": {
     "copied": "已复制",
     "copy": "复制"
