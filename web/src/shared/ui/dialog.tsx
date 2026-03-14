@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/shared/lib/utils'
 
 interface DialogContextValue {
@@ -65,7 +66,10 @@ DialogTrigger.displayName = 'DialogTrigger'
 const DialogPortal = ({ children }: { children: React.ReactNode }) => {
   const { open } = useDialog()
   if (!open) return null
-  return <>{children}</>
+  if (typeof document === 'undefined') {
+    return null
+  }
+  return createPortal(children, document.body)
 }
 
 const DialogOverlay = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
