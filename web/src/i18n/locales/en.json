@@ -416,7 +416,11 @@
     "star": "Star"
   },
   "skillCard": {
-    "starred": "Starred"
+    "starred": "Starred",
+    "starredAction": "Click to unstar",
+    "unstarTitle": "Remove from starred",
+    "unstarDescription": "Are you sure you want to remove \"{{name}}\" from your starred skills?",
+    "unstarConfirm": "Remove"
   },
   "copyButton": {
     "copied": "Copied",
