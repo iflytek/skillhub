@@ -19,12 +19,18 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
+      if (query.meta?.skipGlobalErrorHandler) {
+        return
+      }
       handleApiError(error)
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
+      if (mutation.meta?.skipGlobalErrorHandler) {
+        return
+      }
       // Only auto-handle if the mutation doesn't have its own onError
       if (!mutation.options.onError) {
         handleApiError(error)
