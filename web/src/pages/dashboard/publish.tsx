@@ -10,6 +10,16 @@ import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queri
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
+function isVersionExistsMessage(message?: string): boolean {
+  if (!message) {
+    return false
+  }
+
+  return message.includes('error.skill.version.exists')
+    || message.includes('Version already exists')
+    || message.includes('版本已存在')
+}
+
 export function PublishPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -44,6 +54,15 @@ export function PublishPage() {
         toast.error(t('publish.timeoutTitle'), t('publish.timeoutDescription'))
         return
       }
+
+      if (error instanceof ApiError && isVersionExistsMessage(error.serverMessage || error.message)) {
+        toast.error(
+          t('publish.versionExistsTitle'),
+          t('publish.versionExistsDescription'),
+        )
+        return
+      }
+
       toast.error(t('publish.error'), error instanceof Error ? error.message : '')
     }
   }
