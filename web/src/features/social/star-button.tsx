@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { useStar, useToggleStar } from './use-star'
-import { Star } from 'lucide-react'
+import { Bookmark } from 'lucide-react'
 import { useAuth } from '@/features/auth/use-auth'
 
 interface StarButtonProps {
@@ -34,10 +34,11 @@ export function StarButton({ skillId, starCount, onRequireLogin }: StarButtonPro
     <Button
       variant={starStatus.starred ? 'default' : 'outline'}
       size="sm"
+      className="justify-between"
       onClick={handleToggle}
       disabled={toggleMutation.isPending}
     >
-      <Star className={`w-4 h-4 mr-2 ${starStatus.starred ? 'fill-current' : ''}`} />
+      <Bookmark className={`w-4 h-4 mr-2 ${starStatus.starred ? 'fill-current' : ''}`} />
       {starStatus.starred ? t('starButton.starred') : t('starButton.star')} ({starCount})
     </Button>
   )

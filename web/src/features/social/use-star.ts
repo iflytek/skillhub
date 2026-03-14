@@ -31,11 +31,11 @@ async function toggleStar(skillId: number, starred: boolean): Promise<void> {
   }
 }
 
-export function useStar(skillId: number) {
+export function useStar(skillId: number, enabled = true) {
   return useQuery({
     queryKey: ['skills', skillId, 'star'],
     queryFn: () => getStarStatus(skillId),
-    enabled: !!skillId,
+    enabled: !!skillId && enabled,
   })
 }
 
