@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr agent-worktrees agent-sync
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down agent-worktrees agent-sync
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -11,8 +11,10 @@ STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server:staging
 DEV_PROCESS := python3 scripts/dev_process.py
-AGENT_BASE_REF ?= origin/main
+AGENT_BASE_REF ?=
 AGENT_WORKTREE_ROOT ?=
+PARALLEL_BASE_REF ?= $(if $(AGENT_BASE_REF),$(AGENT_BASE_REF),origin/main)
+PARALLEL_WORKTREE_ROOT ?= $(AGENT_WORKTREE_ROOT)
 DEV_COMPOSE_PROJECT_NAME ?= skillhub
 STAGING_COMPOSE_PROJECT_NAME ?= skillhub-staging
 DEV_COMPOSE := docker compose -p $(DEV_COMPOSE_PROJECT_NAME)
@@ -257,16 +259,32 @@ pr: ## 推送当前分支并创建 Pull Request（需要 gh CLI，仅限交互�
 	fi
 	@gh pr create --fill --web || gh pr create --fill
 
-agent-worktrees: ## 创建 Claude/Codex/integration 并行 worktree（TASK=<slug>）
+parallel-init: ## 创建 Claude/Codex/integration 并行 worktree（TASK=<slug>）
 	@if [ -z "$(TASK)" ]; then \
-		echo "Usage: make agent-worktrees TASK=<task-slug> [AGENT_BASE_REF=origin/main] [AGENT_WORKTREE_ROOT=/path]"; \
+		echo "Usage: make parallel-init TASK=<task-slug> [PARALLEL_BASE_REF=origin/main] [PARALLEL_WORKTREE_ROOT=/path]"; \
 		exit 1; \
 	fi
-	./scripts/setup-agent-worktrees.sh "$(TASK)" "$(AGENT_BASE_REF)" "$(AGENT_WORKTREE_ROOT)"
+	./scripts/setup-agent-worktrees.sh "$(TASK)" "$(PARALLEL_BASE_REF)" "$(PARALLEL_WORKTREE_ROOT)"
 
-agent-sync: ## 合并 agent 分支到 integration worktree（TASK=<slug> [SOURCES=\"branch1 branch2\"]）
+parallel-sync: ## 在 integration worktree 合并 Claude/Codex 分支（自动识别当前 task）
+	PARALLEL_WORKTREE_ROOT="$(PARALLEL_WORKTREE_ROOT)" ./scripts/sync-agent-integration.sh $(SOURCES)
+
+parallel-up: ## 在 integration worktree 合并并启动联调环境（自动识别当前 task）
+	PARALLEL_WORKTREE_ROOT="$(PARALLEL_WORKTREE_ROOT)" ./scripts/parallel-up.sh $(SOURCES)
+
+parallel-down: ## 在 integration worktree 停止联调环境
+	@bash -lc 'source ./scripts/parallel-common.sh; require_integration_task >/dev/null' || { \
+		echo "Usage: run 'make parallel-down' inside an integration worktree"; \
+		exit 1; \
+	}
+	@$(MAKE) dev-all-down
+
+agent-worktrees:
+	@$(MAKE) parallel-init TASK="$(TASK)" PARALLEL_BASE_REF="$(PARALLEL_BASE_REF)" PARALLEL_WORKTREE_ROOT="$(PARALLEL_WORKTREE_ROOT)"
+
+agent-sync:
 	@if [ -z "$(TASK)" ]; then \
 		echo "Usage: make agent-sync TASK=<task-slug> [SOURCES=\"branch1 branch2\"]"; \
 		exit 1; \
 	fi
-	./scripts/sync-agent-integration.sh "$(TASK)" $(SOURCES)
+	PARALLEL_WORKTREE_ROOT="$(PARALLEL_WORKTREE_ROOT)" ./scripts/sync-agent-integration.sh "$(TASK)" $(SOURCES)

@@ -61,20 +61,35 @@ Two mock users are available in local mode (no password needed):
 When two agents need to work in parallel, do not point both of them at the same checkout. Create isolated task worktrees instead:
 
 ```bash
-make agent-worktrees TASK=legal-pages
+make parallel-init TASK=legal-pages
 ```
 
-That creates dedicated Claude, Codex, and integration worktrees as sibling directories. Keep `localhost:3000` reserved for the integration worktree only:
+That creates dedicated Claude, Codex, and integration worktrees as sibling directories. Keep `localhost:3000` reserved for the integration worktree only.
+
+If these workflow helpers are not merged into `origin/main` yet, create the worktrees from your current branch instead:
 
 ```bash
-make agent-sync TASK=legal-pages
+make parallel-init TASK=legal-pages PARALLEL_BASE_REF=HEAD
+```
+
+After the one-time setup, switch to the integration worktree for the daily merge + verification loop:
+
+```bash
 cd ../skillhub-integration-legal-pages
-make dev-all
+make parallel-up
 ```
 
 Then verify the merged result at http://localhost:3000.
 
 Because all worktrees share the same local dependency project, you only need one set of Postgres, Redis, and MinIO containers for all of them.
+
+If you need to inspect or resolve merge conflicts before starting the app, you can still split the flow manually:
+
+```bash
+cd ../skillhub-integration-legal-pages
+make parallel-sync
+make dev-all
+```
 
 See [13-agent-parallel-workflow.md](./13-agent-parallel-workflow.md) for the full workflow, responsibilities, merge rules, and recovery guidance.
 
