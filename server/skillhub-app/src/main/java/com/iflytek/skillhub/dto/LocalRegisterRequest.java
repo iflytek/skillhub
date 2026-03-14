@@ -4,10 +4,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record LocalRegisterRequest(
-    @NotBlank(message = "用户名不能为空")
+    @NotBlank(message = "{validation.auth.local.username.notBlank}")
     String username,
-    @NotBlank(message = "密码不能为空")
+    @NotBlank(message = "{validation.auth.local.password.notBlank}")
     String password,
-    @Email(message = "邮箱格式不正确")
+    @Email(message = "{validation.auth.local.email.invalid}")
     String email
 ) {}
