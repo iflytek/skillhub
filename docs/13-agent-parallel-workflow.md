@@ -27,7 +27,7 @@ All worktrees share the same local Docker dependency project name, so `make dev`
 From the main repository:
 
 ```bash
-make agent-worktrees TASK=legal-pages
+make parallel-init TASK=legal-pages
 ```
 
 This creates:
@@ -45,7 +45,13 @@ And matching local branches:
 You can override the base branch or destination root:
 
 ```bash
-make agent-worktrees TASK=legal-pages AGENT_BASE_REF=origin/main AGENT_WORKTREE_ROOT=/Users/wowo/workspace
+make parallel-init TASK=legal-pages PARALLEL_BASE_REF=origin/main PARALLEL_WORKTREE_ROOT=/Users/wowo/workspace
+```
+
+If you are iterating on this workflow itself before it lands on `origin/main`, create the worktrees from your current branch instead:
+
+```bash
+make parallel-init TASK=legal-pages PARALLEL_BASE_REF=HEAD
 ```
 
 ## Recommended Responsibility Split
@@ -70,21 +76,36 @@ Each agent should commit its own work before integration.
 
 ### 2. Merge into integration
 
-From the main repository:
+From the integration worktree:
 
 ```bash
-make agent-sync TASK=legal-pages
+cd ../skillhub-integration-legal-pages
+make parallel-up
 ```
 
-This merges the default source branches:
+This does both routine steps in one command:
+
+- merges the default source branches into the current integration branch
+- starts the integration worktree with `make dev-all`
+
+The default source branches are:
 
 - `agent/claude/legal-pages`
 - `agent/codex/legal-pages`
 
-If needed, you can override the source list:
+If you need manual control, you can still split the flow:
 
 ```bash
-make agent-sync TASK=legal-pages SOURCES="agent/claude/legal-pages agent/codex/legal-pages"
+cd ../skillhub-integration-legal-pages
+make parallel-sync
+make dev-all
+```
+
+If needed, you can override the source list on either command:
+
+```bash
+make parallel-sync SOURCES="agent/claude/legal-pages agent/codex/legal-pages"
+make parallel-up SOURCES="agent/claude/legal-pages agent/codex/legal-pages"
 ```
 
 If a merge conflict happens, resolve it in the integration worktree. Do not resolve it inside the Claude or Codex worktree unless you intentionally want to rewrite that branch.
@@ -95,7 +116,7 @@ Run the local stack only in the integration worktree:
 
 ```bash
 cd ../skillhub-integration-legal-pages
-make dev-all
+make parallel-up
 ```
 
 Then verify the merged result in the browser:
@@ -106,7 +127,14 @@ Then verify the merged result in the browser:
 When you are done:
 
 ```bash
-make dev-all-down
+make parallel-down
+```
+
+Legacy compatibility remains available from the main repository if needed:
+
+```bash
+make agent-sync TASK=legal-pages
+make agent-verify TASK=legal-pages
 ```
 
 ## Validation Checklist
@@ -114,7 +142,7 @@ make dev-all-down
 Before opening a PR from the integration branch:
 
 1. Run the smallest relevant local verification first, for example `pnpm --dir web typecheck` or backend tests.
-2. Start the integration stack with `make dev-all`.
+2. From the integration worktree, run `make parallel-up`.
 3. Verify the final merged behavior in `http://localhost:3000`.
 4. Run `make staging` if the change needs Docker-path or smoke-test confidence.
 
@@ -135,18 +163,16 @@ For this repository, the simplest path is usually:
 
 1. Claude branch commits
 2. Codex branch commits
-3. Merge both into integration
+3. In the integration worktree, run `make parallel-up`
 4. Verify on `localhost:3000`
 5. Open the PR from integration
 
 ## Commands Summary
 
 ```bash
-make agent-worktrees TASK=legal-pages
-make agent-sync TASK=legal-pages
-
+make parallel-init TASK=legal-pages
 cd ../skillhub-integration-legal-pages
-make dev-all
+make parallel-up
 open http://localhost:3000
-make dev-all-down
+make parallel-down
 ```

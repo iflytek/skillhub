@@ -1,35 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./parallel-common.sh
+source "$SCRIPT_DIR/parallel-common.sh"
+
 usage() {
   cat <<'EOF'
-Usage: sync-agent-integration.sh <task-slug> [source-branch...]
+Usage: sync-agent-integration.sh [task-slug] [source-branch...]
 
 Merges Claude and Codex task branches into the matching integration worktree.
 
 Arguments:
-  task-slug      Required task identifier, for example legal-pages
+  task-slug      Optional task identifier, for example legal-pages.
+                 When omitted, infer it from the current integration branch.
   source-branch  Optional source branches. Defaults to:
                  agent/claude/<task-slug>
                  agent/codex/<task-slug>
 
 Example:
   ./scripts/sync-agent-integration.sh legal-pages
+  cd ../skillhub-integration-legal-pages && ./scripts/sync-agent-integration.sh
   ./scripts/sync-agent-integration.sh legal-pages agent/claude/legal-pages agent/codex/legal-pages
+
+Environment:
+  PARALLEL_WORKTREE_ROOT  Optional parent directory for parallel worktrees
 EOF
-}
-
-fail() {
-  echo "ERROR: $*" >&2
-  exit 1
-}
-
-info() {
-  echo "INFO: $*"
-}
-
-slugify() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
 }
 
 require_clean_worktree() {
@@ -40,18 +36,16 @@ require_clean_worktree() {
 }
 
 TASK_INPUT="${1:-}"
-shift || true
-
-if [ -z "$TASK_INPUT" ]; then
-  usage >&2
-  exit 1
+if [ -n "$TASK_INPUT" ] && [[ "$TASK_INPUT" != */* ]]; then
+  shift
+  TASK_SLUG="$(slugify "$TASK_INPUT")"
+else
+  TASK_SLUG="$(require_integration_task)"
 fi
 
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "Run this script inside a git repository"
-REPO_NAME="$(basename "$REPO_ROOT")"
-TASK_SLUG="$(slugify "$TASK_INPUT")"
-WORKTREE_ROOT="$(dirname "$REPO_ROOT")"
-INTEGRATION_DIR="$WORKTREE_ROOT/${REPO_NAME}-integration-$TASK_SLUG"
+REPO_ROOT="$(repo_root)"
+WORKTREE_ROOT="$(worktree_root "$REPO_ROOT")"
+INTEGRATION_DIR="$(integration_dir_for_task "$TASK_SLUG")"
 INTEGRATION_BRANCH="agent/integration/$TASK_SLUG"
 
 if [ ! -e "$INTEGRATION_DIR/.git" ]; then

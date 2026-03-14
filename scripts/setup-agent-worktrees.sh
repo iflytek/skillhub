@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./parallel-common.sh
+source "$SCRIPT_DIR/parallel-common.sh"
+
 usage() {
   cat <<'EOF'
 Usage: setup-agent-worktrees.sh <task-slug> [base-ref] [worktree-root]
@@ -18,19 +22,6 @@ Arguments:
 Example:
   ./scripts/setup-agent-worktrees.sh legal-pages origin/main /Users/me/workspace
 EOF
-}
-
-fail() {
-  echo "ERROR: $*" >&2
-  exit 1
-}
-
-info() {
-  echo "INFO: $*"
-}
-
-slugify() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
 }
 
 branch_in_use() {
@@ -75,8 +66,8 @@ if [ -z "$TASK_INPUT" ]; then
   exit 1
 fi
 
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "Run this script inside a git repository"
-REPO_NAME="$(basename "$REPO_ROOT")"
+REPO_ROOT="$(repo_root)"
+REPO_NAME="$(repo_name)"
 TASK_SLUG="$(slugify "$TASK_INPUT")"
 
 if [ -z "$TASK_SLUG" ]; then
@@ -114,10 +105,9 @@ Parallel worktrees are ready:
 Recommended flow:
   1. Run Claude only in: $CLAUDE_DIR
   2. Run Codex only in:  $CODEX_DIR
-  3. Keep localhost:3000 reserved for the integration worktree:
-       cd "$INTEGRATION_DIR" && make dev-all
-  4. After each agent commits, sync both branches into integration:
-       make agent-sync TASK=$TASK_SLUG
-  5. Verify the merged result in the browser:
+  3. Work only in the integration worktree when you need merged verification:
+       cd "$INTEGRATION_DIR"
+       make parallel-up
+  4. Verify the merged result in the browser:
        http://localhost:3000
 EOF
