@@ -9,6 +9,7 @@ import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi } from '@/api/client'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -191,7 +192,7 @@ export function SkillDetailPage() {
                           </span>
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(version.publishedAt).toLocaleDateString(i18n.language)}
+                          {formatLocalDateTime(version.publishedAt, i18n.language)}
                         </span>
                       </div>
                       {version.changelog && (
