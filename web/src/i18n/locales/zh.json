@@ -472,6 +472,8 @@
     "error": "发布失败",
     "timeoutTitle": "发布请求超时",
     "timeoutDescription": "本次发布等待时间过长，请稍后到技能列表确认结果，或重新尝试发布。",
+    "versionExistsTitle": "版本号已存在",
+    "versionExistsDescription": "当前技能版本已经发布过，请修改 SKILL.md 中的 version 后重新打包上传。",
     "selectRequired": "请选择命名空间和文件"
   },
   "toast": {
