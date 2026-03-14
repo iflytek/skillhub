@@ -111,6 +111,8 @@
     "password": "Password",
     "usernamePlaceholder": "Enter username",
     "passwordPlaceholder": "Enter password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "submitting": "Logging in...",
     "submit": "Login",
     "noAccount": "Don't have an account?",

@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Eye, EyeOff } from 'lucide-react'
 import { getDirectAuthRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
@@ -18,6 +19,7 @@ export function LoginPage() {
   const directAuthConfig = getDirectAuthRuntimeConfig()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const { data: authMethods } = useAuthMethods(search.returnTo)
 
@@ -85,14 +87,26 @@ export function LoginPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="password">{t('login.password')}</label>
-                    <Input
-                      id="password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder={t('login.passwordPlaceholder')}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder={t('login.passwordPlaceholder')}
+                        className="pr-12"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                        aria-pressed={showPassword}
+                        onClick={() => setShowPassword((current) => !current)}
+                        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   {loginMutation.error ? (
                     <p className="text-sm text-red-600">{loginMutation.error.message}</p>

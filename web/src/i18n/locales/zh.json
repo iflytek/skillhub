@@ -111,6 +111,8 @@
     "password": "密码",
     "usernamePlaceholder": "输入用户名",
     "passwordPlaceholder": "输入密码",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
     "submitting": "登录中...",
     "submit": "登录",
     "noAccount": "还没有账号？",
