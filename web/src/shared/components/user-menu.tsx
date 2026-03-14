@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
 import {
@@ -22,7 +22,6 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const hasRole = (role: string) => user.platformRoles?.includes(role) ?? false
@@ -34,10 +33,12 @@ export function UserMenu({ user }: UserMenuProps) {
   const handleLogout = async () => {
     try {
       await authApi.logout()
-      queryClient.setQueryData(['auth', 'me'], null)
-      navigate({ to: '/' })
     } catch (error) {
       console.error('Logout failed:', error)
+    } finally {
+      // Always clear cache and redirect, even if API call fails
+      queryClient.setQueryData(['auth', 'me'], null)
+      window.location.href = '/'
     }
   }
 

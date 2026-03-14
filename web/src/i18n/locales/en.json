@@ -1,6 +1,7 @@
 {
   "nav": {
     "home": "Home",
+    "explore": "Explore Skills",
     "search": "Search Skills",
     "dashboard": "Dashboard",
     "login": "Login"

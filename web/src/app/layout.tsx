@@ -25,15 +25,31 @@ export function Layout() {
       {/* Glass header */}
       <header className="sticky top-0 z-50 glass-strong border-b border-border/40">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-glow">
-              <span className="text-primary-foreground font-bold text-sm">S</span>
-            </div>
-            <span className="text-xl font-bold font-heading text-foreground group-hover:text-primary transition-colors">
-              SkillHub
-            </span>
-          </Link>
+          {/* 左侧: Logo + 主导航 */}
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-glow">
+                <span className="text-primary-foreground font-bold text-sm">S</span>
+              </div>
+              <span className="text-xl font-bold font-heading text-foreground group-hover:text-primary transition-colors">
+                SkillHub
+              </span>
+            </Link>
 
+            {/* 主导航链接 */}
+            <nav className="hidden md:flex items-center gap-6">
+              <Link
+                to="/search"
+                search={{ q: '', sort: 'relevance', page: 0 }}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                activeProps={{ className: 'text-primary' }}
+              >
+                {t('nav.explore')}
+              </Link>
+            </nav>
+          </div>
+
+          {/* 右侧菜单 */}
           <nav className="flex items-center gap-6">
             <LanguageSwitcher />
             {isLoading ? null : user ? (

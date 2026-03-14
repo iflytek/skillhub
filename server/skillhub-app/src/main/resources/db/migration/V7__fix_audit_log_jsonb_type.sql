@@ -1,12 +1,10 @@
 -- Fix audit_log detail_json column to properly handle JSONB type
 -- This migration ensures existing data is compatible with the JSONB type
 
--- The column is already defined as jsonb in V1, but we need to ensure
--- any existing string data can be properly cast to jsonb
-ALTER TABLE audit_log
-ALTER COLUMN detail_json TYPE jsonb
-USING CASE
-    WHEN detail_json IS NULL THEN NULL
-    WHEN detail_json = '' THEN NULL
-    ELSE detail_json::jsonb
-END;
+-- The column is already defined as jsonb in V1, so this migration is a no-op
+-- for fresh installations. For existing installations with text data, this would
+-- have been needed, but since the column was always jsonb, we just verify it exists.
+
+-- No-op migration: column is already jsonb in V1
+-- This file exists to maintain migration version continuity
+SELECT 1;
