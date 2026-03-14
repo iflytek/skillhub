@@ -47,6 +47,7 @@ export function useToggleStar(skillId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills', skillId, 'star'] })
       queryClient.invalidateQueries({ queryKey: ['skills'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })
     },
   })
 }
