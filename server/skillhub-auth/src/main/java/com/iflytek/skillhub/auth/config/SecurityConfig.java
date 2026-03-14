@@ -96,12 +96,9 @@ public class SecurityConfig {
                     "/api/v1/skills/*/*/versions/*/files",
                     "/api/v1/skills/*/*/versions/*/file",
                     "/api/v1/skills/*/*/resolve",
-                    "/api/v1/skills/*/*/download",
-                    "/api/v1/skills/*/*/versions/*/download",
                     "/api/v1/skills/*/*/tags",
                     "/api/v1/skills/*/*/tags/*/files",
-                    "/api/v1/skills/*/*/tags/*/file",
-                    "/api/v1/skills/*/*/tags/*/download"
+                    "/api/v1/skills/*/*/tags/*/file"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/namespaces", "/api/v1/namespaces/*").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "SKILL_ADMIN", "USER_ADMIN", "AUDITOR")

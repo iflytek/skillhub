@@ -56,6 +56,10 @@ export function SkillDetailPage() {
   })
 
   const handleDownload = () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
     if (!latestVersion) {
       return
     }
