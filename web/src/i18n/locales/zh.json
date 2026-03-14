@@ -85,6 +85,9 @@
   "search": {
     "title": "搜索技能",
     "placeholder": "搜索技能...",
+    "filters": {
+      "label": "筛选:"
+    },
     "sort": {
       "label": "排序:",
       "relevance": "相关性",

@@ -140,47 +140,53 @@ export function SearchPage() {
         <SearchBar value={queryInput} onChange={setQueryInput} onSearch={handleSearch} />
       </div>
 
-      {/* Sort Selector */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">{t('search.sort.label')}</span>
-          <div className="flex gap-2">
-            <Button
-              variant={sort === 'relevance' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleSortChange('relevance')}
-            >
-              {t('search.sort.relevance')}
-            </Button>
-            <Button
-              variant={sort === 'downloads' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleSortChange('downloads')}
-            >
-              {t('search.sort.downloads')}
-            </Button>
-            <Button
-              variant={sort === 'newest' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleSortChange('newest')}
-            >
-              {t('search.sort.newest')}
-            </Button>
-            <Button
-              variant={starredOnly ? 'default' : 'outline'}
-              size="sm"
-              onClick={handleStarredToggle}
-            >
-              {t('search.filterStarred')}
-            </Button>
+      {/* Sort And Filters */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground">{t('search.sort.label')}</span>
+            <div className="flex gap-2">
+              <Button
+                variant={sort === 'relevance' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSortChange('relevance')}
+              >
+                {t('search.sort.relevance')}
+              </Button>
+              <Button
+                variant={sort === 'downloads' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSortChange('downloads')}
+              >
+                {t('search.sort.downloads')}
+              </Button>
+              <Button
+                variant={sort === 'newest' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSortChange('newest')}
+              >
+                {t('search.sort.newest')}
+              </Button>
+            </div>
           </div>
+
+          {resultCount > 0 && (
+            <div className="text-sm text-muted-foreground">
+              {t('search.results', { count: resultCount })}
+            </div>
+          )}
         </div>
 
-        {resultCount > 0 && (
-          <div className="text-sm text-muted-foreground">
-            {t('search.results', { count: resultCount })}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">{t('search.filters.label')}</span>
+          <Button
+            variant={starredOnly ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleStarredToggle}
+          >
+            {t('search.filterStarred')}
+          </Button>
+        </div>
       </div>
 
       {/* Results */}

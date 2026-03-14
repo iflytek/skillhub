@@ -85,6 +85,9 @@
   "search": {
     "title": "Search Skills",
     "placeholder": "Search skills...",
+    "filters": {
+      "label": "Filter:"
+    },
     "sort": {
       "label": "Sort:",
       "relevance": "Relevance",
