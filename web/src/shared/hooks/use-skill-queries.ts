@@ -86,6 +86,7 @@ export function useSearchSkills(params: SearchParams) {
   return useQuery({
     queryKey: ['skills', 'search', params],
     queryFn: () => searchSkills(params),
+    enabled: params.starredOnly !== true,
   })
 }
 
@@ -128,10 +129,11 @@ export function useMySkills() {
   })
 }
 
-export function useMyStars() {
+export function useMyStars(enabled = true) {
   return useQuery({
     queryKey: ['skills', 'stars'],
     queryFn: getMyStars,
+    enabled,
   })
 }
 

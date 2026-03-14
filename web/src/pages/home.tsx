@@ -21,7 +21,7 @@ export function HomePage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0 } })
+    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0, starredOnly: false } })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
@@ -49,7 +49,7 @@ export function HomePage() {
         </div>
 
         <div className="flex items-center justify-center gap-4 animate-fade-up delay-2">
-          <Button size="lg" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })}>
+          <Button size="lg" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })}>
             {t('home.browseSkills')}
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate({ to: '/dashboard/publish' })}>
@@ -67,7 +67,7 @@ export function HomePage() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0 } })}
+            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0, starredOnly: false } })}
           >
             {t('home.viewAll')}
           </Button>
@@ -97,7 +97,7 @@ export function HomePage() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0 } })}
+            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}
           >
             {t('home.viewAll')}
           </Button>

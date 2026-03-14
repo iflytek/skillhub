@@ -94,6 +94,10 @@
     },
     "noResults": "No results found",
     "noResultsFor": "No skills found matching \"{{q}}\"",
+    "filterStarred": "Starred only",
+    "noStarredResults": "No starred skills found",
+    "noStarredResultsFor": "No starred skills match \"{{q}}\"",
+    "noStarredSkills": "You have not starred any skills yet",
     "enterKeyword": "Please enter a search keyword",
     "results": "{{count}} skills found",
     "resultCount": "Found <1>{{count}}</1> results"

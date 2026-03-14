@@ -84,7 +84,7 @@ export function SkillDetailPage() {
       window.history.back()
       return
     }
-    navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0 } })
+    navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })
   }
 
   if (isLoadingSkill) {
