@@ -11,19 +11,19 @@ description: Install and use skills
 ### Install Latest Version
 
 ```bash
-skillhub install @team/my-skill
+clawhub install @team/my-skill
 ```
 
 ### Install Specific Version
 
 ```bash
-skillhub install @team/my-skill@1.2.0
+clawhub install @team/my-skill@1.2.0
 ```
 
 ### Install by Tag
 
 ```bash
-skillhub install @team/my-skill@beta
+clawhub install @team/my-skill@beta
 ```
 
 ### Install with ClawHub CLI

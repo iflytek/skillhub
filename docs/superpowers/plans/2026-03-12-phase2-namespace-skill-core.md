@@ -6709,7 +6709,7 @@ export function FileTree({ files, onSelect }: {
 import { CopyButton } from '@/shared/components/copy-button';
 
 export function InstallCommand({ namespace, slug }: { namespace: string; slug: string }) {
-  const command = `skillhub install @${namespace}/${slug}`;
+  const command = `clawhub install @${namespace}/${slug}`;
   return (
     <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
       <code className="text-sm flex-1 font-mono truncate">{command}</code>

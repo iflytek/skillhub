@@ -458,7 +458,7 @@ Session 中存储以下字段：
 - 后端设置 `XSRF-TOKEN` Cookie（`HttpOnly=false`）
 - 前端从 Cookie 读取 Token，放入请求 Header `X-XSRF-TOKEN`
 - 后端校验 Header 与 Cookie 是否一致
-- CLI API（`/api/v1/**`）与兼容层（`/api/compat/v1/**`）豁免 CSRF（使用 Bearer Token，无 Cookie）
+- CLI API（`/api/v1/**`）与兼容层（`/api/v1/**`）豁免 CSRF（使用 Bearer Token，无 Cookie）
 
 ## 9. 前端权限控制
 
@@ -639,8 +639,8 @@ window.location.href = '/oauth2/authorization/github'
 
 | 接口 | 所需凭证 | 额外判定 |
 |------|---------|---------|
-| `GET /api/compat/v1/whoami` | 任意有效 Bearer Token | 无 |
-| `GET /api/compat/v1/search` | 可选（匿名限 PUBLIC） | `SearchVisibilityScope` |
-| `GET /api/compat/v1/resolve` | 可选（匿名限 PUBLIC） | visibility |
-| `GET /api/compat/v1/download/{slug}/{version}` | 可选（匿名限 PUBLIC） | visibility |
-| `POST /api/compat/v1/publish` | Bearer Token + `skill:publish` | 用户是目标 namespace 的 MEMBER 以上（namespace 由 canonical slug 解析） |
+| `GET /api/v1/whoami` | 任意有效 Bearer Token | 无 |
+| `GET /api/v1/search` | 可选（匿名限 PUBLIC） | `SearchVisibilityScope` |
+| `GET /api/v1/resolve` | 可选（匿名限 PUBLIC） | visibility |
+| `GET /api/v1/download/{slug}/{version}` | 可选（匿名限 PUBLIC） | visibility |
+| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 用户是目标 namespace 的 MEMBER 以上（namespace 由 canonical slug 解析） |

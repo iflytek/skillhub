@@ -188,12 +188,28 @@ public class ClawHubCompatController {
     }
 
     @GetMapping("/download/{canonicalSlug}")
-    public ResponseEntity<Void> download(@PathVariable String canonicalSlug,
-                                         @RequestParam(defaultValue = "latest") String version) {
+    public ResponseEntity<Void> downloadByPath(@PathVariable String canonicalSlug,
+                                               @RequestParam(defaultValue = "latest") String version) {
         SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
         String location = "latest".equals(version)
                 ? "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/download"
                 : "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/versions/" + version + "/download";
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, location)
+                .build();
+    }
+
+    @GetMapping("/download")
+    public ResponseEntity<Void> downloadByQuery(@RequestParam String slug,
+                                                @RequestParam(defaultValue = "latest") String version) {
+        // For query param version, slug is just the skill slug without namespace
+        Skill skill = skillRepository.findBySlug(slug).stream().findFirst()
+                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", slug));
+        Namespace ns = namespaceRepository.findById(skill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", skill.getNamespaceId()));
+        String location = "latest".equals(version)
+                ? "/api/v1/skills/" + ns.getSlug() + "/" + skill.getSlug() + "/download"
+                : "/api/v1/skills/" + ns.getSlug() + "/" + skill.getSlug() + "/versions/" + version + "/download";
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, location)
                 .build();
@@ -269,7 +285,7 @@ public class ClawHubCompatController {
                 versionInfo = new ClawHubSkillResponse.VersionInfo(
                         latestVersionEntity.getVersion(),
                         versionCreatedAt,
-                        latestVersionEntity.getChangelog(),
+                        latestVersionEntity.getChangelog() == null ? "" : latestVersionEntity.getChangelog(),
                         null // license
                 );
             }

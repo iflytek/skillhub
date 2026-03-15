@@ -31,13 +31,13 @@ You can create custom tags for version channel management:
 ### Create/Move Tag
 
 ```bash
-skillhub tag set @team/my-skill beta 1.2.0
+clawhub tag set @team/my-skill beta 1.2.0
 ```
 
 ### Delete Tag
 
 ```bash
-skillhub tag delete @team/my-skill beta
+clawhub tag delete @team/my-skill beta
 ```
 
 ## Version Withdrawal

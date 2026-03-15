@@ -1016,14 +1016,14 @@ GET /.well-known/clawhub.json
 
 Response 200:
 {
-  "apiBase": "/api/compat/v1"
+  "apiBase": "/api/v1"
 }
 ```
 
 #### search - 搜索技能
 
 ```
-GET /api/compat/v1/search?q=keyword&page=0&size=20
+GET /api/v1/search?q=keyword&page=0&size=20
 Authorization: Bearer sk_xxx（可选）
 
 Response 200:
@@ -1057,7 +1057,7 @@ Response 200:
 #### resolve - 解析技能版本
 
 ```
-GET /api/compat/v1/resolve?slug=my-skill&version=1.2.0
+GET /api/v1/resolve?slug=my-skill&version=1.2.0
 Authorization: Bearer sk_xxx（可选）
 
 Response 200:
@@ -1065,7 +1065,7 @@ Response 200:
   "slug": "my-skill",
   "name": "My Skill",
   "version": "1.2.0",
-  "downloadUrl": "/api/compat/v1/download/my-skill/1.2.0",
+  "downloadUrl": "/api/v1/download/my-skill/1.2.0",
   "fileCount": 5,
   "totalSize": 12345
 }
@@ -1079,7 +1079,7 @@ Response 200:
 #### download - 下载技能包
 
 ```
-GET /api/compat/v1/download/{slug}/{version}
+GET /api/v1/download/{slug}/{version}
 Authorization: Bearer sk_xxx（可选）
 
 Response 200:
@@ -1097,7 +1097,7 @@ Content-Disposition: attachment; filename="my-skill-1.2.0.zip"
 #### publish - 发布技能
 
 ```
-POST /api/compat/v1/publish
+POST /api/v1/publish
 Authorization: Bearer sk_xxx
 Content-Type: multipart/form-data
 
@@ -1118,7 +1118,7 @@ Response 200:
 #### whoami - 查询当前用户
 
 ```
-GET /api/compat/v1/whoami
+GET /api/v1/whoami
 Authorization: Bearer sk_xxx
 
 Response 200:
@@ -1135,7 +1135,7 @@ Response 200:
 
 ```java
 @RestController
-@RequestMapping("/api/compat/v1")
+@RequestMapping("/api/v1")
 public class ClawHubCompatController {
 
     private final CanonicalSlugMapper slugMapper;
@@ -1193,7 +1193,7 @@ public class ClawHubCompatController {
             slug,
             detail.displayName(),
             detail.version(),
-            "/api/compat/v1/download/" + slug + "/" + detail.version(),
+            "/api/v1/download/" + slug + "/" + detail.version(),
             detail.fileCount(),
             detail.totalSize()
         );

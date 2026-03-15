@@ -11,19 +11,19 @@ description: 安装和使用技能
 ### 安装最新版本
 
 ```bash
-skillhub install @team/my-skill
+clawhub install @team/my-skill
 ```
 
 ### 安装指定版本
 
 ```bash
-skillhub install @team/my-skill@1.2.0
+clawhub install @team/my-skill@1.2.0
 ```
 
 ### 按标签安装
 
 ```bash
-skillhub install @team/my-skill@beta
+clawhub install @team/my-skill@beta
 ```
 
 ### 使用 ClawHub CLI 安装
