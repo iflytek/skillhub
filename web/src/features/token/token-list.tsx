@@ -88,8 +88,8 @@ export function TokenList() {
     }
   }
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return '-'
+  const formatDate = (dateString?: string | null, emptyLabel = '-') => {
+    if (!dateString) return emptyLabel
     return formatLocalDateTime(dateString, i18n.language)
   }
 
@@ -154,7 +154,7 @@ export function TokenList() {
                   </TableCell>
                   <TableCell>{formatDate(token.createdAt)}</TableCell>
                   <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
-                  <TableCell>{formatDate(token.expiresAt)}</TableCell>
+                  <TableCell>{formatDate(token.expiresAt, t('token.neverExpires'))}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="destructive"
