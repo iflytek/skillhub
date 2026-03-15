@@ -145,6 +145,18 @@ export interface SkillVersion {
   publishedAt: string
 }
 
+export interface SkillVersionDetail {
+  id: number
+  version: string
+  status: string
+  changelog?: string
+  fileCount: number
+  totalSize: number
+  publishedAt: string
+  parsedMetadataJson?: string
+  manifestJson?: string
+}
+
 export interface SkillFile {
   id: number
   filePath: string

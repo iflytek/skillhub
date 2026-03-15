@@ -26,6 +26,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -413,6 +415,106 @@ class SkillPublishServiceTest {
         assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
         verify(prePublishValidator).validate(any());
         verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void testRereleasePublishedVersion_ShouldCloneFilesAndAutoPublish() throws Exception {
+        String publisherId = "user-100";
+        Skill skill = new Skill(1L, "demo-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 11L);
+        skill.setDisplayName("Demo Skill");
+        skill.setSummary("Original summary");
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setId(namespace, 1L);
+
+        SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", publisherId);
+        setId(sourceVersion, 21L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        sourceVersion.setPublishedAt(LocalDateTime.of(2026, 3, 15, 10, 0));
+
+        String sourceSkillMd = """
+                ---
+                name: Demo Skill
+                description: Original summary
+                version: 1.2.3
+                ---
+                Hello world
+                """;
+        byte[] readmeBytes = "# Demo".getBytes(StandardCharsets.UTF_8);
+
+        SkillFile skillMdFile = new SkillFile(sourceVersion.getId(), "SKILL.md", (long) sourceSkillMd.getBytes(StandardCharsets.UTF_8).length, "text/markdown", "hash1", "skills/11/21/SKILL.md");
+        SkillFile readmeFile = new SkillFile(sourceVersion.getId(), "README.md", (long) readmeBytes.length, "text/markdown", "hash2", "skills/11/21/README.md");
+
+        SkillMetadata rereleaseMetadata = new SkillMetadata(
+                "Demo Skill",
+                "Original summary",
+                "1.2.4",
+                "Hello world",
+                Map.of("name", "Demo Skill", "description", "Original summary", "version", "1.2.4"));
+
+        when(skillRepository.findById(skill.getId())).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(skill.getNamespaceId())).thenReturn(Optional.of(namespace));
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.3")).thenReturn(Optional.of(sourceVersion));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.4")).thenReturn(Optional.empty());
+        when(skillFileRepository.findByVersionId(sourceVersion.getId())).thenReturn(List.of(skillMdFile, readmeFile));
+        when(objectStorageService.getObject(skillMdFile.getStorageKey())).thenReturn(new java.io.ByteArrayInputStream(sourceSkillMd.getBytes(StandardCharsets.UTF_8)));
+        when(objectStorageService.getObject(readmeFile.getStorageKey())).thenReturn(new java.io.ByteArrayInputStream(readmeBytes));
+        when(skillPackageValidator.validate(anyList())).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(anyString())).thenReturn(rereleaseMetadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                setId(saved, 30L);
+            }
+            return saved;
+        });
+        when(skillRepository.save(any())).thenReturn(skill);
+
+        SkillPublishService.PublishResult result = service.rereleasePublishedVersion(
+                skill.getId(),
+                "1.2.3",
+                "1.2.4",
+                publisherId,
+                Map.of(skill.getNamespaceId(), com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER)
+        );
+
+        assertEquals("1.2.4", result.version().getVersion());
+        assertEquals(SkillVersionStatus.PUBLISHED, result.version().getStatus());
+        assertEquals(30L, skill.getLatestVersionId());
+        verify(reviewTaskRepository, never()).save(any());
+        verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
+        verify(skillPackageValidator).validate(argThat(entries ->
+                entries.size() == 2
+                        && entries.stream().anyMatch(entry ->
+                        entry.path().equals("SKILL.md")
+                                && new String(entry.content(), StandardCharsets.UTF_8).contains("version: 1.2.4"))));
+        verify(prePublishValidator).validate(any());
+    }
+
+    @Test
+    void testRereleasePublishedVersion_ShouldRejectDuplicateTargetVersion() throws Exception {
+        String publisherId = "user-100";
+        Skill skill = new Skill(1L, "demo-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 11L);
+        SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", publisherId);
+        setId(sourceVersion, 21L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillVersion existingTarget = new SkillVersion(skill.getId(), "1.2.4", publisherId);
+        setId(existingTarget, 22L);
+
+        when(skillRepository.findById(skill.getId())).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.3")).thenReturn(Optional.of(sourceVersion));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.4")).thenReturn(Optional.of(existingTarget));
+
+        assertThrows(DomainBadRequestException.class, () -> service.rereleasePublishedVersion(
+                skill.getId(),
+                "1.2.3",
+                "1.2.4",
+                publisherId,
+                Map.of(skill.getNamespaceId(), com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER)
+        ));
     }
 
     private void setId(Object entity, Long id) throws Exception {

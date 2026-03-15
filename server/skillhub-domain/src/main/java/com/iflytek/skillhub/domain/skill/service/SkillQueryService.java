@@ -256,8 +256,10 @@ public class SkillQueryService {
         if (canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
             visibleVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
                     .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED
+                            || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
                             || version.getStatus() == SkillVersionStatus.DRAFT
-                            || version.getStatus() == SkillVersionStatus.REJECTED)
+                            || version.getStatus() == SkillVersionStatus.REJECTED
+                            || version.getStatus() == SkillVersionStatus.YANKED)
                     .sorted(Comparator
                             .comparingInt((SkillVersion version) -> lifecycleListPriority(version.getStatus()))
                             .thenComparing(SkillVersion::getPublishedAt,
@@ -434,6 +436,15 @@ public class SkillQueryService {
         }
         if (status == SkillVersionStatus.REJECTED) {
             return 1;
+        }
+        if (status == SkillVersionStatus.PENDING_REVIEW) {
+            return 2;
+        }
+        if (status == SkillVersionStatus.DRAFT) {
+            return 3;
+        }
+        if (status == SkillVersionStatus.YANKED) {
+            return 4;
         }
         return 2;
     }
