@@ -589,6 +589,8 @@
     "timeoutDescription": "本次发布等待时间过长，请稍后到技能列表确认结果，或重新尝试发布。",
     "versionExistsTitle": "版本号已存在",
     "versionExistsDescription": "当前技能版本已经发布过，请修改 SKILL.md 中的 version 后重新打包上传。",
+    "precheckFailedTitle": "发布前校验未通过",
+    "precheckFailedDescription": "技能包中包含疑似密钥、令牌或密码内容。请将真实凭证替换为占位符后再重试。",
     "selectRequired": "请选择命名空间和文件"
   },
   "toast": {

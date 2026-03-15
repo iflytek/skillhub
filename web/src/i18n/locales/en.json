@@ -589,6 +589,8 @@
     "timeoutDescription": "The publish request took too long. Please check the skill list later or try again.",
     "versionExistsTitle": "Version already exists",
     "versionExistsDescription": "This skill version has already been published. Update the version in SKILL.md, rebuild the package, and upload it again.",
+    "precheckFailedTitle": "Pre-publish check failed",
+    "precheckFailedDescription": "The package appears to contain a secret, token, or password. Replace real credentials with placeholders and try again.",
     "selectRequired": "Please select namespace and file"
   },
   "toast": {
