@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -69,7 +70,9 @@ public class SkillQueryService {
             java.time.LocalDateTime createdAt,
             java.time.LocalDateTime updatedAt,
             SkillVersion latestVersionEntity,
-            boolean canManageLifecycle
+            boolean canManageLifecycle,
+            String viewingVersionStatus,
+            boolean canInteract
     ) {}
 
     public record SkillVersionDetailDTO(
@@ -111,12 +114,9 @@ public class SkillQueryService {
         }
 
         String latestVersion = null;
-        SkillVersion latestVersionEntity = null;
-        if (skill.getLatestVersionId() != null) {
-            latestVersionEntity = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
-            if (latestVersionEntity != null) {
-                latestVersion = latestVersionEntity.getVersion();
-            }
+        SkillVersion latestVersionEntity = resolvePreviewVersion(skill, currentUserId);
+        if (latestVersionEntity != null) {
+            latestVersion = latestVersionEntity.getVersion();
         }
 
         return new SkillDetailDTO(
@@ -136,7 +136,9 @@ public class SkillQueryService {
                 skill.getCreatedAt(),
                 skill.getUpdatedAt(),
                 latestVersionEntity,
-                canManageRestrictedSkill(skill, currentUserId, userNsRoles)
+                canManageRestrictedSkill(skill, currentUserId, userNsRoles),
+                latestVersionEntity != null ? latestVersionEntity.getStatus().name() : null,
+                latestVersionEntity == null || latestVersionEntity.getStatus() == SkillVersionStatus.PUBLISHED
         );
     }
 
@@ -171,7 +173,7 @@ public class SkillQueryService {
         Skill skill = findSkill(namespaceSlug, skillSlug);
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPublishedVersion(skillVersion, version);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
 
         return new SkillVersionDetailDTO(
                 skillVersion.getId(),
@@ -196,7 +198,7 @@ public class SkillQueryService {
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPublishedVersion(skillVersion, version);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
 
         return skillFileRepository.findByVersionId(skillVersion.getId());
     }
@@ -224,11 +226,11 @@ public class SkillQueryService {
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPublishedVersion(skillVersion, version);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
 
         SkillFile file = findFile(skillVersion, filePath);
 
-        return objectStorageService.getObject(file.getStorageKey());
+        return readFileContent(file);
     }
 
     public InputStream getFileContentByTag(
@@ -242,7 +244,7 @@ public class SkillQueryService {
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
         SkillVersion skillVersion = resolveVersionEntity(skill, null, tagName, null);
         SkillFile file = findFile(skillVersion, filePath);
-        return objectStorageService.getObject(file.getStorageKey());
+        return readFileContent(file);
     }
 
     public Page<SkillVersion> listVersions(String namespaceSlug,
@@ -338,6 +340,14 @@ public class SkillQueryService {
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.file.notFound", filePath));
     }
 
+    private InputStream readFileContent(SkillFile file) {
+        try {
+            return objectStorageService.getObject(file.getStorageKey());
+        } catch (UncheckedIOException e) {
+            throw new DomainBadRequestException("error.skill.file.notFound", file.getFilePath());
+        }
+    }
+
     private SkillVersion resolveVersionEntity(Skill skill, String version, String tag, String hash) {
         if (version != null && !version.isBlank()) {
             SkillVersion exactVersion = findVersion(skill, version);
@@ -388,6 +398,28 @@ public class SkillQueryService {
         return latestVersion;
     }
 
+    private SkillVersion resolvePreviewVersion(Skill skill, String currentUserId) {
+        SkillVersion publishedVersion = null;
+        if (skill.getLatestVersionId() != null) {
+            publishedVersion = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
+        }
+        if (publishedVersion != null) {
+            return publishedVersion;
+        }
+        return resolveOwnerPendingPreview(skill, currentUserId);
+    }
+
+    private SkillVersion resolveOwnerPendingPreview(Skill skill, String currentUserId) {
+        if (!isOwner(skill, currentUserId)) {
+            return null;
+        }
+        return skillVersionRepository.findBySkillIdAndStatus(skill.getId(), SkillVersionStatus.PENDING_REVIEW).stream()
+                .max(Comparator
+                        .comparing(SkillVersion::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(SkillVersion::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+    }
+
     private String computeFingerprint(SkillVersion version) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -430,6 +462,10 @@ public class SkillQueryService {
                 || role == NamespaceRole.OWNER;
     }
 
+    private boolean isOwner(Skill skill, String currentUserId) {
+        return currentUserId != null && skill.getOwnerId().equals(currentUserId);
+    }
+
     private int lifecycleListPriority(SkillVersionStatus status) {
         if (status == SkillVersionStatus.PUBLISHED) {
             return 0;
@@ -453,5 +489,15 @@ public class SkillQueryService {
         if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
             throw new DomainBadRequestException("error.skill.version.notPublished", versionStr);
         }
+    }
+
+    private void assertPreviewAccessible(Skill skill, SkillVersion version, String versionStr, String currentUserId) {
+        if (version.getStatus() == SkillVersionStatus.PUBLISHED) {
+            return;
+        }
+        if (version.getStatus() == SkillVersionStatus.PENDING_REVIEW && isOwner(skill, currentUserId)) {
+            return;
+        }
+        throw new DomainBadRequestException("error.skill.version.notPublished", versionStr);
     }
 }

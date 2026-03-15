@@ -103,6 +103,42 @@ class SkillControllerTest {
     }
 
     @Test
+    void getSkillDetailShouldExposePendingPreviewFlags() throws Exception {
+        when(skillQueryService.getSkillDetail(
+                eq("team"),
+                eq("demo"),
+                eq((String) null),
+                eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(new SkillQueryService.SkillDetailDTO(
+                        1L,
+                        "demo",
+                        "Demo",
+                        "Pending preview",
+                        "PUBLIC",
+                        "ACTIVE",
+                        10L,
+                        2,
+                        null,
+                        0,
+                        false,
+                        "1.1.0",
+                        1L,
+                        LocalDateTime.of(2026, 3, 15, 10, 0),
+                        LocalDateTime.of(2026, 3, 15, 10, 0),
+                        null,
+                        true,
+                        "PENDING_REVIEW",
+                        false
+                ));
+
+        mockMvc.perform(get("/api/web/skills/team/demo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.latestVersion").value("1.1.0"))
+                .andExpect(jsonPath("$.data.viewingVersionStatus").value("PENDING_REVIEW"))
+                .andExpect(jsonPath("$.data.canInteract").value(false));
+    }
+
+    @Test
     void listFilesByTagShouldReturnUnifiedEnvelope() throws Exception {
         when(skillQueryService.listFilesByTag(
                 eq("team"),
