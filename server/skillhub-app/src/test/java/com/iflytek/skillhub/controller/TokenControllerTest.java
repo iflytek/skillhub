@@ -94,6 +94,28 @@ class TokenControllerTest {
     }
 
     @Test
+    void create_rejectsDuplicateActiveNames() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "tester", "tester@example.com", "", "github", Set.of("USER")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
+                .willThrow(new DomainBadRequestException("error.token.name.duplicate"));
+
+        mockMvc.perform(post("/api/v1/tokens")
+                        .with(authentication(auth))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"name":"cli"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.msg").value("你已经有同名 Token"));
+    }
+
+    @Test
     void create_passesExpirationToService() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-42", "tester", "tester@example.com", "", "github", Set.of("USER")
