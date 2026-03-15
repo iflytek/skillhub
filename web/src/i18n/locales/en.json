@@ -301,7 +301,12 @@
     "subtitle": "Update your password when local account login is enabled.",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
+    "currentPasswordRequired": "Please enter your current password",
+    "newPasswordRequired": "Please enter your new password",
+    "invalidCurrentPassword": "Current password is incorrect",
     "success": "Password changed successfully",
+    "successTitle": "Password changed successfully",
+    "successDescription": "Please sign in again with your new password.",
     "defaultError": "Failed to change password",
     "submitting": "Submitting...",
     "submit": "Update Password"

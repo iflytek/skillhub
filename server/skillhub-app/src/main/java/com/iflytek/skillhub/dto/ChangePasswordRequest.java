@@ -3,8 +3,8 @@ package com.iflytek.skillhub.dto;
 import jakarta.validation.constraints.NotBlank;
 
 public record ChangePasswordRequest(
-    @NotBlank(message = "当前密码不能为空")
+    @NotBlank(message = "{validation.auth.local.currentPassword.notBlank}")
     String currentPassword,
-    @NotBlank(message = "新密码不能为空")
+    @NotBlank(message = "{validation.auth.local.newPassword.notBlank}")
     String newPassword
 ) {}
