@@ -35,6 +35,8 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class SkillPublishService {
 
+    private static final int MAX_SKILL_SUMMARY_LENGTH = 512;
+
     public record PublishResult(
             Long skillId,
             String slug,
@@ -121,6 +123,12 @@ public class SkillPublishService {
             String autoVersion = java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"));
             metadata = new SkillMetadata(metadata.name(), metadata.description(), autoVersion, metadata.body(), metadata.frontmatter());
+        }
+        if (metadata.description() != null && metadata.description().length() > MAX_SKILL_SUMMARY_LENGTH) {
+            throw new DomainBadRequestException(
+                    "error.skill.publish.summary.tooLong",
+                    MAX_SKILL_SUMMARY_LENGTH
+            );
         }
         String skillSlug = SlugValidator.slugify(metadata.name());
 
