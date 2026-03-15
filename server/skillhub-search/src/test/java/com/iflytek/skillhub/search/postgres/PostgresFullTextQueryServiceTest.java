@@ -44,6 +44,9 @@ class PostgresFullTextQueryServiceTest {
 
         verify(nativeQuery).setParameter("tsQuery", "ai:*");
         verify(countQuery).setParameter("tsQuery", "ai:*");
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("to_tsvector('simple', coalesce(title, '')) @@ to_tsquery('simple', :tsQuery)");
     }
 
     @Test
