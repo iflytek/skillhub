@@ -152,6 +152,7 @@ public class SkillSearchAppService {
                 skill.getRatingAvg(),
                 skill.getRatingCount(),
                 latestVersion,
+                latestVersion == null ? null : "PUBLISHED",
                 namespaceSlug,
                 skill.getUpdatedAt()
         );

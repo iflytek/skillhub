@@ -185,6 +185,8 @@
     "title": "我的技能",
     "subtitle": "管理你发布的技能",
     "publishNew": "发布新技能",
+    "statusPendingReview": "审核中",
+    "statusPublished": "已发布",
     "emptyTitle": "还没有技能",
     "emptyDescription": "开始发布你的第一个技能吧",
     "publishSkill": "发布技能"
