@@ -17,6 +17,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
     private static final int MAX_QUERY_TERMS = 8;
     private static final int SHORT_PREFIX_LENGTH = 2;
     private static final String TITLE_VECTOR_SQL = "to_tsvector('simple', coalesce(title, ''))";
+    private static final String TITLE_SQL = "LOWER(title)";
 
     private final EntityManager entityManager;
 
@@ -58,11 +59,14 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         // Full-text search
         if (hasKeyword) {
+            sql.append("AND (");
             if (useShortPrefixTitleSearch) {
-                sql.append("AND ").append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
+                sql.append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
             } else {
-                sql.append("AND search_vector @@ to_tsquery('simple', :tsQuery) ");
+                sql.append("search_vector @@ to_tsquery('simple', :tsQuery) ");
             }
+            sql.append(" OR ").append(TITLE_SQL).append(" LIKE :titleLike");
+            sql.append(") ");
         }
 
         // Sorting
@@ -73,11 +77,16 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         } else if ("newest".equals(query.sortBy())) {
             sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC ");
         } else if ("relevance".equals(query.sortBy()) && hasKeyword) {
+            sql.append("ORDER BY CASE ");
+            sql.append("WHEN ").append(TITLE_SQL).append(" = :titleExact THEN 4 ");
+            sql.append("WHEN ").append(TITLE_SQL).append(" LIKE :titlePrefix THEN 3 ");
+            sql.append("WHEN ").append(TITLE_SQL).append(" LIKE :titleLike THEN 2 ");
+            sql.append("ELSE 1 END DESC, ");
             if (useShortPrefixTitleSearch) {
-                sql.append("ORDER BY ts_rank_cd(").append(TITLE_VECTOR_SQL)
+                sql.append("ts_rank_cd(").append(TITLE_VECTOR_SQL)
                         .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
             } else {
-                sql.append("ORDER BY ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+                sql.append("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
             }
         } else {
             sql.append("ORDER BY updated_at DESC ");
@@ -100,6 +109,9 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         if (hasKeyword) {
             nativeQuery.setParameter("tsQuery", tsQuery);
+            nativeQuery.setParameter("titleExact", normalizedKeyword.toLowerCase());
+            nativeQuery.setParameter("titlePrefix", normalizedKeyword.toLowerCase() + "%");
+            nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
         }
 
         nativeQuery.setParameter("limit", query.size());
@@ -135,6 +147,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         if (hasKeyword) {
             countQuery.setParameter("tsQuery", tsQuery);
+            countQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
         }
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
@@ -146,7 +159,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
-        return keyword.trim();
+        return keyword.trim().toLowerCase();
     }
 
     private String buildPrefixTsQuery(String keyword) {
