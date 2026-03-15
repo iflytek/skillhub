@@ -103,11 +103,13 @@
     "noStarredSkills": "你还没有收藏任何技能",
     "enterKeyword": "请输入搜索关键词",
     "results": "找到 {{count}} 个技能",
-    "resultCount": "找到 <1>{{count}}</1> 个结果"
+    "resultCount": "找到 <1>{{count}}</1> 个结果",
+    "loadingMore": "正在更新搜索结果..."
   },
   "searchBar": {
     "placeholder": "搜索技能...",
-    "button": "搜索"
+    "button": "搜索",
+    "clear": "清空搜索"
   },
   "login": {
     "title": "登录 SkillHub",

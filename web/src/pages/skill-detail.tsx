@@ -10,6 +10,7 @@ import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi } from '@/api/client'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { formatCompactCount } from '@/shared/lib/number-format'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -228,7 +229,7 @@ export function SkillDetailPage() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.downloads')}</div>
-            <div className="font-semibold text-foreground">{skill.downloadCount.toLocaleString()}</div>
+            <div className="font-semibold text-foreground">{formatCompactCount(skill.downloadCount)}</div>
           </div>
 
           <div className="h-px bg-border/40" />

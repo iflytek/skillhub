@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Loader2, Search, X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 
@@ -7,11 +8,12 @@ interface SearchBarProps {
   defaultValue?: string
   value?: string
   placeholder?: string
+  isSearching?: boolean
   onChange?: (query: string) => void
   onSearch?: (query: string) => void
 }
 
-export function SearchBar({ defaultValue = '', value, placeholder, onChange, onSearch }: SearchBarProps) {
+export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch }: SearchBarProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(defaultValue)
   const isControlled = value !== undefined
@@ -37,32 +39,36 @@ export function SearchBar({ defaultValue = '', value, placeholder, onChange, onS
     }
   }
 
+  const handleClear = () => {
+    handleChange('')
+    onSearch?.('')
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex gap-3 glass-strong p-2 rounded-xl">
       <div className="relative flex-1">
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input
           type="text"
           value={currentQuery}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder || t('searchBar.placeholder')}
-          className="pl-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
+          className="pl-10 pr-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
         />
+        {currentQuery ? (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+            aria-label={t('searchBar.clear')}
+            title={t('searchBar.clear')}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
-      <Button type="submit" size="lg" className="px-8">
-        {t('searchBar.button')}
+      <Button type="submit" size="lg" className="px-8 min-w-28" disabled={isSearching}>
+        {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : t('searchBar.button')}
       </Button>
     </form>
   )
