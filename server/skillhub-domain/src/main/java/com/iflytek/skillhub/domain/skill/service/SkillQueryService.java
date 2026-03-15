@@ -399,14 +399,14 @@ public class SkillQueryService {
     }
 
     private SkillVersion resolvePreviewVersion(Skill skill, String currentUserId) {
-        SkillVersion ownerPreview = resolveOwnerPendingPreview(skill, currentUserId);
-        if (ownerPreview != null) {
-            return ownerPreview;
+        SkillVersion publishedVersion = null;
+        if (skill.getLatestVersionId() != null) {
+            publishedVersion = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
         }
-        if (skill.getLatestVersionId() == null) {
-            return null;
+        if (publishedVersion != null) {
+            return publishedVersion;
         }
-        return skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
+        return resolveOwnerPendingPreview(skill, currentUserId);
     }
 
     private SkillVersion resolveOwnerPendingPreview(Skill skill, String currentUserId) {

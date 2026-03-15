@@ -13,9 +13,12 @@ function parseServerDateTime(value: string): Date {
 }
 
 export function formatLocalDateTime(
-  value: string,
+  value: string | null | undefined,
   locale: string,
   options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' },
 ) {
+  if (!value) {
+    return '—'
+  }
   return new Intl.DateTimeFormat(locale, options).format(parseServerDateTime(value))
 }

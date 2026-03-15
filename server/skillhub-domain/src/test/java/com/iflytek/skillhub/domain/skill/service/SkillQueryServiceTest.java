@@ -503,6 +503,40 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldKeepPublishedVersionWhenSkillAlreadyPublic() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String ownerId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        SkillVersion pending = new SkillVersion(1L, "1.1.0", ownerId);
+        setId(pending, 12L);
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
+
+        assertEquals("1.0.0", result.latestVersion());
+        assertEquals("PUBLISHED", result.viewingVersionStatus());
+        assertTrue(result.canInteract());
+    }
+
+    @Test
     void testGetVersionDetail_ShouldAllowPendingVersionForOwnerPreview() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";
