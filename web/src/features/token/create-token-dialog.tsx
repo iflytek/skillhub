@@ -121,9 +121,9 @@ export function CreateTokenDialog({ children, existingNames = [], onCreated }: C
       <DialogContent>
         {!createdToken ? (
           <>
-            <DialogHeader>
-              <DialogTitle>{t('createToken.title')}</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle className="text-center">{t('createToken.title')}</DialogTitle>
+              <DialogDescription className="text-center">
                 {t('createToken.description')}
               </DialogDescription>
             </DialogHeader>
@@ -198,7 +198,7 @@ export function CreateTokenDialog({ children, existingNames = [], onCreated }: C
             {createMutation.error ? (
               <p className="text-sm text-red-600">{createMutation.error.message}</p>
             ) : null}
-            <DialogFooter>
+            <DialogFooter className="sm:justify-center sm:space-x-3">
               <Button variant="outline" onClick={handleClose}>
                 {t('dialog.cancel')}
               </Button>
@@ -212,9 +212,9 @@ export function CreateTokenDialog({ children, existingNames = [], onCreated }: C
           </>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle>{t('createToken.successTitle')}</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle className="text-center">{t('createToken.successTitle')}</DialogTitle>
+              <DialogDescription className="text-center">
                 {t('createToken.successDescription')}
               </DialogDescription>
             </DialogHeader>
@@ -234,7 +234,7 @@ export function CreateTokenDialog({ children, existingNames = [], onCreated }: C
                 <div className="text-sm">{formatExpiresAt(createdToken.expiresAt)}</div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="sm:justify-center sm:space-x-3">
               <Button onClick={handleCopyToken}>
                 {t('createToken.copyToken')}
               </Button>
