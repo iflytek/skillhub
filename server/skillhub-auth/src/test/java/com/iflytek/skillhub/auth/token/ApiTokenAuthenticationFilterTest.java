@@ -92,4 +92,23 @@ class ApiTokenAuthenticationFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(apiTokenService, never()).touchLastUsed(token);
     }
+
+    @Test
+    void shouldAuthenticateBearerTokensForApiWebRequests() throws Exception {
+        ApiToken token = new ApiToken("user-3", "cli", "sk_test", "hash", "[\"skill:publish\"]");
+        UserAccount user = new UserAccount("user-3", "Carol", "carol@example.com", "");
+
+        when(apiTokenService.validateToken("raw-token")).thenReturn(Optional.of(token));
+        when(userAccountRepository.findById("user-3")).thenReturn(Optional.of(user));
+        when(roleBindingRepository.findByUserId("user-3")).thenReturn(List.of());
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/web/skills/global/publish");
+        request.addHeader("Authorization", "Bearer raw-token");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(apiTokenService).touchLastUsed(token);
+    }
 }

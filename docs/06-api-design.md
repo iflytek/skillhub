@@ -240,6 +240,7 @@ Public API 的可见性规则：
 
 - 普通用户发布成功后，`status` 为 `PENDING_REVIEW`
 - 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/publish`、`/api/compat/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
+- 当前版本保持该审核策略，不再提供“全员直发”的运行模式
 
 ## 7.4 Token API（需登录）
 
@@ -254,7 +255,7 @@ Public API 的可见性规则：
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/v1/whoami` | 当前 Bearer Token 对应的用户信息 |
-| POST | `/api/v1/publish` | 发布技能包（Phase 2 直接返回 `PUBLISHED`，Phase 3 恢复审核流；`SUPER_ADMIN` 始终直发） |
+| POST | `/api/v1/publish` | 发布技能包（普通用户进入审核；`SUPER_ADMIN` 始终直发） |
 | GET | `/api/v1/resolve/{namespace}/{slug}` | 解析版本 |
 | GET | `/api/v1/check/{namespace}/{slug}/{version}` | 本地哈希与远端比对 |
 

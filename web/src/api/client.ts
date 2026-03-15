@@ -15,6 +15,7 @@ import type {
   PromotionTask,
   AuditLogItem,
   SkillSummary,
+  SkillReport,
   AuthMethod,
   OAuthProvider,
   User,
@@ -411,6 +412,35 @@ export const accountApi = {
   },
 }
 
+export const skillLifecycleApi = {
+  async archiveSkill(namespace: string, slug: string, reason?: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/archive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    })
+  },
+
+  async unarchiveSkill(namespace: string, slug: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/unarchive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async deleteVersion(namespace: string, slug: string, version: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+}
+
 export const tokenApi = {
   async getTokens(params?: { page?: number, size?: number }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
     const page = await unwrap<{ items: ApiToken[], total: number, page: number, size: number }>(client.GET('/api/v1/tokens', {
@@ -562,6 +592,49 @@ export const promotionApi = {
   },
 }
 
+export const reportApi = {
+  async submitSkillReport(namespace: string, slug: string, request: { reason: string; details?: string }): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/reports`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  async listSkillReports(params: { status?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('status', params.status ?? 'PENDING')
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: SkillReport[]; total: number; page: number; size: number }>(
+      `/api/v1/admin/skill-reports?${searchParams.toString()}`,
+    )
+  },
+
+  async resolveSkillReport(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skill-reports/${id}/resolve`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+
+  async dismissSkillReport(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skill-reports/${id}/dismiss`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+}
+
 export const meApi = {
   async getStars(): Promise<SkillSummary[]> {
     return fetchJson<SkillSummary[]>(`${WEB_API_PREFIX}/me/stars`)
@@ -642,10 +715,27 @@ export const adminApi = {
     })
   },
 
-  async getAuditLogs(params: { action?: string; userId?: string; page?: number; size?: number }) {
+  async getAuditLogs(params: {
+    action?: string
+    userId?: string
+    requestId?: string
+    ipAddress?: string
+    resourceType?: string
+    resourceId?: string
+    startTime?: string
+    endTime?: string
+    page?: number
+    size?: number
+  }) {
     const searchParams = new URLSearchParams()
     if (params.action) searchParams.set('action', params.action)
     if (params.userId) searchParams.set('userId', params.userId)
+    if (params.requestId) searchParams.set('requestId', params.requestId)
+    if (params.ipAddress) searchParams.set('ipAddress', params.ipAddress)
+    if (params.resourceType) searchParams.set('resourceType', params.resourceType)
+    if (params.resourceId) searchParams.set('resourceId', params.resourceId)
+    if (params.startTime) searchParams.set('startTime', params.startTime)
+    if (params.endTime) searchParams.set('endTime', params.endTime)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
     return fetchJson<{ items: AuditLogItem[]; total: number; page: number; size: number }>(

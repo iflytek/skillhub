@@ -62,6 +62,11 @@ public class SkillPackageValidator {
                 errors.add("Disallowed file extension: " + normalizedPath);
             }
 
+            String contentMismatch = SkillPackagePolicy.validateContentMatchesExtension(normalizedPath, entry.content());
+            if (contentMismatch != null) {
+                errors.add(contentMismatch);
+            }
+
             if (SkillPackagePolicy.SKILL_MD_PATH.equals(normalizedPath) && skillMd == null) {
                 skillMd = entry;
             }

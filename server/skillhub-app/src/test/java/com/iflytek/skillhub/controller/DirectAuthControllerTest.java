@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.iflytek.skillhub.auth.local.LocalAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.security.AuthFailureThrottleService;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class DirectAuthControllerTest {
 
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
+
+    @MockBean
+    private AuthFailureThrottleService authFailureThrottleService;
 
     @Test
     void directLoginShouldAuthenticateViaConfiguredProvider() throws Exception {

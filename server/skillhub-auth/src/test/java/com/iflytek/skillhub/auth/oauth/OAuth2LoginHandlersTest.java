@@ -25,6 +25,7 @@ class OAuth2LoginHandlersTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         HttpSession session = request.getSession(true);
+        String originalSessionId = session.getId();
         session.setAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE, "/dashboard/publish");
 
         var principal = new com.iflytek.skillhub.auth.rbac.PlatformPrincipal(
@@ -39,6 +40,7 @@ class OAuth2LoginHandlersTest {
         handler.onAuthenticationSuccess(request, response, authentication);
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/dashboard/publish");
+        assertThat(request.getSession(false).getId()).isNotEqualTo(originalSessionId);
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
         assertThat(session.getAttribute("platformPrincipal")).isEqualTo(principal);
         assertThat(session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNotNull();
