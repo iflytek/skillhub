@@ -66,6 +66,9 @@ public class SkillQueryService {
             boolean hidden,
             String latestVersion,
             Long namespaceId,
+            java.time.LocalDateTime createdAt,
+            java.time.LocalDateTime updatedAt,
+            SkillVersion latestVersionEntity,
             boolean canManageLifecycle
     ) {}
 
@@ -108,10 +111,11 @@ public class SkillQueryService {
         }
 
         String latestVersion = null;
+        SkillVersion latestVersionEntity = null;
         if (skill.getLatestVersionId() != null) {
-            SkillVersion version = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
-            if (version != null) {
-                latestVersion = version.getVersion();
+            latestVersionEntity = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
+            if (latestVersionEntity != null) {
+                latestVersion = latestVersionEntity.getVersion();
             }
         }
 
@@ -129,6 +133,9 @@ public class SkillQueryService {
                 skill.isHidden(),
                 latestVersion,
                 skill.getNamespaceId(),
+                skill.getCreatedAt(),
+                skill.getUpdatedAt(),
+                latestVersionEntity,
                 canManageRestrictedSkill(skill, currentUserId, userNsRoles)
         );
     }

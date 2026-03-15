@@ -70,14 +70,13 @@ class ClawHubCompatControllerTest {
                         20
                 ));
 
-        mockMvc.perform(get("/api/compat/v1/search")
+        mockMvc.perform(get("/api/v1/search")
                         .param("q", "test"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items").isArray())
-                .andExpect(jsonPath("$.items[0].canonicalSlug").value("my-skill"))
-                .andExpect(jsonPath("$.items[0].description").value("test summary"))
-                .andExpect(jsonPath("$.items[0].latestVersion").value("1.2.0"))
-                .andExpect(jsonPath("$.items[0].starCount").value(5));
+                .andExpect(jsonPath("$.results").isArray())
+                .andExpect(jsonPath("$.results[0].slug").value("my-skill"))
+                .andExpect(jsonPath("$.results[0].summary").value("test summary"))
+                .andExpect(jsonPath("$.results[0].version").value("1.2.0"));
     }
 
     @Test
@@ -85,11 +84,10 @@ class ClawHubCompatControllerTest {
         when(skillQueryService.resolveVersion("global", "my-skill", null, "latest", null, null, java.util.Map.of()))
                 .thenReturn(new SkillQueryService.ResolvedVersionDTO(
                         1L, "global", "my-skill", "latest", 2L, "sha", true, "/api/v1/skills/global/my-skill/download"));
-        mockMvc.perform(get("/api/compat/v1/resolve/my-skill"))
+        mockMvc.perform(get("/api/v1/resolve/my-skill"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.canonicalSlug").value("my-skill"))
-                .andExpect(jsonPath("$.version").value("latest"))
-                .andExpect(jsonPath("$.downloadUrl").value("/api/v1/skills/global/my-skill/download"));
+                .andExpect(jsonPath("$.match.version").value("latest"))
+                .andExpect(jsonPath("$.latestVersion.version").value("latest"));
     }
 
     @Test
@@ -97,11 +95,10 @@ class ClawHubCompatControllerTest {
         when(skillQueryService.resolveVersion("team-ai", "my-skill", null, "latest", null, null, java.util.Map.of()))
                 .thenReturn(new SkillQueryService.ResolvedVersionDTO(
                         1L, "team-ai", "my-skill", "latest", 2L, "sha", true, "/api/v1/skills/team-ai/my-skill/download"));
-        mockMvc.perform(get("/api/compat/v1/resolve/team-ai--my-skill"))
+        mockMvc.perform(get("/api/v1/resolve/team-ai--my-skill"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.canonicalSlug").value("team-ai--my-skill"))
-                .andExpect(jsonPath("$.version").value("latest"))
-                .andExpect(jsonPath("$.downloadUrl").value("/api/v1/skills/team-ai/my-skill/download"));
+                .andExpect(jsonPath("$.match.version").value("latest"))
+                .andExpect(jsonPath("$.latestVersion.version").value("latest"));
     }
 
     @Test
@@ -109,12 +106,11 @@ class ClawHubCompatControllerTest {
         when(skillQueryService.resolveVersion("global", "my-skill", "1.0.0", null, null, null, java.util.Map.of()))
                 .thenReturn(new SkillQueryService.ResolvedVersionDTO(
                         1L, "global", "my-skill", "1.0.0", 2L, "sha", true, "/api/v1/skills/global/my-skill/download"));
-        mockMvc.perform(get("/api/compat/v1/resolve/my-skill")
+        mockMvc.perform(get("/api/v1/resolve/my-skill")
                         .param("version", "1.0.0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.canonicalSlug").value("my-skill"))
-                .andExpect(jsonPath("$.version").value("1.0.0"))
-                .andExpect(jsonPath("$.downloadUrl").value("/api/v1/skills/global/my-skill/download"));
+                .andExpect(jsonPath("$.match.version").value("1.0.0"))
+                .andExpect(jsonPath("$.latestVersion.version").value("1.0.0"));
     }
 
     @Test
@@ -133,12 +129,12 @@ class ClawHubCompatControllerTest {
                 List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
         );
 
-        mockMvc.perform(get("/api/compat/v1/whoami")
+        mockMvc.perform(get("/api/v1/whoami")
                         .with(authentication(auth))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value("user-42"))
-                .andExpect(jsonPath("$.displayName").value("tester"))
-                .andExpect(jsonPath("$.email").value("tester@example.com"));
+                .andExpect(jsonPath("$.user.handle").value("user-42"))
+                .andExpect(jsonPath("$.user.displayName").value("tester"))
+                .andExpect(jsonPath("$.user.image").value("https://example.com/avatar.png"));
     }
 }

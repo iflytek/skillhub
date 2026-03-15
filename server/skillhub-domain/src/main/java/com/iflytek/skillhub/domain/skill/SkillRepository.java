@@ -12,4 +12,6 @@ public interface SkillRepository {
     Skill save(Skill skill);
     List<Skill> findByOwnerId(String ownerId);
     void incrementDownloadCount(Long skillId);
+    List<Skill> findBySlug(String slug);
+    Optional<Skill> findByNamespaceSlugAndSlug(String namespaceSlug, String slug);
 }
