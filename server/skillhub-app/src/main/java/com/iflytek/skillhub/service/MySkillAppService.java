@@ -124,6 +124,7 @@ public class MySkillAppService {
                 skill.getSlug(),
                 skill.getDisplayName(),
                 skill.getSummary(),
+                skill.getStatus().name(),
                 skill.getDownloadCount(),
                 skill.getStarCount(),
                 skill.getRatingAvg(),

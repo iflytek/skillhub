@@ -412,6 +412,35 @@ export const accountApi = {
   },
 }
 
+export const skillLifecycleApi = {
+  async archiveSkill(namespace: string, slug: string, reason?: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/archive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    })
+  },
+
+  async unarchiveSkill(namespace: string, slug: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/unarchive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async deleteVersion(namespace: string, slug: string, version: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+}
+
 export const tokenApi = {
   async getTokens(params?: { page?: number, size?: number }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
     const page = await unwrap<{ items: ApiToken[], total: number, page: number, size: number }>(client.GET('/api/v1/tokens', {
