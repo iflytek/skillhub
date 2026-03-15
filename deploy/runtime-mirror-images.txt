@@ -1,0 +1,7 @@
+# source_image target_image
+postgres:16-alpine postgres:16-alpine
+redis:7-alpine redis:7-alpine
+minio/minio:latest minio:latest
+prom/prometheus:latest prometheus:latest
+grafana/grafana:latest grafana:latest
+nginx:alpine nginx:alpine
