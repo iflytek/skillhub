@@ -25,6 +25,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,9 @@ class SkillLifecycleControllerTest {
 
     @MockBean
     private ReviewService reviewService;
+
+    @MockBean
+    private SkillPublishService skillPublishService;
 
     @MockBean
     private AuditLogService auditLogService;
@@ -171,6 +175,45 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.versionId").value(2))
                 .andExpect(jsonPath("$.data.action").value("WITHDRAW_REVIEW"))
                 .andExpect(jsonPath("$.data.status").value("DELETED"));
+    }
+
+    @Test
+    void rereleaseVersion_returnsUnifiedEnvelope() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion newVersion = new SkillVersion(1L, "1.2.4", "owner");
+        setSkillVersionId(newVersion, 3L);
+        newVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        SkillVersion sourceVersion = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(sourceVersion, 2L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(sourceVersion));
+        given(skillPublishService.rereleasePublishedVersion(
+                eq(1L),
+                eq("1.2.3"),
+                eq("1.2.4"),
+                eq("usr_1"),
+                anyMap()))
+                .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetVersion\":\"1.2.4\"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.versionId").value(3))
+                .andExpect(jsonPath("$.data.action").value("RERELEASE_VERSION"))
+                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
     }
 
     private Skill skillWithStatus(Skill skill, com.iflytek.skillhub.domain.skill.SkillStatus status) {
