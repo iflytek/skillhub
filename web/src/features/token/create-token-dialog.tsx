@@ -14,7 +14,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
-import { toast } from '@/shared/lib/toast'
+import { centeredToastOptions, toast } from '@/shared/lib/toast'
 import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
 
 interface CreateTokenDialogProps {
@@ -78,22 +78,10 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
 
     try {
       await navigator.clipboard.writeText(createdToken.token)
-      toast.success(t('createToken.copySuccess'), undefined, {
-        position: 'top-center',
-        classNames: {
-          title: 'text-center font-semibold',
-          description: 'text-center',
-        },
-      })
+      toast.success(t('createToken.copySuccess'), undefined, centeredToastOptions())
     } catch (error) {
       console.error('Failed to copy token:', error)
-      toast.error(t('createToken.copyFailed'), undefined, {
-        position: 'top-center',
-        classNames: {
-          title: 'text-center font-semibold',
-          description: 'text-center',
-        },
-      })
+      toast.error(t('createToken.copyFailed'), undefined, centeredToastOptions())
     }
   }
 

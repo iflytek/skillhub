@@ -1,5 +1,19 @@
 import { toast as sonnerToast, type ExternalToast } from 'sonner'
 
+export const CENTER_TOASTER_ID = 'top-center'
+
+export function centeredToastOptions(options?: ExternalToast): ExternalToast {
+  return {
+    toasterId: CENTER_TOASTER_ID,
+    classNames: {
+      title: 'text-center font-semibold',
+      description: 'text-center',
+      ...options?.classNames,
+    },
+    ...options,
+  }
+}
+
 export const toast = {
   success: (message: string, description?: string, options?: ExternalToast) => {
     sonnerToast.success(message, { description, ...options })
