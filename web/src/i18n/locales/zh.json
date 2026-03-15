@@ -239,7 +239,12 @@
   "adminUsers": {
     "title": "用户管理",
     "subtitle": "管理平台用户和权限",
+    "searchLabel": "搜索用户",
     "searchPlaceholder": "搜索用户名或邮箱...",
+    "searchHint": "输入用户名或邮箱后，按回车或点击搜索。",
+    "searchAction": "搜索",
+    "clearSearch": "清空",
+    "filterLabel": "状态筛选",
     "filterAll": "全部",
     "filterActive": "活跃",
     "filterPending": "待审批",

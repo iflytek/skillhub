@@ -239,7 +239,12 @@
   "adminUsers": {
     "title": "User Management",
     "subtitle": "Manage platform users and permissions",
+    "searchLabel": "Search users",
     "searchPlaceholder": "Search username or email...",
+    "searchHint": "Enter a username or email, then press Enter or click Search.",
+    "searchAction": "Search",
+    "clearSearch": "Clear",
+    "filterLabel": "Status filter",
     "filterAll": "All",
     "filterActive": "Active",
     "filterPending": "Pending",

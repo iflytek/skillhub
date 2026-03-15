@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { KeyboardEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -34,6 +34,7 @@ export function AdminUsersPage() {
     { value: 'SUPER_ADMIN', label: t('adminUsers.roleSuperAdmin') },
   ]
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [page, setPage] = useState(0)
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
@@ -56,6 +57,25 @@ export function AdminUsersPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString(i18n.language)
+  }
+
+  useEffect(() => {
+    setPage(0)
+  }, [search, statusFilter])
+
+  const applySearch = () => {
+    setSearch(searchInput.trim())
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearch('')
+  }
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      applySearch()
+    }
   }
 
   const handleChangeRole = (user: AdminUser) => {
@@ -104,19 +124,36 @@ export function AdminUsersPage() {
       </div>
 
       <Card className="p-5">
-        <div className="flex gap-4">
-          <Input
-            placeholder={t('adminUsers.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1"
-          />
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">{t('adminUsers.filterAll')}</option>
-            <option value="ACTIVE">{t('adminUsers.filterActive')}</option>
-            <option value="PENDING">{t('adminUsers.filterPending')}</option>
-            <option value="DISABLED">{t('adminUsers.filterDisabled')}</option>
-          </Select>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_220px]">
+          <div className="space-y-2">
+            <Label htmlFor="admin-user-search">{t('adminUsers.searchLabel')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="admin-user-search"
+                placeholder={t('adminUsers.searchPlaceholder')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="flex-1"
+              />
+              <Button type="button" onClick={applySearch}>
+                {t('adminUsers.searchAction')}
+              </Button>
+              <Button type="button" variant="outline" onClick={clearSearch} disabled={!searchInput && !search}>
+                {t('adminUsers.clearSearch')}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('adminUsers.searchHint')}</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="admin-user-status">{t('adminUsers.filterLabel')}</Label>
+            <Select id="admin-user-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">{t('adminUsers.filterAll')}</option>
+              <option value="ACTIVE">{t('adminUsers.filterActive')}</option>
+              <option value="PENDING">{t('adminUsers.filterPending')}</option>
+              <option value="DISABLED">{t('adminUsers.filterDisabled')}</option>
+            </Select>
+          </div>
         </div>
       </Card>
 
