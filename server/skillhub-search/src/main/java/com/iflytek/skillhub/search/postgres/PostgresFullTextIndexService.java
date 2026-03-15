@@ -76,6 +76,7 @@ public class PostgresFullTextIndexService implements SearchIndexService {
     private String buildSemanticVector(SkillSearchDocument document) {
         return searchEmbeddingService.embed(String.join("\n",
                 safe(document.title()),
+                safe(document.title()),
                 safe(document.summary()),
                 safe(document.keywords()),
                 safe(document.searchText())));
