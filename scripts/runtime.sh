@@ -12,14 +12,22 @@ SKILLHUB_REF="${SKILLHUB_REF:-main}"
 SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
+SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
 SKILLHUB_SERVER_IMAGE_VALUE="${SKILLHUB_SERVER_IMAGE:-}"
 SKILLHUB_WEB_IMAGE_VALUE="${SKILLHUB_WEB_IMAGE:-}"
+POSTGRES_IMAGE_VALUE="${POSTGRES_IMAGE:-}"
+REDIS_IMAGE_VALUE="${REDIS_IMAGE:-}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --version)
       [ "$#" -ge 2 ] || { echo "Missing value for --version" >&2; exit 1; }
       SKILLHUB_VERSION_VALUE="$2"
+      shift 2
+      ;;
+    --mirror-registry)
+      [ "$#" -ge 2 ] || { echo "Missing value for --mirror-registry" >&2; exit 1; }
+      SKILLHUB_MIRROR_REGISTRY_VALUE="$2"
       shift 2
       ;;
     --home)
@@ -42,16 +50,29 @@ while [ "$#" -gt 0 ]; do
       SKILLHUB_WEB_IMAGE_VALUE="$2"
       shift 2
       ;;
+    --postgres-image)
+      [ "$#" -ge 2 ] || { echo "Missing value for --postgres-image" >&2; exit 1; }
+      POSTGRES_IMAGE_VALUE="$2"
+      shift 2
+      ;;
+    --redis-image)
+      [ "$#" -ge 2 ] || { echo "Missing value for --redis-image" >&2; exit 1; }
+      REDIS_IMAGE_VALUE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<EOF
 Usage: sh runtime.sh [up|down|clean|ps|logs|pull] [options]
 
 Options:
   --version <tag>       Use a specific image tag, for example v0.1.0
+  --mirror-registry <r> Use mirrored images from <registry>/<namespace>
   --home <dir>          Store runtime files in a specific directory
   --ref <git-ref>       Download runtime files from a specific Git ref
   --server-image <img>  Override backend image repository
   --web-image <img>     Override frontend image repository
+  --postgres-image <i>  Override PostgreSQL image
+  --redis-image <img>   Override Redis image
 EOF
       exit 0
       ;;
@@ -117,8 +138,32 @@ prepare_runtime_files() {
     cp "$ENV_EXAMPLE_FILE" "$ENV_FILE"
   fi
 
+  if [ -n "$SKILLHUB_MIRROR_REGISTRY_VALUE" ]; then
+    mirror_registry="${SKILLHUB_MIRROR_REGISTRY_VALUE%/}"
+    if [ -z "$POSTGRES_IMAGE_VALUE" ]; then
+      POSTGRES_IMAGE_VALUE="$mirror_registry/postgres:16-alpine"
+    fi
+    if [ -z "$REDIS_IMAGE_VALUE" ]; then
+      REDIS_IMAGE_VALUE="$mirror_registry/redis:7-alpine"
+    fi
+    if [ -z "$SKILLHUB_SERVER_IMAGE_VALUE" ]; then
+      SKILLHUB_SERVER_IMAGE_VALUE="$mirror_registry/skillhub-server"
+    fi
+    if [ -z "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
+      SKILLHUB_WEB_IMAGE_VALUE="$mirror_registry/skillhub-web"
+    fi
+  fi
+
   if [ -n "$SKILLHUB_VERSION_VALUE" ]; then
     set_env_value "SKILLHUB_VERSION" "$SKILLHUB_VERSION_VALUE"
+  fi
+
+  if [ -n "$POSTGRES_IMAGE_VALUE" ]; then
+    set_env_value "POSTGRES_IMAGE" "$POSTGRES_IMAGE_VALUE"
+  fi
+
+  if [ -n "$REDIS_IMAGE_VALUE" ]; then
+    set_env_value "REDIS_IMAGE" "$REDIS_IMAGE_VALUE"
   fi
 
   if [ -n "$SKILLHUB_SERVER_IMAGE_VALUE" ]; then
