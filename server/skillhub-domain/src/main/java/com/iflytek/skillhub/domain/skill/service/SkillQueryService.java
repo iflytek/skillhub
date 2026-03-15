@@ -383,12 +383,25 @@ public class SkillQueryService {
     }
 
     private void assertPublishedAccessible(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
-        if (skill.getStatus() != SkillStatus.ACTIVE) {
-            throw new DomainBadRequestException("error.skill.status.notActive");
+        if (skill.getStatus() != SkillStatus.ACTIVE && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
+        if (skill.isHidden() && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
+    }
+
+    private boolean canManageRestrictedSkill(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
+        if (currentUserId == null) {
+            return false;
+        }
+        NamespaceRole role = userNsRoles.get(skill.getNamespaceId());
+        return skill.getOwnerId().equals(currentUserId)
+                || role == NamespaceRole.ADMIN
+                || role == NamespaceRole.OWNER;
     }
 
     private void assertPublishedVersion(SkillVersion version, String versionStr) {

@@ -142,6 +142,10 @@ public class SkillPublishService {
                     return skillRepository.save(newSkill);
                 });
 
+        if (skill.getStatus() == SkillStatus.ARCHIVED) {
+            throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
+        }
+
         // 7. Check version doesn't already exist
         if (skillVersionRepository.findBySkillIdAndVersion(skill.getId(), metadata.version()).isPresent()) {
             throw new DomainBadRequestException("error.skill.version.exists", metadata.version());

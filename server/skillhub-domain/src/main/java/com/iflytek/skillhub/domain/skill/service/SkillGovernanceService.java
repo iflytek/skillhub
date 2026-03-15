@@ -1,13 +1,24 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.event.SkillStatusChangedEvent;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillFileRepository;
+import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
+import com.iflytek.skillhub.storage.ObjectStorageService;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,14 +27,23 @@ public class SkillGovernanceService {
 
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
+    private final SkillFileRepository skillFileRepository;
+    private final ObjectStorageService objectStorageService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SkillGovernanceService(SkillRepository skillRepository,
                                   SkillVersionRepository skillVersionRepository,
-                                  AuditLogService auditLogService) {
+                                  SkillFileRepository skillFileRepository,
+                                  ObjectStorageService objectStorageService,
+                                  AuditLogService auditLogService,
+                                  ApplicationEventPublisher eventPublisher) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
+        this.skillFileRepository = skillFileRepository;
+        this.objectStorageService = objectStorageService;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -36,6 +56,26 @@ public class SkillGovernanceService {
         skill.setUpdatedBy(actorUserId);
         Skill saved = skillRepository.save(skill);
         auditLogService.record(actorUserId, "HIDE_SKILL", "SKILL", skillId, null, clientIp, userAgent, jsonReason(reason));
+        return saved;
+    }
+
+    @Transactional
+    public Skill archiveSkill(Long skillId,
+                              String actorUserId,
+                              Map<Long, NamespaceRole> userNamespaceRoles,
+                              String clientIp,
+                              String userAgent,
+                              String reason) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+
+        SkillStatus previousStatus = skill.getStatus();
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setUpdatedBy(actorUserId);
+        Skill saved = skillRepository.save(skill);
+        auditLogService.record(actorUserId, "ARCHIVE_SKILL", "SKILL", skillId, null, clientIp, userAgent, jsonReason(reason));
+        eventPublisher.publishEvent(new SkillStatusChangedEvent(skillId, previousStatus, SkillStatus.ARCHIVED));
         return saved;
     }
 
@@ -53,6 +93,56 @@ public class SkillGovernanceService {
     }
 
     @Transactional
+    public Skill unarchiveSkill(Long skillId,
+                                String actorUserId,
+                                Map<Long, NamespaceRole> userNamespaceRoles,
+                                String clientIp,
+                                String userAgent) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+
+        SkillStatus previousStatus = skill.getStatus();
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setUpdatedBy(actorUserId);
+        Skill saved = skillRepository.save(skill);
+        auditLogService.record(actorUserId, "UNARCHIVE_SKILL", "SKILL", skillId, null, clientIp, userAgent, null);
+        eventPublisher.publishEvent(new SkillStatusChangedEvent(skillId, previousStatus, SkillStatus.ACTIVE));
+        return saved;
+    }
+
+    @Transactional
+    public void deleteVersion(Skill skill,
+                              SkillVersion version,
+                              String actorUserId,
+                              Map<Long, NamespaceRole> userNamespaceRoles,
+                              String clientIp,
+                              String userAgent) {
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        if (version.getStatus() != SkillVersionStatus.DRAFT && version.getStatus() != SkillVersionStatus.REJECTED) {
+            throw new DomainBadRequestException("error.skill.version.delete.unsupported", version.getVersion());
+        }
+
+        List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
+        if (!files.isEmpty()) {
+            objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());
+        }
+        objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
+        skillFileRepository.deleteByVersionId(version.getId());
+        skillVersionRepository.delete(version);
+        auditLogService.record(
+                actorUserId,
+                "DELETE_SKILL_VERSION",
+                "SKILL_VERSION",
+                version.getId(),
+                null,
+                clientIp,
+                userAgent,
+                "{\"version\":\"" + version.getVersion().replace("\"", "\\\"") + "\"}"
+        );
+    }
+
+    @Transactional
     public SkillVersion yankVersion(Long versionId, String actorUserId, String clientIp, String userAgent, String reason) {
         SkillVersion version = skillVersionRepository.findById(versionId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.version.notFound", versionId));
@@ -63,6 +153,18 @@ public class SkillGovernanceService {
         SkillVersion saved = skillVersionRepository.save(version);
         auditLogService.record(actorUserId, "YANK_SKILL_VERSION", "SKILL_VERSION", versionId, null, clientIp, userAgent, jsonReason(reason));
         return saved;
+    }
+
+    private void assertCanManageLifecycle(Skill skill,
+                                          String actorUserId,
+                                          Map<Long, NamespaceRole> userNamespaceRoles) {
+        NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
+        boolean canManage = skill.getOwnerId().equals(actorUserId)
+                || namespaceRole == NamespaceRole.ADMIN
+                || namespaceRole == NamespaceRole.OWNER;
+        if (!canManage) {
+            throw new DomainForbiddenException("error.skill.lifecycle.noPermission");
+        }
     }
 
     private String jsonReason(String reason) {
