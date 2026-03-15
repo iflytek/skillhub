@@ -1,7 +1,15 @@
 package com.iflytek.skillhub.compat.dto;
 
 public record ClawHubWhoamiResponse(
-    String userId,
-    String displayName,
-    String email
-) {}
+    User user
+) {
+    public ClawHubWhoamiResponse(String handle, String displayName, String image) {
+        this(new User(handle, displayName, image));
+    }
+
+    public record User(
+        String handle,
+        String displayName,
+        String image
+    ) {}
+}

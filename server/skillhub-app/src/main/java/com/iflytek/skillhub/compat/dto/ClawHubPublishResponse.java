@@ -1,7 +1,11 @@
 package com.iflytek.skillhub.compat.dto;
 
 public record ClawHubPublishResponse(
-    String canonicalSlug,
-    String version,
-    String status
-) {}
+    boolean ok,
+    String skillId,
+    String versionId
+) {
+    public ClawHubPublishResponse(String skillId, String versionId) {
+        this(true, skillId, versionId);
+    }
+}

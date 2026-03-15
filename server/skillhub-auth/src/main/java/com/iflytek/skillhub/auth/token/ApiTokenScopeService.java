@@ -22,6 +22,7 @@ public class ApiTokenScopeService {
         ScopeRule.allow(null, "/api/v1/auth/device/**"),
         ScopeRule.allow(null, "/api/v1/check"),
         ScopeRule.allow("GET", "/api/v1/whoami"),
+        ScopeRule.allow("GET", "/api/v1/search"),
         ScopeRule.allow("GET", "/api/v1/skills"),
         ScopeRule.allow("GET", "/api/v1/skills/**"),
         ScopeRule.allow("GET", "/api/web/skills"),
@@ -42,6 +43,7 @@ public class ApiTokenScopeService {
     private static final List<ScopeRule> REQUIRED_SCOPE_RULES = List.of(
         ScopeRule.require(null, "/api/v1/tokens", "token:manage"),
         ScopeRule.require(null, "/api/v1/tokens/**", "token:manage"),
+        ScopeRule.require("POST", "/api/v1/skills", "skill:publish"),
         ScopeRule.require("POST", "/api/v1/skills/*/publish", "skill:publish"),
         ScopeRule.require("POST", "/api/web/skills/*/publish", "skill:publish"),
         ScopeRule.require("POST", "/api/v1/publish", "skill:publish"),

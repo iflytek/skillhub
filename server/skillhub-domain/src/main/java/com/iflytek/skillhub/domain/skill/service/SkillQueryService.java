@@ -65,7 +65,10 @@ public class SkillQueryService {
             Integer ratingCount,
             boolean hidden,
             String latestVersion,
-            Long namespaceId
+            Long namespaceId,
+            java.time.LocalDateTime createdAt,
+            java.time.LocalDateTime updatedAt,
+            SkillVersion latestVersionEntity
     ) {}
 
     public record SkillVersionDetailDTO(
@@ -107,10 +110,11 @@ public class SkillQueryService {
         }
 
         String latestVersion = null;
+        SkillVersion latestVersionEntity = null;
         if (skill.getLatestVersionId() != null) {
-            SkillVersion version = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
-            if (version != null) {
-                latestVersion = version.getVersion();
+            latestVersionEntity = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
+            if (latestVersionEntity != null) {
+                latestVersion = latestVersionEntity.getVersion();
             }
         }
 
@@ -127,7 +131,10 @@ public class SkillQueryService {
                 skill.getRatingCount(),
                 skill.isHidden(),
                 latestVersion,
-                skill.getNamespaceId()
+                skill.getNamespaceId(),
+                skill.getCreatedAt(),
+                skill.getUpdatedAt(),
+                latestVersionEntity
         );
     }
 
