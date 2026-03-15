@@ -337,7 +337,7 @@ class SkillPublishServiceTest {
     }
 
     @Test
-    void testPublishFromEntries_RejectsDescriptionLongerThanDatabaseLimit() throws Exception {
+    void testPublishFromEntries_AllowsDescriptionLongerThanPreviousDatabaseLimit() throws Exception {
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";
         String longDescription = "x".repeat(513);
@@ -355,15 +355,32 @@ class SkillPublishServiceTest {
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
         when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
         when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
 
-        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
-                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of())
+        Skill skill = new Skill(namespace.getId(), "too-long-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 10L);
+        when(skillRepository.findByNamespaceIdAndSlug(namespace.getId(), "too-long-skill")).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.0.0")).thenReturn(Optional.empty());
+        when(skillVersionRepository.save(any())).thenAnswer(invocation -> {
+            SkillVersion version = invocation.getArgument(0);
+            if (version.getId() == null) {
+                setId(version, 20L);
+            }
+            return version;
+        });
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug,
+                entries,
+                publisherId,
+                SkillVisibility.PUBLIC,
+                Set.of()
         );
 
-        assertEquals("error.skill.publish.summary.tooLong", exception.messageCode());
-        assertArrayEquals(new Object[]{512}, exception.messageArgs());
-        verify(prePublishValidator, never()).validate(any());
-        verify(skillRepository, never()).save(any());
+        assertEquals(longDescription, skill.getSummary());
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
+        verify(prePublishValidator).validate(any());
+        verify(skillRepository).save(skill);
     }
 
     private void setId(Object entity, Long id) throws Exception {
