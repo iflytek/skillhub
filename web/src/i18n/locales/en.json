@@ -384,6 +384,7 @@
     "tabFiles": "Files",
     "tabVersions": "Versions",
     "noReadme": "No README",
+    "readmeUnavailable": "README is temporarily unavailable. Please try again later or re-upload this skill version.",
     "noFiles": "No files",
     "noVersions": "No versions",
     "fileCount": "{{count}} files",

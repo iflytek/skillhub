@@ -44,7 +44,7 @@ async function getSkillReadme(namespace: string, slug: string, version: string):
   try {
     return await fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=SKILL.md`)
   } catch {
-    return ''
+    return await fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=README.md`)
   }
 }
 
