@@ -133,6 +133,8 @@ export interface SkillDetail {
   latestVersion?: string
   namespace: string
   canManageLifecycle: boolean
+  viewingVersionStatus?: string
+  canInteract: boolean
 }
 
 export interface SkillVersion {

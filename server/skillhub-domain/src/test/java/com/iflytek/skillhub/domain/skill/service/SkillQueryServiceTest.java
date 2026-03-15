@@ -433,6 +433,136 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldPreferPendingVersionForOwnerPreview() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String ownerId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+        published.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 1, 10, 0));
+
+        SkillVersion pending = new SkillVersion(1L, "1.1.0", ownerId);
+        setId(pending, 12L);
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PENDING_REVIEW))
+                .thenReturn(List.of(pending));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
+
+        assertEquals("1.1.0", result.latestVersion());
+        assertEquals("PENDING_REVIEW", result.viewingVersionStatus());
+        assertFalse(result.canInteract());
+    }
+
+    @Test
+    void testGetVersionDetail_ShouldAllowPendingVersionForOwnerPreview() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String version = "1.1.0";
+        String ownerId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        SkillVersion pending = new SkillVersion(1L, version, ownerId);
+        setId(pending, 11L);
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        pending.setParsedMetadataJson("{\"name\":\"test-skill\"}");
+        pending.setManifestJson("[{\"path\":\"SKILL.md\"}]");
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
+
+        SkillQueryService.SkillVersionDetailDTO result = service.getVersionDetail(
+                namespaceSlug,
+                skillSlug,
+                version,
+                ownerId,
+                userNsRoles
+        );
+
+        assertEquals("PENDING_REVIEW", result.status());
+        assertEquals("{\"name\":\"test-skill\"}", result.parsedMetadataJson());
+    }
+
+    @Test
+    void testListFiles_ShouldAllowPendingVersionForOwnerPreview() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String version = "1.1.0";
+        String ownerId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion pending = new SkillVersion(1L, version, ownerId);
+        setId(pending, 11L);
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        SkillFile file = new SkillFile(11L, "README.md", 12L, "text/markdown", "hash", "storage-key");
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
+        when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
+
+        List<SkillFile> result = service.listFiles(namespaceSlug, skillSlug, version, ownerId, userNsRoles);
+
+        assertEquals(1, result.size());
+        assertEquals("README.md", result.get(0).getFilePath());
+    }
+
+    @Test
+    void testGetVersionDetail_ShouldRejectPendingVersionForNonOwner() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String version = "1.1.0";
+        String viewerId = "viewer-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        SkillVersion pending = new SkillVersion(1L, version, "owner-1");
+        setId(pending, 11L);
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, viewerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
+
+        assertThrows(DomainBadRequestException.class, () ->
+                service.getVersionDetail(namespaceSlug, skillSlug, version, viewerId, userNsRoles));
+    }
+
+    @Test
     void testListVersions_ShouldIncludeDraftAndRejectedForLifecycleManagers() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";

@@ -16,5 +16,7 @@ public record SkillDetailResponse(
         boolean hidden,
         String latestVersion,
         String namespace,
-        boolean canManageLifecycle
+        boolean canManageLifecycle,
+        String viewingVersionStatus,
+        boolean canInteract
 ) {}

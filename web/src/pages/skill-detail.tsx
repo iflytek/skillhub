@@ -77,9 +77,10 @@ export function SkillDetailPage() {
 
   const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(namespace, slug)
   const { data: versions } = useSkillVersions(namespace, slug)
-  const latestVersion = versions?.[0]
-  const { data: files } = useSkillFiles(namespace, slug, latestVersion?.version)
-  const { data: readme } = useSkillReadme(namespace, slug, latestVersion?.version)
+  const selectedVersion = skill?.latestVersion ?? versions?.[0]?.version
+  const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
+  const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
+  const { data: readme } = useSkillReadme(namespace, slug, selectedVersion)
   const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
   const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
@@ -87,6 +88,8 @@ export function SkillDetailPage() {
   const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
+  const isPendingPreview = skill?.viewingVersionStatus === 'PENDING_REVIEW'
+  const canInteract = skill?.canInteract ?? true
 
   const refreshSkill = () => {
     queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
@@ -105,7 +108,7 @@ export function SkillDetailPage() {
   })
 
   const yankMutation = useMutation({
-    mutationFn: () => adminApi.yankVersion(latestVersion!.id),
+    mutationFn: () => adminApi.yankVersion(selectedVersionEntry!.id),
     onSuccess: refreshSkill,
   })
   const archiveMutation = useArchiveSkill()
@@ -120,11 +123,11 @@ export function SkillDetailPage() {
       requireLogin()
       return
     }
-    if (!latestVersion) {
+    if (!selectedVersionEntry || isPendingPreview) {
       return
     }
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    const downloadUrl = `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${latestVersion.version}/download`
+    const downloadUrl = `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersionEntry.version}/download`
     window.open(downloadUrl, '_blank')
   }
 
@@ -389,10 +392,21 @@ export function SkillDetailPage() {
                 {resolveSkillStatusLabel(skill.status)}
               </span>
             )}
+            {isPendingPreview && (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-700">
+                {t('skillDetail.pendingPreviewBadge')}
+              </span>
+            )}
           </div>
           <h1 className="text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
           {skill.summary && (
             <p className="text-lg text-muted-foreground leading-relaxed">{skill.summary}</p>
+          )}
+          {isPendingPreview && (
+            <Card className="border-amber-500/30 bg-amber-500/5 p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-foreground">{t('skillDetail.pendingPreviewTitle')}</div>
+              <p className="mt-1">{t('skillDetail.pendingPreviewDescription')}</p>
+            </Card>
           )}
         </div>
 
@@ -544,18 +558,24 @@ export function SkillDetailPage() {
           <div className="h-px bg-border/40" />
 
           <div className="space-y-3">
-            <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
-            <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
-            <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={reportMutation.isPending}>
-              {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
-            </Button>
-            {!user && (
+            {canInteract ? (
+              <>
+                <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
+                <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+                <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={reportMutation.isPending}>
+                  {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('skillDetail.pendingPreviewInteractionHint')}</p>
+            )}
+            {!user && canInteract && (
               <p className="text-xs text-muted-foreground">{t('skillDetail.loginToRate')}</p>
             )}
           </div>
         </Card>
 
-        {skill.latestVersion && (
+        {skill.latestVersion && canInteract && (
           <Card className="p-5 space-y-4">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</div>
             {skill.status === 'ARCHIVED' && (
@@ -574,7 +594,7 @@ export function SkillDetailPage() {
           variant="outline"
           size="lg"
           onClick={handleDownload}
-          disabled={!latestVersion || skill.status === 'ARCHIVED'}
+          disabled={!selectedVersionEntry || skill.status === 'ARCHIVED' || isPendingPreview}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -615,7 +635,7 @@ export function SkillDetailPage() {
                   {unhideMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unhideSkill')}
                 </Button>
               )}
-              {latestVersion && (
+              {selectedVersionEntry && (
                 <Button variant="destructive" onClick={() => yankMutation.mutate()} disabled={yankMutation.isPending}>
                   {yankMutation.isPending ? t('skillDetail.processing') : t('skillDetail.yankVersion')}
                 </Button>

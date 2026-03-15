@@ -71,7 +71,9 @@ public class SkillController extends BaseApiController {
                 detail.hidden(),
                 detail.latestVersion(),
                 namespace,
-                detail.canManageLifecycle()
+                detail.canManageLifecycle(),
+                detail.viewingVersionStatus(),
+                detail.canInteract()
         );
 
         return ok("response.success.read", response);
