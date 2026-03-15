@@ -62,6 +62,20 @@ class AdminUserAppServiceTest {
     }
 
     @Test
+    void listUsers_defaultsToUserRoleWhenNoExplicitBindingExists() {
+        UserAccount user = user("user-1", "alice", "alice@example.com", UserStatus.ACTIVE);
+        PageRequest pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(adminUserSearchRepository.search(null, null, pageable))
+                .thenReturn(new PageImpl<>(List.of(user), pageable, 1));
+        when(userRoleBindingRepository.findByUserIdIn(List.of("user-1"))).thenReturn(List.of());
+
+        PageResponse<?> response = service.listUsers(null, null, 0, 20);
+
+        assertThat(response.items().get(0)).extracting("platformRoles")
+                .isEqualTo(List.of("USER"));
+    }
+
+    @Test
     void listUsers_withInvalidStatus_throwsBadRequest() {
         assertThrows(DomainBadRequestException.class, () -> service.listUsers(null, "BANNED", 0, 20));
     }
