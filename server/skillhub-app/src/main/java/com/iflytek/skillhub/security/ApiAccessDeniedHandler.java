@@ -21,10 +21,14 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
     private static final Logger logger = LoggerFactory.getLogger(ApiAccessDeniedHandler.class);
     private final ObjectMapper objectMapper;
     private final ApiResponseFactory apiResponseFactory;
+    private final SensitiveLogSanitizer sensitiveLogSanitizer;
 
-    public ApiAccessDeniedHandler(ObjectMapper objectMapper, ApiResponseFactory apiResponseFactory) {
+    public ApiAccessDeniedHandler(ObjectMapper objectMapper,
+                                  ApiResponseFactory apiResponseFactory,
+                                  SensitiveLogSanitizer sensitiveLogSanitizer) {
         this.objectMapper = objectMapper;
         this.apiResponseFactory = apiResponseFactory;
+        this.sensitiveLogSanitizer = sensitiveLogSanitizer;
     }
 
     @Override
@@ -35,7 +39,7 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
                 "Forbidden API request [requestId={}, method={}, path={}, reason={}]",
                 MDC.get("requestId"),
                 request.getMethod(),
-                request.getRequestURI(),
+                sensitiveLogSanitizer.sanitizeRequestTarget(request),
                 accessDeniedException.getClass().getSimpleName()
         );
         ApiResponse<Void> body = apiResponseFactory.error(403, "error.forbidden");

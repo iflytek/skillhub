@@ -21,10 +21,14 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private static final Logger logger = LoggerFactory.getLogger(ApiAuthenticationEntryPoint.class);
     private final ObjectMapper objectMapper;
     private final ApiResponseFactory apiResponseFactory;
+    private final SensitiveLogSanitizer sensitiveLogSanitizer;
 
-    public ApiAuthenticationEntryPoint(ObjectMapper objectMapper, ApiResponseFactory apiResponseFactory) {
+    public ApiAuthenticationEntryPoint(ObjectMapper objectMapper,
+                                       ApiResponseFactory apiResponseFactory,
+                                       SensitiveLogSanitizer sensitiveLogSanitizer) {
         this.objectMapper = objectMapper;
         this.apiResponseFactory = apiResponseFactory;
+        this.sensitiveLogSanitizer = sensitiveLogSanitizer;
     }
 
     @Override
@@ -35,7 +39,7 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
                 "Unauthorized API request [requestId={}, method={}, path={}, reason={}]",
                 MDC.get("requestId"),
                 request.getMethod(),
-                request.getRequestURI(),
+                sensitiveLogSanitizer.sanitizeRequestTarget(request),
                 authException.getClass().getSimpleName()
         );
         ApiResponse<Void> body = apiResponseFactory.error(401, "error.auth.required");

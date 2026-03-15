@@ -7,6 +7,7 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
+import com.iflytek.skillhub.security.SensitiveLogSanitizer;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +26,12 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private final ApiResponseFactory apiResponseFactory;
+    private final SensitiveLogSanitizer sensitiveLogSanitizer;
 
-    public GlobalExceptionHandler(ApiResponseFactory apiResponseFactory) {
+    public GlobalExceptionHandler(ApiResponseFactory apiResponseFactory,
+                                  SensitiveLogSanitizer sensitiveLogSanitizer) {
         this.apiResponseFactory = apiResponseFactory;
+        this.sensitiveLogSanitizer = sensitiveLogSanitizer;
     }
 
     @ExceptionHandler(LocalizedException.class)
@@ -110,7 +114,7 @@ public class GlobalExceptionHandler {
                 "Unhandled API exception [requestId={}, method={}, path={}, userId={}]",
                 MDC.get("requestId"),
                 request.getMethod(),
-                request.getRequestURI(),
+                sensitiveLogSanitizer.sanitizeRequestTarget(request),
                 resolveUserId(request),
                 ex
         );
@@ -124,7 +128,7 @@ public class GlobalExceptionHandler {
                 MDC.get("requestId"),
                 status.value(),
                 request.getMethod(),
-                request.getRequestURI(),
+                sensitiveLogSanitizer.sanitizeRequestTarget(request),
                 resolveUserId(request),
                 messageCode
         );

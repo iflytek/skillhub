@@ -15,6 +15,7 @@ import com.iflytek.skillhub.auth.local.LocalAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
+import com.iflytek.skillhub.security.AuthFailureThrottleService;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class LocalAuthControllerTest {
     @MockBean
     private SkillHubMetrics skillHubMetrics;
 
+    @MockBean
+    private AuthFailureThrottleService authFailureThrottleService;
+
     @Test
     void login_returnsCurrentUserEnvelope() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -70,6 +74,7 @@ class LocalAuthControllerTest {
             .andExpect(jsonPath("$.data.oauthProvider").value("local"));
         verify(skillHubMetrics).recordLocalLogin(true);
         verify(skillHubMetrics, never()).recordLocalLogin(false);
+        verify(authFailureThrottleService).resetIdentifier("local", "alice");
     }
 
     @Test
@@ -125,6 +130,7 @@ class LocalAuthControllerTest {
                     {"username":"alice","password":"wrong"}
                     """))
             .andExpect(status().isUnauthorized());
+        verify(authFailureThrottleService).recordFailure("local", "alice", "127.0.0.1");
         verify(skillHubMetrics).recordLocalLogin(false);
         verify(skillHubMetrics, never()).recordLocalLogin(true);
     }
