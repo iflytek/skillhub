@@ -23,9 +23,11 @@ export function Toaster() {
       <Sonner
         id={CENTER_TOASTER_ID}
         position="top-center"
+        offset={16}
+        mobileOffset={16}
         toastOptions={{
           classNames: {
-            toast: 'glass-strong border border-border/40',
+            toast: 'glass-strong mx-auto w-fit max-w-[min(100vw-2rem,32rem)] border border-border/40',
             title: 'text-foreground font-semibold text-center',
             description: 'text-muted-foreground text-center',
             actionButton: 'bg-primary text-primary-foreground',

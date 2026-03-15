@@ -99,13 +99,13 @@ export function TokenList() {
       }
       setDeleteDialog({ open: false })
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
-      toast.success(t('token.deleteSuccess'))
+      toast.success(t('token.deleteSuccess'), undefined, centeredToastOptions())
     },
     onError: (_error, _tokenId, context) => {
       context?.previousPages.forEach(([queryKey, previousPage]) => {
         queryClient.setQueryData(queryKey, previousPage)
       })
-      toast.error(t('token.deleteFailed'))
+      toast.error(t('token.deleteFailed'), undefined, centeredToastOptions())
     },
   })
 
