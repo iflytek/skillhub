@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -43,6 +44,7 @@ class ReviewServiceTest {
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private SkillGovernanceService skillGovernanceService;
 
     private ReviewService reviewService;
 
@@ -59,7 +61,7 @@ class ReviewServiceTest {
         objectMapper = new ObjectMapper();
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher, objectMapper);
+                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -414,16 +416,18 @@ class ReviewServiceTest {
         void shouldWithdrawReviewSuccessfully() {
             ReviewTask task = createPendingReviewTask();
             SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
 
             when(reviewTaskRepository.findBySkillVersionIdAndStatus(SKILL_VERSION_ID, ReviewTaskStatus.PENDING))
                     .thenReturn(Optional.of(task));
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillGovernanceService.withdrawPendingVersion(skill, sv, USER_ID)).thenReturn(false);
 
             reviewService.withdrawReview(SKILL_VERSION_ID, USER_ID);
 
             verify(reviewTaskRepository).delete(task);
-            assertEquals(SkillVersionStatus.DRAFT, sv.getStatus());
-            verify(skillVersionRepository).save(sv);
+            verify(skillGovernanceService).withdrawPendingVersion(skill, sv, USER_ID);
         }
 
         @Test
@@ -444,6 +448,43 @@ class ReviewServiceTest {
             String otherUserId = "user-999";
             assertThrows(DomainForbiddenException.class,
                     () -> reviewService.withdrawReview(SKILL_VERSION_ID, otherUserId));
+        }
+
+        @Test
+        void shouldDeleteEntireSkillWhenOnlyPendingVersionExists() {
+            ReviewTask task = createPendingReviewTask();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
+
+            when(reviewTaskRepository.findBySkillVersionIdAndStatus(SKILL_VERSION_ID, ReviewTaskStatus.PENDING))
+                    .thenReturn(Optional.of(task));
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillGovernanceService.withdrawPendingVersion(skill, sv, USER_ID)).thenReturn(true);
+
+            reviewService.withdrawReview(SKILL_VERSION_ID, USER_ID);
+
+            verify(reviewTaskRepository).delete(task);
+            verify(skillGovernanceService).withdrawPendingVersion(skill, sv, USER_ID);
+        }
+
+        @Test
+        void shouldDeletePendingVersionAndKeepSkillWhenPublishedHistoryExists() {
+            ReviewTask task = createPendingReviewTask();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
+            setField(skill, "latestVersionId", 99L);
+
+            when(reviewTaskRepository.findBySkillVersionIdAndStatus(SKILL_VERSION_ID, ReviewTaskStatus.PENDING))
+                    .thenReturn(Optional.of(task));
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillGovernanceService.withdrawPendingVersion(skill, sv, USER_ID)).thenReturn(false);
+
+            reviewService.withdrawReview(SKILL_VERSION_ID, USER_ID);
+
+            verify(reviewTaskRepository).delete(task);
+            verify(skillGovernanceService).withdrawPendingVersion(skill, sv, USER_ID);
         }
     }
 }

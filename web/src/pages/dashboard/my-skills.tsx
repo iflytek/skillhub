@@ -6,7 +6,7 @@ import { Card } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
-import { useArchiveSkill, useMySkills, useUnarchiveSkill } from '@/shared/hooks/use-skill-queries'
+import { useArchiveSkill, useMySkills, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
 
@@ -15,9 +15,11 @@ export function MySkillsPage() {
   const { t } = useTranslation()
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const { data: skills, isLoading } = useMySkills()
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
+  const withdrawMutation = useWithdrawSkillReview()
 
   const handleSkillClick = (namespace: string, slug: string) => {
     navigate({ to: `/space/${namespace}/${slug}` })
@@ -89,6 +91,27 @@ export function MySkillsPage() {
     }
   }
 
+  const handleWithdrawSkill = async () => {
+    if (!withdrawTarget) {
+      return
+    }
+    try {
+      await withdrawMutation.mutateAsync({
+        namespace: withdrawTarget.namespace,
+        slug: withdrawTarget.slug,
+        version: withdrawTarget.version,
+      })
+      toast.success(
+        t('mySkills.withdrawSuccessTitle'),
+        t('mySkills.withdrawSuccessDescription', { skill: withdrawTarget.name }),
+      )
+      setWithdrawTarget(null)
+    } catch (error) {
+      toast.error(t('mySkills.withdrawErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-up">
@@ -151,7 +174,27 @@ export function MySkillsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pl-4">
-                  {skill.status === 'ARCHIVED' ? (
+                  {skill.latestVersionStatus === 'PENDING_REVIEW' && skill.latestVersion ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        const pendingVersion = skill.latestVersion
+                        if (!pendingVersion) {
+                          return
+                        }
+                        setWithdrawTarget({
+                          namespace: skill.namespace,
+                          slug: skill.slug,
+                          name: skill.displayName,
+                          version: pendingVersion,
+                        })
+                      }}
+                    >
+                      {t('mySkills.withdrawReview')}
+                    </Button>
+                  ) : skill.status === 'ARCHIVED' ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -226,6 +269,19 @@ export function MySkillsPage() {
         description={unarchiveTarget ? t('mySkills.unarchiveConfirmDescription', { skill: unarchiveTarget.name }) : ''}
         confirmText={t('mySkills.unarchive')}
         onConfirm={handleUnarchiveSkill}
+      />
+
+      <ConfirmDialog
+        open={!!withdrawTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWithdrawTarget(null)
+          }
+        }}
+        title={t('mySkills.withdrawConfirmTitle')}
+        description={withdrawTarget ? t('mySkills.withdrawConfirmDescription', { skill: withdrawTarget.name }) : ''}
+        confirmText={t('mySkills.withdrawReview')}
+        onConfirm={handleWithdrawSkill}
       />
     </div>
   )
