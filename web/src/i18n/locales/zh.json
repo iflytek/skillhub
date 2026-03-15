@@ -486,6 +486,7 @@
       "private": "私有"
     },
     "file": "技能包文件",
+    "removeSelectedFile": "删除已选文件",
     "publishing": "发布中...",
     "confirm": "确认发布",
     "success": "发布成功",

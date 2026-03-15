@@ -486,6 +486,7 @@
       "private": "Private"
     },
     "file": "Skill Package File",
+    "removeSelectedFile": "Remove selected file",
     "publishing": "Publishing...",
     "confirm": "Confirm Publish",
     "success": "Published Successfully",
