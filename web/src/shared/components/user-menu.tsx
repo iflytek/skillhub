@@ -96,6 +96,13 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             </Link>
           </DropdownMenuItem>
         )}
+        {isSkillAdmin && (
+          <DropdownMenuItem asChild>
+            <Link to="/dashboard/reports" className="cursor-pointer">
+              {t('user.menu.reports')}
+            </Link>
+          </DropdownMenuItem>
+        )}
         {(isUserAdmin || isAuditor) && <DropdownMenuSeparator />}
         {isUserAdmin && (
           <DropdownMenuItem asChild>

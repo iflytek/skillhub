@@ -8,6 +8,7 @@ public record SkillSummaryResponse(
         String slug,
         String displayName,
         String summary,
+        String status,
         Long downloadCount,
         Integer starCount,
         BigDecimal ratingAvg,

@@ -68,7 +68,8 @@ public class SkillQueryService {
             Long namespaceId,
             java.time.LocalDateTime createdAt,
             java.time.LocalDateTime updatedAt,
-            SkillVersion latestVersionEntity
+            SkillVersion latestVersionEntity,
+            boolean canManageLifecycle
     ) {}
 
     public record SkillVersionDetailDTO(
@@ -134,7 +135,8 @@ public class SkillQueryService {
                 skill.getNamespaceId(),
                 skill.getCreatedAt(),
                 skill.getUpdatedAt(),
-                latestVersionEntity
+                latestVersionEntity,
+                canManageRestrictedSkill(skill, currentUserId, userNsRoles)
         );
     }
 
@@ -250,16 +252,31 @@ public class SkillQueryService {
                                            Pageable pageable) {
         Skill skill = findSkill(namespaceSlug, skillSlug);
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
-
-        List<SkillVersion> publishedVersions = skillVersionRepository.findBySkillIdAndStatus(
-                skill.getId(), SkillVersionStatus.PUBLISHED);
+        List<SkillVersion> visibleVersions;
+        if (canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+            visibleVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
+                    .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED
+                            || version.getStatus() == SkillVersionStatus.DRAFT
+                            || version.getStatus() == SkillVersionStatus.REJECTED)
+                    .sorted(Comparator
+                            .comparingInt((SkillVersion version) -> lifecycleListPriority(version.getStatus()))
+                            .thenComparing(SkillVersion::getPublishedAt,
+                                    Comparator.nullsLast(Comparator.reverseOrder()))
+                            .thenComparing(SkillVersion::getCreatedAt,
+                                    Comparator.nullsLast(Comparator.reverseOrder()))
+                            .thenComparing(SkillVersion::getId, Comparator.reverseOrder()))
+                    .toList();
+        } else {
+            visibleVersions = skillVersionRepository.findBySkillIdAndStatus(
+                    skill.getId(), SkillVersionStatus.PUBLISHED);
+        }
 
         // Manual pagination
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), publishedVersions.size());
-        List<SkillVersion> pageContent = publishedVersions.subList(start, end);
+        int start = Math.min((int) pageable.getOffset(), visibleVersions.size());
+        int end = Math.min(start + pageable.getPageSize(), visibleVersions.size());
+        List<SkillVersion> pageContent = visibleVersions.subList(start, end);
 
-        return new PageImpl<>(pageContent, pageable, publishedVersions.size());
+        return new PageImpl<>(pageContent, pageable, visibleVersions.size());
     }
 
     public ResolvedVersionDTO resolveVersion(
@@ -390,12 +407,35 @@ public class SkillQueryService {
     }
 
     private void assertPublishedAccessible(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
-        if (skill.getStatus() != SkillStatus.ACTIVE) {
-            throw new DomainBadRequestException("error.skill.status.notActive");
+        if (skill.getStatus() != SkillStatus.ACTIVE && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
+        if (skill.isHidden() && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
+    }
+
+    private boolean canManageRestrictedSkill(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
+        if (currentUserId == null) {
+            return false;
+        }
+        NamespaceRole role = userNsRoles.get(skill.getNamespaceId());
+        return skill.getOwnerId().equals(currentUserId)
+                || role == NamespaceRole.ADMIN
+                || role == NamespaceRole.OWNER;
+    }
+
+    private int lifecycleListPriority(SkillVersionStatus status) {
+        if (status == SkillVersionStatus.PUBLISHED) {
+            return 0;
+        }
+        if (status == SkillVersionStatus.REJECTED) {
+            return 1;
+        }
+        return 2;
     }
 
     private void assertPublishedVersion(SkillVersion version, String versionStr) {

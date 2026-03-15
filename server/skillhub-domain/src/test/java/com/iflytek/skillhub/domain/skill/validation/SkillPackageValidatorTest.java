@@ -143,6 +143,31 @@ class SkillPackageValidatorTest {
     }
 
     @Test
+    void testInvalidYamlFrontmatterUsesFriendlyMessage() {
+        String skillMdContent = """
+            ---
+            name: clawdbot
+            description: Send messages from Clawdbot via the discord tool: send messages, react, post or edit
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+                new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e ->
+                e.contains("Invalid SKILL.md frontmatter")
+                        && e.contains("line")
+                        && e.contains("column")));
+        assertFalse(result.errors().stream().anyMatch(e -> e.contains("mapping values are not allowed here")));
+    }
+
+    @Test
     void testPackageTooLarge() {
         String skillMdContent = """
             ---
@@ -220,5 +245,51 @@ class SkillPackageValidatorTest {
 
         assertFalse(result.passed());
         assertTrue(result.errors().stream().anyMatch(e -> e.contains("Duplicate package entry path: docs/guide.md")));
+    }
+
+    @Test
+    void testSpoofedBinaryTextFileRejected() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        byte[] binaryPayload = new byte[] {0x4d, 0x5a, 0x00, 0x02};
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"),
+            new PackageEntry("notes.md", binaryPayload, binaryPayload.length, "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("File content does not match extension")));
+    }
+
+    @Test
+    void testInvalidSvgPayloadRejected() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"),
+            new PackageEntry("icon.svg", "not actually svg".getBytes(), 16, "image/svg+xml")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("File content does not match extension")));
     }
 }

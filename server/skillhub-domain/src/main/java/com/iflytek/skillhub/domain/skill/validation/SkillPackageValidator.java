@@ -7,8 +7,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SkillPackageValidator {
+    private static final Pattern YAML_LINE_COLUMN = Pattern.compile("line\\s+(\\d+),\\s+column\\s+(\\d+)");
 
     private final SkillMetadataParser metadataParser;
     private final int maxFileCount;
@@ -62,6 +65,11 @@ public class SkillPackageValidator {
                 errors.add("Disallowed file extension: " + normalizedPath);
             }
 
+            String contentMismatch = SkillPackagePolicy.validateContentMatchesExtension(normalizedPath, entry.content());
+            if (contentMismatch != null) {
+                errors.add(contentMismatch);
+            }
+
             if (SkillPackagePolicy.SKILL_MD_PATH.equals(normalizedPath) && skillMd == null) {
                 skillMd = entry;
             }
@@ -78,10 +86,7 @@ public class SkillPackageValidator {
             String content = new String(skillMd.content());
             metadataParser.parse(content);
         } catch (LocalizedDomainException e) {
-            String detail = e.messageArgs().length == 0
-                    ? e.messageCode()
-                    : e.messageCode() + " " + java.util.Arrays.toString(e.messageArgs());
-            errors.add("Invalid SKILL.md frontmatter: " + detail);
+            errors.add("Invalid SKILL.md frontmatter: " + formatMetadataError(e));
         }
 
         // 3. Check file count
@@ -107,5 +112,39 @@ public class SkillPackageValidator {
 
     private boolean hasAllowedExtension(String normalizedPath) {
         return allowedExtensions.stream().anyMatch(normalizedPath::endsWith);
+    }
+
+    private String formatMetadataError(LocalizedDomainException exception) {
+        return switch (exception.messageCode()) {
+            case "error.skill.metadata.requiredField.missing" ->
+                    "missing required field \"" + exception.messageArgs()[0] + "\"";
+            case "error.skill.metadata.frontmatter.missingStart" ->
+                    "missing opening --- marker";
+            case "error.skill.metadata.frontmatter.missingEnd" ->
+                    "missing closing --- marker";
+            case "error.skill.metadata.frontmatter.missingContent" ->
+                    "frontmatter is empty";
+            case "error.skill.metadata.yaml.notMap" ->
+                    "frontmatter must be a YAML object";
+            case "error.skill.metadata.yaml.invalid" ->
+                    formatYamlSyntaxError(exception.messageArgs());
+            default -> {
+                if (exception.messageArgs().length == 0) {
+                    yield exception.messageCode();
+                }
+                yield exception.messageCode() + " " + java.util.Arrays.toString(exception.messageArgs());
+            }
+        };
+    }
+
+    private String formatYamlSyntaxError(Object[] args) {
+        String raw = args.length > 0 && args[0] != null ? args[0].toString() : "";
+        Matcher matcher = YAML_LINE_COLUMN.matcher(raw);
+        if (matcher.find()) {
+            return "invalid YAML near line " + matcher.group(1)
+                    + ", column " + matcher.group(2)
+                    + ". If a value contains a colon, wrap it in quotes.";
+        }
+        return "invalid YAML syntax";
     }
 }

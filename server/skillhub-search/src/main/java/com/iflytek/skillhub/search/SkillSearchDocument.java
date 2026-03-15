@@ -9,6 +9,7 @@ public record SkillSearchDocument(
         String summary,
         String keywords,
         String searchText,
+        String semanticVector,
         String visibility,
         String status
 ) {}

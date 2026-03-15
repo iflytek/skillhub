@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
-import { fetchJson, fetchText, getCsrfHeaders, meApi, WEB_API_PREFIX } from '@/api/client'
+import { fetchJson, fetchText, getCsrfHeaders, meApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
@@ -165,8 +165,56 @@ export function usePublishSkill() {
 
   return useMutation({
     mutationFn: publishSkill,
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+    },
+  })
+}
+
+export function useArchiveSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, reason }: { namespace: string; slug: string; reason?: string }) =>
+      skillLifecycleApi.archiveSkill(namespace, slug, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useUnarchiveSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug }: { namespace: string; slug: string }) =>
+      skillLifecycleApi.unarchiveSkill(namespace, slug),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useDeleteSkillVersion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
+      skillLifecycleApi.deleteVersion(namespace, slug, version),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
     },
   })
 }

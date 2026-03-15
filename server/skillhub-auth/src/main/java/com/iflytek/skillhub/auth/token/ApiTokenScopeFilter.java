@@ -66,7 +66,9 @@ public class ApiTokenScopeFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path == null || (!path.startsWith("/api/v1/") && !path.startsWith("/api/compat/"));
+        return path == null || (!path.startsWith("/api/v1/")
+                && !path.startsWith("/api/web/")
+                && !path.startsWith("/api/compat/"));
     }
 
     private boolean isApiTokenAuthentication(Authentication authentication) {

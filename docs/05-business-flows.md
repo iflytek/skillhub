@@ -6,7 +6,7 @@
 
 > **设计决策**：一期暂不考虑异步发布（uploadId、publishId、状态轮询、异步转正等）。一期技能包为文本资源包，体积有限（上限 10MB），同步处理足以满足需求。如后续引入大文件或复杂校验流程，再考虑异步模型。
 
-### 1.1 Phase 2 发布流程基线
+### 1.1 当前发布流程基线
 
 ```
 用户提交发布
@@ -29,11 +29,11 @@
     ▼
 ④ 持久化数据
    - 创建或关联 skill 记录（首次发布时创建 skill）
-   - 创建 skill_version（status=PUBLISHED）
+   - 创建 skill_version（普通用户进入 `PENDING_REVIEW`，`SUPER_ADMIN` 直达 `PUBLISHED`）
    - 创建 skill_file 记录
    - 解析 SKILL.md frontmatter → parsed_metadata_json
    - 生成 manifest_json
-   - 更新 skill.latest_version_id
+   - 直发场景更新 skill.latest_version_id
     │
     ▼
 ⑤ 同步写入审计日志
@@ -42,16 +42,11 @@
 ⑥ 异步触发搜索索引写入
 ```
 
-Phase 2 的目标是先跑通上传、存储、发布、查询、下载完整链路，因此不经过审核，发布结果直接进入 `PUBLISHED`。
+当前版本采用审核流，不再区分“Phase 2 直发”与“Phase 3 恢复审核”两套现实实现：
 
-### 1.2 Phase 3 迁移后的发布流程
-
-Phase 3 在不改变发布入口的前提下，把后半段切换为“创建 DRAFT → 提交审核 → 人工审核 → 发布”：
-
-- 发布请求先创建 `skill_version(status=DRAFT)`
-- 提交审核后转为 `PENDING_REVIEW`
-- 创建 `review_task(status=PENDING)`
-- 审核通过后才转为 `PUBLISHED`
+- 普通用户发布请求创建 `skill_version(status=PENDING_REVIEW)`
+- 同步创建 `review_task(status=PENDING)`
+- 审核通过后转为 `PUBLISHED`
 - 审核拒绝后转为 `REJECTED`
 - 例外：提交人持有 `SUPER_ADMIN` 平台角色时，发布入口直接创建 `skill_version(status=PUBLISHED)`，跳过 `review_task` 创建，同时不再要求其必须是目标 namespace 成员
 - 上述例外必须对 Web、`/api/v1/publish`、`/api/compat/v1/publish` 保持一致
@@ -76,10 +71,9 @@ Parts:
 
 一期同步响应：服务端同步完成上传、校验、存储、持久化，返回 `200 OK` + skill_version 信息。
 
-Phase 2 CLI 默认行为：上传 → 直接发布为 `PUBLISHED`。
-Phase 3 CLI 默认行为：上传 → 创建 DRAFT → 自动提交审核。
+当前 CLI 默认行为：上传 → 进入审核。
 如果调用方持有 `SUPER_ADMIN`，则直接发布为 `PUBLISHED`。
-Web 端可保留“发布后再提交审核”的两段式体验，但这属于 Phase 3 能力。
+Web 端与 CLI 保持同一发布语义，只是在交互上可提供更明确的审核提示。
 
 `/api/v1/publish` 响应：
 
@@ -199,7 +193,7 @@ Web 端可保留“发布后再提交审核”的两段式体验，但这属于 
 | `SkillDownloadedEvent` | 下载完成 | 下载计数 |
 | `SkillStarredEvent` | 收藏/取消 | 收藏计数 |
 | `SkillRatedEvent` | 评分提交 | 评分重算 |
-| `ReviewCompletedEvent` | 审核完成 | 通知提交者（一期可选） |
+| `ReviewCompletedEvent` | 审核完成 | 预留给后续通知能力（当前可不消费） |
 | `SkillPromotedEvent` | 提升到全局 | 搜索索引写入（新 skill） |
 
 一期用 Spring ApplicationEvent + `@Async` 实现，后续可替换为消息队列。

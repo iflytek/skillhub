@@ -1,13 +1,21 @@
 package com.iflytek.skillhub.search.postgres;
 
+import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
+import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.SearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import java.util.Comparator;
+import java.util.HashMap;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -20,9 +28,32 @@ public class PostgresFullTextQueryService implements SearchQueryService {
     private static final String TITLE_SQL = "LOWER(title)";
 
     private final EntityManager entityManager;
+    private final SkillSearchDocumentJpaRepository searchDocumentRepository;
+    private final SearchEmbeddingService searchEmbeddingService;
+    private final boolean semanticEnabled;
+    private final double semanticWeight;
+    private final int candidateMultiplier;
+    private final int maxCandidates;
 
     public PostgresFullTextQueryService(EntityManager entityManager) {
+        this(entityManager, null, null, false, 0.35D, 8, 120);
+    }
+
+    @Autowired
+    public PostgresFullTextQueryService(EntityManager entityManager,
+                                        SkillSearchDocumentJpaRepository searchDocumentRepository,
+                                        SearchEmbeddingService searchEmbeddingService,
+                                        @Value("${skillhub.search.semantic.enabled:true}") boolean semanticEnabled,
+                                        @Value("${skillhub.search.semantic.weight:0.35}") double semanticWeight,
+                                        @Value("${skillhub.search.semantic.candidate-multiplier:8}") int candidateMultiplier,
+                                        @Value("${skillhub.search.semantic.max-candidates:120}") int maxCandidates) {
         this.entityManager = entityManager;
+        this.searchDocumentRepository = searchDocumentRepository;
+        this.searchEmbeddingService = searchEmbeddingService;
+        this.semanticEnabled = semanticEnabled;
+        this.semanticWeight = semanticWeight;
+        this.candidateMultiplier = candidateMultiplier;
+        this.maxCandidates = maxCandidates;
     }
 
     @Override
@@ -31,6 +62,21 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         String tsQuery = buildPrefixTsQuery(normalizedKeyword);
         boolean hasKeyword = tsQuery != null;
         boolean useShortPrefixTitleSearch = hasKeyword && normalizedKeyword.length() <= SHORT_PREFIX_LENGTH;
+        boolean useSemanticRerank = semanticEnabled
+                && hasKeyword
+                && "relevance".equals(query.sortBy())
+                && searchDocumentRepository != null
+                && searchEmbeddingService != null;
+        int requestedOffset = query.page() * query.size();
+        if (useSemanticRerank && requestedOffset + query.size() > maxCandidates) {
+            useSemanticRerank = false;
+        }
+        int sqlLimit = query.size();
+        int sqlOffset = requestedOffset;
+        if (useSemanticRerank) {
+            sqlLimit = Math.min(Math.max((query.page() + 1) * query.size() * candidateMultiplier, query.size() * candidateMultiplier), maxCandidates);
+            sqlOffset = 0;
+        }
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
@@ -114,8 +160,8 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
         }
 
-        nativeQuery.setParameter("limit", query.size());
-        nativeQuery.setParameter("offset", query.page() * query.size());
+        nativeQuery.setParameter("limit", sqlLimit);
+        nativeQuery.setParameter("offset", sqlOffset);
 
         @SuppressWarnings("unchecked")
         List<Long> skillIds = (List<Long>) nativeQuery.getResultList().stream()
@@ -152,7 +198,58 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
 
+        if (useSemanticRerank && !skillIds.isEmpty()) {
+            skillIds = rerankBySemanticSimilarity(skillIds, normalizedKeyword, requestedOffset, query.size());
+        }
+
         return new SearchResult(skillIds, total, query.page(), query.size());
+    }
+
+    private List<Long> rerankBySemanticSimilarity(List<Long> candidateSkillIds,
+                                                  String normalizedKeyword,
+                                                  int requestedOffset,
+                                                  int pageSize) {
+        Map<Long, SkillSearchDocumentEntity> documentsBySkillId = new HashMap<>();
+        for (SkillSearchDocumentEntity entity : searchDocumentRepository.findBySkillIdIn(candidateSkillIds)) {
+            documentsBySkillId.put(entity.getSkillId(), entity);
+        }
+
+        int totalCandidates = Math.max(candidateSkillIds.size(), 1);
+        List<RankedSkill> rankedSkills = new java.util.ArrayList<>(candidateSkillIds.size());
+        for (int index = 0; index < candidateSkillIds.size(); index++) {
+            Long skillId = candidateSkillIds.get(index);
+            SkillSearchDocumentEntity entity = documentsBySkillId.get(skillId);
+            double baseScore = 1D - (index / (double) totalCandidates);
+            double semanticScore = computeSemanticScore(normalizedKeyword, entity);
+            double combinedScore = (baseScore * (1D - semanticWeight)) + (semanticScore * semanticWeight);
+            rankedSkills.add(new RankedSkill(skillId, combinedScore));
+        }
+
+        return rankedSkills.stream()
+                .sorted(Comparator.comparingDouble(RankedSkill::score).reversed())
+                .skip(requestedOffset)
+                .limit(pageSize)
+                .map(RankedSkill::skillId)
+                .toList();
+    }
+
+    private double computeSemanticScore(String normalizedKeyword, SkillSearchDocumentEntity entity) {
+        if (entity == null) {
+            return 0D;
+        }
+        String serializedVector = entity.getSemanticVector();
+        if (serializedVector == null || serializedVector.isBlank()) {
+            serializedVector = searchEmbeddingService.embed(String.join("\n",
+                    safe(entity.getTitle()),
+                    safe(entity.getSummary()),
+                    safe(entity.getKeywords()),
+                    safe(entity.getSearchText())));
+        }
+        return searchEmbeddingService.similarity(normalizedKeyword, serializedVector);
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 
     private String normalizeKeyword(String keyword) {
@@ -182,5 +279,8 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 .map(term -> term + ":*")
                 .reduce((left, right) -> left + " & " + right)
                 .orElse(null);
+    }
+
+    private record RankedSkill(Long skillId, double score) {
     }
 }
