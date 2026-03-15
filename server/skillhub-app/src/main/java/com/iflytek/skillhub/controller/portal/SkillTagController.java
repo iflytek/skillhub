@@ -17,7 +17,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/skills/{namespace}/{slug}/tags")
+@RequestMapping({
+        "/api/v1/skills/{namespace}/{slug}/tags",
+        "/api/web/skills/{namespace}/{slug}/tags"
+})
 public class SkillTagController extends BaseApiController {
 
     private final SkillTagService skillTagService;

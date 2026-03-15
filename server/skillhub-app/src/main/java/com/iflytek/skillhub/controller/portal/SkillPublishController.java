@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/skills")
+@RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillPublishController extends BaseApiController {
 
     private final SkillPublishService skillPublishService;

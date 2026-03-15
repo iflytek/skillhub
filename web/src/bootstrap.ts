@@ -9,11 +9,24 @@ async function loadRuntimeConfig() {
   })
 }
 
+function ensureRuntimeConfigFallback() {
+  window.__SKILLHUB_RUNTIME_CONFIG__ ??= {
+    apiBaseUrl: '',
+    appBaseUrl: '',
+    authDirectEnabled: 'false',
+    authDirectProvider: '',
+    authSessionBootstrapEnabled: 'false',
+    authSessionBootstrapProvider: '',
+    authSessionBootstrapAuto: 'false',
+  }
+}
+
 void (async () => {
   try {
     await loadRuntimeConfig()
   } catch (error) {
     console.error(error)
+    ensureRuntimeConfigFallback()
   }
 
   await import('./main')

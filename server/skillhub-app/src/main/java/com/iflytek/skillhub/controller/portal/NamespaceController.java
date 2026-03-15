@@ -11,7 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/namespaces")
+@RequestMapping({"/api/v1/namespaces", "/api/web/namespaces"})
 public class NamespaceController extends BaseApiController {
 
     private final NamespaceService namespaceService;

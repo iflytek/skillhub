@@ -70,7 +70,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)
-                .ignoringRequestMatchers("/api/v1/**", "/api/compat/**")
+                .ignoringRequestMatchers("/api/v1/**", "/api/web/**", "/api/compat/**")
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
@@ -92,7 +92,13 @@ public class SecurityConfig {
                     "/api/compat/v1/resolve/**",
                     "/api/compat/v1/download/**"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/skills/*/star", "/api/v1/skills/*/rating").authenticated()
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/skills/*/star",
+                    "/api/v1/skills/*/rating",
+                    "/api/web/skills/*/star",
+                    "/api/web/skills/*/rating"
+                ).authenticated()
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/v1/skills",
@@ -104,9 +110,25 @@ public class SecurityConfig {
                     "/api/v1/skills/*/*/resolve",
                     "/api/v1/skills/*/*/tags",
                     "/api/v1/skills/*/*/tags/*/files",
-                    "/api/v1/skills/*/*/tags/*/file"
+                    "/api/v1/skills/*/*/tags/*/file",
+                    "/api/web/skills",
+                    "/api/web/skills/*/*",
+                    "/api/web/skills/*/*/versions",
+                    "/api/web/skills/*/*/versions/*",
+                    "/api/web/skills/*/*/versions/*/files",
+                    "/api/web/skills/*/*/versions/*/file",
+                    "/api/web/skills/*/*/resolve",
+                    "/api/web/skills/*/*/tags",
+                    "/api/web/skills/*/*/tags/*/files",
+                    "/api/web/skills/*/*/tags/*/file"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/namespaces", "/api/v1/namespaces/*").permitAll()
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/namespaces",
+                    "/api/v1/namespaces/*",
+                    "/api/web/namespaces",
+                    "/api/web/namespaces/*"
+                ).permitAll()
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "SKILL_ADMIN", "USER_ADMIN", "AUDITOR")
                 .anyRequest().authenticated()
             )

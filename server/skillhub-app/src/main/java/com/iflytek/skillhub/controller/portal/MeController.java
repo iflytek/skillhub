@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/me")
+@RequestMapping({"/api/v1/me", "/api/web/me"})
 public class MeController extends BaseApiController {
 
     private final MySkillAppService mySkillAppService;

@@ -8,7 +8,7 @@ import { InstallCommand } from '@/features/skill/install-command'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
-import { adminApi } from '@/api/client'
+import { adminApi, WEB_API_PREFIX } from '@/api/client'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
@@ -67,7 +67,7 @@ export function SkillDetailPage() {
       return
     }
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    const downloadUrl = `/api/v1/skills/${cleanNamespace}/${slug}/versions/${latestVersion.version}/download`
+    const downloadUrl = `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${latestVersion.version}/download`
     window.open(downloadUrl, '_blank')
   }
 

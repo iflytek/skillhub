@@ -8,9 +8,9 @@ import { UserMenu } from '@/shared/components/user-menu'
 
 export function Layout() {
   const { t } = useTranslation()
-  const { user, isLoading } = useAuth()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isLanding = pathname === '/'
+  const { user, isLoading } = useAuth(!isLanding)
 
   if (isLanding) {
     return <LandingPage />
@@ -18,14 +18,11 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-background bg-dots relative">
-      {/* Glow orbs */}
       <div className="glow-orb-primary" style={{ top: '-10%', right: '10%' }} />
       <div className="glow-orb-accent" style={{ bottom: '20%', left: '-5%' }} />
 
-      {/* Glass header */}
       <header className="sticky top-0 z-50 glass-strong border-b border-border/40">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
-          {/* 左侧: Logo + 主导航 */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-glow">
@@ -36,7 +33,6 @@ export function Layout() {
               </span>
             </Link>
 
-            {/* 主导航链接 */}
             <nav className="hidden md:flex items-center gap-6">
               <Link
                 to="/search"
@@ -49,7 +45,6 @@ export function Layout() {
             </nav>
           </div>
 
-          {/* 右侧菜单 */}
           <nav className="flex items-center gap-6">
             <LanguageSwitcher />
             {isLoading ? null : user ? (
@@ -82,7 +77,6 @@ export function Layout() {
         </Suspense>
       </main>
 
-      {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 bg-card/30 backdrop-blur-sm mt-24">
         <div className="container mx-auto px-4 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
