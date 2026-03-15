@@ -351,6 +351,124 @@ class SkillQueryServiceTest {
         assertEquals("/api/v1/skills/global/smoke-skill-two/versions/1.0.0%20beta/download", result.downloadUrl());
     }
 
+    @Test
+    void testGetSkillDetail_ShouldFlagLifecyclePermissionForOwner() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", userId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
+
+        assertTrue(result.canManageLifecycle());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldNotFlagLifecyclePermissionForRegularViewer() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "viewer-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
+
+        assertFalse(result.canManageLifecycle());
+    }
+
+    @Test
+    void testListVersions_ShouldIncludeDraftAndRejectedForLifecycleManagers() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", userId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", userId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillVersion draft = new SkillVersion(1L, "1.1.0", userId);
+        setId(draft, 12L);
+        draft.setStatus(SkillVersionStatus.DRAFT);
+        SkillVersion rejected = new SkillVersion(1L, "1.2.0", userId);
+        setId(rejected, 13L);
+        rejected.setStatus(SkillVersionStatus.REJECTED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(rejected, draft, published));
+
+        Page<SkillVersion> result = service.listVersions(
+                namespaceSlug,
+                skillSlug,
+                userId,
+                userNsRoles,
+                PageRequest.of(0, 10)
+        );
+
+        assertEquals(List.of("1.0.0", "1.2.0", "1.1.0"),
+                result.getContent().stream().map(SkillVersion::getVersion).toList());
+    }
+
+    @Test
+    void testListVersions_ShouldOnlyReturnPublishedForRegularViewers() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "viewer-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(published));
+
+        Page<SkillVersion> result = service.listVersions(
+                namespaceSlug,
+                skillSlug,
+                userId,
+                userNsRoles,
+                PageRequest.of(0, 10)
+        );
+
+        assertEquals(List.of("1.0.0"),
+                result.getContent().stream().map(SkillVersion::getVersion).toList());
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);

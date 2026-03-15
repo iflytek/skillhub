@@ -2,6 +2,7 @@ package com.iflytek.skillhub.search.postgres;
 
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.SearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import org.springframework.stereotype.Service;
@@ -14,9 +15,12 @@ import java.util.Optional;
 public class PostgresFullTextIndexService implements SearchIndexService {
 
     private final SkillSearchDocumentJpaRepository repository;
+    private final SearchEmbeddingService searchEmbeddingService;
 
-    public PostgresFullTextIndexService(SkillSearchDocumentJpaRepository repository) {
+    public PostgresFullTextIndexService(SkillSearchDocumentJpaRepository repository,
+                                        SearchEmbeddingService searchEmbeddingService) {
         this.repository = repository;
+        this.searchEmbeddingService = searchEmbeddingService;
     }
 
     @Override
@@ -33,6 +37,7 @@ public class PostgresFullTextIndexService implements SearchIndexService {
             entity.setSummary(document.summary());
             entity.setKeywords(document.keywords());
             entity.setSearchText(document.searchText());
+            entity.setSemanticVector(buildSemanticVector(document));
             entity.setVisibility(document.visibility());
             entity.setStatus(document.status());
             repository.save(entity);
@@ -46,6 +51,7 @@ public class PostgresFullTextIndexService implements SearchIndexService {
                     document.summary(),
                     document.keywords(),
                     document.searchText(),
+                    buildSemanticVector(document),
                     document.visibility(),
                     document.status()
             );
@@ -65,5 +71,18 @@ public class PostgresFullTextIndexService implements SearchIndexService {
     @Transactional
     public void remove(Long skillId) {
         repository.deleteBySkillId(skillId);
+    }
+
+    private String buildSemanticVector(SkillSearchDocument document) {
+        return searchEmbeddingService.embed(String.join("\n",
+                safe(document.title()),
+                safe(document.title()),
+                safe(document.summary()),
+                safe(document.keywords()),
+                safe(document.searchText())));
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 }

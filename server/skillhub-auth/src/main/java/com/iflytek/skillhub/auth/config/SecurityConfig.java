@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -26,10 +27,23 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
+    private static final String CONTENT_SECURITY_POLICY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "img-src 'self' data: blob: https:",
+            "font-src 'self' data: https://fonts.gstatic.com",
+            "connect-src 'self' ws: wss: http://localhost:* https://localhost:*",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "frame-ancestors 'none'",
+            "form-action 'self'");
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver;
@@ -65,16 +79,32 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName(null);
+        RequestMatcher csrfIgnoreMatcher = request -> {
+            String path = request.getRequestURI();
+            String authorization = request.getHeader("Authorization");
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                return true;
+            }
+            if (path == null) {
+                return false;
+            }
+            return path.startsWith("/api/compat/")
+                    || path.equals("/api/v1/publish")
+                    || path.startsWith("/api/v1/auth/device/");
+        };
 
         http
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)
-                .ignoringRequestMatchers("/api/v1/**", "/api/web/**", "/api/compat/**")
+                .ignoringRequestMatchers(csrfIgnoreMatcher)
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/health",
+                    "/api/v1/search",
+                    "/api/v1/resolve/**",
+                    "/api/v1/download/**",
                     "/api/v1/auth/providers",
                     "/api/v1/auth/methods",
                     "/api/v1/auth/me",
@@ -84,7 +114,6 @@ public class SecurityConfig {
                     "/api/v1/auth/device/**",
                     "/api/v1/check",
                     "/actuator/health",
-                    "/actuator/prometheus",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/.well-known/**",
@@ -92,6 +121,7 @@ public class SecurityConfig {
                     "/api/compat/v1/resolve/**",
                     "/api/compat/v1/download/**"
                 ).permitAll()
+                .requestMatchers("/actuator/prometheus").hasAnyRole("SUPER_ADMIN", "AUDITOR")
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/v1/skills/*/star",
@@ -129,7 +159,7 @@ public class SecurityConfig {
                     "/api/web/namespaces",
                     "/api/web/namespaces/*"
                 ).permitAll()
-                .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "SKILL_ADMIN", "USER_ADMIN", "AUDITOR")
+                .requestMatchers("/api/v1/admin/**").authenticated()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
@@ -140,6 +170,7 @@ public class SecurityConfig {
             )
             .headers(headers -> headers
                 .contentTypeOptions(contentTypeOptions -> {})
+                .contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY))
                 .frameOptions(frameOptions -> frameOptions.deny())
                 .httpStrictTransportSecurity(hsts -> hsts
                     .includeSubDomains(true)

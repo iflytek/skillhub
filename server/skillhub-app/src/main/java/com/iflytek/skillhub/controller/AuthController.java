@@ -8,12 +8,15 @@ import com.iflytek.skillhub.dto.AuthMethodResponse;
 import com.iflytek.skillhub.dto.AuthProviderResponse;
 import com.iflytek.skillhub.dto.DirectLoginRequest;
 import com.iflytek.skillhub.dto.SessionBootstrapRequest;
+import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.service.AuthMethodCatalog;
 import com.iflytek.skillhub.service.DirectAuthService;
 import com.iflytek.skillhub.service.SessionBootstrapService;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import com.iflytek.skillhub.security.AuthFailureThrottleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.iflytek.skillhub.exception.UnauthorizedException;
@@ -32,15 +35,18 @@ public class AuthController extends BaseApiController {
     private final AuthMethodCatalog authMethodCatalog;
     private final SessionBootstrapService sessionBootstrapService;
     private final DirectAuthService directAuthService;
+    private final AuthFailureThrottleService authFailureThrottleService;
 
     public AuthController(ApiResponseFactory responseFactory,
                           AuthMethodCatalog authMethodCatalog,
                           SessionBootstrapService sessionBootstrapService,
-                          DirectAuthService directAuthService) {
+                          DirectAuthService directAuthService,
+                          AuthFailureThrottleService authFailureThrottleService) {
         super(responseFactory);
         this.authMethodCatalog = authMethodCatalog;
         this.sessionBootstrapService = sessionBootstrapService;
         this.directAuthService = directAuthService;
+        this.authFailureThrottleService = authFailureThrottleService;
     }
 
     @GetMapping("/me")
@@ -78,17 +84,42 @@ public class AuthController extends BaseApiController {
     @RateLimit(category = "auth-direct-login", authenticated = 20, anonymous = 10, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> directLogin(@Valid @RequestBody DirectLoginRequest request,
                                                    HttpServletRequest httpRequest) {
-        return ok(
-            "response.success.read",
-            AuthMeResponse.from(
-                directAuthService.authenticate(
+        String category = "direct:" + request.provider();
+        String clientIp = resolveClientIp(httpRequest);
+        authFailureThrottleService.assertAllowed(category, request.username(), clientIp);
+        PlatformPrincipal principal;
+        try {
+            principal = directAuthService.authenticate(
                     request.provider(),
                     request.username(),
                     request.password(),
                     httpRequest
-                )
-            )
+            );
+        } catch (AuthFlowException ex) {
+            if (HttpStatus.UNAUTHORIZED.equals(ex.getStatus())) {
+                authFailureThrottleService.recordFailure(category, request.username(), clientIp);
+            }
+            throw ex;
+        }
+        authFailureThrottleService.resetIdentifier(category, request.username());
+        return ok(
+            "response.success.read",
+            AuthMeResponse.from(principal)
         );
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 
 }

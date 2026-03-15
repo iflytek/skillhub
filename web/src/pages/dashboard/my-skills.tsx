@@ -1,22 +1,32 @@
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/components/empty-state'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
-import { useMySkills } from '@/shared/hooks/use-skill-queries'
+import { useArchiveSkill, useMySkills, useUnarchiveSkill } from '@/shared/hooks/use-skill-queries'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { toast } from '@/shared/lib/toast'
 
 export function MySkillsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const { data: skills, isLoading } = useMySkills()
+  const archiveMutation = useArchiveSkill()
+  const unarchiveMutation = useUnarchiveSkill()
 
   const handleSkillClick = (namespace: string, slug: string) => {
     navigate({ to: `/space/${namespace}/${slug}` })
   }
 
   const resolveStatusLabel = (status?: string) => {
+    if (status === 'ARCHIVED') {
+      return t('mySkills.statusArchived')
+    }
     if (status === 'PENDING_REVIEW') {
       return t('mySkills.statusPendingReview')
     }
@@ -27,6 +37,9 @@ export function MySkillsPage() {
   }
 
   const resolveStatusClassName = (status?: string) => {
+    if (status === 'ARCHIVED') {
+      return 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+    }
     if (status === 'PENDING_REVIEW') {
       return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
     }
@@ -34,6 +47,46 @@ export function MySkillsPage() {
       return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
     }
     return 'bg-secondary/60 text-muted-foreground border-border/40'
+  }
+
+  const handleArchiveSkill = async () => {
+    if (!archiveTarget) {
+      return
+    }
+    try {
+      await archiveMutation.mutateAsync({
+        namespace: archiveTarget.namespace,
+        slug: archiveTarget.slug,
+      })
+      toast.success(
+        t('mySkills.archiveSuccessTitle'),
+        t('mySkills.archiveSuccessDescription', { skill: archiveTarget.name }),
+      )
+      setArchiveTarget(null)
+    } catch (error) {
+      toast.error(t('mySkills.archiveErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
+  const handleUnarchiveSkill = async () => {
+    if (!unarchiveTarget) {
+      return
+    }
+    try {
+      await unarchiveMutation.mutateAsync({
+        namespace: unarchiveTarget.namespace,
+        slug: unarchiveTarget.slug,
+      })
+      toast.success(
+        t('mySkills.unarchiveSuccessTitle'),
+        t('mySkills.unarchiveSuccessDescription', { skill: unarchiveTarget.name }),
+      )
+      setUnarchiveTarget(null)
+    } catch (error) {
+      toast.error(t('mySkills.unarchiveErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
   }
 
   if (isLoading) {
@@ -79,6 +132,11 @@ export function MySkillsPage() {
                     {skill.latestVersion && (
                       <span className="font-mono text-xs">v{skill.latestVersion}</span>
                     )}
+                    {skill.status ? (
+                      <span className={`rounded-full border px-2.5 py-0.5 text-xs ${resolveStatusClassName(skill.status)}`}>
+                        {resolveStatusLabel(skill.status)}
+                      </span>
+                    ) : null}
                     {skill.latestVersionStatus ? (
                       <span className={`rounded-full border px-2.5 py-0.5 text-xs ${resolveStatusClassName(skill.latestVersionStatus)}`}>
                         {resolveStatusLabel(skill.latestVersionStatus)}
@@ -92,9 +150,42 @@ export function MySkillsPage() {
                     </span>
                   </div>
                 </div>
-                <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <div className="flex items-center gap-2 pl-4">
+                  {skill.status === 'ARCHIVED' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setUnarchiveTarget({
+                          namespace: skill.namespace,
+                          slug: skill.slug,
+                          name: skill.displayName,
+                        })
+                      }}
+                    >
+                      {t('mySkills.unarchive')}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setArchiveTarget({
+                          namespace: skill.namespace,
+                          slug: skill.slug,
+                          name: skill.displayName,
+                        })
+                      }}
+                    >
+                      {t('mySkills.archive')}
+                    </Button>
+                  )}
+                  <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </Card>
           ))}
@@ -110,6 +201,32 @@ export function MySkillsPage() {
           }
         />
       )}
+
+      <ConfirmDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveTarget(null)
+          }
+        }}
+        title={t('mySkills.archiveConfirmTitle')}
+        description={archiveTarget ? t('mySkills.archiveConfirmDescription', { skill: archiveTarget.name }) : ''}
+        confirmText={t('mySkills.archive')}
+        onConfirm={handleArchiveSkill}
+      />
+
+      <ConfirmDialog
+        open={!!unarchiveTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnarchiveTarget(null)
+          }
+        }}
+        title={t('mySkills.unarchiveConfirmTitle')}
+        description={unarchiveTarget ? t('mySkills.unarchiveConfirmDescription', { skill: unarchiveTarget.name }) : ''}
+        confirmText={t('mySkills.unarchive')}
+        onConfirm={handleUnarchiveSkill}
+      />
     </div>
   )
 }

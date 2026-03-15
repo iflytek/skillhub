@@ -31,14 +31,35 @@ class AdminAuditLogAppServiceTest {
                         "alice",
                         "{\"status\":\"DISABLED\"}",
                         "127.0.0.1",
+                        "req-1",
+                        "USER",
+                        "42",
                         Instant.parse("2026-03-13T01:00:00Z")
                 )));
 
-        PageResponse<?> response = service.listAuditLogs(0, 20, "user-1", "USER_STATUS_CHANGE");
+        PageResponse<?> response = service.listAuditLogs(
+                0,
+                20,
+                "user-1",
+                "USER_STATUS_CHANGE",
+                "req-1",
+                "127.0.0.1",
+                "USER",
+                "42",
+                Instant.parse("2026-03-13T00:00:00Z"),
+                Instant.parse("2026-03-14T00:00:00Z"));
 
         assertThat(response.total()).isEqualTo(1);
         assertThat(response.items()).hasSize(1);
         verify(jdbcTemplate).queryForObject(contains("al.actor_user_id = :userId"), any(MapSqlParameterSource.class), eq(Long.class));
         verify(jdbcTemplate).query(contains("al.action = :action"), any(MapSqlParameterSource.class), any(RowMapper.class));
+        verify(jdbcTemplate).query(
+                contains("al.request_id = :requestId"),
+                any(MapSqlParameterSource.class),
+                any(RowMapper.class));
+        verify(jdbcTemplate).query(
+                contains("CAST(al.target_id AS TEXT) = :resourceId"),
+                any(MapSqlParameterSource.class),
+                any(RowMapper.class));
     }
 }

@@ -9,6 +9,8 @@ import com.iflytek.skillhub.service.AdminAuditLogAppService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")
 public class AuditLogController extends BaseApiController {
@@ -27,7 +29,23 @@ public class AuditLogController extends BaseApiController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String userId,
-            @RequestParam(required = false) String action) {
-        return ok("response.success.read", adminAuditLogAppService.listAuditLogs(page, size, userId, action));
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String requestId,
+            @RequestParam(required = false) String ipAddress,
+            @RequestParam(required = false) String resourceType,
+            @RequestParam(required = false) String resourceId,
+            @RequestParam(required = false) Instant startTime,
+            @RequestParam(required = false) Instant endTime) {
+        return ok("response.success.read", adminAuditLogAppService.listAuditLogs(
+                page,
+                size,
+                userId,
+                action,
+                requestId,
+                ipAddress,
+                resourceType,
+                resourceId,
+                startTime,
+                endTime));
     }
 }

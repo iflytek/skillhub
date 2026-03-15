@@ -70,7 +70,8 @@ public class SkillController extends BaseApiController {
                 detail.ratingCount(),
                 detail.hidden(),
                 detail.latestVersion(),
-                namespace
+                namespace,
+                detail.canManageLifecycle()
         );
 
         return ok("response.success.read", response);

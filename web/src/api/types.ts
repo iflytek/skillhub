@@ -107,6 +107,7 @@ export interface SkillSummary {
   slug: string
   displayName: string
   summary?: string
+  status?: string
   downloadCount: number
   starCount: number
   ratingAvg?: number
@@ -131,6 +132,7 @@ export interface SkillDetail {
   hidden: boolean
   latestVersion?: string
   namespace: string
+  canManageLifecycle: boolean
 }
 
 export interface SkillVersion {
@@ -220,6 +222,22 @@ export interface PromotionTask {
   reviewedAt?: string
 }
 
+export interface SkillReport {
+  id: number
+  skillId: number
+  namespace?: string
+  skillSlug?: string
+  skillDisplayName?: string
+  reporterId: string
+  reason: string
+  details?: string
+  status: 'PENDING' | 'RESOLVED' | 'DISMISSED' | string
+  handledBy?: string
+  handleComment?: string
+  createdAt: string
+  handledAt?: string
+}
+
 export interface AdminUser {
   userId: string
   username: string
@@ -232,7 +250,10 @@ export interface AdminUser {
 export interface AuditLogItem {
   id: string
   userId?: string
+  username?: string
   action: string
+  details?: string
+  requestId?: string
   resourceType?: string
   resourceId?: string
   timestamp: string

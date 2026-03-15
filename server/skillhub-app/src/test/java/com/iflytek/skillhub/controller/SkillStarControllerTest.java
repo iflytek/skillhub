@@ -132,4 +132,25 @@ class SkillStarControllerTest {
         mockMvc.perform(get("/api/v1/skills/10/star"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void apiWebStarSkillWithoutCsrfShouldBeRejectedForSessionAuth() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42",
+                "tester",
+                "tester@example.com",
+                "https://example.com/avatar.png",
+                "github",
+                Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        mockMvc.perform(put("/api/web/skills/10/star")
+                        .with(authentication(auth)))
+                .andExpect(status().isForbidden());
+    }
 }
