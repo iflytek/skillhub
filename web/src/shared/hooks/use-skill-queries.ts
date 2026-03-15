@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
-import { fetchJson, fetchText, getCsrfHeaders, meApi } from '@/api/client'
+import { fetchJson, fetchText, getCsrfHeaders, meApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
@@ -15,36 +15,36 @@ async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSu
   if (params.page !== undefined) queryParams.append('page', String(params.page))
   if (params.size !== undefined) queryParams.append('size', String(params.size))
 
-  return fetchJson<PagedResponse<SkillSummary>>(`/api/v1/skills?${queryParams.toString()}`)
+  return fetchJson<PagedResponse<SkillSummary>>(`${WEB_API_PREFIX}/skills?${queryParams.toString()}`)
 }
 
 async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  return fetchJson<SkillDetail>(`/api/v1/skills/${cleanNamespace}/${slug}`)
+  return fetchJson<SkillDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`)
 }
 
 async function getSkillVersions(namespace: string, slug: string): Promise<SkillVersion[]> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  const page = await fetchJson<PagedResponse<SkillVersion>>(`/api/v1/skills/${cleanNamespace}/${slug}/versions`)
+  const page = await fetchJson<PagedResponse<SkillVersion>>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions`)
   return page.items
 }
 
 async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  return fetchJson<SkillFile[]>(`/api/v1/skills/${cleanNamespace}/${slug}/versions/${version}/files`)
+  return fetchJson<SkillFile[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/files`)
 }
 
 async function getSkillReadme(namespace: string, slug: string, version: string): Promise<string> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   try {
-    return await fetchText(`/api/v1/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=SKILL.md`)
+    return await fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=SKILL.md`)
   } catch {
     return ''
   }
 }
 
 async function getMySkills(): Promise<SkillSummary[]> {
-  return fetchJson<SkillSummary[]>('/api/v1/me/skills')
+  return fetchJson<SkillSummary[]>(`${WEB_API_PREFIX}/me/skills`)
 }
 
 async function getMyStars(): Promise<SkillSummary[]> {
@@ -52,18 +52,18 @@ async function getMyStars(): Promise<SkillSummary[]> {
 }
 
 async function getMyNamespaces(): Promise<Namespace[]> {
-  const page = await fetchJson<PagedResponse<Namespace>>('/api/v1/namespaces')
+  const page = await fetchJson<PagedResponse<Namespace>>(`${WEB_API_PREFIX}/namespaces`)
   return page.items
 }
 
 async function getNamespaceDetail(slug: string): Promise<Namespace> {
   const cleanSlug = slug.startsWith('@') ? slug.slice(1) : slug
-  return fetchJson<Namespace>(`/api/v1/namespaces/${cleanSlug}`)
+  return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${cleanSlug}`)
 }
 
 async function getNamespaceMembers(slug: string): Promise<NamespaceMember[]> {
   const cleanSlug = slug.startsWith('@') ? slug.slice(1) : slug
-  const page = await fetchJson<PagedResponse<NamespaceMember>>(`/api/v1/namespaces/${cleanSlug}/members`)
+  const page = await fetchJson<PagedResponse<NamespaceMember>>(`${WEB_API_PREFIX}/namespaces/${cleanSlug}/members`)
   return page.items
 }
 
@@ -73,7 +73,7 @@ async function publishSkill(params: { namespace: string; file: File; visibility:
   formData.append('file', params.file)
   formData.append('visibility', params.visibility)
 
-  return fetchJson<PublishResult>(`/api/v1/skills/${cleanNamespace}/publish`, {
+  return fetchJson<PublishResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/publish`, {
     method: 'POST',
     headers: getCsrfHeaders(),
     body: formData,

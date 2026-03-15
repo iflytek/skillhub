@@ -73,8 +73,17 @@ const AccountSettingsPage = createLazyRouteComponent(
 const AdminUsersPage = createLazyRouteComponent(() => import('@/pages/admin/users'), 'AdminUsersPage')
 const AuditLogPage = createLazyRouteComponent(() => import('@/pages/admin/audit-log'), 'AuditLogPage')
 
+function DefaultNotFound() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+      Not Found
+    </div>
+  )
+}
+
 const rootRoute = createRootRoute({
   component: Layout,
+  notFoundComponent: DefaultNotFound,
 })
 
 function buildReturnTo(location: { pathname: string; searchStr?: string; hash?: string }) {
@@ -310,7 +319,10 @@ const routeTree = rootRoute.addChildren([
   adminAuditLogRoute,
 ])
 
-export const router = createRouter({ routeTree })
+export const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: DefaultNotFound,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {

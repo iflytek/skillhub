@@ -279,6 +279,32 @@ class ReviewServiceTest {
         }
 
         @Test
+        void superAdminCanApproveOwnSubmission() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(eq(task), eq(USER_ID), eq(ns.getType()), anyMap(), eq(Set.of("SUPER_ADMIN"))))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, USER_ID, "self approved", task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.approveReview(
+                    REVIEW_TASK_ID, USER_ID, "self approved", Map.of(), Set.of("SUPER_ADMIN"));
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
+            assertEquals(USER_ID, skill.getUpdatedBy());
+        }
+
+        @Test
         void shouldThrowOnConcurrentModification() {
             ReviewTask task = createPendingReviewTask();
             Namespace ns = createTeamNamespace();
@@ -341,6 +367,29 @@ class ReviewServiceTest {
             assertThrows(DomainForbiddenException.class,
                     () -> reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "no",
                             Map.of(), Set.of()));
+        }
+
+        @Test
+        void superAdminCanRejectOwnSubmission() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(eq(task), eq(USER_ID), eq(ns.getType()), anyMap(), eq(Set.of("SUPER_ADMIN"))))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, USER_ID, "self rejected", task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.rejectReview(
+                    REVIEW_TASK_ID, USER_ID, "self rejected", Map.of(), Set.of("SUPER_ADMIN"));
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
         }
 
         @Test

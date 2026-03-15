@@ -41,7 +41,7 @@ import java.util.Map;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/v1/promotions")
+@RequestMapping({"/api/v1/promotions", "/api/web/promotions"})
 public class PromotionController extends BaseApiController {
 
     private final PromotionService promotionService;

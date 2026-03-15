@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/skills")
+@RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillController extends BaseApiController {
 
     private final SkillQueryService skillQueryService;

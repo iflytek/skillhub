@@ -24,6 +24,8 @@ import i18n from '@/i18n/config'
 
 export { ApiError }
 
+export const WEB_API_PREFIX = '/api/web'
+
 type RuntimeConfig = {
   apiBaseUrl?: string
   appBaseUrl?: string
@@ -495,16 +497,16 @@ export const reviewApi = {
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
     return fetchJson<{ items: ReviewTask[]; total: number; page: number; size: number }>(
-      `/api/v1/reviews?${searchParams.toString()}`,
+      `${WEB_API_PREFIX}/reviews?${searchParams.toString()}`,
     )
   },
 
   async get(id: number): Promise<ReviewTask> {
-    return fetchJson<ReviewTask>(`/api/v1/reviews/${id}`)
+    return fetchJson<ReviewTask>(`${WEB_API_PREFIX}/reviews/${id}`)
   },
 
   async approve(id: number, comment?: string): Promise<void> {
-    await fetchJson<void>(`/api/v1/reviews/${id}/approve`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/reviews/${id}/approve`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
@@ -514,7 +516,7 @@ export const reviewApi = {
   },
 
   async reject(id: number, comment: string): Promise<void> {
-    await fetchJson<void>(`/api/v1/reviews/${id}/reject`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/reviews/${id}/reject`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
@@ -531,16 +533,16 @@ export const promotionApi = {
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
     return fetchJson<{ items: PromotionTask[]; total: number; page: number; size: number }>(
-      `/api/v1/promotions?${searchParams.toString()}`,
+      `${WEB_API_PREFIX}/promotions?${searchParams.toString()}`,
     )
   },
 
   async get(id: number): Promise<PromotionTask> {
-    return fetchJson<PromotionTask>(`/api/v1/promotions/${id}`)
+    return fetchJson<PromotionTask>(`${WEB_API_PREFIX}/promotions/${id}`)
   },
 
   async approve(id: number, comment?: string): Promise<void> {
-    await fetchJson<void>(`/api/v1/promotions/${id}/approve`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/promotions/${id}/approve`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
@@ -550,7 +552,7 @@ export const promotionApi = {
   },
 
   async reject(id: number, comment?: string): Promise<void> {
-    await fetchJson<void>(`/api/v1/promotions/${id}/reject`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/promotions/${id}/reject`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
@@ -562,7 +564,7 @@ export const promotionApi = {
 
 export const meApi = {
   async getStars(): Promise<SkillSummary[]> {
-    return fetchJson<SkillSummary[]>('/api/v1/me/stars')
+    return fetchJson<SkillSummary[]>(`${WEB_API_PREFIX}/me/stars`)
   },
 }
 

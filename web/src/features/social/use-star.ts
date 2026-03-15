@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ApiError, fetchJson, getCsrfHeaders } from '@/api/client'
+import { ApiError, fetchJson, getCsrfHeaders, WEB_API_PREFIX } from '@/api/client'
 
 interface StarStatus {
   starred: boolean
@@ -7,7 +7,7 @@ interface StarStatus {
 
 async function getStarStatus(skillId: number): Promise<StarStatus> {
   try {
-    const starred = await fetchJson<boolean>(`/api/v1/skills/${skillId}/star`)
+    const starred = await fetchJson<boolean>(`${WEB_API_PREFIX}/skills/${skillId}/star`)
     return { starred }
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
@@ -19,12 +19,12 @@ async function getStarStatus(skillId: number): Promise<StarStatus> {
 
 async function toggleStar(skillId: number, starred: boolean): Promise<void> {
   if (starred) {
-    await fetchJson<void>(`/api/v1/skills/${skillId}/star`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${skillId}/star`, {
       method: 'DELETE',
       headers: getCsrfHeaders(),
     })
   } else {
-    await fetchJson<void>(`/api/v1/skills/${skillId}/star`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${skillId}/star`, {
       method: 'PUT',
       headers: getCsrfHeaders(),
     })

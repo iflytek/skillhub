@@ -37,8 +37,24 @@ class ReviewPermissionCheckerTest {
     void superAdminCannotReviewOwnSubmission() {
         String userId = "user-1";
         ReviewTask task = new ReviewTask(1L, 10L, userId);
-        assertFalse(checker.canReview(task, userId,
+        assertTrue(checker.canReview(task, userId,
                 NamespaceType.TEAM, Map.of(), Set.of("SUPER_ADMIN")));
+    }
+
+    @Test
+    void regularUserCannotReviewOwnGlobalSubmission() {
+        String userId = "user-1";
+        ReviewTask task = new ReviewTask(1L, 1L, userId);
+        assertFalse(checker.canReview(task, userId,
+                NamespaceType.GLOBAL, Map.of(), Set.of()));
+    }
+
+    @Test
+    void superAdminCanReviewOwnGlobalSubmission() {
+        String userId = "user-1";
+        ReviewTask task = new ReviewTask(1L, 1L, userId);
+        assertTrue(checker.canReview(task, userId,
+                NamespaceType.GLOBAL, Map.of(), Set.of("SUPER_ADMIN")));
     }
 
     @Test

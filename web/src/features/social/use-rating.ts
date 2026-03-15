@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ApiError, fetchJson, getCsrfHeaders } from '@/api/client'
+import { ApiError, fetchJson, getCsrfHeaders, WEB_API_PREFIX } from '@/api/client'
 
 interface UserRating {
   score: number
@@ -8,7 +8,7 @@ interface UserRating {
 
 async function getUserRating(skillId: number): Promise<UserRating> {
   try {
-    return await fetchJson<UserRating>(`/api/v1/skills/${skillId}/rating`)
+    return await fetchJson<UserRating>(`${WEB_API_PREFIX}/skills/${skillId}/rating`)
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       return { score: 0, rated: false }
@@ -18,7 +18,7 @@ async function getUserRating(skillId: number): Promise<UserRating> {
 }
 
 async function rateSkill(skillId: number, rating: number): Promise<void> {
-  await fetchJson<void>(`/api/v1/skills/${skillId}/rating`, {
+  await fetchJson<void>(`${WEB_API_PREFIX}/skills/${skillId}/rating`, {
     method: 'PUT',
     headers: getCsrfHeaders({
       'Content-Type': 'application/json',

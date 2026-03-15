@@ -24,8 +24,12 @@ public class ApiTokenScopeService {
         ScopeRule.allow("GET", "/api/v1/whoami"),
         ScopeRule.allow("GET", "/api/v1/skills"),
         ScopeRule.allow("GET", "/api/v1/skills/**"),
+        ScopeRule.allow("GET", "/api/web/skills"),
+        ScopeRule.allow("GET", "/api/web/skills/**"),
         ScopeRule.allow("GET", "/api/v1/namespaces"),
         ScopeRule.allow("GET", "/api/v1/namespaces/*"),
+        ScopeRule.allow("GET", "/api/web/namespaces"),
+        ScopeRule.allow("GET", "/api/web/namespaces/*"),
         ScopeRule.allow("GET", "/api/compat/v1/search"),
         ScopeRule.allow("GET", "/api/compat/v1/resolve/**"),
         ScopeRule.allow("GET", "/api/compat/v1/whoami"),
@@ -39,6 +43,7 @@ public class ApiTokenScopeService {
         ScopeRule.require(null, "/api/v1/tokens", "token:manage"),
         ScopeRule.require(null, "/api/v1/tokens/**", "token:manage"),
         ScopeRule.require("POST", "/api/v1/skills/*/publish", "skill:publish"),
+        ScopeRule.require("POST", "/api/web/skills/*/publish", "skill:publish"),
         ScopeRule.require("POST", "/api/v1/publish", "skill:publish"),
         ScopeRule.require("POST", "/api/compat/v1/publish", "skill:publish")
     );
@@ -96,7 +101,7 @@ public class ApiTokenScopeService {
     }
 
     private boolean isApiPath(String path) {
-        return path != null && (path.startsWith("/api/v1/") || path.startsWith("/api/compat/"));
+        return path != null && (path.startsWith("/api/v1/") || path.startsWith("/api/web/") || path.startsWith("/api/compat/"));
     }
 
     public record AuthorizationDecision(boolean allowed, String requiredScope, String message) {

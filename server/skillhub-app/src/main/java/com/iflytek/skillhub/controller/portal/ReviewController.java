@@ -42,7 +42,7 @@ import java.util.Map;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/v1/reviews")
+@RequestMapping({"/api/v1/reviews", "/api/web/reviews"})
 public class ReviewController extends BaseApiController {
 
     private final ReviewService reviewService;
