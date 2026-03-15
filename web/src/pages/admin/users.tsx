@@ -26,6 +26,13 @@ import type { AdminUser } from '@/features/admin/use-admin-users'
 
 export function AdminUsersPage() {
   const { t, i18n } = useTranslation()
+  const roleOptions = [
+    { value: 'USER', label: t('adminUsers.roleUser') },
+    { value: 'SKILL_ADMIN', label: t('adminUsers.roleReviewer') },
+    { value: 'USER_ADMIN', label: t('adminUsers.roleUserAdmin') },
+    { value: 'AUDITOR', label: t('adminUsers.roleAuditor') },
+    { value: 'SUPER_ADMIN', label: t('adminUsers.roleSuperAdmin') },
+  ]
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [page, setPage] = useState(0)
@@ -53,7 +60,7 @@ export function AdminUsersPage() {
 
   const handleChangeRole = (user: AdminUser) => {
     setSelectedUser(user)
-    setNewRole(user.platformRoles[0] || '')
+    setNewRole(user.platformRoles[0] || 'USER')
     setRoleDialogOpen(true)
   }
 
@@ -64,7 +71,7 @@ export function AdminUsersPage() {
   }
 
   const confirmRoleChange = async () => {
-    if (!selectedUser) return
+    if (!selectedUser || !newRole || newRole === (selectedUser.platformRoles[0] || 'USER')) return
     try {
       await updateRoleMutation.mutateAsync({ userId: selectedUser.userId, role: newRole })
       setRoleDialogOpen(false)
@@ -238,12 +245,11 @@ export function AdminUsersPage() {
             <div className="space-y-2">
               <Label htmlFor="role">{t('adminUsers.roleLabel')}</Label>
               <Select id="role" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                <option value="">{t('adminUsers.selectRole')}</option>
-                <option value="USER">{t('adminUsers.roleUser')}</option>
-                <option value="SKILL_ADMIN">{t('adminUsers.roleReviewer')}</option>
-                <option value="USER_ADMIN">{t('adminUsers.roleUserAdmin')}</option>
-                <option value="AUDITOR">{t('adminUsers.roleAuditor')}</option>
-                <option value="SUPER_ADMIN">{t('adminUsers.roleSuperAdmin')}</option>
+                {roleOptions.map((roleOption) => (
+                  <option key={roleOption.value} value={roleOption.value}>
+                    {roleOption.label}
+                  </option>
+                ))}
               </Select>
             </div>
           </div>
@@ -251,7 +257,15 @@ export function AdminUsersPage() {
             <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
+            <Button
+              onClick={confirmRoleChange}
+              disabled={
+                updateRoleMutation.isPending
+                || !selectedUser
+                || !newRole
+                || newRole === (selectedUser.platformRoles[0] || 'USER')
+              }
+            >
               {t('dialog.confirm')}
             </Button>
           </DialogFooter>
