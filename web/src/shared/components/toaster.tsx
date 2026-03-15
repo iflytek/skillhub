@@ -23,6 +23,7 @@ export function Toaster() {
       <Sonner
         id={CENTER_TOASTER_ID}
         position="top-center"
+        className="!left-1/2 !right-auto !top-4 !-translate-x-1/2"
         offset={16}
         mobileOffset={16}
         toastOptions={{

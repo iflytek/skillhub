@@ -219,7 +219,7 @@ export function TokenList() {
                 <TableHead>{t('token.createdAt')}</TableHead>
                 <TableHead>{t('token.lastUsed')}</TableHead>
                 <TableHead>{t('token.expiresAt')}</TableHead>
-                <TableHead className="text-right">{t('token.actions')}</TableHead>
+                <TableHead className="text-center">{t('token.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -234,8 +234,8 @@ export function TokenList() {
                   <TableCell>{formatDate(token.createdAt)}</TableCell>
                   <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
                   <TableCell>{formatDate(token.expiresAt, t('token.neverExpires'))}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                  <TableCell className="text-center">
+                    <div className="flex justify-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
