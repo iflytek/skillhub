@@ -87,6 +87,11 @@ skillhub:
   search:
     engine: postgres
     rebuild-on-startup: false
+    semantic:
+      enabled: true
+      weight: 0.35
+      candidate-multiplier: 8
+      max-candidates: 120
   publish:
     max-file-count: 100
     max-single-file-size: 1048576  # 1MB

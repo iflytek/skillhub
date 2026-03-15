@@ -35,6 +35,9 @@ public class SkillSearchDocumentEntity {
     @Column(name = "search_text", columnDefinition = "TEXT")
     private String searchText;
 
+    @Column(name = "semantic_vector", columnDefinition = "TEXT")
+    private String semanticVector;
+
     @Column(nullable = false, length = 20)
     private String visibility;
 
@@ -56,6 +59,7 @@ public class SkillSearchDocumentEntity {
             String summary,
             String keywords,
             String searchText,
+            String semanticVector,
             String visibility,
             String status) {
         this.skillId = skillId;
@@ -66,6 +70,7 @@ public class SkillSearchDocumentEntity {
         this.summary = summary;
         this.keywords = keywords;
         this.searchText = searchText;
+        this.semanticVector = semanticVector;
         this.visibility = visibility;
         this.status = status;
     }
@@ -117,6 +122,10 @@ public class SkillSearchDocumentEntity {
         return visibility;
     }
 
+    public String getSemanticVector() {
+        return semanticVector;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -152,6 +161,10 @@ public class SkillSearchDocumentEntity {
 
     public void setSearchText(String searchText) {
         this.searchText = searchText;
+    }
+
+    public void setSemanticVector(String semanticVector) {
+        this.semanticVector = semanticVector;
     }
 
     public void setVisibility(String visibility) {
