@@ -12,6 +12,8 @@ SKILLHUB_REF="${SKILLHUB_REF:-main}"
 SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
+SKILLHUB_ALIYUN_REGISTRY="${SKILLHUB_ALIYUN_REGISTRY:-crpi-ptu2rqimrigtq0qx.cn-hangzhou.personal.cr.aliyuncs.com}"
+SKILLHUB_ALIYUN_NAMESPACE="${SKILLHUB_ALIYUN_NAMESPACE:-test1245}"
 SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
 SKILLHUB_SERVER_IMAGE_VALUE="${SKILLHUB_SERVER_IMAGE:-}"
 SKILLHUB_WEB_IMAGE_VALUE="${SKILLHUB_WEB_IMAGE:-}"
@@ -24,6 +26,14 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -ge 2 ] || { echo "Missing value for --version" >&2; exit 1; }
       SKILLHUB_VERSION_VALUE="$2"
       shift 2
+      ;;
+    --aliyun)
+      if [ -z "$SKILLHUB_ALIYUN_REGISTRY" ] || [ -z "$SKILLHUB_ALIYUN_NAMESPACE" ]; then
+        echo "SKILLHUB_ALIYUN_REGISTRY and SKILLHUB_ALIYUN_NAMESPACE must be configured for --aliyun" >&2
+        exit 1
+      fi
+      SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_ALIYUN_REGISTRY%/}/${SKILLHUB_ALIYUN_NAMESPACE}"
+      shift
       ;;
     --mirror-registry)
       [ "$#" -ge 2 ] || { echo "Missing value for --mirror-registry" >&2; exit 1; }
@@ -66,6 +76,7 @@ Usage: sh runtime.sh [up|down|clean|ps|logs|pull] [options]
 
 Options:
   --version <tag>       Use a specific image tag, for example v0.1.0
+  --aliyun              Use the configured Aliyun mirror registry
   --mirror-registry <r> Use mirrored images from <registry>/<namespace>
   --home <dir>          Store runtime files in a specific directory
   --ref <git-ref>       Download runtime files from a specific Git ref
