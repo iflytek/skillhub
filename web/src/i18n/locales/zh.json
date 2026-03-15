@@ -172,6 +172,7 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "管理你的账户和 API Tokens",
+    "backToDashboard": "返回控制台",
     "userInfo": "用户信息",
     "userInfoDesc": "你的账户详情",
     "loginVia": "通过 {{provider}} 登录",

@@ -7,6 +7,7 @@ import { Select } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queries'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
@@ -73,10 +74,7 @@ export function PublishPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('publish.title')}</h1>
-        <p className="text-muted-foreground text-lg">{t('publish.subtitle')}</p>
-      </div>
+      <DashboardPageHeader title={t('publish.title')} subtitle={t('publish.subtitle')} />
 
       <Card className="p-4 bg-blue-500/5 border-blue-500/20">
         <div className="flex items-start gap-3">

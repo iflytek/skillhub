@@ -172,6 +172,7 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Manage your account and API Tokens",
+    "backToDashboard": "Back to Dashboard",
     "userInfo": "User Info",
     "userInfoDesc": "Your account details",
     "loginVia": "Logged in via {{provider}}",

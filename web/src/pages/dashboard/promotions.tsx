@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECTED' }) {
   const { t, i18n } = useTranslation()
@@ -70,10 +71,7 @@ export function PromotionsPage() {
   const { t } = useTranslation()
   return (
     <div className="space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('promotions.title')}</h1>
-        <p className="text-muted-foreground text-lg">{t('promotions.subtitle')}</p>
-      </div>
+      <DashboardPageHeader title={t('promotions.title')} subtitle={t('promotions.subtitle')} />
       <Tabs defaultValue="PENDING">
         <TabsList>
           <TabsTrigger value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
