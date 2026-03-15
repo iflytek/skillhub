@@ -26,4 +26,15 @@ class HashingSearchEmbeddingServiceTest {
 
         assertThat(relevant).isGreaterThan(noisy);
     }
+
+    @Test
+    void similarityShouldHandleSingularAndPluralForms() {
+        String pluralVector = service.embed("build strong habits with daily practice");
+        String unrelatedVector = service.embed("research company profiles on the web");
+
+        double pluralMatch = service.similarity("habit", pluralVector);
+        double unrelatedMatch = service.similarity("habit", unrelatedVector);
+
+        assertThat(pluralMatch).isGreaterThan(unrelatedMatch);
+    }
 }

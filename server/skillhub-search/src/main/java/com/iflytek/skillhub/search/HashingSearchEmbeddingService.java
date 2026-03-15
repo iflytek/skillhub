@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 public class HashingSearchEmbeddingService implements SearchEmbeddingService {
     private static final Pattern TOKEN_SPLITTER = Pattern.compile("[^\\p{L}\\p{N}_]+");
     private static final int DIMENSIONS = 64;
+    private static final double NGRAM_WEIGHT = 0.35D;
 
     @Override
     public String embed(String text) {
@@ -47,14 +48,28 @@ public class HashingSearchEmbeddingService implements SearchEmbeddingService {
                 .map(String::trim)
                 .filter(token -> !token.isBlank())
                 .forEach(token -> {
-                    int hash = token.hashCode();
-                    int index = Math.floorMod(hash, DIMENSIONS);
-                    double weight = 1D + Math.min(token.length(), 12) / 12D;
-                    vector[index] += weight;
+                    addTokenWeight(vector, token, 1D + Math.min(token.length(), 12) / 12D);
+                    addCharacterNgrams(vector, token);
                 });
 
         normalize(vector);
         return vector;
+    }
+
+    private void addTokenWeight(double[] vector, String token, double weight) {
+        int hash = token.hashCode();
+        int index = Math.floorMod(hash, DIMENSIONS);
+        vector[index] += weight;
+    }
+
+    private void addCharacterNgrams(double[] vector, String token) {
+        if (token.length() < 3) {
+            return;
+        }
+        for (int i = 0; i <= token.length() - 3; i++) {
+            String trigram = token.substring(i, i + 3);
+            addTokenWeight(vector, trigram, NGRAM_WEIGHT);
+        }
     }
 
     private double[] parseVector(String serializedVector) {
