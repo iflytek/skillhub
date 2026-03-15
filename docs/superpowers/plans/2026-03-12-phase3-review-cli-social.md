@@ -6428,7 +6428,7 @@ class WellKnownControllerTest {
     void returns_api_base() throws Exception {
         mockMvc.perform(get("/.well-known/clawhub.json"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.apiBase").value("/api/compat/v1"));
+            .andExpect(jsonPath("$.apiBase").value("/api/v1"));
     }
 }
 ```
@@ -6446,7 +6446,7 @@ import java.util.Map;
 public class WellKnownController {
     @GetMapping("/.well-known/clawhub.json")
     public Map<String, String> clawHubDiscovery() {
-        return Map.of("apiBase", "/api/compat/v1");
+        return Map.of("apiBase", "/api/v1");
     }
 }
 ```
@@ -6527,7 +6527,7 @@ class ClawHubCompatControllerTest {
 
     @Test
     void search_returns_compat_format() throws Exception {
-        mockMvc.perform(get("/api/compat/v1/search").param("q", "test"))
+        mockMvc.perform(get("/api/v1/search").param("q", "test"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items").isArray());
     }
@@ -6536,14 +6536,14 @@ class ClawHubCompatControllerTest {
     void resolve_parses_canonical_slug() throws Exception {
         when(slugMapper.fromCanonical("my-skill"))
             .thenReturn(new SkillCoordinate("global", "my-skill"));
-        mockMvc.perform(get("/api/compat/v1/resolve")
+        mockMvc.perform(get("/api/v1/resolve")
                 .param("slug", "my-skill"))
             .andExpect(status().isOk());
     }
 
     @Test
     void whoami_requires_auth() throws Exception {
-        mockMvc.perform(get("/api/compat/v1/whoami"))
+        mockMvc.perform(get("/api/v1/whoami"))
             .andExpect(status().isUnauthorized());
     }
 }
@@ -6566,7 +6566,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/compat/v1")
+@RequestMapping("/api/v1")
 public class ClawHubCompatController {
     private final CanonicalSlugMapper slugMapper;
 
@@ -6591,7 +6591,7 @@ public class ClawHubCompatController {
         SkillCoordinate coord = slugMapper.fromCanonical(slug);
         // TODO: 调用 SkillQueryService 获取版本详情
         return new ClawHubResolveResponse(slug, "", version,
-            "/api/compat/v1/download/" + slug + "/" + version, 0, 0);
+            "/api/v1/download/" + slug + "/" + version, 0, 0);
     }
 
     @GetMapping("/download/{slug}/{version}")

@@ -18,7 +18,7 @@ Response:
 
 ```json
 {
-  "apiBase": "/api/compat/v1"
+  "apiBase": "/api/v1"
 }
 ```
 
@@ -27,7 +27,7 @@ Response:
 ### Whoami
 
 ```http
-GET /api/compat/v1/whoami
+GET /api/v1/whoami
 ```
 
 Response:
@@ -43,7 +43,7 @@ Response:
 ### Search
 
 ```http
-GET /api/compat/v1/search?q={keyword}&page={page}&limit={limit}
+GET /api/v1/search?q={keyword}&page={page}&limit={limit}
 ```
 
 Response:
@@ -75,7 +75,7 @@ Response:
 ### Resolve
 
 ```http
-GET /api/compat/v1/resolve?slug={slug}&version={version}
+GET /api/v1/resolve?slug={slug}&version={version}
 ```
 
 Response:
@@ -84,20 +84,20 @@ Response:
 {
   "slug": "my-skill",
   "version": "1.2.0",
-  "downloadUrl": "/api/compat/v1/download/my-skill/1.2.0"
+  "downloadUrl": "/api/v1/download/my-skill/1.2.0"
 }
 ```
 
 ### Download
 
 ```http
-GET /api/compat/v1/download/{slug}/{version}
+GET /api/v1/download/{slug}/{version}
 ```
 
 ### Publish
 
 ```http
-POST /api/compat/v1/publish
+POST /api/v1/publish
 Content-Type: multipart/form-data
 
 file: <zip-file>

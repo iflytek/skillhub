@@ -50,7 +50,7 @@ ClawHub CLI 使用单一 slug 模型，slug 校验规则为 `[a-z0-9]([a-z0-9-]*
 - skillhub 自有 CLI 支持两种格式输入，内部统一转换为 namespace 坐标
 
 **Well-known 发现：**
-- skillhub 服务端提供 `/.well-known/clawhub.json`，返回 `{ "apiBase": "/api/compat/v1" }`
+- skillhub 服务端提供 `/.well-known/clawhub.json`，返回 `{ "apiBase": "/api/v1" }`
 - ClawHub CLI 通过此机制自动发现兼容层 API 基地址
 
 ## 2. 参考项目取舍

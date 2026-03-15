@@ -12,7 +12,7 @@ description: 技能评分和收藏功能
 
 查看已收藏的技能：
 - Web：进入"我的收藏"
-- CLI：`skillhub stars`
+- CLI：`clawhub stars`
 
 ## 技能评分
 

@@ -13,8 +13,8 @@ export function InstallCommand({ namespace, slug, version }: InstallCommandProps
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const command = version
-    ? `skillhub install ${namespace}/${slug}@${version}`
-    : `skillhub install ${namespace}/${slug}`
+    ? `clawhub install ${namespace}/${slug}@${version}`
+    : `clawhub install ${namespace}/${slug}`
 
   const handleCopy = async () => {
     try {

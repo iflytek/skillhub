@@ -21,10 +21,10 @@ description: 发布技能到 SkillHub
 
 ```bash
 # 1. 登录
-skillhub login
+clawhub login
 
 # 2. 发布
-skillhub publish ./my-skill.zip --namespace @team-myteam
+clawhub publish ./my-skill.zip --namespace @team-myteam
 ```
 
 ## 通过 ClawHub CLI 发布

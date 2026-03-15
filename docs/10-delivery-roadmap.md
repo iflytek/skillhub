@@ -9,7 +9,7 @@
 - 一期同步发布模型，暂不考虑异步发布
 - API Token 一期继承用户全部权限（非最小权限），后续版本细化
 - CLI 主认证切换为 OAuth Device Flow，Bearer Token 统一用于 CLI API 和兼容层
-- ClawHub CLI 兼容层基地址 `/api/compat/v1`，通过 `/.well-known/clawhub.json` 发现
+- ClawHub CLI 兼容层基地址 `/api/v1`，通过 `/.well-known/clawhub.json` 发现
 
 ## Phase 1：工程骨架 + 认证打通
 
@@ -75,7 +75,7 @@
 - 评分 + 收藏 + 计数器（原子更新）
 - OAuth Device Flow（device code、授权确认、轮询换取 Bearer Token）
 - CLI API（whoami、publish、resolve、check）
-- ClawHub CLI 协议兼容层（`/api/compat/v1` 端点：search、resolve、download、publish、whoami）
+- ClawHub CLI 协议兼容层（`/api/v1` 端点：search、resolve、download、publish、whoami）
 - 兼容层 canonical slug 映射（`--` 双连字符规则）
 - `/.well-known/clawhub.json` 发现端点
 - 协议适配器与兼容性测试（针对 ClawHub CLI 的真实请求/响应样例）

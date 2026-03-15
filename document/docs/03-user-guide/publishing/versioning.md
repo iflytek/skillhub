@@ -31,13 +31,13 @@ SkillHub 使用语义化版本（Semantic Versioning）：`MAJOR.MINOR.PATCH`
 ### 创建/移动标签
 
 ```bash
-skillhub tag set @team/my-skill beta 1.2.0
+clawhub tag set @team/my-skill beta 1.2.0
 ```
 
 ### 删除标签
 
 ```bash
-skillhub tag delete @team/my-skill beta
+clawhub tag delete @team/my-skill beta
 ```
 
 ## 版本撤回
