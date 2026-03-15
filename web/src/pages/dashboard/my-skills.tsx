@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/components/empty-state'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { useMySkills } from '@/shared/hooks/use-skill-queries'
 import { formatCompactCount } from '@/shared/lib/number-format'
 
@@ -47,15 +48,15 @@ export function MySkillsPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold font-heading mb-2">{t('mySkills.title')}</h1>
-          <p className="text-muted-foreground text-lg">{t('mySkills.subtitle')}</p>
-        </div>
-        <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
+      <DashboardPageHeader
+        title={t('mySkills.title')}
+        subtitle={t('mySkills.subtitle')}
+        actions={(
+          <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
           {t('mySkills.publishNew')}
-        </Button>
-      </div>
+          </Button>
+        )}
+      />
 
       {skills && skills.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">

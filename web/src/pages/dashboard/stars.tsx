@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { SkillCard } from '@/features/skill/skill-card'
 import { useMyStars } from '@/shared/hooks/use-skill-queries'
 import { Card } from '@/shared/ui/card'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 export function MyStarsPage() {
   const { t } = useTranslation()
@@ -21,10 +22,7 @@ export function MyStarsPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('stars.title')}</h1>
-        <p className="text-muted-foreground text-lg">{t('stars.subtitle')}</p>
-      </div>
+      <DashboardPageHeader title={t('stars.title')} subtitle={t('stars.subtitle')} />
 
       {!skills || skills.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">{t('stars.empty')}</Card>

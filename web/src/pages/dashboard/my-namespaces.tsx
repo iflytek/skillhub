@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { EmptyState } from '@/shared/components/empty-state'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { useMyNamespaces } from '@/shared/hooks/use-skill-queries'
 
 export function MyNamespacesPage() {
@@ -37,13 +38,11 @@ export function MyNamespacesPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold font-heading mb-2">{t('myNamespaces.title')}</h1>
-          <p className="text-muted-foreground text-lg">{t('myNamespaces.subtitle')}</p>
-        </div>
-        <Button disabled>{t('myNamespaces.create')}</Button>
-      </div>
+      <DashboardPageHeader
+        title={t('myNamespaces.title')}
+        subtitle={t('myNamespaces.subtitle')}
+        actions={<Button disabled>{t('myNamespaces.create')}</Button>}
+      />
 
       {namespaces && namespaces.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
