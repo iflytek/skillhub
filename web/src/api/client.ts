@@ -15,6 +15,7 @@ import type {
   PromotionTask,
   AuditLogItem,
   SkillSummary,
+  SkillReport,
   AuthMethod,
   OAuthProvider,
   User,
@@ -553,6 +554,49 @@ export const promotionApi = {
 
   async reject(id: number, comment?: string): Promise<void> {
     await fetchJson<void>(`${WEB_API_PREFIX}/promotions/${id}/reject`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+}
+
+export const reportApi = {
+  async submitSkillReport(namespace: string, slug: string, request: { reason: string; details?: string }): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/reports`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  async listSkillReports(params: { status?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('status', params.status ?? 'PENDING')
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: SkillReport[]; total: number; page: number; size: number }>(
+      `/api/v1/admin/skill-reports?${searchParams.toString()}`,
+    )
+  },
+
+  async resolveSkillReport(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skill-reports/${id}/resolve`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+
+  async dismissSkillReport(id: number, comment?: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/skill-reports/${id}/dismiss`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',

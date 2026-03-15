@@ -51,6 +51,7 @@ const NamespaceReviewsPage = createLazyRouteComponent(
   'NamespaceReviewsPage',
 )
 const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
+const ReportsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reports'), 'ReportsPage')
 const ReviewDetailPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/review-detail'),
   'ReviewDetailPage',
@@ -212,6 +213,19 @@ const dashboardReviewsRoute = createRoute({
   component: ReviewsPage,
 })
 
+const dashboardReportsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/reports',
+  beforeLoad: async (ctx) => {
+    const { user } = await requireAuth(ctx)
+    if (!user.platformRoles?.includes('SKILL_ADMIN') && !user.platformRoles?.includes('SUPER_ADMIN')) {
+      throw redirect({ to: '/dashboard' })
+    }
+    return { user }
+  },
+  component: ReportsPage,
+})
+
 const dashboardReviewDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reviews/$id',
@@ -308,6 +322,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,
   dashboardReviewsRoute,
+  dashboardReportsRoute,
   dashboardReviewDetailRoute,
   dashboardPromotionsRoute,
   dashboardStarsRoute,
