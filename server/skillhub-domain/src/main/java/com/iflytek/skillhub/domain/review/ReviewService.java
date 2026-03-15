@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
+import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class ReviewService {
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final SkillGovernanceService skillGovernanceService;
 
     public ReviewService(ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
@@ -41,7 +43,8 @@ public class ReviewService {
                          NamespaceRepository namespaceRepository,
                          ReviewPermissionChecker permissionChecker,
                          ApplicationEventPublisher eventPublisher,
-                         ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper,
+                         SkillGovernanceService skillGovernanceService) {
         this.reviewTaskRepository = reviewTaskRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
@@ -49,6 +52,7 @@ public class ReviewService {
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
+        this.skillGovernanceService = skillGovernanceService;
     }
 
     @Transactional
@@ -202,8 +206,9 @@ public class ReviewService {
 
         SkillVersion skillVersion = skillVersionRepository.findById(skillVersionId)
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", skillVersionId));
-        skillVersion.setStatus(SkillVersionStatus.DRAFT);
-        skillVersionRepository.save(skillVersion);
+        Skill skill = skillRepository.findById(skillVersion.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
+        skillGovernanceService.withdrawPendingVersion(skill, skillVersion, userId);
     }
 
     public boolean canReviewNamespace(ReviewTask task,

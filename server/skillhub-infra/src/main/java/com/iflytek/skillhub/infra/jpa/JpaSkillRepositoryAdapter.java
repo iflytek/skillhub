@@ -53,6 +53,11 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     }
 
     @Override
+    public void delete(Skill skill) {
+        jpaDelegate.delete(skill);
+    }
+
+    @Override
     public List<Skill> findByOwnerId(String ownerId) {
         return delegate.findByOwnerId(ownerId);
     }
