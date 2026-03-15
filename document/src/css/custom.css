@@ -1,0 +1,215 @@
+/**
+ * SkillHub 自定义样式 - 讯飞蓝色系
+ */
+
+:root {
+  /* 主色：讯飞蓝 */
+  --ifm-color-primary: #0052D9;
+  --ifm-color-primary-dark: #003DA6;
+  --ifm-color-primary-darker: #002E7A;
+  --ifm-color-primary-darkest: #001F52;
+  --ifm-color-primary-light: #4080FF;
+  --ifm-color-primary-lighter: #6699FF;
+  --ifm-color-primary-lightest: #99BBFF;
+
+  /* 辅助色 */
+  --ifm-color-secondary: #00B42A;
+  --ifm-color-warning: #FF7D00;
+  --ifm-color-danger: #F53F3F;
+
+  /* 中性色 */
+  --ifm-color-gray-0: #F7F8FA;
+  --ifm-color-gray-100: #F2F3F5;
+  --ifm-color-gray-200: #E5E6EB;
+  --ifm-color-gray-300: #C9CDD4;
+  --ifm-color-gray-400: #86909C;
+  --ifm-color-gray-500: #4E5969;
+  --ifm-color-gray-600: #272E3B;
+  --ifm-color-gray-700: #1D2129;
+  --ifm-color-gray-800: #0F1218;
+  --ifm-color-gray-900: #000000;
+
+  /* 背景色 */
+  --ifm-background-color: #FFFFFF;
+  --ifm-background-surface-color: #F7F8FA;
+
+  /* 文本色 */
+  --ifm-font-color-base: #1D2129;
+  --ifm-font-color-secondary: #4E5969;
+  --ifm-font-color-muted: #86909C;
+
+  /* 导航栏 */
+  --ifm-navbar-background-color: #FFFFFF;
+  --ifm-navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* 侧边栏 */
+  --ifm-sidebar-background-color: #F7F8FA;
+  --ifm-sidebar-border-color: #E5E6EB;
+}
+
+/* 深色模式 */
+[data-theme='dark'] {
+  --ifm-color-primary: #4080FF;
+  --ifm-color-primary-dark: #0052D9;
+  --ifm-color-primary-darker: #003DA6;
+  --ifm-color-primary-darkest: #002E7A;
+  --ifm-color-primary-light: #6699FF;
+  --ifm-color-primary-lighter: #99BBFF;
+  --ifm-color-primary-lightest: #CCDDFF;
+
+  --ifm-background-color: #1D2129;
+  --ifm-background-surface-color: #272E3B;
+
+  --ifm-font-color-base: #F7F8FA;
+  --ifm-font-color-secondary: #C9CDD4;
+  --ifm-font-color-muted: #86909C;
+
+  --ifm-navbar-background-color: #272E3B;
+  --ifm-sidebar-background-color: #272E3B;
+  --ifm-sidebar-border-color: #3E475A;
+}
+
+/* 企业价值卡片样式 */
+.enterprise-value-card {
+  border: 1px solid var(--ifm-color-gray-200);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s ease;
+  background: var(--ifm-background-color);
+}
+
+.enterprise-value-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 82, 217, 0.12);
+  border-color: var(--ifm-color-primary-light);
+}
+
+.enterprise-value-card__icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.enterprise-value-card__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--ifm-font-color-base);
+}
+
+.enterprise-value-card__description {
+  font-size: 14px;
+  color: var(--ifm-font-color-secondary);
+  line-height: 1.6;
+}
+
+/* Hero 区域样式 */
+.hero-section {
+  padding: 80px 0;
+  text-align: center;
+  background: linear-gradient(135deg, #F7F8FA 0%, #FFFFFF 100%);
+}
+
+[data-theme='dark'] .hero-section {
+  background: linear-gradient(135deg, #1D2129 0%, #272E3B 100%);
+}
+
+.hero-section__title {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--ifm-font-color-base);
+}
+
+.hero-section__tagline {
+  font-size: 20px;
+  color: var(--ifm-font-color-secondary);
+  margin-bottom: 32px;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-section__cta {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: var(--ifm-color-primary);
+  color: white;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  background: var(--ifm-color-primary-dark);
+  color: white;
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ifm-color-primary);
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--ifm-color-primary);
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: var(--ifm-color-primary);
+  color: white;
+  text-decoration: none;
+}
+
+/* 功能特性标签样式 */
+.feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.feature-tag {
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-gray-200);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--ifm-font-color-secondary);
+}
+
+/* 快速开始代码块样式 */
+.quick-start-code {
+  background: var(--ifm-color-gray-800);
+  color: var(--ifm-color-gray-0);
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  overflow-x: auto;
+  text-align: left;
+  max-width: 800px;
+  margin: 24px auto;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .hero-section__title {
+    font-size: 32px;
+  }
+
+  .hero-section__tagline {
+    font-size: 16px;
+  }
+}
