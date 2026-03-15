@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
@@ -200,6 +201,39 @@ class SkillQueryServiceTest {
 
         assertThrows(DomainBadRequestException.class, () ->
                 service.listFiles(namespaceSlug, skillSlug, version, "user-100", userNsRoles));
+    }
+
+    @Test
+    void testGetFileContent_ShouldTranslateMissingStorageObject() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String version = "1.0.0";
+        String filePath = "SKILL.md";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion skillVersion = new SkillVersion(1L, version, "user-100");
+        setId(skillVersion, 1L);
+        skillVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillFile file = new SkillFile(1L, filePath, 100L, "text/markdown", "hash1", "skills/1/1/SKILL.md");
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
+        when(skillFileRepository.findByVersionId(1L)).thenReturn(List.of(file));
+        when(objectStorageService.getObject(file.getStorageKey()))
+                .thenThrow(new UncheckedIOException(new java.io.FileNotFoundException(file.getStorageKey())));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                service.getFileContent(namespaceSlug, skillSlug, version, filePath, "user-100", userNsRoles));
+
+        assertEquals("error.skill.file.notFound", ex.messageCode());
+        assertArrayEquals(new Object[]{filePath}, ex.messageArgs());
     }
 
     @Test

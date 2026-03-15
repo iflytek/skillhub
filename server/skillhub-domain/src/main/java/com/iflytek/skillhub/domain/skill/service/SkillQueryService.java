@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -229,7 +230,7 @@ public class SkillQueryService {
 
         SkillFile file = findFile(skillVersion, filePath);
 
-        return objectStorageService.getObject(file.getStorageKey());
+        return readFileContent(file);
     }
 
     public InputStream getFileContentByTag(
@@ -243,7 +244,7 @@ public class SkillQueryService {
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
         SkillVersion skillVersion = resolveVersionEntity(skill, null, tagName, null);
         SkillFile file = findFile(skillVersion, filePath);
-        return objectStorageService.getObject(file.getStorageKey());
+        return readFileContent(file);
     }
 
     public Page<SkillVersion> listVersions(String namespaceSlug,
@@ -337,6 +338,14 @@ public class SkillQueryService {
                 .filter(f -> f.getFilePath().equals(filePath))
                 .findFirst()
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.file.notFound", filePath));
+    }
+
+    private InputStream readFileContent(SkillFile file) {
+        try {
+            return objectStorageService.getObject(file.getStorageKey());
+        } catch (UncheckedIOException e) {
+            throw new DomainBadRequestException("error.skill.file.notFound", file.getFilePath());
+        }
     }
 
     private SkillVersion resolveVersionEntity(Skill skill, String version, String tag, String hash) {
