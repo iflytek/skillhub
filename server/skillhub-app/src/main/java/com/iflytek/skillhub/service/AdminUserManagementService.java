@@ -1,7 +1,6 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
-import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
@@ -17,6 +16,7 @@ import com.iflytek.skillhub.dto.PageResponse;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -107,7 +107,7 @@ public class AdminUserManagementService {
             .map(binding -> binding.getRole().getCode())
             .sorted(Comparator.naturalOrder())
             .forEach(roles::add);
-        roles = new LinkedHashSet<>(PlatformRoleDefaults.withDefaultUserRole(roles));
+        roles = new LinkedHashSet<>(withDefaultUserRole(roles));
         return new AdminUserSummaryResponse(
             user.getId(),
             user.getDisplayName(),
@@ -123,6 +123,17 @@ public class AdminUserManagementService {
             return null;
         }
         return keyword.trim();
+    }
+
+    private Set<String> withDefaultUserRole(Set<String> roles) {
+        Set<String> resolvedRoles = new TreeSet<>();
+        if (roles != null) {
+            resolvedRoles.addAll(roles);
+        }
+        if (resolvedRoles.isEmpty()) {
+            resolvedRoles.add("USER");
+        }
+        return Set.copyOf(resolvedRoles);
     }
 
     private UserStatus parseStatus(String status) {
