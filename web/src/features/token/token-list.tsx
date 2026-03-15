@@ -240,7 +240,7 @@ export function TokenList() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopyToken(token.id)}
-                        title={createdTokens[token.id] ? t('token.copy') : t('token.copyUnavailableTitle')}
+                        aria-label={createdTokens[token.id] ? t('token.copy') : t('token.copyUnavailableTitle')}
                       >
                         <Copy className="mr-1 h-4 w-4" />
                         {t('token.copy')}
