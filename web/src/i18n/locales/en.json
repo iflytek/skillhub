@@ -69,7 +69,29 @@
     "footerLicense": "© 2026 SkillHub. Apache License 2.0.",
     "footerDocs": "Docs",
     "footerGithub": "GitHub",
-    "footerCommunity": "Community"
+    "footerCommunity": "Community",
+    "quickStart": {
+      "title": "Quick Start",
+      "subtitle": "快速开始",
+      "description": "Get started with SkillHub in just a few simple steps",
+      "tip": "💡 Tip: Visit the skill detail page for one-click install commands with environment variables",
+      "steps": {
+        "configureEnv": {
+          "title": "1. Configure Environment Variables",
+          "description": "Configure ClawHub CLI to connect to SkillHub"
+        },
+        "installSkills": {
+          "title": "2. Install Skills",
+          "description": "Search and install the skills you need",
+          "code": "# Search skills\nclawhub search <keyword>\n\n# Install skill\nclawhub install <skill>"
+        },
+        "publishSkills": {
+          "title": "3. Publish Skills",
+          "description": "Share your skills with the team",
+          "code": "# Publish skill\nclawhub publish\n\n# Or use web interface\n# Click \"Publish Skill\""
+        }
+      }
+    }
   },
   "home": {
     "subtitle": "Modern Skill Registry",
@@ -80,7 +102,29 @@
     "popularDescription": "Most popular skills in the community",
     "latestTitle": "Latest Releases",
     "latestDescription": "Freshly published skills",
-    "viewAll": "View All →"
+    "viewAll": "View All →",
+    "quickStart": {
+      "title": "Quick Start",
+      "subtitle": "快速开始",
+      "description": "Get started with SkillHub in just a few simple steps",
+      "tip": "💡 Tip: Visit the skill detail page for one-click install commands with environment variables",
+      "steps": {
+        "configureEnv": {
+          "title": "1. Configure Environment Variables",
+          "description": "Configure ClawHub CLI to connect to SkillHub"
+        },
+        "installSkills": {
+          "title": "2. Install Skills",
+          "description": "Search and install the skills you need",
+          "code": "# Search skills\nclawhub search <keyword>\n\n# Install skill\nclawhub install <skill>"
+        },
+        "publishSkills": {
+          "title": "3. Publish Skills",
+          "description": "Share your skills with the team",
+          "code": "# Publish skill\nclawhub publish\n\n# Or use web interface\n# Click \"Publish Skill\""
+        }
+      }
+    }
   },
   "search": {
     "title": "Search Skills",

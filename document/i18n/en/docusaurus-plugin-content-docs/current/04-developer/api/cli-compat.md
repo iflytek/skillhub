@@ -8,6 +8,40 @@ description: ClawHub CLI protocol compatibility layer
 
 SkillHub provides a ClawHub CLI protocol compatibility layer for seamless migration of existing tools.
 
+## Configuring ClawHub CLI
+
+To connect ClawHub CLI to your SkillHub instance, configure the following environment variables:
+
+### Environment Variable Configuration
+
+**Linux/macOS (bash/zsh):**
+```bash
+# ~/.bashrc or ~/.zshrc
+export CLAWHUB_SITE=https://skill.xfyun.cn
+export CLAWHUB_REGISTRY=https://skill.xfyun.cn
+```
+
+**Windows (PowerShell):**
+```powershell
+# Permanent setting (current user)
+[Environment]::SetEnvironmentVariable('CLAWHUB_SITE', 'https://skill.xfyun.cn', 'User')
+[Environment]::SetEnvironmentVariable('CLAWHUB_REGISTRY', 'https://skill.xfyun.cn', 'User')
+
+# Or temporary setting (current session)
+$env:CLAWHUB_SITE = 'https://skill.xfyun.cn'
+$env:CLAWHUB_REGISTRY = 'https://skill.xfyun.cn'
+```
+
+### Using CLI Flags (Single Command)
+
+```bash
+clawhub --site https://skill.xfyun.cn --registry https://skill.xfyun.cn install <skill>
+```
+
+### One-click Copy from Web UI
+
+The SkillHub skill detail page automatically displays install commands with the correct environment variables pre-configured. Simply copy and use.
+
 ## Well-known Discovery
 
 ```http

@@ -5,7 +5,145 @@ import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 import { Button } from '@/shared/ui/button'
-import { useEffect, useRef, useState } from 'react'
+import { Check, Copy, Terminal, Settings, PackageOpen } from 'lucide-react'
+import { useEffect, useRef, useState, useMemo } from 'react'
+
+function getAppBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return 'https://skill.xfyun.cn'
+  }
+  const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
+  if (runtimeConfig?.appBaseUrl) {
+    return runtimeConfig.appBaseUrl
+  }
+  return `${window.location.protocol}//${window.location.host}`
+}
+
+function CopyButton({ text }: { text: string }) {
+  const { t } = useTranslation()
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={handleCopy}
+      title={copied ? (t('copyButton.copied') || 'Copied') : (t('copyButton.copy') || 'Copy')}
+      aria-label={copied ? (t('copyButton.copied') || 'Copied') : (t('copyButton.copy') || 'Copy')}
+      className="h-8 w-8"
+    >
+      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+    </Button>
+  )
+}
+
+function CodeBlock({ code }: { code: string }) {
+  return (
+    <div className="relative group">
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-700 rounded-t-lg">
+        <span className="text-xs text-slate-400 font-mono">bash</span>
+        <CopyButton text={code} />
+      </div>
+      <pre className="p-4 bg-slate-950 rounded-b-lg overflow-x-auto">
+        <code className="font-mono text-sm text-slate-200">{code}</code>
+      </pre>
+    </div>
+  )
+}
+
+function QuickStartSection() {
+  const { t } = useTranslation()
+  const baseUrl = useMemo(() => getAppBaseUrl(), [])
+
+  const steps = [
+    {
+      icon: <Settings className="h-6 w-6" />,
+      title: t('landing.quickStart.steps.configureEnv.title'),
+      description: t('landing.quickStart.steps.configureEnv.description'),
+      code: `# Linux/macOS
+export CLAWHUB_SITE=${baseUrl}
+export CLAWHUB_REGISTRY=${baseUrl}
+
+# Windows PowerShell
+$env:CLAWHUB_SITE = '${baseUrl}'
+$env:CLAWHUB_REGISTRY = '${baseUrl}'`,
+    },
+    {
+      icon: <Terminal className="h-6 w-6" />,
+      title: t('landing.quickStart.steps.installSkills.title'),
+      description: t('landing.quickStart.steps.installSkills.description'),
+      code: t('landing.quickStart.steps.installSkills.code'),
+    },
+    {
+      icon: <PackageOpen className="h-6 w-6" />,
+      title: t('landing.quickStart.steps.publishSkills.title'),
+      description: t('landing.quickStart.steps.publishSkills.description'),
+      code: t('landing.quickStart.steps.publishSkills.code'),
+    },
+  ]
+
+  return (
+    <section className="py-20 space-y-8">
+      <div className="text-center space-y-4 animate-fade-up">
+        <h2 className="text-4xl md:text-5xl font-bold text-slate-100">
+          {t('landing.quickStart.title')}
+          <span className="block text-lg font-normal text-slate-400 mt-2">
+            {t('landing.quickStart.subtitle')}
+          </span>
+        </h2>
+        <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          {t('landing.quickStart.description')}
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-1 gap-6 max-w-4xl mx-auto">
+        {steps.map((step, idx) => (
+          <div
+            key={idx}
+            className="relative p-6 rounded-2xl bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-300 animate-fade-up"
+            style={{ animationDelay: (idx * 0.1) + 's' }}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 p-3 rounded-xl bg-cyan-500/10 text-cyan-400">
+                {step.icon}
+              </div>
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-100">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {step.description}
+                  </p>
+                </div>
+                <CodeBlock code={step.code} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-center pt-4 animate-fade-up">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+          <span className="text-sm text-yellow-300">
+            {t('landing.quickStart.tip')}
+          </span>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export function LandingPage() {
   const { t } = useTranslation()
@@ -277,6 +415,9 @@ export function LandingPage() {
             ))}
           </div>
         </div>
+
+        {/* Quick Start Section */}
+        <QuickStartSection />
 
       </div>
 
