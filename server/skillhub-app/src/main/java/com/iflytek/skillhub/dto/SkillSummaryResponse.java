@@ -13,6 +13,7 @@ public record SkillSummaryResponse(
         BigDecimal ratingAvg,
         Integer ratingCount,
         String latestVersion,
+        String latestVersionStatus,
         String namespace,
         LocalDateTime updatedAt
 ) {}

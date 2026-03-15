@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -165,4 +166,5 @@ class LocalAuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0));
     }
+
 }

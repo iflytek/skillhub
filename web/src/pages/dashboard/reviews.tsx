@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/shared/ui/table'
 import { useReviewList } from '@/features/review/use-review-list'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
@@ -94,10 +95,7 @@ export function ReviewsPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('reviews.title')}</h1>
-        <p className="text-muted-foreground text-lg">{t('reviews.subtitle')}</p>
-      </div>
+      <DashboardPageHeader title={t('reviews.title')} subtitle={t('reviews.subtitle')} />
 
       <Tabs defaultValue="PENDING">
         <TabsList>

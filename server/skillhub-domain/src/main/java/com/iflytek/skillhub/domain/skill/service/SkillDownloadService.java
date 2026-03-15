@@ -140,7 +140,7 @@ public class SkillDownloadService {
 
         ObjectMetadata metadata = objectStorageService.getMetadata(storageKey);
         String presignedUrl = objectStorageService.generatePresignedUrl(storageKey, Duration.ofMinutes(10));
-        InputStream content = presignedUrl == null ? objectStorageService.getObject(storageKey) : null;
+        InputStream content = objectStorageService.getObject(storageKey);
 
         // Publish download event
         eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));

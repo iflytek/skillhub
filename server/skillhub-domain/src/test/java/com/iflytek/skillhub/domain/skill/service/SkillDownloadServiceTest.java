@@ -88,6 +88,7 @@ class SkillDownloadServiceTest {
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
         when(objectStorageService.getObject(storageKey)).thenReturn(content);
+        when(objectStorageService.generatePresignedUrl(eq(storageKey), any())).thenReturn(null);
 
         // Act
         SkillDownloadService.DownloadResult result = service.downloadLatest(namespaceSlug, skillSlug, userId, userNsRoles);
@@ -96,6 +97,7 @@ class SkillDownloadServiceTest {
         assertNotNull(result);
         assertEquals("test-skill-1.0.0.zip", result.filename());
         assertEquals(1000L, result.contentLength());
+        assertNotNull(result.content());
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
@@ -129,6 +131,7 @@ class SkillDownloadServiceTest {
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
         when(objectStorageService.getObject(storageKey)).thenReturn(content);
+        when(objectStorageService.generatePresignedUrl(eq(storageKey), any())).thenReturn(null);
 
         // Act
         SkillDownloadService.DownloadResult result = service.downloadByTag(namespaceSlug, skillSlug, tagName, userId, userNsRoles);
@@ -136,7 +139,43 @@ class SkillDownloadServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals("test-skill-1.0.0.zip", result.filename());
+        assertNotNull(result.content());
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
+    }
+
+    @Test
+    void testDownloadVersion_WithPresignedUrlStillProvidesStreamFallback() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String versionStr = "1.0.0";
+        String userId = "user-100";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion version = new SkillVersion(1L, versionStr, userId);
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        String storageKey = "packages/1/10/bundle.zip";
+        InputStream content = new ByteArrayInputStream("test".getBytes());
+        ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, versionStr)).thenReturn(Optional.of(version));
+        when(objectStorageService.exists(storageKey)).thenReturn(true);
+        when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
+        when(objectStorageService.getObject(storageKey)).thenReturn(content);
+        when(objectStorageService.generatePresignedUrl(eq(storageKey), any())).thenReturn("http://minio.local/presigned");
+
+        SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
+
+        assertEquals("http://minio.local/presigned", result.presignedUrl());
+        assertNotNull(result.content());
     }
 
     @Test

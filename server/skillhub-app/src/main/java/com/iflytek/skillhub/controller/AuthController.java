@@ -11,6 +11,7 @@ import com.iflytek.skillhub.dto.SessionBootstrapRequest;
 import com.iflytek.skillhub.service.AuthMethodCatalog;
 import com.iflytek.skillhub.service.DirectAuthService;
 import com.iflytek.skillhub.service.SessionBootstrapService;
+import com.iflytek.skillhub.ratelimit.RateLimit;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
@@ -64,6 +65,7 @@ public class AuthController extends BaseApiController {
     }
 
     @PostMapping("/session/bootstrap")
+    @RateLimit(category = "auth-session-bootstrap", authenticated = 30, anonymous = 15, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> bootstrapSession(@Valid @RequestBody SessionBootstrapRequest request,
                                                         HttpServletRequest httpRequest) {
         return ok(
@@ -73,6 +75,7 @@ public class AuthController extends BaseApiController {
     }
 
     @PostMapping("/direct/login")
+    @RateLimit(category = "auth-direct-login", authenticated = 20, anonymous = 10, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> directLogin(@Valid @RequestBody DirectLoginRequest request,
                                                    HttpServletRequest httpRequest) {
         return ok(

@@ -7,6 +7,7 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.TokenCreateRequest;
 import com.iflytek.skillhub.dto.TokenCreateResponse;
+import com.iflytek.skillhub.dto.TokenExpirationUpdateRequest;
 import com.iflytek.skillhub.dto.TokenSummaryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +35,7 @@ public class TokenController extends BaseApiController {
                 ? "[\"skill:read\",\"skill:publish\"]"
                 : request.scopes().toString();
 
-        var result = apiTokenService.createToken(principal.userId(), request.name(), scopeJson);
+        var result = apiTokenService.createToken(principal.userId(), request.name(), scopeJson, request.expiresAt());
         return ok("response.success.created", new TokenCreateResponse(
                 result.rawToken(),
                 result.entity().getId(),
@@ -68,5 +69,21 @@ public class TokenController extends BaseApiController {
             @PathVariable Long id) {
         apiTokenService.revokeToken(id, principal.userId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/expiration")
+    public ApiResponse<TokenSummaryResponse> updateExpiration(
+            @AuthenticationPrincipal PlatformPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody TokenExpirationUpdateRequest request) {
+        var token = apiTokenService.updateExpiration(id, principal.userId(), request.expiresAt());
+        return ok("response.success.updated", new TokenSummaryResponse(
+                token.getId(),
+                token.getName(),
+                token.getTokenPrefix(),
+                token.getCreatedAt().toString(),
+                token.getExpiresAt() != null ? token.getExpiresAt().toString() : "",
+                token.getLastUsedAt() != null ? token.getLastUsedAt().toString() : ""
+        ));
     }
 }

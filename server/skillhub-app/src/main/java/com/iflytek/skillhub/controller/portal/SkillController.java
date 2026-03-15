@@ -23,8 +23,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.InputStream;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -276,13 +278,14 @@ public class SkillController extends BaseApiController {
     public ResponseEntity<InputStreamResource> downloadLatest(
             @PathVariable String namespace,
             @PathVariable String slug,
+            HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadLatest(
                 namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of());
 
-        return buildDownloadResponse(result);
+        return buildDownloadResponse(request, result);
     }
 
     @GetMapping("/{namespace}/{slug}/versions/{version}/download")
@@ -291,13 +294,14 @@ public class SkillController extends BaseApiController {
             @PathVariable String namespace,
             @PathVariable String slug,
             @PathVariable String version,
+            HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadVersion(
                 namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of());
 
-        return buildDownloadResponse(result);
+        return buildDownloadResponse(request, result);
     }
 
     @GetMapping("/{namespace}/{slug}/tags/{tagName}/download")
@@ -306,17 +310,18 @@ public class SkillController extends BaseApiController {
             @PathVariable String namespace,
             @PathVariable String slug,
             @PathVariable String tagName,
+            HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadByTag(
                 namespace, slug, tagName, userId, userNsRoles != null ? userNsRoles : Map.of());
 
-        return buildDownloadResponse(result);
+        return buildDownloadResponse(request, result);
     }
 
-    private ResponseEntity<InputStreamResource> buildDownloadResponse(SkillDownloadService.DownloadResult result) {
-        if (result.presignedUrl() != null) {
+    private ResponseEntity<InputStreamResource> buildDownloadResponse(HttpServletRequest request, SkillDownloadService.DownloadResult result) {
+        if (shouldRedirectToPresignedUrl(request, result.presignedUrl())) {
             return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, result.presignedUrl())
                 .build();
@@ -327,5 +332,27 @@ public class SkillController extends BaseApiController {
                 .contentType(MediaType.parseMediaType(result.contentType()))
                 .contentLength(result.contentLength())
                 .body(new InputStreamResource(result.content()));
+    }
+
+    private boolean shouldRedirectToPresignedUrl(HttpServletRequest request, String presignedUrl) {
+        if (presignedUrl == null || presignedUrl.isBlank()) {
+            return false;
+        }
+        if (!isSecureRequest(request)) {
+            return true;
+        }
+        try {
+            return "https".equalsIgnoreCase(URI.create(presignedUrl).getScheme());
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private boolean isSecureRequest(HttpServletRequest request) {
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        if (forwardedProto != null && !forwardedProto.isBlank()) {
+            return "https".equalsIgnoreCase(forwardedProto);
+        }
+        return request.isSecure();
     }
 }

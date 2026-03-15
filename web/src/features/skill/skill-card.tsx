@@ -6,6 +6,7 @@ import { useStar, useToggleStar } from '@/features/social/use-star'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
+import { formatCompactCount } from '@/shared/lib/number-format'
 import { Bookmark } from 'lucide-react'
 
 interface SkillCardProps {
@@ -83,7 +84,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
               </svg>
-              {skill.downloadCount}
+              {formatCompactCount(skill.downloadCount)}
             </span>
             <span
               className={`flex items-center gap-1 ${showStarredBadge ? 'font-semibold text-primary' : ''}`}

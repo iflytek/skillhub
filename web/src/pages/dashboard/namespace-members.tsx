@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { useNamespaceDetail, useNamespaceMembers } from '@/shared/hooks/use-skill-queries'
 
 export function NamespaceMembersPage() {
@@ -34,11 +35,14 @@ export function NamespaceMembersPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
+      <DashboardPageHeader
+        title={t('members.title')}
+        subtitle={namespace ? `@${namespace.slug}` : undefined}
+      />
       <NamespaceHeader namespace={namespace} />
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold font-heading">{t('members.title')}</h2>
+        <div className="flex items-center justify-end">
           <Button disabled>{t('members.addMember')}</Button>
         </div>
 

@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.social.SkillStar;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
@@ -78,6 +79,7 @@ class MySkillAppServiceTest {
         ReflectionTestUtils.setField(secondSkill, "updatedAt", LocalDateTime.of(2026, 3, 14, 11, 0));
 
         given(skillRepository.findByIdIn(List.of(1L, 2L))).willReturn(List.of(firstSkill, secondSkill));
+        given(skillVersionRepository.findBySkillIdIn(List.of(1L, 2L))).willReturn(List.of());
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(new Namespace("team-ai", "Team AI", "user-1")));
 
         var stars = service.listMyStars("user-1");
@@ -85,5 +87,29 @@ class MySkillAppServiceTest {
         assertThat(stars).hasSize(2);
         assertThat(stars.get(0).slug()).isEqualTo("second-skill");
         assertThat(stars.get(1).slug()).isEqualTo("first-skill");
+    }
+
+    @Test
+    void listMySkills_includes_pendingReviewVersionWhenNoPublishedPointerExists() {
+        Skill skill = new Skill(101L, "draft-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Draft Skill");
+        skill.setSummary("pending review");
+        ReflectionTestUtils.setField(skill, "id", 1L);
+        ReflectionTestUtils.setField(skill, "updatedAt", LocalDateTime.of(2026, 3, 15, 10, 0));
+
+        SkillVersion pendingVersion = new SkillVersion(1L, "1.0.0", "user-1");
+        pendingVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        ReflectionTestUtils.setField(pendingVersion, "id", 11L);
+        ReflectionTestUtils.setField(pendingVersion, "createdAt", LocalDateTime.of(2026, 3, 15, 9, 30));
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdIn(List.of(1L))).willReturn(List.of(pendingVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(new Namespace("team-ai", "Team AI", "user-1")));
+
+        var skills = service.listMySkills("user-1");
+
+        assertThat(skills).hasSize(1);
+        assertThat(skills.get(0).latestVersion()).isEqualTo("1.0.0");
+        assertThat(skills.get(0).latestVersionStatus()).isEqualTo("PENDING_REVIEW");
     }
 }

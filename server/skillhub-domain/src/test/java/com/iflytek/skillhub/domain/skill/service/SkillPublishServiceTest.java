@@ -336,6 +336,53 @@ class SkillPublishServiceTest {
         verify(namespaceMemberRepository, never()).findByNamespaceIdAndUserId(any(), any());
     }
 
+    @Test
+    void testPublishFromEntries_AllowsDescriptionLongerThanPreviousDatabaseLimit() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String longDescription = "x".repeat(513);
+        String skillMdContent = "---\nname: Too Long Skill\ndescription: ignored\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("Too Long Skill", longDescription, "1.0.0", "Body", Map.of());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+
+        Skill skill = new Skill(namespace.getId(), "too-long-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 10L);
+        when(skillRepository.findByNamespaceIdAndSlug(namespace.getId(), "too-long-skill")).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.0.0")).thenReturn(Optional.empty());
+        when(skillVersionRepository.save(any())).thenAnswer(invocation -> {
+            SkillVersion version = invocation.getArgument(0);
+            if (version.getId() == null) {
+                setId(version, 20L);
+            }
+            return version;
+        });
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug,
+                entries,
+                publisherId,
+                SkillVisibility.PUBLIC,
+                Set.of()
+        );
+
+        assertEquals(longDescription, skill.getSummary());
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
+        verify(prePublishValidator).validate(any());
+        verify(skillRepository).save(skill);
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);

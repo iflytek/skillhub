@@ -7,6 +7,7 @@ import { Select } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queries'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
@@ -29,6 +30,10 @@ export function PublishPage() {
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
+
+  const handleRemoveSelectedFile = () => {
+    setSelectedFile(null)
+  }
 
   const handlePublish = async () => {
     if (!selectedFile || !namespaceSlug) {
@@ -69,10 +74,7 @@ export function PublishPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('publish.title')}</h1>
-        <p className="text-muted-foreground text-lg">{t('publish.subtitle')}</p>
-      </div>
+      <DashboardPageHeader title={t('publish.title')} subtitle={t('publish.subtitle')} />
 
       <Card className="p-4 bg-blue-500/5 border-blue-500/20">
         <div className="flex items-start gap-3">
@@ -123,15 +125,29 @@ export function PublishPage() {
         <div className="space-y-3">
           <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           <UploadZone
+            key={selectedFile ? `${selectedFile.name}-${selectedFile.lastModified}` : 'empty'}
             onFileSelect={setSelectedFile}
             disabled={publishMutation.isPending}
           />
           {selectedFile && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
+              <div className="min-w-0 text-sm text-muted-foreground flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="truncate">
+                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveSelectedFile}
+                disabled={publishMutation.isPending}
+              >
+                {t('publish.removeSelectedFile')}
+              </Button>
             </div>
           )}
         </div>

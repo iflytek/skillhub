@@ -14,8 +14,11 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
-import { toast } from '@/shared/lib/toast'
+import { Select } from '@/shared/ui/select'
+import { centeredToastOptions, toast } from '@/shared/lib/toast'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
+import { resolveTokenExpiresAt, toLocalDateTimeInputValue, type TokenExpirationMode } from './token-expiration'
 
 interface CreateTokenDialogProps {
   children: React.ReactNode
@@ -25,11 +28,14 @@ interface CreateTokenDialogProps {
 const MAX_TOKEN_NAME_LENGTH = 64
 
 export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenDialogProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [createdToken, setCreatedToken] = useState<CreateTokenResponse | null>(null)
   const [nameError, setNameError] = useState<string | null>(null)
+  const [expirationMode, setExpirationMode] = useState<TokenExpirationMode>('never')
+  const [customExpiresAt, setCustomExpiresAt] = useState('')
+  const [expiresAtError, setExpiresAtError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const normalizedName = name.trim()
@@ -43,6 +49,9 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       setCreatedToken(data)
       setName('')
       setNameError(null)
+      setExpirationMode('never')
+      setCustomExpiresAt('')
+      setExpiresAtError(null)
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
     },
   })
@@ -61,8 +70,15 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       return
     }
 
+    const expiresAt = resolveTokenExpiresAt(expirationMode, customExpiresAt)
+    if (expirationMode === 'custom' && !expiresAt) {
+      setExpiresAtError(t('createToken.expiresAtRequired'))
+      return
+    }
+
     setNameError(null)
-    createMutation.mutate({ name: normalizedName })
+    setExpiresAtError(null)
+    createMutation.mutate({ name: normalizedName, expiresAt })
   }
 
   const handleClose = () => {
@@ -70,6 +86,9 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
     setCreatedToken(null)
     setName('')
     setNameError(null)
+    setExpirationMode('never')
+    setCustomExpiresAt('')
+    setExpiresAtError(null)
     createMutation.reset()
   }
 
@@ -78,24 +97,21 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
 
     try {
       await navigator.clipboard.writeText(createdToken.token)
-      toast.success(t('createToken.copySuccess'), undefined, {
-        position: 'top-center',
-        classNames: {
-          title: 'text-center font-semibold',
-          description: 'text-center',
-        },
-      })
+      toast.success(t('createToken.copySuccess'), undefined, centeredToastOptions())
     } catch (error) {
       console.error('Failed to copy token:', error)
-      toast.error(t('createToken.copyFailed'), undefined, {
-        position: 'top-center',
-        classNames: {
-          title: 'text-center font-semibold',
-          description: 'text-center',
-        },
-      })
+      toast.error(t('createToken.copyFailed'), undefined, centeredToastOptions())
     }
   }
+
+  const formatExpiresAt = (expiresAt?: string) => {
+    if (!expiresAt) {
+      return t('token.neverExpires')
+    }
+    return formatLocalDateTime(expiresAt, i18n.language)
+  }
+
+  const minDateTime = toLocalDateTimeInputValue(new Date())
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -103,9 +119,9 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       <DialogContent>
         {!createdToken ? (
           <>
-            <DialogHeader>
-              <DialogTitle>{t('createToken.title')}</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle className="text-center">{t('createToken.title')}</DialogTitle>
+              <DialogDescription className="text-center">
                 {t('createToken.description')}
               </DialogDescription>
             </DialogHeader>
@@ -139,11 +155,48 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
                   </span>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="token-expiration">{t('createToken.expirationLabel')}</Label>
+                <Select
+                  id="token-expiration"
+                  value={expirationMode}
+                  onChange={(e) => {
+                    setExpirationMode(e.target.value as TokenExpirationMode)
+                    setExpiresAtError(null)
+                  }}
+                >
+                  <option value="never">{t('createToken.expirationNever')}</option>
+                  <option value="7d">{t('createToken.expiration7d')}</option>
+                  <option value="30d">{t('createToken.expiration30d')}</option>
+                  <option value="90d">{t('createToken.expiration90d')}</option>
+                  <option value="custom">{t('createToken.expirationCustom')}</option>
+                </Select>
+                {expirationMode === 'custom' ? (
+                  <Input
+                    id="token-custom-expiration"
+                    type="datetime-local"
+                    value={customExpiresAt}
+                    min={minDateTime}
+                    onChange={(e) => {
+                      setCustomExpiresAt(e.target.value)
+                      if (expiresAtError) {
+                        setExpiresAtError(null)
+                      }
+                    }}
+                  />
+                ) : null}
+                {expiresAtError ? (
+                  <p className="text-xs text-red-600">{expiresAtError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{t('createToken.expirationHint')}</p>
+                )}
+              </div>
             </div>
             {createMutation.error ? (
               <p className="text-sm text-red-600">{createMutation.error.message}</p>
             ) : null}
-            <DialogFooter>
+            <DialogFooter className="sm:justify-center sm:space-x-3">
               <Button variant="outline" onClick={handleClose}>
                 {t('dialog.cancel')}
               </Button>
@@ -157,9 +210,9 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
           </>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle>{t('createToken.successTitle')}</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle className="text-center">{t('createToken.successTitle')}</DialogTitle>
+              <DialogDescription className="text-center">
                 {t('createToken.successDescription')}
               </DialogDescription>
             </DialogHeader>
@@ -174,8 +227,12 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
                 <Label>{t('createToken.nameDisplay')}</Label>
                 <div className="text-sm">{createdToken.name}</div>
               </div>
+              <div className="space-y-2">
+                <Label>{t('createToken.expiresAtDisplay')}</Label>
+                <div className="text-sm">{formatExpiresAt(createdToken.expiresAt)}</div>
+              </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="sm:justify-center sm:space-x-3">
               <Button onClick={handleCopyToken}>
                 {t('createToken.copyToken')}
               </Button>

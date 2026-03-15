@@ -129,7 +129,7 @@ const searchRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       q: (search.q as string) || '',
-      sort: (search.sort as string) || 'relevance',
+      sort: (search.sort as string) || 'newest',
       page: Number(search.page) || 0,
       starredOnly: search.starredOnly === true || search.starredOnly === 'true',
     }

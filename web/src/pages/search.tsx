@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Loader2 } from 'lucide-react'
 import type { SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
 import { SearchBar } from '@/features/search/search-bar'
@@ -44,7 +45,7 @@ export function SearchPage() {
   const { isAuthenticated } = useAuth()
 
   const q = searchParams.q || ''
-  const sort = searchParams.sort || 'relevance'
+  const sort = searchParams.sort || 'newest'
   const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
   const [queryInput, setQueryInput] = useState(q)
@@ -53,14 +54,18 @@ export function SearchPage() {
     setQueryInput(q)
   }, [q])
 
-  const { data, isLoading } = useSearchSkills({
+  const { data, isLoading, isFetching } = useSearchSkills({
     q,
     sort,
     page,
     size: PAGE_SIZE,
     starredOnly,
   })
-  const { data: starredSkills, isLoading: isLoadingStarred } = useMyStars(starredOnly && isAuthenticated)
+  const {
+    data: starredSkills,
+    isLoading: isLoadingStarred,
+    isFetching: isFetchingStarred,
+  } = useMyStars(starredOnly && isAuthenticated)
 
   useEffect(() => {
     const normalizedQuery = queryInput.trim()
@@ -131,13 +136,19 @@ export function SearchPage() {
       : 0
   const displayItems = starredOnly ? starredPageItems : (data?.items ?? [])
   const isPageLoading = starredOnly ? isLoadingStarred : isLoading
+  const isUpdatingResults = starredOnly ? isFetchingStarred && !isLoadingStarred : isFetching && !isLoading
   const resultCount = starredOnly ? filteredStarredSkills.length : (data?.total ?? 0)
 
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
-        <SearchBar value={queryInput} onChange={setQueryInput} onSearch={handleSearch} />
+        <SearchBar
+          value={queryInput}
+          isSearching={isUpdatingResults}
+          onChange={setQueryInput}
+          onSearch={handleSearch}
+        />
       </div>
 
       {/* Sort And Filters */}
@@ -176,6 +187,13 @@ export function SearchPage() {
             </div>
           )}
         </div>
+
+        {isUpdatingResults ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t('search.loadingMore')}</span>
+          </div>
+        ) : null}
 
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-muted-foreground">{t('search.filters.label')}</span>

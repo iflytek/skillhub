@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import org.springframework.data.domain.Page;
@@ -43,15 +44,7 @@ public class MySkillAppService {
                 .sorted(Comparator.comparing(Skill::getUpdatedAt).reversed())
                 .toList();
 
-        List<Long> latestVersionIds = skills.stream()
-                .map(Skill::getLatestVersionId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Long, SkillVersion> versionsById = latestVersionIds.isEmpty()
-                ? Map.of()
-                : skillVersionRepository.findByIdIn(latestVersionIds).stream()
-                        .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
+        Map<Long, SkillVersion> versionsBySkillId = loadLatestRelevantVersions(skills);
 
         List<Long> namespaceIds = skills.stream()
                 .map(Skill::getNamespaceId)
@@ -65,7 +58,7 @@ public class MySkillAppService {
                                 com.iflytek.skillhub.domain.namespace.Namespace::getSlug));
 
         return skills.stream()
-                .map(skill -> toSummaryResponse(skill, versionsById, namespaceSlugsById))
+                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespaceSlugsById))
                 .toList();
     }
 
@@ -81,15 +74,7 @@ public class MySkillAppService {
                 : skillRepository.findByIdIn(skillIds).stream()
                         .collect(Collectors.toMap(Skill::getId, Function.identity()));
 
-        List<Long> latestVersionIds = skillsById.values().stream()
-                .map(Skill::getLatestVersionId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Long, SkillVersion> versionsById = latestVersionIds.isEmpty()
-                ? Map.of()
-                : skillVersionRepository.findByIdIn(latestVersionIds).stream()
-                        .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
+        Map<Long, SkillVersion> versionsBySkillId = loadLatestRelevantVersions(skillsById.values());
 
         List<Long> namespaceIds = skillsById.values().stream()
                 .map(Skill::getNamespaceId)
@@ -106,7 +91,7 @@ public class MySkillAppService {
                 .sorted(Comparator.comparing(com.iflytek.skillhub.domain.social.SkillStar::getCreatedAt).reversed())
                 .map(star -> skillsById.get(star.getSkillId()))
                 .filter(java.util.Objects::nonNull)
-                .map(skill -> toSummaryResponse(skill, versionsById, namespaceSlugsById))
+                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespaceSlugsById))
                 .toList();
     }
 
@@ -130,13 +115,9 @@ public class MySkillAppService {
 
     private SkillSummaryResponse toSummaryResponse(
             Skill skill,
-            Map<Long, SkillVersion> versionsById,
+            Map<Long, SkillVersion> versionsBySkillId,
             Map<Long, String> namespaceSlugsById) {
-        String latestVersion = skill.getLatestVersionId() == null
-                ? null
-                : Optional.ofNullable(versionsById.get(skill.getLatestVersionId()))
-                        .map(SkillVersion::getVersion)
-                        .orElse(null);
+        SkillVersion latestVersion = versionsBySkillId.get(skill.getId());
 
         return new SkillSummaryResponse(
                 skill.getId(),
@@ -147,9 +128,52 @@ public class MySkillAppService {
                 skill.getStarCount(),
                 skill.getRatingAvg(),
                 skill.getRatingCount(),
-                latestVersion,
+                Optional.ofNullable(latestVersion).map(SkillVersion::getVersion).orElse(null),
+                Optional.ofNullable(latestVersion).map(SkillVersion::getStatus).map(Enum::name).orElse(null),
                 namespaceSlugsById.get(skill.getNamespaceId()),
                 skill.getUpdatedAt()
         );
+    }
+
+    private Map<Long, SkillVersion> loadLatestRelevantVersions(java.util.Collection<Skill> skills) {
+        if (skills.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> explicitLatestVersionIds = skills.stream()
+                .map(Skill::getLatestVersionId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, SkillVersion> versionsById = explicitLatestVersionIds.isEmpty()
+                ? Map.of()
+                : skillVersionRepository.findByIdIn(explicitLatestVersionIds).stream()
+                        .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
+
+        List<Long> skillIdsNeedingFallback = skills.stream()
+                .filter(skill -> skill.getLatestVersionId() == null || !versionsById.containsKey(skill.getLatestVersionId()))
+                .map(Skill::getId)
+                .distinct()
+                .toList();
+        Map<Long, SkillVersion> fallbackBySkillId = skillIdsNeedingFallback.isEmpty()
+                ? Map.of()
+                : skillVersionRepository.findBySkillIdIn(skillIdsNeedingFallback).stream()
+                        .filter(version -> version.getStatus() != SkillVersionStatus.YANKED)
+                        .collect(Collectors.toMap(
+                                SkillVersion::getSkillId,
+                                Function.identity(),
+                                (left, right) -> left.getCreatedAt().isAfter(right.getCreatedAt()) ? left : right
+                        ));
+
+        Map<Long, SkillVersion> resolvedVersions = new java.util.HashMap<>();
+        for (Skill skill : skills) {
+            SkillVersion resolvedVersion = skill.getLatestVersionId() != null
+                    ? versionsById.get(skill.getLatestVersionId())
+                    : fallbackBySkillId.get(skill.getId());
+            if (resolvedVersion != null) {
+                resolvedVersions.put(skill.getId(), resolvedVersion);
+            }
+        }
+        return resolvedVersions;
     }
 }

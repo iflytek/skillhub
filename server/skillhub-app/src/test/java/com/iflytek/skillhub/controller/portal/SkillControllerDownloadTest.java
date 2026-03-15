@@ -47,7 +47,7 @@ class SkillControllerDownloadTest {
     void downloadVersion_redirectsToPresignedUrlWhenAvailable() throws Exception {
         given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", null, java.util.Map.of()))
             .willReturn(new SkillDownloadService.DownloadResult(
-                null,
+                new ByteArrayInputStream("zip".getBytes()),
                 "demo-skill-1.0.0.zip",
                 128L,
                 "application/zip",
@@ -59,6 +59,25 @@ class SkillControllerDownloadTest {
                 .with(csrf()))
             .andExpect(status().isFound())
             .andExpect(header().string("Location", "https://download.example/presigned"));
+    }
+
+    @Test
+    void downloadVersion_streamsWhenPresignedUrlIsInsecureForHttpsRequest() throws Exception {
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", null, java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-1.0.0.zip",
+                3L,
+                "application/zip",
+                "http://download.example/presigned"
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .header("X-Forwarded-Proto", "https")
+                .with(user("test-user"))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-1.0.0.zip\""));
     }
 
     @Test
