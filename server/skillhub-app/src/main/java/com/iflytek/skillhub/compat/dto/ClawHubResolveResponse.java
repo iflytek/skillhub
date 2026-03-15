@@ -1,7 +1,10 @@
 package com.iflytek.skillhub.compat.dto;
 
 public record ClawHubResolveResponse(
-    String canonicalSlug,
-    String version,
-    String downloadUrl
-) {}
+    VersionInfo match,
+    VersionInfo latestVersion
+) {
+    public record VersionInfo(
+        String version
+    ) {}
+}

@@ -10,6 +10,6 @@ public class WellKnownController {
 
     @GetMapping("/.well-known/clawhub.json")
     public Map<String, String> clawhubConfig() {
-        return Map.of("apiBase", "/api/compat/v1");
+        return Map.of("apiBase", "/api/v1");
     }
 }

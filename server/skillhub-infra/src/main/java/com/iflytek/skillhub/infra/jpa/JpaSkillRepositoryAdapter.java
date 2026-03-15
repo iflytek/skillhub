@@ -61,4 +61,14 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     public void incrementDownloadCount(Long skillId) {
         delegate.incrementDownloadCount(skillId);
     }
+
+    @Override
+    public List<Skill> findBySlug(String slug) {
+        return delegate.findBySlug(slug);
+    }
+
+    @Override
+    public Optional<Skill> findByNamespaceSlugAndSlug(String namespaceSlug, String slug) {
+        return delegate.findByNamespaceSlugAndSlug(namespaceSlug, slug);
+    }
 }
