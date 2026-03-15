@@ -336,6 +336,36 @@ class SkillPublishServiceTest {
         verify(namespaceMemberRepository, never()).findByNamespaceIdAndUserId(any(), any());
     }
 
+    @Test
+    void testPublishFromEntries_RejectsDescriptionLongerThanDatabaseLimit() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String longDescription = "x".repeat(513);
+        String skillMdContent = "---\nname: Too Long Skill\ndescription: ignored\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("Too Long Skill", longDescription, "1.0.0", "Body", Map.of());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of())
+        );
+
+        assertEquals("error.skill.publish.summary.tooLong", exception.messageCode());
+        assertArrayEquals(new Object[]{512}, exception.messageArgs());
+        verify(prePublishValidator, never()).validate(any());
+        verify(skillRepository, never()).save(any());
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);
