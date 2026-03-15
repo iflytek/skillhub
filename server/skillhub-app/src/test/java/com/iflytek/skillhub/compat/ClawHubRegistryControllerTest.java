@@ -147,7 +147,8 @@ class ClawHubRegistryControllerTest {
                         0,
                         false,
                         "1.2.0",
-                        1L
+                        1L,
+                        false
                 ));
 
         Skill skill = new Skill(1L, "global-skill", "owner-1", SkillVisibility.PUBLIC);

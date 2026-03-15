@@ -215,4 +215,45 @@ class PostgresFullTextQueryServiceTest {
         verify(nativeQuery).setParameter("offset", 0);
         assertThat(result.skillIds()).containsExactly(1L, 2L);
     }
+
+    @Test
+    void deepSemanticPagesShouldFallBackToDatabasePagination() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        SkillSearchDocumentJpaRepository repository = mock(SkillSearchDocumentJpaRepository.class);
+        HashingSearchEmbeddingService embeddingService = new HashingSearchEmbeddingService();
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of(201L, 202L));
+        when(countQuery.getSingleResult()).thenReturn(1000L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(
+                entityManager,
+                repository,
+                embeddingService,
+                true,
+                0.6D,
+                8,
+                120
+        );
+
+        var result = service.search(new SearchQuery(
+                "self improvement",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                20,
+                10
+        ));
+
+        verify(nativeQuery).setParameter("limit", 10);
+        verify(nativeQuery).setParameter("offset", 200);
+        verify(repository, never()).findBySkillIdIn(org.mockito.ArgumentMatchers.anyList());
+        assertThat(result.skillIds()).containsExactly(201L, 202L);
+        assertThat(result.total()).isEqualTo(1000L);
+    }
 }

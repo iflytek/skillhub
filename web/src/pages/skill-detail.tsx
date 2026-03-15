@@ -314,7 +314,7 @@ export function SkillDetailPage() {
                           <span className="text-sm text-muted-foreground">
                             {formatLocalDateTime(version.publishedAt, i18n.language)}
                           </span>
-                          {canDeleteVersion(version.status) && (
+                          {skill.canManageLifecycle && canDeleteVersion(version.status) && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -418,7 +418,7 @@ export function SkillDetailPage() {
           {t('skillDetail.download')}
         </Button>
 
-        {user && (
+        {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</div>
             <p className="text-sm text-muted-foreground">

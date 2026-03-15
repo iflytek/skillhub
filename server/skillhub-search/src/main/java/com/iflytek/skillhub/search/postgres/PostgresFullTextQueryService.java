@@ -68,6 +68,9 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 && searchDocumentRepository != null
                 && searchEmbeddingService != null;
         int requestedOffset = query.page() * query.size();
+        if (useSemanticRerank && requestedOffset + query.size() > maxCandidates) {
+            useSemanticRerank = false;
+        }
         int sqlLimit = query.size();
         int sqlOffset = requestedOffset;
         if (useSemanticRerank) {
