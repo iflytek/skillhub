@@ -9,10 +9,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class PostgresFullTextQueryService implements SearchQueryService {
-    private static final int SHORT_KEYWORD_LENGTH = 2;
+    private static final Pattern QUERY_TERM_SPLITTER = Pattern.compile("[^\\p{L}\\p{N}_]+");
+    private static final int MAX_QUERY_TERMS = 8;
 
     private final EntityManager entityManager;
 
@@ -23,8 +25,8 @@ public class PostgresFullTextQueryService implements SearchQueryService {
     @Override
     public SearchResult search(SearchQuery query) {
         String normalizedKeyword = normalizeKeyword(query.keyword());
-        boolean hasKeyword = normalizedKeyword != null;
-        boolean useShortKeywordFallback = hasKeyword && normalizedKeyword.length() <= SHORT_KEYWORD_LENGTH;
+        String tsQuery = buildPrefixTsQuery(normalizedKeyword);
+        boolean hasKeyword = tsQuery != null;
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
@@ -53,16 +55,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         // Full-text search
         if (hasKeyword) {
-            if (useShortKeywordFallback) {
-                sql.append("AND (");
-                sql.append("LOWER(title) LIKE LOWER(:keywordLike) ");
-                sql.append("OR LOWER(summary) LIKE LOWER(:keywordLike) ");
-                sql.append("OR LOWER(keywords) LIKE LOWER(:keywordLike) ");
-                sql.append("OR LOWER(search_text) LIKE LOWER(:keywordLike)");
-                sql.append(") ");
-            } else {
-                sql.append("AND search_vector @@ plainto_tsquery('simple', :keyword) ");
-            }
+            sql.append("AND search_vector @@ to_tsquery('simple', :tsQuery) ");
         }
 
         // Sorting
@@ -72,8 +65,8 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("ORDER BY (SELECT rating_avg FROM skill WHERE id = skill_id) DESC ");
         } else if ("newest".equals(query.sortBy())) {
             sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC ");
-        } else if ("relevance".equals(query.sortBy()) && hasKeyword && !useShortKeywordFallback) {
-            sql.append("ORDER BY ts_rank(search_vector, plainto_tsquery('simple', :keyword)) DESC ");
+        } else if ("relevance".equals(query.sortBy()) && hasKeyword) {
+            sql.append("ORDER BY ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
         } else {
             sql.append("ORDER BY updated_at DESC ");
         }
@@ -94,11 +87,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         if (hasKeyword) {
-            if (useShortKeywordFallback) {
-                nativeQuery.setParameter("keywordLike", "%" + normalizedKeyword + "%");
-            } else {
-                nativeQuery.setParameter("keyword", normalizedKeyword);
-            }
+            nativeQuery.setParameter("tsQuery", tsQuery);
         }
 
         nativeQuery.setParameter("limit", query.size());
@@ -133,11 +122,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         if (hasKeyword) {
-            if (useShortKeywordFallback) {
-                countQuery.setParameter("keywordLike", "%" + normalizedKeyword + "%");
-            } else {
-                countQuery.setParameter("keyword", normalizedKeyword);
-            }
+            countQuery.setParameter("tsQuery", tsQuery);
         }
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
@@ -150,5 +135,27 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             return null;
         }
         return keyword.trim();
+    }
+
+    private String buildPrefixTsQuery(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+
+        List<String> terms = QUERY_TERM_SPLITTER.splitAsStream(keyword.toLowerCase())
+                .map(String::trim)
+                .filter(term -> !term.isBlank())
+                .distinct()
+                .limit(MAX_QUERY_TERMS)
+                .toList();
+
+        if (terms.isEmpty()) {
+            return null;
+        }
+
+        return terms.stream()
+                .map(term -> term + ":*")
+                .reduce((left, right) -> left + " & " + right)
+                .orElse(null);
     }
 }

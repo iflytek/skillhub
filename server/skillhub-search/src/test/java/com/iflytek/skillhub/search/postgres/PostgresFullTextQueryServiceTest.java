@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 class PostgresFullTextQueryServiceTest {
 
     @Test
-    void shortKeywordsShouldUseLikeFallback() {
+    void shortKeywordsShouldUsePrefixTsQuery() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
         Query countQuery = mock(Query.class);
@@ -42,14 +42,12 @@ class PostgresFullTextQueryServiceTest {
                 20
         ));
 
-        verify(nativeQuery).setParameter("keywordLike", "%ai%");
-        verify(countQuery).setParameter("keywordLike", "%ai%");
-        verify(nativeQuery, never()).setParameter("keyword", "ai");
-        verify(countQuery, never()).setParameter("keyword", "ai");
+        verify(nativeQuery).setParameter("tsQuery", "ai:*");
+        verify(countQuery).setParameter("tsQuery", "ai:*");
     }
 
     @Test
-    void longerKeywordsShouldKeepFullTextSearch() {
+    void longerKeywordsShouldUsePrefixTsQuery() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
         Query countQuery = mock(Query.class);
@@ -72,14 +70,12 @@ class PostgresFullTextQueryServiceTest {
                 20
         ));
 
-        verify(nativeQuery).setParameter("keyword", "agent");
-        verify(countQuery).setParameter("keyword", "agent");
-        verify(nativeQuery, never()).setParameter("keywordLike", "%agent%");
-        verify(countQuery, never()).setParameter("keywordLike", "%agent%");
+        verify(nativeQuery).setParameter("tsQuery", "agent:*");
+        verify(countQuery).setParameter("tsQuery", "agent:*");
     }
 
     @Test
-    void shortKeywordSqlShouldAvoidTsRankOrdering() {
+    void prefixSearchSqlShouldUseVectorRanking() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
         Query countQuery = mock(Query.class);
@@ -94,7 +90,7 @@ class PostgresFullTextQueryServiceTest {
         PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
 
         service.search(new SearchQuery(
-                "go",
+                "sel",
                 null,
                 new SearchVisibilityScope(null, Set.of(), Set.of()),
                 "relevance",
@@ -104,7 +100,35 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("LOWER(title) LIKE LOWER(:keywordLike)");
-        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("ts_rank");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("search_vector @@ to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery))");
+    }
+
+    @Test
+    void multipleTermsShouldBuildPrefixQueryForEachLexeme() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "self improving",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20
+        ));
+
+        verify(nativeQuery).setParameter("tsQuery", "self:* & improving:*");
+        verify(countQuery).setParameter("tsQuery", "self:* & improving:*");
     }
 }
