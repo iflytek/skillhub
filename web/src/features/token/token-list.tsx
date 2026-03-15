@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Copy, Pencil } from 'lucide-react'
 import { tokenApi } from '@/api/client'
 import { Button } from '@/shared/ui/button'
 import {
@@ -14,9 +15,14 @@ import {
 import { CreateTokenDialog } from './create-token-dialog'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Pagination } from '@/shared/components/pagination'
-import { toast } from '@/shared/lib/toast'
+import { centeredToastOptions, toast } from '@/shared/lib/toast'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Label } from '@/shared/ui/label'
+import { Select } from '@/shared/ui/select'
+import { Input } from '@/shared/ui/input'
 import type { ApiToken } from '@/api/types'
+import { resolveTokenExpiresAt, toLocalDateTimeInputValue, type TokenExpirationMode } from './token-expiration'
 
 const PAGE_SIZE = 10
 type TokenPage = { items: ApiToken[]; total: number; page: number; size: number }
@@ -25,8 +31,20 @@ export function TokenList() {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
+  const [createdTokens, setCreatedTokens] = useState<Record<number, string>>({})
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; tokenId?: number; name?: string }>({
     open: false,
+  })
+  const [expirationDialog, setExpirationDialog] = useState<{
+    open: boolean
+    tokenId?: number
+    tokenName?: string
+    mode: TokenExpirationMode
+    customExpiresAt: string
+  }>({
+    open: false,
+    mode: 'never',
+    customExpiresAt: '',
   })
 
   const { data: tokenPage, isLoading, isError, error } = useQuery<TokenPage>({
@@ -34,6 +52,19 @@ export function TokenList() {
     queryFn: () => tokenApi.getTokens({ page, size: PAGE_SIZE }),
     meta: {
       skipGlobalErrorHandler: true,
+    },
+  })
+
+  const updateExpirationMutation = useMutation({
+    mutationFn: ({ tokenId, expiresAt }: { tokenId: number; expiresAt?: string }) =>
+      tokenApi.updateTokenExpiration(tokenId, expiresAt),
+    onSuccess: () => {
+      setExpirationDialog({ open: false, mode: 'never', customExpiresAt: '' })
+      queryClient.invalidateQueries({ queryKey: ['tokens'] })
+      toast.success(t('token.updateExpirationSuccess'))
+    },
+    onError: () => {
+      toast.error(t('token.updateExpirationFailed'))
     },
   })
 
@@ -82,10 +113,52 @@ export function TokenList() {
     setDeleteDialog({ open: true, tokenId, name })
   }
 
+  const handleCopyToken = async (tokenId: number) => {
+    const rawToken = createdTokens[tokenId]
+    if (!rawToken) {
+      toast.info(t('token.copyUnavailableTitle'), t('token.copyUnavailableDescription'), centeredToastOptions())
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(rawToken)
+      toast.success(t('token.copySuccess'), undefined, centeredToastOptions())
+    } catch {
+      toast.error(t('token.copyFailed'), undefined, centeredToastOptions())
+    }
+  }
+
+  const handleEditExpiration = (token: ApiToken) => {
+    setExpirationDialog({
+      open: true,
+      tokenId: token.id,
+      tokenName: token.name,
+      mode: token.expiresAt ? 'custom' : 'never',
+      customExpiresAt: token.expiresAt ? token.expiresAt.slice(0, 16) : '',
+    })
+  }
+
   const confirmDelete = async () => {
     if (deleteDialog.tokenId) {
       await deleteMutation.mutateAsync(deleteDialog.tokenId)
     }
+  }
+
+  const confirmExpirationUpdate = async () => {
+    if (!expirationDialog.tokenId) {
+      return
+    }
+
+    const expiresAt = resolveTokenExpiresAt(expirationDialog.mode, expirationDialog.customExpiresAt)
+    if (expirationDialog.mode === 'custom' && !expiresAt) {
+      toast.error(t('createToken.expiresAtRequired'))
+      return
+    }
+
+    await updateExpirationMutation.mutateAsync({
+      tokenId: expirationDialog.tokenId,
+      expiresAt,
+    })
   }
 
   const formatDate = (dateString?: string | null, emptyLabel = '-') => {
@@ -120,10 +193,16 @@ export function TokenList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t('token.title')}</h2>
-        <CreateTokenDialog existingNames={tokens.map((token) => token.name)}>
+        <CreateTokenDialog
+          existingNames={tokens.map((token) => token.name)}
+          onCreated={(token) => {
+            setCreatedTokens((current) => ({ ...current, [token.id]: token.token }))
+          }}
+        >
           <Button>{t('token.createNew')}</Button>
         </CreateTokenDialog>
       </div>
+      <p className="text-sm text-muted-foreground">{t('token.copyHint')}</p>
 
       {!tokenPage || tokenPage.total === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
@@ -156,14 +235,34 @@ export function TokenList() {
                   <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
                   <TableCell>{formatDate(token.expiresAt, t('token.neverExpires'))}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(token.id, token.name)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      {t('token.delete')}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyToken(token.id)}
+                        title={createdTokens[token.id] ? t('token.copy') : t('token.copyUnavailableTitle')}
+                      >
+                        <Copy className="mr-1 h-4 w-4" />
+                        {t('token.copy')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditExpiration(token)}
+                        disabled={updateExpirationMutation.isPending}
+                      >
+                        <Pencil className="mr-1 h-4 w-4" />
+                        {t('token.editExpiration')}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(token.id, token.name)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {t('token.delete')}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -185,6 +284,59 @@ export function TokenList() {
         variant="destructive"
         onConfirm={confirmDelete}
       />
+
+      <Dialog open={expirationDialog.open} onOpenChange={(open) => setExpirationDialog((current) => ({ ...current, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('token.editExpirationTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('token.editExpirationDescription', { name: expirationDialog.tokenName })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="token-expiration-mode">{t('createToken.expirationLabel')}</Label>
+              <Select
+                id="token-expiration-mode"
+                value={expirationDialog.mode}
+                onChange={(event) => setExpirationDialog((current) => ({
+                  ...current,
+                  mode: event.target.value as TokenExpirationMode,
+                }))}
+              >
+                <option value="never">{t('createToken.expirationNever')}</option>
+                <option value="7d">{t('createToken.expiration7d')}</option>
+                <option value="30d">{t('createToken.expiration30d')}</option>
+                <option value="90d">{t('createToken.expiration90d')}</option>
+                <option value="custom">{t('createToken.expirationCustom')}</option>
+              </Select>
+            </div>
+            {expirationDialog.mode === 'custom' ? (
+              <div className="space-y-2">
+                <Label htmlFor="token-expiration-custom">{t('createToken.expirationCustom')}</Label>
+                <Input
+                  id="token-expiration-custom"
+                  type="datetime-local"
+                  value={expirationDialog.customExpiresAt}
+                  min={toLocalDateTimeInputValue(new Date())}
+                  onChange={(event) => setExpirationDialog((current) => ({
+                    ...current,
+                    customExpiresAt: event.target.value,
+                  }))}
+                />
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExpirationDialog({ open: false, mode: 'never', customExpiresAt: '' })}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button onClick={confirmExpirationUpdate} disabled={updateExpirationMutation.isPending}>
+              {updateExpirationMutation.isPending ? t('token.updatingExpiration') : t('token.saveExpiration')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

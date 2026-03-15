@@ -3,6 +3,7 @@ package com.iflytek.skillhub.auth.token;
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -75,6 +76,15 @@ public class ApiTokenService {
                 t.setRevokedAt(LocalDateTime.now());
                 tokenRepo.save(t);
             });
+    }
+
+    @Transactional
+    public ApiToken updateExpiration(Long tokenId, String userId, String expiresAt) {
+        ApiToken token = tokenRepo.findById(tokenId)
+                .filter(existing -> existing.getUserId().equals(userId) && existing.getRevokedAt() == null)
+                .orElseThrow(() -> new DomainNotFoundException("error.token.notFound", tokenId));
+        token.setExpiresAt(parseExpiresAt(expiresAt));
+        return tokenRepo.save(token);
     }
 
     public List<ApiToken> listActiveTokens(String userId) {

@@ -30,6 +30,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -154,5 +155,33 @@ class TokenControllerTest {
                 .andExpect(jsonPath("$.data.total").value(12))
                 .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.size").value(10));
+    }
+
+    @Test
+    void updateExpiration_returnsUpdatedToken() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "tester", "tester@example.com", "", "github", Set.of("USER")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        var token = new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]");
+        org.springframework.test.util.ReflectionTestUtils.setField(token, "id", 7L);
+        org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.LocalDateTime.of(2026, 3, 14, 10, 0));
+        token.setExpiresAt(java.time.LocalDateTime.of(2026, 5, 1, 9, 30));
+
+        given(apiTokenService.updateExpiration(7L, "user-42", "2026-05-01T09:30"))
+                .willReturn(token);
+
+        mockMvc.perform(put("/api/v1/tokens/7/expiration")
+                        .with(authentication(auth))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"expiresAt":"2026-05-01T09:30"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(7))
+                .andExpect(jsonPath("$.data.expiresAt").value("2026-05-01T09:30"));
     }
 }

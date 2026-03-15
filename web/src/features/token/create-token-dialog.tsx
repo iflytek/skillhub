@@ -18,22 +18,23 @@ import { Select } from '@/shared/ui/select'
 import { centeredToastOptions, toast } from '@/shared/lib/toast'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
+import { resolveTokenExpiresAt, toLocalDateTimeInputValue, type TokenExpirationMode } from './token-expiration'
 
 interface CreateTokenDialogProps {
   children: React.ReactNode
   existingNames?: string[]
+  onCreated?: (token: CreateTokenResponse) => void
 }
 
 const MAX_TOKEN_NAME_LENGTH = 64
-type ExpirationMode = 'never' | '7d' | '30d' | '90d' | 'custom'
 
-export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenDialogProps) {
+export function CreateTokenDialog({ children, existingNames = [], onCreated }: CreateTokenDialogProps) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [createdToken, setCreatedToken] = useState<CreateTokenResponse | null>(null)
   const [nameError, setNameError] = useState<string | null>(null)
-  const [expirationMode, setExpirationMode] = useState<ExpirationMode>('never')
+  const [expirationMode, setExpirationMode] = useState<TokenExpirationMode>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
   const [expiresAtError, setExpiresAtError] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -53,6 +54,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       setCustomExpiresAt('')
       setExpiresAtError(null)
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
+      onCreated?.(data)
     },
   })
 
@@ -70,7 +72,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       return
     }
 
-    const expiresAt = resolveExpiresAt()
+    const expiresAt = resolveTokenExpiresAt(expirationMode, customExpiresAt)
     if (expirationMode === 'custom' && !expiresAt) {
       setExpiresAtError(t('createToken.expiresAtRequired'))
       return
@@ -102,27 +104,6 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       console.error('Failed to copy token:', error)
       toast.error(t('createToken.copyFailed'), undefined, centeredToastOptions())
     }
-  }
-
-  const resolveExpiresAt = () => {
-    if (expirationMode === 'never') {
-      return undefined
-    }
-
-    if (expirationMode === 'custom') {
-      return customExpiresAt || undefined
-    }
-
-    const next = new Date()
-    if (expirationMode === '7d') {
-      next.setDate(next.getDate() + 7)
-    } else if (expirationMode === '30d') {
-      next.setDate(next.getDate() + 30)
-    } else if (expirationMode === '90d') {
-      next.setDate(next.getDate() + 90)
-    }
-    next.setSeconds(0, 0)
-    return toLocalDateTimeInputValue(next)
   }
 
   const formatExpiresAt = (expiresAt?: string) => {
@@ -183,7 +164,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
                   id="token-expiration"
                   value={expirationMode}
                   onChange={(e) => {
-                    setExpirationMode(e.target.value as ExpirationMode)
+                    setExpirationMode(e.target.value as TokenExpirationMode)
                     setExpiresAtError(null)
                   }}
                 >
@@ -266,13 +247,4 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       </DialogContent>
     </Dialog>
   )
-}
-
-function toLocalDateTimeInputValue(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
 }

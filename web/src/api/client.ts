@@ -454,6 +454,16 @@ export const tokenApi = {
     }
   },
 
+  async updateTokenExpiration(tokenId: number, expiresAt?: string): Promise<ApiToken> {
+    return fetchJson<ApiToken>(`/api/v1/tokens/${tokenId}/expiration`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ expiresAt: expiresAt ?? '' }),
+    })
+  },
+
   async deleteToken(tokenId: number): Promise<void> {
     const { error, response } = await client.DELETE('/api/v1/tokens/{id}', {
       params: {
