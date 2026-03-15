@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.local;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -26,6 +27,10 @@ public class LocalAuthService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
+    // Precomputed BCrypt hash for "skillhub-local-auth-dummy". Used to blur timing
+    // differences between existing and non-existing usernames during login.
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu";
 
     private final LocalCredentialRepository credentialRepository;
     private final UserAccountRepository userAccountRepository;
@@ -91,7 +96,12 @@ public class LocalAuthService {
     public PlatformPrincipal login(String username, String password) {
         String normalizedUsername = normalizeUsername(username);
         LocalCredential credential = credentialRepository.findByUsernameIgnoreCase(normalizedUsername)
-            .orElseThrow(() -> invalidCredentials());
+            .orElse(null);
+
+        if (credential == null) {
+            passwordEncoder.matches(password == null ? "" : password, DUMMY_PASSWORD_HASH);
+            throw invalidCredentials();
+        }
 
         UserAccount user = userAccountRepository.findById(credential.getUserId())
             .orElseThrow(() -> new IllegalStateException("User not found for local credential"));
@@ -134,6 +144,7 @@ public class LocalAuthService {
         Set<String> roles = userRoleBindingRepository.findByUserId(user.getId()).stream()
             .map(binding -> binding.getRole().getCode())
             .collect(Collectors.toSet());
+        roles = PlatformRoleDefaults.withDefaultUserRole(roles);
         return new PlatformPrincipal(
             user.getId(),
             user.getDisplayName(),

@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -60,6 +61,26 @@ class ApiTokenServiceTest {
                 .isInstanceOf(DomainBadRequestException.class);
 
         verify(tokenRepo).existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase("user-1", "My Token");
+        verify(tokenRepo, never()).save(any());
+    }
+
+    @Test
+    void createToken_setsExpirationWhenProvided() {
+        when(tokenRepo.existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase("user-1", "CLI"))
+                .thenReturn(false);
+        when(tokenRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.createToken("user-1", "CLI", "[]", "2099-03-20T10:15:00");
+
+        assertThat(result.entity().getExpiresAt()).isEqualTo(java.time.LocalDateTime.of(2099, 3, 20, 10, 15));
+    }
+
+    @Test
+    void createToken_rejectsPastExpiration() {
+        assertThatThrownBy(() -> service.createToken("user-1", "CLI", "[]", "2000-01-01T00:00:00"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessageContaining("validation.token.expiresAt.future");
+
         verify(tokenRepo, never()).save(any());
     }
 }

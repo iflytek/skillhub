@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.mock;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -10,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Component
 @Profile("local")
+@ConditionalOnProperty(name = "skillhub.auth.mock.enabled", havingValue = "true")
 @Order(-100)
 public class MockAuthFilter extends OncePerRequestFilter {
 
@@ -48,6 +51,7 @@ public class MockAuthFilter extends OncePerRequestFilter {
                     Set<String> roles = roleBindingRepo.findByUserId(userId).stream()
                         .map(rb -> rb.getRole().getCode())
                         .collect(Collectors.toSet());
+                    roles = PlatformRoleDefaults.withDefaultUserRole(roles);
                     var principal = new PlatformPrincipal(
                         user.getId(), user.getDisplayName(), user.getEmail(),
                         user.getAvatarUrl(), "mock", roles

@@ -11,6 +11,7 @@ import com.iflytek.skillhub.dto.LocalLoginRequest;
 import com.iflytek.skillhub.dto.LocalRegisterRequest;
 import com.iflytek.skillhub.exception.UnauthorizedException;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
+import com.iflytek.skillhub.ratelimit.RateLimit;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -38,6 +39,7 @@ public class LocalAuthController extends BaseApiController {
     }
 
     @PostMapping("/register")
+    @RateLimit(category = "auth-register", authenticated = 10, anonymous = 5, windowSeconds = 300)
     public ApiResponse<AuthMeResponse> register(@Valid @RequestBody LocalRegisterRequest request,
                                                 HttpServletRequest httpRequest) {
         PlatformPrincipal principal = localAuthService.register(request.username(), request.password(), request.email());
@@ -47,6 +49,7 @@ public class LocalAuthController extends BaseApiController {
     }
 
     @PostMapping("/login")
+    @RateLimit(category = "auth-local-login", authenticated = 20, anonymous = 10, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> login(@Valid @RequestBody LocalLoginRequest request,
                                              HttpServletRequest httpRequest) {
         PlatformPrincipal principal;
@@ -62,6 +65,7 @@ public class LocalAuthController extends BaseApiController {
     }
 
     @PostMapping("/change-password")
+    @RateLimit(category = "auth-change-password", authenticated = 5, anonymous = 20, windowSeconds = 300)
     public ApiResponse<Void> changePassword(@AuthenticationPrincipal PlatformPrincipal principal,
                                             @Valid @RequestBody ChangePasswordRequest request) {
         if (principal == null) {

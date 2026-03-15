@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { TokenList } from '@/features/token/token-list'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 export function TokensPage() {
   const { t } = useTranslation()
   return (
     <div className="space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('tokens.pageTitle')}</h1>
-        <p className="text-muted-foreground text-lg">{t('tokens.pageSubtitle')}</p>
-      </div>
+      <DashboardPageHeader
+        title={t('tokens.pageTitle')}
+        subtitle={t('tokens.pageSubtitle')}
+      />
       <TokenList />
     </div>
   )

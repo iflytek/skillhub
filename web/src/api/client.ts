@@ -13,7 +13,6 @@ import type {
   MergeVerifyRequest,
   ReviewTask,
   PromotionTask,
-  AdminUser,
   AuditLogItem,
   SkillSummary,
   AuthMethod,
@@ -455,6 +454,16 @@ export const tokenApi = {
     }
   },
 
+  async updateTokenExpiration(tokenId: number, expiresAt?: string): Promise<ApiToken> {
+    return fetchJson<ApiToken>(`/api/v1/tokens/${tokenId}/expiration`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ expiresAt: expiresAt ?? '' }),
+    })
+  },
+
   async deleteToken(tokenId: number): Promise<void> {
     const { error, response } = await client.DELETE('/api/v1/tokens/{id}', {
       params: {
@@ -564,9 +573,34 @@ export const adminApi = {
     if (params.status) searchParams.set('status', params.status)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: AdminUser[]; total: number; page: number; size: number }>(
+    const response = await fetchJson<{
+      items: Array<{
+        id: string
+        username: string
+        email?: string
+        platformRoles?: string[]
+        status: string
+        createdAt: string
+      }>
+      total: number
+      page: number
+      size: number
+    }>(
       `/api/v1/admin/users?${searchParams.toString()}`,
     )
+    return {
+      ...response,
+      items: response.items
+        .filter((user) => user.id && user.username && user.status && user.createdAt)
+        .map((user) => ({
+          userId: user.id,
+          username: user.username,
+          email: user.email,
+          platformRoles: user.platformRoles ?? [],
+          status: user.status,
+          createdAt: user.createdAt,
+        })),
+    }
   },
 
   async updateUserRole(userId: string, role: string): Promise<void> {

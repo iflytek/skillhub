@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -130,12 +131,29 @@ public class AdminUserAppService {
         if (userIds.isEmpty()) {
             return Map.of();
         }
-        return userRoleBindingRepository.findByUserIdIn(userIds).stream()
+        Map<String, List<String>> explicitRolesByUserId = userRoleBindingRepository.findByUserIdIn(userIds).stream()
                 .collect(Collectors.groupingBy(
                         UserRoleBinding::getUserId,
                         Collectors.mapping(binding -> binding.getRole().getCode(),
                                 Collectors.collectingAndThen(Collectors.toList(),
                                         roles -> roles.stream().sorted().toList()))));
+        return userIds.stream().collect(Collectors.toMap(
+                userId -> userId,
+                userId -> withDefaultUserRole(explicitRolesByUserId.getOrDefault(userId, List.of())).stream()
+                        .sorted()
+                        .toList()
+        ));
+    }
+
+    private Set<String> withDefaultUserRole(List<String> roles) {
+        Set<String> resolvedRoles = new TreeSet<>();
+        if (roles != null) {
+            resolvedRoles.addAll(roles);
+        }
+        if (resolvedRoles.isEmpty()) {
+            resolvedRoles.add("USER");
+        }
+        return Set.copyOf(resolvedRoles);
     }
 
     private UserAccount loadUser(String userId) {

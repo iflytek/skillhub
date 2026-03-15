@@ -4,6 +4,7 @@ import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useNamespaceDetail } from '@/shared/hooks/use-skill-queries'
 import { useReviewList } from '@/features/review/use-review-list'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
   const { t } = useTranslation()
@@ -56,12 +57,10 @@ export function NamespaceReviewsPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
-      <div>
-        <h1 className="text-4xl font-bold font-heading mb-2">{t('nsReviews.title')}</h1>
-        <p className="text-muted-foreground text-lg">
-          {namespace ? t('nsReviews.reviewsFor', { name: namespace.displayName }) : t('nsReviews.loadingNamespace')}
-        </p>
-      </div>
+      <DashboardPageHeader
+        title={t('nsReviews.title')}
+        subtitle={namespace ? t('nsReviews.reviewsFor', { name: namespace.displayName }) : t('nsReviews.loadingNamespace')}
+      />
       <ReviewListSection namespaceId={namespace?.id} />
     </div>
   )

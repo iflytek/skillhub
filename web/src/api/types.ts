@@ -35,6 +35,7 @@ export type ApiToken = Omit<components['schemas']['TokenSummaryResponse'], 'id' 
 export type CreateTokenRequest = Omit<components['schemas']['TokenCreateRequest'], 'name'> & {
   name: string
   scopes?: string[]
+  expiresAt?: string
 }
 
 export type CreateTokenResponse = Omit<components['schemas']['TokenCreateResponse'], 'token' | 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
@@ -111,6 +112,7 @@ export interface SkillSummary {
   ratingAvg?: number
   ratingCount: number
   latestVersion?: string
+  latestVersionStatus?: string
   namespace: string
   updatedAt: string
 }

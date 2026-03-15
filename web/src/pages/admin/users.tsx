@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { KeyboardEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -26,7 +26,15 @@ import type { AdminUser } from '@/features/admin/use-admin-users'
 
 export function AdminUsersPage() {
   const { t, i18n } = useTranslation()
+  const roleOptions = [
+    { value: 'USER', label: t('adminUsers.roleUser') },
+    { value: 'SKILL_ADMIN', label: t('adminUsers.roleReviewer') },
+    { value: 'USER_ADMIN', label: t('adminUsers.roleUserAdmin') },
+    { value: 'AUDITOR', label: t('adminUsers.roleAuditor') },
+    { value: 'SUPER_ADMIN', label: t('adminUsers.roleSuperAdmin') },
+  ]
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [page, setPage] = useState(0)
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
@@ -51,9 +59,28 @@ export function AdminUsersPage() {
     return new Date(dateString).toLocaleString(i18n.language)
   }
 
+  useEffect(() => {
+    setPage(0)
+  }, [search, statusFilter])
+
+  const applySearch = () => {
+    setSearch(searchInput.trim())
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearch('')
+  }
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      applySearch()
+    }
+  }
+
   const handleChangeRole = (user: AdminUser) => {
     setSelectedUser(user)
-    setNewRole(user.platformRoles[0] || '')
+    setNewRole(user.platformRoles[0] || 'USER')
     setRoleDialogOpen(true)
   }
 
@@ -64,7 +91,7 @@ export function AdminUsersPage() {
   }
 
   const confirmRoleChange = async () => {
-    if (!selectedUser) return
+    if (!selectedUser || !newRole || newRole === (selectedUser.platformRoles[0] || 'USER')) return
     try {
       await updateRoleMutation.mutateAsync({ userId: selectedUser.userId, role: newRole })
       setRoleDialogOpen(false)
@@ -97,19 +124,36 @@ export function AdminUsersPage() {
       </div>
 
       <Card className="p-5">
-        <div className="flex gap-4">
-          <Input
-            placeholder={t('adminUsers.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1"
-          />
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">{t('adminUsers.filterAll')}</option>
-            <option value="ACTIVE">{t('adminUsers.filterActive')}</option>
-            <option value="PENDING">{t('adminUsers.filterPending')}</option>
-            <option value="DISABLED">{t('adminUsers.filterDisabled')}</option>
-          </Select>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_220px]">
+          <div className="space-y-2">
+            <Label htmlFor="admin-user-search">{t('adminUsers.searchLabel')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="admin-user-search"
+                placeholder={t('adminUsers.searchPlaceholder')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="flex-1"
+              />
+              <Button type="button" onClick={applySearch}>
+                {t('adminUsers.searchAction')}
+              </Button>
+              <Button type="button" variant="outline" onClick={clearSearch} disabled={!searchInput && !search}>
+                {t('adminUsers.clearSearch')}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('adminUsers.searchHint')}</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="admin-user-status">{t('adminUsers.filterLabel')}</Label>
+            <Select id="admin-user-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">{t('adminUsers.filterAll')}</option>
+              <option value="ACTIVE">{t('adminUsers.filterActive')}</option>
+              <option value="PENDING">{t('adminUsers.filterPending')}</option>
+              <option value="DISABLED">{t('adminUsers.filterDisabled')}</option>
+            </Select>
+          </div>
         </div>
       </Card>
 
@@ -238,12 +282,11 @@ export function AdminUsersPage() {
             <div className="space-y-2">
               <Label htmlFor="role">{t('adminUsers.roleLabel')}</Label>
               <Select id="role" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                <option value="">{t('adminUsers.selectRole')}</option>
-                <option value="USER">{t('adminUsers.roleUser')}</option>
-                <option value="REVIEWER">{t('adminUsers.roleReviewer')}</option>
-                <option value="USER_ADMIN">{t('adminUsers.roleUserAdmin')}</option>
-                <option value="AUDITOR">{t('adminUsers.roleAuditor')}</option>
-                <option value="SUPER_ADMIN">{t('adminUsers.roleSuperAdmin')}</option>
+                {roleOptions.map((roleOption) => (
+                  <option key={roleOption.value} value={roleOption.value}>
+                    {roleOption.label}
+                  </option>
+                ))}
               </Select>
             </div>
           </div>
@@ -251,7 +294,15 @@ export function AdminUsersPage() {
             <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
+            <Button
+              onClick={confirmRoleChange}
+              disabled={
+                updateRoleMutation.isPending
+                || !selectedUser
+                || !newRole
+                || newRole === (selectedUser.platformRoles[0] || 'USER')
+              }
+            >
               {t('dialog.confirm')}
             </Button>
           </DialogFooter>

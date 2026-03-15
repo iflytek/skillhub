@@ -80,6 +80,7 @@ class ClawHubRegistryControllerTest {
                                         BigDecimal.ZERO,
                                         0,
                                         "1.2.0",
+                                        "PUBLISHED",
                                         "global",
                                         updatedAt
                                 ),
@@ -93,6 +94,7 @@ class ClawHubRegistryControllerTest {
                                         BigDecimal.ONE,
                                         2,
                                         "2.0.0",
+                                        "PUBLISHED",
                                         "team-ai",
                                         updatedAt.plusHours(1)
                                 )
