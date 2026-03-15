@@ -23,6 +23,11 @@ spring:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID:local-placeholder}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
 
+skillhub:
+  auth:
+    mock:
+      enabled: true
+
 logging:
   level:
     com.iflytek.skillhub: DEBUG
