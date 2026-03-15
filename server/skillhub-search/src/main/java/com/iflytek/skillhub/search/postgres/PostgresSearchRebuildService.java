@@ -88,6 +88,7 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 skill.getSummary(),
                 "",
                 searchText,
+                null,
                 skill.getVisibility().name(),
                 skill.getStatus().name()
         ));
