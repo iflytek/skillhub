@@ -447,6 +447,17 @@ export const skillLifecycleApi = {
       headers: await ensureCsrfHeaders(),
     })
   },
+
+  async rereleaseVersion(namespace: string, slug: string, version: string, targetVersion: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}/rerelease`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ targetVersion }),
+    })
+  },
 }
 
 export const tokenApi = {

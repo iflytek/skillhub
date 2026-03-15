@@ -25,13 +25,36 @@ import { toast } from '@/shared/lib/toast'
 import {
   useSkillDetail,
   useSkillVersions,
+  useSkillVersionDetail,
   useSkillFiles,
   useSkillReadme,
   useArchiveSkill,
   useDeleteSkillVersion,
+  useRereleaseSkillVersion,
   useUnarchiveSkill,
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
+
+function suggestNextVersion(version: string) {
+  const semverMatch = version.match(/^(\d+)\.(\d+)\.(\d+)$/)
+  if (semverMatch) {
+    const [, major, minor, patch] = semverMatch
+    return `${major}.${minor}.${Number.parseInt(patch, 10) + 1}`
+  }
+  return `${version}.1`
+}
+
+function parseMetadataJson(parsed?: string) {
+  if (!parsed) {
+    return {}
+  }
+  try {
+    const value = JSON.parse(parsed)
+    return typeof value === 'object' && value !== null ? value : {}
+  } catch {
+    return {}
+  }
+}
 
 export function SkillDetailPage() {
   const { t, i18n } = useTranslation()
@@ -45,6 +68,10 @@ export function SkillDetailPage() {
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
+  const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
+  const [targetVersionInput, setTargetVersionInput] = useState('')
+  const [diffSourceVersion, setDiffSourceVersion] = useState<string | null>(null)
+  const [diffCompareVersion, setDiffCompareVersion] = useState<string | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
@@ -53,6 +80,12 @@ export function SkillDetailPage() {
   const latestVersion = versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, latestVersion?.version)
   const { data: readme } = useSkillReadme(namespace, slug, latestVersion?.version)
+  const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
+  const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
+  const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
+  const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined)
+  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined)
+  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
 
   const refreshSkill = () => {
@@ -79,6 +112,7 @@ export function SkillDetailPage() {
   const unarchiveMutation = useUnarchiveSkill()
   const deleteVersionMutation = useDeleteSkillVersion()
   const withdrawReviewMutation = useWithdrawSkillReview()
+  const rereleaseVersionMutation = useRereleaseSkillVersion()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
   const handleDownload = () => {
@@ -154,6 +188,43 @@ export function SkillDetailPage() {
 
   const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED'
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
+  const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
+
+  const metadataDiffEntries = (() => {
+    const source = parseMetadataJson(diffSourceDetail?.parsedMetadataJson)
+    const compare = parseMetadataJson(diffCompareDetail?.parsedMetadataJson)
+    const keys = Array.from(new Set([...Object.keys(source), ...Object.keys(compare)])).sort()
+    return keys
+      .filter((key) => JSON.stringify(source[key]) !== JSON.stringify(compare[key]))
+      .map((key) => ({
+        key,
+        source: source[key],
+        target: compare[key],
+      }))
+  })()
+
+  const fileDiffSummary = (() => {
+    const sourceMap = new Map((diffSourceFiles ?? []).map((file) => [file.filePath, file.sha256]))
+    const compareMap = new Map((diffCompareFiles ?? []).map((file) => [file.filePath, file.sha256]))
+    const added: string[] = []
+    const removed: string[] = []
+    const changed: string[] = []
+
+    for (const [path, hash] of sourceMap.entries()) {
+      if (!compareMap.has(path)) {
+        removed.push(path)
+      } else if (compareMap.get(path) !== hash) {
+        changed.push(path)
+      }
+    }
+    for (const path of compareMap.keys()) {
+      if (!sourceMap.has(path)) {
+        added.push(path)
+      }
+    }
+
+    return { added, removed, changed }
+  })()
 
   const handleArchive = async () => {
     try {
@@ -216,6 +287,45 @@ export function SkillDetailPage() {
       toast.error(t('skillDetail.withdrawReviewErrorTitle'), error instanceof Error ? error.message : '')
       throw error
     }
+  }
+
+  const handleOpenRerelease = (version: string) => {
+    setRereleaseTarget(version)
+    setTargetVersionInput(suggestNextVersion(version))
+  }
+
+  const handleRereleaseVersion = async () => {
+    if (!rereleaseTarget || !targetVersionInput.trim()) {
+      return
+    }
+    try {
+      await rereleaseVersionMutation.mutateAsync({
+        namespace,
+        slug,
+        version: rereleaseTarget,
+        targetVersion: targetVersionInput.trim(),
+      })
+      toast.success(
+        t('skillDetail.rereleaseSuccessTitle'),
+        t('skillDetail.rereleaseSuccessDescription', { source: rereleaseTarget, target: targetVersionInput.trim() }),
+      )
+      setRereleaseTarget(null)
+      setTargetVersionInput('')
+    } catch (error) {
+      toast.error(t('skillDetail.rereleaseErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
+  const handleOpenDiff = (version: string) => {
+    const publishedVersions = versions?.filter((item) => item.status === 'PUBLISHED') ?? []
+    const compareVersion = publishedVersions.find((item) => item.version !== version)?.version ?? null
+    if (!compareVersion) {
+      toast.error(t('skillDetail.versionCompareUnavailableTitle'), t('skillDetail.versionCompareUnavailableDescription'))
+      return
+    }
+    setDiffSourceVersion(version)
+    setDiffCompareVersion(compareVersion)
   }
 
   if (isLoadingSkill) {
@@ -331,11 +441,34 @@ export function SkillDetailPage() {
                               {version.status}
                             </span>
                           )}
+                          {skill.latestVersion === version.version && (
+                            <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs text-primary-foreground">
+                              {t('skillDetail.currentVersion')}
+                            </span>
+                          )}
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-muted-foreground">
                             {formatLocalDateTime(version.publishedAt, i18n.language)}
                           </span>
+                          {skill.canManageLifecycle && canRereleaseVersion(version.status) && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenDiff(version.version)}
+                              >
+                                {t('skillDetail.compareVersions')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenRerelease(version.version)}
+                              >
+                                {t('skillDetail.rereleaseVersion')}
+                              </Button>
+                            </>
+                          )}
                           {skill.canManageLifecycle && canDeleteVersion(version.status) && (
                             <Button
                               size="sm"
@@ -567,6 +700,132 @@ export function SkillDetailPage() {
         confirmText={t('skillDetail.withdrawReview')}
         onConfirm={handleWithdrawVersion}
       />
+
+      <Dialog
+        open={!!rereleaseTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRereleaseTarget(null)
+            setTargetVersionInput('')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('skillDetail.rereleaseDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {rereleaseTarget ? t('skillDetail.rereleaseDialogDescription', { version: rereleaseTarget }) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">{t('skillDetail.rereleaseSourceVersion')}</div>
+              <div className="rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 font-mono text-sm text-foreground">
+                {rereleaseTarget ? `v${rereleaseTarget}` : '—'}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">{t('skillDetail.rereleaseTargetVersion')}</div>
+              <Input value={targetVersionInput} onChange={(event) => setTargetVersionInput(event.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRereleaseTarget(null)}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button onClick={handleRereleaseVersion} disabled={rereleaseVersionMutation.isPending || !targetVersionInput.trim()}>
+              {rereleaseVersionMutation.isPending ? t('skillDetail.processing') : t('skillDetail.rereleaseVersion')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!diffSourceVersion && !!diffCompareVersion}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDiffSourceVersion(null)
+            setDiffCompareVersion(null)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('skillDetail.compareDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {diffSourceVersion && diffCompareVersion
+                ? t('skillDetail.compareDialogDescription', { source: diffSourceVersion, target: diffCompareVersion })
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="rounded-lg border border-border/60 p-3">
+                <div className="text-muted-foreground">{t('skillDetail.compareSourceLabel')}</div>
+                <div className="mt-1 font-mono text-foreground">v{diffSourceVersion}</div>
+              </div>
+              <div className="rounded-lg border border-border/60 p-3">
+                <div className="text-muted-foreground">{t('skillDetail.compareTargetLabel')}</div>
+                <div className="mt-1 font-mono text-foreground">v{diffCompareVersion}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-foreground">{t('skillDetail.metadataChanges')}</div>
+              {metadataDiffEntries.length > 0 ? (
+                <div className="space-y-2">
+                  {metadataDiffEntries.map((entry) => (
+                    <div key={entry.key} className="rounded-lg border border-border/60 p-3 text-sm">
+                      <div className="font-medium text-foreground">{entry.key}</div>
+                      <div className="mt-1 text-muted-foreground">
+                        {String(entry.source ?? '—')} → {String(entry.target ?? '—')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">{t('skillDetail.noMetadataChanges')}</div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-foreground">{t('skillDetail.readmeChange')}</div>
+              <div className="text-sm text-muted-foreground">
+                {diffSourceReadme !== diffCompareReadme ? t('skillDetail.readmeChanged') : t('skillDetail.readmeUnchanged')}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-foreground">{t('skillDetail.fileChanges')}</div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded-lg border border-border/60 p-3">
+                  <div className="text-muted-foreground">{t('skillDetail.filesAdded')}</div>
+                  <div className="mt-1 font-semibold text-foreground">{fileDiffSummary.added.length}</div>
+                </div>
+                <div className="rounded-lg border border-border/60 p-3">
+                  <div className="text-muted-foreground">{t('skillDetail.filesRemoved')}</div>
+                  <div className="mt-1 font-semibold text-foreground">{fileDiffSummary.removed.length}</div>
+                </div>
+                <div className="rounded-lg border border-border/60 p-3">
+                  <div className="text-muted-foreground">{t('skillDetail.filesChanged')}</div>
+                  <div className="mt-1 font-semibold text-foreground">{fileDiffSummary.changed.length}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDiffSourceVersion(null)
+                setDiffCompareVersion(null)
+              }}
+            >
+              {t('dialog.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
