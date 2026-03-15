@@ -10,6 +10,7 @@ public interface SkillRepository {
     Optional<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
     List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status);
     Skill save(Skill skill);
+    void delete(Skill skill);
     List<Skill> findByOwnerId(String ownerId);
     void incrementDownloadCount(Long skillId);
     List<Skill> findBySlug(String slug);

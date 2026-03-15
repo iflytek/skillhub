@@ -143,6 +143,39 @@ public class SkillGovernanceService {
     }
 
     @Transactional
+    public boolean withdrawPendingVersion(Skill skill,
+                                          SkillVersion version,
+                                          String actorUserId) {
+        if (version.getStatus() != SkillVersionStatus.PENDING_REVIEW) {
+            throw new DomainBadRequestException("review.withdraw.not_pending", version.getId());
+        }
+
+        List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
+        if (!files.isEmpty()) {
+            objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());
+        }
+        objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
+        skillFileRepository.deleteByVersionId(version.getId());
+        skillVersionRepository.delete(version);
+
+        List<SkillVersion> remainingVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
+                .filter(existing -> !existing.getId().equals(version.getId()))
+                .toList();
+
+        if (remainingVersions.isEmpty()) {
+            skillRepository.delete(skill);
+            return true;
+        }
+
+        if (version.getId().equals(skill.getLatestVersionId())) {
+            skill.setLatestVersionId(null);
+        }
+        skill.setUpdatedBy(actorUserId);
+        skillRepository.save(skill);
+        return false;
+    }
+
+    @Transactional
     public SkillVersion yankVersion(Long versionId, String actorUserId, String clientIp, String userAgent, String reason) {
         SkillVersion version = skillVersionRepository.findById(versionId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.version.notFound", versionId));

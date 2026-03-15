@@ -439,6 +439,14 @@ export const skillLifecycleApi = {
       headers: await ensureCsrfHeaders(),
     })
   },
+
+  async withdrawReview(namespace: string, slug: string, version: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}/withdraw-review`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
 }
 
 export const tokenApi = {

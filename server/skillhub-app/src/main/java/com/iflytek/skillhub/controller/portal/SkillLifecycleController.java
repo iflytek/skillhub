@@ -1,9 +1,11 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.review.ReviewService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -32,17 +34,23 @@ public class SkillLifecycleController extends BaseApiController {
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillGovernanceService skillGovernanceService;
+    private final ReviewService reviewService;
+    private final AuditLogService auditLogService;
 
     public SkillLifecycleController(NamespaceRepository namespaceRepository,
                                     SkillRepository skillRepository,
                                     SkillVersionRepository skillVersionRepository,
                                     SkillGovernanceService skillGovernanceService,
+                                    ReviewService reviewService,
+                                    AuditLogService auditLogService,
                                     ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillGovernanceService = skillGovernanceService;
+        this.reviewService = reviewService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping("/{namespace}/{slug}/archive")
@@ -106,6 +114,31 @@ public class SkillLifecycleController extends BaseApiController {
 
         return ok("response.success.deleted",
                 new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "DELETE_VERSION", version));
+    }
+
+    @PostMapping("/{namespace}/{slug}/versions/{version}/withdraw-review")
+    public ApiResponse<SkillLifecycleMutationResponse> withdrawReview(@PathVariable String namespace,
+                                                                     @PathVariable String slug,
+                                                                     @PathVariable String version,
+                                                                     @RequestAttribute("userId") String userId,
+                                                                     HttpServletRequest httpRequest) {
+        Skill skill = findSkill(namespace, slug);
+        SkillVersion skillVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), version)
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", version));
+        reviewService.withdrawReview(skillVersion.getId(), userId);
+        auditLogService.record(
+                userId,
+                "REVIEW_WITHDRAW",
+                "SKILL_VERSION",
+                skillVersion.getId(),
+                null,
+                httpRequest.getRemoteAddr(),
+                httpRequest.getHeader("User-Agent"),
+                "{\"version\":\"" + version.replace("\"", "\\\"") + "\"}"
+        );
+
+        return ok("response.success.updated",
+                new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "WITHDRAW_REVIEW", "DELETED"));
     }
 
     private Skill findSkill(String namespaceSlug, String skillSlug) {
