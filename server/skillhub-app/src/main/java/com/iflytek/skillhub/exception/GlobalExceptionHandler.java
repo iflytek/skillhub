@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -91,6 +92,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<ApiResponse<Void>> handleForbidden(SecurityException ex, HttpServletRequest request) {
+        logHandledException(HttpStatus.FORBIDDEN, "error.forbidden", request);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                apiResponseFactory.error(403, "error.forbidden"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         logHandledException(HttpStatus.FORBIDDEN, "error.forbidden", request);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                 apiResponseFactory.error(403, "error.forbidden"));

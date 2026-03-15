@@ -18,11 +18,23 @@ export function AuditLogPage() {
   const { t, i18n } = useTranslation()
   const [actionFilter, setActionFilter] = useState<string>('')
   const [userIdFilter, setUserIdFilter] = useState('')
+  const [requestIdFilter, setRequestIdFilter] = useState('')
+  const [ipFilter, setIpFilter] = useState('')
+  const [resourceTypeFilter, setResourceTypeFilter] = useState('')
+  const [resourceIdFilter, setResourceIdFilter] = useState('')
+  const [startTimeFilter, setStartTimeFilter] = useState('')
+  const [endTimeFilter, setEndTimeFilter] = useState('')
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useAuditLog({
     action: actionFilter || undefined,
     userId: userIdFilter || undefined,
+    requestId: requestIdFilter || undefined,
+    ipAddress: ipFilter || undefined,
+    resourceType: resourceTypeFilter || undefined,
+    resourceId: resourceIdFilter || undefined,
+    startTime: startTimeFilter ? new Date(startTimeFilter).toISOString() : undefined,
+    endTime: endTimeFilter ? new Date(endTimeFilter).toISOString() : undefined,
     page,
     size: 20,
   })
@@ -39,8 +51,11 @@ export function AuditLogPage() {
       </div>
 
       <Card className="p-5">
-        <div className="flex gap-4">
-          <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="w-[200px]">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Select value={actionFilter} onChange={(e) => {
+            setActionFilter(e.target.value)
+            setPage(0)
+          }} className="w-[200px]">
             <option value="">{t('auditLog.filterAll')}</option>
             <option value="CLI_PUBLISH">{t('auditLog.filterCliPublish')}</option>
             <option value="COMPAT_PUBLISH">{t('auditLog.filterCompatPublish')}</option>
@@ -52,8 +67,58 @@ export function AuditLogPage() {
           <Input
             placeholder={t('auditLog.userIdPlaceholder')}
             value={userIdFilter}
-            onChange={(e) => setUserIdFilter(e.target.value)}
-            className="w-[200px]"
+            onChange={(e) => {
+              setUserIdFilter(e.target.value)
+              setPage(0)
+            }}
+          />
+          <Input
+            placeholder={t('auditLog.requestIdPlaceholder')}
+            value={requestIdFilter}
+            onChange={(e) => {
+              setRequestIdFilter(e.target.value)
+              setPage(0)
+            }}
+          />
+          <Input
+            placeholder={t('auditLog.ipPlaceholder')}
+            value={ipFilter}
+            onChange={(e) => {
+              setIpFilter(e.target.value)
+              setPage(0)
+            }}
+          />
+          <Input
+            placeholder={t('auditLog.resourceTypePlaceholder')}
+            value={resourceTypeFilter}
+            onChange={(e) => {
+              setResourceTypeFilter(e.target.value)
+              setPage(0)
+            }}
+          />
+          <Input
+            placeholder={t('auditLog.resourceIdPlaceholder')}
+            value={resourceIdFilter}
+            onChange={(e) => {
+              setResourceIdFilter(e.target.value)
+              setPage(0)
+            }}
+          />
+          <Input
+            type="datetime-local"
+            value={startTimeFilter}
+            onChange={(e) => {
+              setStartTimeFilter(e.target.value)
+              setPage(0)
+            }}
+          />
+          <Input
+            type="datetime-local"
+            value={endTimeFilter}
+            onChange={(e) => {
+              setEndTimeFilter(e.target.value)
+              setPage(0)
+            }}
           />
         </div>
       </Card>
@@ -88,10 +153,10 @@ export function AuditLogPage() {
                     <TableCell>{formatDate(log.timestamp)}</TableCell>
                     <TableCell className="font-medium">{log.action}</TableCell>
                     <TableCell>{log.userId || '-'}</TableCell>
-                    <TableCell>{log.resourceType || '-'}</TableCell>
+                    <TableCell>{log.username || '-'}</TableCell>
                     <TableCell>{log.ipAddress || '-'}</TableCell>
                     <TableCell className="max-w-md truncate">
-                      {log.resourceId || '-'}
+                      {log.details || `${log.resourceType || '-'}:${log.resourceId || '-'}`}
                     </TableCell>
                   </TableRow>
                 ))}
