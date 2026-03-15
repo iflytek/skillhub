@@ -240,7 +240,7 @@ export function AdminUsersPage() {
               <Select id="role" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
                 <option value="">{t('adminUsers.selectRole')}</option>
                 <option value="USER">{t('adminUsers.roleUser')}</option>
-                <option value="REVIEWER">{t('adminUsers.roleReviewer')}</option>
+                <option value="SKILL_ADMIN">{t('adminUsers.roleReviewer')}</option>
                 <option value="USER_ADMIN">{t('adminUsers.roleUserAdmin')}</option>
                 <option value="AUDITOR">{t('adminUsers.roleAuditor')}</option>
                 <option value="SUPER_ADMIN">{t('adminUsers.roleSuperAdmin')}</option>
