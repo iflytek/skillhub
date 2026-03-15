@@ -3,6 +3,7 @@ package com.iflytek.skillhub.auth.identity;
 import com.iflytek.skillhub.auth.entity.IdentityBinding;
 import com.iflytek.skillhub.auth.oauth.OAuthClaims;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
@@ -76,6 +77,7 @@ public class IdentityBindingService {
         Set<String> roles = roleBindingRepo.findByUserId(user.getId()).stream()
             .map(rb -> rb.getRole().getCode())
             .collect(Collectors.toSet());
+        roles = PlatformRoleDefaults.withDefaultUserRole(roles);
 
         return new PlatformPrincipal(
             user.getId(), user.getDisplayName(), user.getEmail(),
