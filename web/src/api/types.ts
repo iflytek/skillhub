@@ -220,6 +220,22 @@ export interface PromotionTask {
   reviewedAt?: string
 }
 
+export interface SkillReport {
+  id: number
+  skillId: number
+  namespace?: string
+  skillSlug?: string
+  skillDisplayName?: string
+  reporterId: string
+  reason: string
+  details?: string
+  status: 'PENDING' | 'RESOLVED' | 'DISMISSED' | string
+  handledBy?: string
+  handleComment?: string
+  createdAt: string
+  handledAt?: string
+}
+
 export interface AdminUser {
   userId: string
   username: string

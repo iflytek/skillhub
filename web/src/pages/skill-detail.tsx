@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,12 +10,17 @@ import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi, WEB_API_PREFIX } from '@/api/client'
+import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
+import { toast } from '@/shared/lib/toast'
 import {
   useSkillDetail,
   useSkillVersions,
@@ -27,6 +33,9 @@ export function SkillDetailPage() {
   const navigate = useNavigate()
   const location = useRouterState({ select: (s) => s.location })
   const queryClient = useQueryClient()
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetails, setReportDetails] = useState('')
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
@@ -57,6 +66,7 @@ export function SkillDetailPage() {
     mutationFn: () => adminApi.yankVersion(latestVersion!.id),
     onSuccess: refreshSkill,
   })
+  const reportMutation = useSubmitSkillReport(namespace, slug)
 
   const handleDownload = () => {
     if (!user) {
@@ -78,6 +88,34 @@ export function SkillDetailPage() {
         returnTo: `${location.pathname}${location.searchStr}${location.hash}`,
       },
     })
+  }
+
+  const handleOpenReport = () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    setReportDialogOpen(true)
+  }
+
+  const handleSubmitReport = async () => {
+    if (!reportReason.trim()) {
+      toast.error(t('skillDetail.reportReasonRequired'))
+      return
+    }
+
+    try {
+      await reportMutation.mutateAsync({
+        reason: reportReason.trim(),
+        details: reportDetails.trim() || undefined,
+      })
+      setReportDialogOpen(false)
+      setReportReason('')
+      setReportDetails('')
+      toast.success(t('skillDetail.reportSuccessTitle'), t('skillDetail.reportSuccessDescription'))
+    } catch (error) {
+      toast.error(t('skillDetail.reportErrorTitle'), error instanceof Error ? error.message : '')
+    }
   }
 
   const handleBack = () => {
@@ -253,6 +291,9 @@ export function SkillDetailPage() {
           <div className="space-y-3">
             <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
             <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+            <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={reportMutation.isPending}>
+              {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
+            </Button>
             {!user && (
               <p className="text-xs text-muted-foreground">{t('skillDetail.loginToRate')}</p>
             )}
@@ -305,6 +346,37 @@ export function SkillDetailPage() {
           </Card>
         )}
       </div>
+
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('skillDetail.reportDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('skillDetail.reportDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value)}
+              placeholder={t('skillDetail.reportReasonPlaceholder')}
+              maxLength={200}
+            />
+            <Textarea
+              value={reportDetails}
+              onChange={(event) => setReportDetails(event.target.value)}
+              placeholder={t('skillDetail.reportDetailsPlaceholder')}
+              rows={5}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button onClick={handleSubmitReport} disabled={reportMutation.isPending}>
+              {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.submitReport')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
