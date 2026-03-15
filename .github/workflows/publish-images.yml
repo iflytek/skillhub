@@ -19,6 +19,11 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      MIRROR_REGISTRY: ${{ secrets.MIRROR_REGISTRY || secrets.ALIYUN_REGISTRY }}
+      MIRROR_NAMESPACE: ${{ secrets.MIRROR_NAMESPACE || secrets.ALIYUN_NAME_SPACE }}
+      MIRROR_REGISTRY_USERNAME: ${{ secrets.MIRROR_REGISTRY_USERNAME || secrets.ALIYUN_REGISTRY_USER }}
+      MIRROR_REGISTRY_PASSWORD: ${{ secrets.MIRROR_REGISTRY_PASSWORD || secrets.ALIYUN_REGISTRY_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -27,10 +32,12 @@ jobs:
             context: ./server
             dockerfile: ./server/Dockerfile
             image: ghcr.io/${{ github.repository_owner }}/skillhub-server
+            mirror_image: skillhub-server
           - name: web
             context: ./web
             dockerfile: ./web/Dockerfile
             image: ghcr.io/${{ github.repository_owner }}/skillhub-web
+            mirror_image: skillhub-web
 
     steps:
       - name: Check out repository
@@ -49,11 +56,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Detect mirror configuration
+        id: mirror
+        shell: bash
+        run: |
+          if [[ -n "${MIRROR_REGISTRY}" && -n "${MIRROR_NAMESPACE}" && -n "${MIRROR_REGISTRY_USERNAME}" && -n "${MIRROR_REGISTRY_PASSWORD}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to mirror registry
+        if: ${{ steps.mirror.outputs.enabled == 'true' }}
+        shell: bash
+        run: |
+          echo "${MIRROR_REGISTRY_PASSWORD}" | docker login "${MIRROR_REGISTRY}" \
+            --username "${MIRROR_REGISTRY_USERNAME}" \
+            --password-stdin
+
+      - name: Prepare image targets
+        id: targets
+        run: |
+          {
+            echo "images<<EOF"
+            echo "${{ matrix.image }}"
+            if [ "${{ steps.mirror.outputs.enabled }}" = "true" ]; then
+              echo "${MIRROR_REGISTRY%/}/${MIRROR_NAMESPACE}/${{ matrix.mirror_image }}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ matrix.image }}
+          images: ${{ steps.targets.outputs.images }}
           tags: |
             type=raw,value=edge,enable={{is_default_branch}}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
@@ -75,3 +112,47 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  mirror-runtime-images:
+    name: Mirror Runtime Images
+    runs-on: ubuntu-latest
+    needs: publish
+    env:
+      MIRROR_REGISTRY: ${{ secrets.MIRROR_REGISTRY || secrets.ALIYUN_REGISTRY }}
+      MIRROR_NAMESPACE: ${{ secrets.MIRROR_NAMESPACE || secrets.ALIYUN_NAME_SPACE }}
+      MIRROR_REGISTRY_USERNAME: ${{ secrets.MIRROR_REGISTRY_USERNAME || secrets.ALIYUN_REGISTRY_USER }}
+      MIRROR_REGISTRY_PASSWORD: ${{ secrets.MIRROR_REGISTRY_PASSWORD || secrets.ALIYUN_REGISTRY_PASSWORD }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Detect mirror configuration
+        id: mirror
+        shell: bash
+        run: |
+          if [[ -n "${MIRROR_REGISTRY}" && -n "${MIRROR_NAMESPACE}" && -n "${MIRROR_REGISTRY_USERNAME}" && -n "${MIRROR_REGISTRY_PASSWORD}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.mirror.outputs.enabled == 'true' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to mirror registry
+        if: ${{ steps.mirror.outputs.enabled == 'true' }}
+        shell: bash
+        run: |
+          echo "${MIRROR_REGISTRY_PASSWORD}" | docker login "${MIRROR_REGISTRY}" \
+            --username "${MIRROR_REGISTRY_USERNAME}" \
+            --password-stdin
+
+      - name: Mirror runtime dependency images
+        if: ${{ steps.mirror.outputs.enabled == 'true' }}
+        run: bash scripts/mirror-runtime-images.sh
+
+      - name: Skip mirroring when registry secrets are not configured
+        if: ${{ steps.mirror.outputs.enabled != 'true' }}
+        run: echo "Mirror registry secrets are not configured; skipping runtime image mirroring."

@@ -137,6 +137,13 @@ Recommended image tags:
 - `SKILLHUB_VERSION=edge` for the latest `main` build
 - `SKILLHUB_VERSION=vX.Y.Z` for a fixed release
 
+If you maintain a closer registry mirror, start the runtime with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up \
+  --mirror-registry <registry>/<namespace>
+```
+
 Start the runtime:
 
 ```bash
