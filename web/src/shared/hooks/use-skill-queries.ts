@@ -165,6 +165,9 @@ export function usePublishSkill() {
 
   return useMutation({
     mutationFn: publishSkill,
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
     },

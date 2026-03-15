@@ -15,7 +15,7 @@ class BasicPrePublishValidatorTest {
     private final BasicPrePublishValidator validator = new BasicPrePublishValidator();
 
     @Test
-    void shouldRejectObviousCredentialLeak() {
+    void shouldRejectObviousCredentialLeakWithHelpfulLocation() {
         PackageEntry skillMd = new PackageEntry(
                 "SKILL.md",
                 """
@@ -23,26 +23,24 @@ class BasicPrePublishValidatorTest {
                 name: Secret Skill
                 version: 1.0.0
                 ---
+                token=sk-abcdefghijklmnopqrstuvwxyz123456
                 """.getBytes(StandardCharsets.UTF_8),
-                47,
+                91,
                 "text/markdown"
-        );
-        PackageEntry config = new PackageEntry(
-                "config.txt",
-                "OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456".getBytes(StandardCharsets.UTF_8),
-                50,
-                "text/plain"
         );
 
         ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
-                List.of(skillMd, config),
+                List.of(skillMd),
                 new SkillMetadata("Secret Skill", "desc", "1.0.0", "body", Map.of()),
                 "user-1",
                 1L
         ));
 
         assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(error -> error.contains("Potential secret detected")));
+        assertTrue(result.errors().stream().anyMatch(error ->
+                error.contains("SKILL.md")
+                        && error.contains("line 5")
+                        && error.contains("looks like a")));
     }
 
     @Test
@@ -68,6 +66,32 @@ class BasicPrePublishValidatorTest {
         ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
                 List.of(skillMd, readme),
                 new SkillMetadata("Safe Skill", "desc", "1.0.0", "body", Map.of()),
+                "user-1",
+                1L
+        ));
+
+        assertTrue(result.passed());
+    }
+
+    @Test
+    void shouldIgnoreObviousPlaceholderSecrets() {
+        PackageEntry skillMd = new PackageEntry(
+                "SKILL.md",
+                """
+                ---
+                name: Example Skill
+                version: 1.0.0
+                ---
+                token=YOUR_TOKEN_HERE
+                api_key=example-key-value
+                """.getBytes(StandardCharsets.UTF_8),
+                102,
+                "text/markdown"
+        );
+
+        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
+                List.of(skillMd),
+                new SkillMetadata("Example Skill", "desc", "1.0.0", "body", Map.of()),
                 "user-1",
                 1L
         ));

@@ -21,6 +21,26 @@ function isVersionExistsMessage(message?: string): boolean {
     || message.includes('版本已存在')
 }
 
+function isPrecheckFailureMessage(message?: string): boolean {
+  if (!message) {
+    return false
+  }
+
+  return message.includes('error.skill.publish.precheck.failed')
+    || message.includes('Pre-publish validation failed')
+    || message.includes('预发布校验失败')
+    || message.includes('looks like a secret or token')
+}
+
+function isFrontmatterFailureMessage(message?: string): boolean {
+  if (!message) {
+    return false
+  }
+
+  return message.includes('Invalid SKILL.md frontmatter')
+    || message.includes('技能包校验失败：Invalid SKILL.md frontmatter')
+}
+
 export function PublishPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -64,6 +84,22 @@ export function PublishPage() {
         toast.error(
           t('publish.versionExistsTitle'),
           t('publish.versionExistsDescription'),
+        )
+        return
+      }
+
+      if (error instanceof ApiError && isPrecheckFailureMessage(error.serverMessage || error.message)) {
+        toast.error(
+          t('publish.precheckFailedTitle'),
+          error.serverMessage || t('publish.precheckFailedDescription'),
+        )
+        return
+      }
+
+      if (error instanceof ApiError && isFrontmatterFailureMessage(error.serverMessage || error.message)) {
+        toast.error(
+          t('publish.frontmatterFailedTitle'),
+          error.serverMessage || t('publish.frontmatterFailedDescription'),
         )
         return
       }
