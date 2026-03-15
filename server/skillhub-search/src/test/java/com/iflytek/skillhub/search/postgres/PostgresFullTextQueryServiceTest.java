@@ -47,6 +47,7 @@ class PostgresFullTextQueryServiceTest {
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst()).contains("to_tsvector('simple', coalesce(title, '')) @@ to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("LOWER(title) LIKE :titleLike");
     }
 
     @Test
@@ -105,6 +106,36 @@ class PostgresFullTextQueryServiceTest {
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst()).contains("search_vector @@ to_tsquery('simple', :tsQuery)");
         assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery))");
+    }
+
+    @Test
+    void shortPrefixRelevanceShouldRankUsingTitleVectorWithoutDuplicateOrderBy() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "x",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20
+        ));
+
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(to_tsvector('simple', coalesce(title, '')), to_tsquery('simple', :tsQuery))");
+        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("ORDER BY ORDER BY");
     }
 
     @Test
