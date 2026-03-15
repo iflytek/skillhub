@@ -5,6 +5,12 @@ import type { AuditLogItem } from '@/api/types'
 export interface AuditLogParams {
   action?: string
   userId?: string
+  requestId?: string
+  ipAddress?: string
+  resourceType?: string
+  resourceId?: string
+  startTime?: string
+  endTime?: string
   page?: number
   size?: number
 }

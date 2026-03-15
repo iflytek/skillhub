@@ -61,7 +61,7 @@ class AuditLogControllerTest {
             principal, null, List.of(new SimpleGrantedAuthority("ROLE_AUDITOR"))
         );
 
-        when(adminAuditLogAppService.listAuditLogs(0, 20, null, null))
+        when(adminAuditLogAppService.listAuditLogs(0, 20, null, null, null, null, null, null, null, null))
                 .thenReturn(new PageResponse<>(
                         List.of(new AuditLogItemResponse(
                                 1L,
@@ -70,6 +70,9 @@ class AuditLogControllerTest {
                                 "alice",
                                 "{\"status\":\"DISABLED\"}",
                                 "127.0.0.1",
+                                "req-1",
+                                "USER",
+                                "42",
                                 Instant.parse("2026-03-13T01:00:00Z"))),
                         1,
                         0,
@@ -81,7 +84,10 @@ class AuditLogControllerTest {
             .andExpect(jsonPath("$.data.items").isArray())
             .andExpect(jsonPath("$.data.total").value(1))
             .andExpect(jsonPath("$.data.items[0].username").value("alice"))
-            .andExpect(jsonPath("$.data.items[0].details").value("{\"status\":\"DISABLED\"}"));
+            .andExpect(jsonPath("$.data.items[0].details").value("{\"status\":\"DISABLED\"}"))
+            .andExpect(jsonPath("$.data.items[0].requestId").value("req-1"))
+            .andExpect(jsonPath("$.data.items[0].resourceType").value("USER"))
+            .andExpect(jsonPath("$.data.items[0].resourceId").value("42"));
     }
 
     @Test
@@ -93,7 +99,7 @@ class AuditLogControllerTest {
             principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
         );
 
-        when(adminAuditLogAppService.listAuditLogs(0, 20, null, null))
+        when(adminAuditLogAppService.listAuditLogs(0, 20, null, null, null, null, null, null, null, null))
                 .thenReturn(new PageResponse<>(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/v1/admin/audit-logs").with(authentication(auth)))
@@ -110,14 +116,43 @@ class AuditLogControllerTest {
             principal, null, List.of(new SimpleGrantedAuthority("ROLE_AUDITOR"))
         );
 
-        when(adminAuditLogAppService.listAuditLogs(0, 20, "user-1", "CREATE_SKILL"))
+        when(adminAuditLogAppService.listAuditLogs(
+                0,
+                20,
+                "user-1",
+                "CREATE_SKILL",
+                "req-2",
+                "127.0.0.1",
+                "SKILL",
+                "99",
+                Instant.parse("2026-03-13T00:00:00Z"),
+                Instant.parse("2026-03-14T00:00:00Z")))
                 .thenReturn(new PageResponse<>(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/v1/admin/audit-logs")
                 .param("userId", "user-1")
                 .param("action", "CREATE_SKILL")
+                .param("requestId", "req-2")
+                .param("ipAddress", "127.0.0.1")
+                .param("resourceType", "SKILL")
+                .param("resourceId", "99")
+                .param("startTime", "2026-03-13T00:00:00Z")
+                .param("endTime", "2026-03-14T00:00:00Z")
                 .with(authentication(auth)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items").isArray());
+    }
+
+    @Test
+    void listAuditLogs_withUserAdminRole_returns403() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-88", "useradmin", "useradmin@example.com", "", "github", Set.of("USER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER_ADMIN"))
+        );
+
+        mockMvc.perform(get("/api/v1/admin/audit-logs").with(authentication(auth)))
+                .andExpect(status().isForbidden());
     }
 }

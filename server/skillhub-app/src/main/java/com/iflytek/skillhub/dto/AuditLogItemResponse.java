@@ -9,6 +9,9 @@ public record AuditLogItemResponse(
         String username,
         String details,
         String ipAddress,
+        String requestId,
+        String resourceType,
+        String resourceId,
         Instant timestamp
 ) {
 }

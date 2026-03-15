@@ -106,6 +106,19 @@ class UserManagementControllerTest {
     }
 
     @Test
+    void listUsers_withSkillAdminRole_returns403() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-77", "skilladmin", "skilladmin@example.com", "", "github", Set.of("SKILL_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_SKILL_ADMIN"))
+        );
+
+        mockMvc.perform(get("/api/v1/admin/users").with(authentication(auth)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void updateUserRole_withUserAdminRole_returns200() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
             "user-42", "admin", "admin@example.com", "", "github", Set.of("USER_ADMIN")

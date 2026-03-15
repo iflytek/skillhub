@@ -715,10 +715,27 @@ export const adminApi = {
     })
   },
 
-  async getAuditLogs(params: { action?: string; userId?: string; page?: number; size?: number }) {
+  async getAuditLogs(params: {
+    action?: string
+    userId?: string
+    requestId?: string
+    ipAddress?: string
+    resourceType?: string
+    resourceId?: string
+    startTime?: string
+    endTime?: string
+    page?: number
+    size?: number
+  }) {
     const searchParams = new URLSearchParams()
     if (params.action) searchParams.set('action', params.action)
     if (params.userId) searchParams.set('userId', params.userId)
+    if (params.requestId) searchParams.set('requestId', params.requestId)
+    if (params.ipAddress) searchParams.set('ipAddress', params.ipAddress)
+    if (params.resourceType) searchParams.set('resourceType', params.resourceType)
+    if (params.resourceId) searchParams.set('resourceId', params.resourceId)
+    if (params.startTime) searchParams.set('startTime', params.startTime)
+    if (params.endTime) searchParams.set('endTime', params.endTime)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
     return fetchJson<{ items: AuditLogItem[]; total: number; page: number; size: number }>(
