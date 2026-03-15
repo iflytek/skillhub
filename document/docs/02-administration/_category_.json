@@ -1,0 +1,8 @@
+{
+  "label": "管理员指南",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "部署、配置和管理 SkillHub"
+  }
+}
