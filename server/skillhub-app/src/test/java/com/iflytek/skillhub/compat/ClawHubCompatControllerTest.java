@@ -56,6 +56,7 @@ class ClawHubCompatControllerTest {
                                 "my-skill",
                                 "My Skill",
                                 "test summary",
+                                "ACTIVE",
                                 10L,
                                 5,
                                 BigDecimal.valueOf(4.5),
