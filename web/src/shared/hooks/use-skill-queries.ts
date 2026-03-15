@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SkillSummary, SkillDetail, SkillVersion, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, meApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
@@ -32,6 +32,11 @@ async function getSkillVersions(namespace: string, slug: string): Promise<SkillV
 async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   return fetchJson<SkillFile[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/files`)
+}
+
+async function getSkillVersionDetail(namespace: string, slug: string, version: string): Promise<SkillVersionDetail> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillVersionDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}`)
 }
 
 async function getSkillReadme(namespace: string, slug: string, version: string): Promise<string> {
@@ -118,6 +123,14 @@ export function useSkillReadme(namespace: string, slug: string, version?: string
   return useQuery({
     queryKey: ['skills', namespace, slug, 'versions', version, 'readme'],
     queryFn: () => getSkillReadme(namespace, slug, version!),
+    enabled: !!namespace && !!slug && !!version,
+  })
+}
+
+export function useSkillVersionDetail(namespace: string, slug: string, version?: string) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
+    queryFn: () => getSkillVersionDetail(namespace, slug, version!),
     enabled: !!namespace && !!slug && !!version,
   })
 }
@@ -225,6 +238,21 @@ export function useWithdrawSkillReview() {
   return useMutation({
     mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
       skillLifecycleApi.withdrawReview(namespace, slug, version),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useRereleaseSkillVersion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version, targetVersion }: { namespace: string; slug: string; version: string; targetVersion: string }) =>
+      skillLifecycleApi.rereleaseVersion(namespace, slug, version, targetVersion),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })

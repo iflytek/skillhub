@@ -267,6 +267,43 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testListVersions_ShouldIncludePendingAndRejectedForLifecycleManagers() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String ownerId = "user-100";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.OWNER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
+        setId(published, 10L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+        published.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 1, 10, 0));
+
+        SkillVersion pending = new SkillVersion(1L, "1.1.0", ownerId);
+        setId(pending, 11L);
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+
+        SkillVersion rejected = new SkillVersion(1L, "1.2.0", ownerId);
+        setId(rejected, 12L);
+        rejected.setStatus(SkillVersionStatus.REJECTED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(pending, published, rejected));
+
+        Page<SkillVersion> result = service.listVersions(namespaceSlug, skillSlug, ownerId, userNsRoles, PageRequest.of(0, 20));
+
+        assertEquals(List.of("1.0.0", "1.2.0", "1.1.0"),
+                result.getContent().stream().map(SkillVersion::getVersion).toList());
+    }
+
+    @Test
     void testResolveVersion_ShouldReturnLatestWhenHashDoesNotMatch() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";
