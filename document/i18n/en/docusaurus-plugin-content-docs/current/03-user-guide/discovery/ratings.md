@@ -12,7 +12,7 @@ Click the "Favorite" button on the skill detail page to favorite a skill.
 
 View your favorite skills:
 - Web: Go to "My Favorites"
-- CLI: `skillhub stars`
+- CLI: `clawhub stars`
 
 ## Skill Rating
 

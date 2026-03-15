@@ -49,7 +49,7 @@
 - 审核通过后转为 `PUBLISHED`
 - 审核拒绝后转为 `REJECTED`
 - 例外：提交人持有 `SUPER_ADMIN` 平台角色时，发布入口直接创建 `skill_version(status=PUBLISHED)`，跳过 `review_task` 创建，同时不再要求其必须是目标 namespace 成员
-- 上述例外必须对 Web、`/api/v1/publish`、`/api/compat/v1/publish` 保持一致
+- 上述例外必须对 Web、`/api/v1/publish`、`/api/v1/publish` 保持一致
 
 ### 对象存储写入策略
 

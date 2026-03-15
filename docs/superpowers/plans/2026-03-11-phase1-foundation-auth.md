@@ -2756,7 +2756,7 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
         // 仅对 CLI 和 Token API 路径生效
         String path = request.getRequestURI();
         return !(path.startsWith("/api/v1/cli/") || path.startsWith("/api/v1/tokens")
-                 || path.startsWith("/api/compat/"));
+                 || path.startsWith("/api/"));
     }
 }
 ```
@@ -2974,7 +2974,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)
-                .ignoringRequestMatchers("/api/v1/cli/**", "/api/compat/**")
+                .ignoringRequestMatchers("/api/v1/cli/**", "/api/**")
             )
             .authorizeHttpRequests(auth -> auth
                 // 公开端点

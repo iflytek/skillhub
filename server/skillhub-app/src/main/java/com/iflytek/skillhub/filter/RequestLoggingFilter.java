@@ -60,6 +60,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         }
 
         sb.append("Response Status: ").append(response.getStatus()).append("\n");
+
+        String responseBody = getResponseBody(response);
+        if (responseBody != null && !responseBody.isBlank()) {
+            sb.append("Response Body: ").append(responseBody).append("\n");
+        }
+
         sb.append("Duration: ").append(duration).append("ms\n");
         sb.append("===================================");
 
@@ -81,6 +87,18 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         if (buf.length > 0) {
             try {
                 return new String(buf, request.getCharacterEncoding());
+            } catch (UnsupportedEncodingException e) {
+                return "[unknown encoding]";
+            }
+        }
+        return null;
+    }
+
+    private String getResponseBody(ContentCachingResponseWrapper response) {
+        byte[] buf = response.getContentAsByteArray();
+        if (buf.length > 0) {
+            try {
+                return new String(buf, response.getCharacterEncoding());
             } catch (UnsupportedEncodingException e) {
                 return "[unknown encoding]";
             }

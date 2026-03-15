@@ -18,7 +18,7 @@ GET /.well-known/clawhub.json
 
 ```json
 {
-  "apiBase": "/api/compat/v1"
+  "apiBase": "/api/v1"
 }
 ```
 
@@ -27,7 +27,7 @@ GET /.well-known/clawhub.json
 ### Whoami
 
 ```http
-GET /api/compat/v1/whoami
+GET /api/v1/whoami
 ```
 
 响应：
@@ -43,7 +43,7 @@ GET /api/compat/v1/whoami
 ### 搜索
 
 ```http
-GET /api/compat/v1/search?q={keyword}&page={page}&limit={limit}
+GET /api/v1/search?q={keyword}&page={page}&limit={limit}
 ```
 
 响应：
@@ -75,7 +75,7 @@ GET /api/compat/v1/search?q={keyword}&page={page}&limit={limit}
 ### 解析
 
 ```http
-GET /api/compat/v1/resolve?slug={slug}&version={version}
+GET /api/v1/resolve?slug={slug}&version={version}
 ```
 
 响应：
@@ -84,20 +84,20 @@ GET /api/compat/v1/resolve?slug={slug}&version={version}
 {
   "slug": "my-skill",
   "version": "1.2.0",
-  "downloadUrl": "/api/compat/v1/download/my-skill/1.2.0"
+  "downloadUrl": "/api/v1/download/my-skill/1.2.0"
 }
 ```
 
 ### 下载
 
 ```http
-GET /api/compat/v1/download/{slug}/{version}
+GET /api/v1/download/{slug}/{version}
 ```
 
 ### 发布
 
 ```http
-POST /api/compat/v1/publish
+POST /api/v1/publish
 Content-Type: multipart/form-data
 
 file: <zip-file>

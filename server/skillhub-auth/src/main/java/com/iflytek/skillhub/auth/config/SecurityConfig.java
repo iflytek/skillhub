@@ -88,7 +88,7 @@ public class SecurityConfig {
             if (path == null) {
                 return false;
             }
-            return path.startsWith("/api/compat/")
+            return path.startsWith("/api/")
                     || path.equals("/api/v1/publish")
                     || path.startsWith("/api/v1/auth/device/");
         };
@@ -117,9 +117,9 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/.well-known/**",
-                    "/api/compat/v1/search",
-                    "/api/compat/v1/resolve/**",
-                    "/api/compat/v1/download/**"
+                    "/api/v1/search",
+                    "/api/v1/resolve/**",
+                    "/api/v1/download/**"
                 ).permitAll()
                 .requestMatchers("/actuator/prometheus").hasAnyRole("SUPER_ADMIN", "AUDITOR")
                 .requestMatchers(

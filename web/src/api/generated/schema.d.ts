@@ -564,7 +564,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/compat/v1/publish": {
+    "/api/v1/publish": {
         parameters: {
             query?: never;
             header?: never;
@@ -1012,7 +1012,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/compat/v1/whoami": {
+    "/api/v1/whoami": {
         parameters: {
             query?: never;
             header?: never;
@@ -1028,7 +1028,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/compat/v1/search": {
+    "/api/v1/search": {
         parameters: {
             query?: never;
             header?: never;
@@ -1044,7 +1044,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/compat/v1/resolve/{canonicalSlug}": {
+    "/api/v1/resolve/{canonicalSlug}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1060,7 +1060,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/compat/v1/download/{canonicalSlug}": {
+    "/api/v1/download/{canonicalSlug}": {
         parameters: {
             query?: never;
             header?: never;

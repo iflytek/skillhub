@@ -239,7 +239,7 @@ Public API 的可见性规则：
 发布状态约束：
 
 - 普通用户发布成功后，`status` 为 `PENDING_REVIEW`
-- 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/publish`、`/api/compat/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
+- 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/publish`、`/api/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
 - 当前版本保持该审核策略，不再提供“全员直发”的运行模式
 
 ## 7.4 Token API（需登录）
@@ -387,7 +387,7 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 
 ## 7.10 ClawHub CLI 兼容层 API
 
-兼容层 API 基地址为 `/api/compat/v1`，通过 `/.well-known/clawhub.json` 发现。兼容层使用 canonical slug（双连字符映射规则，详见 `00-product-direction.md` 1.1 节）。
+兼容层 API 基地址为 `/api/v1`，通过 `/.well-known/clawhub.json` 发现。兼容层使用 canonical slug（双连字符映射规则，详见 `00-product-direction.md` 1.1 节）。
 
 认证方式：`Authorization: Bearer <token>`。Bearer Token 可来自 CLI Device Flow 或平台 API Token。
 
@@ -398,7 +398,7 @@ GET /.well-known/clawhub.json
 
 响应：
 {
-  "apiBase": "/api/compat/v1"
+  "apiBase": "/api/v1"
 }
 ```
 
@@ -406,15 +406,15 @@ GET /.well-known/clawhub.json
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/compat/v1/whoami` | 当前用户信息 |
-| GET | `/api/compat/v1/search` | 搜索技能 |
-| GET | `/api/compat/v1/resolve` | 通过 slug + version 解析版本 |
-| GET | `/api/compat/v1/download/{slug}/{version}` | 下载技能 zip 包 |
-| POST | `/api/compat/v1/publish` | 发布技能（multipart/form-data，`SUPER_ADMIN` 直发） |
+| GET | `/api/v1/whoami` | 当前用户信息 |
+| GET | `/api/v1/search` | 搜索技能 |
+| GET | `/api/v1/resolve` | 通过 slug + version 解析版本 |
+| GET | `/api/v1/download/{slug}/{version}` | 下载技能 zip 包 |
+| POST | `/api/v1/publish` | 发布技能（multipart/form-data，`SUPER_ADMIN` 直发） |
 
 ### 兼容层请求/响应格式
 
-**GET `/api/compat/v1/whoami`**
+**GET `/api/v1/whoami`**
 
 ```json
 {
@@ -424,7 +424,7 @@ GET /.well-known/clawhub.json
 }
 ```
 
-**GET `/api/compat/v1/search?q={keyword}&page={page}&limit={limit}`**
+**GET `/api/v1/search?q={keyword}&page={page}&limit={limit}`**
 
 ```json
 {
@@ -449,21 +449,21 @@ GET /.well-known/clawhub.json
 
 注意：兼容层返回的 `slug` 为 canonical slug 格式（全局空间直接返回 skill slug，团队空间返回 `namespace--skill`）。
 
-**GET `/api/compat/v1/resolve?slug={slug}&version={version}`**
+**GET `/api/v1/resolve?slug={slug}&version={version}`**
 
 ```json
 {
   "slug": "my-skill",
   "version": "1.2.0",
-  "downloadUrl": "/api/compat/v1/download/my-skill/1.2.0"
+  "downloadUrl": "/api/v1/download/my-skill/1.2.0"
 }
 ```
 
-**GET `/api/compat/v1/download/{slug}/{version}`**
+**GET `/api/v1/download/{slug}/{version}`**
 
 返回指定版本的 zip 文件流。默认版本解析由 `resolve` 接口负责。
 
-**POST `/api/compat/v1/publish`**
+**POST `/api/v1/publish`**
 
 ```
 Content-Type: multipart/form-data
@@ -521,7 +521,7 @@ Parts:
 - 版本策略：URL path 版本 `/api/v1/`
 - 幂等性：写操作通过 `X-Request-Id` + Redis 去重（TTL 24h）
 
-### Compatibility API（`/api/compat/v1/*`）
+### Compatibility API（`/api/v1/*`）
 
 - 响应格式完全遵循 ClawHub 协议，不套统一响应包裹
 - 错误响应遵循 ClawHub 格式：`{ error: string, message: string }`
