@@ -26,6 +26,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -65,12 +66,25 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName(null);
+        RequestMatcher csrfIgnoreMatcher = request -> {
+            String path = request.getRequestURI();
+            String authorization = request.getHeader("Authorization");
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                return true;
+            }
+            if (path == null) {
+                return false;
+            }
+            return path.startsWith("/api/compat/")
+                    || path.equals("/api/v1/publish")
+                    || path.startsWith("/api/v1/auth/device/");
+        };
 
         http
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)
-                .ignoringRequestMatchers("/api/v1/**", "/api/web/**", "/api/compat/**")
+                .ignoringRequestMatchers(csrfIgnoreMatcher)
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
@@ -84,7 +98,6 @@ public class SecurityConfig {
                     "/api/v1/auth/device/**",
                     "/api/v1/check",
                     "/actuator/health",
-                    "/actuator/prometheus",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/.well-known/**",
@@ -92,6 +105,7 @@ public class SecurityConfig {
                     "/api/compat/v1/resolve/**",
                     "/api/compat/v1/download/**"
                 ).permitAll()
+                .requestMatchers("/actuator/prometheus").hasAnyRole("SUPER_ADMIN", "AUDITOR")
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/v1/skills/*/star",

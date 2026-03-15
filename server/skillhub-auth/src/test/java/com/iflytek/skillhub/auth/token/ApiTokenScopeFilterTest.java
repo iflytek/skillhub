@@ -99,4 +99,37 @@ class ApiTokenScopeFilterTest {
         verify(chain).doFilter(request, response);
         verify(handler, never()).handle(eq(request), eq(response), any());
     }
+
+    @Test
+    void shouldDenyApiWebRequestsWithoutRequiredScope() throws Exception {
+        AccessDeniedHandler handler = (request, response, accessDeniedException) -> {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, accessDeniedException.getMessage());
+        };
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+            "user-3",
+            "Bob",
+            "bob@example.com",
+            "",
+            "api_token",
+            Set.of("USER")
+        );
+        var authentication = new UsernamePasswordAuthenticationToken(
+            principal,
+            null,
+            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/web/skills/global/publish");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        assertEquals(HttpServletResponse.SC_FORBIDDEN, response.getStatus());
+        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:publish"));
+        verify(chain, never()).doFilter(request, response);
+    }
 }

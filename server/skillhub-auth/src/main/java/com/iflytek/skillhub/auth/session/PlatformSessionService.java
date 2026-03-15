@@ -30,7 +30,14 @@ public class PlatformSessionService {
     public void attachToAuthenticatedSession(PlatformPrincipal principal,
                                              Authentication authentication,
                                              HttpServletRequest request) {
-        persist(principal, authentication, request, false);
+        attachToAuthenticatedSession(principal, authentication, request, false);
+    }
+
+    public void attachToAuthenticatedSession(PlatformPrincipal principal,
+                                             Authentication authentication,
+                                             HttpServletRequest request,
+                                             boolean rotateSessionId) {
+        persist(principal, authentication, request, rotateSessionId);
     }
 
     private void persist(PlatformPrincipal principal,
