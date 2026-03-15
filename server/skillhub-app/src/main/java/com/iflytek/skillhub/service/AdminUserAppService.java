@@ -2,6 +2,7 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
@@ -130,12 +131,18 @@ public class AdminUserAppService {
         if (userIds.isEmpty()) {
             return Map.of();
         }
-        return userRoleBindingRepository.findByUserIdIn(userIds).stream()
+        Map<String, List<String>> explicitRolesByUserId = userRoleBindingRepository.findByUserIdIn(userIds).stream()
                 .collect(Collectors.groupingBy(
                         UserRoleBinding::getUserId,
                         Collectors.mapping(binding -> binding.getRole().getCode(),
                                 Collectors.collectingAndThen(Collectors.toList(),
                                         roles -> roles.stream().sorted().toList()))));
+        return userIds.stream().collect(Collectors.toMap(
+                userId -> userId,
+                userId -> PlatformRoleDefaults.withDefaultUserRole(explicitRolesByUserId.getOrDefault(userId, List.of())).stream()
+                        .sorted()
+                        .toList()
+        ));
     }
 
     private UserAccount loadUser(String userId) {

@@ -74,6 +74,7 @@ class LocalAuthServiceTest {
         assertThat(userCaptor.getValue().getDisplayName()).isEqualTo("alice");
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.email()).isEqualTo("alice@example.com");
+        assertThat(principal.platformRoles()).containsExactly("USER");
         verify(credentialRepository).save(any(LocalCredential.class));
         verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
     }

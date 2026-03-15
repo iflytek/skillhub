@@ -23,9 +23,9 @@ public class RbacService {
     }
 
     public Set<String> getUserRoleCodes(String userId) {
-        return roleBindingRepo.findByUserId(userId).stream()
+        return PlatformRoleDefaults.withDefaultUserRole(roleBindingRepo.findByUserId(userId).stream()
             .map(rb -> rb.getRole().getCode())
-            .collect(Collectors.toSet());
+            .collect(Collectors.toSet()));
     }
 
     public Set<String> getUserPermissions(String userId) {

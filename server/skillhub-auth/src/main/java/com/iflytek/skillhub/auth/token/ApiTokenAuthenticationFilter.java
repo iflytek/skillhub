@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.token;
 
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
@@ -57,6 +58,7 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
                     Set<String> roles = roleBindingRepo.findByUserId(user.getId()).stream()
                         .map(rb -> rb.getRole().getCode())
                         .collect(Collectors.toSet());
+                    roles = PlatformRoleDefaults.withDefaultUserRole(roles);
                     Set<String> scopes = apiTokenScopeService.parseScopes(token.getScopeJson());
                     PlatformPrincipal principal = new PlatformPrincipal(
                         user.getId(), user.getDisplayName(), user.getEmail(),

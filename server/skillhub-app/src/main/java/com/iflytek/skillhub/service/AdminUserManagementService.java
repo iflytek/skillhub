@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
@@ -106,6 +107,7 @@ public class AdminUserManagementService {
             .map(binding -> binding.getRole().getCode())
             .sorted(Comparator.naturalOrder())
             .forEach(roles::add);
+        roles = new LinkedHashSet<>(PlatformRoleDefaults.withDefaultUserRole(roles));
         return new AdminUserSummaryResponse(
             user.getId(),
             user.getDisplayName(),

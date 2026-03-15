@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.local;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -134,6 +135,7 @@ public class LocalAuthService {
         Set<String> roles = userRoleBindingRepository.findByUserId(user.getId()).stream()
             .map(binding -> binding.getRole().getCode())
             .collect(Collectors.toSet());
+        roles = PlatformRoleDefaults.withDefaultUserRole(roles);
         return new PlatformPrincipal(
             user.getId(),
             user.getDisplayName(),
