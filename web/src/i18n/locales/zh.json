@@ -591,6 +591,8 @@
     "versionExistsDescription": "当前技能版本已经发布过，请修改 SKILL.md 中的 version 后重新打包上传。",
     "precheckFailedTitle": "发布前校验未通过",
     "precheckFailedDescription": "技能包中包含疑似密钥、令牌或密码内容。请将真实凭证替换为占位符后再重试。",
+    "frontmatterFailedTitle": "SKILL.md 格式有误",
+    "frontmatterFailedDescription": "请检查 SKILL.md 顶部 frontmatter 的 YAML 格式。若字段值中包含冒号，请用引号包裹。",
     "selectRequired": "请选择命名空间和文件"
   },
   "toast": {

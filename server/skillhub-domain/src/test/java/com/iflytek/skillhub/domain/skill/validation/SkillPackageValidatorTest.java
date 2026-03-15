@@ -143,6 +143,31 @@ class SkillPackageValidatorTest {
     }
 
     @Test
+    void testInvalidYamlFrontmatterUsesFriendlyMessage() {
+        String skillMdContent = """
+            ---
+            name: clawdbot
+            description: Send messages from Clawdbot via the discord tool: send messages, react, post or edit
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+                new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e ->
+                e.contains("Invalid SKILL.md frontmatter")
+                        && e.contains("line")
+                        && e.contains("column")));
+        assertFalse(result.errors().stream().anyMatch(e -> e.contains("mapping values are not allowed here")));
+    }
+
+    @Test
     void testPackageTooLarge() {
         String skillMdContent = """
             ---
