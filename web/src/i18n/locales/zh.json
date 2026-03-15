@@ -384,6 +384,7 @@
     "tabFiles": "文件",
     "tabVersions": "版本",
     "noReadme": "暂无 README",
+    "readmeUnavailable": "README 暂时不可用，请稍后重试或重新上传该技能版本。",
     "noFiles": "暂无文件",
     "noVersions": "暂无版本",
     "fileCount": "{{count}} 个文件",

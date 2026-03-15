@@ -80,7 +80,7 @@ export function SkillDetailPage() {
   const selectedVersion = skill?.latestVersion ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
-  const { data: readme } = useSkillReadme(namespace, slug, selectedVersion)
+  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion)
   const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
   const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
@@ -421,6 +421,10 @@ export function SkillDetailPage() {
             {readme ? (
               <Card className="p-8">
                 <MarkdownRenderer content={readme} />
+              </Card>
+            ) : readmeError ? (
+              <Card className="p-8 text-muted-foreground text-center">
+                {t('skillDetail.readmeUnavailable')}
               </Card>
             ) : (
               <Card className="p-8 text-muted-foreground text-center">
