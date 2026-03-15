@@ -34,7 +34,7 @@ public class TokenController extends BaseApiController {
                 ? "[\"skill:read\",\"skill:publish\"]"
                 : request.scopes().toString();
 
-        var result = apiTokenService.createToken(principal.userId(), request.name(), scopeJson);
+        var result = apiTokenService.createToken(principal.userId(), request.name(), scopeJson, request.expiresAt());
         return ok("response.success.created", new TokenCreateResponse(
                 result.rawToken(),
                 result.entity().getId(),

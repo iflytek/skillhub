@@ -78,7 +78,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        given(apiTokenService.createToken(anyString(), anyString(), anyString()))
+        given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .willThrow(new DomainBadRequestException("validation.token.name.size"));
 
                 mockMvc.perform(post("/api/v1/tokens")
@@ -90,6 +90,33 @@ class TokenControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.msg").value("Token 名称最多 64 个字符"));
+    }
+
+    @Test
+    void create_passesExpirationToService() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "tester", "tester@example.com", "", "github", Set.of("USER")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        var token = new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]");
+        org.springframework.test.util.ReflectionTestUtils.setField(token, "id", 7L);
+        org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.LocalDateTime.of(2026, 3, 15, 12, 0));
+        token.setExpiresAt(java.time.LocalDateTime.of(2026, 4, 15, 12, 0));
+
+        given(apiTokenService.createToken("user-42", "cli", "[\"skill:read\",\"skill:publish\"]", "2026-04-15T12:00:00"))
+                .willReturn(new ApiTokenService.TokenCreateResult("sk_raw", token));
+
+        mockMvc.perform(post("/api/v1/tokens")
+                        .with(authentication(auth))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"name":"cli","expiresAt":"2026-04-15T12:00:00"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.expiresAt").value("2026-04-15T12:00"));
     }
 
     @Test
