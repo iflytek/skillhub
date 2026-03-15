@@ -40,4 +40,4 @@ Supports merging multiple accounts into one, preserving operation history.
 
 ## Next Steps
 
-- [Create Skill Package](../../03-user-guide/publishing/create-skill) - Start publishing skills
+- [Create Skill Package](../../user-guide/publishing/create-skill) - Start publishing skills

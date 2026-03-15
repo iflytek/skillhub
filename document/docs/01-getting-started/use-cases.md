@@ -68,5 +68,5 @@ description: SkillHub 在企业中的典型应用场景
 
 ## 下一步
 
-- [单机部署](../02-administration/deployment/single-machine) - 开始部署
-- [命名空间管理](../02-administration/governance/namespaces) - 了解组织治理
+- [单机部署](../administration/deployment/single-machine) - 开始部署
+- [命名空间管理](../administration/governance/namespaces) - 了解组织治理

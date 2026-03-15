@@ -39,4 +39,4 @@ Excellent team skills can be applied for promotion to the global namespace for e
 
 ## Next Steps
 
-- [API Overview](../../04-developer/api/overview) - API integration
+- [API Overview](../../developer/api/overview) - API integration

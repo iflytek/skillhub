@@ -69,4 +69,4 @@ make help
 
 - [Overview](./overview) - Deep dive into product features
 - [Use Cases](./use-cases) - Explore enterprise application scenarios
-- [Single Machine Deployment](../02-administration/deployment/single-machine) - Production deployment guide
+- [Single Machine Deployment](../administration/deployment/single-machine) - Production deployment guide

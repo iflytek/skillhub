@@ -42,4 +42,4 @@ description: 未来发展路线图
 
 ## 下一步
 
-- [快速开始](../../01-getting-started/quick-start) - 开始使用
+- [快速开始](../../getting-started/quick-start) - 开始使用

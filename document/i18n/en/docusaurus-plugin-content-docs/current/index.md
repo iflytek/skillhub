@@ -13,8 +13,8 @@ description: Enterprise-grade AI Skill Registry - Secure, controllable skill pub
       Secure, controllable skill publishing, discovery, and management platform with full enterprise data sovereignty
     </p>
     <div className="hero-section__cta">
-      <a href="/01-getting-started/quick-start" className="btn-primary">Deploy Now</a>
-      <a href="/01-getting-started/overview" className="btn-secondary">Learn More</a>
+      <a href="/getting-started/quick-start" className="btn-primary">Deploy Now</a>
+      <a href="/getting-started/overview" className="btn-secondary">Learn More</a>
     </div>
   </div>
 </section>
@@ -96,6 +96,6 @@ description: Enterprise-grade AI Skill Registry - Secure, controllable skill pub
 
 ## Next Steps
 
-- [Quick Start](./01-getting-started/quick-start) - Deploy SkillHub with one command
-- [Overview](./01-getting-started/overview) - Learn more about product features
-- [Deployment Guide](./02-administration/deployment/single-machine) - Production deployment
+- [Quick Start](./getting-started/quick-start) - Deploy SkillHub with one command
+- [Overview](./getting-started/overview) - Learn more about product features
+- [Deployment Guide](./administration/deployment/single-machine) - Production deployment

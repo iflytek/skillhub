@@ -51,4 +51,4 @@ SKILLHUB_STORAGE_S3_SECRET_KEY=xxx
 
 ## 下一步
 
-- [常见问题](../../05-reference/faq) - FAQ
+- [常见问题](../../reference/faq) - FAQ

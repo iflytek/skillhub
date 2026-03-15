@@ -69,4 +69,4 @@ make help
 
 - [产品概述](./overview) - 深入了解产品特性
 - [典型应用场景](./use-cases) - 探索企业应用场景
-- [单机部署](../02-administration/deployment/single-machine) - 生产环境部署指南
+- [单机部署](../administration/deployment/single-machine) - 生产环境部署指南

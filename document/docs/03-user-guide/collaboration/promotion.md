@@ -39,4 +39,4 @@ description: 申请将团队技能提升到全局空间
 
 ## 下一步
 
-- [API 概述](../../04-developer/api/overview) - API 集成
+- [API 概述](../../developer/api/overview) - API 集成

@@ -40,4 +40,4 @@ USER_ADMIN 或 SUPER_ADMIN 可封禁/解封用户。
 
 ## 下一步
 
-- [创建技能包](../../03-user-guide/publishing/create-skill) - 开始发布技能
+- [创建技能包](../../user-guide/publishing/create-skill) - 开始发布技能

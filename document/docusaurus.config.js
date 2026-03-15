@@ -80,15 +80,15 @@ const config = {
             items: [
               {
                 label: '快速开始',
-                to: '/01-getting-started/quick-start',
+                to: '/getting-started/quick-start',
               },
               {
                 label: '部署指南',
-                to: '/02-administration/deployment/single-machine',
+                to: '/administration/deployment/single-machine',
               },
               {
                 label: 'API 参考',
-                to: '/04-developer/api/overview',
+                to: '/developer/api/overview',
               },
             ],
           },

@@ -68,5 +68,5 @@ description: Typical enterprise application scenarios for SkillHub
 
 ## Next Steps
 
-- [Single Machine Deployment](../02-administration/deployment/single-machine) - Start deployment
-- [Namespace Management](../02-administration/governance/namespaces) - Learn about organization governance
+- [Single Machine Deployment](../administration/deployment/single-machine) - Start deployment
+- [Namespace Management](../administration/governance/namespaces) - Learn about organization governance

@@ -42,4 +42,4 @@ description: Future development roadmap
 
 ## Next Steps
 
-- [Quick Start](../../01-getting-started/quick-start) - Get started
+- [Quick Start](../../getting-started/quick-start) - Get started

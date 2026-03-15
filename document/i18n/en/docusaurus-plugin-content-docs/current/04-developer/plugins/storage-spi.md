@@ -51,4 +51,4 @@ Implement `ObjectStorageService` interface and register as Spring Bean.
 
 ## Next Steps
 
-- [FAQ](../../05-reference/faq) - FAQ
+- [FAQ](../../reference/faq) - FAQ

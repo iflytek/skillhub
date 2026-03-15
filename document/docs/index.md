@@ -13,8 +13,8 @@ description: 企业级 AI 技能注册表 - 安全可控的技能发布、发现
       安全可控的技能发布、发现与管理平台，保障企业数据主权
     </p>
     <div className="hero-section__cta">
-      <a href="/01-getting-started/quick-start" className="btn-primary">立即部署</a>
-      <a href="/01-getting-started/overview" className="btn-secondary">了解更多</a>
+      <a href="/getting-started/quick-start" className="btn-primary">立即部署</a>
+      <a href="/getting-started/overview" className="btn-secondary">了解更多</a>
     </div>
   </div>
 </section>
@@ -96,6 +96,6 @@ description: 企业级 AI 技能注册表 - 安全可控的技能发布、发现
 
 ## 下一步
 
-- [快速开始](./01-getting-started/quick-start) - 一键启动 SkillHub
-- [产品概述](./01-getting-started/overview) - 了解更多产品特性
-- [部署指南](./02-administration/deployment/single-machine) - 生产环境部署
+- [快速开始](./getting-started/quick-start) - 一键启动 SkillHub
+- [产品概述](./getting-started/overview) - 了解更多产品特性
+- [部署指南](./administration/deployment/single-machine) - 生产环境部署
