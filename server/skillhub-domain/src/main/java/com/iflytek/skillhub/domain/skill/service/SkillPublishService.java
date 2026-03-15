@@ -5,10 +5,12 @@ import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.SlugValidator;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
@@ -17,18 +19,24 @@ import com.iflytek.skillhub.domain.skill.validation.PrePublishValidator;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
 import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import org.yaml.snakeyaml.Yaml;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -88,6 +96,50 @@ public class SkillPublishService {
             String publisherId,
             SkillVisibility visibility,
             java.util.Set<String> platformRoles) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles, false, false);
+    }
+
+    @Transactional
+    public PublishResult rereleasePublishedVersion(
+            Long skillId,
+            String sourceVersion,
+            String targetVersion,
+            String publisherId,
+            Map<Long, NamespaceRole> userNamespaceRoles) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, publisherId, userNamespaceRoles);
+
+        SkillVersion publishedVersion = skillVersionRepository.findBySkillIdAndVersion(skillId, sourceVersion)
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", sourceVersion));
+        if (publishedVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
+            throw new DomainBadRequestException("error.skill.version.notPublished", sourceVersion);
+        }
+        if (skillVersionRepository.findBySkillIdAndVersion(skillId, targetVersion).isPresent()) {
+            throw new DomainBadRequestException("error.skill.version.exists", targetVersion);
+        }
+
+        List<PackageEntry> entries = rebuildEntriesForRerelease(skillId, publishedVersion.getId(), targetVersion);
+
+        return publishFromEntriesInternal(
+                resolveNamespaceSlug(skill.getNamespaceId()),
+                entries,
+                publisherId,
+                skill.getVisibility(),
+                Set.of(),
+                true,
+                true
+        );
+    }
+
+    private PublishResult publishFromEntriesInternal(
+            String namespaceSlug,
+            List<PackageEntry> entries,
+            String publisherId,
+            SkillVisibility visibility,
+            Set<String> platformRoles,
+            boolean forceAutoPublish,
+            boolean bypassMembershipCheck) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
@@ -96,7 +148,7 @@ public class SkillPublishService {
         boolean isSuperAdmin = platformRoles.contains("SUPER_ADMIN");
 
         // 2. Check publisher is member unless SUPER_ADMIN short-circuits permission checks
-        if (!isSuperAdmin) {
+        if (!isSuperAdmin && !bypassMembershipCheck) {
             namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
                     .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
         }
@@ -153,7 +205,7 @@ public class SkillPublishService {
 
         // 8. Create SkillVersion
         SkillVersion version = new SkillVersion(skill.getId(), metadata.version(), publisherId);
-        boolean autoPublish = isSuperAdmin;
+        boolean autoPublish = forceAutoPublish || isSuperAdmin;
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
             version.setPublishedAt(LocalDateTime.now());
@@ -251,6 +303,64 @@ public class SkillPublishService {
 
         // 13. Return identifiers for the created version
         return new PublishResult(skill.getId(), skill.getSlug(), version);
+    }
+
+    private String resolveNamespaceSlug(Long namespaceId) {
+        return namespaceRepository.findById(namespaceId)
+                .orElseThrow(() -> new DomainBadRequestException("error.namespace.notFound", namespaceId))
+                .getSlug();
+    }
+
+    private void assertCanManageLifecycle(Skill skill,
+                                          String actorUserId,
+                                          Map<Long, NamespaceRole> userNamespaceRoles) {
+        NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
+        boolean canManage = skill.getOwnerId().equals(actorUserId)
+                || namespaceRole == NamespaceRole.ADMIN
+                || namespaceRole == NamespaceRole.OWNER;
+        if (!canManage) {
+            throw new DomainForbiddenException("error.skill.lifecycle.noPermission");
+        }
+    }
+
+    private List<PackageEntry> rebuildEntriesForRerelease(Long skillId, Long versionId, String targetVersion) {
+        List<SkillFile> files = skillFileRepository.findByVersionId(versionId).stream()
+                .sorted(Comparator.comparing(SkillFile::getFilePath))
+                .toList();
+        List<PackageEntry> entries = new ArrayList<>(files.size());
+        for (SkillFile file : files) {
+            byte[] content = readAllBytes(objectStorageService.getObject(file.getStorageKey()));
+            if ("SKILL.md".equals(file.getFilePath())) {
+                content = rewriteSkillMdVersion(content, targetVersion);
+            }
+            entries.add(new PackageEntry(
+                    file.getFilePath(),
+                    content,
+                    content.length,
+                    file.getContentType() != null ? file.getContentType() : "application/octet-stream"
+            ));
+        }
+        return entries;
+    }
+
+    private byte[] readAllBytes(InputStream inputStream) {
+        try (InputStream in = inputStream) {
+            return in.readAllBytes();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read stored skill file", e);
+        }
+    }
+
+    private byte[] rewriteSkillMdVersion(byte[] content, String targetVersion) {
+        String skillMdContent = new String(content);
+        SkillMetadata metadata = skillMetadataParser.parse(skillMdContent);
+        Map<String, Object> frontmatter = new LinkedHashMap<>(metadata.frontmatter());
+        frontmatter.put("version", targetVersion);
+        String rewritten = "---\n"
+                + new Yaml().dump(frontmatter).trim()
+                + "\n---\n"
+                + metadata.body();
+        return rewritten.getBytes();
     }
 
     private List<Map<String, Object>> buildManifest(List<PackageEntry> entries) {
