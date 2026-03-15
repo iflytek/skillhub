@@ -3,8 +3,10 @@ package com.iflytek.skillhub.auth.local;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
@@ -117,6 +119,21 @@ class LocalAuthServiceTest {
 
         assertThat(credential.getFailedAttempts()).isEqualTo(1);
         verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    void login_withUnknownUsername_stillPerformsDummyPasswordCheck() {
+        given(credentialRepository.findByUsernameIgnoreCase("ghost")).willReturn(Optional.empty());
+        given(passwordEncoder.matches(eq("bad"), eq("$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu")))
+            .willReturn(false);
+
+        assertThatThrownBy(() -> service.login("ghost", "bad"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(passwordEncoder).matches("bad", "$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu");
+        verify(userAccountRepository, never()).findById(any());
     }
 
     @Test
