@@ -111,6 +111,7 @@ export interface SkillSummary {
   ratingAvg?: number
   ratingCount: number
   latestVersion?: string
+  latestVersionStatus?: string
   namespace: string
   updatedAt: string
 }

@@ -185,6 +185,8 @@
     "title": "My Skills",
     "subtitle": "Manage your published skills",
     "publishNew": "Publish New Skill",
+    "statusPendingReview": "Pending Review",
+    "statusPublished": "Published",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Start publishing your first skill",
     "publishSkill": "Publish Skill"

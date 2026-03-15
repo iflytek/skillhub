@@ -14,6 +14,26 @@ export function MySkillsPage() {
     navigate({ to: `/space/${namespace}/${slug}` })
   }
 
+  const resolveStatusLabel = (status?: string) => {
+    if (status === 'PENDING_REVIEW') {
+      return t('mySkills.statusPendingReview')
+    }
+    if (status === 'PUBLISHED') {
+      return t('mySkills.statusPublished')
+    }
+    return status
+  }
+
+  const resolveStatusClassName = (status?: string) => {
+    if (status === 'PENDING_REVIEW') {
+      return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+    }
+    if (status === 'PUBLISHED') {
+      return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+    }
+    return 'bg-secondary/60 text-muted-foreground border-border/40'
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-up">
@@ -57,6 +77,11 @@ export function MySkillsPage() {
                     {skill.latestVersion && (
                       <span className="font-mono text-xs">v{skill.latestVersion}</span>
                     )}
+                    {skill.latestVersionStatus ? (
+                      <span className={`rounded-full border px-2.5 py-0.5 text-xs ${resolveStatusClassName(skill.latestVersionStatus)}`}>
+                        {resolveStatusLabel(skill.latestVersionStatus)}
+                      </span>
+                    ) : null}
                     <span className="flex items-center gap-1">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
