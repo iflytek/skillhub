@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 public class PostgresFullTextQueryService implements SearchQueryService {
     private static final Pattern QUERY_TERM_SPLITTER = Pattern.compile("[^\\p{L}\\p{N}_]+");
     private static final int MAX_QUERY_TERMS = 8;
+    private static final int SHORT_PREFIX_LENGTH = 2;
+    private static final String TITLE_VECTOR_SQL = "to_tsvector('simple', coalesce(title, ''))";
 
     private final EntityManager entityManager;
 
@@ -27,6 +29,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         String normalizedKeyword = normalizeKeyword(query.keyword());
         String tsQuery = buildPrefixTsQuery(normalizedKeyword);
         boolean hasKeyword = tsQuery != null;
+        boolean useShortPrefixTitleSearch = hasKeyword && normalizedKeyword.length() <= SHORT_PREFIX_LENGTH;
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
@@ -55,7 +58,11 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         // Full-text search
         if (hasKeyword) {
-            sql.append("AND search_vector @@ to_tsquery('simple', :tsQuery) ");
+            if (useShortPrefixTitleSearch) {
+                sql.append("AND ").append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
+            } else {
+                sql.append("AND search_vector @@ to_tsquery('simple', :tsQuery) ");
+            }
         }
 
         // Sorting
@@ -66,7 +73,12 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         } else if ("newest".equals(query.sortBy())) {
             sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC ");
         } else if ("relevance".equals(query.sortBy()) && hasKeyword) {
-            sql.append("ORDER BY ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+            if (useShortPrefixTitleSearch) {
+                sql.append("ORDER BY ts_rank_cd(").append(TITLE_VECTOR_SQL)
+                        .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+            } else {
+                sql.append("ORDER BY ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+            }
         } else {
             sql.append("ORDER BY updated_at DESC ");
         }
