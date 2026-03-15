@@ -58,7 +58,21 @@ firewall, with the same polish you'd expect from a public registry.
 
 ## Quick Start
 
-Start the full local stack with: `curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up`
+Start the full local stack with one of the following commands:
+
+Official images:
+```bash
+rm -rf /tmp/skillhub-runtime
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up
+```
+
+Aliyun mirror shortcut:
+```bash
+rm -rf /tmp/skillhub-aliyun
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version edge
+```
+
+If deployment runs into problems, clear the existing runtime home and retry.
 
 ### Prerequisites
 
@@ -136,12 +150,6 @@ Recommended image tags:
 
 - `SKILLHUB_VERSION=edge` for the latest `main` build
 - `SKILLHUB_VERSION=vX.Y.Z` for a fixed release
-
-Use the bundled Aliyun mirror shortcut when a nearer registry is configured:
-
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --version edge
-```
 
 Start the runtime:
 
