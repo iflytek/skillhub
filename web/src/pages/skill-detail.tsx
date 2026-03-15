@@ -30,6 +30,7 @@ import {
   useArchiveSkill,
   useDeleteSkillVersion,
   useUnarchiveSkill,
+  useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
 
 export function SkillDetailPage() {
@@ -43,6 +44,7 @@ export function SkillDetailPage() {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
+  const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
@@ -76,6 +78,7 @@ export function SkillDetailPage() {
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const deleteVersionMutation = useDeleteSkillVersion()
+  const withdrawReviewMutation = useWithdrawSkillReview()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
   const handleDownload = () => {
@@ -150,6 +153,7 @@ export function SkillDetailPage() {
   }
 
   const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED'
+  const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
 
   const handleArchive = async () => {
     try {
@@ -192,6 +196,24 @@ export function SkillDetailPage() {
       setDeleteVersionTarget(null)
     } catch (error) {
       toast.error(t('skillDetail.deleteVersionErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
+  const handleWithdrawVersion = async () => {
+    if (!withdrawVersionTarget) {
+      return
+    }
+    try {
+      await withdrawReviewMutation.mutateAsync({ namespace, slug, version: withdrawVersionTarget })
+      toast.success(
+        t('skillDetail.withdrawReviewSuccessTitle'),
+        t('skillDetail.withdrawReviewSuccessDescription', { version: withdrawVersionTarget }),
+      )
+      setWithdrawVersionTarget(null)
+      navigate({ to: '/dashboard/skills' })
+    } catch (error) {
+      toast.error(t('skillDetail.withdrawReviewErrorTitle'), error instanceof Error ? error.message : '')
       throw error
     }
   }
@@ -321,6 +343,15 @@ export function SkillDetailPage() {
                               onClick={() => setDeleteVersionTarget(version.version)}
                             >
                               {t('skillDetail.deleteVersion')}
+                            </Button>
+                          )}
+                          {skill.canManageLifecycle && canWithdrawVersion(version.status) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setWithdrawVersionTarget(version.version)}
+                            >
+                              {t('skillDetail.withdrawReview')}
                             </Button>
                           )}
                         </div>
@@ -522,6 +553,19 @@ export function SkillDetailPage() {
         confirmText={t('skillDetail.deleteVersion')}
         variant="destructive"
         onConfirm={handleDeleteVersion}
+      />
+
+      <ConfirmDialog
+        open={!!withdrawVersionTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWithdrawVersionTarget(null)
+          }
+        }}
+        title={t('skillDetail.withdrawReviewConfirmTitle')}
+        description={withdrawVersionTarget ? t('skillDetail.withdrawReviewConfirmDescription', { version: withdrawVersionTarget }) : ''}
+        confirmText={t('skillDetail.withdrawReview')}
+        onConfirm={handleWithdrawVersion}
       />
     </div>
   )

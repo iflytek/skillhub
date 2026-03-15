@@ -13,10 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.review.ReviewService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -54,6 +56,12 @@ class SkillLifecycleControllerTest {
 
     @MockBean
     private SkillGovernanceService skillGovernanceService;
+
+    @MockBean
+    private ReviewService reviewService;
+
+    @MockBean
+    private AuditLogService auditLogService;
 
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
@@ -137,6 +145,32 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.versionId").value(2))
                 .andExpect(jsonPath("$.data.action").value("DELETE_VERSION"))
                 .andExpect(jsonPath("$.data.status").value("1.0.0"));
+    }
+
+    @Test
+    void withdrawReview_returnsUnifiedEnvelope() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        setSkillVersionId(version, 2L);
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).willReturn(java.util.Optional.of(version));
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.0.0/withdraw-review")
+                        .requestAttr("userId", "usr_1")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.versionId").value(2))
+                .andExpect(jsonPath("$.data.action").value("WITHDRAW_REVIEW"))
+                .andExpect(jsonPath("$.data.status").value("DELETED"));
     }
 
     private Skill skillWithStatus(Skill skill, com.iflytek.skillhub.domain.skill.SkillStatus status) {

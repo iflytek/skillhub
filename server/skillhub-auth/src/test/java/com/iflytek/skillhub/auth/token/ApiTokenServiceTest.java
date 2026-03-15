@@ -1,12 +1,16 @@
 package com.iflytek.skillhub.auth.token;
 
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
+import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,5 +86,38 @@ class ApiTokenServiceTest {
                 .hasMessageContaining("validation.token.expiresAt.future");
 
         verify(tokenRepo, never()).save(any());
+    }
+
+    @Test
+    void createToken_rejectsBlankNamesAfterTrimming() {
+        assertThatThrownBy(() -> service.createToken("user-1", "   ", "[]"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessageContaining("validation.token.name.notBlank");
+
+        verify(tokenRepo, never()).save(any());
+    }
+
+    @Test
+    void createToken_allowsReusingNameWhenPreviousTokenIsRevoked() {
+        when(tokenRepo.existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase("user-1", "CLI"))
+                .thenReturn(false);
+        when(tokenRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.createToken("user-1", " CLI ", "[]");
+
+        assertThat(result.entity().getName()).isEqualTo("CLI");
+        verify(tokenRepo).existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase("user-1", "CLI");
+        verify(tokenRepo).save(any(ApiToken.class));
+    }
+
+    @Test
+    void createToken_translatesDatabaseConstraintViolationToDuplicateError() {
+        when(tokenRepo.existsByUserIdAndRevokedAtIsNullAndNameIgnoreCase("user-1", "CLI"))
+                .thenReturn(false);
+        when(tokenRepo.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        assertThatThrownBy(() -> service.createToken("user-1", "CLI", "[]"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessageContaining("error.token.name.duplicate");
     }
 }
