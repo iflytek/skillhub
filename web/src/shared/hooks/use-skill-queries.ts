@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace } from '@/api/types'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
@@ -58,6 +58,10 @@ async function getMyStars(): Promise<SkillSummary[]> {
 
 async function getMyNamespaces(): Promise<ManagedNamespace[]> {
   return namespaceApi.listMine()
+}
+
+async function createNamespace(request: CreateNamespaceRequest): Promise<Namespace> {
+  return namespaceApi.create(request)
 }
 
 async function getNamespaceDetail(slug: string): Promise<Namespace> {
@@ -152,6 +156,19 @@ export function useMyNamespaces() {
   return useQuery({
     queryKey: ['namespaces', 'my'],
     queryFn: getMyNamespaces,
+  })
+}
+
+export function useCreateNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createNamespace,
+    onSuccess: (namespace) => {
+      queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces', namespace.slug] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces'] })
+    },
   })
 }
 

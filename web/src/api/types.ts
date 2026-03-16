@@ -61,6 +61,12 @@ export interface ChangePasswordRequest {
   newPassword: string
 }
 
+export type CreateNamespaceRequest = Omit<components['schemas']['NamespaceRequest'], 'slug' | 'displayName'> & {
+  slug: string
+  displayName: string
+  description?: string
+}
+
 export interface MergeInitiateRequest {
   secondaryIdentifier: string
 }

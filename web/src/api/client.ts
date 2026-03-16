@@ -21,6 +21,7 @@ import type {
   User,
   ManagedNamespace,
   Namespace,
+  CreateNamespaceRequest,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -467,6 +468,20 @@ function normalizeNamespaceSlug(namespace: string): string {
 }
 
 export const namespaceApi = {
+  async create(request: CreateNamespaceRequest): Promise<Namespace> {
+    const namespace = await unwrap<Namespace>(client.POST('/api/v1/namespaces', {
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: {
+        slug: normalizeNamespaceSlug(request.slug),
+        displayName: request.displayName.trim(),
+        description: request.description?.trim() || undefined,
+      },
+    } as never) as never)
+    return namespace
+  },
+
   async listMine(): Promise<ManagedNamespace[]> {
     return fetchJson<ManagedNamespace[]>(`${WEB_API_PREFIX}/me/namespaces`)
   },

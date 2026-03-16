@@ -7,6 +7,7 @@ import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { CreateNamespaceDialog } from '@/features/namespace/create-namespace-dialog'
 import { useArchiveNamespace, useFreezeNamespace, useMyNamespaces, useRestoreNamespace, useUnfreezeNamespace } from '@/shared/hooks/use-skill-queries'
 import { toast } from '@/shared/lib/toast'
 
@@ -159,7 +160,11 @@ export function MyNamespacesPage() {
       <DashboardPageHeader
         title={t('myNamespaces.title')}
         subtitle={t('myNamespaces.subtitle')}
-        actions={<Button disabled>{t('myNamespaces.create')}</Button>}
+        actions={(
+          <CreateNamespaceDialog>
+            <Button>{t('myNamespaces.create')}</Button>
+          </CreateNamespaceDialog>
+        )}
       />
 
       {namespaces && namespaces.length > 0 ? (
@@ -273,7 +278,11 @@ export function MyNamespacesPage() {
         <EmptyState
           title={t('myNamespaces.emptyTitle')}
           description={t('myNamespaces.emptyDescription')}
-          action={<Button disabled>{t('myNamespaces.create')}</Button>}
+          action={(
+            <CreateNamespaceDialog>
+              <Button>{t('myNamespaces.create')}</Button>
+            </CreateNamespaceDialog>
+          )}
         />
       )}
 
