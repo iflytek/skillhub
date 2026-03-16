@@ -47,23 +47,25 @@
 | Profile | 用途 | 说明 |
 |---------|------|------|
 | `local` | 本地源码开发能力 | 启用 mock 登录、开发种子账号、调试日志 |
-| `docker` | 容器运行时能力 | 启用容器运行时相关能力，不影响通用首登管理员初始化 |
+| `docker` | 容器运行时能力 | 启用容器运行时相关能力，不会自动打开首登管理员 |
 
 单机交付环境使用 `SPRING_PROFILES_ACTIVE=docker`，原因如下：
 
 - 生产环境不应开启 `X-Mock-User-Id` 这一类本地开发旁路能力
-- 容器环境仍然保留 `docker` profile 的运行时能力，但首个管理员账户初始化本身不再依赖该 profile
+- 容器环境仍然保留 `docker` profile 的运行时能力，但首个管理员账户初始化本身不再依赖该 profile，且默认关闭
 - 数据库、Redis、OSS、站点公网地址全部改为环境变量优先
 
-默认首登账号来源于环境变量：
+如需启用首登管理员，来源于以下环境变量：
 
+- `BOOTSTRAP_ADMIN_ENABLED=true`
 - `BOOTSTRAP_ADMIN_USERNAME`
 - `BOOTSTRAP_ADMIN_PASSWORD`
 
 建议：
 
+- 默认保持 `BOOTSTRAP_ADMIN_ENABLED=false`
 - 完成首次登录后立即修改管理员密码
-- 如果已有外部身份源，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
+- 如果已有外部身份源，通常不需要启用 bootstrap admin
 - `SKILLHUB_PUBLIC_BASE_URL` 应配置为最终 HTTPS 域名，避免 OAuth / Cookie / 设备码链接异常
 
 ## 4 开发环境
@@ -206,7 +208,8 @@ docker compose --env-file .env.release -f compose.release.yml up -d
    - `SKILLHUB_PUBLIC_BASE_URL` 填最终 HTTPS 域名，且不要带尾部 `/`
    - `SKILLHUB_STORAGE_PROVIDER=s3`
    - 按云厂商 OSS / S3 兼容参数填写 `SKILLHUB_STORAGE_S3_*`
-   - 设置非默认的 `POSTGRES_PASSWORD` 与 `BOOTSTRAP_ADMIN_PASSWORD`
+   - 设置非默认的 `POSTGRES_PASSWORD`
+   - 如果要启用首登管理员，再额外设置 `BOOTSTRAP_ADMIN_ENABLED=true` 与非默认的 `BOOTSTRAP_ADMIN_PASSWORD`
 3. 启动前校验
    - 运行 `make validate-release-config`
    - 确认没有 `replace-me`、`change-this-*`、`ChangeMe!2026` 之类的占位值
@@ -215,7 +218,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
    - 检查 `docker compose --env-file .env.release -f compose.release.yml ps`
    - 检查 `curl -i http://127.0.0.1:8080/actuator/health`
 5. 首登收尾
-   - 使用 `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` 登录
+   - 仅在启用了 `BOOTSTRAP_ADMIN_ENABLED=true` 时，使用 `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` 登录
    - 立即修改管理员密码
    - 如果后续完全走 OAuth，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
 

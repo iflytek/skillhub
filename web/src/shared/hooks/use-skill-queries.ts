@@ -223,7 +223,7 @@ export function useSubmitPromotion() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
     },
   })
 }

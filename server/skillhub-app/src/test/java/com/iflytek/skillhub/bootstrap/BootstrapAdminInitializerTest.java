@@ -29,6 +29,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +65,7 @@ class BootstrapAdminInitializerTest {
 
     @Test
     void shouldSeedBootstrapAdminWithCredentialRoleAndMembership() throws Exception {
+        bootstrapAdminProperties.setEnabled(true);
         Namespace global = new Namespace("global", "Global", "system");
         setField(global, "id", 1L);
 
@@ -83,10 +85,11 @@ class BootstrapAdminInitializerTest {
         initializer.run(new DefaultApplicationArguments(new String[0]));
 
         ArgumentCaptor<UserAccount> userCaptor = ArgumentCaptor.forClass(UserAccount.class);
-        verify(userAccountRepository).save(userCaptor.capture());
-        assertEquals("docker-admin", userCaptor.getValue().getId());
-        assertEquals("Admin", userCaptor.getValue().getDisplayName());
-        assertEquals("admin@skillhub.local", userCaptor.getValue().getEmail());
+        verify(userAccountRepository, atLeastOnce()).save(userCaptor.capture());
+        UserAccount savedUser = userCaptor.getAllValues().getLast();
+        assertEquals("docker-admin", savedUser.getId());
+        assertEquals("Admin", savedUser.getDisplayName());
+        assertEquals("admin@skillhub.local", savedUser.getEmail());
 
         ArgumentCaptor<LocalCredential> credentialCaptor = ArgumentCaptor.forClass(LocalCredential.class);
         verify(localCredentialRepository).save(credentialCaptor.capture());
@@ -107,6 +110,7 @@ class BootstrapAdminInitializerTest {
 
     @Test
     void shouldSkipWhenBootstrapAdminCredentialAlreadyExists() {
+        bootstrapAdminProperties.setEnabled(true);
         when(localCredentialRepository.existsByUsernameIgnoreCase("admin")).thenReturn(true);
 
         initializer.run(new DefaultApplicationArguments(new String[0]));

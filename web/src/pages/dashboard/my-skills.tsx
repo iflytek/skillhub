@@ -11,14 +11,14 @@ import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
-function isDuplicatePromotionMessage(message?: string): boolean {
-  if (!message) {
-    return false
+function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending' | 'promotion.already_promoted' | null {
+  if (error.serverMessageKey === 'promotion.duplicate_pending') {
+    return 'promotion.duplicate_pending'
   }
-
-  return message.includes('promotion.duplicate_pending')
-    || message.includes('已有待处理的提升申请')
-    || message.includes('Duplicate pending promotion')
+  if (error.serverMessageKey === 'promotion.already_promoted') {
+    return 'promotion.already_promoted'
+  }
+  return null
 }
 
 export function MySkillsPage() {
@@ -140,9 +140,16 @@ export function MySkillsPage() {
       )
       setPromotionTarget(null)
     } catch (error) {
-      if (error instanceof ApiError && isDuplicatePromotionMessage(error.serverMessage || error.message)) {
-        toast.error(t('mySkills.promotionDuplicateTitle'), t('mySkills.promotionDuplicateDescription'))
-        return
+      if (error instanceof ApiError) {
+        const conflictKey = getPromotionConflictKey(error)
+        if (conflictKey === 'promotion.duplicate_pending') {
+          toast.error(t('mySkills.promotionDuplicateTitle'), t('mySkills.promotionDuplicateDescription'))
+          return
+        }
+        if (conflictKey === 'promotion.already_promoted') {
+          toast.error(t('mySkills.promotionAlreadyPromotedTitle'), t('mySkills.promotionAlreadyPromotedDescription'))
+          return
+        }
       }
       toast.error(t('mySkills.promotionErrorTitle'), error instanceof Error ? error.message : '')
       throw error
