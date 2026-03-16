@@ -1,6 +1,10 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.AuthMeResponse;
@@ -28,6 +32,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController extends BaseApiController {
@@ -36,24 +43,41 @@ public class AuthController extends BaseApiController {
     private final SessionBootstrapService sessionBootstrapService;
     private final DirectAuthService directAuthService;
     private final AuthFailureThrottleService authFailureThrottleService;
+    private final UserRoleBindingRepository userRoleBindingRepository;
+    private final PlatformSessionService platformSessionService;
 
     public AuthController(ApiResponseFactory responseFactory,
                           AuthMethodCatalog authMethodCatalog,
                           SessionBootstrapService sessionBootstrapService,
                           DirectAuthService directAuthService,
-                          AuthFailureThrottleService authFailureThrottleService) {
+                          AuthFailureThrottleService authFailureThrottleService,
+                          UserRoleBindingRepository userRoleBindingRepository,
+                          PlatformSessionService platformSessionService) {
         super(responseFactory);
         this.authMethodCatalog = authMethodCatalog;
         this.sessionBootstrapService = sessionBootstrapService;
         this.directAuthService = directAuthService;
         this.authFailureThrottleService = authFailureThrottleService;
+        this.userRoleBindingRepository = userRoleBindingRepository;
+        this.platformSessionService = platformSessionService;
     }
 
     @GetMapping("/me")
     public ApiResponse<AuthMeResponse> me(@AuthenticationPrincipal PlatformPrincipal principal,
-                                          Authentication authentication) {
+                                          Authentication authentication,
+                                          HttpServletRequest request) {
         if (principal == null || authentication == null || !authentication.isAuthenticated()) {
             throw new UnauthorizedException("error.auth.required");
+        }
+        Set<String> freshRoles = PlatformRoleDefaults.withDefaultUserRole(
+                userRoleBindingRepository.findByUserId(principal.userId()).stream()
+                        .map(binding -> binding.getRole().getCode())
+                        .collect(Collectors.toSet()));
+        if (!freshRoles.equals(principal.platformRoles())) {
+            principal = new PlatformPrincipal(
+                    principal.userId(), principal.displayName(), principal.email(),
+                    principal.avatarUrl(), principal.oauthProvider(), freshRoles);
+            platformSessionService.establishSession(principal, request, false);
         }
         return ok("response.success.read", AuthMeResponse.from(principal));
     }
