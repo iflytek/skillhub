@@ -225,7 +225,7 @@
     "viewStars": "查看我的收藏",
     "mySkillsTitle": "我的技能",
     "openMySkills": "打开我的技能",
-    "mySkillsPreviewDescription": "这里只展示前几条技能，更多内容请进入我的技能页查看。",
+    "mySkillsPreviewDescription": "最近的技能概览，点击可进入详情或我的技能页。",
     "mySkillsPreviewEmpty": "你还没有发布任何技能",
     "credentials": "访问凭证",
     "openTokens": "打开 Token 页面",

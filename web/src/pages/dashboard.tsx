@@ -6,7 +6,7 @@ import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { limitPreviewItems } from './dashboard-preview'
 
-const DASHBOARD_PREVIEW_LIMIT = 4
+const DASHBOARD_PREVIEW_LIMIT = 5
 
 export function DashboardPage() {
   const { t } = useTranslation()
@@ -112,14 +112,14 @@ export function DashboardPage() {
           <Card>
             <CardContent className="p-4">
               {isLoadingSkills ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {Array.from({ length: DASHBOARD_PREVIEW_LIMIT }).map((_, index) => (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: DASHBOARD_PREVIEW_LIMIT + 1 }).map((_, index) => (
                     <div key={index} className="h-20 animate-shimmer rounded-lg" />
                   ))}
                 </div>
               ) : skillPreview.items.length > 0 ? (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {skillPreview.items.map((skill) => (
                       <Link
                         key={skill.id}
@@ -136,12 +136,15 @@ export function DashboardPage() {
                         ) : null}
                       </Link>
                     ))}
+                    {skillPreview.hasMore ? (
+                      <Link
+                        to="/dashboard/skills"
+                        className="flex min-h-20 items-center justify-center rounded-lg border border-dashed border-border/70 px-3 py-3 text-lg font-semibold text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+                      >
+                        {t('dashboard.previewMore')}
+                      </Link>
+                    ) : null}
                   </div>
-                  {skillPreview.hasMore ? (
-                    <div className="inline-flex rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-                      {t('dashboard.previewMore')}
-                    </div>
-                  ) : null}
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">{t('dashboard.mySkillsPreviewEmpty')}</div>

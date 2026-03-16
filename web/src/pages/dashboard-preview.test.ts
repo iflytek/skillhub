@@ -17,4 +17,12 @@ describe('limitPreviewItems', () => {
       remainingCount: 1,
     })
   })
+
+  it('supports a five-item preview before the ellipsis entry', () => {
+    expect(limitPreviewItems(['a', 'b', 'c', 'd', 'e', 'f'], 5)).toEqual({
+      items: ['a', 'b', 'c', 'd', 'e'],
+      hasMore: true,
+      remainingCount: 1,
+    })
+  })
 })
