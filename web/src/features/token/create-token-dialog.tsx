@@ -210,22 +210,22 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
           </>
         ) : (
           <>
-            <DialogHeader className="text-center sm:text-center">
+            <DialogHeader className="min-w-0 text-center sm:text-center">
               <DialogTitle className="text-center">{t('createToken.successTitle')}</DialogTitle>
-              <DialogDescription className="text-center">
+              <DialogDescription className="text-center break-words">
                 {t('createToken.successDescription')}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="min-w-0 space-y-4 py-4">
               <div className="space-y-2">
                 <Label>{t('createToken.tokenLabel')}</Label>
-                <div className="rounded-md bg-muted p-3 font-mono text-sm break-all">
+                <div className="overflow-hidden rounded-md bg-muted p-3 font-mono text-sm break-all">
                   {createdToken.token}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>{t('createToken.nameDisplay')}</Label>
-                <div className="text-sm">{createdToken.name}</div>
+                <div className="text-sm break-all">{createdToken.name}</div>
               </div>
               <div className="space-y-2">
                 <Label>{t('createToken.expiresAtDisplay')}</Label>

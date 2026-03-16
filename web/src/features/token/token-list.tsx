@@ -204,7 +204,7 @@ export function TokenList() {
             <TableBody>
               {tokens.map((token) => (
                 <TableRow key={token.id}>
-                  <TableCell className="font-medium">{token.name}</TableCell>
+                  <TableCell className="font-medium max-w-48 break-all">{token.name}</TableCell>
                   <TableCell>
                     <code className="text-sm bg-muted px-2 py-1 rounded">
                       {token.tokenPrefix}...
@@ -257,9 +257,9 @@ export function TokenList() {
 
       <Dialog open={expirationDialog.open} onOpenChange={(open) => setExpirationDialog((current) => ({ ...current, open }))}>
         <DialogContent>
-          <DialogHeader>
+          <DialogHeader className="min-w-0">
             <DialogTitle>{t('token.editExpirationTitle')}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="break-all">
               {t('token.editExpirationDescription', { name: expirationDialog.tokenName })}
             </DialogDescription>
           </DialogHeader>
