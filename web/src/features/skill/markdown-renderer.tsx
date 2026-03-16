@@ -1,11 +1,29 @@
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
+import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
+import type { Root } from 'mdast'
+import { visit } from 'unist-util-visit'
 
 interface MarkdownRendererProps {
   content: string
   className?: string
+}
+
+function remarkStripFrontmatter() {
+  return (tree: Root) => {
+    visit(tree, (node, index, parent) => {
+      if (!parent || index === undefined) {
+        return
+      }
+
+      const nodeType = String(node.type)
+      if (nodeType === 'yaml' || nodeType === 'toml') {
+        parent.children.splice(index, 1)
+      }
+    })
+  }
 }
 
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
@@ -19,7 +37,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div className={containerClassName}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkFrontmatter, remarkStripFrontmatter, remarkGfm]}
         rehypePlugins={[rehypeSanitize, rehypeHighlight]}
         components={{
           pre: ({ children }) => (
