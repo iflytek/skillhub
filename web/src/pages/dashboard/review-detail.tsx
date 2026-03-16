@@ -5,9 +5,17 @@ import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Textarea } from '@/shared/ui/textarea'
 import { Label } from '@/shared/ui/label'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/lib/toast'
 import { useReviewDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
+import { SecurityAuditPanel } from '@/features/review/security-audit-panel'
+import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
+import { FileTree } from '@/features/skill/file-tree'
+import { CodeViewer } from '@/features/skill/code-viewer'
+import { useSkillReadme, useSkillFiles } from '@/shared/hooks/use-skill-queries'
+import { fetchText } from '@/api/client'
+import type { SkillFile } from '@/api/types'
 
 export function ReviewDetailPage() {
   const { id } = useParams({ from: '/dashboard/reviews/$id' })
@@ -23,6 +31,20 @@ export function ReviewDetailPage() {
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [approveDialog, setApproveDialog] = useState(false)
   const [rejectDialog, setRejectDialog] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<SkillFile | null>(null)
+  const [fileContent, setFileContent] = useState<string | null>(null)
+  const [loadingFile, setLoadingFile] = useState(false)
+
+  const { data: readme } = useSkillReadme(
+    review?.namespace || '',
+    review?.skillSlug || '',
+    review?.version
+  )
+  const { data: files } = useSkillFiles(
+    review?.namespace || '',
+    review?.skillSlug || '',
+    review?.version
+  )
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString(i18n.language)
@@ -60,6 +82,24 @@ export function ReviewDetailPage() {
         },
       }
     )
+  }
+
+  const handleFileClick = async (file: SkillFile) => {
+    if (!review) return
+    setSelectedFile(file)
+    setLoadingFile(true)
+    setFileContent(null)
+    try {
+      const cleanNamespace = review.namespace.startsWith('@') ? review.namespace.slice(1) : review.namespace
+      const url = `/api/web/skills/${cleanNamespace}/${review.skillSlug}/versions/${review.version}/file?path=${encodeURIComponent(file.filePath)}`
+      const content = await fetchText(url)
+      setFileContent(content)
+    } catch (error) {
+      toast.error('Failed to load file')
+      setFileContent(null)
+    } finally {
+      setLoadingFile(false)
+    }
   }
 
   if (isLoading) {
@@ -149,6 +189,59 @@ export function ReviewDetailPage() {
             <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.reviewComment}</p>
           </div>
         )}
+      </Card>
+
+      <SecurityAuditPanel skillId={review.skillId} versionId={review.skillVersionId} hasSecurityAudit={review.hasSecurityAudit} />
+
+      <Card className="p-8 space-y-6">
+        <h2 className="text-xl font-bold font-heading">{t('review.skillContent')}</h2>
+        <Tabs defaultValue="readme">
+          <TabsList>
+            <TabsTrigger value="readme">{t('review.readme')}</TabsTrigger>
+            <TabsTrigger value="files">{t('review.files')}</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="readme" className="mt-6">
+            {readme ? (
+              <MarkdownRenderer content={readme} />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                {t('review.noReadme')}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="files" className="mt-6 space-y-6">
+            {files && files.length > 0 ? (
+              <>
+                <FileTree files={files} onFileClick={handleFileClick} />
+                {selectedFile && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold font-heading">
+                      {t('review.fileContent')}
+                    </Label>
+                    {loadingFile ? (
+                      <div className="h-64 animate-shimmer rounded-xl" />
+                    ) : fileContent ? (
+                      selectedFile.filePath.endsWith('.md') ? (
+                        <MarkdownRenderer content={fileContent} />
+                      ) : (
+                        <CodeViewer
+                          content={fileContent}
+                          fileName={selectedFile.filePath}
+                        />
+                      )
+                    ) : null}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                No files available
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </Card>
 
       {review.status === 'PENDING' && (
