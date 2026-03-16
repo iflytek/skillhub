@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
@@ -136,6 +137,20 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data.latestVersion").value("1.1.0"))
                 .andExpect(jsonPath("$.data.viewingVersionStatus").value("PENDING_REVIEW"))
                 .andExpect(jsonPath("$.data.canInteract").value(false));
+    }
+
+    @Test
+    void getSkillDetailShouldReturnForbiddenForArchivedNamespace() throws Exception {
+        when(skillQueryService.getSkillDetail(
+                eq("team"),
+                eq("demo"),
+                eq((String) null),
+                eq(Map.<Long, NamespaceRole>of())))
+                .thenThrow(new DomainForbiddenException("error.namespace.archived", "team"));
+
+        mockMvc.perform(get("/api/web/skills/team/demo"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test

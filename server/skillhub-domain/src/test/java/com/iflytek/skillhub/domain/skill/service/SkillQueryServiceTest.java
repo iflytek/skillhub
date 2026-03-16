@@ -3,6 +3,7 @@ package com.iflytek.skillhub.domain.skill.service;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -116,6 +117,24 @@ class SkillQueryServiceTest {
         assertThrows(DomainForbiddenException.class, () ->
                 service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles)
         );
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldHideArchivedNamespaceFromAnonymousUsers() throws Exception {
+        String namespaceSlug = "archived-team";
+        String skillSlug = "test-skill";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Archived Team", "user-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "user-200", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.getSkillDetail(namespaceSlug, skillSlug, null, Map.of()));
     }
 
     @Test

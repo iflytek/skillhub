@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,11 +41,11 @@ class SkillSearchControllerTest {
                 eq("newest"),
                 eq(0),
                 eq(20),
-                eq((String) null),
-                eq(null)))
+                any(),
+                any()))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
 
-        mockMvc.perform(get("/api/v1/skills")
+        mockMvc.perform(get("/api/web/skills")
                         .param("q", "review")
                         .param("namespace", "global"))
                 .andExpect(status().isOk())

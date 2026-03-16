@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -89,19 +91,21 @@ public class SkillSearchAppService {
                 .map(Skill::getNamespaceId)
                 .distinct()
                 .toList();
-        Map<Long, String> namespaceSlugsById = namespaceIds.isEmpty()
+        Map<Long, Namespace> namespacesById = namespaceIds.isEmpty()
                 ? Map.of()
                 : namespaceRepository.findByIdIn(namespaceIds).stream()
-                        .collect(Collectors.toMap(com.iflytek.skillhub.domain.namespace.Namespace::getId,
-                                com.iflytek.skillhub.domain.namespace.Namespace::getSlug));
+                        .collect(Collectors.toMap(Namespace::getId, Function.identity()));
+        Map<Long, String> namespaceSlugsById = namespacesById.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getSlug()));
 
         List<SkillSummaryResponse> skills = result.skillIds().stream()
                 .map(skillsById::get)
                 .filter(java.util.Objects::nonNull)
+                .filter(skill -> namespaceVisible(skill.getNamespaceId(), namespacesById, userId, userNsRoles))
                 .map(skill -> toSummaryResponse(skill, versionsById, namespaceSlugsById))
                 .toList();
 
-        return new SearchResponse(skills, result.total(), result.page(), result.size());
+        return new SearchResponse(skills, skills.size(), result.page(), result.size());
     }
 
     private Long resolveNamespaceId(String namespaceSlug) {
@@ -157,5 +161,19 @@ public class SkillSearchAppService {
                 namespaceSlug,
                 skill.getUpdatedAt()
         );
+    }
+
+    private boolean namespaceVisible(
+            Long namespaceId,
+            Map<Long, Namespace> namespacesById,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        NamespaceStatus status = java.util.Optional.ofNullable(namespacesById.get(namespaceId))
+                .map(Namespace::getStatus)
+                .orElse(NamespaceStatus.ACTIVE);
+        if (status != NamespaceStatus.ARCHIVED) {
+            return true;
+        }
+        return userId != null && userNsRoles != null && userNsRoles.containsKey(namespaceId);
     }
 }
