@@ -39,13 +39,9 @@ async function getSkillVersionDetail(namespace: string, slug: string, version: s
   return fetchJson<SkillVersionDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}`)
 }
 
-async function getSkillReadme(namespace: string, slug: string, version: string): Promise<string> {
+async function getSkillDocumentation(namespace: string, slug: string, version: string, path: string): Promise<string> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  try {
-    return await fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=SKILL.md`)
-  } catch {
-    return await fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=README.md`)
-  }
+  return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=${encodeURIComponent(path)}`)
 }
 
 async function getMySkills(): Promise<SkillSummary[]> {
@@ -144,11 +140,11 @@ export function useSkillFiles(namespace: string, slug: string, version?: string)
   })
 }
 
-export function useSkillReadme(namespace: string, slug: string, version?: string) {
+export function useSkillReadme(namespace: string, slug: string, version?: string, path?: string | null) {
   return useQuery({
-    queryKey: ['skills', namespace, slug, 'versions', version, 'readme'],
-    queryFn: () => getSkillReadme(namespace, slug, version!),
-    enabled: !!namespace && !!slug && !!version,
+    queryKey: ['skills', namespace, slug, 'versions', version, 'readme', path],
+    queryFn: () => getSkillDocumentation(namespace, slug, version!, path!),
+    enabled: !!namespace && !!slug && !!version && !!path,
   })
 }
 

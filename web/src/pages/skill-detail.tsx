@@ -13,6 +13,7 @@ import { adminApi, ApiError, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -92,13 +93,16 @@ export function SkillDetailPage() {
   const selectedVersion = skill?.latestVersion ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
-  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion)
+  const documentationPath = resolveDocumentationFilePath(files)
+  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath)
   const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
   const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined)
-  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined)
-  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined)
+  const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
+  const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
+  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined, diffSourceDocumentationPath)
+  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isPendingPreview = skill?.viewingVersionStatus === 'PENDING_REVIEW'
   const canInteract = skill?.canInteract ?? true
@@ -449,23 +453,43 @@ export function SkillDetailPage() {
 
         <Tabs defaultValue="readme">
           <TabsList>
-            <TabsTrigger value="readme">{t('skillDetail.tabReadme')}</TabsTrigger>
+            <TabsTrigger value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
             <TabsTrigger value="files">{t('skillDetail.tabFiles')}</TabsTrigger>
             <TabsTrigger value="versions">{t('skillDetail.tabVersions')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
             {readme ? (
-              <Card className="p-8">
+              <Card className="p-8 space-y-4">
+                {documentationPath ? (
+                  <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    {t('skillDetail.documentationSource', { path: documentationPath })}
+                  </div>
+                ) : null}
                 <MarkdownRenderer content={readme} />
               </Card>
             ) : readmeError ? (
-              <Card className="p-8 text-muted-foreground text-center">
-                {t('skillDetail.readmeUnavailable')}
+              <Card className="p-8 text-center">
+                <div className="text-base font-semibold text-foreground">{t('skillDetail.documentationUnavailableTitle')}</div>
+                <p className="mt-2 text-sm text-muted-foreground">{t('skillDetail.documentationUnavailable')}</p>
               </Card>
             ) : (
-              <Card className="p-8 text-muted-foreground text-center">
-                {t('skillDetail.noReadme')}
+              <Card className="p-8 space-y-4">
+                <div>
+                  <div className="text-base font-semibold text-foreground">{t('skillDetail.noDocumentationTitle')}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{t('skillDetail.noDocumentationDescription')}</p>
+                </div>
+                {skill.summary ? (
+                  <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      {t('skillDetail.summaryLabel')}
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-foreground">{skill.summary}</p>
+                  </div>
+                ) : null}
+                <div className="text-sm text-muted-foreground">
+                  {t('skillDetail.noDocumentationHint')}
+                </div>
               </Card>
             )}
           </TabsContent>
