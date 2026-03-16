@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -173,7 +174,7 @@ public class SkillQueryService {
         Skill skill = findSkill(namespaceSlug, skillSlug);
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
 
         return new SkillVersionDetailDTO(
                 skillVersion.getId(),
@@ -194,11 +195,21 @@ public class SkillQueryService {
             String version,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return listFiles(namespaceSlug, skillSlug, version, currentUserId, userNsRoles, Set.of());
+    }
+
+    public List<SkillFile> listFiles(
+            String namespaceSlug,
+            String skillSlug,
+            String version,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Skill skill = findSkill(namespaceSlug, skillSlug);
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles, platformRoles);
 
         return skillFileRepository.findByVersionId(skillVersion.getId());
     }
@@ -222,11 +233,22 @@ public class SkillQueryService {
             String filePath,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return getFileContent(namespaceSlug, skillSlug, version, filePath, currentUserId, userNsRoles, Set.of());
+    }
+
+    public InputStream getFileContent(
+            String namespaceSlug,
+            String skillSlug,
+            String version,
+            String filePath,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Skill skill = findSkill(namespaceSlug, skillSlug);
         assertPublishedAccessible(skill, currentUserId, userNsRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles, platformRoles);
 
         SkillFile file = findFile(skillVersion, filePath);
 
@@ -491,11 +513,27 @@ public class SkillQueryService {
         }
     }
 
-    private void assertPreviewAccessible(Skill skill, SkillVersion version, String versionStr, String currentUserId) {
+    private void assertPreviewAccessible(Skill skill, SkillVersion version, String versionStr,
+                                          String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
+        assertPreviewAccessible(skill, version, versionStr, currentUserId, userNsRoles, Set.of());
+    }
+
+    private void assertPreviewAccessible(Skill skill, SkillVersion version, String versionStr,
+                                          String currentUserId, Map<Long, NamespaceRole> userNsRoles,
+                                          Set<String> platformRoles) {
         if (version.getStatus() == SkillVersionStatus.PUBLISHED) {
             return;
         }
-        if (version.getStatus() == SkillVersionStatus.PENDING_REVIEW && isOwner(skill, currentUserId)) {
+        // Owner can always view their own non-published versions
+        if (isOwner(skill, currentUserId)) {
+            return;
+        }
+        // Namespace admins and platform admins can view pending/rejected versions
+        NamespaceRole role = userNsRoles.get(skill.getNamespaceId());
+        if (role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN) {
+            return;
+        }
+        if (platformRoles.contains("SKILL_ADMIN") || platformRoles.contains("SUPER_ADMIN")) {
             return;
         }
         throw new DomainBadRequestException("error.skill.version.notPublished", versionStr);
