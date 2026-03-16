@@ -96,6 +96,12 @@ Local profile seeds two mock-auth users automatically:
 
 Use them with the `X-Mock-User-Id` header in local development.
 
+The backend also bootstraps a local-login super admin for first-time access
+in any runtime when `BOOTSTRAP_ADMIN_ENABLED=true`:
+
+- username: `BOOTSTRAP_ADMIN_USERNAME` (`admin` by default)
+- password: `BOOTSTRAP_ADMIN_PASSWORD` (`ChangeMe!2026` by default)
+
 Stop everything with:
 
 ```bash
@@ -173,8 +179,8 @@ The runtime stack uses its own Compose project name, so it does not
 collide with containers from `make dev-all`.
 
 The production Compose stack now defaults to the `docker` profile only.
-It does not enable local mock auth. Instead, the backend bootstraps a
-local admin account from environment variables for the first login:
+It does not enable local mock auth. The backend bootstraps a local admin
+account from environment variables for the first login:
 
 - username: `BOOTSTRAP_ADMIN_USERNAME`
 - password: `BOOTSTRAP_ADMIN_PASSWORD`
