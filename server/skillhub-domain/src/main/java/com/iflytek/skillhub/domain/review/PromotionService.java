@@ -85,9 +85,13 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
         }
 
-        promotionRequestRepository.findBySourceVersionIdAndStatus(sourceVersionId, ReviewTaskStatus.PENDING)
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.PENDING)
                 .ifPresent(existing -> {
                     throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
+                });
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.APPROVED)
+                .ifPresent(existing -> {
+                    throw new DomainBadRequestException("promotion.already_promoted", sourceSkillId);
                 });
 
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
@@ -127,9 +131,13 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
         }
 
-        promotionRequestRepository.findBySourceVersionIdAndStatus(sourceVersionId, ReviewTaskStatus.PENDING)
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.PENDING)
                 .ifPresent(existing -> {
                     throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
+                });
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.APPROVED)
+                .ifPresent(existing -> {
+                    throw new DomainBadRequestException("promotion.already_promoted", sourceSkillId);
                 });
 
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
@@ -156,14 +164,17 @@ public class PromotionService {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
 
-        Skill sourceSkill = skillRepository.findById(request.getSourceSkillId())
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", request.getSourceSkillId()));
+        PromotionRequest approvedRequest = promotionRequestRepository.findById(promotionId)
+                .orElseThrow(() -> new DomainNotFoundException("promotion.not_found", promotionId));
 
-        SkillVersion sourceVersion = skillVersionRepository.findById(request.getSourceVersionId())
-                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", request.getSourceVersionId()));
+        Skill sourceSkill = skillRepository.findById(approvedRequest.getSourceSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", approvedRequest.getSourceSkillId()));
+
+        SkillVersion sourceVersion = skillVersionRepository.findById(approvedRequest.getSourceVersionId())
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", approvedRequest.getSourceVersionId()));
 
         // Create new skill in global namespace
-        Skill newSkill = new Skill(request.getTargetNamespaceId(), sourceSkill.getSlug(),
+        Skill newSkill = new Skill(approvedRequest.getTargetNamespaceId(), sourceSkill.getSlug(),
                 sourceSkill.getOwnerId(), SkillVisibility.PUBLIC);
         newSkill.setDisplayName(sourceSkill.getDisplayName());
         newSkill.setSummary(sourceSkill.getSummary());
@@ -189,7 +200,7 @@ public class PromotionService {
         skillRepository.save(newSkill);
 
         // Copy file records (reuse storageKey)
-        List<SkillFile> sourceFiles = skillFileRepository.findByVersionId(request.getSourceVersionId());
+        List<SkillFile> sourceFiles = skillFileRepository.findByVersionId(approvedRequest.getSourceVersionId());
         Long newVersionId = newVersion.getId();
         List<SkillFile> copiedFiles = sourceFiles.stream()
                 .map(f -> new SkillFile(newVersionId, f.getFilePath(), f.getFileSize(),
@@ -198,13 +209,13 @@ public class PromotionService {
         skillFileRepository.saveAll(copiedFiles);
 
         // Update promotion request with target skill id
-        request.setTargetSkillId(newSkill.getId());
-        promotionRequestRepository.save(request);
+        approvedRequest.setTargetSkillId(newSkill.getId());
+        PromotionRequest savedRequest = promotionRequestRepository.save(approvedRequest);
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 newSkill.getId(), newVersion.getId(), reviewerId));
         governanceNotificationService.notifyUser(
-                request.getSubmittedBy(),
+                approvedRequest.getSubmittedBy(),
                 "PROMOTION",
                 "PROMOTION_REQUEST",
                 promotionId,
@@ -212,7 +223,7 @@ public class PromotionService {
                 "{\"status\":\"APPROVED\"}"
         );
 
-        return request;
+        return savedRequest;
     }
 
     @Transactional

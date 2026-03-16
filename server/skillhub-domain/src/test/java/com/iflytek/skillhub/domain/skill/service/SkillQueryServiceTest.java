@@ -4,6 +4,8 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -46,6 +48,8 @@ class SkillQueryServiceTest {
     private ObjectStorageService objectStorageService;
     @Mock
     private VisibilityChecker visibilityChecker;
+    @Mock
+    private PromotionRequestRepository promotionRequestRepository;
 
     private SkillQueryService service;
 
@@ -58,7 +62,8 @@ class SkillQueryServiceTest {
                 skillFileRepository,
                 skillTagRepository,
                 objectStorageService,
-                visibilityChecker
+                visibilityChecker,
+                promotionRequestRepository
         );
     }
 
@@ -485,11 +490,74 @@ class SkillQueryServiceTest {
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).thenReturn(Optional.empty());
+        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED)).thenReturn(Optional.empty());
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
         assertEquals(11L, result.latestVersionId());
         assertTrue(result.canSubmitPromotion());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldHidePromotionWhenPendingPromotionExists() throws Exception {
+        String namespaceSlug = "team-ns";
+        String skillSlug = "team-skill";
+        String userId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Team NS", userId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", userId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING))
+                .thenReturn(Optional.of(mock(com.iflytek.skillhub.domain.review.PromotionRequest.class)));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
+
+        assertFalse(result.canSubmitPromotion());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldHidePromotionWhenSkillAlreadyPromoted() throws Exception {
+        String namespaceSlug = "team-ns";
+        String skillSlug = "team-skill";
+        String userId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Team NS", userId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", userId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).thenReturn(Optional.empty());
+        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED))
+                .thenReturn(Optional.of(mock(com.iflytek.skillhub.domain.review.PromotionRequest.class)));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
+
+        assertFalse(result.canSubmitPromotion());
     }
 
     @Test

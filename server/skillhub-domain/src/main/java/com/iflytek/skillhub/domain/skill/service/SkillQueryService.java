@@ -5,6 +5,8 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -37,6 +39,7 @@ public class SkillQueryService {
     private final SkillTagRepository skillTagRepository;
     private final ObjectStorageService objectStorageService;
     private final VisibilityChecker visibilityChecker;
+    private final PromotionRequestRepository promotionRequestRepository;
 
     public SkillQueryService(
             NamespaceRepository namespaceRepository,
@@ -45,7 +48,8 @@ public class SkillQueryService {
             SkillFileRepository skillFileRepository,
             SkillTagRepository skillTagRepository,
             ObjectStorageService objectStorageService,
-            VisibilityChecker visibilityChecker) {
+            VisibilityChecker visibilityChecker,
+            PromotionRequestRepository promotionRequestRepository) {
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -53,6 +57,7 @@ public class SkillQueryService {
         this.skillTagRepository = skillTagRepository;
         this.objectStorageService = objectStorageService;
         this.visibilityChecker = visibilityChecker;
+        this.promotionRequestRepository = promotionRequestRepository;
     }
 
     public record SkillDetailDTO(
@@ -499,6 +504,12 @@ public class SkillQueryService {
             return false;
         }
         if (latestVersionEntity == null || latestVersionEntity.getStatus() != SkillVersionStatus.PUBLISHED) {
+            return false;
+        }
+        if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.PENDING).isPresent()) {
+            return false;
+        }
+        if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.APPROVED).isPresent()) {
             return false;
         }
         return canManageRestrictedSkill(skill, currentUserId, userNsRoles);

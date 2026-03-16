@@ -3,6 +3,8 @@ package com.iflytek.skillhub.service;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -29,16 +31,19 @@ public class MySkillAppService {
     private final NamespaceRepository namespaceRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillStarRepository skillStarRepository;
+    private final PromotionRequestRepository promotionRequestRepository;
 
     public MySkillAppService(
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             SkillVersionRepository skillVersionRepository,
-            SkillStarRepository skillStarRepository) {
+            SkillStarRepository skillStarRepository,
+            PromotionRequestRepository promotionRequestRepository) {
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillStarRepository = skillStarRepository;
+        this.promotionRequestRepository = promotionRequestRepository;
     }
 
     public List<SkillSummaryResponse> listMySkills(String userId) {
@@ -148,6 +153,12 @@ public class MySkillAppService {
             return false;
         }
         if (namespace.getStatus() != NamespaceStatus.ACTIVE || skill.getStatus() != com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE) {
+            return false;
+        }
+        if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.PENDING).isPresent()) {
+            return false;
+        }
+        if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.APPROVED).isPresent()) {
             return false;
         }
         return latestVersion != null && latestVersion.getStatus() == SkillVersionStatus.PUBLISHED;
