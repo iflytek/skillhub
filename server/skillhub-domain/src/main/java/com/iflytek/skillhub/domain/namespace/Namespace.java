@@ -65,6 +65,7 @@ public class Namespace {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public NamespaceStatus getStatus() { return status; }
+    public void setStatus(NamespaceStatus status) { this.status = status; }
     public NamespaceType getType() { return type; }
     public void setType(NamespaceType type) { this.type = type; }
     public String getAvatarUrl() { return avatarUrl; }

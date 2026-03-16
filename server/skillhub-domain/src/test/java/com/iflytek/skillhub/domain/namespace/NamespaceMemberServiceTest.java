@@ -20,6 +20,8 @@ class NamespaceMemberServiceTest {
     private NamespaceMemberRepository namespaceMemberRepository;
     @Mock
     private NamespaceService namespaceService;
+    @Mock
+    private NamespaceAccessPolicy namespaceAccessPolicy;
 
     @InjectMocks
     private NamespaceMemberService namespaceMemberService;
@@ -29,7 +31,10 @@ class NamespaceMemberServiceTest {
         Long namespaceId = 1L;
         String userId = "user-2";
         NamespaceRole role = NamespaceRole.MEMBER;
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
 
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
                 .thenReturn(Optional.empty());
         when(namespaceMemberRepository.save(any(NamespaceMember.class)))
@@ -43,12 +48,19 @@ class NamespaceMemberServiceTest {
 
     @Test
     void addMember_shouldThrowExceptionForOwnerRole() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(1L)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+
         assertThrows(DomainBadRequestException.class, () ->
                 namespaceMemberService.addMember(1L, "user-2", NamespaceRole.OWNER, "user-99"));
     }
 
     @Test
     void addMember_shouldRequireAdminOrOwner() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(1L)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         doThrow(new DomainForbiddenException("error.namespace.admin.required")).when(namespaceService).assertAdminOrOwner(1L, "user-99");
 
         assertThrows(DomainForbiddenException.class, () ->
@@ -59,6 +71,9 @@ class NamespaceMemberServiceTest {
     void addMember_shouldThrowExceptionWhenMemberExists() {
         Long namespaceId = 1L;
         String userId = "user-2";
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
                 .thenReturn(Optional.of(new NamespaceMember()));
 
@@ -67,10 +82,26 @@ class NamespaceMemberServiceTest {
     }
 
     @Test
+    void addMember_shouldRejectFrozenNamespace() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        namespace.setStatus(NamespaceStatus.FROZEN);
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+
+        assertThrows(DomainBadRequestException.class, () ->
+                namespaceMemberService.addMember(namespaceId, "user-2", NamespaceRole.MEMBER, "user-99"));
+    }
+
+    @Test
     void removeMember_shouldThrowExceptionForOwner() {
         Long namespaceId = 1L;
         String userId = "user-2";
         NamespaceMember ownerMember = new NamespaceMember(namespaceId, userId, NamespaceRole.OWNER);
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
                 .thenReturn(Optional.of(ownerMember));
 
@@ -80,6 +111,9 @@ class NamespaceMemberServiceTest {
 
     @Test
     void removeMember_shouldThrowExceptionWhenMemberNotFound() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(1L)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "user-2"))
                 .thenReturn(Optional.empty());
 
@@ -88,10 +122,26 @@ class NamespaceMemberServiceTest {
     }
 
     @Test
+    void updateMemberRole_shouldRejectArchivedNamespace() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+
+        assertThrows(DomainBadRequestException.class, () ->
+                namespaceMemberService.updateMemberRole(namespaceId, "user-2", NamespaceRole.ADMIN, "user-99"));
+    }
+
+    @Test
     void updateMemberRole_shouldUpdateRoleSuccessfully() {
         Long namespaceId = 1L;
         String userId = "user-2";
         NamespaceMember member = new NamespaceMember(namespaceId, userId, NamespaceRole.MEMBER);
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
                 .thenReturn(Optional.of(member));
         when(namespaceMemberRepository.save(any(NamespaceMember.class))).thenReturn(member);
@@ -106,6 +156,9 @@ class NamespaceMemberServiceTest {
     void updateMemberRole_shouldThrowExceptionForOwnerRole() {
         Long namespaceId = 1L;
         String userId = "user-2";
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
 
         assertThrows(DomainBadRequestException.class, () ->
                 namespaceMemberService.updateMemberRole(namespaceId, userId, NamespaceRole.OWNER, "user-99"));
@@ -113,6 +166,9 @@ class NamespaceMemberServiceTest {
 
     @Test
     void updateMemberRole_shouldThrowExceptionWhenMemberNotFound() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(1L)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "user-2"))
                 .thenReturn(Optional.empty());
 
@@ -128,7 +184,10 @@ class NamespaceMemberServiceTest {
 
         NamespaceMember currentOwner = new NamespaceMember(namespaceId, currentOwnerId, NamespaceRole.OWNER);
         NamespaceMember newOwner = new NamespaceMember(namespaceId, newOwnerId, NamespaceRole.ADMIN);
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
 
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canTransferOwnership(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, currentOwnerId))
                 .thenReturn(Optional.of(currentOwner));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, newOwnerId))
@@ -143,6 +202,9 @@ class NamespaceMemberServiceTest {
 
     @Test
     void transferOwnership_shouldThrowExceptionWhenCurrentOwnerNotFound() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(1L)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canTransferOwnership(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "user-2"))
                 .thenReturn(Optional.empty());
 
@@ -155,6 +217,9 @@ class NamespaceMemberServiceTest {
         Long namespaceId = 1L;
         String currentOwnerId = "user-2";
         NamespaceMember notOwner = new NamespaceMember(namespaceId, currentOwnerId, NamespaceRole.ADMIN);
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canTransferOwnership(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, currentOwnerId))
                 .thenReturn(Optional.of(notOwner));
 
@@ -168,7 +233,10 @@ class NamespaceMemberServiceTest {
         String currentOwnerId = "user-2";
         String newOwnerId = "user-3";
         NamespaceMember currentOwner = new NamespaceMember(namespaceId, currentOwnerId, NamespaceRole.OWNER);
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
 
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canTransferOwnership(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, currentOwnerId))
                 .thenReturn(Optional.of(currentOwner));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, newOwnerId))
@@ -176,6 +244,18 @@ class NamespaceMemberServiceTest {
 
         assertThrows(DomainBadRequestException.class, () ->
                 namespaceMemberService.transferOwnership(namespaceId, currentOwnerId, newOwnerId));
+    }
+
+    @Test
+    void transferOwnership_shouldRejectFrozenNamespace() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        namespace.setStatus(NamespaceStatus.FROZEN);
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canTransferOwnership(namespace)).thenReturn(false);
+
+        assertThrows(DomainBadRequestException.class, () ->
+                namespaceMemberService.transferOwnership(namespaceId, "user-2", "user-3"));
     }
 
     @Test

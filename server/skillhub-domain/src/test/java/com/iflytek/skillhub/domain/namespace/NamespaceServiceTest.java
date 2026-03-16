@@ -23,6 +23,9 @@ class NamespaceServiceTest {
     @Mock
     private NamespaceMemberRepository namespaceMemberRepository;
 
+    @Mock
+    private NamespaceAccessPolicy namespaceAccessPolicy;
+
     @InjectMocks
     private NamespaceService namespaceService;
 
@@ -70,6 +73,8 @@ class NamespaceServiceTest {
         when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
                 .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canMutateSettings(namespace)).thenReturn(true);
         when(namespaceRepository.save(any(Namespace.class))).thenReturn(namespace);
 
         Namespace result = namespaceService.updateNamespace(
@@ -102,6 +107,37 @@ class NamespaceServiceTest {
                 .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.MEMBER)));
 
         assertThrows(DomainForbiddenException.class, () ->
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+    }
+
+    @Test
+    void updateNamespace_shouldRejectFrozenNamespace() {
+        Long namespaceId = 1L;
+        String operatorUserId = "user-1";
+        Namespace namespace = new Namespace("slug", "Old Name", "user-1");
+        namespace.setStatus(NamespaceStatus.FROZEN);
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canMutateSettings(namespace)).thenReturn(false);
+
+        assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+    }
+
+    @Test
+    void updateNamespace_shouldRejectGlobalNamespaceMutation() {
+        Long namespaceId = 1L;
+        String operatorUserId = "user-1";
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
+
+        assertThrows(DomainBadRequestException.class, () ->
                 namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
     }
 

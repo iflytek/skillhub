@@ -10,11 +10,14 @@ public class NamespaceService {
 
     private final NamespaceRepository namespaceRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
+    private final NamespaceAccessPolicy namespaceAccessPolicy;
 
     public NamespaceService(NamespaceRepository namespaceRepository,
-                           NamespaceMemberRepository namespaceMemberRepository) {
+                           NamespaceMemberRepository namespaceMemberRepository,
+                           NamespaceAccessPolicy namespaceAccessPolicy) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
+        this.namespaceAccessPolicy = namespaceAccessPolicy;
     }
 
     @Transactional
@@ -42,6 +45,7 @@ public class NamespaceService {
         Namespace namespace = namespaceRepository.findById(namespaceId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.id.notFound", namespaceId));
         assertAdminOrOwner(namespaceId, operatorUserId);
+        assertMutable(namespace);
 
         if (displayName != null) {
             namespace.setDisplayName(displayName);
@@ -61,12 +65,26 @@ public class NamespaceService {
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
     }
 
+    public Namespace getNamespace(Long namespaceId) {
+        return namespaceRepository.findById(namespaceId)
+                .orElseThrow(() -> new DomainBadRequestException("error.namespace.id.notFound", namespaceId));
+    }
+
     void assertAdminOrOwner(Long namespaceId, String userId) {
         NamespaceRole role = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .map(NamespaceMember::getRole)
                 .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
         if (role != NamespaceRole.OWNER && role != NamespaceRole.ADMIN) {
             throw new DomainForbiddenException("error.namespace.admin.required");
+        }
+    }
+
+    void assertMutable(Namespace namespace) {
+        if (namespaceAccessPolicy.isImmutable(namespace)) {
+            throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
+        }
+        if (!namespaceAccessPolicy.canMutateSettings(namespace)) {
+            throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
         }
     }
 }
