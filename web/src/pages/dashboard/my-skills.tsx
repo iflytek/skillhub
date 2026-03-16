@@ -6,9 +6,20 @@ import { Card } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
-import { useArchiveSkill, useMySkills, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
+import { useArchiveSkill, useMySkills, useSubmitPromotion, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
+import { ApiError } from '@/api/client'
+
+function isDuplicatePromotionMessage(message?: string): boolean {
+  if (!message) {
+    return false
+  }
+
+  return message.includes('promotion.duplicate_pending')
+    || message.includes('已有待处理的提升申请')
+    || message.includes('Duplicate pending promotion')
+}
 
 export function MySkillsPage() {
   const navigate = useNavigate()
@@ -16,10 +27,12 @@ export function MySkillsPage() {
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
+  const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
   const { data: skills, isLoading } = useMySkills()
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const withdrawMutation = useWithdrawSkillReview()
+  const submitPromotionMutation = useSubmitPromotion()
 
   const handleSkillClick = (namespace: string, slug: string) => {
     navigate({ to: `/space/${namespace}/${slug}` })
@@ -112,6 +125,30 @@ export function MySkillsPage() {
     }
   }
 
+  const handleSubmitPromotion = async () => {
+    if (!promotionTarget) {
+      return
+    }
+    try {
+      await submitPromotionMutation.mutateAsync({
+        sourceSkillId: promotionTarget.skillId,
+        sourceVersionId: promotionTarget.versionId,
+      })
+      toast.success(
+        t('mySkills.promotionSuccessTitle'),
+        t('mySkills.promotionSuccessDescription', { skill: promotionTarget.name, version: promotionTarget.version }),
+      )
+      setPromotionTarget(null)
+    } catch (error) {
+      if (error instanceof ApiError && isDuplicatePromotionMessage(error.serverMessage || error.message)) {
+        toast.error(t('mySkills.promotionDuplicateTitle'), t('mySkills.promotionDuplicateDescription'))
+        return
+      }
+      toast.error(t('mySkills.promotionErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-up">
@@ -194,6 +231,22 @@ export function MySkillsPage() {
                     >
                       {t('mySkills.withdrawReview')}
                     </Button>
+                  ) : skill.canSubmitPromotion && skill.latestVersionId && skill.latestVersion ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setPromotionTarget({
+                          skillId: skill.id,
+                          versionId: skill.latestVersionId!,
+                          name: skill.displayName,
+                          version: skill.latestVersion!,
+                        })
+                      }}
+                    >
+                      {t('mySkills.promoteToGlobal')}
+                    </Button>
                   ) : skill.status === 'ARCHIVED' ? (
                     <Button
                       size="sm"
@@ -244,6 +297,19 @@ export function MySkillsPage() {
           }
         />
       )}
+
+      <ConfirmDialog
+        open={!!promotionTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPromotionTarget(null)
+          }
+        }}
+        title={t('mySkills.promotionConfirmTitle')}
+        description={promotionTarget ? t('mySkills.promotionConfirmDescription', { skill: promotionTarget.name, version: promotionTarget.version }) : ''}
+        confirmText={t('mySkills.promoteToGlobal')}
+        onConfirm={handleSubmitPromotion}
+      />
 
       <ConfirmDialog
         open={!!archiveTarget}

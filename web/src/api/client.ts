@@ -693,6 +693,16 @@ export const reviewApi = {
 }
 
 export const promotionApi = {
+  async submit(request: { sourceSkillId: number; sourceVersionId: number; targetNamespaceId: number }): Promise<void> {
+    await fetchJson<void>(`${WEB_API_PREFIX}/promotions`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+
   async list(params: { status?: string; page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status ?? 'PENDING')

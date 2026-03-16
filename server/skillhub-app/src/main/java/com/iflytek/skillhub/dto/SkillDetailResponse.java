@@ -15,8 +15,10 @@ public record SkillDetailResponse(
         Integer ratingCount,
         boolean hidden,
         String latestVersion,
+        Long latestVersionId,
         String namespace,
         boolean canManageLifecycle,
+        boolean canSubmitPromotion,
         String viewingVersionStatus,
         boolean canInteract
 ) {}

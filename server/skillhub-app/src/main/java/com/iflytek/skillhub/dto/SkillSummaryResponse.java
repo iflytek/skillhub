@@ -14,7 +14,9 @@ public record SkillSummaryResponse(
         BigDecimal ratingAvg,
         Integer ratingCount,
         String latestVersion,
+        Long latestVersionId,
         String latestVersionStatus,
         String namespace,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        boolean canSubmitPromotion
 ) {}

@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -71,7 +72,9 @@ public class SkillQueryService {
             java.time.LocalDateTime createdAt,
             java.time.LocalDateTime updatedAt,
             SkillVersion latestVersionEntity,
+            Long latestVersionId,
             boolean canManageLifecycle,
+            boolean canSubmitPromotion,
             String viewingVersionStatus,
             boolean canInteract
     ) {}
@@ -137,7 +140,9 @@ public class SkillQueryService {
                 skill.getCreatedAt(),
                 skill.getUpdatedAt(),
                 latestVersionEntity,
+                latestVersionEntity != null ? latestVersionEntity.getId() : null,
                 canManageRestrictedSkill(skill, currentUserId, userNsRoles),
+                canSubmitPromotion(namespace, skill, latestVersionEntity, currentUserId, userNsRoles),
                 latestVersionEntity != null ? latestVersionEntity.getStatus().name() : null,
                 latestVersionEntity == null || latestVersionEntity.getStatus() == SkillVersionStatus.PUBLISHED
         );
@@ -479,6 +484,24 @@ public class SkillQueryService {
         return skill.getOwnerId().equals(currentUserId)
                 || role == NamespaceRole.ADMIN
                 || role == NamespaceRole.OWNER;
+    }
+
+    private boolean canSubmitPromotion(
+            Namespace namespace,
+            Skill skill,
+            SkillVersion latestVersionEntity,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        if (namespace.getType() == NamespaceType.GLOBAL) {
+            return false;
+        }
+        if (namespace.getStatus() != NamespaceStatus.ACTIVE || skill.getStatus() != SkillStatus.ACTIVE) {
+            return false;
+        }
+        if (latestVersionEntity == null || latestVersionEntity.getStatus() != SkillVersionStatus.PUBLISHED) {
+            return false;
+        }
+        return canManageRestrictedSkill(skill, currentUserId, userNsRoles);
     }
 
     private boolean isOwner(Skill skill, String currentUserId) {

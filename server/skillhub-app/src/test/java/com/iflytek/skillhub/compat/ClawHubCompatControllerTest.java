@@ -62,9 +62,11 @@ class ClawHubCompatControllerTest {
                                 BigDecimal.valueOf(4.5),
                                 2,
                                 "1.2.0",
+                                11L,
                                 "PUBLISHED",
                                 "global",
-                                LocalDateTime.of(2026, 3, 13, 9, 0))),
+                                LocalDateTime.of(2026, 3, 13, 9, 0),
+                                false)),
                         1,
                         0,
                         20

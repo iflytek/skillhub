@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -50,15 +52,13 @@ public class MySkillAppService {
                 .map(Skill::getNamespaceId)
                 .distinct()
                 .toList();
-        Map<Long, String> namespaceSlugsById = namespaceIds.isEmpty()
+        Map<Long, com.iflytek.skillhub.domain.namespace.Namespace> namespacesById = namespaceIds.isEmpty()
                 ? Map.of()
                 : namespaceRepository.findByIdIn(namespaceIds).stream()
-                        .collect(Collectors.toMap(
-                                com.iflytek.skillhub.domain.namespace.Namespace::getId,
-                                com.iflytek.skillhub.domain.namespace.Namespace::getSlug));
+                        .collect(Collectors.toMap(com.iflytek.skillhub.domain.namespace.Namespace::getId, Function.identity()));
 
         return skills.stream()
-                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespaceSlugsById))
+                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespacesById))
                 .toList();
     }
 
@@ -80,18 +80,16 @@ public class MySkillAppService {
                 .map(Skill::getNamespaceId)
                 .distinct()
                 .toList();
-        Map<Long, String> namespaceSlugsById = namespaceIds.isEmpty()
+        Map<Long, com.iflytek.skillhub.domain.namespace.Namespace> namespacesById = namespaceIds.isEmpty()
                 ? Map.of()
                 : namespaceRepository.findByIdIn(namespaceIds).stream()
-                        .collect(Collectors.toMap(
-                                com.iflytek.skillhub.domain.namespace.Namespace::getId,
-                                com.iflytek.skillhub.domain.namespace.Namespace::getSlug));
+                        .collect(Collectors.toMap(com.iflytek.skillhub.domain.namespace.Namespace::getId, Function.identity()));
 
         return stars.stream()
                 .sorted(Comparator.comparing(com.iflytek.skillhub.domain.social.SkillStar::getCreatedAt).reversed())
                 .map(star -> skillsById.get(star.getSkillId()))
                 .filter(java.util.Objects::nonNull)
-                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespaceSlugsById))
+                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespacesById))
                 .toList();
     }
 
@@ -116,8 +114,9 @@ public class MySkillAppService {
     private SkillSummaryResponse toSummaryResponse(
             Skill skill,
             Map<Long, SkillVersion> versionsBySkillId,
-            Map<Long, String> namespaceSlugsById) {
+            Map<Long, com.iflytek.skillhub.domain.namespace.Namespace> namespacesById) {
         SkillVersion latestVersion = versionsBySkillId.get(skill.getId());
+        com.iflytek.skillhub.domain.namespace.Namespace namespace = namespacesById.get(skill.getNamespaceId());
 
         return new SkillSummaryResponse(
                 skill.getId(),
@@ -130,10 +129,28 @@ public class MySkillAppService {
                 skill.getRatingAvg(),
                 skill.getRatingCount(),
                 Optional.ofNullable(latestVersion).map(SkillVersion::getVersion).orElse(null),
+                Optional.ofNullable(latestVersion).map(SkillVersion::getId).orElse(null),
                 Optional.ofNullable(latestVersion).map(SkillVersion::getStatus).map(Enum::name).orElse(null),
-                namespaceSlugsById.get(skill.getNamespaceId()),
-                skill.getUpdatedAt()
+                namespace != null ? namespace.getSlug() : null,
+                skill.getUpdatedAt(),
+                canSubmitPromotion(skill, latestVersion, namespace)
         );
+    }
+
+    private boolean canSubmitPromotion(
+            Skill skill,
+            SkillVersion latestVersion,
+            com.iflytek.skillhub.domain.namespace.Namespace namespace) {
+        if (namespace == null) {
+            return false;
+        }
+        if (namespace.getType() == NamespaceType.GLOBAL) {
+            return false;
+        }
+        if (namespace.getStatus() != NamespaceStatus.ACTIVE || skill.getStatus() != com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE) {
+            return false;
+        }
+        return latestVersion != null && latestVersion.getStatus() == SkillVersionStatus.PUBLISHED;
     }
 
     private Map<Long, SkillVersion> loadLatestRelevantVersions(java.util.Collection<Skill> skills) {

@@ -464,6 +464,35 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldAllowPromotionForTeamOwnerOnPublishedSkill() throws Exception {
+        String namespaceSlug = "team-ns";
+        String skillSlug = "team-skill";
+        String userId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Team NS", userId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", userId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
+
+        assertEquals(11L, result.latestVersionId());
+        assertTrue(result.canSubmitPromotion());
+    }
+
+    @Test
     void testGetSkillDetail_ShouldNotFlagLifecyclePermissionForRegularViewer() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";
@@ -483,6 +512,7 @@ class SkillQueryServiceTest {
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
         assertFalse(result.canManageLifecycle());
+        assertFalse(result.canSubmitPromotion());
     }
 
     @Test

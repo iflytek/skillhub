@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
-import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
@@ -70,6 +70,15 @@ async function getNamespaceDetail(slug: string): Promise<Namespace> {
 
 async function getNamespaceMembers(slug: string): Promise<NamespaceMember[]> {
   return namespaceApi.listMembers(slug)
+}
+
+async function submitPromotion(params: { sourceSkillId: number; sourceVersionId: number }): Promise<void> {
+  const globalNamespace = await namespaceApi.getDetail('global')
+  await promotionApi.submit({
+    sourceSkillId: params.sourceSkillId,
+    sourceVersionId: params.sourceVersionId,
+    targetNamespaceId: globalNamespace.id,
+  })
 }
 
 async function searchNamespaceMemberCandidates(params: { slug: string; search: string }): Promise<NamespaceCandidateUser[]> {
@@ -207,6 +216,19 @@ export function useNamespaceMemberCandidates(slug: string, search: string, enabl
     queryKey: ['namespaces', slug, 'member-candidates', search],
     queryFn: () => searchNamespaceMemberCandidates({ slug, search }),
     enabled: enabled && !!slug && search.trim().length >= 2,
+  })
+}
+
+export function useSubmitPromotion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: submitPromotion,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['promotions'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+    },
   })
 }
 

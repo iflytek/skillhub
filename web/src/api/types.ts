@@ -139,9 +139,11 @@ export interface SkillSummary {
   ratingAvg?: number
   ratingCount: number
   latestVersion?: string
+  latestVersionId?: number
   latestVersionStatus?: string
   namespace: string
   updatedAt: string
+  canSubmitPromotion: boolean
 }
 
 export interface SkillDetail {
@@ -157,10 +159,18 @@ export interface SkillDetail {
   ratingCount: number
   hidden: boolean
   latestVersion?: string
+  latestVersionId?: number
   namespace: string
   canManageLifecycle: boolean
+  canSubmitPromotion: boolean
   viewingVersionStatus?: string
   canInteract: boolean
+}
+
+export interface SubmitPromotionRequest {
+  sourceSkillId: number
+  sourceVersionId: number
+  targetNamespaceId: number
 }
 
 export interface SkillVersion {

@@ -9,7 +9,7 @@ import { InstallCommand } from '@/features/skill/install-command'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
-import { adminApi, WEB_API_PREFIX } from '@/api/client'
+import { adminApi, ApiError, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { formatCompactCount } from '@/shared/lib/number-format'
@@ -31,6 +31,7 @@ import {
   useArchiveSkill,
   useDeleteSkillVersion,
   useRereleaseSkillVersion,
+  useSubmitPromotion,
   useUnarchiveSkill,
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
@@ -56,6 +57,16 @@ function parseMetadataJson(parsed?: string) {
   }
 }
 
+function isDuplicatePromotionMessage(message?: string): boolean {
+  if (!message) {
+    return false
+  }
+
+  return message.includes('promotion.duplicate_pending')
+    || message.includes('已有待处理的提升申请')
+    || message.includes('Duplicate pending promotion')
+}
+
 export function SkillDetailPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -66,6 +77,7 @@ export function SkillDetailPage() {
   const [reportDetails, setReportDetails] = useState('')
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
+  const [promotionConfirmOpen, setPromotionConfirmOpen] = useState(false)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
@@ -116,6 +128,7 @@ export function SkillDetailPage() {
   const deleteVersionMutation = useDeleteSkillVersion()
   const withdrawReviewMutation = useWithdrawSkillReview()
   const rereleaseVersionMutation = useRereleaseSkillVersion()
+  const submitPromotionMutation = useSubmitPromotion()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
   const handleDownload = () => {
@@ -329,6 +342,30 @@ export function SkillDetailPage() {
     }
     setDiffSourceVersion(version)
     setDiffCompareVersion(compareVersion)
+  }
+
+  const handleSubmitPromotion = async () => {
+    if (!skill?.latestVersionId) {
+      return
+    }
+    try {
+      await submitPromotionMutation.mutateAsync({
+        sourceSkillId: skill.id,
+        sourceVersionId: skill.latestVersionId,
+      })
+      toast.success(
+        t('skillDetail.promotionSuccessTitle'),
+        t('skillDetail.promotionSuccessDescription', { skill: skill.displayName, version: skill.latestVersion ?? '' }),
+      )
+      setPromotionConfirmOpen(false)
+    } catch (error) {
+      if (error instanceof ApiError && isDuplicatePromotionMessage(error.serverMessage || error.message)) {
+        toast.error(t('skillDetail.promotionDuplicateTitle'), t('skillDetail.promotionDuplicateDescription'))
+        return
+      }
+      toast.error(t('skillDetail.promotionErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
   }
 
   if (isLoadingSkill) {
@@ -626,6 +663,18 @@ export function SkillDetailPage() {
           </Card>
         )}
 
+        {skill.canSubmitPromotion && skill.latestVersion && skill.latestVersionId && (
+          <Card className="p-5 space-y-3">
+            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</div>
+            <p className="text-sm text-muted-foreground">
+              {t('skillDetail.promotionSectionDescription', { version: skill.latestVersion })}
+            </p>
+            <Button variant="outline" onClick={() => setPromotionConfirmOpen(true)} disabled={submitPromotionMutation.isPending}>
+              {submitPromotionMutation.isPending ? t('skillDetail.processing') : t('skillDetail.promoteToGlobal')}
+            </Button>
+          </Card>
+        )}
+
         {governanceVisible && (
           <Card className="p-5 space-y-3">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</div>
@@ -679,6 +728,18 @@ export function SkillDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={promotionConfirmOpen}
+        onOpenChange={setPromotionConfirmOpen}
+        title={t('skillDetail.promotionConfirmTitle')}
+        description={t('skillDetail.promotionConfirmDescription', {
+          skill: skill.displayName,
+          version: skill.latestVersion ?? '',
+        })}
+        confirmText={t('skillDetail.promoteToGlobal')}
+        onConfirm={handleSubmitPromotion}
+      />
 
       <ConfirmDialog
         open={archiveConfirmOpen}

@@ -126,7 +126,9 @@ class SkillControllerTest {
                         LocalDateTime.of(2026, 3, 15, 10, 0),
                         LocalDateTime.of(2026, 3, 15, 10, 0),
                         null,
+                        11L,
                         true,
+                        false,
                         "PENDING_REVIEW",
                         false
                 ));
@@ -135,6 +137,8 @@ class SkillControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.latestVersion").value("1.1.0"))
+                .andExpect(jsonPath("$.data.latestVersionId").value(11L))
+                .andExpect(jsonPath("$.data.canSubmitPromotion").value(false))
                 .andExpect(jsonPath("$.data.viewingVersionStatus").value("PENDING_REVIEW"))
                 .andExpect(jsonPath("$.data.canInteract").value(false));
     }
