@@ -85,6 +85,13 @@
   code, pre, kbd {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
+
+  /* Hide browser-native password reveal button (conflicts with custom toggle) */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear,
+  input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none;
+  }
 }
 
 /* ─── Dot-grid background texture ─── */

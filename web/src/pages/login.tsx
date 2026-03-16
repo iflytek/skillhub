@@ -135,7 +135,7 @@ export function LoginPage() {
                         onClick={() => setShowPassword((current) => !current)}
                         className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </button>
                     </div>
                     {fieldErrors.password ? (
