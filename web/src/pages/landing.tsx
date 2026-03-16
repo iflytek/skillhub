@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
 import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
+import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { UserMenu } from '@/shared/components/user-menu'
 import { Button } from '@/shared/ui/button'
 import { Check, Copy, Terminal, Settings, PackageOpen } from 'lucide-react'
@@ -250,7 +251,7 @@ export function LandingPage() {
   }, [])
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0, starredOnly: false } })
+    navigate({ to: '/search', search: { q: normalizeSearchQuery(query), sort: 'relevance', page: 0, starredOnly: false } })
   }
 
   const features = [

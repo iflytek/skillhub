@@ -10,6 +10,7 @@ import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
 import { Pagination } from '@/shared/components/pagination'
 import { useMyStars, useSearchSkills } from '@/shared/hooks/use-skill-queries'
+import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
 
 const PAGE_SIZE = 12
@@ -44,7 +45,7 @@ export function SearchPage() {
   const searchParams = useSearch({ from: '/search' })
   const { isAuthenticated } = useAuth()
 
-  const q = searchParams.q || ''
+  const q = normalizeSearchQuery(searchParams.q || '')
   const sort = searchParams.sort || 'newest'
   const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
@@ -68,7 +69,7 @@ export function SearchPage() {
   } = useMyStars(starredOnly && isAuthenticated)
 
   useEffect(() => {
-    const normalizedQuery = queryInput.trim()
+    const normalizedQuery = normalizeSearchQuery(queryInput)
     if (normalizedQuery === q) {
       return
     }
@@ -90,7 +91,7 @@ export function SearchPage() {
   }, [navigate, page, q, queryInput, sort, starredOnly])
 
   const handleSearch = (query: string) => {
-    const normalizedQuery = query.trim()
+    const normalizedQuery = normalizeSearchQuery(query)
     setQueryInput(query)
     startTransition(() => {
       navigate({ to: '/search', search: { q: normalizedQuery, sort, page: 0, starredOnly }, replace: true })

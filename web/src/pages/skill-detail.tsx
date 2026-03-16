@@ -9,9 +9,10 @@ import { InstallCommand } from '@/features/skill/install-command'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
-import { adminApi, ApiError, WEB_API_PREFIX } from '@/api/client'
+import { adminApi, ApiError, skillDownloadApi } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
@@ -135,7 +136,18 @@ export function SkillDetailPage() {
   const submitPromotionMutation = useSubmitPromotion()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
-  const handleDownload = () => {
+  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+    const objectUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0)
+  }
+
+  const handleDownload = async () => {
     if (!user) {
       requireLogin()
       return
@@ -143,9 +155,21 @@ export function SkillDetailPage() {
     if (!selectedVersionEntry || isPendingPreview) {
       return
     }
-    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    const downloadUrl = `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersionEntry.version}/download`
-    window.open(downloadUrl, '_blank')
+
+    try {
+      const downloadedFile = await skillDownloadApi.downloadVersion(namespace, slug, selectedVersionEntry.version)
+      triggerBrowserDownload(
+        downloadedFile.blob,
+        downloadedFile.fileName ?? `${slug}-${selectedVersionEntry.version}.zip`,
+      )
+      incrementSkillDownloadCount(queryClient, { namespace, slug })
+      queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'search'] })
+    } catch (error) {
+      toast.error(t('skillDetail.reportErrorTitle'), error instanceof Error ? error.message : '')
+    }
   }
 
   const requireLogin = () => {

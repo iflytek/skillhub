@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
+import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
 function createLazyRouteComponent<TModule extends Record<string, unknown>>(
   importer: () => Promise<TModule>,
@@ -139,7 +140,7 @@ const searchRoute = createRoute({
   component: SearchPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      q: (search.q as string) || '',
+      q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
       sort: (search.sort as string) || 'newest',
       page: Number(search.page) || 0,
       starredOnly: search.starredOnly === true || search.starredOnly === 'true',

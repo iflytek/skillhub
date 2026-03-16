@@ -1,4 +1,5 @@
 import { toast as sonnerToast, type ExternalToast } from 'sonner'
+import { truncateErrorMessage } from './error-display'
 
 export const CENTER_TOASTER_ID = 'top-center'
 
@@ -26,7 +27,10 @@ export const toast = {
     sonnerToast.success(message, { description, ...withDefaultToaster(options) })
   },
   error: (message: string, description?: string, options?: ExternalToast) => {
-    sonnerToast.error(message, { description, ...withDefaultToaster(options) })
+    sonnerToast.error(truncateErrorMessage(message) ?? message, {
+      description: truncateErrorMessage(description),
+      ...withDefaultToaster(options),
+    })
   },
   warning: (message: string, description?: string, options?: ExternalToast) => {
     sonnerToast.warning(message, { description, ...withDefaultToaster(options) })

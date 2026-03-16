@@ -2,14 +2,21 @@ import { useQuery } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
 import type { User } from '@/api/types'
 
-export function useAuth(enabled = true) {
-  const { data: user, isLoading, error } = useQuery<User | null>({
-    queryKey: ['auth', 'me'],
+export function getAuthQueryOptions(enabled = true) {
+  return {
+    queryKey: ['auth', 'me'] as const,
     queryFn: authApi.getMe,
     retry: false,
     enabled,
-    staleTime: 5 * 60 * 1000, // 5 分钟
-  })
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
+  }
+}
+
+export function useAuth(enabled = true) {
+  const { data: user, isLoading, error } = useQuery<User | null>(getAuthQueryOptions(enabled))
 
   return {
     user: user ?? null,

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConfirmAccountMerge, useInitiateAccountMerge, useVerifyAccountMerge } from '@/features/auth/use-account-merge'
+import { truncateErrorMessage } from '@/shared/lib/error-display'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -25,7 +26,9 @@ export function AccountSettingsPage() {
       setVerificationToken(result.verificationToken)
       setStatusMessage(t('accounts.initiateSuccess', { secondaryUserId: result.secondaryUserId }))
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : t('accounts.initiateError'))
+      setStatusMessage(
+        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.initiateError')) ?? t('accounts.initiateError'),
+      )
     }
   }
 
@@ -39,7 +42,9 @@ export function AccountSettingsPage() {
       })
       setStatusMessage(t('accounts.verifySuccess'))
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : t('accounts.verifyError'))
+      setStatusMessage(
+        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.verifyError')) ?? t('accounts.verifyError'),
+      )
     }
   }
 
@@ -49,7 +54,9 @@ export function AccountSettingsPage() {
       await confirmMutation.mutateAsync({ mergeRequestId: Number(mergeRequestId) })
       setStatusMessage(t('accounts.confirmSuccess'))
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : t('accounts.confirmError'))
+      setStatusMessage(
+        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.confirmError')) ?? t('accounts.confirmError'),
+      )
     }
   }
 

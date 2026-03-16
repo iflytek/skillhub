@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { fetchJson, getCsrfHeaders } from '@/api/client'
+import { truncateErrorMessage } from '@/shared/lib/error-display'
 
 async function authorizeDevice(userCode: string): Promise<void> {
   await fetchJson<void>('/api/v1/device/authorize', {
@@ -80,7 +81,7 @@ export function DeviceAuthPage() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : t('device.defaultError')
+        text: truncateErrorMessage(error instanceof Error ? error.message : t('device.defaultError')) ?? t('device.defaultError'),
       })
     } finally {
       setIsSubmitting(false)

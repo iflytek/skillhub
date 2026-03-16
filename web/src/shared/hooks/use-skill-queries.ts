@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
   const queryParams = new URLSearchParams()
-  if (params.q) queryParams.append('q', params.q)
+  const normalizedQuery = normalizeSearchQuery(params.q ?? '')
+  if (normalizedQuery) queryParams.append('q', normalizedQuery)
   if (params.namespace) {
     const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
     queryParams.append('namespace', cleanNamespace)

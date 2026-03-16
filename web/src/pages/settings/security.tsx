@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ApiError, authApi } from '@/api/client'
+import { truncateErrorMessage } from '@/shared/lib/error-display'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -49,7 +50,9 @@ export function SecuritySettingsPage() {
       if (error instanceof ApiError && error.status === 401) {
         setErrorMessage(t('security.invalidCurrentPassword'))
       } else {
-        setErrorMessage(error instanceof Error ? error.message : t('security.defaultError'))
+        setErrorMessage(
+          truncateErrorMessage(error instanceof Error ? error.message : t('security.defaultError')) ?? t('security.defaultError'),
+        )
       }
     } finally {
       setIsSubmitting(false)
