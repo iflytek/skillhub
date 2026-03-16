@@ -14,10 +14,12 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public serverMessage?: string,
+    public serverMessageKey?: string,
   ) {
     super(resolveLocalizedMessage(message) || message)
     this.name = 'ApiError'
     this.serverMessage = resolveLocalizedMessage(serverMessage) || serverMessage
+    this.serverMessageKey = serverMessage
   }
 }
 

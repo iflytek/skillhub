@@ -17,19 +17,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Seeds default admin account for Docker one-click startup.
+ * Seeds a default bootstrap admin account for any runtime profile.
  * Idempotent: skips if admin credential already exists.
  */
 @Component
-@Profile("docker")
-public class DockerSeedDataRunner implements ApplicationRunner {
-    private static final Logger log = LoggerFactory.getLogger(DockerSeedDataRunner.class);
+public class BootstrapAdminInitializer implements ApplicationRunner {
+    private static final Logger log = LoggerFactory.getLogger(BootstrapAdminInitializer.class);
 
     private final BootstrapAdminProperties bootstrapAdminProperties;
     private final UserAccountRepository userAccountRepository;
@@ -40,14 +38,14 @@ public class DockerSeedDataRunner implements ApplicationRunner {
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DockerSeedDataRunner(BootstrapAdminProperties bootstrapAdminProperties,
-                                UserAccountRepository userAccountRepository,
-                                LocalCredentialRepository localCredentialRepository,
-                                RoleRepository roleRepository,
-                                UserRoleBindingRepository userRoleBindingRepository,
-                                NamespaceRepository namespaceRepository,
-                                NamespaceMemberRepository namespaceMemberRepository,
-                                PasswordEncoder passwordEncoder) {
+    public BootstrapAdminInitializer(BootstrapAdminProperties bootstrapAdminProperties,
+                                     UserAccountRepository userAccountRepository,
+                                     LocalCredentialRepository localCredentialRepository,
+                                     RoleRepository roleRepository,
+                                     UserRoleBindingRepository userRoleBindingRepository,
+                                     NamespaceRepository namespaceRepository,
+                                     NamespaceMemberRepository namespaceMemberRepository,
+                                     PasswordEncoder passwordEncoder) {
         this.bootstrapAdminProperties = bootstrapAdminProperties;
         this.userAccountRepository = userAccountRepository;
         this.localCredentialRepository = localCredentialRepository;
@@ -62,11 +60,11 @@ public class DockerSeedDataRunner implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (!bootstrapAdminProperties.isEnabled()) {
-            log.info("Docker bootstrap admin is disabled");
+            log.info("Bootstrap admin is disabled");
             return;
         }
         if (localCredentialRepository.existsByUsernameIgnoreCase(bootstrapAdminProperties.getUsername())) {
-            log.info("Docker seed data already exists, skipping");
+            log.info("Bootstrap admin already exists, skipping");
             return;
         }
 
@@ -109,6 +107,6 @@ public class DockerSeedDataRunner implements ApplicationRunner {
             namespaceMemberRepository.save(new NamespaceMember(globalNs.getId(), admin.getId(), NamespaceRole.OWNER));
         }
 
-        log.info("Docker seed data initialized for admin account: {}", bootstrapAdminProperties.getUsername());
+        log.info("Bootstrap admin initialized for account: {}", bootstrapAdminProperties.getUsername());
     }
 }

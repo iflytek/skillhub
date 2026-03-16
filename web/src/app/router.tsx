@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
+import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
 // Capture original URL before TanStack Router rewrites it
 const ORIGINAL_URL_SEARCH = typeof window !== 'undefined' ? window.location.search : ''
@@ -56,6 +57,7 @@ const NamespaceReviewsPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-reviews'),
   'NamespaceReviewsPage',
 )
+const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
 const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
 const ReportsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reports'), 'ReportsPage')
 const ReviewDetailPage = createLazyRouteComponent(
@@ -144,7 +146,7 @@ const searchRoute = createRoute({
   component: SearchPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      q: (search.q as string) || '',
+      q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
       sort: (search.sort as string) || 'newest',
       page: Number(search.page) || 0,
       starredOnly: search.starredOnly === true || search.starredOnly === 'true',
@@ -210,6 +212,13 @@ const dashboardNamespaceReviewsRoute = createRoute({
   path: 'dashboard/namespaces/$slug/reviews',
   beforeLoad: requireAuth,
   component: NamespaceReviewsPage,
+})
+
+const dashboardGovernanceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/governance',
+  beforeLoad: requireAuth,
+  component: GovernancePage,
 })
 
 const dashboardReviewsRoute = createRoute({
@@ -336,6 +345,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespacesRoute,
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,
+  dashboardGovernanceRoute,
   dashboardReviewsRoute,
   dashboardReportsRoute,
   dashboardReviewDetailRoute,

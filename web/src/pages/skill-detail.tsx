@@ -9,10 +9,12 @@ import { InstallCommand } from '@/features/skill/install-command'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
-import { adminApi, WEB_API_PREFIX } from '@/api/client'
+import { adminApi, ApiError, skillDownloadApi } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -31,6 +33,7 @@ import {
   useArchiveSkill,
   useDeleteSkillVersion,
   useRereleaseSkillVersion,
+  useSubmitPromotion,
   useUnarchiveSkill,
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
@@ -56,6 +59,16 @@ function parseMetadataJson(parsed?: string) {
   }
 }
 
+function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending' | 'promotion.already_promoted' | null {
+  if (error.serverMessageKey === 'promotion.duplicate_pending') {
+    return 'promotion.duplicate_pending'
+  }
+  if (error.serverMessageKey === 'promotion.already_promoted') {
+    return 'promotion.already_promoted'
+  }
+  return null
+}
+
 export function SkillDetailPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -66,6 +79,7 @@ export function SkillDetailPage() {
   const [reportDetails, setReportDetails] = useState('')
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
+  const [promotionConfirmOpen, setPromotionConfirmOpen] = useState(false)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
@@ -80,13 +94,16 @@ export function SkillDetailPage() {
   const selectedVersion = skill?.latestVersion ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
-  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion)
+  const documentationPath = resolveDocumentationFilePath(files)
+  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath)
   const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
   const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined)
-  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined)
-  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined)
+  const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
+  const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
+  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined, diffSourceDocumentationPath)
+  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isPendingPreview = skill?.viewingVersionStatus === 'PENDING_REVIEW'
   const canInteract = skill?.canInteract ?? true
@@ -116,9 +133,21 @@ export function SkillDetailPage() {
   const deleteVersionMutation = useDeleteSkillVersion()
   const withdrawReviewMutation = useWithdrawSkillReview()
   const rereleaseVersionMutation = useRereleaseSkillVersion()
+  const submitPromotionMutation = useSubmitPromotion()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
-  const handleDownload = () => {
+  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+    const objectUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0)
+  }
+
+  const handleDownload = async () => {
     if (!user) {
       requireLogin()
       return
@@ -126,9 +155,21 @@ export function SkillDetailPage() {
     if (!selectedVersionEntry || isPendingPreview) {
       return
     }
-    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    const downloadUrl = `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersionEntry.version}/download`
-    window.open(downloadUrl, '_blank')
+
+    try {
+      const downloadedFile = await skillDownloadApi.downloadVersion(namespace, slug, selectedVersionEntry.version)
+      triggerBrowserDownload(
+        downloadedFile.blob,
+        downloadedFile.fileName ?? `${slug}-${selectedVersionEntry.version}.zip`,
+      )
+      incrementSkillDownloadCount(queryClient, { namespace, slug })
+      queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'search'] })
+    } catch (error) {
+      toast.error(t('skillDetail.reportErrorTitle'), error instanceof Error ? error.message : '')
+    }
   }
 
   const requireLogin = () => {
@@ -331,6 +372,37 @@ export function SkillDetailPage() {
     setDiffCompareVersion(compareVersion)
   }
 
+  const handleSubmitPromotion = async () => {
+    if (!skill?.latestVersionId) {
+      return
+    }
+    try {
+      await submitPromotionMutation.mutateAsync({
+        sourceSkillId: skill.id,
+        sourceVersionId: skill.latestVersionId,
+      })
+      toast.success(
+        t('skillDetail.promotionSuccessTitle'),
+        t('skillDetail.promotionSuccessDescription', { skill: skill.displayName, version: skill.latestVersion ?? '' }),
+      )
+      setPromotionConfirmOpen(false)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const conflictKey = getPromotionConflictKey(error)
+        if (conflictKey === 'promotion.duplicate_pending') {
+          toast.error(t('skillDetail.promotionDuplicateTitle'), t('skillDetail.promotionDuplicateDescription'))
+          return
+        }
+        if (conflictKey === 'promotion.already_promoted') {
+          toast.error(t('skillDetail.promotionAlreadyPromotedTitle'), t('skillDetail.promotionAlreadyPromotedDescription'))
+          return
+        }
+      }
+      toast.error(t('skillDetail.promotionErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
   if (isLoadingSkill) {
     return (
       <div className="space-y-6 animate-fade-up">
@@ -412,23 +484,43 @@ export function SkillDetailPage() {
 
         <Tabs defaultValue="readme">
           <TabsList>
-            <TabsTrigger value="readme">{t('skillDetail.tabReadme')}</TabsTrigger>
+            <TabsTrigger value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
             <TabsTrigger value="files">{t('skillDetail.tabFiles')}</TabsTrigger>
             <TabsTrigger value="versions">{t('skillDetail.tabVersions')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
             {readme ? (
-              <Card className="p-8">
+              <Card className="p-8 space-y-4">
+                {documentationPath ? (
+                  <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    {t('skillDetail.documentationSource', { path: documentationPath })}
+                  </div>
+                ) : null}
                 <MarkdownRenderer content={readme} />
               </Card>
             ) : readmeError ? (
-              <Card className="p-8 text-muted-foreground text-center">
-                {t('skillDetail.readmeUnavailable')}
+              <Card className="p-8 text-center">
+                <div className="text-base font-semibold text-foreground">{t('skillDetail.documentationUnavailableTitle')}</div>
+                <p className="mt-2 text-sm text-muted-foreground">{t('skillDetail.documentationUnavailable')}</p>
               </Card>
             ) : (
-              <Card className="p-8 text-muted-foreground text-center">
-                {t('skillDetail.noReadme')}
+              <Card className="p-8 space-y-4">
+                <div>
+                  <div className="text-base font-semibold text-foreground">{t('skillDetail.noDocumentationTitle')}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{t('skillDetail.noDocumentationDescription')}</p>
+                </div>
+                {skill.summary ? (
+                  <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      {t('skillDetail.summaryLabel')}
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-foreground">{skill.summary}</p>
+                  </div>
+                ) : null}
+                <div className="text-sm text-muted-foreground">
+                  {t('skillDetail.noDocumentationHint')}
+                </div>
               </Card>
             )}
           </TabsContent>
@@ -626,6 +718,18 @@ export function SkillDetailPage() {
           </Card>
         )}
 
+        {skill.canSubmitPromotion && skill.latestVersion && skill.latestVersionId && (
+          <Card className="p-5 space-y-3">
+            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</div>
+            <p className="text-sm text-muted-foreground">
+              {t('skillDetail.promotionSectionDescription', { version: skill.latestVersion })}
+            </p>
+            <Button variant="outline" onClick={() => setPromotionConfirmOpen(true)} disabled={submitPromotionMutation.isPending}>
+              {submitPromotionMutation.isPending ? t('skillDetail.processing') : t('skillDetail.promoteToGlobal')}
+            </Button>
+          </Card>
+        )}
+
         {governanceVisible && (
           <Card className="p-5 space-y-3">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</div>
@@ -679,6 +783,18 @@ export function SkillDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={promotionConfirmOpen}
+        onOpenChange={setPromotionConfirmOpen}
+        title={t('skillDetail.promotionConfirmTitle')}
+        description={t('skillDetail.promotionConfirmDescription', {
+          skill: skill.displayName,
+          version: skill.latestVersion ?? '',
+        })}
+        confirmText={t('skillDetail.promoteToGlobal')}
+        onConfirm={handleSubmitPromotion}
+      />
 
       <ConfirmDialog
         open={archiveConfirmOpen}

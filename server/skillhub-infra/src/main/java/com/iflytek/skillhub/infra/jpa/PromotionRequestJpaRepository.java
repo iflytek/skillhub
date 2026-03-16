@@ -18,9 +18,11 @@ public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRe
 
     Optional<PromotionRequest> findBySourceVersionIdAndStatus(Long sourceVersionId, ReviewTaskStatus status);
 
+    Optional<PromotionRequest> findBySourceSkillIdAndStatus(Long sourceSkillId, ReviewTaskStatus status);
+
     Page<PromotionRequest> findByStatus(ReviewTaskStatus status, Pageable pageable);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         UPDATE PromotionRequest p
         SET p.status = :status,

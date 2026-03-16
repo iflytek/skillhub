@@ -2,6 +2,9 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.review.PromotionRequest;
+import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -43,11 +46,20 @@ class MySkillAppServiceTest {
     @Mock
     private SkillStarRepository skillStarRepository;
 
+    @Mock
+    private PromotionRequestRepository promotionRequestRepository;
+
     private MySkillAppService service;
 
     @BeforeEach
     void setUp() {
-        service = new MySkillAppService(skillRepository, namespaceRepository, skillVersionRepository, skillStarRepository);
+        service = new MySkillAppService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                skillStarRepository,
+                promotionRequestRepository
+        );
     }
 
     @Test
@@ -110,6 +122,64 @@ class MySkillAppServiceTest {
 
         assertThat(skills).hasSize(1);
         assertThat(skills.get(0).latestVersion()).isEqualTo("1.0.0");
+        assertThat(skills.get(0).latestVersionId()).isEqualTo(11L);
         assertThat(skills.get(0).latestVersionStatus()).isEqualTo("PENDING_REVIEW");
+        assertThat(skills.get(0).canSubmitPromotion()).isFalse();
+    }
+
+    @Test
+    void listMySkills_marksTeamPublishedSkillAsPromotable() {
+        Skill skill = new Skill(101L, "team-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Team Skill");
+        skill.setSummary("published");
+        ReflectionTestUtils.setField(skill, "id", 2L);
+        ReflectionTestUtils.setField(skill, "updatedAt", LocalDateTime.of(2026, 3, 15, 11, 0));
+
+        SkillVersion publishedVersion = new SkillVersion(2L, "1.2.0", "user-1");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(publishedVersion, "id", 22L);
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", LocalDateTime.of(2026, 3, 15, 10, 30));
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdIn(List.of(2L))).willReturn(List.of(publishedVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
+
+        var skills = service.listMySkills("user-1");
+
+        assertThat(skills).hasSize(1);
+        assertThat(skills.get(0).latestVersionId()).isEqualTo(22L);
+        assertThat(skills.get(0).latestVersionStatus()).isEqualTo("PUBLISHED");
+        assertThat(skills.get(0).canSubmitPromotion()).isTrue();
+    }
+
+    @Test
+    void listMySkills_hidesPromotionWhenPendingRequestExists() {
+        Skill skill = new Skill(101L, "team-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Team Skill");
+        ReflectionTestUtils.setField(skill, "id", 2L);
+
+        SkillVersion publishedVersion = new SkillVersion(2L, "1.2.0", "user-1");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(publishedVersion, "id", 22L);
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", LocalDateTime.of(2026, 3, 15, 10, 30));
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdIn(List.of(2L))).willReturn(List.of(publishedVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.PENDING))
+                .willReturn(Optional.of(new PromotionRequest(2L, 22L, 999L, "user-1")));
+
+        var skills = service.listMySkills("user-1");
+
+        assertThat(skills).hasSize(1);
+        assertThat(skills.get(0).canSubmitPromotion()).isFalse();
     }
 }

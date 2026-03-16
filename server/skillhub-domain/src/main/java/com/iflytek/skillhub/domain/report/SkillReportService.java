@@ -1,11 +1,13 @@
 package com.iflytek.skillhub.domain.report;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
+import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,13 +18,19 @@ public class SkillReportService {
     private final SkillRepository skillRepository;
     private final SkillReportRepository skillReportRepository;
     private final AuditLogService auditLogService;
+    private final SkillGovernanceService skillGovernanceService;
+    private final GovernanceNotificationService governanceNotificationService;
 
     public SkillReportService(SkillRepository skillRepository,
                               SkillReportRepository skillReportRepository,
-                              AuditLogService auditLogService) {
+                              AuditLogService auditLogService,
+                              SkillGovernanceService skillGovernanceService,
+                              GovernanceNotificationService governanceNotificationService) {
         this.skillRepository = skillRepository;
         this.skillReportRepository = skillReportRepository;
         this.auditLogService = auditLogService;
+        this.skillGovernanceService = skillGovernanceService;
+        this.governanceNotificationService = governanceNotificationService;
     }
 
     @Transactional
@@ -66,13 +74,36 @@ public class SkillReportService {
                                      String comment,
                                      String clientIp,
                                      String userAgent) {
+        return resolveReport(reportId, actorUserId, SkillReportDisposition.RESOLVE_ONLY, comment, clientIp, userAgent);
+    }
+
+    @Transactional
+    public SkillReport resolveReport(Long reportId,
+                                     String actorUserId,
+                                     SkillReportDisposition disposition,
+                                     String comment,
+                                     String clientIp,
+                                     String userAgent) {
         SkillReport report = requirePendingReport(reportId);
+        if (disposition == SkillReportDisposition.RESOLVE_AND_HIDE) {
+            skillGovernanceService.hideSkill(report.getSkillId(), actorUserId, clientIp, userAgent, comment);
+        } else if (disposition == SkillReportDisposition.RESOLVE_AND_ARCHIVE) {
+            skillGovernanceService.archiveSkillAsAdmin(report.getSkillId(), actorUserId, clientIp, userAgent, comment);
+        }
         report.setStatus(SkillReportStatus.RESOLVED);
         report.setHandledBy(actorUserId);
         report.setHandleComment(normalize(comment));
         report.setHandledAt(LocalDateTime.now());
         SkillReport saved = skillReportRepository.save(report);
         auditLogService.record(actorUserId, "RESOLVE_SKILL_REPORT", "SKILL_REPORT", reportId, null, clientIp, userAgent, null);
+        governanceNotificationService.notifyUser(
+                report.getReporterId(),
+                "REPORT",
+                "SKILL_REPORT",
+                reportId,
+                "Report handled",
+                "{\"status\":\"RESOLVED\"}"
+        );
         return saved;
     }
 
@@ -89,6 +120,14 @@ public class SkillReportService {
         report.setHandledAt(LocalDateTime.now());
         SkillReport saved = skillReportRepository.save(report);
         auditLogService.record(actorUserId, "DISMISS_SKILL_REPORT", "SKILL_REPORT", reportId, null, clientIp, userAgent, null);
+        governanceNotificationService.notifyUser(
+                report.getReporterId(),
+                "REPORT",
+                "SKILL_REPORT",
+                reportId,
+                "Report dismissed",
+                "{\"status\":\"DISMISSED\"}"
+        );
         return saved;
     }
 

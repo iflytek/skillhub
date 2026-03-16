@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -32,6 +33,20 @@ public class AdminAuditLogAppService {
                                                             String resourceId,
                                                             Instant startTime,
                                                             Instant endTime) {
+        return listAuditLogsByActions(page, size, userId, action != null ? List.of(action) : null, requestId, ipAddress, resourceType, resourceId, startTime, endTime);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<AuditLogItemResponse> listAuditLogsByActions(int page,
+                                                                     int size,
+                                                                     String userId,
+                                                                     Collection<String> actions,
+                                                                     String requestId,
+                                                                     String ipAddress,
+                                                                     String resourceType,
+                                                                     String resourceId,
+                                                                     Instant startTime,
+                                                                     Instant endTime) {
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("limit", size)
                 .addValue("offset", Math.max(page, 0) * size);
@@ -39,7 +54,7 @@ public class AdminAuditLogAppService {
         String whereClause = buildWhereClause(
                 parameters,
                 userId,
-                action,
+                actions,
                 requestId,
                 ipAddress,
                 resourceType,
@@ -92,7 +107,7 @@ public class AdminAuditLogAppService {
 
     private String buildWhereClause(MapSqlParameterSource parameters,
                                     String userId,
-                                    String action,
+                                    Collection<String> actions,
                                     String requestId,
                                     String ipAddress,
                                     String resourceType,
@@ -104,9 +119,9 @@ public class AdminAuditLogAppService {
             clause.append(" AND al.actor_user_id = :userId");
             parameters.addValue("userId", userId.trim());
         }
-        if (StringUtils.hasText(action)) {
-            clause.append(" AND al.action = :action");
-            parameters.addValue("action", action.trim());
+        if (actions != null && !actions.isEmpty()) {
+            clause.append(" AND al.action IN (:actions)");
+            parameters.addValue("actions", actions.stream().filter(StringUtils::hasText).map(String::trim).toList());
         }
         if (StringUtils.hasText(requestId)) {
             clause.append(" AND al.request_id = :requestId");

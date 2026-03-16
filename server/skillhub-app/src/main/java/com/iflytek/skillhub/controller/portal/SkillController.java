@@ -70,8 +70,10 @@ public class SkillController extends BaseApiController {
                 detail.ratingCount(),
                 detail.hidden(),
                 detail.latestVersion(),
+                detail.latestVersionId(),
                 namespace,
                 detail.canManageLifecycle(),
+                detail.canSubmitPromotion(),
                 detail.viewingVersionStatus(),
                 detail.canInteract()
         );

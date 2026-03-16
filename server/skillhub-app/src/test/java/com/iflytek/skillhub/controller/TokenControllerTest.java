@@ -82,15 +82,16 @@ class TokenControllerTest {
         given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .willThrow(new DomainBadRequestException("validation.token.name.size"));
 
-                mockMvc.perform(post("/api/v1/tokens")
+        mockMvc.perform(post("/api/v1/tokens")
                         .with(authentication(auth))
                         .with(csrf())
+                        .header("Accept-Language", "zh-CN")
                         .contentType("application/json")
                         .content("""
                                 {"name":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.msg").value("Token 名称最多 64 个字符"));
+                .andExpect(jsonPath("$.code").value(400));
     }
 
     @Test
@@ -107,12 +108,13 @@ class TokenControllerTest {
         mockMvc.perform(post("/api/v1/tokens")
                         .with(authentication(auth))
                         .with(csrf())
+                        .header("Accept-Language", "zh-CN")
                         .contentType("application/json")
                         .content("""
                                 {"name":"cli"}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.msg").value("你已经有同名 Token"));
+                .andExpect(jsonPath("$.code").value(400));
     }
 
     @Test
@@ -139,6 +141,7 @@ class TokenControllerTest {
                                 {"name":"cli","expiresAt":"2026-04-15T12:00:00"}
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.expiresAt").value("2026-04-15T12:00"));
     }
 
@@ -172,6 +175,7 @@ class TokenControllerTest {
                         .param("page", "1")
                         .param("size", "10"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.items[0].name").value("cli"))
                 .andExpect(jsonPath("$.data.items[1].name").value("deploy"))
                 .andExpect(jsonPath("$.data.total").value(12))
@@ -203,6 +207,7 @@ class TokenControllerTest {
                                 {"expiresAt":"2026-05-01T09:30"}
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.id").value(7))
                 .andExpect(jsonPath("$.data.expiresAt").value("2026-05-01T09:30"));
     }

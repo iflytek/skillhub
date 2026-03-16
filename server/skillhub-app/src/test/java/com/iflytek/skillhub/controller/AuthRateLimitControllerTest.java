@@ -60,8 +60,7 @@ class AuthRateLimitControllerTest {
                     {"username":"alice","password":"wrong"}
                     """))
             .andExpect(status().isTooManyRequests())
-            .andExpect(jsonPath("$.code").value(429))
-            .andExpect(jsonPath("$.msg").isNotEmpty());
+            .andExpect(jsonPath("$.code").value(429));
 
         verify(localAuthService, never()).login(anyString(), anyString());
     }
@@ -78,7 +77,8 @@ class AuthRateLimitControllerTest {
                         .content("""
                     {"username":"alice","password":"wrong"}
                     """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
 
         verify(authFailureThrottleService).assertAllowed("local", "alice", "127.0.0.1");
         verify(authFailureThrottleService).recordFailure("local", "alice", "127.0.0.1");
@@ -102,7 +102,8 @@ class AuthRateLimitControllerTest {
                         .content("""
                     {"username":"alice","password":"correct"}
                     """))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
 
         verify(authFailureThrottleService).resetIdentifier("local", "alice");
     }

@@ -8,11 +8,17 @@ import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { useDismissSkillReport, useResolveSkillReport, useSkillReports } from '@/features/report/use-skill-reports'
 import { toast } from '@/shared/lib/toast'
+import type { ReportDisposition } from '@/api/types'
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  const [pendingAction, setPendingAction] = useState<{ id: number; action: 'resolve' | 'dismiss'; skillLabel: string } | null>(null)
+  const [pendingAction, setPendingAction] = useState<{
+    id: number
+    action: 'resolve' | 'dismiss'
+    disposition?: ReportDisposition
+    skillLabel: string
+  } | null>(null)
   const { data: pendingReports, isLoading: isPendingLoading } = useSkillReports('PENDING')
   const { data: resolvedReports, isLoading: isResolvedLoading } = useSkillReports('RESOLVED')
   const { data: dismissedReports, isLoading: isDismissedLoading } = useSkillReports('DISMISSED')
@@ -34,8 +40,8 @@ export function ReportsPage() {
     }
     try {
       if (pendingAction.action === 'resolve') {
-        await resolveMutation.mutateAsync({ id: pendingAction.id })
-        toast.success(t('reports.resolveSuccessTitle'), t('reports.resolveSuccessDescription', { skill: pendingAction.skillLabel }))
+        await resolveMutation.mutateAsync({ id: pendingAction.id, disposition: pendingAction.disposition })
+        toast.success(resolveSuccessTitle(pendingAction.disposition, t), resolveSuccessDescription(pendingAction.disposition, t, pendingAction.skillLabel))
       } else {
         await dismissMutation.mutateAsync({ id: pendingAction.id })
         toast.success(t('reports.dismissSuccessTitle'), t('reports.dismissSuccessDescription', { skill: pendingAction.skillLabel }))
@@ -43,7 +49,7 @@ export function ReportsPage() {
       setPendingAction(null)
     } catch (error) {
       toast.error(
-        pendingAction.action === 'resolve' ? t('reports.resolveErrorTitle') : t('reports.dismissErrorTitle'),
+        pendingAction.action === 'resolve' ? resolveErrorTitle(pendingAction.disposition, t) : t('reports.dismissErrorTitle'),
         error instanceof Error ? error.message : '',
       )
     }
@@ -101,11 +107,27 @@ export function ReportsPage() {
                     {t('reports.dismiss')}
                   </Button>
                   <Button
+                    variant="outline"
                     size="sm"
                     disabled={resolveMutation.isPending || dismissMutation.isPending}
-                    onClick={() => setPendingAction({ id: report.id, action: 'resolve', skillLabel })}
+                    onClick={() => setPendingAction({ id: report.id, action: 'resolve', disposition: 'RESOLVE_ONLY', skillLabel })}
                   >
                     {t('reports.resolve')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={resolveMutation.isPending || dismissMutation.isPending}
+                    onClick={() => setPendingAction({ id: report.id, action: 'resolve', disposition: 'RESOLVE_AND_HIDE', skillLabel })}
+                  >
+                    {t('reports.resolveAndHide')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={resolveMutation.isPending || dismissMutation.isPending}
+                    onClick={() => setPendingAction({ id: report.id, action: 'resolve', disposition: 'RESOLVE_AND_ARCHIVE', skillLabel })}
+                  >
+                    {t('reports.resolveAndArchive')}
                   </Button>
                 </div>
               ) : (
@@ -151,11 +173,41 @@ export function ReportsPage() {
         }}
         title={pendingAction?.action === 'resolve' ? t('reports.resolveConfirmTitle') : t('reports.dismissConfirmTitle')}
         description={pendingAction?.action === 'resolve'
-          ? t('reports.resolveConfirmDescription', { skill: pendingAction?.skillLabel ?? '' })
+          ? resolveConfirmDescription(pendingAction?.disposition, t, pendingAction?.skillLabel ?? '')
           : t('reports.dismissConfirmDescription', { skill: pendingAction?.skillLabel ?? '' })}
-        confirmText={pendingAction?.action === 'resolve' ? t('reports.resolve') : t('reports.dismiss')}
+        confirmText={pendingAction?.action === 'resolve' ? resolveConfirmText(pendingAction?.disposition, t) : t('reports.dismiss')}
         onConfirm={handleConfirm}
       />
     </div>
   )
+}
+
+function resolveConfirmText(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
+  if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHide')
+  if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchive')
+  return t('reports.resolve')
+}
+
+function resolveConfirmDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string, skillLabel: string) {
+  if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideConfirmDescription', { skill: skillLabel })
+  if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveConfirmDescription', { skill: skillLabel })
+  return t('reports.resolveConfirmDescription', { skill: skillLabel })
+}
+
+function resolveSuccessTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
+  if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideSuccessTitle')
+  if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveSuccessTitle')
+  return t('reports.resolveSuccessTitle')
+}
+
+function resolveSuccessDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string, skillLabel: string) {
+  if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideSuccessDescription', { skill: skillLabel })
+  if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveSuccessDescription', { skill: skillLabel })
+  return t('reports.resolveSuccessDescription', { skill: skillLabel })
+}
+
+function resolveErrorTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
+  if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideErrorTitle')
+  if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveErrorTitle')
+  return t('reports.resolveErrorTitle')
 }

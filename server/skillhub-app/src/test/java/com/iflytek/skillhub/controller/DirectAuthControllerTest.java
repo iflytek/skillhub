@@ -71,6 +71,7 @@ class DirectAuthControllerTest {
 
         mockMvc.perform(get("/api/v1/auth/me").session(session))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.userId").value("usr_direct_1"));
     }
 

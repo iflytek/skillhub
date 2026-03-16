@@ -4,6 +4,7 @@ import { SearchBar } from '@/features/search/search-bar'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
+import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
 import { Check, Copy, Terminal, Settings, PackageOpen } from 'lucide-react'
 import { useState, useMemo } from 'react'
@@ -159,7 +160,7 @@ export function HomePage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: query, sort: 'relevance', page: 0, starredOnly: false } })
+    navigate({ to: '/search', search: { q: normalizeSearchQuery(query), sort: 'relevance', page: 0, starredOnly: false } })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {

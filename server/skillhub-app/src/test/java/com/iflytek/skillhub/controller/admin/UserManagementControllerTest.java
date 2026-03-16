@@ -53,7 +53,8 @@ class UserManagementControllerTest {
     @Test
     void listUsers_unauthenticated_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/admin/users"))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -102,6 +103,7 @@ class UserManagementControllerTest {
 
         mockMvc.perform(get("/api/v1/admin/users").with(authentication(auth)))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.items").isArray());
     }
 
@@ -115,7 +117,8 @@ class UserManagementControllerTest {
         );
 
         mockMvc.perform(get("/api/v1/admin/users").with(authentication(auth)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test

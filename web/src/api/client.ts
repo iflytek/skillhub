@@ -16,9 +16,19 @@ import type {
   AuditLogItem,
   SkillSummary,
   SkillReport,
+  GovernanceSummary,
+  GovernanceInboxItem,
+  GovernanceActivityItem,
+  GovernanceNotification,
+  ReportDisposition,
   AuthMethod,
   OAuthProvider,
   User,
+  ManagedNamespace,
+  Namespace,
+  CreateNamespaceRequest,
+  NamespaceMember,
+  NamespaceCandidateUser,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -26,6 +36,11 @@ import i18n from '@/i18n/config'
 export { ApiError }
 
 export const WEB_API_PREFIX = '/api/web'
+
+export type DownloadedFile = {
+  blob: Blob
+  fileName?: string
+}
 
 type RuntimeConfig = {
   apiBaseUrl?: string
@@ -110,17 +125,17 @@ async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response:
   const envelope = isApiEnvelope<T>(data) ? data : isApiEnvelope<T>(error) ? error : null
 
   if (!response.ok) {
-    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
   }
   if (error) {
-    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
   }
   if (data === undefined) {
     throw new ApiError(`HTTP ${response.status}`, response.status)
   }
   if (isApiEnvelope<T>(data)) {
     if (data.code !== 0) {
-      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg)
+      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg, data.msg)
     }
     return data.data
   }
@@ -234,7 +249,7 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
   }
 
   if (!response.ok || json.code !== 0) {
-    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg)
+    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg, json.msg)
   }
 
   return json.data
@@ -261,6 +276,20 @@ function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith('/') ? value : `${value}/`
+}
+
+function parseDownloadFileName(contentDisposition: string | null): string | undefined {
+  if (!contentDisposition) {
+    return undefined
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match) {
+    return decodeURIComponent(utf8Match[1])
+  }
+
+  const basicMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
+  return basicMatch?.[1]
 }
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -412,6 +441,27 @@ export const accountApi = {
   },
 }
 
+export const skillDownloadApi = {
+  async downloadVersion(namespace: string, slug: string, version: string): Promise<DownloadedFile> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    const response = await fetch(
+      withBaseUrl(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/download`),
+      {
+        headers: withRequestHeaders(),
+      },
+    )
+
+    if (!response.ok) {
+      throw new ApiError(`HTTP ${response.status}`, response.status)
+    }
+
+    return {
+      blob: await response.blob(),
+      fileName: parseDownloadFileName(response.headers.get('content-disposition')),
+    }
+  },
+}
+
 export const skillLifecycleApi = {
   async archiveSkill(namespace: string, slug: string, reason?: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
@@ -456,6 +506,113 @@ export const skillLifecycleApi = {
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify({ targetVersion }),
+    })
+  },
+}
+
+function normalizeNamespaceSlug(namespace: string): string {
+  return namespace.startsWith('@') ? namespace.slice(1) : namespace
+}
+
+export const namespaceApi = {
+  async create(request: CreateNamespaceRequest): Promise<Namespace> {
+    const namespace = await unwrap<Namespace>(client.POST('/api/v1/namespaces', {
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: {
+        slug: normalizeNamespaceSlug(request.slug),
+        displayName: request.displayName.trim(),
+        description: request.description?.trim() || undefined,
+      },
+    } as never) as never)
+    return namespace
+  },
+
+  async listMine(): Promise<ManagedNamespace[]> {
+    return fetchJson<ManagedNamespace[]>(`${WEB_API_PREFIX}/me/namespaces`)
+  },
+
+  async getDetail(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}`)
+  },
+
+  async freeze(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/freeze`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async unfreeze(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/unfreeze`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async archive(slug: string, reason?: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/archive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    })
+  },
+
+  async restore(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/restore`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listMembers(slug: string): Promise<NamespaceMember[]> {
+    const page = await fetchJson<{ items: NamespaceMember[] }>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members`)
+    return page.items
+  },
+
+  async searchMemberCandidates(slug: string, search: string, size = 10): Promise<NamespaceCandidateUser[]> {
+    const query = new URLSearchParams({
+      search: search.trim(),
+      size: String(size),
+    })
+    return fetchJson<NamespaceCandidateUser[]>(
+      `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/member-candidates?${query.toString()}`,
+    )
+  },
+
+  async addMember(slug: string, request: { userId: string; role: string }): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        userId: request.userId.trim(),
+        role: request.role,
+      }),
+    })
+  },
+
+  async updateMemberRole(slug: string, userId: string, role: string): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(
+      `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}/role`,
+      {
+        method: 'PUT',
+        headers: await ensureCsrfHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ role }),
+      },
+    )
+  },
+
+  async removeMember(slug: string, userId: string): Promise<void> {
+    await fetchJson<void>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
     })
   },
 }
@@ -531,7 +688,7 @@ export const tokenApi = {
 
     const envelope = (error && isApiEnvelope<void>(error) ? error : null) as { msg?: string } | null
     if (!response.ok || error) {
-      throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+      throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
     }
   },
 }
@@ -576,6 +733,16 @@ export const reviewApi = {
 }
 
 export const promotionApi = {
+  async submit(request: { sourceSkillId: number; sourceVersionId: number; targetNamespaceId: number }): Promise<void> {
+    await fetchJson<void>(`${WEB_API_PREFIX}/promotions`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+
   async list(params: { status?: string; page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status ?? 'PENDING')
@@ -633,13 +800,13 @@ export const reportApi = {
     )
   },
 
-  async resolveSkillReport(id: number, comment?: string): Promise<void> {
+  async resolveSkillReport(id: number, comment?: string, disposition: ReportDisposition = 'RESOLVE_ONLY'): Promise<void> {
     await fetchJson<void>(`/api/v1/admin/skill-reports/${id}/resolve`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
       }),
-      body: JSON.stringify({ comment }),
+      body: JSON.stringify({ comment, disposition }),
     })
   },
 
@@ -650,6 +817,42 @@ export const reportApi = {
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify({ comment }),
+    })
+  },
+}
+
+export const governanceApi = {
+  async getSummary(): Promise<GovernanceSummary> {
+    return fetchJson<GovernanceSummary>(`${WEB_API_PREFIX}/governance/summary`)
+  },
+
+  async getInbox(params: { type?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.type) searchParams.set('type', params.type)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: GovernanceInboxItem[]; total: number; page: number; size: number }>(
+      `${WEB_API_PREFIX}/governance/inbox?${searchParams.toString()}`,
+    )
+  },
+
+  async getActivity(params: { page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: GovernanceActivityItem[]; total: number; page: number; size: number }>(
+      `${WEB_API_PREFIX}/governance/activity?${searchParams.toString()}`,
+    )
+  },
+
+  async getNotifications(): Promise<GovernanceNotification[]> {
+    return fetchJson<GovernanceNotification[]>(`${WEB_API_PREFIX}/governance/notifications`)
+  },
+
+  async markNotificationRead(id: number): Promise<GovernanceNotification> {
+    return fetchJson<GovernanceNotification>(`${WEB_API_PREFIX}/governance/notifications/${id}/read`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
     })
   },
 }

@@ -4,11 +4,11 @@ server:
   forward-headers-strategy: framework
   servlet:
     session:
+      timeout: ${SERVER_SERVLET_SESSION_TIMEOUT:8h}
       cookie:
         http-only: true
         secure: ${SESSION_COOKIE_SECURE:false}
         same-site: lax
-        max-age: 28800
 
 spring:
   messages:
@@ -101,7 +101,7 @@ skillhub:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
   bootstrap:
     admin:
-      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
       user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}

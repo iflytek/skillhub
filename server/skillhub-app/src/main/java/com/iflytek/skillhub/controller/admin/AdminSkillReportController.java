@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.admin;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.report.SkillReportDisposition;
 import com.iflytek.skillhub.domain.report.SkillReportService;
 import com.iflytek.skillhub.dto.AdminSkillReportActionRequest;
 import com.iflytek.skillhub.dto.AdminSkillReportSummaryResponse;
@@ -54,6 +55,9 @@ public class AdminSkillReportController extends BaseApiController {
         var report = skillReportService.resolveReport(
                 reportId,
                 principal.userId(),
+                request != null && request.disposition() != null
+                        ? SkillReportDisposition.valueOf(request.disposition().trim().toUpperCase())
+                        : SkillReportDisposition.RESOLVE_ONLY,
                 request != null ? request.comment() : null,
                 httpRequest.getRemoteAddr(),
                 httpRequest.getHeader("User-Agent")

@@ -13,15 +13,19 @@ public class NamespaceMemberService {
 
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final NamespaceService namespaceService;
+    private final NamespaceAccessPolicy namespaceAccessPolicy;
 
     public NamespaceMemberService(NamespaceMemberRepository namespaceMemberRepository,
-                                  NamespaceService namespaceService) {
+                                  NamespaceService namespaceService,
+                                  NamespaceAccessPolicy namespaceAccessPolicy) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.namespaceService = namespaceService;
+        this.namespaceAccessPolicy = namespaceAccessPolicy;
     }
 
     @Transactional
     public NamespaceMember addMember(Long namespaceId, String userId, NamespaceRole role, String operatorUserId) {
+        assertMemberMutationAllowed(namespaceId);
         namespaceService.assertAdminOrOwner(namespaceId, operatorUserId);
 
         if (role == NamespaceRole.OWNER) {
@@ -38,6 +42,7 @@ public class NamespaceMemberService {
 
     @Transactional
     public void removeMember(Long namespaceId, String userId, String operatorUserId) {
+        assertMemberMutationAllowed(namespaceId);
         namespaceService.assertAdminOrOwner(namespaceId, operatorUserId);
 
         NamespaceMember member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
@@ -52,6 +57,7 @@ public class NamespaceMemberService {
 
     @Transactional
     public NamespaceMember updateMemberRole(Long namespaceId, String userId, NamespaceRole newRole, String operatorUserId) {
+        assertMemberMutationAllowed(namespaceId);
         namespaceService.assertAdminOrOwner(namespaceId, operatorUserId);
 
         if (newRole == NamespaceRole.OWNER) {
@@ -67,6 +73,11 @@ public class NamespaceMemberService {
 
     @Transactional
     public void transferOwnership(Long namespaceId, String currentOwnerId, String newOwnerId) {
+        Namespace namespace = namespaceService.getNamespace(namespaceId);
+        if (!namespaceAccessPolicy.canTransferOwnership(namespace)) {
+            throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
+        }
+
         NamespaceMember currentOwner = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, currentOwnerId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.owner.current.notFound"));
 
@@ -91,5 +102,15 @@ public class NamespaceMemberService {
 
     public Page<NamespaceMember> listMembers(Long namespaceId, Pageable pageable) {
         return namespaceMemberRepository.findByNamespaceId(namespaceId, pageable);
+    }
+
+    private void assertMemberMutationAllowed(Long namespaceId) {
+        Namespace namespace = namespaceService.getNamespace(namespaceId);
+        if (!namespaceAccessPolicy.canManageMembers(namespace)) {
+            if (namespaceAccessPolicy.isImmutable(namespace)) {
+                throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
+            }
+            throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
+        }
     }
 }

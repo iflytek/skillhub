@@ -14,6 +14,26 @@ import {
 } from '@/shared/ui/table'
 import { useAuditLog } from '@/features/admin/use-audit-log'
 
+const ACTION_OPTIONS = [
+  { value: '', labelKey: 'auditLog.filterAll' },
+  { value: 'CLI_PUBLISH', labelKey: 'auditLog.filterCliPublish' },
+  { value: 'COMPAT_PUBLISH', labelKey: 'auditLog.filterCompatPublish' },
+  { value: 'REVIEW_SUBMIT', labelKey: 'auditLog.filterReviewSubmit' },
+  { value: 'REVIEW_APPROVE', labelKey: 'auditLog.filterReviewApprove' },
+  { value: 'REVIEW_REJECT', labelKey: 'auditLog.filterReviewReject' },
+  { value: 'PROMOTION_SUBMIT', labelKey: 'auditLog.filterPromotionSubmit' },
+  { value: 'PROMOTION_APPROVE', labelKey: 'auditLog.filterPromotionApprove' },
+  { value: 'PROMOTION_REJECT', labelKey: 'auditLog.filterPromotionReject' },
+  { value: 'REPORT_SKILL', labelKey: 'auditLog.filterReportSkill' },
+  { value: 'RESOLVE_SKILL_REPORT', labelKey: 'auditLog.filterResolveSkillReport' },
+  { value: 'DISMISS_SKILL_REPORT', labelKey: 'auditLog.filterDismissSkillReport' },
+  { value: 'HIDE_SKILL', labelKey: 'auditLog.filterHideSkill' },
+  { value: 'ARCHIVE_SKILL', labelKey: 'auditLog.filterArchiveSkill' },
+  { value: 'UNHIDE_SKILL', labelKey: 'auditLog.filterUnhideSkill' },
+  { value: 'UNARCHIVE_SKILL', labelKey: 'auditLog.filterUnarchiveSkill' },
+  { value: 'YANK_SKILL_VERSION', labelKey: 'auditLog.filterYankVersion' },
+] as const
+
 export function AuditLogPage() {
   const { t, i18n } = useTranslation()
   const [actionFilter, setActionFilter] = useState<string>('')
@@ -56,13 +76,11 @@ export function AuditLogPage() {
             setActionFilter(e.target.value)
             setPage(0)
           }} className="w-[200px]">
-            <option value="">{t('auditLog.filterAll')}</option>
-            <option value="CLI_PUBLISH">{t('auditLog.filterCliPublish')}</option>
-            <option value="COMPAT_PUBLISH">{t('auditLog.filterCompatPublish')}</option>
-            <option value="REVIEW_APPROVE">{t('auditLog.filterReviewApprove')}</option>
-            <option value="REVIEW_REJECT">{t('auditLog.filterReviewReject')}</option>
-            <option value="PROMOTION_APPROVE">{t('auditLog.filterPromotionApprove')}</option>
-            <option value="YANK_SKILL_VERSION">{t('auditLog.filterYankVersion')}</option>
+            {ACTION_OPTIONS.map((option) => (
+              <option key={option.value || 'all'} value={option.value}>
+                {t(option.labelKey)}
+              </option>
+            ))}
           </Select>
           <Input
             placeholder={t('auditLog.userIdPlaceholder')}

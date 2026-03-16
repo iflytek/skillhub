@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "skillhub.bootstrap.admin")
 public class BootstrapAdminProperties {
-    private boolean enabled = true;
+    private boolean enabled = false;
     private String userId = "docker-admin";
     private String username = "admin";
     private String password = "ChangeMe!2026";

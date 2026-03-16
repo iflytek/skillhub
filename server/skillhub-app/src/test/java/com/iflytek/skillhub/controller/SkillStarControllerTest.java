@@ -96,7 +96,8 @@ class SkillStarControllerTest {
     void star_skill_unauthenticated_returns_401() throws Exception {
         mockMvc.perform(put("/api/v1/skills/10/star")
                         .with(csrf()))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -130,11 +131,12 @@ class SkillStarControllerTest {
     @Test
     void check_starred_unauthenticated_returns_401() throws Exception {
         mockMvc.perform(get("/api/v1/skills/10/star"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
-    void apiWebStarSkillWithoutCsrfShouldBeRejectedForSessionAuth() throws Exception {
+    void apiWebStarSkillWithoutCsrfShouldAllowSessionAuth() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-42",
                 "tester",
@@ -151,6 +153,9 @@ class SkillStarControllerTest {
 
         mockMvc.perform(put("/api/web/skills/10/star")
                         .with(authentication(auth)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        verify(skillStarService).star(eq(10L), eq("user-42"));
     }
 }

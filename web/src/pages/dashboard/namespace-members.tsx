@@ -1,20 +1,110 @@
+import { useState } from 'react'
 import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { AddNamespaceMemberDialog } from '@/features/namespace/add-namespace-member-dialog'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
-import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
-import { useNamespaceDetail, useNamespaceMembers } from '@/shared/hooks/use-skill-queries'
+import { Select } from '@/shared/ui/select'
+import {
+  useMyNamespaces,
+  useNamespaceDetail,
+  useNamespaceMembers,
+  useRemoveNamespaceMember,
+  useUpdateNamespaceMemberRole,
+} from '@/shared/hooks/use-skill-queries'
+import { toast } from '@/shared/lib/toast'
+
+type PendingRemoval = {
+  userId: string
+}
 
 export function NamespaceMembersPage() {
-  const translation = useTranslation()
-  const t = translation.t
-  const language = translation.i18n.language
+  const { t, i18n } = useTranslation()
   const params = useParams({ from: '/dashboard/namespaces/$slug/members' })
   const slug = params.slug
+  const [draftRoles, setDraftRoles] = useState<Record<string, string>>({})
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
+  const [savingRoleUserId, setSavingRoleUserId] = useState<string | null>(null)
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null)
 
   const { data: namespace, isLoading: isLoadingNamespace } = useNamespaceDetail(slug)
-  const { data: members, isLoading: isLoadingMembers } = useNamespaceMembers(slug)
+  const { data: members, isLoading: isLoadingMembers, error: membersError } = useNamespaceMembers(slug)
+  const { data: myNamespaces } = useMyNamespaces()
+  const updateRoleMutation = useUpdateNamespaceMemberRole()
+  const removeMemberMutation = useRemoveNamespaceMember()
+
+  const currentNamespace = myNamespaces?.find((item) => item.slug === slug)
+  const currentUserRole = currentNamespace?.currentUserRole
+  const isReadOnly = namespace?.type === 'GLOBAL' || namespace?.status !== 'ACTIVE'
+  const canManageMembers = !isReadOnly && (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN')
+
+  const readOnlyMessage = namespace?.type === 'GLOBAL'
+    ? t('members.globalReadOnly')
+    : namespace?.status === 'FROZEN'
+      ? t('members.frozenReadOnly')
+      : namespace?.status === 'ARCHIVED'
+        ? t('members.archivedReadOnly')
+        : currentUserRole === 'MEMBER'
+          ? t('members.memberReadOnly')
+          : null
+
+  const resolveDraftRole = (userId: string, currentRole: string) => draftRoles[userId] ?? currentRole
+
+  const handleRoleSave = async (userId: string, currentRole: string) => {
+    const nextRole = resolveDraftRole(userId, currentRole)
+    if (nextRole === currentRole) {
+      return
+    }
+
+    setSavingRoleUserId(userId)
+    try {
+      await updateRoleMutation.mutateAsync({
+        slug,
+        userId,
+        role: nextRole,
+      })
+      toast.success(
+        t('members.updateRoleSuccessTitle'),
+        t('members.updateRoleSuccessDescription', { userId, role: nextRole }),
+      )
+      setDraftRoles((current) => {
+        const next = { ...current }
+        delete next[userId]
+        return next
+      })
+    } catch (error) {
+      toast.error(t('members.updateRoleErrorTitle'), error instanceof Error ? error.message : '')
+    } finally {
+      setSavingRoleUserId(null)
+    }
+  }
+
+  const handleRemoveMember = async () => {
+    if (!pendingRemoval) {
+      return
+    }
+
+    setRemovingUserId(pendingRemoval.userId)
+    try {
+      await removeMemberMutation.mutateAsync({
+        slug,
+        userId: pendingRemoval.userId,
+      })
+      toast.success(
+        t('members.removeSuccessTitle'),
+        t('members.removeSuccessDescription', { userId: pendingRemoval.userId }),
+      )
+      setPendingRemoval(null)
+    } catch (error) {
+      toast.error(t('members.removeErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    } finally {
+      setRemovingUserId(null)
+    }
+  }
 
   if (isLoadingNamespace) {
     return (
@@ -42,14 +132,30 @@ export function NamespaceMembersPage() {
       <NamespaceHeader namespace={namespace} />
 
       <div className="space-y-6">
+        {readOnlyMessage ? (
+          <Card className="border-border/50 bg-secondary/40 p-4 text-sm text-muted-foreground">
+            {readOnlyMessage}
+          </Card>
+        ) : null}
+
         <div className="flex items-center justify-end">
-          <Button disabled>{t('members.addMember')}</Button>
+          {canManageMembers ? (
+            <AddNamespaceMemberDialog slug={slug}>
+              <Button>{t('members.addMember')}</Button>
+            </AddNamespaceMemberDialog>
+          ) : (
+            <Button disabled>{t('members.addMember')}</Button>
+          )}
         </div>
 
-        {isLoadingMembers ? (
+        {membersError ? (
+          <Card className="p-6 text-center text-red-600">
+            {membersError.message}
+          </Card>
+        ) : isLoadingMembers ? (
           <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-14 animate-shimmer rounded-lg" />
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="h-14 animate-shimmer rounded-lg" />
             ))}
           </div>
         ) : members && members.length > 0 ? (
@@ -65,24 +171,66 @@ export function NamespaceMembersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((member) => (
-                    <tr key={member.id} className="border-b border-border/40 last:border-b-0 hover:bg-secondary/30 transition-colors">
-                      <td className="p-4 font-medium">{member.userId}</td>
-                      <td className="p-4">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-accent/10 text-accent border border-accent/20">
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-muted-foreground">
-                        {new Date(member.createdAt).toLocaleDateString(language)}
-                      </td>
-                      <td className="p-4 text-right">
-                        <Button variant="destructive" size="sm" disabled>
-                          {t('members.remove')}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {members.map((member) => {
+                    const roleValue = resolveDraftRole(member.userId, member.role)
+                    const isOwner = member.role === 'OWNER'
+                    const isSavingRole = savingRoleUserId === member.userId
+                    const isRemoving = removingUserId === member.userId
+
+                    return (
+                      <tr key={member.id} className="border-b border-border/40 last:border-b-0 hover:bg-secondary/30 transition-colors">
+                        <td className="p-4 font-medium font-mono">{member.userId}</td>
+                        <td className="p-4">
+                          {canManageMembers && !isOwner ? (
+                            <div className="flex items-center gap-2">
+                              <Select
+                                className="w-36"
+                                value={roleValue}
+                                onChange={(event) => {
+                                  setDraftRoles((current) => ({
+                                    ...current,
+                                    [member.userId]: event.target.value,
+                                  }))
+                                }}
+                              >
+                                <option value="MEMBER">{t('members.roleMember')}</option>
+                                <option value="ADMIN">{t('members.roleAdmin')}</option>
+                              </Select>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={roleValue === member.role || isSavingRole}
+                                onClick={() => handleRoleSave(member.userId, member.role)}
+                              >
+                                {isSavingRole ? t('members.savingRole') : t('members.saveRole')}
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-accent/10 text-accent border border-accent/20">
+                              {member.role === 'OWNER'
+                                ? t('members.roleOwner')
+                                : member.role === 'ADMIN'
+                                  ? t('members.roleAdmin')
+                                  : t('members.roleMember')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {new Date(member.createdAt).toLocaleDateString(i18n.language)}
+                        </td>
+                        <td className="p-4 text-right">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={!canManageMembers || isOwner || isRemoving}
+                            onClick={() => setPendingRemoval({ userId: member.userId })}
+                          >
+                            {t('members.remove')}
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -93,6 +241,20 @@ export function NamespaceMembersPage() {
           </Card>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingRemoval}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingRemoval(null)
+          }
+        }}
+        title={t('members.removeConfirmTitle')}
+        description={pendingRemoval ? t('members.removeConfirmDescription', { userId: pendingRemoval.userId }) : ''}
+        confirmText={t('members.remove')}
+        variant="destructive"
+        onConfirm={handleRemoveMember}
+      />
     </div>
   )
 }

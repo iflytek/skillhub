@@ -56,7 +56,7 @@ SkillHub is configured through environment variables. The main configuration ite
 
 | Environment Variable | Description | Default Value |
 |---------------------|-------------|---------------|
-| `BOOTSTRAP_ADMIN_ENABLED` | Enable bootstrap admin | `true` |
+| `BOOTSTRAP_ADMIN_ENABLED` | Enable bootstrap admin | `false` |
 | `BOOTSTRAP_ADMIN_USERNAME` | Bootstrap admin username | - |
 | `BOOTSTRAP_ADMIN_PASSWORD` | Bootstrap admin password | - |
 

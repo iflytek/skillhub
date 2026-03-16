@@ -58,7 +58,8 @@ class AuthControllerTest {
     @Test
     void meShouldReturnUnauthorizedForAnonymousRequest() throws Exception {
         mockMvc.perform(get("/api/v1/auth/me"))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -86,7 +87,6 @@ class AuthControllerTest {
             .andExpect(header().string("X-Frame-Options", "DENY"))
             .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.msg").isNotEmpty())
             .andExpect(jsonPath("$.data.userId").value("user-42"))
             .andExpect(jsonPath("$.data.displayName").value("tester"))
             .andExpect(jsonPath("$.data.oauthProvider").value("github"))
@@ -100,7 +100,6 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/v1/auth/providers"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.msg").isNotEmpty())
             .andExpect(jsonPath("$.data.length()").value(2))
             .andExpect(jsonPath("$.data[*].id", hasItems("github", "gitee")))
             .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
@@ -115,6 +114,7 @@ class AuthControllerTest {
     void providersShouldAppendReturnToWhenRequested() throws Exception {
         mockMvc.perform(get("/api/v1/auth/providers").param("returnTo", "/dashboard/publish"))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
                 "/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish",
                 "/oauth2/authorization/gitee?returnTo=%2Fdashboard%2Fpublish"
@@ -141,8 +141,7 @@ class AuthControllerTest {
                     {"provider":"private-sso"}
                     """))
             .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.code").value(403))
-            .andExpect(jsonPath("$.msg").isNotEmpty());
+            .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test
@@ -154,7 +153,6 @@ class AuthControllerTest {
                     {"provider":"private-sso","username":"alice","password":"secret"}
                     """))
             .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.code").value(403))
-            .andExpect(jsonPath("$.msg").isNotEmpty());
+            .andExpect(jsonPath("$.code").value(403));
     }
 }

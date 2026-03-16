@@ -1,9 +1,11 @@
 package com.iflytek.skillhub.domain.review;
 
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
+import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -29,6 +31,7 @@ public class PromotionService {
     private final NamespaceRepository namespaceRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final GovernanceNotificationService governanceNotificationService;
 
     public PromotionService(PromotionRequestRepository promotionRequestRepository,
                             SkillRepository skillRepository,
@@ -36,7 +39,8 @@ public class PromotionService {
                             SkillFileRepository skillFileRepository,
                             NamespaceRepository namespaceRepository,
                             ReviewPermissionChecker permissionChecker,
-                            ApplicationEventPublisher eventPublisher) {
+                            ApplicationEventPublisher eventPublisher,
+                            GovernanceNotificationService governanceNotificationService) {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -44,6 +48,7 @@ public class PromotionService {
         this.namespaceRepository = namespaceRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
+        this.governanceNotificationService = governanceNotificationService;
     }
 
     @Transactional
@@ -65,6 +70,10 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
         }
 
+        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
+        assertNamespaceActive(sourceNamespace);
+
         if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("promotion.submit.no_permission");
         }
@@ -76,9 +85,13 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
         }
 
-        promotionRequestRepository.findBySourceVersionIdAndStatus(sourceVersionId, ReviewTaskStatus.PENDING)
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.PENDING)
                 .ifPresent(existing -> {
                     throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
+                });
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.APPROVED)
+                .ifPresent(existing -> {
+                    throw new DomainBadRequestException("promotion.already_promoted", sourceSkillId);
                 });
 
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
@@ -103,6 +116,10 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
         }
 
+        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
+        assertNamespaceActive(sourceNamespace);
+
         if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles)) {
             throw new DomainForbiddenException("promotion.submit.no_permission");
         }
@@ -114,9 +131,13 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
         }
 
-        promotionRequestRepository.findBySourceVersionIdAndStatus(sourceVersionId, ReviewTaskStatus.PENDING)
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.PENDING)
                 .ifPresent(existing -> {
                     throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
+                });
+        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.APPROVED)
+                .ifPresent(existing -> {
+                    throw new DomainBadRequestException("promotion.already_promoted", sourceSkillId);
                 });
 
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
@@ -143,14 +164,17 @@ public class PromotionService {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
 
-        Skill sourceSkill = skillRepository.findById(request.getSourceSkillId())
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", request.getSourceSkillId()));
+        PromotionRequest approvedRequest = promotionRequestRepository.findById(promotionId)
+                .orElseThrow(() -> new DomainNotFoundException("promotion.not_found", promotionId));
 
-        SkillVersion sourceVersion = skillVersionRepository.findById(request.getSourceVersionId())
-                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", request.getSourceVersionId()));
+        Skill sourceSkill = skillRepository.findById(approvedRequest.getSourceSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", approvedRequest.getSourceSkillId()));
+
+        SkillVersion sourceVersion = skillVersionRepository.findById(approvedRequest.getSourceVersionId())
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", approvedRequest.getSourceVersionId()));
 
         // Create new skill in global namespace
-        Skill newSkill = new Skill(request.getTargetNamespaceId(), sourceSkill.getSlug(),
+        Skill newSkill = new Skill(approvedRequest.getTargetNamespaceId(), sourceSkill.getSlug(),
                 sourceSkill.getOwnerId(), SkillVisibility.PUBLIC);
         newSkill.setDisplayName(sourceSkill.getDisplayName());
         newSkill.setSummary(sourceSkill.getSummary());
@@ -176,7 +200,7 @@ public class PromotionService {
         skillRepository.save(newSkill);
 
         // Copy file records (reuse storageKey)
-        List<SkillFile> sourceFiles = skillFileRepository.findByVersionId(request.getSourceVersionId());
+        List<SkillFile> sourceFiles = skillFileRepository.findByVersionId(approvedRequest.getSourceVersionId());
         Long newVersionId = newVersion.getId();
         List<SkillFile> copiedFiles = sourceFiles.stream()
                 .map(f -> new SkillFile(newVersionId, f.getFilePath(), f.getFileSize(),
@@ -185,13 +209,21 @@ public class PromotionService {
         skillFileRepository.saveAll(copiedFiles);
 
         // Update promotion request with target skill id
-        request.setTargetSkillId(newSkill.getId());
-        promotionRequestRepository.save(request);
+        approvedRequest.setTargetSkillId(newSkill.getId());
+        PromotionRequest savedRequest = promotionRequestRepository.save(approvedRequest);
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 newSkill.getId(), newVersion.getId(), reviewerId));
+        governanceNotificationService.notifyUser(
+                approvedRequest.getSubmittedBy(),
+                "PROMOTION",
+                "PROMOTION_REQUEST",
+                promotionId,
+                "Promotion approved",
+                "{\"status\":\"APPROVED\"}"
+        );
 
-        return request;
+        return savedRequest;
     }
 
     @Transactional
@@ -213,11 +245,28 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
+        governanceNotificationService.notifyUser(
+                request.getSubmittedBy(),
+                "PROMOTION",
+                "PROMOTION_REQUEST",
+                promotionId,
+                "Promotion rejected",
+                "{\"status\":\"REJECTED\"}"
+        );
 
         return promotionRequestRepository.findById(promotionId).orElse(request);
     }
 
     public boolean canViewPromotion(PromotionRequest request, String userId, Set<String> platformRoles) {
         return permissionChecker.canViewPromotion(request, userId, platformRoles);
+    }
+
+    private void assertNamespaceActive(Namespace namespace) {
+        if (namespace.getStatus() == NamespaceStatus.FROZEN) {
+            throw new DomainBadRequestException("error.namespace.frozen", namespace.getSlug());
+        }
+        if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
+            throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
+        }
     }
 }

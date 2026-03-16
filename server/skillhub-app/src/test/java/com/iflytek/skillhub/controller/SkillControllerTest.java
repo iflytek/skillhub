@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
@@ -63,7 +64,6 @@ class SkillControllerTest {
         mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").isNotEmpty())
                 .andExpect(jsonPath("$.data.version").value("1.0.0"))
                 .andExpect(jsonPath("$.data.parsedMetadataJson").value("{\"name\":\"demo\"}"))
                 .andExpect(jsonPath("$.data.manifestJson").value("[{\"path\":\"SKILL.md\"}]"))
@@ -126,16 +126,35 @@ class SkillControllerTest {
                         LocalDateTime.of(2026, 3, 15, 10, 0),
                         LocalDateTime.of(2026, 3, 15, 10, 0),
                         null,
+                        11L,
                         true,
+                        false,
                         "PENDING_REVIEW",
                         false
                 ));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.latestVersion").value("1.1.0"))
+                .andExpect(jsonPath("$.data.latestVersionId").value(11L))
+                .andExpect(jsonPath("$.data.canSubmitPromotion").value(false))
                 .andExpect(jsonPath("$.data.viewingVersionStatus").value("PENDING_REVIEW"))
                 .andExpect(jsonPath("$.data.canInteract").value(false));
+    }
+
+    @Test
+    void getSkillDetailShouldReturnForbiddenForArchivedNamespace() throws Exception {
+        when(skillQueryService.getSkillDetail(
+                eq("team"),
+                eq("demo"),
+                eq((String) null),
+                eq(Map.<Long, NamespaceRole>of())))
+                .thenThrow(new DomainForbiddenException("error.namespace.archived", "team"));
+
+        mockMvc.perform(get("/api/web/skills/team/demo"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test

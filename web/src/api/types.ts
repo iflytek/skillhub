@@ -61,6 +61,12 @@ export interface ChangePasswordRequest {
   newPassword: string
 }
 
+export type CreateNamespaceRequest = Omit<components['schemas']['NamespaceRequest'], 'slug' | 'displayName'> & {
+  slug: string
+  displayName: string
+  description?: string
+}
+
 export interface MergeInitiateRequest {
   secondaryIdentifier: string
 }
@@ -82,6 +88,9 @@ export interface MergeConfirmRequest {
 }
 
 // Namespace types
+export type NamespaceStatus = 'ACTIVE' | 'FROZEN' | 'ARCHIVED' | string
+export type NamespaceRole = 'OWNER' | 'ADMIN' | 'MEMBER' | string
+
 export interface Namespace {
   id: number
   slug: string
@@ -89,16 +98,33 @@ export interface Namespace {
   description?: string
   type: 'GLOBAL' | 'TEAM'
   avatarUrl?: string
-  status: string
+  status: NamespaceStatus
   createdAt: string
   updatedAt?: string
+}
+
+export interface ManagedNamespace extends Namespace {
+  createdBy?: string
+  currentUserRole?: NamespaceRole
+  immutable: boolean
+  canFreeze: boolean
+  canUnfreeze: boolean
+  canArchive: boolean
+  canRestore: boolean
 }
 
 export interface NamespaceMember {
   id: number
   userId: string
-  role: string
+  role: NamespaceRole
   createdAt: string
+}
+
+export interface NamespaceCandidateUser {
+  userId: string
+  displayName: string
+  email?: string
+  status: string
 }
 
 // Skill types
@@ -113,9 +139,11 @@ export interface SkillSummary {
   ratingAvg?: number
   ratingCount: number
   latestVersion?: string
+  latestVersionId?: number
   latestVersionStatus?: string
   namespace: string
   updatedAt: string
+  canSubmitPromotion: boolean
 }
 
 export interface SkillDetail {
@@ -131,10 +159,18 @@ export interface SkillDetail {
   ratingCount: number
   hidden: boolean
   latestVersion?: string
+  latestVersionId?: number
   namespace: string
   canManageLifecycle: boolean
+  canSubmitPromotion: boolean
   viewingVersionStatus?: string
   canInteract: boolean
+}
+
+export interface SubmitPromotionRequest {
+  sourceSkillId: number
+  sourceVersionId: number
+  targetNamespaceId: number
 }
 
 export interface SkillVersion {
@@ -250,6 +286,47 @@ export interface SkillReport {
   handleComment?: string
   createdAt: string
   handledAt?: string
+}
+
+export type ReportDisposition = 'RESOLVE_ONLY' | 'RESOLVE_AND_HIDE' | 'RESOLVE_AND_ARCHIVE'
+
+export interface GovernanceSummary {
+  pendingReviews: number
+  pendingPromotions: number
+  pendingReports: number
+}
+
+export interface GovernanceInboxItem {
+  type: 'REVIEW' | 'PROMOTION' | 'REPORT' | string
+  id: number
+  title: string
+  subtitle?: string
+  timestamp?: string
+  namespace?: string
+  skillSlug?: string
+}
+
+export interface GovernanceActivityItem {
+  id: number
+  action: string
+  actorUserId?: string
+  actorDisplayName?: string
+  targetType?: string
+  targetId?: string
+  details?: string
+  timestamp?: string
+}
+
+export interface GovernanceNotification {
+  id?: number
+  category: string
+  entityType: string
+  entityId: number
+  title: string
+  bodyJson?: string
+  status: 'UNREAD' | 'READ' | string
+  createdAt?: string
+  readAt?: string
 }
 
 export interface AdminUser {

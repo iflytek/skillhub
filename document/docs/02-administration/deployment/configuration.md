@@ -56,7 +56,7 @@ SkillHub 通过环境变量进行配置，主要配置项如下：
 
 | 环境变量 | 说明 | 默认值 |
 |---------|------|--------|
-| `BOOTSTRAP_ADMIN_ENABLED` | 是否启用首登管理员 | `true` |
+| `BOOTSTRAP_ADMIN_ENABLED` | 是否启用首登管理员 | `false` |
 | `BOOTSTRAP_ADMIN_USERNAME` | 首登管理员用户名 | - |
 | `BOOTSTRAP_ADMIN_PASSWORD` | 首登管理员密码 | - |
 
