@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ConcurrentModificationException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -153,12 +154,27 @@ public class ReviewService {
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
+
+        Skill skill = skillRepository.findById(skillVersion.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
+
+        // Check no other owner has a published skill with the same slug
+        List<Skill> sameSlugSkills = skillRepository.findByNamespaceIdAndSlug(skill.getNamespaceId(), skill.getSlug());
+        for (Skill other : sameSlugSkills) {
+            if (!other.getId().equals(skill.getId())) {
+                boolean otherHasPublished = !skillVersionRepository
+                        .findBySkillIdAndStatus(other.getId(), SkillVersionStatus.PUBLISHED)
+                        .isEmpty();
+                if (otherHasPublished) {
+                    throw new DomainBadRequestException("error.skill.approve.nameConflict", skill.getSlug());
+                }
+            }
+        }
+
         skillVersion.setStatus(SkillVersionStatus.PUBLISHED);
         skillVersion.setPublishedAt(LocalDateTime.now());
         skillVersionRepository.save(skillVersion);
 
-        Skill skill = skillRepository.findById(skillVersion.getSkillId())
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
         skill.setLatestVersionId(skillVersion.getId());
         applyPublishedMetadata(skill, skillVersion);
         skill.setUpdatedBy(reviewerId);

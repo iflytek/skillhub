@@ -29,6 +29,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.ConcurrentModificationException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -233,6 +234,7 @@ class ReviewServiceTest {
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.approveReview(
@@ -263,6 +265,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
@@ -356,6 +359,7 @@ class ReviewServiceTest {
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.approveReview(
@@ -376,6 +380,33 @@ class ReviewServiceTest {
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(0);
 
             assertThrows(ConcurrentModificationException.class,
+                    () -> reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
+                            Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of()));
+        }
+
+        @Test
+        void shouldRejectApproveWhenOtherOwnerHasPublishedSameSlug() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill(); // owned by USER_ID
+
+            // Another owner's skill with same slug that has a published version
+            Skill otherSkill = new Skill(NAMESPACE_ID, "my-skill", "other-user", SkillVisibility.PUBLIC);
+            setField(otherSkill, "id", 99L);
+            SkillVersion otherPublished = new SkillVersion(99L, "1.0.0", "other-user");
+            otherPublished.setStatus(SkillVersionStatus.PUBLISHED);
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill, otherSkill));
+            when(skillVersionRepository.findBySkillIdAndStatus(99L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(otherPublished));
+
+            assertThrows(DomainBadRequestException.class,
                     () -> reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
                             Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of()));
         }

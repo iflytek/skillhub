@@ -43,7 +43,7 @@ public class SkillReportController extends BaseApiController {
                                                                  @RequestBody SkillReportSubmitRequest request,
                                                                  @RequestAttribute("userId") String userId,
                                                                  HttpServletRequest httpRequest) {
-        Skill skill = findSkill(namespace, slug);
+        Skill skill = findSkill(namespace, slug, userId);
         var report = skillReportService.submitReport(
                 skill.getId(),
                 userId,
@@ -55,11 +55,32 @@ public class SkillReportController extends BaseApiController {
         return ok("response.success.created", new SkillReportMutationResponse(report.getId(), report.getStatus().name()));
     }
 
-    private Skill findSkill(String namespaceSlug, String skillSlug) {
+    private Skill findSkill(String namespaceSlug, String skillSlug, String currentUserId) {
         String cleanNamespace = namespaceSlug.startsWith("@") ? namespaceSlug.substring(1) : namespaceSlug;
         Namespace namespace = namespaceRepository.findBySlug(cleanNamespace)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", cleanNamespace));
-        return skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        return resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
+    }
+
+    private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {
+        java.util.List<Skill> skills = skillRepository.findByNamespaceIdAndSlug(namespaceId, slug);
+        if (skills.isEmpty()) {
+            throw new DomainBadRequestException("error.skill.notFound", slug);
+        }
+        java.util.Optional<Skill> published = skills.stream()
+                .filter(s -> s.getLatestVersionId() != null)
+                .findFirst();
+        if (published.isPresent()) {
+            return published.get();
+        }
+        if (currentUserId != null) {
+            java.util.Optional<Skill> ownSkill = skills.stream()
+                    .filter(s -> currentUserId.equals(s.getOwnerId()))
+                    .findFirst();
+            if (ownSkill.isPresent()) {
+                return ownSkill.get();
+            }
+        }
+        return skills.get(0);
     }
 }

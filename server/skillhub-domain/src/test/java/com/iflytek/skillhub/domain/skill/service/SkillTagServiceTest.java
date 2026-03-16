@@ -73,7 +73,7 @@ class SkillTagServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, operatorId))
                 .thenReturn(Optional.of(new NamespaceMember(1L, operatorId, NamespaceRole.OWNER)));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(skillVersionRepository.findBySkillIdAndVersion(1L, targetVersion)).thenReturn(Optional.of(version));
         when(skillTagRepository.findBySkillIdAndTagName(1L, tagName)).thenReturn(Optional.empty());
         when(skillTagRepository.save(any())).thenReturn(tag);
@@ -118,7 +118,7 @@ class SkillTagServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, operatorId))
                 .thenReturn(Optional.of(new NamespaceMember(1L, operatorId, NamespaceRole.ADMIN)));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(skillTagRepository.findBySkillIdAndTagName(1L, tagName)).thenReturn(Optional.of(tag));
 
         // Act
@@ -175,7 +175,7 @@ class SkillTagServiceTest {
         SkillTag tag2 = new SkillTag(1L, "beta", 2L, "user-100");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(skillTagRepository.findBySkillId(1L)).thenReturn(List.of(tag1, tag2));
         when(visibilityChecker.canAccess(eq(skill), isNull(), eq(java.util.Map.of()))).thenReturn(true);
 

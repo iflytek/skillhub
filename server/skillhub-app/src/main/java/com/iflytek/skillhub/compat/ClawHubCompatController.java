@@ -304,8 +304,7 @@ public class ClawHubCompatController {
 
         Namespace ns = namespaceRepository.findBySlug(coord.namespace())
                 .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", coord.namespace()));
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(ns.getId(), coord.slug())
-                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", coord.slug()));
+        Skill skill = resolveVisibleSkill(ns.getId(), coord.slug(), userId);
 
         SkillVersion latestVersionEntity = null;
         if (skill.getLatestVersionId() != null) {
@@ -382,8 +381,7 @@ public class ClawHubCompatController {
         SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
         Namespace ns = namespaceRepository.findBySlug(coord.namespace())
                 .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", coord.namespace()));
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(ns.getId(), coord.slug())
-                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", canonicalSlug));
+        Skill skill = resolveVisibleSkill(ns.getId(), coord.slug(), principal.userId());
 
         boolean alreadyStarred = skillStarService.isStarred(skill.getId(), principal.userId());
         skillStarService.star(skill.getId(), principal.userId());
@@ -399,8 +397,7 @@ public class ClawHubCompatController {
         SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
         Namespace ns = namespaceRepository.findBySlug(coord.namespace())
                 .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", coord.namespace()));
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(ns.getId(), coord.slug())
-                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", canonicalSlug));
+        Skill skill = resolveVisibleSkill(ns.getId(), coord.slug(), principal.userId());
 
         boolean alreadyUnstarred = !skillStarService.isStarred(skill.getId(), principal.userId());
         skillStarService.unstar(skill.getId(), principal.userId());
@@ -481,5 +478,27 @@ public class ClawHubCompatController {
                 principal.displayName(),
                 principal.avatarUrl()
         );
+    }
+
+    private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {
+        java.util.List<Skill> skills = skillRepository.findByNamespaceIdAndSlug(namespaceId, slug);
+        if (skills.isEmpty()) {
+            throw new DomainNotFoundException("error.skill.notFound", slug);
+        }
+        java.util.Optional<Skill> published = skills.stream()
+                .filter(s -> s.getLatestVersionId() != null)
+                .findFirst();
+        if (published.isPresent()) {
+            return published.get();
+        }
+        if (currentUserId != null) {
+            java.util.Optional<Skill> ownSkill = skills.stream()
+                    .filter(s -> currentUserId.equals(s.getOwnerId()))
+                    .findFirst();
+            if (ownSkill.isPresent()) {
+                return ownSkill.get();
+            }
+        }
+        return skills.get(0);
     }
 }

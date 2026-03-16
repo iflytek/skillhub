@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class SkillTagService {
@@ -44,8 +45,7 @@ public class SkillTagService {
                                    String currentUserId,
                                    java.util.Map<Long, NamespaceRole> userNamespaceRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
         if (!visibilityChecker.canAccess(skill, currentUserId, userNamespaceRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
         }
@@ -76,8 +76,7 @@ public class SkillTagService {
 
         Namespace namespace = findNamespace(namespaceSlug);
         assertAdminOrOwner(namespace.getId(), operatorId);
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, operatorId);
 
         // Find target version
         SkillVersion version = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), targetVersion)
@@ -111,8 +110,7 @@ public class SkillTagService {
 
         Namespace namespace = findNamespace(namespaceSlug);
         assertAdminOrOwner(namespace.getId(), operatorId);
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, operatorId);
 
         SkillTag tag = skillTagRepository.findBySkillIdAndTagName(skill.getId(), tagName)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.tag.notFound", tagName));
@@ -123,6 +121,28 @@ public class SkillTagService {
     private Namespace findNamespace(String slug) {
         return namespaceRepository.findBySlug(slug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
+    }
+
+    private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {
+        List<Skill> skills = skillRepository.findByNamespaceIdAndSlug(namespaceId, slug);
+        if (skills.isEmpty()) {
+            throw new DomainBadRequestException("error.skill.notFound", slug);
+        }
+        Optional<Skill> published = skills.stream()
+                .filter(s -> s.getLatestVersionId() != null)
+                .findFirst();
+        if (published.isPresent()) {
+            return published.get();
+        }
+        if (currentUserId != null) {
+            Optional<Skill> ownSkill = skills.stream()
+                    .filter(s -> currentUserId.equals(s.getOwnerId()))
+                    .findFirst();
+            if (ownSkill.isPresent()) {
+                return ownSkill.get();
+            }
+        }
+        return skills.get(0);
     }
 
     private void assertAdminOrOwner(Long namespaceId, String operatorId) {

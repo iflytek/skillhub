@@ -87,7 +87,7 @@ class SkillQueryServiceTest {
         setId(version, 10L);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
 
@@ -115,7 +115,7 @@ class SkillQueryServiceTest {
         setId(skill, 1L);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(false);
 
         // Act & Assert
@@ -189,7 +189,7 @@ class SkillQueryServiceTest {
         Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
         when(skillFileRepository.findByVersionId(1L)).thenReturn(List.of(file1));
@@ -219,7 +219,7 @@ class SkillQueryServiceTest {
         skillVersion.setStatus(SkillVersionStatus.DRAFT);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
 
@@ -246,7 +246,7 @@ class SkillQueryServiceTest {
         SkillFile file = new SkillFile(1L, filePath, 100L, "text/markdown", "hash1", "skills/1/1/SKILL.md");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
         when(skillFileRepository.findByVersionId(1L)).thenReturn(List.of(file));
@@ -279,7 +279,7 @@ class SkillQueryServiceTest {
         skillVersion.setManifestJson("[{\"path\":\"SKILL.md\"}]");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
 
@@ -313,7 +313,7 @@ class SkillQueryServiceTest {
         SkillFile file = new SkillFile(11L, "README.md", 12L, "text/markdown", "hash", "storage-key");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(latestVersion));
         when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
@@ -351,7 +351,7 @@ class SkillQueryServiceTest {
         rejected.setStatus(SkillVersionStatus.REJECTED);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(pending, published, rejected));
 
@@ -385,7 +385,7 @@ class SkillQueryServiceTest {
         SkillFile version110File = new SkillFile(10L, "SKILL.md", 10L, "text/markdown", "hash110", "key110");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
                 .thenReturn(List.of(version100, version110));
@@ -427,7 +427,7 @@ class SkillQueryServiceTest {
         SkillFile file = new SkillFile(11L, "SKILL.md", 10L, "text/markdown", "hash", "key");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, null, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(version));
         when(skillVersionRepository.findBySkillIdAndStatus(3L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(version));
@@ -460,7 +460,7 @@ class SkillQueryServiceTest {
         skill.setStatus(SkillStatus.ACTIVE);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
@@ -574,7 +574,7 @@ class SkillQueryServiceTest {
         skill.setStatus(SkillStatus.ACTIVE);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
@@ -607,7 +607,7 @@ class SkillQueryServiceTest {
         pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PENDING_REVIEW))
                 .thenReturn(List.of(pending));
@@ -642,7 +642,7 @@ class SkillQueryServiceTest {
         pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
 
@@ -674,7 +674,7 @@ class SkillQueryServiceTest {
         pending.setManifestJson("[{\"path\":\"SKILL.md\"}]");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
 
@@ -709,7 +709,7 @@ class SkillQueryServiceTest {
         SkillFile file = new SkillFile(11L, "README.md", 12L, "text/markdown", "hash", "storage-key");
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
         when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
@@ -739,7 +739,7 @@ class SkillQueryServiceTest {
         pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, viewerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
 
@@ -771,7 +771,7 @@ class SkillQueryServiceTest {
         rejected.setStatus(SkillVersionStatus.REJECTED);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(rejected, draft, published));
 
@@ -805,7 +805,7 @@ class SkillQueryServiceTest {
         published.setStatus(SkillVersionStatus.PUBLISHED);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(published));
 

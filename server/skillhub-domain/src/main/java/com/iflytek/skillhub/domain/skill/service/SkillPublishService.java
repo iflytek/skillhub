@@ -188,8 +188,23 @@ public class SkillPublishService {
                     String.join(", ", prePublishValidation.errors()));
         }
 
-        // 6. Find or create Skill record
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
+        // 6. Find or create Skill record (with owner isolation)
+        List<Skill> existingSkills = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug);
+
+        // Check if any other owner's skill has published versions
+        for (Skill existing : existingSkills) {
+            if (!existing.getOwnerId().equals(publisherId)) {
+                boolean hasPublished = !skillVersionRepository
+                        .findBySkillIdAndStatus(existing.getId(), SkillVersionStatus.PUBLISHED)
+                        .isEmpty();
+                if (hasPublished) {
+                    throw new DomainBadRequestException("error.skill.publish.nameConflict", skillSlug);
+                }
+            }
+        }
+
+        // Find or create skill for current user
+        Skill skill = skillRepository.findByNamespaceIdAndSlugAndOwnerId(namespace.getId(), skillSlug, publisherId)
                 .orElseGet(() -> {
                     Skill newSkill = new Skill(namespace.getId(), skillSlug, publisherId, visibility);
                     newSkill.setCreatedBy(publisherId);
@@ -198,6 +213,14 @@ public class SkillPublishService {
 
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
+        }
+
+        // 6c. Auto-withdraw pending review versions
+        List<SkillVersion> pendingVersions = skillVersionRepository
+                .findBySkillIdAndStatus(skill.getId(), SkillVersionStatus.PENDING_REVIEW);
+        for (SkillVersion pending : pendingVersions) {
+            pending.setStatus(SkillVersionStatus.DRAFT);
+            skillVersionRepository.save(pending);
         }
 
         // 7. Check version doesn't already exist

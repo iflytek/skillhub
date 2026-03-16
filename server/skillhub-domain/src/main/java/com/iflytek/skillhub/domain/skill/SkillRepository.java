@@ -7,7 +7,8 @@ public interface SkillRepository {
     Optional<Skill> findById(Long id);
     List<Skill> findByIdIn(List<Long> ids);
     List<Skill> findAll();
-    Optional<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
+    List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
+    Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
     List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status);
     Skill save(Skill skill);
     void delete(Skill skill);

@@ -38,8 +38,13 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     }
 
     @Override
-    public Optional<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug) {
+    public List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug) {
         return delegate.findByNamespaceIdAndSlug(namespaceId, slug);
+    }
+
+    @Override
+    public Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId) {
+        return delegate.findByNamespaceIdAndSlugAndOwnerId(namespaceId, slug, ownerId);
     }
 
     @Override
