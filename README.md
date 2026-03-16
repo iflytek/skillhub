@@ -325,6 +325,14 @@ what you'd like to change.
 - Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 
+## 📞 Support
+
+- 💬 **Community Discussion**: [GitHub Discussions](https://github.com/iflytek/skillhub/discussions)
+- 🐛 **Bug Reports**: [Issues](https://github.com/iflytek/skillhub/issues)
+- 👥 **WeChat Work Group**:
+
+  ![WeChat Work Group](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)
+
 ## License
 
 Apache License 2.0
