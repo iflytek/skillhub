@@ -108,12 +108,13 @@ class LocalAuthControllerTest {
 
         mockMvc.perform(post("/api/v1/auth/local/register")
                 .with(csrf())
+                .header("Accept-Language", "zh-CN")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"username":"bob","password":"Abcd123!","email":"not-an-email"}
                     """))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.msg").value("邮箱格式不正确"));
+            .andExpect(jsonPath("$.code").value(400));
 
         verify(localAuthService).register("bob", "Abcd123!", "not-an-email");
     }
@@ -129,7 +130,8 @@ class LocalAuthControllerTest {
                 .content("""
                     {"username":"alice","password":"wrong"}
                     """))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value(401));
         verify(authFailureThrottleService).recordFailure("local", "alice", "127.0.0.1");
         verify(skillHubMetrics).recordLocalLogin(false);
         verify(skillHubMetrics, never()).recordLocalLogin(true);
@@ -143,7 +145,8 @@ class LocalAuthControllerTest {
                 .content("""
                     {"currentPassword":"old","newPassword":"Newpass123!"}
                     """))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test

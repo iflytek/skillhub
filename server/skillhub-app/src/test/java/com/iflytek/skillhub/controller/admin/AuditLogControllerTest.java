@@ -49,7 +49,8 @@ class AuditLogControllerTest {
     @Test
     void listAuditLogs_unauthenticated_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/admin/audit-logs"))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -104,6 +105,7 @@ class AuditLogControllerTest {
 
         mockMvc.perform(get("/api/v1/admin/audit-logs").with(authentication(auth)))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.items").isArray());
     }
 
@@ -140,6 +142,7 @@ class AuditLogControllerTest {
                 .param("endTime", "2026-03-14T00:00:00Z")
                 .with(authentication(auth)))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.items").isArray());
     }
 
@@ -153,6 +156,7 @@ class AuditLogControllerTest {
         );
 
         mockMvc.perform(get("/api/v1/admin/audit-logs").with(authentication(auth)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
     }
 }

@@ -59,6 +59,7 @@ class SessionBootstrapControllerTest {
 
         mockMvc.perform(get("/api/v1/auth/me").session(session))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.userId").value("sso-user-1"))
             .andExpect(jsonPath("$.data.oauthProvider").value("private-sso"));
     }

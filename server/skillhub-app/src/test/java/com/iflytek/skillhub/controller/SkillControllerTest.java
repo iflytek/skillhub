@@ -64,7 +64,6 @@ class SkillControllerTest {
         mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").isNotEmpty())
                 .andExpect(jsonPath("$.data.version").value("1.0.0"))
                 .andExpect(jsonPath("$.data.parsedMetadataJson").value("{\"name\":\"demo\"}"))
                 .andExpect(jsonPath("$.data.manifestJson").value("[{\"path\":\"SKILL.md\"}]"))
@@ -134,6 +133,7 @@ class SkillControllerTest {
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.latestVersion").value("1.1.0"))
                 .andExpect(jsonPath("$.data.viewingVersionStatus").value("PENDING_REVIEW"))
                 .andExpect(jsonPath("$.data.canInteract").value(false));

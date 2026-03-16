@@ -64,6 +64,11 @@ public class LocalFileStorageService implements ObjectStorageService {
     }
 
     private Path resolve(String key) {
+        // Object keys use forward slashes; reject backslashes so traversal checks
+        // behave consistently across platforms.
+        if (key.contains("\\")) {
+            throw new IllegalArgumentException("Invalid storage key: " + key);
+        }
         Path resolved = basePath.resolve(key).normalize();
         if (!resolved.startsWith(basePath)) {
             throw new IllegalArgumentException("Invalid storage key: " + key);
