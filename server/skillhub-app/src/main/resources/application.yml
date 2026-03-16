@@ -101,7 +101,7 @@ skillhub:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
   security:
     scanner:
-      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:true}
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
       base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}
       health-path: /health
       scan-path: /scan-upload

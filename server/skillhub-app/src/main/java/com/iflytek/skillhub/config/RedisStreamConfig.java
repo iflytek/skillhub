@@ -24,11 +24,6 @@ public class RedisStreamConfig {
     private String groupName;
 
     @Bean
-    public String scanStreamKey() {
-        return streamKey;
-    }
-
-    @Bean
     public RedisScanTaskProducer redisScanTaskProducer(StringRedisTemplate redisTemplate) {
         return new RedisScanTaskProducer(redisTemplate, streamKey);
     }

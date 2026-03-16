@@ -64,8 +64,12 @@ services:
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@skillhub.local}
       OAUTH2_GITHUB_CLIENT_ID: ${OAUTH2_GITHUB_CLIENT_ID:-local-placeholder}
       OAUTH2_GITHUB_CLIENT_SECRET: ${OAUTH2_GITHUB_CLIENT_SECRET:-local-placeholder}
+      SKILLHUB_SECURITY_SCANNER_ENABLED: ${SKILLHUB_SECURITY_SCANNER_ENABLED:-false}
+      SKILLHUB_SECURITY_SCANNER_URL: ${SKILLHUB_SECURITY_SCANNER_URL:-http://skill-scanner:8000}
+      SKILLHUB_SECURITY_SCANNER_MODE: ${SKILLHUB_SECURITY_SCANNER_MODE:-local}
     volumes:
       - skillhub_storage:/var/lib/skillhub/storage
+      - scanner_tmp:/tmp/skillhub-scans
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,7 +101,24 @@ services:
       retries: 12
       start_period: 10s
 
+  skill-scanner:
+    image: ${SKILLHUB_SCANNER_IMAGE:-ghcr.io/iflytek/skillhub-scanner}:${SKILLHUB_VERSION:-edge}
+    restart: unless-stopped
+    environment:
+      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
+      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-}
+    volumes:
+      - scanner_tmp:/tmp/skillhub-scans
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - scanner
+
 volumes:
   postgres_data:
   redis_data:
   skillhub_storage:
+  scanner_tmp:

@@ -68,9 +68,17 @@ spec:
                   name: skillhub-secret
                   key: oauth2-github-client-secret
                   optional: true
+            - name: SKILLHUB_SECURITY_SCANNER_ENABLED
+              value: "${SKILLHUB_SECURITY_SCANNER_ENABLED:-false}"
+            - name: SKILLHUB_SECURITY_SCANNER_URL
+              value: "http://skillhub-scanner:8000"
+            - name: SKILLHUB_SECURITY_SCANNER_MODE
+              value: "local"
           volumeMounts:
             - name: skillhub-storage
               mountPath: /var/lib/skillhub/storage
+            - name: scanner-tmp
+              mountPath: /tmp/skillhub-scans
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -87,3 +95,5 @@ spec:
         - name: skillhub-storage
           persistentVolumeClaim:
             claimName: skillhub-storage-pvc
+        - name: scanner-tmp
+          emptyDir: {}
