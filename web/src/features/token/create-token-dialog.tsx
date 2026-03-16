@@ -114,7 +114,18 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
   const minDateTime = toLocalDateTimeInputValue(new Date())
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (nextOpen) {
+        setCreatedToken(null)
+        setName('')
+        setNameError(null)
+        setExpirationMode('never')
+        setCustomExpiresAt('')
+        setExpiresAtError(null)
+        createMutation.reset()
+      }
+      setOpen(nextOpen)
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         {!createdToken ? (

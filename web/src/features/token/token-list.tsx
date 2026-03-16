@@ -93,7 +93,7 @@ export function TokenList() {
       return { previousPages }
     },
     onSuccess: () => {
-      if (tokenPage && tokenPage.items.length === 1 && page > 0) {
+      if (tokenPage && tokenPage.items.length === 0 && page > 0) {
         setPage(page - 1)
       }
       setDeleteDialog({ open: false })
