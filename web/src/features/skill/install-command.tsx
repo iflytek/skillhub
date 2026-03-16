@@ -20,13 +20,12 @@ function getAppBaseUrl(): string {
   return `${window.location.protocol}//${window.location.host}`
 }
 
-export function InstallCommand({ namespace, slug, version }: InstallCommandProps) {
+export function InstallCommand({ slug }: InstallCommandProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const baseUrl = useMemo(() => getAppBaseUrl(), [])
 
-  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   const command = useMemo(() => {
     const installCmd = `clawhub install ${slug} `
     // 如果是默认的 clawhub.ai 不需要环境变量，否则显示完整配置
@@ -34,7 +33,7 @@ export function InstallCommand({ namespace, slug, version }: InstallCommandProps
       return `CLAWHUB_SITE=${baseUrl} CLAWHUB_REGISTRY=${baseUrl} ${installCmd}`
     }
     return installCmd
-  }, [cleanNamespace, slug, version, baseUrl])
+  }, [baseUrl, slug])
 
   const handleCopy = async () => {
     try {

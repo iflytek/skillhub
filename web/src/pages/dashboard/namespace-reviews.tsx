@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useNamespaceDetail } from '@/shared/hooks/use-skill-queries'
 import { useReviewList } from '@/features/review/use-review-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { NamespaceHeader } from '@/features/namespace/namespace-header'
 
 function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
   const { t } = useTranslation()
@@ -54,6 +55,13 @@ export function NamespaceReviewsPage() {
   const { t } = useTranslation()
   const { slug } = useParams({ from: '/dashboard/namespaces/$slug/reviews' })
   const { data: namespace } = useNamespaceDetail(slug)
+  const readOnlyMessage = namespace?.type === 'GLOBAL'
+    ? t('nsReviews.globalReadOnly')
+    : namespace?.status === 'FROZEN'
+      ? t('nsReviews.frozenReadOnly')
+      : namespace?.status === 'ARCHIVED'
+        ? t('nsReviews.archivedReadOnly')
+        : null
 
   return (
     <div className="space-y-8 animate-fade-up">
@@ -61,6 +69,12 @@ export function NamespaceReviewsPage() {
         title={t('nsReviews.title')}
         subtitle={namespace ? t('nsReviews.reviewsFor', { name: namespace.displayName }) : t('nsReviews.loadingNamespace')}
       />
+      {namespace ? <NamespaceHeader namespace={namespace} /> : null}
+      {readOnlyMessage ? (
+        <Card className="border-border/50 bg-secondary/40 p-4 text-sm text-muted-foreground">
+          {readOnlyMessage}
+        </Card>
+      ) : null}
       <ReviewListSection namespaceId={namespace?.id} />
     </div>
   )

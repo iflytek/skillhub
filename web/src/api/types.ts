@@ -82,6 +82,9 @@ export interface MergeConfirmRequest {
 }
 
 // Namespace types
+export type NamespaceStatus = 'ACTIVE' | 'FROZEN' | 'ARCHIVED' | string
+export type NamespaceRole = 'OWNER' | 'ADMIN' | 'MEMBER' | string
+
 export interface Namespace {
   id: number
   slug: string
@@ -89,15 +92,25 @@ export interface Namespace {
   description?: string
   type: 'GLOBAL' | 'TEAM'
   avatarUrl?: string
-  status: string
+  status: NamespaceStatus
   createdAt: string
   updatedAt?: string
+}
+
+export interface ManagedNamespace extends Namespace {
+  createdBy?: string
+  currentUserRole?: NamespaceRole
+  immutable: boolean
+  canFreeze: boolean
+  canUnfreeze: boolean
+  canArchive: boolean
+  canRestore: boolean
 }
 
 export interface NamespaceMember {
   id: number
   userId: string
-  role: string
+  role: NamespaceRole
   createdAt: string
 }
 

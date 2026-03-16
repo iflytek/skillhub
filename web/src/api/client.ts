@@ -19,6 +19,8 @@ import type {
   AuthMethod,
   OAuthProvider,
   User,
+  ManagedNamespace,
+  Namespace,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -456,6 +458,51 @@ export const skillLifecycleApi = {
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify({ targetVersion }),
+    })
+  },
+}
+
+function normalizeNamespaceSlug(namespace: string): string {
+  return namespace.startsWith('@') ? namespace.slice(1) : namespace
+}
+
+export const namespaceApi = {
+  async listMine(): Promise<ManagedNamespace[]> {
+    return fetchJson<ManagedNamespace[]>(`${WEB_API_PREFIX}/me/namespaces`)
+  },
+
+  async getDetail(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}`)
+  },
+
+  async freeze(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/freeze`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async unfreeze(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/unfreeze`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async archive(slug: string, reason?: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/archive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    })
+  },
+
+  async restore(slug: string): Promise<Namespace> {
+    return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/restore`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
     })
   },
 }

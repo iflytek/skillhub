@@ -15,6 +15,14 @@ export function NamespaceMembersPage() {
 
   const { data: namespace, isLoading: isLoadingNamespace } = useNamespaceDetail(slug)
   const { data: members, isLoading: isLoadingMembers } = useNamespaceMembers(slug)
+  const isReadOnly = namespace?.type === 'GLOBAL' || namespace?.status !== 'ACTIVE'
+  const readOnlyMessage = namespace?.type === 'GLOBAL'
+    ? t('members.globalReadOnly')
+    : namespace?.status === 'FROZEN'
+      ? t('members.frozenReadOnly')
+      : namespace?.status === 'ARCHIVED'
+        ? t('members.archivedReadOnly')
+        : null
 
   if (isLoadingNamespace) {
     return (
@@ -42,8 +50,14 @@ export function NamespaceMembersPage() {
       <NamespaceHeader namespace={namespace} />
 
       <div className="space-y-6">
+        {readOnlyMessage ? (
+          <Card className="border-border/50 bg-secondary/40 p-4 text-sm text-muted-foreground">
+            {readOnlyMessage}
+          </Card>
+        ) : null}
+
         <div className="flex items-center justify-end">
-          <Button disabled>{t('members.addMember')}</Button>
+          <Button disabled={isReadOnly}>{t('members.addMember')}</Button>
         </div>
 
         {isLoadingMembers ? (
@@ -77,7 +91,7 @@ export function NamespaceMembersPage() {
                         {new Date(member.createdAt).toLocaleDateString(language)}
                       </td>
                       <td className="p-4 text-right">
-                        <Button variant="destructive" size="sm" disabled>
+                        <Button variant="destructive" size="sm" disabled={isReadOnly}>
                           {t('members.remove')}
                         </Button>
                       </td>

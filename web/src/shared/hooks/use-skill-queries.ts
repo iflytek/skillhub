@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember } from '@/api/types'
-import { fetchJson, fetchText, getCsrfHeaders, meApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace } from '@/api/types'
+import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
@@ -56,14 +56,12 @@ async function getMyStars(): Promise<SkillSummary[]> {
   return meApi.getStars()
 }
 
-async function getMyNamespaces(): Promise<Namespace[]> {
-  const page = await fetchJson<PagedResponse<Namespace>>(`${WEB_API_PREFIX}/namespaces`)
-  return page.items
+async function getMyNamespaces(): Promise<ManagedNamespace[]> {
+  return namespaceApi.listMine()
 }
 
 async function getNamespaceDetail(slug: string): Promise<Namespace> {
-  const cleanSlug = slug.startsWith('@') ? slug.slice(1) : slug
-  return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${cleanSlug}`)
+  return namespaceApi.getDetail(slug)
 }
 
 async function getNamespaceMembers(slug: string): Promise<NamespaceMember[]> {
@@ -173,6 +171,13 @@ export function useNamespaceMembers(slug: string) {
   })
 }
 
+function invalidateNamespaceQueries(queryClient: ReturnType<typeof useQueryClient>, slug: string) {
+  queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
+  queryClient.invalidateQueries({ queryKey: ['namespaces', slug] })
+  queryClient.invalidateQueries({ queryKey: ['namespaces', slug, 'members'] })
+  queryClient.invalidateQueries({ queryKey: ['reviews'] })
+}
+
 export function usePublishSkill() {
   const queryClient = useQueryClient()
 
@@ -258,6 +263,50 @@ export function useRereleaseSkillVersion() {
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
       queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useFreezeNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug }: { slug: string }) => namespaceApi.freeze(slug),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useUnfreezeNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug }: { slug: string }) => namespaceApi.unfreeze(slug),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useArchiveNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug, reason }: { slug: string; reason?: string }) => namespaceApi.archive(slug, reason),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useRestoreNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug }: { slug: string }) => namespaceApi.restore(slug),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
     },
   })
 }
