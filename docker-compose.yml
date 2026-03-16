@@ -42,6 +42,23 @@ services:
       timeout: 5s
       retries: 5
 
+  skill-scanner:
+    build: ./scanner
+    ports:
+      - "8000:8000"
+    environment:
+      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
+      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-}
+    volumes:
+      - /tmp/skillhub-scans:/tmp/skillhub-scans
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - scanner
+
 volumes:
   postgres_data:
   minio_data:

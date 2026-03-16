@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
+.PHONY: help dev dev-all dev-all-scanner dev-deps dev-server-only dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-scanner staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -28,6 +28,88 @@ dev: ## 启动本地开发环境（仅依赖服务）
 	@echo "Services ready."
 	@echo "Start backend with: make dev-server"
 	@echo "Start frontend with: make dev-web"
+
+dev-deps: ## 启动依赖服务（数据库、Redis、MinIO、Scanner、前端）
+	@mkdir -p $(DEV_DIR)
+	@echo "Starting dependency services (postgres, redis, minio, scanner)..."
+	$(DEV_COMPOSE) --profile scanner up -d --wait --remove-orphans
+	@echo "Dependency services ready."
+	@if [ ! -d web/node_modules ]; then \
+		echo "Installing frontend dependencies..."; \
+		$(MAKE) web-install; \
+	fi
+	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
+		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
+	else \
+		echo "Starting frontend..."; \
+		$(DEV_PROCESS) start --pid-file $(DEV_WEB_PID) --log-file $(DEV_WEB_LOG) --cwd web -- pnpm exec vite --host 0.0.0.0 --strictPort >/dev/null; \
+	fi
+	@echo "Waiting for frontend on $(DEV_WEB_URL) ..."
+	@frontend_ready=0; \
+	for i in $$(seq 1 60); do \
+		if curl -sf $(DEV_WEB_URL) >/dev/null; then \
+			echo "Frontend ready."; \
+			frontend_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$frontend_ready" -ne 1 ]; then \
+		echo "Frontend failed to become ready. Check $(DEV_WEB_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Dependencies ready:"
+	@echo "  PostgreSQL: localhost:5432"
+	@echo "  Redis:      localhost:6379"
+	@echo "  MinIO:      http://localhost:9000"
+	@echo "  Scanner:    http://localhost:8000"
+	@echo "  Frontend:   $(DEV_WEB_URL)"
+	@echo ""
+	@echo "Start backend with: make dev-server-only"
+
+dev-server-only: ## 仅启动后端服务（需要先运行 make dev-deps）
+	@mkdir -p $(DEV_DIR)
+	@if $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
+		echo "Backend already running with PID $$(cat $(DEV_SERVER_PID))"; \
+	else \
+		echo "Starting backend..."; \
+		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
+	fi
+	@echo "Waiting for backend on $(DEV_API_URL) ..."
+	@backend_ready=0; \
+	for attempt in 1 2; do \
+		for i in $$(seq 1 30); do \
+			if curl -sf $(DEV_API_URL)/actuator/health >/dev/null; then \
+				echo "Backend ready."; \
+				backend_ready=1; \
+				break 2; \
+			fi; \
+			if ! $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
+				break; \
+			fi; \
+			sleep 2; \
+		done; \
+		if [ "$$attempt" -lt 2 ]; then \
+			echo "Backend did not become ready on attempt $$attempt. Restarting..."; \
+			$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID); \
+			sleep 2; \
+			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
+		fi; \
+	done; \
+	if [ "$$backend_ready" -ne 1 ]; then \
+		echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Backend ready:"
+	@echo "  Backend API: $(DEV_API_URL)"
+	@echo "  Backend Log: $(DEV_SERVER_LOG)"
+	@echo ""
+	@echo "Full environment ready:"
+	@echo "  Web UI:  $(DEV_WEB_URL)"
+	@echo "  Backend: $(DEV_API_URL)"
+	@echo "Mock auth users:"
+	@echo "  local-user  -> X-Mock-User-Id: local-user"
+	@echo "  local-admin -> X-Mock-User-Id: local-admin"
 
 dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 	@mkdir -p $(DEV_DIR)
@@ -96,6 +178,78 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 	@echo "Logs:"
 	@echo "  Backend: $(DEV_SERVER_LOG)"
 	@echo "  Frontend: $(DEV_WEB_LOG)"
+
+dev-all-scanner: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端）
+	@mkdir -p $(DEV_DIR)
+	@echo "Starting all services including scanner..."
+	$(DEV_COMPOSE) --profile scanner up -d --wait --remove-orphans
+	@echo "Services ready (including scanner)."
+	@if [ ! -d web/node_modules ]; then \
+		echo "Installing frontend dependencies..."; \
+		$(MAKE) web-install; \
+	fi
+	@if $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
+		echo "Backend already running with PID $$(cat $(DEV_SERVER_PID))"; \
+	else \
+		echo "Starting backend..."; \
+		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
+	fi
+	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
+		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
+	else \
+		echo "Starting frontend..."; \
+		$(DEV_PROCESS) start --pid-file $(DEV_WEB_PID) --log-file $(DEV_WEB_LOG) --cwd web -- pnpm exec vite --host 0.0.0.0 --strictPort >/dev/null; \
+	fi
+	@echo "Waiting for backend on $(DEV_API_URL) ..."
+	@backend_ready=0; \
+	for attempt in 1 2; do \
+		for i in $$(seq 1 30); do \
+			if curl -sf $(DEV_API_URL)/actuator/health >/dev/null; then \
+				echo "Backend ready."; \
+				backend_ready=1; \
+				break 2; \
+			fi; \
+			if ! $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
+				break; \
+			fi; \
+			sleep 2; \
+		done; \
+		if [ "$$attempt" -lt 2 ]; then \
+			echo "Backend did not become ready on attempt $$attempt. Restarting..."; \
+			$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID); \
+			sleep 2; \
+			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
+		fi; \
+	done; \
+	if [ "$$backend_ready" -ne 1 ]; then \
+		echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Waiting for frontend on $(DEV_WEB_URL) ..."
+	@frontend_ready=0; \
+	for i in $$(seq 1 60); do \
+		if curl -sf $(DEV_WEB_URL) >/dev/null; then \
+			echo "Frontend ready."; \
+			frontend_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$frontend_ready" -ne 1 ]; then \
+		echo "Frontend failed to become ready. Check $(DEV_WEB_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Local environment is ready (with scanner):"
+	@echo "  Web UI:  $(DEV_WEB_URL)"
+	@echo "  Backend: $(DEV_API_URL)"
+	@echo "  Scanner: http://localhost:8000"
+	@echo "Mock auth users:"
+	@echo "  local-user  -> X-Mock-User-Id: local-user"
+	@echo "  local-admin -> X-Mock-User-Id: local-admin"
+	@echo "Logs:"
+	@echo "  Backend: $(DEV_SERVER_LOG)"
+	@echo "  Frontend: $(DEV_WEB_LOG)"
+	@echo "  Scanner: docker logs skillhub-skill-scanner-1"
 
 dev-server: ## 启动后端开发服务器
 	cd server && /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local'
@@ -211,8 +365,41 @@ staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：
 		exit 1; \
 	fi
 
+staging-scanner: ## 构建并启动 staging 环境（含安全扫描服务）
+	@echo "=== [1/6] Building backend JAR and Docker image ==="
+	cd server && ./mvnw package -DskipTests -B -q
+	docker build -t $(STAGING_SERVER_IMAGE) -f server/Dockerfile.dev server
+	@echo "=== [2/6] Building scanner Docker image ==="
+	docker build -t skillhub-scanner:staging -f scanner/Dockerfile scanner
+	@echo "=== [3/6] Building frontend static files ==="
+	cd web && pnpm run build
+	@echo "=== [4/6] Starting dependency services ==="
+	$(STAGING_BASE_COMPOSE) up -d --wait
+	@echo "=== [5/6] Starting staging services (with scanner) ==="
+	SKILLHUB_SECURITY_SCANNER_ENABLED=true $(STAGING_COMPOSE) --profile scanner up -d --wait
+	@echo "=== [6/6] Running smoke tests ==="
+	@if bash scripts/smoke-test.sh $(STAGING_API_URL); then \
+		echo ""; \
+		echo "Staging (with scanner) passed. Environment is running:"; \
+		echo "  Web UI:  $(STAGING_WEB_URL)"; \
+		echo "  Backend: $(STAGING_API_URL)"; \
+		echo "  Scanner: http://localhost:8000"; \
+		echo ""; \
+		echo "Scanner health: curl http://localhost:8000/health"; \
+		echo "Scanner analyzers: curl http://localhost:8000/analyzers"; \
+		echo ""; \
+		echo "Run 'make staging-down' to stop."; \
+		echo "Run 'make pr' to create a pull request."; \
+	else \
+		echo ""; \
+		echo "Smoke tests FAILED. Printing logs..."; \
+		$(STAGING_COMPOSE) logs server; \
+		$(MAKE) staging-down; \
+		exit 1; \
+	fi
+
 staging-down: ## 停止 staging 环境
-	$(STAGING_COMPOSE) down --remove-orphans
+	$(STAGING_COMPOSE) --profile scanner down --remove-orphans
 
 staging-logs: ## 查看 staging 服务日志（SERVICE=server|web，默认 server）
 	@SERVICE=$${SERVICE:-server}; \

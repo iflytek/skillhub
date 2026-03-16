@@ -112,6 +112,25 @@ Run `make help` to see all available commands.
 
 For the full development workflow (local dev → staging → PR), see [docs/dev-workflow.md](docs/dev-workflow.md).
 
+### Security Scanning (Optional)
+
+SkillHub integrates with [cisco-ai-defense/skill-scanner](https://github.com/cisco-ai-defense/skill-scanner) for security analysis of skill packages. The scanner service is optional and runs in a separate container.
+
+**Start staging with scanner:**
+
+```bash
+make staging-scanner
+```
+
+This enables security scanning with pattern-based and static analysis. For LLM-powered semantic analysis, configure API credentials:
+
+```bash
+cp scanner/.env.example scanner/.env
+# Edit scanner/.env with your LLM API key
+```
+
+See [scanner/README.md](scanner/README.md) for detailed configuration and usage.
+
 ### API Contract Sync
 
 OpenAPI types for the web client are checked into the repository.

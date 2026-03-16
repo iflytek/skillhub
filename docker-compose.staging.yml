@@ -42,6 +42,11 @@ services:
       BOOTSTRAP_ADMIN_EMAIL: admin@skillhub.local
       OAUTH2_GITHUB_CLIENT_ID: local-placeholder
       OAUTH2_GITHUB_CLIENT_SECRET: local-placeholder
+      SKILLHUB_SECURITY_SCANNER_ENABLED: ${SKILLHUB_SECURITY_SCANNER_ENABLED:-false}
+      SKILLHUB_SECURITY_SCANNER_URL: http://skill-scanner:8000
+      SKILLHUB_SECURITY_SCANNER_MODE: local
+    volumes:
+      - scanner_tmp:/tmp/skillhub-scans
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,3 +79,21 @@ services:
       timeout: 5s
       retries: 6
       start_period: 10s
+
+  skill-scanner:
+    build: ./scanner
+    environment:
+      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
+      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-}
+    volumes:
+      - scanner_tmp:/tmp/skillhub-scans
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - scanner
+
+volumes:
+  scanner_tmp:
