@@ -137,15 +137,12 @@ export function SkillDetailPage() {
   const submitPromotionMutation = useSubmitPromotion()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
-  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
-    const objectUrl = window.URL.createObjectURL(blob)
+  const triggerBrowserDownload = (url: string) => {
     const link = document.createElement('a')
-    link.href = objectUrl
-    link.download = fileName
+    link.href = url
     document.body.appendChild(link)
     link.click()
     link.remove()
-    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0)
   }
 
   const handleDownload = async () => {
@@ -158,11 +155,8 @@ export function SkillDetailPage() {
     }
 
     try {
-      const downloadedFile = await skillDownloadApi.downloadVersion(namespace, slug, selectedVersionEntry.version)
-      triggerBrowserDownload(
-        downloadedFile.blob,
-        downloadedFile.fileName ?? `${slug}-${selectedVersionEntry.version}.zip`,
-      )
+      const downloadRequest = await skillDownloadApi.downloadVersion(namespace, slug, selectedVersionEntry.version)
+      triggerBrowserDownload(downloadRequest.url)
       incrementSkillDownloadCount(queryClient, { namespace, slug })
       queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
