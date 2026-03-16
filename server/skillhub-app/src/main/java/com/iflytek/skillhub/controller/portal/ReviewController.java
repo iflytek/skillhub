@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.review.ReviewService;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.security.SecurityAuditRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
@@ -53,6 +54,7 @@ public class ReviewController extends BaseApiController {
     private final UserAccountRepository userAccountRepository;
     private final RbacService rbacService;
     private final AuditLogService auditLogService;
+    private final SecurityAuditRepository securityAuditRepository;
 
     public ReviewController(ReviewService reviewService,
                             ReviewTaskRepository reviewTaskRepository,
@@ -62,6 +64,7 @@ public class ReviewController extends BaseApiController {
                             UserAccountRepository userAccountRepository,
                             RbacService rbacService,
                             AuditLogService auditLogService,
+                            SecurityAuditRepository securityAuditRepository,
                             ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.reviewService = reviewService;
@@ -72,6 +75,7 @@ public class ReviewController extends BaseApiController {
         this.userAccountRepository = userAccountRepository;
         this.rbacService = rbacService;
         this.auditLogService = auditLogService;
+        this.securityAuditRepository = securityAuditRepository;
     }
 
     @PostMapping
@@ -241,9 +245,12 @@ public class ReviewController extends BaseApiController {
                 ? userAccountRepository.findById(task.getReviewedBy()).map(UserAccount::getDisplayName).orElse(null)
                 : null;
 
+        boolean hasAudit = securityAuditRepository.existsBySkillVersionId(task.getSkillVersionId());
+
         return new ReviewTaskResponse(
                 task.getId(),
                 task.getSkillVersionId(),
+                skill.getId(),
                 namespace.getSlug(),
                 skill.getSlug(),
                 skillVersion.getVersion(),
@@ -254,7 +261,8 @@ public class ReviewController extends BaseApiController {
                 reviewedByName,
                 task.getReviewComment(),
                 task.getSubmittedAt(),
-                task.getReviewedAt()
+                task.getReviewedAt(),
+                hasAudit
         );
     }
 
