@@ -101,7 +101,7 @@ skillhub:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
   bootstrap:
     admin:
-      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
       user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}

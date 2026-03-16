@@ -120,17 +120,17 @@ async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response:
   const envelope = isApiEnvelope<T>(data) ? data : isApiEnvelope<T>(error) ? error : null
 
   if (!response.ok) {
-    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
   }
   if (error) {
-    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
   }
   if (data === undefined) {
     throw new ApiError(`HTTP ${response.status}`, response.status)
   }
   if (isApiEnvelope<T>(data)) {
     if (data.code !== 0) {
-      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg)
+      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg, data.msg)
     }
     return data.data
   }
@@ -244,7 +244,7 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
   }
 
   if (!response.ok || json.code !== 0) {
-    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg)
+    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg, json.msg)
   }
 
   return json.data
@@ -648,7 +648,7 @@ export const tokenApi = {
 
     const envelope = (error && isApiEnvelope<void>(error) ? error : null) as { msg?: string } | null
     if (!response.ok || error) {
-      throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg)
+      throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
     }
   },
 }
