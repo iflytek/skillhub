@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-server-restart dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-server-restart dev-web build-web test-web typecheck-web lint-web generate-api db-reset namespace-smoke validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -116,6 +116,9 @@ dev-server-restart: ## 重启后端开发服务器
 	done; \
 	echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
 	exit 1
+
+namespace-smoke: ## 运行命名空间工作流 smoke test
+	./scripts/namespace-smoke-test.sh $(DEV_API_URL)
 
 dev-down: ## 停止本地开发环境
 	$(DEV_COMPOSE) down --remove-orphans

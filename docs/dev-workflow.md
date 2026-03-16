@@ -60,6 +60,7 @@ Two mock users are available in local mode (no password needed):
 | `SERVICE=frontend make dev-logs` | Tail frontend logs               |
 | `make dev-all-reset`             | Full reset (clears data volumes) |
 | `make dev-server-restart`        | Restart backend after Java changes |
+| `make namespace-smoke`           | Run namespace workflow smoke test |
 | `make db-reset`                  | Reset database only              |
 
 ### Claude + Codex parallel workflow
