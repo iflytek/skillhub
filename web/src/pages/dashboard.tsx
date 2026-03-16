@@ -74,8 +74,8 @@ export function DashboardPage() {
         </Card>
         <Card className="p-5">
           <div className="text-sm text-muted-foreground">{t('dashboard.governanceTitle')}</div>
-          <Link to="/dashboard/promotions" className="mt-2 inline-block font-semibold text-primary hover:underline">
-            {t('dashboard.viewPromotions')}
+          <Link to="/dashboard/governance" className="mt-2 inline-block font-semibold text-primary hover:underline">
+            {t('dashboard.viewGovernance')}
           </Link>
         </Card>
         {governanceVisible ? (

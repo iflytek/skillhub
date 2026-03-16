@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { reportApi } from '@/api/client'
+import type { ReportDisposition } from '@/api/types'
 
 export function useSkillReports(status: string) {
   return useQuery({
@@ -20,9 +21,11 @@ export function useSubmitSkillReport(namespace: string, slug: string) {
 export function useResolveSkillReport() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, comment }: { id: number; comment?: string }) => reportApi.resolveSkillReport(id, comment),
+    mutationFn: ({ id, comment, disposition }: { id: number; comment?: string; disposition?: ReportDisposition }) =>
+      reportApi.resolveSkillReport(id, comment, disposition),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skill-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
     },
   })
 }
@@ -33,6 +36,7 @@ export function useDismissSkillReport() {
     mutationFn: ({ id, comment }: { id: number; comment?: string }) => reportApi.dismissSkillReport(id, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skill-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
     },
   })
 }

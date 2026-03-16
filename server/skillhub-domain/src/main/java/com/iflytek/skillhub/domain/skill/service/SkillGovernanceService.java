@@ -69,13 +69,31 @@ public class SkillGovernanceService {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
         assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        return archiveSkillInternal(skill, actorUserId, clientIp, userAgent, reason);
+    }
 
+    @Transactional
+    public Skill archiveSkillAsAdmin(Long skillId,
+                                     String actorUserId,
+                                     String clientIp,
+                                     String userAgent,
+                                     String reason) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        return archiveSkillInternal(skill, actorUserId, clientIp, userAgent, reason);
+    }
+
+    private Skill archiveSkillInternal(Skill skill,
+                                       String actorUserId,
+                                       String clientIp,
+                                       String userAgent,
+                                       String reason) {
         SkillStatus previousStatus = skill.getStatus();
         skill.setStatus(SkillStatus.ARCHIVED);
         skill.setUpdatedBy(actorUserId);
         Skill saved = skillRepository.save(skill);
-        auditLogService.record(actorUserId, "ARCHIVE_SKILL", "SKILL", skillId, null, clientIp, userAgent, jsonReason(reason));
-        eventPublisher.publishEvent(new SkillStatusChangedEvent(skillId, previousStatus, SkillStatus.ARCHIVED));
+        auditLogService.record(actorUserId, "ARCHIVE_SKILL", "SKILL", skill.getId(), null, clientIp, userAgent, jsonReason(reason));
+        eventPublisher.publishEvent(new SkillStatusChangedEvent(skill.getId(), previousStatus, SkillStatus.ARCHIVED));
         return saved;
     }
 

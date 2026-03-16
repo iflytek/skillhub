@@ -30,6 +30,7 @@ export function useApproveReview() {
       approveReview(taskId, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
     },
   })
 }
@@ -42,6 +43,7 @@ export function useRejectReview() {
       rejectReview(taskId, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
     },
   })
 }

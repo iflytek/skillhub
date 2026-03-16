@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.review;
 
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
+import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
@@ -35,6 +36,7 @@ class PromotionServiceTest {
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private GovernanceNotificationService governanceNotificationService;
 
     private PromotionService promotionService;
 
@@ -51,7 +53,7 @@ class PromotionServiceTest {
     void setUp() {
         promotionService = new PromotionService(
                 promotionRequestRepository, skillRepository, skillVersionRepository,
-                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher);
+                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher, governanceNotificationService);
     }
 
     private static void setField(Object target, String fieldName, Object value) {
@@ -305,6 +307,52 @@ class PromotionServiceTest {
 
             assertThrows(DomainBadRequestException.class,
                     () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of()));
+        }
+    }
+
+    @Nested
+    class ReviewPromotion {
+
+        @Test
+        void shouldNotifySubmitterWhenPromotionApproved() {
+            PromotionRequest request = createPendingPromotion();
+            Skill sourceSkill = createSourceSkill();
+            SkillVersion sourceVersion = createPublishedVersion();
+            Skill newSkill = new Skill(TARGET_NAMESPACE_ID, "my-skill", REVIEWER_ID, SkillVisibility.PUBLIC);
+            setField(newSkill, "id", NEW_SKILL_ID);
+            SkillVersion newVersion = new SkillVersion(NEW_SKILL_ID, sourceVersion.getVersion(), REVIEWER_ID);
+            setField(newVersion, "id", NEW_VERSION_ID);
+
+            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(request));
+            when(permissionChecker.canReviewPromotion(request, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
+            when(promotionRequestRepository.updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, request.getVersion()))
+                    .thenReturn(1);
+            when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
+            when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(skillRepository.save(any(Skill.class))).thenReturn(newSkill);
+            when(skillVersionRepository.save(any(SkillVersion.class))).thenReturn(newVersion);
+            when(skillFileRepository.findByVersionId(SOURCE_VERSION_ID)).thenReturn(List.of());
+
+            promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "ok", Set.of("SKILL_ADMIN"));
+
+            verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("PROMOTION"), eq("PROMOTION_REQUEST"), eq(PROMOTION_ID), eq("Promotion approved"), any());
+        }
+
+        @Test
+        void shouldNotifySubmitterWhenPromotionRejected() {
+            PromotionRequest request = createPendingPromotion();
+
+            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(request));
+            when(permissionChecker.canReviewPromotion(request, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
+            when(promotionRequestRepository.updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "no", null, request.getVersion()))
+                    .thenReturn(1);
+            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(request));
+
+            promotionService.rejectPromotion(PROMOTION_ID, REVIEWER_ID, "no", Set.of("SKILL_ADMIN"));
+
+            verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("PROMOTION"), eq("PROMOTION_REQUEST"), eq(PROMOTION_ID), eq("Promotion rejected"), any());
         }
     }
 

@@ -13,6 +13,7 @@ import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.report.SkillReportDisposition;
 import com.iflytek.skillhub.domain.report.SkillReport;
 import com.iflytek.skillhub.domain.report.SkillReportService;
 import com.iflytek.skillhub.dto.AdminSkillReportSummaryResponse;
@@ -92,14 +93,20 @@ class AdminSkillReportControllerTest {
         SkillReport report = new SkillReport(10L, 1L, "user-1", "Spam", "details");
         ReflectionTestUtils.setField(report, "id", 99L);
         report.setStatus(com.iflytek.skillhub.domain.report.SkillReportStatus.RESOLVED);
-        when(skillReportService.resolveReport(org.mockito.ArgumentMatchers.eq(99L), org.mockito.ArgumentMatchers.eq("admin"), org.mockito.ArgumentMatchers.eq("handled"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+        when(skillReportService.resolveReport(
+                org.mockito.ArgumentMatchers.eq(99L),
+                org.mockito.ArgumentMatchers.eq("admin"),
+                org.mockito.ArgumentMatchers.eq(SkillReportDisposition.RESOLVE_AND_HIDE),
+                org.mockito.ArgumentMatchers.eq("handled"),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
                 .thenReturn(report);
 
         mockMvc.perform(post("/api/v1/admin/skill-reports/99/resolve")
                         .with(authentication(adminAuth()))
                         .with(csrf())
                         .contentType(APPLICATION_JSON)
-                        .content("{\"comment\":\"handled\"}"))
+                        .content("{\"comment\":\"handled\",\"disposition\":\"RESOLVE_AND_HIDE\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.reportId").value(99))
                 .andExpect(jsonPath("$.data.status").value("RESOLVED"));

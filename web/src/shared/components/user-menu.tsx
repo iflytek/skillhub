@@ -78,6 +78,11 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
+          <Link to="/dashboard/governance" className="cursor-pointer">
+            {t('user.menu.governance')}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link to="/dashboard/stars" className="cursor-pointer">
             {t('user.menu.stars')}
           </Link>

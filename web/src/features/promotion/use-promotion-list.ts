@@ -26,6 +26,7 @@ export function useApprovePromotion() {
     mutationFn: ({ id, comment }: { id: number; comment?: string }) => promotionApi.approve(id, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
     },
   })
 }
@@ -36,6 +37,7 @@ export function useRejectPromotion() {
     mutationFn: ({ id, comment }: { id: number; comment?: string }) => promotionApi.reject(id, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] })
+      queryClient.invalidateQueries({ queryKey: ['governance'] })
     },
   })
 }

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.review;
 
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
+import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -30,6 +31,7 @@ public class PromotionService {
     private final NamespaceRepository namespaceRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final GovernanceNotificationService governanceNotificationService;
 
     public PromotionService(PromotionRequestRepository promotionRequestRepository,
                             SkillRepository skillRepository,
@@ -37,7 +39,8 @@ public class PromotionService {
                             SkillFileRepository skillFileRepository,
                             NamespaceRepository namespaceRepository,
                             ReviewPermissionChecker permissionChecker,
-                            ApplicationEventPublisher eventPublisher) {
+                            ApplicationEventPublisher eventPublisher,
+                            GovernanceNotificationService governanceNotificationService) {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -45,6 +48,7 @@ public class PromotionService {
         this.namespaceRepository = namespaceRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
+        this.governanceNotificationService = governanceNotificationService;
     }
 
     @Transactional
@@ -199,6 +203,14 @@ public class PromotionService {
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 newSkill.getId(), newVersion.getId(), reviewerId));
+        governanceNotificationService.notifyUser(
+                request.getSubmittedBy(),
+                "PROMOTION",
+                "PROMOTION_REQUEST",
+                promotionId,
+                "Promotion approved",
+                "{\"status\":\"APPROVED\"}"
+        );
 
         return request;
     }
@@ -222,6 +234,14 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
+        governanceNotificationService.notifyUser(
+                request.getSubmittedBy(),
+                "PROMOTION",
+                "PROMOTION_REQUEST",
+                promotionId,
+                "Promotion rejected",
+                "{\"status\":\"REJECTED\"}"
+        );
 
         return promotionRequestRepository.findById(promotionId).orElse(request);
     }

@@ -16,6 +16,11 @@ import type {
   AuditLogItem,
   SkillSummary,
   SkillReport,
+  GovernanceSummary,
+  GovernanceInboxItem,
+  GovernanceActivityItem,
+  GovernanceNotification,
+  ReportDisposition,
   AuthMethod,
   OAuthProvider,
   User,
@@ -745,13 +750,13 @@ export const reportApi = {
     )
   },
 
-  async resolveSkillReport(id: number, comment?: string): Promise<void> {
+  async resolveSkillReport(id: number, comment?: string, disposition: ReportDisposition = 'RESOLVE_ONLY'): Promise<void> {
     await fetchJson<void>(`/api/v1/admin/skill-reports/${id}/resolve`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
       }),
-      body: JSON.stringify({ comment }),
+      body: JSON.stringify({ comment, disposition }),
     })
   },
 
@@ -762,6 +767,42 @@ export const reportApi = {
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify({ comment }),
+    })
+  },
+}
+
+export const governanceApi = {
+  async getSummary(): Promise<GovernanceSummary> {
+    return fetchJson<GovernanceSummary>(`${WEB_API_PREFIX}/governance/summary`)
+  },
+
+  async getInbox(params: { type?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.type) searchParams.set('type', params.type)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: GovernanceInboxItem[]; total: number; page: number; size: number }>(
+      `${WEB_API_PREFIX}/governance/inbox?${searchParams.toString()}`,
+    )
+  },
+
+  async getActivity(params: { page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<{ items: GovernanceActivityItem[]; total: number; page: number; size: number }>(
+      `${WEB_API_PREFIX}/governance/activity?${searchParams.toString()}`,
+    )
+  },
+
+  async getNotifications(): Promise<GovernanceNotification[]> {
+    return fetchJson<GovernanceNotification[]>(`${WEB_API_PREFIX}/governance/notifications`)
+  },
+
+  async markNotificationRead(id: number): Promise<GovernanceNotification> {
+    return fetchJson<GovernanceNotification>(`${WEB_API_PREFIX}/governance/notifications/${id}/read`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
     })
   },
 }

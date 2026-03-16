@@ -50,6 +50,7 @@ const NamespaceReviewsPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-reviews'),
   'NamespaceReviewsPage',
 )
+const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
 const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
 const ReportsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reports'), 'ReportsPage')
 const ReviewDetailPage = createLazyRouteComponent(
@@ -206,6 +207,13 @@ const dashboardNamespaceReviewsRoute = createRoute({
   component: NamespaceReviewsPage,
 })
 
+const dashboardGovernanceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/governance',
+  beforeLoad: requireAuth,
+  component: GovernancePage,
+})
+
 const dashboardReviewsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reviews',
@@ -321,6 +329,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespacesRoute,
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,
+  dashboardGovernanceRoute,
   dashboardReviewsRoute,
   dashboardReportsRoute,
   dashboardReviewDetailRoute,

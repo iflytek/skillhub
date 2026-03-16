@@ -1,0 +1,102 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Card } from '@/shared/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { GovernanceInbox } from '@/features/governance/governance-inbox'
+import { GovernanceActivity } from '@/features/governance/governance-activity'
+import { GovernanceNotifications } from '@/features/governance/governance-notifications'
+import {
+  useGovernanceActivity,
+  useGovernanceInbox,
+  useGovernanceNotifications,
+  useGovernanceSummary,
+  useMarkGovernanceNotificationRead,
+} from '@/features/governance/use-governance'
+
+type GovernanceInboxTab = 'ALL' | 'REVIEW' | 'PROMOTION' | 'REPORT'
+
+function SummaryCard({ label, value }: { label: string; value?: number }) {
+  return (
+    <Card className="p-5">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="mt-3 text-3xl font-bold font-heading">{value ?? 0}</div>
+    </Card>
+  )
+}
+
+export function GovernancePage() {
+  const { t } = useTranslation()
+  const [inboxType, setInboxType] = useState<GovernanceInboxTab>('ALL')
+  const { data: summary, isLoading: isSummaryLoading } = useGovernanceSummary()
+  const { data: inboxItems, isLoading: isInboxLoading } = useGovernanceInbox(inboxType === 'ALL' ? undefined : inboxType)
+  const { data: activityItems, isLoading: isActivityLoading } = useGovernanceActivity()
+  const { data: notifications, isLoading: isNotificationsLoading } = useGovernanceNotifications()
+  const markReadMutation = useMarkGovernanceNotificationRead()
+
+  const unreadCount = notifications?.filter((item) => item.status === 'UNREAD').length ?? 0
+
+  return (
+    <div className="space-y-8 animate-fade-up">
+      <DashboardPageHeader title={t('governance.title')} subtitle={t('governance.subtitle')} />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <SummaryCard label={t('governance.pendingReviews')} value={isSummaryLoading ? undefined : summary?.pendingReviews} />
+        <SummaryCard label={t('governance.pendingPromotions')} value={isSummaryLoading ? undefined : summary?.pendingPromotions} />
+        <SummaryCard label={t('governance.pendingReports')} value={isSummaryLoading ? undefined : summary?.pendingReports} />
+        <SummaryCard label={t('governance.unreadNotifications')} value={unreadCount} />
+      </div>
+
+      <Card className="p-5 space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold font-heading">{t('governance.inboxTitle')}</h2>
+          <p className="text-sm text-muted-foreground">{t('governance.inboxSubtitle')}</p>
+        </div>
+
+        <Tabs defaultValue="ALL" onValueChange={(value) => setInboxType(value as GovernanceInboxTab)}>
+          <TabsList>
+            <TabsTrigger value="ALL">{t('governance.tabAll')}</TabsTrigger>
+            <TabsTrigger value="REVIEW">{t('governance.tabReview')}</TabsTrigger>
+            <TabsTrigger value="PROMOTION">{t('governance.tabPromotion')}</TabsTrigger>
+            <TabsTrigger value="REPORT">{t('governance.tabReport')}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="ALL" className="mt-6">
+            <GovernanceInbox items={inboxItems} isLoading={isInboxLoading} />
+          </TabsContent>
+          <TabsContent value="REVIEW" className="mt-6">
+            <GovernanceInbox items={inboxItems} isLoading={isInboxLoading} />
+          </TabsContent>
+          <TabsContent value="PROMOTION" className="mt-6">
+            <GovernanceInbox items={inboxItems} isLoading={isInboxLoading} />
+          </TabsContent>
+          <TabsContent value="REPORT" className="mt-6">
+            <GovernanceInbox items={inboxItems} isLoading={isInboxLoading} />
+          </TabsContent>
+        </Tabs>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="p-5 space-y-5">
+          <div>
+            <h2 className="text-xl font-semibold font-heading">{t('governance.notificationsTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('governance.notificationsSubtitle')}</p>
+          </div>
+          <GovernanceNotifications
+            items={notifications}
+            isLoading={isNotificationsLoading}
+            onMarkRead={(id) => markReadMutation.mutate(id)}
+            isMarkingRead={markReadMutation.isPending}
+          />
+        </Card>
+
+        <Card className="p-5 space-y-5">
+          <div>
+            <h2 className="text-xl font-semibold font-heading">{t('governance.activityTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('governance.activitySubtitle')}</p>
+          </div>
+          <GovernanceActivity items={activityItems} isLoading={isActivityLoading} />
+        </Card>
+      </div>
+    </div>
+  )
+}

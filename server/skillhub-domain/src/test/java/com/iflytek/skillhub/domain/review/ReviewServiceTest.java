@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.review;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
+import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -46,6 +47,7 @@ class ReviewServiceTest {
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private SkillGovernanceService skillGovernanceService;
+    @Mock private GovernanceNotificationService governanceNotificationService;
 
     private ReviewService reviewService;
 
@@ -62,7 +64,7 @@ class ReviewServiceTest {
         objectMapper = new ObjectMapper();
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService);
+                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -245,6 +247,7 @@ class ReviewServiceTest {
             assertEquals("Approved Summary", skill.getSummary());
             assertEquals(REVIEWER_ID, skill.getUpdatedBy());
             verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
+            verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("REVIEW"), eq("REVIEW_TASK"), eq(REVIEW_TASK_ID), eq("Review approved"), any());
         }
 
         @Test
@@ -271,6 +274,28 @@ class ReviewServiceTest {
             assertEquals(SKILL_ID, event.skillId());
             assertEquals(SKILL_VERSION_ID, event.versionId());
             assertEquals(REVIEWER_ID, event.publisherId());
+        }
+
+        @Test
+        void shouldNotifySubmitterWhenRejected() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(eq(task), eq(REVIEWER_ID), eq(ns.getType()), anyMap(), anySet()))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Needs work", task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "Needs work",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
+
+            verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("REVIEW"), eq("REVIEW_TASK"), eq(REVIEW_TASK_ID), eq("Review rejected"), any());
         }
 
         @Test

@@ -1,0 +1,50 @@
+package com.iflytek.skillhub.domain.governance;
+
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
+import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class GovernanceNotificationService {
+
+    private final UserNotificationRepository userNotificationRepository;
+
+    public GovernanceNotificationService(UserNotificationRepository userNotificationRepository) {
+        this.userNotificationRepository = userNotificationRepository;
+    }
+
+    @Transactional
+    public UserNotification notifyUser(String userId,
+                                       String category,
+                                       String entityType,
+                                       Long entityId,
+                                       String title,
+                                       String bodyJson) {
+        return userNotificationRepository.save(new UserNotification(
+                userId,
+                category,
+                entityType,
+                entityId,
+                title,
+                bodyJson
+        ));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserNotification> listNotifications(String userId) {
+        return userNotificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    @Transactional
+    public UserNotification markRead(Long notificationId, String userId) {
+        UserNotification notification = userNotificationRepository.findById(notificationId)
+                .orElseThrow(() -> new DomainNotFoundException("error.notification.notFound", notificationId));
+        if (!notification.getUserId().equals(userId)) {
+            throw new DomainForbiddenException("error.notification.noPermission");
+        }
+        notification.markRead();
+        return userNotificationRepository.save(notification);
+    }
+}

@@ -278,6 +278,47 @@ export interface SkillReport {
   handledAt?: string
 }
 
+export type ReportDisposition = 'RESOLVE_ONLY' | 'RESOLVE_AND_HIDE' | 'RESOLVE_AND_ARCHIVE'
+
+export interface GovernanceSummary {
+  pendingReviews: number
+  pendingPromotions: number
+  pendingReports: number
+}
+
+export interface GovernanceInboxItem {
+  type: 'REVIEW' | 'PROMOTION' | 'REPORT' | string
+  id: number
+  title: string
+  subtitle?: string
+  timestamp?: string
+  namespace?: string
+  skillSlug?: string
+}
+
+export interface GovernanceActivityItem {
+  id: number
+  action: string
+  actorUserId?: string
+  actorDisplayName?: string
+  targetType?: string
+  targetId?: string
+  details?: string
+  timestamp?: string
+}
+
+export interface GovernanceNotification {
+  id?: number
+  category: string
+  entityType: string
+  entityId: number
+  title: string
+  bodyJson?: string
+  status: 'UNREAD' | 'READ' | string
+  createdAt?: string
+  readAt?: string
+}
+
 export interface AdminUser {
   userId: string
   username: string
