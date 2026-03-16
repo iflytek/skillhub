@@ -11,6 +11,8 @@ STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server:staging
 DEV_PROCESS := python3 scripts/dev_process.py
+DEV_SERVER_PREPARE := ./mvnw -pl skillhub-app -am compile -DskipTests >/dev/null
+DEV_SERVER_CMD := ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=
 DEV_COMPOSE_PROJECT_NAME ?= skillhub
@@ -40,7 +42,7 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 		echo "Backend already running with PID $$(cat $(DEV_SERVER_PID))"; \
 	else \
 		echo "Starting backend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
+		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)' >/dev/null; \
 	fi
 	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
 		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
@@ -66,7 +68,7 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 			echo "Backend did not become ready on attempt $$attempt. Restarting..."; \
 			$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID); \
 			sleep 2; \
-			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local' >/dev/null; \
+			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)' >/dev/null; \
 		fi; \
 	done; \
 	if [ "$$backend_ready" -ne 1 ]; then \
@@ -98,7 +100,7 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 	@echo "  Frontend: $(DEV_WEB_LOG)"
 
 dev-server: ## 启动后端开发服务器
-	cd server && /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local'
+	cd server && /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)'
 
 dev-down: ## 停止本地开发环境
 	$(DEV_COMPOSE) down --remove-orphans

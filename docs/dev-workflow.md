@@ -32,8 +32,9 @@ SkillHub now pins a shared Docker Compose project name for local development, so
 
 **Backend:** Spring Boot DevTools is configured. After editing Java code:
 1. In IntelliJ IDEA: press `Cmd+F9` (Build Project)
-2. The backend restarts automatically in 3-8 seconds
-3. Watch the terminal running `make dev-server` for the restart log
+2. If you changed code in another backend module such as `skillhub-domain` or `skillhub-search`, make sure the whole server project is rebuilt, not just `skillhub-app`
+3. The backend restarts automatically in 3-8 seconds
+4. Watch the terminal running `make dev-server` for the restart log
 
 ### Mock authentication
 

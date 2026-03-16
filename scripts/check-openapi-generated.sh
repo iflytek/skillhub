@@ -34,7 +34,7 @@ docker compose up -d --wait postgres redis
 
 (
   cd "$SERVER_DIR"
-  ./mvnw -pl skillhub-app -am -DskipTests install
+  ./mvnw -pl skillhub-app -am compile -DskipTests
 ) >"$BUILD_LOG" 2>&1 || {
   echo "Failed to prepare backend modules. See $BUILD_LOG" >&2
   print_log_tail "$BUILD_LOG"
