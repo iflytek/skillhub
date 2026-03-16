@@ -62,6 +62,8 @@ class SkillPublishServiceTest {
     private ReviewTaskRepository reviewTaskRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.iflytek.skillhub.domain.security.SecurityScanService securityScanService;
 
     private SkillPublishService service;
     private ObjectMapper objectMapper;
@@ -81,7 +83,8 @@ class SkillPublishServiceTest {
                 prePublishValidator,
                 objectMapper,
                 reviewTaskRepository,
-                eventPublisher
+                eventPublisher,
+                securityScanService
         );
     }
 

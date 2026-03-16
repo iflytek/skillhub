@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
@@ -61,6 +62,7 @@ public class SkillPublishService {
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final SecurityScanService securityScanService;
 
     public SkillPublishService(
             NamespaceRepository namespaceRepository,
@@ -74,7 +76,8 @@ public class SkillPublishService {
             PrePublishValidator prePublishValidator,
             ObjectMapper objectMapper,
             ReviewTaskRepository reviewTaskRepository,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            SecurityScanService securityScanService) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.skillRepository = skillRepository;
@@ -87,6 +90,7 @@ public class SkillPublishService {
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
         this.eventPublisher = eventPublisher;
+        this.securityScanService = securityScanService;
     }
 
     @Transactional
@@ -206,9 +210,12 @@ public class SkillPublishService {
         // 8. Create SkillVersion
         SkillVersion version = new SkillVersion(skill.getId(), metadata.version(), publisherId);
         boolean autoPublish = forceAutoPublish || isSuperAdmin;
+        boolean shouldScan = !autoPublish && securityScanService.isEnabled();
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
             version.setPublishedAt(LocalDateTime.now());
+        } else if (shouldScan) {
+            version.setStatus(SkillVersionStatus.SCANNING);
         } else {
             version.setStatus(SkillVersionStatus.PENDING_REVIEW);
         }
@@ -283,25 +290,28 @@ public class SkillPublishService {
         version.setTotalSize(totalSize);
         skillVersionRepository.save(version);
 
-        if (!autoPublish) {
+        // 12. Update skill metadata
+        skill.setDisplayName(metadata.name());
+        skill.setSummary(metadata.description());
+        skill.setUpdatedBy(publisherId);
+
+        // 13. Post-processing: route to the appropriate publish path
+        if (autoPublish) {
+            // SUPER_ADMIN: publish immediately
+            skill.setLatestVersionId(version.getId());
+            skillRepository.save(skill);
+            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
+        } else if (shouldScan) {
+            // Scanner enabled: trigger async scan → ScanCompletedEvent → auto-create ReviewTask
+            skillRepository.save(skill);
+            securityScanService.triggerScan(version.getId(), entries, publisherId);
+        } else {
+            // No scanner: go straight to human review
+            skillRepository.save(skill);
             ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
             reviewTaskRepository.save(reviewTask);
         }
 
-        // 12. Update skill metadata and move the published pointer for auto-publish flows
-        skill.setDisplayName(metadata.name());
-        skill.setSummary(metadata.description());
-        if (autoPublish) {
-            skill.setLatestVersionId(version.getId());
-        }
-        skill.setUpdatedBy(publisherId);
-        skillRepository.save(skill);
-
-        if (autoPublish) {
-            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
-        }
-
-        // 13. Return identifiers for the created version
         return new PublishResult(skill.getId(), skill.getSlug(), version);
     }
 
