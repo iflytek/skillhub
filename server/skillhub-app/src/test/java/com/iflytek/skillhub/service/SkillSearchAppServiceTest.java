@@ -1,8 +1,10 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
@@ -20,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,11 +40,14 @@ class SkillSearchAppServiceTest {
     @Mock
     private SkillVersionRepository skillVersionRepository;
 
+    @Mock
+    private NamespaceService namespaceService;
+
     private SkillSearchAppService service;
 
     @BeforeEach
     void setUp() {
-        service = new SkillSearchAppService(searchQueryService, skillRepository, namespaceRepository, skillVersionRepository);
+        service = new SkillSearchAppService(searchQueryService, skillRepository, namespaceRepository, skillVersionRepository, namespaceService);
     }
 
     @Test
@@ -62,6 +68,50 @@ class SkillSearchAppServiceTest {
 
         assertEquals(0, response.items().size());
         assertEquals(0, response.total());
+    }
+
+    @Test
+    void search_shouldFillVisiblePageAcrossArchivedNamespaceResults() {
+        Skill archivedSkill = new Skill(1L, "archived-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(archivedSkill, "id", 10L);
+        Skill visibleSkill = new Skill(2L, "visible-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(visibleSkill, "id", 11L);
+
+        Namespace archivedNamespace = new Namespace("archived-team", "Archived Team", "owner-1");
+        setField(archivedNamespace, "id", 1L);
+        archivedNamespace.setStatus(NamespaceStatus.ARCHIVED);
+        Namespace activeNamespace = new Namespace("team-a", "Team A", "owner-1");
+        setField(activeNamespace, "id", 2L);
+        activeNamespace.setStatus(NamespaceStatus.ACTIVE);
+
+        when(searchQueryService.search(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new SearchResult(List.of(10L, 11L), 2, 0, 20));
+        when(skillRepository.findByIdIn(List.of(10L, 11L))).thenReturn(List.of(archivedSkill, visibleSkill));
+        when(namespaceRepository.findByIdIn(List.of(1L, 2L))).thenReturn(List.of(archivedNamespace, activeNamespace));
+
+        SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 1, null, null);
+
+        assertEquals(1, response.items().size());
+        assertEquals("visible-skill", response.items().getFirst().slug());
+        assertEquals(1, response.total());
+    }
+
+    @Test
+    void search_shouldHideArchivedNamespaceFilterForAnonymousUsers() {
+        Namespace archivedNamespace = new Namespace("archived-team", "Archived Team", "owner-1");
+        setField(archivedNamespace, "id", 1L);
+        archivedNamespace.setStatus(NamespaceStatus.ARCHIVED);
+        when(namespaceService.getNamespaceBySlugForRead("archived-team", null, Map.of())).thenThrow(
+                new com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException(
+                        "error.namespace.slug.notFound",
+                        "archived-team"
+                )
+        );
+
+        assertThrows(
+                com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class,
+                () -> service.search("skill", "archived-team", "newest", 0, 20, null, Map.of())
+        );
     }
 
     private void setField(Object target, String fieldName, Object value) {

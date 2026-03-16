@@ -68,8 +68,10 @@ public class NamespaceController extends BaseApiController {
     }
 
     @GetMapping("/namespaces/{slug}")
-    public ApiResponse<NamespaceResponse> getNamespace(@PathVariable String slug) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+    public ApiResponse<NamespaceResponse> getNamespace(@PathVariable String slug,
+                                                       @RequestAttribute(value = "userId", required = false) String userId,
+                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        Namespace namespace = namespaceService.getNamespaceBySlugForRead(slug, userId, userNsRoles != null ? userNsRoles : Map.of());
         return ok("response.success.read", NamespaceResponse.from(namespace));
     }
 

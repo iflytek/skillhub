@@ -133,12 +133,26 @@ class NamespaceServiceTest {
         Namespace namespace = new Namespace("global", "Global", "system");
         namespace.setType(NamespaceType.GLOBAL);
         when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
-        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
-                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
         when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
 
         assertThrows(DomainBadRequestException.class, () ->
                 namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+    }
+
+    @Test
+    void updateNamespace_shouldRejectGlobalNamespaceMutationBeforeMembershipChecks() {
+        Long namespaceId = 1L;
+        String operatorUserId = "user-404";
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+
+        assertEquals("error.namespace.system.immutable", exception.messageCode());
+        verify(namespaceMemberRepository, never()).findByNamespaceIdAndUserId(namespaceId, operatorUserId);
     }
 
     @Test

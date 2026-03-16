@@ -43,11 +43,11 @@ public class NamespaceMemberCandidateService {
     @Transactional(readOnly = true)
     public List<NamespaceCandidateUserResponse> searchCandidates(String slug, String search, String operatorUserId, int size) {
         Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        if (namespaceAccessPolicy.isImmutable(namespace)) {
+            throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
+        }
         namespaceService.assertAdminOrOwner(namespace.getId(), operatorUserId);
         if (!namespaceAccessPolicy.canManageMembers(namespace)) {
-            if (namespaceAccessPolicy.isImmutable(namespace)) {
-                throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
-            }
             throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
         }
 

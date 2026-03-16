@@ -92,6 +92,29 @@ class NamespaceMemberCandidateServiceTest {
                 service.searchCandidates("team-a", "ali", "owner-1", 10));
     }
 
+    @Test
+    void searchCandidates_shouldRejectGlobalNamespaceBeforeMembershipChecks() {
+        Namespace namespace = new Namespace("global", "Global", "system");
+        setField(namespace, "id", 1L);
+        namespace.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.GLOBAL);
+
+        NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
+                namespaceService,
+                namespaceAccessPolicy,
+                namespaceMemberRepository,
+                userAccountRepository
+        );
+
+        when(namespaceService.getNamespaceBySlug("global")).thenReturn(namespace);
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
+                service.searchCandidates("global", "ali", "guest-1", 10));
+
+        assertEquals("error.namespace.system.immutable", exception.messageCode());
+        verify(namespaceService, org.mockito.Mockito.never()).assertAdminOrOwner(1L, "guest-1");
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

@@ -5,6 +5,8 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 @Service
 public class NamespaceService {
 
@@ -44,8 +46,9 @@ public class NamespaceService {
                                      String operatorUserId) {
         Namespace namespace = namespaceRepository.findById(namespaceId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.id.notFound", namespaceId));
+        assertNotImmutable(namespace);
         assertAdminOrOwner(namespaceId, operatorUserId);
-        assertMutable(namespace);
+        assertWritable(namespace);
 
         if (displayName != null) {
             namespace.setDisplayName(displayName);
@@ -63,6 +66,17 @@ public class NamespaceService {
     public Namespace getNamespaceBySlug(String slug) {
         return namespaceRepository.findBySlug(slug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
+    }
+
+    public Namespace getNamespaceBySlugForRead(String slug, String userId, Map<Long, NamespaceRole> userNsRoles) {
+        Namespace namespace = getNamespaceBySlug(slug);
+        if (namespace.getStatus() != NamespaceStatus.ARCHIVED) {
+            return namespace;
+        }
+        if (userId != null && userNsRoles != null && userNsRoles.containsKey(namespace.getId())) {
+            return namespace;
+        }
+        throw new DomainBadRequestException("error.namespace.slug.notFound", slug);
     }
 
     public Namespace getNamespace(Long namespaceId) {
@@ -85,9 +99,17 @@ public class NamespaceService {
     }
 
     void assertMutable(Namespace namespace) {
+        assertNotImmutable(namespace);
+        assertWritable(namespace);
+    }
+
+    void assertNotImmutable(Namespace namespace) {
         if (namespaceAccessPolicy.isImmutable(namespace)) {
             throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
         }
+    }
+
+    private void assertWritable(Namespace namespace) {
         if (!namespaceAccessPolicy.canMutateSettings(namespace)) {
             throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
         }

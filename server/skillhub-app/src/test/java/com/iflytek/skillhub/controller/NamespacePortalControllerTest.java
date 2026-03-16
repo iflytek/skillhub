@@ -83,6 +83,21 @@ class NamespacePortalControllerTest {
     }
 
     @Test
+    void getNamespace_hidesArchivedNamespaceFromAnonymousUsers() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
+        given(namespaceService.getNamespaceBySlugForRead("team-a", null, Map.of())).willThrow(
+                new com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException(
+                        "error.namespace.slug.notFound",
+                        "team-a"
+                )
+        );
+
+        mockMvc.perform(get("/api/v1/namespaces/team-a"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
     void archiveNamespace_returnsUpdatedNamespace() throws Exception {
         Namespace archived = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
         given(namespaceGovernanceService.archiveNamespace(eq("team-a"), eq("owner-1"), eq("cleanup"), nullable(String.class), any(), any()))
