@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -65,6 +66,9 @@ public class ReviewService {
 
         Skill skill = skillRepository.findById(skillVersion.getSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
+        Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
+        assertNamespaceActive(namespace);
 
         if (!permissionChecker.canSubmitForReview(skill, userId, userNamespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("review.submit.no_permission");
@@ -94,6 +98,9 @@ public class ReviewService {
 
         Skill skill = skillRepository.findById(skillVersion.getSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
+        Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
+        assertNamespaceActive(namespace);
 
         if (skillVersion.getStatus() != SkillVersionStatus.DRAFT) {
             throw new DomainBadRequestException("review.submit.not_draft", skillVersionId);
@@ -127,6 +134,7 @@ public class ReviewService {
 
         Namespace namespace = namespaceRepository.findById(task.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", task.getNamespaceId()));
+        assertNamespaceActive(namespace);
 
         if (!permissionChecker.canReview(task, reviewerId, namespace.getType(),
                 userNamespaceRoles, platformRoles)) {
@@ -172,6 +180,7 @@ public class ReviewService {
 
         Namespace namespace = namespaceRepository.findById(task.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", task.getNamespaceId()));
+        assertNamespaceActive(namespace);
 
         if (!permissionChecker.canReview(task, reviewerId, namespace.getType(),
                 userNamespaceRoles, platformRoles)) {
@@ -208,6 +217,9 @@ public class ReviewService {
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", skillVersionId));
         Skill skill = skillRepository.findById(skillVersion.getSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
+        Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
+        assertNamespaceActive(namespace);
         skillGovernanceService.withdrawPendingVersion(skill, skillVersion, userId);
     }
 
@@ -239,6 +251,15 @@ public class ReviewService {
             skill.setSummary(metadata.description());
         } catch (Exception e) {
             throw new IllegalStateException("Failed to deserialize skill metadata", e);
+        }
+    }
+
+    private void assertNamespaceActive(Namespace namespace) {
+        if (namespace.getStatus() == NamespaceStatus.FROZEN) {
+            throw new DomainBadRequestException("error.namespace.frozen", namespace.getSlug());
+        }
+        if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
+            throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
         }
     }
 }

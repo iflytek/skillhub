@@ -3,6 +3,7 @@ package com.iflytek.skillhub.domain.review;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -97,6 +98,12 @@ class PromotionServiceTest {
         return ns;
     }
 
+    private Namespace createSourceNamespace() {
+        Namespace ns = new Namespace("team-a", "Team A", "user-1");
+        setField(ns, "id", 5L);
+        return ns;
+    }
+
     private PromotionRequest createPendingPromotion() {
         PromotionRequest pr = new PromotionRequest(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID);
         setField(pr, "id", PROMOTION_ID);
@@ -121,6 +128,7 @@ class PromotionServiceTest {
 
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(createSourceNamespace()));
             when(permissionChecker.canSubmitPromotion(sourceSkill, USER_ID, Map.of())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.of(globalNs));
             when(promotionRequestRepository.findBySourceVersionIdAndStatus(SOURCE_VERSION_ID, ReviewTaskStatus.PENDING))
@@ -191,6 +199,7 @@ class PromotionServiceTest {
             Skill sourceSkill = createSourceSkill();
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(createPublishedVersion()));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(createSourceNamespace()));
             when(permissionChecker.canSubmitPromotion(sourceSkill, USER_ID, Map.of())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.empty());
 
@@ -203,6 +212,7 @@ class PromotionServiceTest {
             Skill sourceSkill = createSourceSkill();
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(createPublishedVersion()));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(createSourceNamespace()));
             when(permissionChecker.canSubmitPromotion(sourceSkill, USER_ID, Map.of())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.of(createTeamNamespace()));
 
@@ -215,6 +225,7 @@ class PromotionServiceTest {
             Skill sourceSkill = createSourceSkill();
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(createPublishedVersion()));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(createSourceNamespace()));
             when(permissionChecker.canSubmitPromotion(sourceSkill, USER_ID, Map.of())).thenReturn(true);
             when(namespaceRepository.findById(TARGET_NAMESPACE_ID)).thenReturn(Optional.of(createGlobalNamespace()));
             when(promotionRequestRepository.findBySourceVersionIdAndStatus(SOURCE_VERSION_ID, ReviewTaskStatus.PENDING))
@@ -231,6 +242,7 @@ class PromotionServiceTest {
 
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(createSourceNamespace()));
             when(permissionChecker.canSubmitPromotion(
                     sourceSkill,
                     "user-999",
@@ -256,6 +268,7 @@ class PromotionServiceTest {
 
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(createSourceNamespace()));
             when(permissionChecker.canSubmitPromotion(
                     sourceSkill,
                     "user-999",
@@ -276,6 +289,22 @@ class PromotionServiceTest {
             );
 
             assertNotNull(result);
+        }
+
+        @Test
+        void shouldRejectSubmitWhenSourceNamespaceFrozen() {
+            Skill sourceSkill = createSourceSkill();
+            SkillVersion sourceVersion = createPublishedVersion();
+            Namespace sourceNamespace = new Namespace("team-a", "Team A", "user-1");
+            setField(sourceNamespace, "id", sourceSkill.getNamespaceId());
+            sourceNamespace.setStatus(NamespaceStatus.FROZEN);
+
+            when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
+            when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(namespaceRepository.findById(sourceSkill.getNamespaceId())).thenReturn(Optional.of(sourceNamespace));
+
+            assertThrows(DomainBadRequestException.class,
+                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of()));
         }
     }
 

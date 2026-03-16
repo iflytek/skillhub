@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
@@ -309,6 +310,25 @@ class SkillPublishServiceTest {
         assertThrows(DomainBadRequestException.class, () ->
                 service.publishFromEntries(namespaceSlug, List.of(), "user-100", SkillVisibility.PUBLIC, Set.of())
         );
+    }
+
+    @Test
+    void testPublishFromEntries_ShouldRejectFrozenNamespace() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        namespace.setStatus(NamespaceStatus.FROZEN);
+        setId(namespace, 1L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+
+        assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
     }
 
     @Test

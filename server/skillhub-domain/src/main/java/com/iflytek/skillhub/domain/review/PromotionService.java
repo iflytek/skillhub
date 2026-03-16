@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -65,6 +66,10 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
         }
 
+        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
+        assertNamespaceActive(sourceNamespace);
+
         if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("promotion.submit.no_permission");
         }
@@ -102,6 +107,10 @@ public class PromotionService {
         if (sourceVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
             throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
         }
+
+        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
+        assertNamespaceActive(sourceNamespace);
 
         if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles)) {
             throw new DomainForbiddenException("promotion.submit.no_permission");
@@ -219,5 +228,14 @@ public class PromotionService {
 
     public boolean canViewPromotion(PromotionRequest request, String userId, Set<String> platformRoles) {
         return permissionChecker.canViewPromotion(request, userId, platformRoles);
+    }
+
+    private void assertNamespaceActive(Namespace namespace) {
+        if (namespace.getStatus() == NamespaceStatus.FROZEN) {
+            throw new DomainBadRequestException("error.namespace.frozen", namespace.getSlug());
+        }
+        if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
+            throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
+        }
     }
 }

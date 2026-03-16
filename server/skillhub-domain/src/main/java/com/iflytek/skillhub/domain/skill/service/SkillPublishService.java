@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.SlugValidator;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
@@ -144,6 +145,7 @@ public class SkillPublishService {
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
+        assertNamespaceWritable(namespace);
 
         boolean isSuperAdmin = platformRoles.contains("SUPER_ADMIN");
 
@@ -309,6 +311,15 @@ public class SkillPublishService {
         return namespaceRepository.findById(namespaceId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.notFound", namespaceId))
                 .getSlug();
+    }
+
+    private void assertNamespaceWritable(Namespace namespace) {
+        if (namespace.getStatus() == NamespaceStatus.FROZEN) {
+            throw new DomainBadRequestException("error.namespace.frozen", namespace.getSlug());
+        }
+        if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
+            throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
+        }
     }
 
     private void assertCanManageLifecycle(Skill skill,
