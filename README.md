@@ -114,15 +114,35 @@ For the full development workflow (local dev → staging → PR), see [docs/dev-
 
 ### Security Scanning (Optional)
 
-SkillHub integrates with [cisco-ai-defense/skill-scanner](https://github.com/cisco-ai-defense/skill-scanner) for security analysis of skill packages. The scanner service is optional and runs in a separate container.
+SkillHub integrates with [cisco-ai-defense/skill-scanner](https://github.com/cisco-ai-defense/skill-scanner) for security analysis of skill packages. The scanner service is optional and disabled by default.
 
-**Start staging with scanner:**
+**Quick start with scanner (runtime.sh):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up --scanner
+```
+
+**Local development with scanner:**
+
+```bash
+make dev-all-scanner
+```
+
+**Staging with scanner:**
 
 ```bash
 make staging-scanner
 ```
 
-This enables security scanning with pattern-based and static analysis. For LLM-powered semantic analysis, configure API credentials:
+**Container runtime with scanner:**
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml --profile scanner up -d
+```
+
+Make sure `SKILLHUB_SECURITY_SCANNER_ENABLED=true` is set in `.env.release`.
+
+For LLM-powered semantic analysis, configure API credentials:
 
 ```bash
 cp scanner/.env.example scanner/.env
@@ -185,8 +205,12 @@ Then open:
 Stop it with:
 
 ```bash
-docker compose --env-file .env.release -f compose.release.yml down
+docker compose --env-file .env.release -f compose.release.yml --profile scanner down
 ```
+
+To enable security scanning, set `SKILLHUB_SECURITY_SCANNER_ENABLED=true` in
+`.env.release` and add `--profile scanner` to the `up` command. Or use
+`runtime.sh` with the `--scanner` flag.
 
 The runtime stack uses its own Compose project name, so it does not
 collide with containers from `make dev-all`.
@@ -237,6 +261,7 @@ Basic Kubernetes manifests are available under [`deploy/k8s/`](./deploy/k8s):
 - `secret.yaml.example`
 - `backend-deployment.yaml`
 - `frontend-deployment.yaml`
+- `scanner-deployment.yaml` (optional)
 - `services.yaml`
 - `ingress.yaml`
 
@@ -249,6 +274,12 @@ kubectl apply -f deploy/k8s/backend-deployment.yaml
 kubectl apply -f deploy/k8s/frontend-deployment.yaml
 kubectl apply -f deploy/k8s/services.yaml
 kubectl apply -f deploy/k8s/ingress.yaml
+```
+
+To enable security scanning, also apply the scanner deployment:
+
+```bash
+kubectl apply -f deploy/k8s/scanner-deployment.yaml
 ```
 
 ## Smoke Test
