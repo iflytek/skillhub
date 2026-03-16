@@ -205,6 +205,7 @@ export interface PublishResult {
 export interface ReviewTask {
   id: number
   skillVersionId: number
+  skillId: number
   namespace: string
   skillSlug: string
   version: string
@@ -216,6 +217,7 @@ export interface ReviewTask {
   reviewComment?: string
   submittedAt: string
   reviewedAt?: string
+  hasSecurityAudit?: boolean
 }
 
 export interface PromotionTask {
@@ -272,4 +274,30 @@ export interface AuditLogItem {
   resourceId?: string
   timestamp: string
   ipAddress?: string
+}
+
+// Security Audit types
+export interface SecurityAudit {
+  id: number
+  scanId?: string
+  scannerType: string
+  verdict: 'SAFE' | 'SUSPICIOUS' | 'DANGEROUS' | 'BLOCKED'
+  isSafe: boolean
+  maxSeverity?: string
+  findingsCount: number
+  findings: SecurityFinding[]
+  scanDurationSeconds?: number
+  scannedAt?: string
+  createdAt: string
+}
+
+export interface SecurityFinding {
+  ruleId: string
+  severity: string
+  category: string
+  title: string
+  message: string
+  filePath?: string
+  lineNumber?: number
+  codeSnippet?: string
 }

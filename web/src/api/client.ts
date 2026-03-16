@@ -19,6 +19,7 @@ import type {
   AuthMethod,
   OAuthProvider,
   User,
+  SecurityAudit,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -783,5 +784,11 @@ export const adminApi = {
       headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ reason }),
     })
+  },
+}
+
+export const securityAuditApi = {
+  async get(skillId: number, versionId: number): Promise<SecurityAudit> {
+    return fetchJson<SecurityAudit>(`/api/v1/skills/${skillId}/versions/${versionId}/security-audit`)
   },
 }
