@@ -22,6 +22,8 @@ import type {
   ManagedNamespace,
   Namespace,
   CreateNamespaceRequest,
+  NamespaceMember,
+  NamespaceCandidateUser,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -517,6 +519,54 @@ export const namespaceApi = {
   async restore(slug: string): Promise<Namespace> {
     return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/restore`, {
       method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listMembers(slug: string): Promise<NamespaceMember[]> {
+    const page = await fetchJson<{ items: NamespaceMember[] }>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members`)
+    return page.items
+  },
+
+  async searchMemberCandidates(slug: string, search: string, size = 10): Promise<NamespaceCandidateUser[]> {
+    const query = new URLSearchParams({
+      search: search.trim(),
+      size: String(size),
+    })
+    return fetchJson<NamespaceCandidateUser[]>(
+      `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/member-candidates?${query.toString()}`,
+    )
+  },
+
+  async addMember(slug: string, request: { userId: string; role: string }): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        userId: request.userId.trim(),
+        role: request.role,
+      }),
+    })
+  },
+
+  async updateMemberRole(slug: string, userId: string, role: string): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(
+      `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}/role`,
+      {
+        method: 'PUT',
+        headers: await ensureCsrfHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ role }),
+      },
+    )
+  },
+
+  async removeMember(slug: string, userId: string): Promise<void> {
+    await fetchJson<void>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
       headers: await ensureCsrfHeaders(),
     })
   },

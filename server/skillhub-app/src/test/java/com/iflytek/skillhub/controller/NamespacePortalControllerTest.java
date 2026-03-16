@@ -9,6 +9,9 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
+import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -28,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -54,6 +58,9 @@ class NamespacePortalControllerTest {
 
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
+
+    @MockBean
+    private NamespaceMemberCandidateService namespaceMemberCandidateService;
 
     @MockBean
     private DeviceAuthService deviceAuthService;
@@ -91,6 +98,42 @@ class NamespacePortalControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.slug").value("team-a"))
                 .andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void listMembers_forNonMember_returns403() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+        doThrow(new DomainForbiddenException("error.namespace.membership.required"))
+                .when(namespaceService).assertMember(1L, "guest-1");
+
+        mockMvc.perform(get("/api/v1/namespaces/team-a/members")
+                        .with(auth("guest-1"))
+                        .requestAttr("userId", "guest-1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void searchMemberCandidates_returnsCandidates() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+        given(namespaceMemberCandidateService.searchCandidates("team-a", "ali", "owner-1", 10))
+                .willReturn(List.of(new NamespaceCandidateUserResponse(
+                        "user-2",
+                        "alice",
+                        "alice@example.com",
+                        "ACTIVE"
+                )));
+
+        mockMvc.perform(get("/api/v1/namespaces/team-a/member-candidates")
+                        .param("search", "ali")
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].userId").value("user-2"))
+                .andExpect(jsonPath("$.data[0].displayName").value("alice"));
     }
 
     private RequestPostProcessor auth(String userId) {

@@ -70,13 +70,18 @@ public class NamespaceService {
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.id.notFound", namespaceId));
     }
 
-    void assertAdminOrOwner(Long namespaceId, String userId) {
+    public void assertAdminOrOwner(Long namespaceId, String userId) {
         NamespaceRole role = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .map(NamespaceMember::getRole)
                 .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
         if (role != NamespaceRole.OWNER && role != NamespaceRole.ADMIN) {
             throw new DomainForbiddenException("error.namespace.admin.required");
         }
+    }
+
+    public void assertMember(Long namespaceId, String userId) {
+        namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
+                .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
     }
 
     void assertMutable(Namespace namespace) {

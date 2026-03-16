@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest } from '@/api/types'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
@@ -69,9 +69,23 @@ async function getNamespaceDetail(slug: string): Promise<Namespace> {
 }
 
 async function getNamespaceMembers(slug: string): Promise<NamespaceMember[]> {
-  const cleanSlug = slug.startsWith('@') ? slug.slice(1) : slug
-  const page = await fetchJson<PagedResponse<NamespaceMember>>(`${WEB_API_PREFIX}/namespaces/${cleanSlug}/members`)
-  return page.items
+  return namespaceApi.listMembers(slug)
+}
+
+async function searchNamespaceMemberCandidates(params: { slug: string; search: string }): Promise<NamespaceCandidateUser[]> {
+  return namespaceApi.searchMemberCandidates(params.slug, params.search)
+}
+
+async function addNamespaceMember(params: { slug: string; userId: string; role: NamespaceRole }): Promise<NamespaceMember> {
+  return namespaceApi.addMember(params.slug, { userId: params.userId, role: params.role })
+}
+
+async function updateNamespaceMemberRole(params: { slug: string; userId: string; role: NamespaceRole }): Promise<NamespaceMember> {
+  return namespaceApi.updateMemberRole(params.slug, params.userId, params.role)
+}
+
+async function removeNamespaceMember(params: { slug: string; userId: string }): Promise<void> {
+  return namespaceApi.removeMember(params.slug, params.userId)
 }
 
 async function publishSkill(params: { namespace: string; file: File; visibility: string }): Promise<PublishResult> {
@@ -188,6 +202,14 @@ export function useNamespaceMembers(slug: string) {
   })
 }
 
+export function useNamespaceMemberCandidates(slug: string, search: string, enabled = true) {
+  return useQuery({
+    queryKey: ['namespaces', slug, 'member-candidates', search],
+    queryFn: () => searchNamespaceMemberCandidates({ slug, search }),
+    enabled: enabled && !!slug && search.trim().length >= 2,
+  })
+}
+
 function invalidateNamespaceQueries(queryClient: ReturnType<typeof useQueryClient>, slug: string) {
   queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
   queryClient.invalidateQueries({ queryKey: ['namespaces', slug] })
@@ -205,6 +227,39 @@ export function usePublishSkill() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+    },
+  })
+}
+
+export function useAddNamespaceMember() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: addNamespaceMember,
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useUpdateNamespaceMemberRole() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateNamespaceMemberRole,
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useRemoveNamespaceMember() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: removeNamespaceMember,
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
     },
   })
 }

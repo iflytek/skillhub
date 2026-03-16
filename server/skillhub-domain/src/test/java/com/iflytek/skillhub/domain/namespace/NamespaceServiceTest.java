@@ -160,4 +160,25 @@ class NamespaceServiceTest {
         assertThrows(DomainBadRequestException.class, () ->
                 namespaceService.getNamespaceBySlug("nonexistent"));
     }
+
+    @Test
+    void assertMember_shouldAllowExistingMember() {
+        Long namespaceId = 1L;
+        String userId = "user-1";
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, userId, NamespaceRole.MEMBER)));
+
+        assertDoesNotThrow(() -> namespaceService.assertMember(namespaceId, userId));
+    }
+
+    @Test
+    void assertMember_shouldRejectNonMember() {
+        Long namespaceId = 1L;
+        String userId = "user-404";
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(DomainForbiddenException.class, () ->
+                namespaceService.assertMember(namespaceId, userId));
+    }
 }

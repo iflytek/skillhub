@@ -120,6 +120,13 @@ export interface NamespaceMember {
   createdAt: string
 }
 
+export interface NamespaceCandidateUser {
+  userId: string
+  displayName: string
+  email?: string
+  status: string
+}
+
 // Skill types
 export interface SkillSummary {
   id: number

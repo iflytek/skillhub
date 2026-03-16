@@ -4,6 +4,7 @@ import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.*;
 import com.iflytek.skillhub.dto.*;
+import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -24,12 +25,14 @@ public class NamespaceController extends BaseApiController {
     private final NamespaceRepository namespaceRepository;
     private final NamespaceGovernanceService namespaceGovernanceService;
     private final NamespaceAccessPolicy namespaceAccessPolicy;
+    private final NamespaceMemberCandidateService namespaceMemberCandidateService;
 
     public NamespaceController(NamespaceService namespaceService,
                               NamespaceMemberService namespaceMemberService,
                               NamespaceRepository namespaceRepository,
                               NamespaceGovernanceService namespaceGovernanceService,
                               NamespaceAccessPolicy namespaceAccessPolicy,
+                              NamespaceMemberCandidateService namespaceMemberCandidateService,
                               ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.namespaceService = namespaceService;
@@ -37,6 +40,7 @@ public class NamespaceController extends BaseApiController {
         this.namespaceRepository = namespaceRepository;
         this.namespaceGovernanceService = namespaceGovernanceService;
         this.namespaceAccessPolicy = namespaceAccessPolicy;
+        this.namespaceMemberCandidateService = namespaceMemberCandidateService;
     }
 
     @GetMapping("/namespaces")
@@ -159,11 +163,23 @@ public class NamespaceController extends BaseApiController {
     }
 
     @GetMapping("/namespaces/{slug}/members")
-    public ApiResponse<PageResponse<MemberResponse>> listMembers(@PathVariable String slug, Pageable pageable) {
+    public ApiResponse<PageResponse<MemberResponse>> listMembers(@PathVariable String slug,
+                                                                 Pageable pageable,
+                                                                 @RequestAttribute("userId") String userId) {
         Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        namespaceService.assertMember(namespace.getId(), userId);
         Page<NamespaceMember> members = namespaceMemberService.listMembers(namespace.getId(), pageable);
         PageResponse<MemberResponse> response = PageResponse.from(members.map(MemberResponse::from));
         return ok("response.success.read", response);
+    }
+
+    @GetMapping("/namespaces/{slug}/member-candidates")
+    public ApiResponse<List<NamespaceCandidateUserResponse>> searchMemberCandidates(
+            @PathVariable String slug,
+            @RequestParam String search,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestAttribute("userId") String userId) {
+        return ok("response.success.read", namespaceMemberCandidateService.searchCandidates(slug, search, userId, size));
     }
 
     @PostMapping("/namespaces/{slug}/members")
