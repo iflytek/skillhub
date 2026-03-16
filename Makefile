@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-server-restart dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -11,8 +11,8 @@ STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server:staging
 DEV_PROCESS := python3 scripts/dev_process.py
-DEV_SERVER_PREPARE := ./mvnw -pl skillhub-app -am compile -DskipTests >/dev/null
-DEV_SERVER_CMD := ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local
+DEV_SERVER_PREPARE := true
+DEV_SERVER_CMD := ./scripts/run-dev-app.sh
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=
 DEV_COMPOSE_PROJECT_NAME ?= skillhub
@@ -101,6 +101,21 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 
 dev-server: ## 启动后端开发服务器
 	cd server && /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)'
+
+dev-server-restart: ## 重启后端开发服务器
+	@mkdir -p $(DEV_DIR)
+	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
+	@$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)' >/dev/null
+	@echo "Waiting for backend on $(DEV_API_URL) ..."
+	@for i in $$(seq 1 30); do \
+		if curl -sf $(DEV_API_URL)/actuator/health >/dev/null; then \
+			echo "Backend ready."; \
+			exit 0; \
+		fi; \
+		sleep 2; \
+	done; \
+	echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
+	exit 1
 
 dev-down: ## 停止本地开发环境
 	$(DEV_COMPOSE) down --remove-orphans

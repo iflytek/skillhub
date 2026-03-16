@@ -26,15 +26,19 @@ This starts:
 
 SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `5432`, `6379`, and `9000`.
 
-### Hot reload
+### Backend restarts
 
 **Frontend:** Vite HMR is enabled by default. Save a file and the browser updates instantly.
 
-**Backend:** Spring Boot DevTools is configured. After editing Java code:
-1. In IntelliJ IDEA: press `Cmd+F9` (Build Project)
-2. If you changed code in another backend module such as `skillhub-domain` or `skillhub-search`, make sure the whole server project is rebuilt, not just `skillhub-app`
-3. The backend restarts automatically in 3-8 seconds
-4. Watch the terminal running `make dev-server` for the restart log
+**Backend:** the local server now runs from a packaged Spring Boot jar instead of `spring-boot:run`. This avoids mixed classpaths across `skillhub-app`, `skillhub-auth`, `skillhub-domain`, and other sibling modules.
+
+After editing backend code, restart the backend explicitly:
+
+```bash
+make dev-server-restart
+```
+
+If you are running the server in a foreground terminal instead of `make dev-all`, stop it and run `make dev-server` again. Expect a full restart in about 5-10 seconds, including rebuilding the backend modules.
 
 ### Mock authentication
 
@@ -55,6 +59,7 @@ Two mock users are available in local mode (no password needed):
 | `make dev-logs`                  | Tail backend logs                |
 | `SERVICE=frontend make dev-logs` | Tail frontend logs               |
 | `make dev-all-reset`             | Full reset (clears data volumes) |
+| `make dev-server-restart`        | Restart backend after Java changes |
 | `make db-reset`                  | Reset database only              |
 
 ### Claude + Codex parallel workflow
