@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -144,14 +145,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String version,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         List<SkillFile> files = skillQueryService.listFiles(
                 namespace,
                 slug,
                 version,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                platformRoles != null ? platformRoles : Set.of()
         );
 
         List<SkillFileResponse> response = files.stream()
@@ -203,7 +206,8 @@ public class SkillController extends BaseApiController {
             @PathVariable String version,
             @RequestParam("path") String path,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         InputStream content = skillQueryService.getFileContent(
                 namespace,
@@ -211,7 +215,8 @@ public class SkillController extends BaseApiController {
                 version,
                 path,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                platformRoles != null ? platformRoles : Set.of()
         );
 
         return ResponseEntity.ok()

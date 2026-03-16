@@ -17,8 +17,10 @@ SKILLHUB_ALIYUN_NAMESPACE="${SKILLHUB_ALIYUN_NAMESPACE:-skill_hub}"
 SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
 SKILLHUB_SERVER_IMAGE_VALUE="${SKILLHUB_SERVER_IMAGE:-}"
 SKILLHUB_WEB_IMAGE_VALUE="${SKILLHUB_WEB_IMAGE:-}"
+SKILLHUB_SCANNER_IMAGE_VALUE="${SKILLHUB_SCANNER_IMAGE:-}"
 POSTGRES_IMAGE_VALUE="${POSTGRES_IMAGE:-}"
 REDIS_IMAGE_VALUE="${REDIS_IMAGE:-}"
+ENABLE_SCANNER="false"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -70,6 +72,15 @@ while [ "$#" -gt 0 ]; do
       REDIS_IMAGE_VALUE="$2"
       shift 2
       ;;
+    --scanner-image)
+      [ "$#" -ge 2 ] || { echo "Missing value for --scanner-image" >&2; exit 1; }
+      SKILLHUB_SCANNER_IMAGE_VALUE="$2"
+      shift 2
+      ;;
+    --scanner)
+      ENABLE_SCANNER="true"
+      shift
+      ;;
     --help|-h)
       cat <<EOF
 Usage: sh runtime.sh [up|down|clean|ps|logs|pull] [options]
@@ -84,6 +95,8 @@ Options:
   --web-image <img>     Override frontend image repository
   --postgres-image <i>  Override PostgreSQL image
   --redis-image <img>   Override Redis image
+  --scanner             Enable security scanner service
+  --scanner-image <img> Override scanner image repository
 EOF
       exit 0
       ;;
@@ -163,6 +176,9 @@ prepare_runtime_files() {
     if [ -z "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
       SKILLHUB_WEB_IMAGE_VALUE="$mirror_registry/skillhub-web"
     fi
+    if [ -z "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
+      SKILLHUB_SCANNER_IMAGE_VALUE="$mirror_registry/skillhub-scanner"
+    fi
   fi
 
   if [ -n "$SKILLHUB_VERSION_VALUE" ]; then
@@ -184,12 +200,24 @@ prepare_runtime_files() {
   if [ -n "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
     set_env_value "SKILLHUB_WEB_IMAGE" "$SKILLHUB_WEB_IMAGE_VALUE"
   fi
+
+  if [ -n "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
+    set_env_value "SKILLHUB_SCANNER_IMAGE" "$SKILLHUB_SCANNER_IMAGE_VALUE"
+  fi
+
+  if [ "$ENABLE_SCANNER" = "true" ]; then
+    set_env_value "SKILLHUB_SECURITY_SCANNER_ENABLED" "true"
+  fi
 }
 
 run_compose() {
   compose_cmd="$(find_compose)"
+  profile_args=""
+  if [ "$ENABLE_SCANNER" = "true" ]; then
+    profile_args="--profile scanner"
+  fi
   # shellcheck disable=SC2086
-  $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" $profile_args "$@"
 }
 
 prepare_runtime_files
@@ -197,20 +225,30 @@ prepare_runtime_files
 case "$COMMAND" in
   up)
     run_compose up -d
+    scanner_info=""
+    if [ "$ENABLE_SCANNER" = "true" ]; then
+      scanner_info="
+Security Scanner: http://localhost:8000 (enabled)"
+    fi
     cat <<EOF
 SkillHub runtime started.
 Web UI: http://localhost
-Backend API: http://localhost:8080
+Backend API: http://localhost:8080${scanner_info}
 Runtime dir: $SKILLHUB_HOME
 Stop with:
   curl -fsSL $SKILLHUB_RAW_BASE/scripts/runtime.sh | sh -s -- down
 EOF
     ;;
   down)
-    run_compose down
+    # Always include scanner profile on down/clean to stop all containers
+    compose_cmd="$(find_compose)"
+    # shellcheck disable=SC2086
+    $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile scanner down
     ;;
   clean)
-    run_compose down
+    compose_cmd="$(find_compose)"
+    # shellcheck disable=SC2086
+    $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile scanner down
     rm -rf "$SKILLHUB_HOME"
     ;;
   ps)

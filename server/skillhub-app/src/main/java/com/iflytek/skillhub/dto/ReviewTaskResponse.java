@@ -5,6 +5,7 @@ import java.time.Instant;
 public record ReviewTaskResponse(
         Long id,
         Long skillVersionId,
+        Long skillId,
         String namespace,
         String skillSlug,
         String version,
@@ -15,5 +16,6 @@ public record ReviewTaskResponse(
         String reviewedByName,
         String reviewComment,
         Instant submittedAt,
-        Instant reviewedAt
+        Instant reviewedAt,
+        boolean hasSecurityAudit
 ) {}

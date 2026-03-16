@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test clean web-install dev-server dev-web build-web test-web typecheck-web lint-web generate-api db-reset validate-release-config staging staging-scanner staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -24,14 +24,24 @@ help: ## 显示帮助
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 dev: ## 启动本地开发环境（仅依赖服务）
-	$(DEV_COMPOSE) up -d --wait --remove-orphans
+	$(DEV_COMPOSE) --profile scanner up -d --wait --remove-orphans
 	@echo "Services ready."
 	@echo "Start backend with: make dev-server"
 	@echo "Start frontend with: make dev-web"
 
-dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
+dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端）
 	@mkdir -p $(DEV_DIR)
-	@$(MAKE) dev
+	@echo "Starting all services (postgres, redis, minio, scanner)..."
+	$(DEV_COMPOSE) --profile scanner up -d --wait --remove-orphans
+	@echo "Dependency services ready."
+	@echo "Verifying Redis is accepting connections..."
+	@for i in $$(seq 1 15); do \
+		if docker compose -p $(DEV_COMPOSE_PROJECT_NAME) exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; then \
+			echo "Redis ready."; \
+			break; \
+		fi; \
+		sleep 1; \
+	done
 	@if [ ! -d web/node_modules ]; then \
 		echo "Installing frontend dependencies..."; \
 		$(MAKE) web-install; \
@@ -88,20 +98,22 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 		exit 1; \
 	fi
 	@echo "Local environment is ready:"
-	@echo "  Web UI:  $(DEV_WEB_URL)"
-	@echo "  Backend: $(DEV_API_URL)"
+	@echo "  Web UI:   $(DEV_WEB_URL)"
+	@echo "  Backend:  $(DEV_API_URL)"
+	@echo "  Scanner:  http://localhost:8000"
 	@echo "Mock auth users:"
 	@echo "  local-user  -> X-Mock-User-Id: local-user"
 	@echo "  local-admin -> X-Mock-User-Id: local-admin"
 	@echo "Logs:"
-	@echo "  Backend: $(DEV_SERVER_LOG)"
+	@echo "  Backend:  $(DEV_SERVER_LOG)"
 	@echo "  Frontend: $(DEV_WEB_LOG)"
+	@echo "  Scanner:  docker logs skillhub-skill-scanner-1"
 
 dev-server: ## 启动后端开发服务器
 	cd server && /bin/sh -lc './mvnw -pl skillhub-app -am install -DskipTests >/dev/null && exec ./mvnw -pl skillhub-app spring-boot:run -Dspring-boot.run.profiles=local'
 
 dev-down: ## 停止本地开发环境
-	$(DEV_COMPOSE) down --remove-orphans
+	$(DEV_COMPOSE) --profile scanner down --remove-orphans
 
 dev-all-down: ## 停止本地开发环境（依赖 + 后端 + 前端）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
@@ -111,7 +123,7 @@ dev-all-down: ## 停止本地开发环境（依赖 + 后端 + 前端）
 dev-all-reset: ## 重置本地开发环境（清理依赖数据卷后重新启动）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_WEB_PID)
-	$(DEV_COMPOSE) down -v --remove-orphans
+	$(DEV_COMPOSE) --profile scanner down -v --remove-orphans
 	rm -rf $(DEV_DIR)
 	@$(MAKE) dev-all
 
@@ -211,8 +223,41 @@ staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：
 		exit 1; \
 	fi
 
+staging-scanner: ## 构建并启动 staging 环境（含安全扫描服务）
+	@echo "=== [1/6] Building backend JAR and Docker image ==="
+	cd server && ./mvnw package -DskipTests -B -q
+	docker build -t $(STAGING_SERVER_IMAGE) -f server/Dockerfile.dev server
+	@echo "=== [2/6] Building scanner Docker image ==="
+	docker build -t skillhub-scanner:staging -f scanner/Dockerfile scanner
+	@echo "=== [3/6] Building frontend static files ==="
+	cd web && pnpm run build
+	@echo "=== [4/6] Starting dependency services ==="
+	$(STAGING_BASE_COMPOSE) up -d --wait
+	@echo "=== [5/6] Starting staging services (with scanner) ==="
+	SKILLHUB_SECURITY_SCANNER_ENABLED=true $(STAGING_COMPOSE) --profile scanner up -d --wait
+	@echo "=== [6/6] Running smoke tests ==="
+	@if bash scripts/smoke-test.sh $(STAGING_API_URL); then \
+		echo ""; \
+		echo "Staging (with scanner) passed. Environment is running:"; \
+		echo "  Web UI:  $(STAGING_WEB_URL)"; \
+		echo "  Backend: $(STAGING_API_URL)"; \
+		echo "  Scanner: http://localhost:8000"; \
+		echo ""; \
+		echo "Scanner health: curl http://localhost:8000/health"; \
+		echo "Scanner analyzers: curl http://localhost:8000/analyzers"; \
+		echo ""; \
+		echo "Run 'make staging-down' to stop."; \
+		echo "Run 'make pr' to create a pull request."; \
+	else \
+		echo ""; \
+		echo "Smoke tests FAILED. Printing logs..."; \
+		$(STAGING_COMPOSE) logs server; \
+		$(MAKE) staging-down; \
+		exit 1; \
+	fi
+
 staging-down: ## 停止 staging 环境
-	$(STAGING_COMPOSE) down --remove-orphans
+	$(STAGING_COMPOSE) --profile scanner down --remove-orphans
 
 staging-logs: ## 查看 staging 服务日志（SERVICE=server|web，默认 server）
 	@SERVICE=$${SERVICE:-server}; \

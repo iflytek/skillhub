@@ -35,6 +35,12 @@ export function MySkillsPage() {
     if (status === 'PUBLISHED') {
       return t('mySkills.statusPublished')
     }
+    if (status === 'SCANNING') {
+      return t('mySkills.statusScanning')
+    }
+    if (status === 'SCAN_FAILED') {
+      return t('mySkills.statusScanFailed')
+    }
     return status
   }
 
@@ -47,6 +53,12 @@ export function MySkillsPage() {
     }
     if (status === 'PUBLISHED') {
       return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+    }
+    if (status === 'SCANNING') {
+      return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+    }
+    if (status === 'SCAN_FAILED') {
+      return 'bg-red-500/10 text-red-500 border-red-500/20'
     }
     return 'bg-secondary/60 text-muted-foreground border-border/40'
   }

@@ -99,6 +99,20 @@ skillhub:
     allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.js,.ts,.py,.sh,.png,.jpg,.svg
   device-auth:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
+  security:
+    scanner:
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
+      base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}
+      health-path: /health
+      scan-path: /scan-upload
+      mode: ${SKILLHUB_SECURITY_SCANNER_MODE:local}  # local | upload
+      connect-timeout-ms: 5000
+      read-timeout-ms: 300000
+      retry-max-attempts: 3
+    stream:
+      key: ${SKILLHUB_SCAN_STREAM_KEY:skillhub:scan:requests}
+      group: ${SKILLHUB_SCAN_STREAM_GROUP:skillhub-scanners}
+      consumer: ${SKILLHUB_SCAN_STREAM_CONSUMER:scanner-1}
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}

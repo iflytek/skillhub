@@ -6,6 +6,7 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+.mcp.json
 *.iml
 *.swp
 *.swo

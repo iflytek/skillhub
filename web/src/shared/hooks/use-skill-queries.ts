@@ -238,10 +238,8 @@ export function useWithdrawSkillReview() {
   return useMutation({
     mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
       skillLifecycleApi.withdrawReview(namespace, slug, version),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
       queryClient.invalidateQueries({ queryKey: ['skills'] })
     },
   })

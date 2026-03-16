@@ -11,6 +11,7 @@ import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
+import { useSecurityAudit } from '@/features/review/use-security-audit'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
@@ -189,6 +190,22 @@ export function SkillDetailPage() {
     return status ?? ''
   }
 
+  const resolveVersionStatusLabel = (status?: string) => {
+    if (status === 'PUBLISHED') return t('mySkills.statusPublished')
+    if (status === 'PENDING_REVIEW') return t('mySkills.statusPendingReview')
+    if (status === 'SCANNING') return t('mySkills.statusScanning')
+    if (status === 'SCAN_FAILED') return t('mySkills.statusScanFailed')
+    return status ?? ''
+  }
+
+  const resolveVersionStatusClassName = (status?: string) => {
+    if (status === 'PUBLISHED') return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+    if (status === 'PENDING_REVIEW') return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+    if (status === 'SCANNING') return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+    if (status === 'SCAN_FAILED') return 'bg-red-500/10 text-red-500 border-red-500/20'
+    return 'bg-secondary/40 text-muted-foreground border-border/60'
+  }
+
   const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED'
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
@@ -280,12 +297,15 @@ export function SkillDetailPage() {
     }
     try {
       await withdrawReviewMutation.mutateAsync({ namespace, slug, version: withdrawVersionTarget })
+      setWithdrawVersionTarget(null)
+      // Navigate away before cleaning cache to prevent stale refetches
+      // (the skill may no longer exist after withdrawing the only version)
+      navigate({ to: '/dashboard/skills' })
+      queryClient.removeQueries({ queryKey: ['skills', namespace, slug] })
       toast.success(
         t('skillDetail.withdrawReviewSuccessTitle'),
         t('skillDetail.withdrawReviewSuccessDescription', { version: withdrawVersionTarget }),
       )
-      setWithdrawVersionTarget(null)
-      navigate({ to: '/dashboard/skills' })
     } catch (error) {
       toast.error(t('skillDetail.withdrawReviewErrorTitle'), error instanceof Error ? error.message : '')
       throw error
@@ -455,8 +475,8 @@ export function SkillDetailPage() {
                             v{version.version}
                           </span>
                           {version.status && (
-                            <span className="rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-xs text-muted-foreground">
-                              {version.status}
+                            <span className={`rounded-full border px-2.5 py-0.5 text-xs ${resolveVersionStatusClassName(version.status)}`}>
+                              {resolveVersionStatusLabel(version.status)}
                             </span>
                           )}
                           {skill.latestVersion === version.version && (
@@ -464,6 +484,7 @@ export function SkillDetailPage() {
                               {t('skillDetail.currentVersion')}
                             </span>
                           )}
+                          {skill.id && <VerdictBadge skillId={skill.id} versionId={version.id} />}
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-muted-foreground">
@@ -851,5 +872,28 @@ export function SkillDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+function VerdictBadge({ skillId, versionId, hasSecurityAudit }: { skillId: number; versionId: number; hasSecurityAudit?: boolean }) {
+  const { t } = useTranslation()
+  const { data: audit } = useSecurityAudit(skillId, versionId, hasSecurityAudit !== false)
+
+  if (!audit?.verdict) return null
+
+  const verdictConfig: Record<string, { label: string; className: string }> = {
+    SAFE: { label: t('review.verdictSafe'), className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+    SUSPICIOUS: { label: t('review.verdictSuspicious'), className: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+    DANGEROUS: { label: t('review.verdictDangerous'), className: 'bg-red-500/10 text-red-500 border-red-500/20' },
+    BLOCKED: { label: t('review.verdictBlocked'), className: 'bg-slate-500/10 text-slate-500 border-slate-500/20' },
+  }
+
+  const config = verdictConfig[audit.verdict]
+  if (!config) return null
+
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}>
+      {config.label}
+    </span>
   )
 }
