@@ -34,16 +34,7 @@ docker compose up -d --wait postgres redis
 
 (
   cd "$SERVER_DIR"
-  ./mvnw -pl skillhub-app -am compile -DskipTests
-) >"$BUILD_LOG" 2>&1 || {
-  echo "Failed to prepare backend modules. See $BUILD_LOG" >&2
-  print_log_tail "$BUILD_LOG"
-  exit 1
-}
-
-(
-  cd "$SERVER_DIR"
-  SPRING_PROFILES_ACTIVE=local ./mvnw -pl skillhub-app spring-boot:run
+  SPRING_PROFILES_ACTIVE=local ./scripts/run-dev-app.sh
 ) >"$API_LOG" 2>&1 &
 SERVER_PID=$!
 

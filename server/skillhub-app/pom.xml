@@ -101,15 +101,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <additionalClasspathElements>
-                        <additionalClasspathElement>${project.parent.basedir}/skillhub-domain/target/classes</additionalClasspathElement>
-                        <additionalClasspathElement>${project.parent.basedir}/skillhub-auth/target/classes</additionalClasspathElement>
-                        <additionalClasspathElement>${project.parent.basedir}/skillhub-infra/target/classes</additionalClasspathElement>
-                        <additionalClasspathElement>${project.parent.basedir}/skillhub-search/target/classes</additionalClasspathElement>
-                        <additionalClasspathElement>${project.parent.basedir}/skillhub-storage/target/classes</additionalClasspathElement>
-                    </additionalClasspathElements>
-                </configuration>
             </plugin>
         </plugins>
     </build>
