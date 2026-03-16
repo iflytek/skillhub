@@ -50,6 +50,10 @@ export function PublishPage() {
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
+  const selectedNamespace = namespaces?.find((ns) => ns.slug === namespaceSlug)
+  const namespaceOnlyLabel = selectedNamespace?.type === 'GLOBAL'
+    ? t('publish.visibilityOptions.loggedInUsersOnly')
+    : t('publish.visibilityOptions.namespaceOnly')
 
   const handleRemoveSelectedFile = () => {
     setSelectedFile(null)
@@ -153,7 +157,7 @@ export function PublishPage() {
             onChange={(e) => setVisibility(e.target.value)}
           >
             <option value="PUBLIC">{t('publish.visibilityOptions.public')}</option>
-            <option value="NAMESPACE_ONLY">{t('publish.visibilityOptions.namespaceOnly')}</option>
+            <option value="NAMESPACE_ONLY">{namespaceOnlyLabel}</option>
             <option value="PRIVATE">{t('publish.visibilityOptions.private')}</option>
           </Select>
         </div>

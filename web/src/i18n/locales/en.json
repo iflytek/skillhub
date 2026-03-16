@@ -839,6 +839,7 @@
     "visibilityOptions": {
       "public": "Public",
       "namespaceOnly": "Namespace Only",
+      "loggedInUsersOnly": "Logged-in Users Only",
       "private": "Private"
     },
     "file": "Skill Package File",

@@ -839,6 +839,7 @@
     "visibilityOptions": {
       "public": "公开",
       "namespaceOnly": "仅命名空间",
+      "loggedInUsersOnly": "仅登录用户可见",
       "private": "私有"
     },
     "file": "技能包文件",
