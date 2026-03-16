@@ -26,7 +26,7 @@ export function Layout() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 group">
-              <Logo className="w-8 h-8" />
+              <Logo className="w-10 h-10" />
               <span className="text-xl font-bold font-heading text-foreground group-hover:text-primary transition-colors">
                 SkillHub
               </span>
