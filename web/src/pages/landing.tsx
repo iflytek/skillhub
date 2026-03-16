@@ -7,6 +7,7 @@ import { UserMenu } from '@/shared/components/user-menu'
 import { Button } from '@/shared/ui/button'
 import { Check, Copy, Terminal, Settings, PackageOpen } from 'lucide-react'
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { Logo } from '@/shared/components/logo'
 
 function getAppBaseUrl(): string {
   if (typeof window === 'undefined') {
@@ -290,8 +291,11 @@ export function LandingPage() {
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
       <header className="sticky top-0 z-50 border-b border-slate-700/30 bg-slate-950/60 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-6 py-3">
-          <Link to="/" className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
-            SkillHub
+          <Link to="/" className="flex items-center gap-2">
+            <Logo className="w-6 h-6" />
+            <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
+              SkillHub
+            </span>
           </Link>
           <nav className="flex items-center gap-4">
             <LanguageSwitcher className="text-slate-200 hover:text-cyan-300" />

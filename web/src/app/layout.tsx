@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/use-auth'
 import { LandingPage } from '@/pages/landing'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
+import { Logo } from '@/shared/components/logo'
 
 export function Layout() {
   const { t } = useTranslation()
@@ -25,9 +26,7 @@ export function Layout() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-glow">
-                <span className="text-primary-foreground font-bold text-sm">S</span>
-              </div>
+              <Logo className="w-8 h-8" />
               <span className="text-xl font-bold font-heading text-foreground group-hover:text-primary transition-colors">
                 SkillHub
               </span>
