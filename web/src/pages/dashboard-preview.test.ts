@@ -25,4 +25,12 @@ describe('limitPreviewItems', () => {
       remainingCount: 1,
     })
   })
+
+  it('returns an empty preview instead of throwing when input is not an array', () => {
+    expect(limitPreviewItems({ items: ['a', 'b'] } as never, 3)).toEqual({
+      items: [],
+      hasMore: false,
+      remainingCount: 0,
+    })
+  })
 })

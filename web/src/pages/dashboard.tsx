@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
+import type { SkillSummary } from '@/api/types'
 import { useMySkills } from '@/shared/hooks/use-skill-queries'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -14,7 +15,7 @@ export function DashboardPage() {
   const { user, hasRole } = useAuth()
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const { data: skillPage, isLoading: isLoadingSkills } = useMySkills({ page: 0, size: skillPreviewPageSize })
-  const skillPreview = limitPreviewItems(skillPage?.items ?? [], DASHBOARD_PREVIEW_LIMIT)
+  const skillPreview = limitPreviewItems<SkillSummary>(skillPage?.items ?? [], DASHBOARD_PREVIEW_LIMIT)
 
   return (
     <div className="space-y-8 animate-fade-up">
