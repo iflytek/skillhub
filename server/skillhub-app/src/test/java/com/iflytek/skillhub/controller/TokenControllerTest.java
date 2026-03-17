@@ -4,6 +4,9 @@ import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import org.junit.jupiter.api.Test;
@@ -53,6 +56,15 @@ class TokenControllerTest {
     @MockBean
     private ApiTokenService apiTokenService;
 
+    @MockBean
+    private UserAccountRepository userAccountRepository;
+
+    private void mockActiveUser(String userId) {
+        UserAccount user = new UserAccount(userId, "tester", "tester@example.com", null);
+        user.setStatus(UserStatus.ACTIVE);
+        given(userAccountRepository.findById(userId)).willReturn(java.util.Optional.of(user));
+    }
+
     @Test
     void revoke_returns204NoContent() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -61,6 +73,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
+        mockActiveUser("user-42");
 
         mockMvc.perform(delete("/api/v1/tokens/7")
                         .with(authentication(auth))
@@ -79,6 +92,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
+        mockActiveUser("user-42");
         given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .willThrow(new DomainBadRequestException("validation.token.name.size"));
 
@@ -102,6 +116,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
+        mockActiveUser("user-42");
         given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .willThrow(new DomainBadRequestException("error.token.name.duplicate"));
 
@@ -125,6 +140,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
+        mockActiveUser("user-42");
         var token = new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]");
         org.springframework.test.util.ReflectionTestUtils.setField(token, "id", 7L);
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.LocalDateTime.of(2026, 3, 15, 12, 0));
@@ -153,6 +169,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
+        mockActiveUser("user-42");
         var tokenPage = new PageImpl<>(
                 List.of(
                         new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]"),
@@ -191,6 +208,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
+        mockActiveUser("user-42");
         var token = new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]");
         org.springframework.test.util.ReflectionTestUtils.setField(token, "id", 7L);
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.LocalDateTime.of(2026, 3, 14, 10, 0));
