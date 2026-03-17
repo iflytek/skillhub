@@ -59,7 +59,7 @@ public class LocalFileStorageService implements ObjectStorageService {
     }
 
     @Override
-    public String generatePresignedUrl(String key, Duration expiry) {
+    public String generatePresignedUrl(String key, Duration expiry, String downloadFilename) {
         return null;
     }
 

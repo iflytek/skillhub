@@ -1,6 +1,6 @@
 export function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-border/40 bg-card p-5">
+    <div className="rounded-xl border bg-card p-5" style={{ borderColor: 'hsl(var(--border-card))' }}>
       <div className="h-5 animate-shimmer rounded-lg w-3/4 mb-4"></div>
       <div className="h-3 animate-shimmer rounded-md w-full mb-2.5"></div>
       <div className="h-3 animate-shimmer rounded-md w-5/6 mb-5"></div>

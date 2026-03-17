@@ -80,6 +80,7 @@ class SkillDownloadServiceTest {
         setId(namespace, 1L);
         Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setDisplayName("Test Skill");
         skill.setStatus(SkillStatus.ACTIVE);
         skill.setLatestVersionId(10L);
 
@@ -97,14 +98,14 @@ class SkillDownloadServiceTest {
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
         when(objectStorageService.getObject(storageKey)).thenReturn(content);
-        when(objectStorageService.generatePresignedUrl(eq(storageKey), any())).thenReturn(null);
+        when(objectStorageService.generatePresignedUrl(eq(storageKey), any(), eq("Test Skill-1.0.0.zip"))).thenReturn(null);
 
         // Act
         SkillDownloadService.DownloadResult result = service.downloadLatest(namespaceSlug, skillSlug, userId, userNsRoles);
 
         // Assert
         assertNotNull(result);
-        assertEquals("test-skill-1.0.0.zip", result.filename());
+        assertEquals("Test Skill-1.0.0.zip", result.filename());
         assertEquals(1000L, result.contentLength());
         assertNotNull(result.content());
         verify(skillRepository).incrementDownloadCount(1L);
@@ -124,6 +125,7 @@ class SkillDownloadServiceTest {
         setId(namespace, 1L);
         Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setDisplayName("Test Skill");
         skill.setStatus(SkillStatus.ACTIVE);
         SkillTag tag = new SkillTag(1L, tagName, 10L, userId);
         SkillVersion version = new SkillVersion(1L, "1.0.0", userId);
@@ -141,14 +143,14 @@ class SkillDownloadServiceTest {
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
         when(objectStorageService.getObject(storageKey)).thenReturn(content);
-        when(objectStorageService.generatePresignedUrl(eq(storageKey), any())).thenReturn(null);
+        when(objectStorageService.generatePresignedUrl(eq(storageKey), any(), eq("Test Skill-1.0.0.zip"))).thenReturn(null);
 
         // Act
         SkillDownloadService.DownloadResult result = service.downloadByTag(namespaceSlug, skillSlug, tagName, userId, userNsRoles);
 
         // Assert
         assertNotNull(result);
-        assertEquals("test-skill-1.0.0.zip", result.filename());
+        assertEquals("Test Skill-1.0.0.zip", result.filename());
         assertNotNull(result.content());
         verify(skillRepository).incrementDownloadCount(1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
@@ -166,6 +168,7 @@ class SkillDownloadServiceTest {
         setId(namespace, 1L);
         Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setDisplayName("Generate Commit Message");
         skill.setStatus(SkillStatus.ACTIVE);
         SkillVersion version = new SkillVersion(1L, versionStr, userId);
         setId(version, 10L);
@@ -181,7 +184,8 @@ class SkillDownloadServiceTest {
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
         when(objectStorageService.getObject(storageKey)).thenReturn(content);
-        when(objectStorageService.generatePresignedUrl(eq(storageKey), any())).thenReturn("http://minio.local/presigned");
+        when(objectStorageService.generatePresignedUrl(eq(storageKey), any(), eq("Generate Commit Message-1.0.0.zip")))
+                .thenReturn("http://minio.local/presigned");
 
         SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
 
@@ -227,6 +231,7 @@ class SkillDownloadServiceTest {
         setId(namespace, 1L);
         Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setDisplayName("Generate Commit Message");
         skill.setStatus(SkillStatus.ACTIVE);
         SkillVersion version = new SkillVersion(1L, versionStr, userId);
         setId(version, 10L);
@@ -245,7 +250,7 @@ class SkillDownloadServiceTest {
         SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
 
         assertNull(result.presignedUrl());
-        assertEquals("test-skill-1.0.0.zip", result.filename());
+        assertEquals("Generate Commit Message-1.0.0.zip", result.filename());
         assertEquals("application/zip", result.contentType());
         assertTrue(result.contentLength() > 0);
 

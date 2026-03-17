@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
@@ -95,14 +96,19 @@ public class S3StorageService implements ObjectStorageService {
     }
 
     @Override
-    public String generatePresignedUrl(String key, Duration expiry) {
+    public String generatePresignedUrl(String key, Duration expiry, String downloadFilename) {
         Duration signatureDuration = expiry != null ? expiry : properties.getPresignExpiry();
+        String contentDisposition = downloadFilename == null || downloadFilename.isBlank()
+                ? "attachment"
+                : "attachment; filename*=UTF-8''" + java.net.URLEncoder.encode(downloadFilename, StandardCharsets.UTF_8)
+                    .replace("+", "%20");
         PresignedGetObjectRequest request = s3Presigner.presignGetObject(
             GetObjectPresignRequest.builder()
                 .signatureDuration(signatureDuration)
                 .getObjectRequest(GetObjectRequest.builder()
                     .bucket(properties.getBucket())
                     .key(key)
+                    .responseContentDisposition(contentDisposition)
                     .build())
                 .build()
         );

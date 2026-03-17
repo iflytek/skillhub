@@ -51,6 +51,7 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
   }
 }
 
+const LandingPage = createLazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
 const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
 const RegisterPage = createLazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
@@ -140,6 +141,12 @@ async function requireAuth({ location }: { location: { pathname: string; searchS
   }
   return { user }
 }
+
+const landingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: LandingPage,
+})
 
 const skillsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -340,6 +347,7 @@ const adminAuditLogRoute = createRoute({
 })
 
 const routeTree = rootRoute.addChildren([
+  landingRoute,
   skillsRoute,
   loginRoute,
   registerRoute,

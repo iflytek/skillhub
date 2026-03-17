@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { Globe } from 'lucide-react'
+import { ChevronDown, Globe } from 'lucide-react'
 
 interface LanguageSwitcherProps {
   className?: string
@@ -35,18 +35,22 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
         <Button
           variant="ghost"
           size="sm"
-          className={cn('gap-2 text-muted-foreground hover:text-foreground', className)}
+          className={cn('cursor-pointer gap-2 text-muted-foreground hover:text-foreground', className)}
         >
           <Globe className="h-4 w-4" />
           <span className="text-sm text-inherit">{currentLanguage.name}</span>
+          <ChevronDown className="h-3.5 w-3.5 opacity-70" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="flex min-w-[9rem] flex-col gap-1.5 p-2">
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
             onClick={() => changeLanguage(lang.code)}
-            className={currentLangCode === lang.code ? 'bg-accent' : ''}
+            className={cn(
+              'cursor-pointer rounded-md px-3 py-2',
+              currentLangCode === lang.code ? 'bg-accent' : ''
+            )}
           >
             {lang.name}
           </DropdownMenuItem>

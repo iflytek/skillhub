@@ -22,7 +22,7 @@ export function useReviewDetail(taskId: number) {
   })
 }
 
-export function useApproveReview() {
+export function useApproveReview(callbacks?: { onSuccess?: () => void; onError?: (error: Error) => void }) {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -31,11 +31,13 @@ export function useApproveReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })
+      callbacks?.onSuccess?.()
     },
+    onError: callbacks?.onError,
   })
 }
 
-export function useRejectReview() {
+export function useRejectReview(callbacks?: { onSuccess?: () => void; onError?: (error: Error) => void }) {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -44,6 +46,8 @@ export function useRejectReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })
+      callbacks?.onSuccess?.()
     },
+    onError: callbacks?.onError,
   })
 }

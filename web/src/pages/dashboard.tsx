@@ -20,8 +20,8 @@ export function DashboardPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-4xl font-bold font-heading text-foreground">{t('dashboard.title')}</h1>
-        <p className="text-muted-foreground mt-2 text-lg">
+        <h1 className="text-4xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>{t('dashboard.title')}</h1>
+        <p className="mt-2 text-lg" style={{ color: 'hsl(var(--text-secondary))' }}>
           {t('dashboard.subtitle')}
         </p>
       </div>
@@ -56,7 +56,7 @@ export function DashboardPage() {
                 {user.platformRoles.map((role: string) => (
                   <span
                     key={role}
-                    className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary border border-primary/20"
+                    className="role-pill"
                   >
                     {role}
                   </span>

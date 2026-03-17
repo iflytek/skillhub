@@ -89,6 +89,8 @@ Examples:
 - `fix(ops): align smoke test with csrf flow`
 - `docs(deploy): clarify runtime image usage`
 
+**IMPORTANT**: Never add `Co-Authored-By` trailers to commit messages unless explicitly requested by the user.
+
 ### Code Style
 - **Backend**: Follow standard Java conventions, Spring Boot best practices
 - **Frontend**: Follow TypeScript/React best practices, use functional components

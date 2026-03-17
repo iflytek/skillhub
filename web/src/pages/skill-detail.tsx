@@ -10,7 +10,7 @@ import { resolveSkillActionErrorTitle } from '@/features/skill/skill-action-erro
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
-import { adminApi, ApiError, skillDownloadApi } from '@/api/client'
+import { adminApi, ApiError, buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
@@ -141,15 +141,12 @@ export function SkillDetailPage() {
   const submitPromotionMutation = useSubmitPromotion()
   const reportMutation = useSubmitSkillReport(namespace, slug)
 
-  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
-    const objectUrl = window.URL.createObjectURL(blob)
+  const triggerBrowserDownload = (url: string) => {
     const link = document.createElement('a')
-    link.href = objectUrl
-    link.download = fileName
+    link.href = url
     document.body.appendChild(link)
     link.click()
     link.remove()
-    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0)
   }
 
   const handleDownload = async () => {
@@ -162,10 +159,9 @@ export function SkillDetailPage() {
     }
 
     try {
-      const downloadedFile = await skillDownloadApi.downloadVersion(namespace, slug, selectedVersionEntry.version)
+      const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
       triggerBrowserDownload(
-        downloadedFile.blob,
-        downloadedFile.fileName ?? `${slug}-${selectedVersionEntry.version}.zip`,
+        buildApiUrl(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersionEntry.version}/download`),
       )
       incrementSkillDownloadCount(queryClient, { namespace, slug })
       queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
@@ -445,9 +441,9 @@ export function SkillDetailPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-up">
+    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
       {/* Main Content */}
-      <div className="lg:col-span-2 space-y-8">
+      <div className="flex-1 min-w-0 space-y-8">
         <div className="space-y-3">
           <Button
             variant="ghost"
@@ -461,12 +457,12 @@ export function SkillDetailPage() {
           <div className="flex items-center gap-3 mb-1">
             <NamespaceBadge type="GLOBAL" name={namespace} />
             {skill.status && (
-              <span className="rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-xs text-muted-foreground">
+              <span className="badge-soft badge-soft-blue">
                 {resolveSkillStatusLabel(skill.status)}
               </span>
             )}
             {isPendingPreview && (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-700">
+              <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
                 {t('skillDetail.pendingPreviewBadge')}
               </span>
             )}
@@ -620,7 +616,7 @@ export function SkillDetailPage() {
       </div>
 
       {/* Sidebar */}
-      <div className="space-y-5">
+      <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
         <Card className="p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
@@ -756,7 +752,7 @@ export function SkillDetailPage() {
             </div>
           </Card>
         )}
-      </div>
+      </aside>
 
       <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
         <DialogContent>

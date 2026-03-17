@@ -146,9 +146,10 @@ public class SkillDownloadService {
         DownloadResult result;
         if (objectStorageService.exists(storageKey)) {
             ObjectMetadata metadata = objectStorageService.getMetadata(storageKey);
-            String presignedUrl = objectStorageService.generatePresignedUrl(storageKey, Duration.ofMinutes(10));
+            String filename = buildFilename(skill, version);
+            String presignedUrl = objectStorageService.generatePresignedUrl(storageKey, Duration.ofMinutes(10), filename);
             InputStream content = objectStorageService.getObject(storageKey);
-            result = new DownloadResult(content, buildFilename(skill, version), metadata.size(), metadata.contentType(), presignedUrl);
+            result = new DownloadResult(content, filename, metadata.size(), metadata.contentType(), presignedUrl);
         } else {
             result = buildBundleFromFiles(skill, version);
         }
@@ -196,7 +197,19 @@ public class SkillDownloadService {
     }
 
     private String buildFilename(Skill skill, SkillVersion version) {
-        return String.format("%s-%s.zip", skill.getSlug(), version.getVersion());
+        String baseName = skill.getDisplayName();
+        if (baseName == null || baseName.isBlank()) {
+            baseName = skill.getSlug();
+        }
+        return String.format("%s-%s.zip", sanitizeFilename(baseName), version.getVersion());
+    }
+
+    private String sanitizeFilename(String value) {
+        String sanitized = value
+                .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "-")
+                .replaceAll("\\s+", " ")
+                .trim();
+        return sanitized.isBlank() ? "skill" : sanitized;
     }
 
     private Namespace findNamespace(String slug) {

@@ -11,5 +11,5 @@ public interface ObjectStorageService {
     void deleteObjects(List<String> keys);
     boolean exists(String key);
     ObjectMetadata getMetadata(String key);
-    String generatePresignedUrl(String key, Duration expiry);
+    String generatePresignedUrl(String key, Duration expiry, String downloadFilename);
 }

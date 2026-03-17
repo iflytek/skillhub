@@ -105,6 +105,6 @@ class LocalFileStorageServiceTest {
 
         LocalFileStorageService service = new LocalFileStorageService(properties);
 
-        assertThat(service.generatePresignedUrl("packages/demo.zip", Duration.ofMinutes(10))).isNull();
+        assertThat(service.generatePresignedUrl("packages/demo.zip", Duration.ofMinutes(10), "demo.zip")).isNull();
     }
 }

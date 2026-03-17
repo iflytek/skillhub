@@ -17,8 +17,24 @@ export function ReviewDetailPage() {
   const taskId = Number(id)
 
   const { data: review, isLoading } = useReviewDetail(taskId)
-  const approveMutation = useApproveReview()
-  const rejectMutation = useRejectReview()
+  const approveMutation = useApproveReview({
+    onSuccess: () => {
+      toast.success(t('review.approveSuccess'))
+      navigate({ to: '/dashboard/reviews' })
+    },
+    onError: (error) => {
+      toast.error(t('review.approveFailed'), resolveReviewActionErrorDescription(error))
+    },
+  })
+  const rejectMutation = useRejectReview({
+    onSuccess: () => {
+      toast.success(t('review.rejectSuccess'))
+      navigate({ to: '/dashboard/reviews' })
+    },
+    onError: (error) => {
+      toast.error(t('review.rejectFailed'), resolveReviewActionErrorDescription(error))
+    },
+  })
 
   const [comment, setComment] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
@@ -30,18 +46,7 @@ export function ReviewDetailPage() {
   }
 
   const handleApprove = async () => {
-    approveMutation.mutate(
-      { taskId, comment: comment || undefined },
-      {
-        onSuccess: () => {
-          toast.success(t('review.approveSuccess'))
-          navigate({ to: '/dashboard/reviews' })
-        },
-        onError: (error) => {
-          toast.error(t('review.approveFailed'), resolveReviewActionErrorDescription(error))
-        },
-      }
-    )
+    approveMutation.mutate({ taskId, comment: comment || undefined })
   }
 
   const handleReject = async () => {
@@ -49,18 +54,7 @@ export function ReviewDetailPage() {
       toast.error(t('review.rejectReasonRequired'))
       return
     }
-    rejectMutation.mutate(
-      { taskId, comment },
-      {
-        onSuccess: () => {
-          toast.success(t('review.rejectSuccess'))
-          navigate({ to: '/dashboard/reviews' })
-        },
-        onError: (error) => {
-          toast.error(t('review.rejectFailed'), resolveReviewActionErrorDescription(error))
-        },
-      }
-    )
+    rejectMutation.mutate({ taskId, comment })
   }
 
   if (isLoading) {

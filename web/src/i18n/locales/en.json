@@ -1,9 +1,13 @@
 {
   "nav": {
-    "home": "Home",
+    "landing": "Home",
+    "home": "Skill Center",
+    "search": "Search",
+    "skillDetail": "Skill Detail",
     "explore": "Explore Skills",
-    "search": "Search Skills",
     "dashboard": "Dashboard",
+    "mySkills": "My Skills",
+    "publish": "Publish",
     "login": "Login"
   },
   "landing": {
@@ -11,7 +15,8 @@
       "title": "Discover & Share AI Skills",
       "subtitle": "Build powerful AI agents with community-driven skills",
       "searchPlaceholder": "Search skills...",
-      "exploreSkills": "Explore Skills"
+      "exploreSkills": "Explore Skills",
+      "publishSkill": "Start Building"
     },
     "features": {
       "secure": {
@@ -25,7 +30,28 @@
       "integration": {
         "title": "Easy Integration",
         "description": "Seamlessly integrate with your existing tools"
+      },
+      "versionControl": {
+        "title": "Version Control",
+        "description": "Structured version management and release workflows that keep skill packages traceable and reliable."
+      },
+      "cli": {
+        "title": "CLI Tooling",
+        "description": "Powerful command-line workflows for publishing, installing, and managing skill packages."
+      },
+      "governance": {
+        "title": "Review Governance",
+        "description": "Built-in review flows and permission controls to keep enterprise skill quality high."
       }
+    },
+    "stats": {
+      "skills": "Catalogs",
+      "downloads": "Downloads",
+      "teams": "Teams"
+    },
+    "whySkillHub": {
+      "title": "Why SkillHub",
+      "subtitle": "A private Agent skill platform designed for enterprise teams"
     },
     "badge": "Enterprise Skill Registry",
     "tagline": "Publish, Discover, Manage",
@@ -848,7 +874,7 @@
     "community": "Community",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "copyright": "© 2024 SkillHub. All rights reserved."
+    "copyright": "© 2026 SkillHub. All rights reserved."
   },
   "publish": {
     "title": "Publish Skill",

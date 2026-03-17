@@ -37,11 +37,6 @@ export { ApiError }
 
 export const WEB_API_PREFIX = '/api/web'
 
-export type DownloadedFile = {
-  blob: Blob
-  fileName?: string
-}
-
 type RuntimeConfig = {
   apiBaseUrl?: string
   appBaseUrl?: string
@@ -274,22 +269,16 @@ function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
   return new URL(input, ensureTrailingSlash(baseUrl))
 }
 
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith('/') ? value : `${value}/`
+export function buildApiUrl(path: string): string {
+  const baseUrl = getApiBaseUrl()
+  if (!baseUrl) {
+    return path
+  }
+  return new URL(path, ensureTrailingSlash(baseUrl)).toString()
 }
 
-function parseDownloadFileName(contentDisposition: string | null): string | undefined {
-  if (!contentDisposition) {
-    return undefined
-  }
-
-  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
-  if (utf8Match) {
-    return decodeURIComponent(utf8Match[1])
-  }
-
-  const basicMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
-  return basicMatch?.[1]
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`
 }
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -438,27 +427,6 @@ export const accountApi = {
       }),
       body: JSON.stringify(request),
     })
-  },
-}
-
-export const skillDownloadApi = {
-  async downloadVersion(namespace: string, slug: string, version: string): Promise<DownloadedFile> {
-    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    const response = await fetch(
-      withBaseUrl(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/download`),
-      {
-        headers: withRequestHeaders(),
-      },
-    )
-
-    if (!response.ok) {
-      throw new ApiError(`HTTP ${response.status}`, response.status)
-    }
-
-    return {
-      blob: await response.blob(),
-      fileName: parseDownloadFileName(response.headers.get('content-disposition')),
-    }
   },
 }
 

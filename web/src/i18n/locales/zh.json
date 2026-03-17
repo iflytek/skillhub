@@ -1,9 +1,13 @@
 {
   "nav": {
-    "home": "首页",
+    "landing": "首页",
+    "home": "技能中心",
+    "search": "搜索",
+    "skillDetail": "技能详情",
     "explore": "探索",
-    "search": "搜索技能",
     "dashboard": "控制台",
+    "mySkills": "我的技能",
+    "publish": "发布",
     "login": "登录"
   },
   "landing": {
@@ -11,7 +15,8 @@
       "title": "发现与分享 AI 技能",
       "subtitle": "使用社区驱动的技能构建强大的 AI 代理",
       "searchPlaceholder": "搜索技能...",
-      "exploreSkills": "探索技能"
+      "exploreSkills": "探索技能",
+      "publishSkill": "开始构建"
     },
     "features": {
       "secure": {
@@ -25,7 +30,28 @@
       "integration": {
         "title": "轻松集成",
         "description": "无缝集成到您现有的工具中"
+      },
+      "versionControl": {
+        "title": "版本控制",
+        "description": "完善的版本管理和发布流程，确保技能包的质量和可追溯性。"
+      },
+      "cli": {
+        "title": "CLI 工具",
+        "description": "强大的命令行工具，支持快速发布、安装和管理技能包。"
+      },
+      "governance": {
+        "title": "审核治理",
+        "description": "内置审核流程和权限管理，保障企业级技能质量。"
       }
+    },
+    "stats": {
+      "skills": "项目库",
+      "downloads": "下载量",
+      "teams": "团队"
+    },
+    "whySkillHub": {
+      "title": "为什么选择 SkillHub",
+      "subtitle": "专为企业打造的私有化 Agent 技能管理平台"
     },
     "badge": "企业级技能注册中心",
     "tagline": "发布、发现、管理",
@@ -848,7 +874,7 @@
     "community": "社区",
     "privacy": "隐私政策",
     "terms": "服务条款",
-    "copyright": "© 2024 SkillHub. 保留所有权利。"
+    "copyright": "© 2026 SkillHub. 保留所有权利。"
   },
   "publish": {
     "title": "发布技能",
