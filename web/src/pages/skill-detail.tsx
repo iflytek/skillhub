@@ -13,6 +13,7 @@ import { adminApi, ApiError, skillDownloadApi } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
+import { getSkillSquareSearch } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
@@ -210,11 +211,7 @@ export function SkillDetailPage() {
   }
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back()
-      return
-    }
-    navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })
+    navigate({ to: '/search', search: getSkillSquareSearch() })
   }
 
   const resolveSkillStatusLabel = (status?: string) => {
