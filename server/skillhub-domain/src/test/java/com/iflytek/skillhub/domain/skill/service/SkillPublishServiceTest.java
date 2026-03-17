@@ -143,6 +143,62 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void testPublishFromEntries_ShouldReplaceDraftVersionWithSameVersion() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        Skill skill = new Skill(1L, "test-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        SkillVersion draftVersion = new SkillVersion(1L, "1.0.0", publisherId);
+        draftVersion.setStatus(SkillVersionStatus.DRAFT);
+        setId(draftVersion, 8L);
+        SkillFile oldFile = new SkillFile(8L, "SKILL.md", (long) skillMdContent.length(), "text/markdown", "abc", "skills/1/8/SKILL.md");
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId))).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PENDING_REVIEW)).thenReturn(List.of());
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).thenReturn(Optional.of(draftVersion));
+        when(skillFileRepository.findByVersionId(8L)).thenReturn(List.of(oldFile));
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                setId(saved, 10L);
+            }
+            return saved;
+        });
+        when(skillRepository.save(any())).thenReturn(skill);
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug,
+                entries,
+                publisherId,
+                SkillVisibility.PUBLIC,
+                Set.of()
+        );
+
+        assertEquals("1.0.0", result.version().getVersion());
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
+        verify(skillFileRepository).deleteByVersionId(8L);
+        verify(skillVersionRepository).delete(draftVersion);
+        verify(objectStorageService).deleteObjects(List.of("skills/1/8/SKILL.md"));
+        verify(objectStorageService).deleteObject("packages/1/8/bundle.zip");
+    }
+
+    @Test
     void testPublishFromEntries_ShouldSlugifyNameBeforeLookupAndResponse() throws Exception {
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";

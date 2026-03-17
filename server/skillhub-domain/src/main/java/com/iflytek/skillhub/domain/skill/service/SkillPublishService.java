@@ -227,8 +227,13 @@ public class SkillPublishService {
         }
 
         // 7. Check version doesn't already exist
-        if (skillVersionRepository.findBySkillIdAndVersion(skill.getId(), metadata.version()).isPresent()) {
-            throw new DomainBadRequestException("error.skill.version.exists", metadata.version());
+        java.util.Optional<SkillVersion> existingVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), metadata.version());
+        if (existingVersion.isPresent()) {
+            SkillVersion matchedVersion = existingVersion.get();
+            if (matchedVersion.getStatus() == SkillVersionStatus.PUBLISHED) {
+                throw new DomainBadRequestException("error.skill.version.exists", metadata.version());
+            }
+            deleteReplaceableVersionArtifacts(skill, matchedVersion);
         }
 
         // 8. Create SkillVersion
@@ -331,6 +336,27 @@ public class SkillPublishService {
 
         // 13. Return identifiers for the created version
         return new PublishResult(skill.getId(), skill.getSlug(), version);
+    }
+
+    private void deleteReplaceableVersionArtifacts(Skill skill, SkillVersion version) {
+        if (version.getStatus() == SkillVersionStatus.PUBLISHED) {
+            throw new DomainBadRequestException("error.skill.version.exists", version.getVersion());
+        }
+
+        reviewTaskRepository.findBySkillVersionIdAndStatus(version.getId(), ReviewTaskStatus.PENDING)
+                .ifPresent(reviewTaskRepository::delete);
+
+        List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
+        if (!files.isEmpty()) {
+            objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());
+        }
+        objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
+        skillFileRepository.deleteByVersionId(version.getId());
+        skillVersionRepository.delete(version);
+
+        if (version.getId().equals(skill.getLatestVersionId())) {
+            skill.setLatestVersionId(null);
+        }
     }
 
     private String resolveNamespaceSlug(Long namespaceId) {
