@@ -7,7 +7,7 @@ import { router } from './router'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
+      staleTime: 30 * 1000,
       retry: (failureCount, error) => {
         // Don't retry on 401/403/404
         if (error instanceof Error && /HTTP (401|403|404)/.test(error.message)) {
