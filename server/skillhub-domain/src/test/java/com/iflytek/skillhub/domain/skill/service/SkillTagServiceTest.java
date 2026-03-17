@@ -174,6 +174,7 @@ class SkillTagServiceTest {
         setId(namespace, 1L);
         Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setLatestVersionId(2L);
         SkillTag tag1 = new SkillTag(1L, "stable", 1L, "user-100");
         SkillTag tag2 = new SkillTag(1L, "beta", 2L, "user-100");
 
@@ -186,7 +187,8 @@ class SkillTagServiceTest {
         List<SkillTag> result = service.listTags(namespaceSlug, skillSlug, null, java.util.Map.of());
 
         // Assert
-        assertEquals(2, result.size());
+        assertEquals(3, result.size());
+        assertTrue(result.stream().anyMatch(tag -> "latest".equals(tag.getTagName()) && Long.valueOf(2L).equals(tag.getVersionId())));
     }
 
     private void setId(Object entity, Long id) throws Exception {

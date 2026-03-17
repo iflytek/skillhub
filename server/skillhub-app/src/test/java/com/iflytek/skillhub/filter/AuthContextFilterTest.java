@@ -41,7 +41,7 @@ class AuthContextFilterTest {
     @Test
     void disabledSessionUser_shouldInvalidateSessionAndBlockRequest() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal("user-1", "Alice", "alice@example.com", null, "local", Set.of("USER"));
-        UserAccount user = new UserAccount("Alice", "alice@example.com");
+        UserAccount user = new UserAccount("user-1", "Alice", "alice@example.com", null);
         user.setStatus(UserStatus.DISABLED);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -67,7 +67,7 @@ class AuthContextFilterTest {
     @Test
     void activeSessionUser_shouldPopulateRequestContextAndContinue() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal("user-2", "Bob", "bob@example.com", null, "local", Set.of("USER"));
-        UserAccount user = new UserAccount("Bob", "bob@example.com");
+        UserAccount user = new UserAccount("user-2", "Bob", "bob@example.com", null);
         user.setStatus(UserStatus.ACTIVE);
         NamespaceMember member = new NamespaceMember(9L, "user-2", NamespaceRole.ADMIN);
 
