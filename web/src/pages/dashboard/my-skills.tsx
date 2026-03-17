@@ -41,7 +41,10 @@ export function MySkillsPage() {
   const submitPromotionMutation = useSubmitPromotion()
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: `/space/${namespace}/${slug}` })
+    navigate({
+      to: `/space/${namespace}/${slug}`,
+      search: { returnTo: '/dashboard/skills' },
+    })
   }
 
   const resolveStatusLabel = (status?: string) => {

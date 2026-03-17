@@ -25,6 +25,7 @@ export function LoginPage() {
   const { data: authMethods } = useAuthMethods(search.returnTo)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
+  const disabledMessage = search.reason === 'accountDisabled' ? t('apiError.auth.accountDisabled') : null
   const directMethod = directAuthConfig.provider
     ? authMethods?.find((method) =>
       method.methodType === 'DIRECT_PASSWORD' && method.provider === directAuthConfig.provider)
@@ -71,6 +72,11 @@ export function LoginPage() {
 
         <div className="glass-strong p-8 rounded-2xl">
           <div className="space-y-6">
+            {disabledMessage ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {disabledMessage}
+              </div>
+            ) : null}
             <SessionBootstrapEntry
               methodDisplayName={bootstrapMethod?.displayName}
               onAuthenticated={() => navigate({ to: returnTo })}

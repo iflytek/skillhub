@@ -37,6 +37,15 @@ describe('handleApiError', () => {
     expect(window.location.href).toBe('/login')
   })
 
+  it('preserves disabled-account reason when redirecting to login', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('This account has been disabled', 401, 'This account has been disabled'))
+
+    expect(errorSpy).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('/login?reason=accountDisabled')
+  })
+
   it('falls back to the server message for non-standard api errors', async () => {
     const { ApiError, handleApiError } = await import('./api-error')
 

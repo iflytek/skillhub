@@ -154,7 +154,7 @@ public class SkillDownloadService {
             result = buildBundleFromFiles(skill, version);
         }
 
-        // Publish download event
+        skillRepository.incrementDownloadCount(skill.getId());
         eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
         return result;
     }

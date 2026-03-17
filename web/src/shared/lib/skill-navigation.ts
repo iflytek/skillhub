@@ -6,3 +6,7 @@ export function getSkillSquareSearch() {
     starredOnly: false,
   }
 }
+
+export function normalizeSkillDetailReturnTo(returnTo?: string) {
+  return returnTo && returnTo.startsWith('/') ? returnTo : undefined
+}
