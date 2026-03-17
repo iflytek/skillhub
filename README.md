@@ -15,6 +15,12 @@
 
 </div>
 
+<div align="center">
+
+[English](./README.md) | [中文](./README_zh.md)
+
+</div>
+
 ---
 
 SkillHub is a self-hosted platform that gives teams a private,
