@@ -211,7 +211,24 @@
     "defaultError": "授权失败，请检查用户码是否正确",
     "submitting": "授权中...",
     "submit": "授权设备",
-    "notice": "授权后，设备将可以访问你的账户"
+    "notice": "授权后,设备将可以访问你的账户"
+  },
+  "cliAuth": {
+    "validating": "验证中...",
+    "pleaseWait": "请稍候",
+    "creatingToken": "创建令牌中...",
+    "almostThere": "马上就好",
+    "success": "授权成功",
+    "redirecting": "正在跳转回 CLI...",
+    "fallbackInstructions": "如果浏览器未自动跳转,请手动复制以下令牌:",
+    "error": "授权失败",
+    "notAuthenticated": "您尚未登录",
+    "invalidRedirectUri": "无效的回调地址",
+    "missingState": "缺少安全参数",
+    "windowsUrlBug": "检测到 Windows 系统的已知问题：浏览器打开的 URL 不完整。请从 CLI 输出中复制完整的 URL（以 'Opening browser:' 开头的那一行），然后粘贴到浏览器地址栏中。",
+    "tokenCreationFailed": "令牌创建失败",
+    "loginRequired": "请先登录以授权 CLI 访问",
+    "goToLogin": "前往登录"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -845,6 +862,7 @@
     "visibilityOptions": {
       "public": "公开",
       "namespaceOnly": "仅命名空间",
+      "loggedInUsersOnly": "仅登录用户可见",
       "private": "私有"
     },
     "file": "技能包文件",

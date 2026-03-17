@@ -26,6 +26,7 @@ public class SkillDownloadService {
     private final ObjectStorageService objectStorageService;
     private final VisibilityChecker visibilityChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final SkillSlugResolutionService skillSlugResolutionService;
 
     public SkillDownloadService(
             NamespaceRepository namespaceRepository,
@@ -34,7 +35,8 @@ public class SkillDownloadService {
             SkillTagRepository skillTagRepository,
             ObjectStorageService objectStorageService,
             VisibilityChecker visibilityChecker,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            SkillSlugResolutionService skillSlugResolutionService) {
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -42,6 +44,7 @@ public class SkillDownloadService {
         this.objectStorageService = objectStorageService;
         this.visibilityChecker = visibilityChecker;
         this.eventPublisher = eventPublisher;
+        this.skillSlugResolutionService = skillSlugResolutionService;
     }
 
     public record DownloadResult(
@@ -59,8 +62,7 @@ public class SkillDownloadService {
             Map<Long, NamespaceRole> userNsRoles) {
 
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
         // Visibility check
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
@@ -85,8 +87,7 @@ public class SkillDownloadService {
             Map<Long, NamespaceRole> userNsRoles) {
 
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
         // Visibility check
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
@@ -107,8 +108,7 @@ public class SkillDownloadService {
             Map<Long, NamespaceRole> userNsRoles) {
 
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
         // Visibility check
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
@@ -153,6 +153,14 @@ public class SkillDownloadService {
     private Namespace findNamespace(String slug) {
         return namespaceRepository.findBySlug(slug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
+    }
+
+    private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {
+        return skillSlugResolutionService.resolve(
+                namespaceId,
+                slug,
+                currentUserId,
+                SkillSlugResolutionService.Preference.CURRENT_USER);
     }
 
     private void assertPublishedAccessible(Skill skill) {

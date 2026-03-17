@@ -246,7 +246,7 @@ export function usePublishSkill() {
       skipGlobalErrorHandler: true,
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
     },
   })
 }

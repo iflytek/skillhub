@@ -19,6 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,9 +46,11 @@ class SkillDownloadServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     private SkillDownloadService service;
+    private SkillSlugResolutionService skillSlugResolutionService;
 
     @BeforeEach
     void setUp() {
+        skillSlugResolutionService = new SkillSlugResolutionService(skillRepository);
         service = new SkillDownloadService(
                 namespaceRepository,
                 skillRepository,
@@ -55,7 +58,8 @@ class SkillDownloadServiceTest {
                 skillTagRepository,
                 objectStorageService,
                 visibilityChecker,
-                eventPublisher
+                eventPublisher,
+                skillSlugResolutionService
         );
     }
 
@@ -82,7 +86,7 @@ class SkillDownloadServiceTest {
         ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
         when(objectStorageService.exists(storageKey)).thenReturn(true);
@@ -124,7 +128,7 @@ class SkillDownloadServiceTest {
         ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillTagRepository.findBySkillIdAndTagName(1L, tagName)).thenReturn(Optional.of(tag));
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
@@ -164,7 +168,7 @@ class SkillDownloadServiceTest {
         ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, versionStr)).thenReturn(Optional.of(version));
         when(objectStorageService.exists(storageKey)).thenReturn(true);
@@ -196,7 +200,7 @@ class SkillDownloadServiceTest {
         version.setStatus(SkillVersionStatus.DRAFT);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, versionStr)).thenReturn(Optional.of(version));
 

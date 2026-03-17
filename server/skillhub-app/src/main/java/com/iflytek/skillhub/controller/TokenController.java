@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.dto.ApiResponse;
@@ -21,21 +23,30 @@ import java.util.List;
 public class TokenController extends BaseApiController {
 
     private final ApiTokenService apiTokenService;
+    private final ObjectMapper objectMapper;
 
-    public TokenController(ApiTokenService apiTokenService, ApiResponseFactory responseFactory) {
+    public TokenController(ApiTokenService apiTokenService, ApiResponseFactory responseFactory, ObjectMapper objectMapper) {
         super(responseFactory);
         this.apiTokenService = apiTokenService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping
     public ApiResponse<TokenCreateResponse> create(
             @AuthenticationPrincipal PlatformPrincipal principal,
             @Valid @RequestBody TokenCreateRequest request) {
-        String scopeJson = request.scopes() == null || request.scopes().isEmpty()
-                ? "[\"skill:read\",\"skill:publish\"]"
-                : request.scopes().toString();
+        String scopeJson;
+        if (request.scopes() == null || request.scopes().isEmpty()) {
+            scopeJson = "[\"skill:read\",\"skill:publish\"]";
+        } else {
+            try {
+                scopeJson = objectMapper.writeValueAsString(request.scopes());
+            } catch (JsonProcessingException e) {
+                scopeJson = "[\"skill:read\",\"skill:publish\"]";
+            }
+        }
 
-        var result = apiTokenService.createToken(principal.userId(), request.name(), scopeJson, request.expiresAt());
+        var result = apiTokenService.rotateToken(principal.userId(), request.name(), scopeJson, request.expiresAt());
         return ok("response.success.created", new TokenCreateResponse(
                 result.rawToken(),
                 result.entity().getId(),

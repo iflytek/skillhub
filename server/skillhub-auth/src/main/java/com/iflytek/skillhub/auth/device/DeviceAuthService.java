@@ -32,7 +32,7 @@ public class DeviceAuthService {
 
     public DeviceAuthService(RedisTemplate<String, Object> redisTemplate,
                              ApiTokenService apiTokenService,
-                             @Value("${skillhub.device-auth.verification-uri:/device}") String verificationUri) {
+                             @Value("${skillhub.device-auth.verification-uri:/cli/auth}") String verificationUri) {
         this.redisTemplate = redisTemplate;
         this.apiTokenService = apiTokenService;
         this.verificationUri = verificationUri;
@@ -109,7 +109,7 @@ public class DeviceAuthService {
                 throw new DomainBadRequestException("error.deviceAuth.deviceCode.invalid");
             }
 
-            String token = apiTokenService.createToken(
+            String token = apiTokenService.rotateToken(
                 data.getUserId(),
                 CLI_DEVICE_TOKEN_NAME,
                 CLI_DEVICE_SCOPE_JSON

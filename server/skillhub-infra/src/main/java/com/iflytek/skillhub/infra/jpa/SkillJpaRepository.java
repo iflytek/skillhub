@@ -18,7 +18,8 @@ import java.util.Optional;
 @Repository
 public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRepository {
     List<Skill> findByIdIn(List<Long> ids);
-    Optional<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
+    List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
+    Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
 
     @Override
     default List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status) {

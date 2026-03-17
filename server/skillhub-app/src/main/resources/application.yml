@@ -4,11 +4,11 @@ server:
   forward-headers-strategy: framework
   servlet:
     session:
+      timeout: ${SERVER_SERVLET_SESSION_TIMEOUT:8h}
       cookie:
         http-only: true
         secure: ${SESSION_COOKIE_SECURE:false}
         same-site: lax
-        max-age: 28800
 
 spring:
   messages:
@@ -98,7 +98,7 @@ skillhub:
     max-package-size: 104857600  # 100MB
     allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.js,.ts,.py,.sh,.png,.jpg,.svg
   device-auth:
-    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
+    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}

@@ -64,7 +64,7 @@ class SkillReportControllerTest {
         ReflectionTestUtils.setField(report, "id", 99L);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
         given(skillReportService.submitReport(eq(10L), eq("user-1"), eq("Spam"), eq("details"), nullable(String.class), nullable(String.class)))
                 .willReturn(report);
 

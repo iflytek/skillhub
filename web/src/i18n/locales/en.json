@@ -213,6 +213,23 @@
     "submit": "Authorize Device",
     "notice": "After authorization, the device will have access to your account"
   },
+  "cliAuth": {
+    "validating": "Validating...",
+    "pleaseWait": "Please wait",
+    "creatingToken": "Creating token...",
+    "almostThere": "Almost there",
+    "success": "Authorization successful",
+    "redirecting": "Redirecting to CLI...",
+    "fallbackInstructions": "If the browser doesn't redirect automatically, please copy the token below:",
+    "error": "Authorization failed",
+    "notAuthenticated": "You are not logged in",
+    "invalidRedirectUri": "Invalid redirect URI",
+    "missingState": "Missing security parameter",
+    "windowsUrlBug": "Known Windows issue: the browser opened an incomplete URL. Please copy the full URL from the CLI output (the line starting with 'Opening browser:') and paste it into your browser address bar.",
+    "tokenCreationFailed": "Token creation failed",
+    "loginRequired": "Please log in first to authorize CLI access",
+    "goToLogin": "Go to Login"
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "View your account, skills, and access credentials in one place",
@@ -845,6 +862,7 @@
     "visibilityOptions": {
       "public": "Public",
       "namespaceOnly": "Namespace Only",
+      "loggedInUsersOnly": "Logged-in Users Only",
       "private": "Private"
     },
     "file": "Skill Package File",

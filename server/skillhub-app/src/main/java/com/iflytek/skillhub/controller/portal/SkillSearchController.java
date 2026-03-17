@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping({"/api/v1/skills", "/api/web/skills"})
+@RequestMapping({"/api/web/skills"})
 public class SkillSearchController extends BaseApiController {
 
     private final SkillSearchAppService skillSearchAppService;
@@ -22,7 +22,6 @@ public class SkillSearchController extends BaseApiController {
         this.skillSearchAppService = skillSearchAppService;
     }
 
-    @GetMapping
     @RateLimit(category = "search", authenticated = 60, anonymous = 20)
     public ApiResponse<SkillSearchAppService.SearchResponse> search(
             @RequestParam(required = false) String q,

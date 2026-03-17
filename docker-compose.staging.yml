@@ -23,7 +23,7 @@ services:
       REDIS_PORT: 6379
       SESSION_COOKIE_SECURE: "false"
       SKILLHUB_PUBLIC_BASE_URL: "http://localhost"
-      DEVICE_AUTH_VERIFICATION_URI: "http://localhost/api/device/activate"
+      DEVICE_AUTH_VERIFICATION_URI: "http://localhost/cli/auth"
       SKILLHUB_STORAGE_PROVIDER: s3
       STORAGE_BASE_PATH: /var/lib/skillhub/storage
       SKILLHUB_STORAGE_S3_ENDPOINT: http://minio:9000

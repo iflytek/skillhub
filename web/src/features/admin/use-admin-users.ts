@@ -43,6 +43,7 @@ export function useUpdateUserRole() {
       updateUserRole(userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
     },
   })
 }
@@ -54,6 +55,7 @@ export function useUpdateUserStatus() {
       updateUserStatus(userId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
     },
   })
 }
@@ -64,6 +66,7 @@ export function useApproveUser() {
     mutationFn: (userId: string) => adminApi.approveUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
     },
   })
 }
@@ -74,6 +77,7 @@ export function useDisableUser() {
     mutationFn: (userId: string) => adminApi.disableUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
     },
   })
 }
@@ -84,6 +88,7 @@ export function useEnableUser() {
     mutationFn: (userId: string) => adminApi.enableUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
     },
   })
 }

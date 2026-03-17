@@ -81,7 +81,7 @@ class SkillLifecycleControllerTest {
         setSkillId(skill, 1L);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
         given(skillGovernanceService.archiveSkill(eq(1L), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup")))
                 .willReturn(skillWithStatus(skill, com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED));
 
@@ -108,7 +108,7 @@ class SkillLifecycleControllerTest {
         skill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
         given(skillGovernanceService.unarchiveSkill(eq(1L), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class)))
                 .willReturn(skillWithStatus(skill, com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE));
 
@@ -135,7 +135,7 @@ class SkillLifecycleControllerTest {
         version.setStatus(SkillVersionStatus.DRAFT);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
         given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).willReturn(java.util.Optional.of(version));
 
         mockMvc.perform(delete("/api/web/skills/global/demo-skill/versions/1.0.0")
@@ -162,7 +162,7 @@ class SkillLifecycleControllerTest {
         version.setStatus(SkillVersionStatus.PENDING_REVIEW);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
         given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).willReturn(java.util.Optional.of(version));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.0.0/withdraw-review")
@@ -188,7 +188,7 @@ class SkillLifecycleControllerTest {
         newVersion.setStatus(SkillVersionStatus.PUBLISHED);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.Optional.of(skill));
+        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
         SkillVersion sourceVersion = new SkillVersion(1L, "1.2.3", "owner");
         setSkillVersionId(sourceVersion, 2L);
         sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);

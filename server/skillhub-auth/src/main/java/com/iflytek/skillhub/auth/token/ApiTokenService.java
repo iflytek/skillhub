@@ -63,6 +63,26 @@ public class ApiTokenService {
         return new TokenCreateResult(rawToken, token);
     }
 
+    /**
+     * Revoke existing token with the same name (if any) and create a new one.
+     * Used by device auth flow to avoid duplicate-name errors on repeated logins.
+     */
+    @Transactional
+    public TokenCreateResult rotateToken(String userId, String name, String scopeJson) {
+        return rotateToken(userId, name, scopeJson, null);
+    }
+
+    @Transactional
+    public TokenCreateResult rotateToken(String userId, String name, String scopeJson, String expiresAt) {
+        String normalizedName = normalizeName(name);
+        tokenRepo.findByUserIdAndNameIgnoreCaseAndRevokedAtIsNull(userId, normalizedName)
+                .ifPresent(existing -> {
+                    existing.setRevokedAt(LocalDateTime.now());
+                    tokenRepo.save(existing);
+                });
+        return createToken(userId, name, scopeJson, expiresAt);
+    }
+
     public Optional<ApiToken> validateToken(String rawToken) {
         String hash = sha256(rawToken);
         return tokenRepo.findByTokenHash(hash).filter(ApiToken::isValid);
