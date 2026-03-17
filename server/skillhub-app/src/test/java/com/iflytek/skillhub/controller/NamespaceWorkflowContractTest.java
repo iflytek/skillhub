@@ -95,7 +95,7 @@ class NamespaceWorkflowContractTest {
 
         mockMvc.perform(post("/api/web/namespaces")
                         .with(csrf())
-                        .with(auth("owner-1"))
+                        .with(auth("owner-1", Set.of("SKILL_ADMIN")))
                         .requestAttr("userId", "owner-1")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("{\"slug\":\"team-flow\",\"displayName\":\"Team Flow\",\"description\":\"workflow\"}"))
@@ -166,13 +166,17 @@ class NamespaceWorkflowContractTest {
     }
 
     private RequestPostProcessor auth(String userId) {
+      return auth(userId, Set.of());
+    }
+
+    private RequestPostProcessor auth(String userId, Set<String> platformRoles) {
       PlatformPrincipal principal = new PlatformPrincipal(
               userId,
               userId,
               userId + "@example.com",
               "",
               "session",
-              Set.of()
+              platformRoles
       );
       UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
               principal,
