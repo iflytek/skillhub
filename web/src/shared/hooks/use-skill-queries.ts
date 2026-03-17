@@ -2,23 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
-import { normalizeSearchQuery } from '@/shared/lib/search-query'
+import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
-  const queryParams = new URLSearchParams()
-  const normalizedQuery = normalizeSearchQuery(params.q ?? '')
-  if (normalizedQuery) queryParams.append('q', normalizedQuery)
-  if (params.namespace) {
-    const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
-    queryParams.append('namespace', cleanNamespace)
-  }
-  if (params.sort) queryParams.append('sort', params.sort)
-  if (params.page !== undefined) queryParams.append('page', String(params.page))
-  if (params.size !== undefined) queryParams.append('size', String(params.size))
-
-  return fetchJson<PagedResponse<SkillSummary>>(`${WEB_API_PREFIX}/skills?${queryParams.toString()}`)
+  return fetchJson<PagedResponse<SkillSummary>>(buildSkillSearchUrl(params))
 }
 
 async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
@@ -226,7 +215,7 @@ export function useNamespaceMemberCandidates(slug: string, search: string, enabl
   return useQuery({
     queryKey: ['namespaces', slug, 'member-candidates', search],
     queryFn: () => searchNamespaceMemberCandidates({ slug, search }),
-    enabled: enabled && !!slug && search.trim().length >= 2,
+    enabled: shouldEnableNamespaceMemberCandidates(slug, search, enabled),
   })
 }
 
