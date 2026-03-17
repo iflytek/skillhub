@@ -229,6 +229,41 @@ class PostgresFullTextQueryServiceTest {
         verify(nativeQuery, never()).setParameter(org.mockito.ArgumentMatchers.eq("titleExact"), anyString());
         verify(nativeQuery, never()).setParameter(org.mockito.ArgumentMatchers.eq("titlePrefix"), anyString());
         verify(nativeQuery).setParameter("titleLike", "%51222222333%");
+
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst())
+                .contains("ORDER BY (SELECT download_count FROM skill WHERE id = skill_id) DESC, (SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC");
+    }
+
+    @Test
+    void emptyKeywordRelevanceShouldUseStableNewestOrdering() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                null,
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                12
+        ));
+
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst())
+                .contains("ORDER BY updated_at DESC, skill_id DESC");
     }
 
     @Test

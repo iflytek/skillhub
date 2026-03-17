@@ -122,11 +122,13 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         // Sorting
         if ("downloads".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT download_count FROM skill WHERE id = skill_id) DESC ");
+            sql.append("ORDER BY (SELECT download_count FROM skill WHERE id = skill_id) DESC, ");
+            sql.append("(SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
         } else if ("rating".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT rating_avg FROM skill WHERE id = skill_id) DESC ");
+            sql.append("ORDER BY (SELECT rating_avg FROM skill WHERE id = skill_id) DESC, ");
+            sql.append("(SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
         } else if ("newest".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC ");
+            sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
         } else if (useRelevanceOrdering) {
             sql.append("ORDER BY CASE ");
             sql.append("WHEN ").append(TITLE_SQL).append(" = :titleExact THEN 4 ");
@@ -135,14 +137,14 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("ELSE 1 END DESC, ");
             if (useShortPrefixTitleSearch) {
                 sql.append("ts_rank_cd(").append(TITLE_VECTOR_SQL)
-                        .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+                        .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC, skill_id DESC ");
             } else if (hasTsQuery) {
-                sql.append("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+                sql.append("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC, skill_id DESC ");
             } else {
-                sql.append("updated_at DESC ");
+                sql.append("updated_at DESC, skill_id DESC ");
             }
         } else {
-            sql.append("ORDER BY updated_at DESC ");
+            sql.append("ORDER BY updated_at DESC, skill_id DESC ");
         }
 
         // Pagination
