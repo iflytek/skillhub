@@ -120,7 +120,7 @@
     }
   },
   "home": {
-    "subtitle": "Modern Skill Registry",
+    "subtitle": "Skill Registry",
     "description": "Efficient skill management, distribution, and collaboration platform for developers",
     "browseSkills": "Browse Skills",
     "publishSkill": "Publish Skill",
@@ -769,7 +769,7 @@
     "formatHint": "Only .zip format supported"
   },
   "layout": {
-    "footerDescription": "Modern skill registry, providing efficient skill management and distribution for developers."
+    "footerDescription": "Skill registry, providing efficient skill management and distribution for developers."
   },
   "nsReviews": {
     "title": "Namespace Reviews",
