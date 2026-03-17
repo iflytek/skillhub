@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApprovePromotion, usePromotionList, useRejectPromotion } from '@/features/promotion/use-promotion-list'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -33,7 +34,7 @@ function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECT
                 {item.sourceVersion} {'->'} @{item.targetNamespace}
               </div>
             </div>
-            <div className="text-sm text-muted-foreground">{new Date(item.submittedAt).toLocaleString(i18n.language)}</div>
+            <div className="text-sm text-muted-foreground">{formatLocalDateTime(item.submittedAt, i18n.language)}</div>
           </div>
           {status === 'PENDING' ? (
             <>

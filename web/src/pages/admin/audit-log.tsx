@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
@@ -60,7 +61,7 @@ export function AuditLogPage() {
   })
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString(i18n.language)
+    return formatLocalDateTime(dateString, i18n.language)
   }
 
   return (

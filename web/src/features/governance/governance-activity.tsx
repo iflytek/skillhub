@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { GovernanceActivityItem } from '@/api/types'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 
 interface GovernanceActivityProps {
@@ -25,7 +26,7 @@ export function GovernanceActivity({ items, isLoading }: GovernanceActivityProps
           <div className="flex items-center justify-between gap-3">
             <div className="font-medium">{item.action}</div>
             <div className="text-xs text-muted-foreground">
-              {item.timestamp ? new Date(item.timestamp).toLocaleString(i18n.language) : '-'}
+              {item.timestamp ? formatLocalDateTime(item.timestamp, i18n.language) : '-'}
             </div>
           </div>
           <div className="text-sm text-muted-foreground">

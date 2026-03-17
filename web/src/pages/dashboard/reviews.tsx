@@ -12,6 +12,7 @@ import {
 } from '@/shared/ui/table'
 import { useReviewList } from '@/features/review/use-review-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
@@ -21,7 +22,7 @@ export function ReviewsPage() {
   const { data: rejectedReviews, isLoading: isRejectedLoading } = useReviewList('REJECTED')
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString(i18n.language)
+    return formatLocalDateTime(dateString, i18n.language)
   }
 
   const handleRowClick = (reviewId: number) => {

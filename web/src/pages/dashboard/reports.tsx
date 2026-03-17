@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -26,7 +27,7 @@ export function ReportsPage() {
   const resolveMutation = useResolveSkillReport()
   const dismissMutation = useDismissSkillReport()
 
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleString(i18n.language)
+  const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
   const handleOpenSkill = (namespace?: string, skillSlug?: string) => {
     if (!namespace || !skillSlug) {

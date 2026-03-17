@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Textarea } from '@/shared/ui/textarea'
@@ -42,7 +43,7 @@ export function ReviewDetailPage() {
   const [rejectDialog, setRejectDialog] = useState(false)
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString(i18n.language)
+    return formatLocalDateTime(dateString, i18n.language)
   }
 
   const handleApprove = async () => {
