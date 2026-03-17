@@ -107,6 +107,7 @@ class SkillDownloadServiceTest {
         assertEquals("test-skill-1.0.0.zip", result.filename());
         assertEquals(1000L, result.contentLength());
         assertNotNull(result.content());
+        verify(skillRepository).incrementDownloadCount(1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
@@ -149,6 +150,7 @@ class SkillDownloadServiceTest {
         assertNotNull(result);
         assertEquals("test-skill-1.0.0.zip", result.filename());
         assertNotNull(result.content());
+        verify(skillRepository).incrementDownloadCount(1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
@@ -256,6 +258,7 @@ class SkillDownloadServiceTest {
             assertEquals("test", output.toString());
         }
 
+        verify(skillRepository).incrementDownloadCount(1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
