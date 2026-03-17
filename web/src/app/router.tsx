@@ -208,6 +208,9 @@ const namespaceRoute = createRoute({
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace/$slug',
+  validateSearch: (search: Record<string, unknown>): { returnTo?: string } => ({
+    returnTo: typeof search.returnTo === 'string' && search.returnTo.startsWith('/') ? search.returnTo : undefined,
+  }),
   component: SkillDetailPage,
 })
 

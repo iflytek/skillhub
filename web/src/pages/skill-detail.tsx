@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, useRouterState } from '@tanstack/react-router'
+import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
@@ -14,7 +14,7 @@ import { adminApi, ApiError, buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
-import { getSkillSquareSearch } from '@/shared/lib/skill-navigation'
+import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
@@ -75,6 +75,7 @@ export function SkillDetailPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const location = useRouterState({ select: (s) => s.location })
+  const search = useSearch({ from: '/space/$namespace/$slug' })
   const queryClient = useQueryClient()
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
@@ -211,6 +212,11 @@ export function SkillDetailPage() {
   }
 
   const handleBack = () => {
+    const returnTo = normalizeSkillDetailReturnTo(search.returnTo)
+    if (returnTo) {
+      navigate({ to: returnTo })
+      return
+    }
     navigate({ to: '/search', search: getSkillSquareSearch() })
   }
 
