@@ -46,7 +46,7 @@ public class TokenController extends BaseApiController {
             }
         }
 
-        var result = apiTokenService.rotateToken(principal.userId(), request.name(), scopeJson, request.expiresAt());
+        var result = apiTokenService.createToken(principal.userId(), request.name(), scopeJson, request.expiresAt());
         return ok("response.success.created", new TokenCreateResponse(
                 result.rawToken(),
                 result.entity().getId(),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
@@ -49,13 +49,6 @@ export function CliAuthPage() {
   const labelB64 = ORIGINAL_PARAMS.get('label_b64')?.trim() || undefined
   const labelPlain = ORIGINAL_PARAMS.get('label')?.trim() || undefined
   const label = decodeLabel(labelB64, labelPlain)
-
-  // Debug: log search params and raw URL
-  console.log('CLI Auth - Original search (from router.tsx):', ORIGINAL_URL_SEARCH)
-  console.log('CLI Auth - Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR')
-  console.log('CLI Auth - redirectUri:', redirectUri)
-  console.log('CLI Auth - state:', state)
-  console.log('CLI Auth - label:', label)
 
   useEffect(() => {
     // Check authentication status
@@ -209,7 +202,7 @@ export function CliAuthPage() {
             <Button
               className="w-full"
               onClick={() => {
-                const returnTo = `/cli/auth?${searchParams.toString()}`
+                const returnTo = `/cli/auth${ORIGINAL_URL_SEARCH}`
                 navigate({ to: '/login', search: { returnTo } })
               }}
             >
