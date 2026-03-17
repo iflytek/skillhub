@@ -19,7 +19,7 @@ export class ApiError extends Error {
     super(resolveLocalizedMessage(message) || message)
     this.name = 'ApiError'
     this.serverMessage = resolveLocalizedMessage(serverMessage) || serverMessage
-    this.serverMessageKey = serverMessage
+    this.serverMessageKey = serverMessageKey
   }
 }
 
