@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.context.support.StaticMessageSource;
@@ -44,7 +46,7 @@ class AuthContextFilterTest {
                 namespaceMemberRepository,
                 userAccountRepository,
                 apiResponseFactory,
-                new ObjectMapper(),
+                new ObjectMapper().registerModule(new JavaTimeModule()),
                 true
         );
     }
@@ -61,7 +63,7 @@ class AuthContextFilterTest {
         user.setStatus(UserStatus.DISABLED);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
-        HttpSession session = request.getSession(true);
+        MockHttpSession session = (MockHttpSession) request.getSession(true);
         session.setAttribute("platformPrincipal", principal);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, List.of())
@@ -75,8 +77,8 @@ class AuthContextFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertEquals(401, response.getStatus());
-        assertTrue(response.getContentAsString().contains("This account has been disabled"));
-        assertTrue(!request.isRequestedSessionIdValid() || request.getSession(false) == null);
+        assertTrue(response.getContentAsString().contains("\"code\":401"));
+        assertTrue(session.isInvalid());
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain, never()).doFilter(request, response);
     }
