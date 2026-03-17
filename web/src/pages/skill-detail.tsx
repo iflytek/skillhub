@@ -445,9 +445,9 @@ export function SkillDetailPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-up">
+    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
       {/* Main Content */}
-      <div className="lg:col-span-2 space-y-8">
+      <div className="flex-1 min-w-0 space-y-8">
         <div className="space-y-3">
           <Button
             variant="ghost"
@@ -620,7 +620,7 @@ export function SkillDetailPage() {
       </div>
 
       {/* Sidebar */}
-      <div className="space-y-5">
+      <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
         <Card className="p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
@@ -756,7 +756,7 @@ export function SkillDetailPage() {
             </div>
           </Card>
         )}
-      </div>
+      </aside>
 
       <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
         <DialogContent>
