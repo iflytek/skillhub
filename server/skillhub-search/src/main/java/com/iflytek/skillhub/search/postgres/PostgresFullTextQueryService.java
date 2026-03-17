@@ -60,8 +60,9 @@ public class PostgresFullTextQueryService implements SearchQueryService {
     public SearchResult search(SearchQuery query) {
         String normalizedKeyword = normalizeKeyword(query.keyword());
         String tsQuery = buildPrefixTsQuery(normalizedKeyword);
-        boolean hasKeyword = tsQuery != null;
-        boolean useShortPrefixTitleSearch = hasKeyword && normalizedKeyword.length() <= SHORT_PREFIX_LENGTH;
+        boolean hasKeyword = normalizedKeyword != null;
+        boolean hasTsQuery = tsQuery != null;
+        boolean useShortPrefixTitleSearch = hasTsQuery && normalizedKeyword.length() <= SHORT_PREFIX_LENGTH;
         boolean useSemanticRerank = semanticEnabled
                 && hasKeyword
                 && "relevance".equals(query.sortBy())
@@ -106,12 +107,15 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         // Full-text search
         if (hasKeyword) {
             sql.append("AND (");
-            if (useShortPrefixTitleSearch) {
-                sql.append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
-            } else {
-                sql.append("search_vector @@ to_tsquery('simple', :tsQuery) ");
+            if (hasTsQuery) {
+                if (useShortPrefixTitleSearch) {
+                    sql.append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
+                } else {
+                    sql.append("search_vector @@ to_tsquery('simple', :tsQuery) ");
+                }
+                sql.append(" OR ");
             }
-            sql.append(" OR ").append(TITLE_SQL).append(" LIKE :titleLike");
+            sql.append(TITLE_SQL).append(" LIKE :titleLike");
             sql.append(") ");
         }
 
@@ -131,8 +135,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             if (useShortPrefixTitleSearch) {
                 sql.append("ts_rank_cd(").append(TITLE_VECTOR_SQL)
                         .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
-            } else {
+            } else if (hasTsQuery) {
                 sql.append("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC ");
+            } else {
+                sql.append("updated_at DESC ");
             }
         } else {
             sql.append("ORDER BY updated_at DESC ");
@@ -154,7 +160,9 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         if (hasKeyword) {
-            nativeQuery.setParameter("tsQuery", tsQuery);
+            if (hasTsQuery) {
+                nativeQuery.setParameter("tsQuery", tsQuery);
+            }
             nativeQuery.setParameter("titleExact", normalizedKeyword.toLowerCase());
             nativeQuery.setParameter("titlePrefix", normalizedKeyword.toLowerCase() + "%");
             nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
@@ -192,7 +200,9 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         if (hasKeyword) {
-            countQuery.setParameter("tsQuery", tsQuery);
+            if (hasTsQuery) {
+                countQuery.setParameter("tsQuery", tsQuery);
+            }
             countQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
         }
 
@@ -275,10 +285,22 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             return null;
         }
 
-        return terms.stream()
+        List<String> tsQueryTerms = terms.stream()
+                .filter(this::isTsQueryCompatibleTerm)
+                .toList();
+
+        if (tsQueryTerms.isEmpty()) {
+            return null;
+        }
+
+        return tsQueryTerms.stream()
                 .map(term -> term + ":*")
                 .reduce((left, right) -> left + " & " + right)
                 .orElse(null);
+    }
+
+    private boolean isTsQueryCompatibleTerm(String term) {
+        return term.chars().anyMatch(ch -> Character.isLetter(ch) || ch == '_');
     }
 
     private record RankedSkill(Long skillId, double score) {

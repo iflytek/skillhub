@@ -170,6 +170,39 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void numericKeywordsShouldFallbackToTitleLikeSearchWithoutTsQuery() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "122222222222222222222222",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20
+        ));
+
+        verify(nativeQuery, never()).setParameter(org.mockito.ArgumentMatchers.eq("tsQuery"), anyString());
+        verify(countQuery, never()).setParameter(org.mockito.ArgumentMatchers.eq("tsQuery"), anyString());
+
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("LOWER(title) LIKE :titleLike");
+    }
+
+    @Test
     void semanticRerankShouldPromoteSemanticallyRelevantCandidate() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
