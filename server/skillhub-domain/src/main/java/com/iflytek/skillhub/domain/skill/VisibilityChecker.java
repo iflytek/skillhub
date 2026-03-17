@@ -7,6 +7,9 @@ import java.util.Map;
 public class VisibilityChecker {
 
     public boolean canAccess(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNamespaceRoles) {
+        if (skill.isHidden()) {
+            return isOwner(skill, currentUserId) || isAdminOrAbove(userNamespaceRoles.get(skill.getNamespaceId()));
+        }
         if (skill.getLatestVersionId() == null) {
             return isOwner(skill, currentUserId);
         }

@@ -258,6 +258,35 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testListSkillsByNamespace_ShouldHideHiddenSkillsFromRegularUsers() throws Exception {
+        String namespaceSlug = "test-ns";
+        String userId = "user-100";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill visibleSkill = new Skill(1L, "visible-skill", "user-200", SkillVisibility.PUBLIC);
+        setId(visibleSkill, 1L);
+        visibleSkill.setLatestVersionId(11L);
+        Skill hiddenSkill = new Skill(1L, "hidden-skill", "user-300", SkillVisibility.PUBLIC);
+        setId(hiddenSkill, 2L);
+        hiddenSkill.setLatestVersionId(12L);
+        hiddenSkill.setHidden(true);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE))
+                .thenReturn(List.of(visibleSkill, hiddenSkill));
+        when(visibilityChecker.canAccess(visibleSkill, userId, userNsRoles)).thenReturn(true);
+        when(visibilityChecker.canAccess(hiddenSkill, userId, userNsRoles)).thenReturn(false);
+
+        Page<Skill> result = service.listSkillsByNamespace(namespaceSlug, userId, userNsRoles, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("visible-skill", result.getContent().get(0).getSlug());
+    }
+
+    @Test
     void testListFiles() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";

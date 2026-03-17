@@ -15,6 +15,7 @@ class VisibilityCheckerTest {
     private Skill namespaceOnlySkill;
     private Skill privateSkill;
     private Skill unpublishedPublicSkill;
+    private Skill hiddenPublicSkill;
 
     private static final Long NAMESPACE_ID = 1L;
     private static final String OWNER_ID = "user-100";
@@ -33,6 +34,9 @@ class VisibilityCheckerTest {
         privateSkill = new Skill(NAMESPACE_ID, "private-skill", OWNER_ID, SkillVisibility.PRIVATE);
         privateSkill.setLatestVersionId(12L);
         unpublishedPublicSkill = new Skill(NAMESPACE_ID, "draft-public-skill", OWNER_ID, SkillVisibility.PUBLIC);
+        hiddenPublicSkill = new Skill(NAMESPACE_ID, "hidden-public-skill", OWNER_ID, SkillVisibility.PUBLIC);
+        hiddenPublicSkill.setLatestVersionId(13L);
+        hiddenPublicSkill.setHidden(true);
     }
 
     @Test
@@ -127,6 +131,31 @@ class VisibilityCheckerTest {
     @Test
     void testUnpublishedSkillAccessibleByOwner() {
         boolean canAccess = checker.canAccess(unpublishedPublicSkill, OWNER_ID, Map.of());
+        assertTrue(canAccess);
+    }
+
+    @Test
+    void testHiddenSkillNotAccessibleByAnonymous() {
+        boolean canAccess = checker.canAccess(hiddenPublicSkill, null, Map.of());
+        assertFalse(canAccess);
+    }
+
+    @Test
+    void testHiddenSkillNotAccessibleByOtherUser() {
+        boolean canAccess = checker.canAccess(hiddenPublicSkill, OTHER_USER_ID, Map.of());
+        assertFalse(canAccess);
+    }
+
+    @Test
+    void testHiddenSkillAccessibleByOwner() {
+        boolean canAccess = checker.canAccess(hiddenPublicSkill, OWNER_ID, Map.of());
+        assertTrue(canAccess);
+    }
+
+    @Test
+    void testHiddenSkillAccessibleByNamespaceAdmin() {
+        Map<Long, NamespaceRole> roles = Map.of(NAMESPACE_ID, NamespaceRole.ADMIN);
+        boolean canAccess = checker.canAccess(hiddenPublicSkill, ADMIN_USER_ID, roles);
         assertTrue(canAccess);
     }
 }
