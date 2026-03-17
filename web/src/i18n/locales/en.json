@@ -1,9 +1,13 @@
 {
   "nav": {
-    "home": "Home",
+    "landing": "Home",
+    "home": "Skill Center",
+    "search": "Search",
+    "skillDetail": "Skill Detail",
     "explore": "Explore Skills",
-    "search": "Search Skills",
     "dashboard": "Dashboard",
+    "mySkills": "My Skills",
+    "publish": "Publish",
     "login": "Login"
   },
   "landing": {
@@ -848,7 +852,7 @@
     "community": "Community",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "copyright": "© 2024 SkillHub. All rights reserved."
+    "copyright": "© 2026 SkillHub. All rights reserved."
   },
   "publish": {
     "title": "Publish Skill",

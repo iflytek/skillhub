@@ -6,9 +6,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Playfair Display', 'Georgia', 'serif'],
-        heading: ['Outfit', 'DM Sans', 'system-ui', 'sans-serif'],
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {

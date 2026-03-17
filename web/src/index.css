@@ -4,63 +4,76 @@
 
 @layer base {
   :root {
-    /* Aurora Tech — light theme (default) */
-    --background: 210 40% 97%;
-    --foreground: 222 47% 11%;
+    /* SkillHub — 浅色主题 (indigo-violet brand) */
+    --background: 210 20% 98%;
+    --foreground: 220 26% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 26% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    /* Cyan primary */
-    --primary: 192 80% 42%;
+    --popover-foreground: 220 26% 14%;
+    /* Indigo primary (#6A6DFF) */
+    --primary: 239 100% 71%;
     --primary-foreground: 0 0% 100%;
     /* Surface tones */
-    --secondary: 210 30% 93%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 25% 92%;
-    --muted-foreground: 215 16% 42%;
-    /* Violet accent */
-    --accent: 263 60% 58%;
+    --secondary: 210 30% 96%;
+    --secondary-foreground: 220 26% 14%;
+    --muted: 210 25% 95%;
+    --muted-foreground: 215 14% 46%;
+    /* Violet accent (#B85EFF) */
+    --accent: 271 100% 68%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 192 80% 42%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 239 100% 71%;
     --radius: 0.75rem;
 
     /* Extended palette */
-    --surface-glass: 210 30% 95%;
-    --glow-primary: 192 80% 42%;
-    --glow-accent: 263 60% 58%;
+    --surface-glass: 210 30% 97%;
+    --glow-primary: 239 100% 71%;
+    --glow-accent: 271 100% 68%;
     --success: 160 60% 45%;
     --warning: 38 92% 58%;
+
+    /* Brand */
+    --brand-start: #6A6DFF;
+    --brand-end: #B85EFF;
+    --brand-gradient: linear-gradient(135deg, #6A6DFF 0%, #B85EFF 100%);
+
+    /* Text semantic */
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 14% 46%;
+    --text-placeholder: 213 12% 63%;
+
+    /* Border semantic */
+    --border-card: 220 26% 94%;
   }
 
   .dark {
-    /* Aurora Tech — deep navy dark theme */
+    /* Dark theme (preserved, not default) */
     --background: 222 47% 6%;
     --foreground: 210 40% 96%;
     --card: 222 40% 9%;
     --card-foreground: 210 40% 96%;
     --popover: 222 40% 9%;
     --popover-foreground: 210 40% 96%;
-    --primary: 192 91% 56%;
+    --primary: 239 100% 75%;
     --primary-foreground: 222 47% 6%;
     --secondary: 222 30% 13%;
     --secondary-foreground: 210 30% 85%;
     --muted: 222 25% 15%;
     --muted-foreground: 215 20% 55%;
-    --accent: 263 70% 70%;
+    --accent: 271 100% 72%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
     --border: 222 20% 18%;
     --input: 222 20% 18%;
-    --ring: 192 91% 56%;
+    --ring: 239 100% 75%;
     --surface-glass: 222 35% 11%;
-    --glow-primary: 192 91% 56%;
-    --glow-accent: 263 70% 70%;
+    --glow-primary: 239 100% 75%;
+    --glow-accent: 271 100% 72%;
   }
 }
 
@@ -75,7 +88,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -216,21 +229,21 @@
 
 /* ─── Gradient text ─── */
 .text-gradient-primary {
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .text-gradient-hero {
-  background: linear-gradient(135deg, hsl(192 80% 38%), hsl(192 80% 42%), hsl(263 60% 52%));
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .dark .text-gradient-hero {
-  background: linear-gradient(135deg, hsl(192 95% 65%), hsl(192 91% 56%), hsl(263 70% 70%));
+  background: linear-gradient(135deg, #8183FF, #C77EFF);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -278,4 +291,121 @@
 /* ─── Focus ring ─── */
 .focus-ring {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* ─── Brand gradient utilities ─── */
+.text-brand-gradient {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-brand-gradient {
+  background: var(--brand-gradient);
+}
+
+/* ─── Handle tag (namespace @ pill) ─── */
+.handle-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  border-radius: 9999px;
+}
+
+/* ─── Status pills ─── */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  padding: 4px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+  color: white;
+}
+
+.status-pill--published { background: #16a34a; }
+.status-pill--review { background: #ea580c; }
+.status-pill--archived { background: #6b7280; }
+
+/* ─── Role pill ─── */
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+}
+
+/* ─── Soft badges ─── */
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-soft-green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-soft-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* ─── Tab active ─── */
+.tab-active {
+  border-bottom: 2px solid #3b82f6;
+  color: #1d4ed8;
+}
+
+/* ─── Code block ─── */
+.code-block {
+  background: #1A202C;
+  color: #e5e7eb;
+  border-radius: 12px;
+}
+
+/* ─── Upload zone ─── */
+.upload-zone {
+  border: 2px dashed hsl(var(--border));
+  background: hsl(var(--background));
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone:hover {
+  border-color: var(--brand-start);
+  background: rgba(106, 109, 255, 0.04);
+}
+
+.upload-zone .upload-zone-icon {
+  color: hsl(var(--muted-foreground));
+  transition: color 0.2s ease;
+}
+
+.upload-zone:hover .upload-zone-icon {
+  color: var(--brand-start);
+}
+
+/* ─── Feature icon shadow ─── */
+.feature-icon {
+  box-shadow: 0 14px 30px rgba(106, 109, 255, 0.45);
+}
+
+/* ─── Hero input placeholder ─── */
+.hero-input::placeholder {
+  color: hsl(var(--text-placeholder));
 }

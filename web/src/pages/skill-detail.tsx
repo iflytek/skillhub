@@ -461,12 +461,12 @@ export function SkillDetailPage() {
           <div className="flex items-center gap-3 mb-1">
             <NamespaceBadge type="GLOBAL" name={namespace} />
             {skill.status && (
-              <span className="rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-xs text-muted-foreground">
+              <span className="badge-soft badge-soft-blue">
                 {resolveSkillStatusLabel(skill.status)}
               </span>
             )}
             {isPendingPreview && (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-700">
+              <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
                 {t('skillDetail.pendingPreviewBadge')}
               </span>
             )}

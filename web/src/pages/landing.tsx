@@ -1,444 +1,174 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { SearchBar } from '@/features/search/search-bar'
-import { useAuth } from '@/features/auth/use-auth'
-import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
-import { UserMenu } from '@/shared/components/user-menu'
-import { Button } from '@/shared/ui/button'
-import { Check, Copy, Terminal, Settings, PackageOpen } from 'lucide-react'
-import { useEffect, useRef, useState, useMemo } from 'react'
-
-function getAppBaseUrl(): string {
-  if (typeof window === 'undefined') {
-    return 'https://skill.xfyun.cn'
-  }
-  const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
-  if (runtimeConfig?.appBaseUrl) {
-    return runtimeConfig.appBaseUrl
-  }
-  return `${window.location.protocol}//${window.location.host}`
-}
-
-function CopyButton({ text }: { text: string }) {
-  const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
-    }
-  }
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      onClick={handleCopy}
-      title={copied ? (t('copyButton.copied') || 'Copied') : (t('copyButton.copy') || 'Copy')}
-      aria-label={copied ? (t('copyButton.copied') || 'Copied') : (t('copyButton.copy') || 'Copy')}
-      className="h-8 w-8"
-    >
-      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-    </Button>
-  )
-}
-
-function CodeBlock({ code }: { code: string }) {
-  return (
-    <div className="relative group">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-700 rounded-t-lg">
-        <span className="text-xs text-slate-400 font-mono">bash</span>
-        <CopyButton text={code} />
-      </div>
-      <pre className="p-4 bg-slate-950 rounded-b-lg overflow-x-auto">
-        <code className="font-mono text-sm text-slate-200">{code}</code>
-      </pre>
-    </div>
-  )
-}
-
-function QuickStartSection() {
-  const { t } = useTranslation()
-  const baseUrl = useMemo(() => getAppBaseUrl(), [])
-
-  const steps = [
-    {
-      icon: <Settings className="h-6 w-6" />,
-      title: t('landing.quickStart.steps.configureEnv.title'),
-      description: t('landing.quickStart.steps.configureEnv.description'),
-      code: `# Linux/macOS
-export CLAWHUB_SITE=${baseUrl}
-export CLAWHUB_REGISTRY=${baseUrl}
-
-# Windows PowerShell
-$env:CLAWHUB_SITE = '${baseUrl}'
-$env:CLAWHUB_REGISTRY = '${baseUrl}'`,
-    },
-    {
-      icon: <Terminal className="h-6 w-6" />,
-      title: t('landing.quickStart.steps.installSkills.title'),
-      description: t('landing.quickStart.steps.installSkills.description'),
-      code: t('landing.quickStart.steps.installSkills.code'),
-    },
-    {
-      icon: <PackageOpen className="h-6 w-6" />,
-      title: t('landing.quickStart.steps.publishSkills.title'),
-      description: t('landing.quickStart.steps.publishSkills.description'),
-      code: t('landing.quickStart.steps.publishSkills.code'),
-    },
-  ]
-
-  return (
-    <section className="py-20 space-y-8">
-      <div className="text-center space-y-4 animate-fade-up">
-        <h2 className="text-4xl md:text-5xl font-bold text-slate-100">
-          {t('landing.quickStart.title')}
-          <span className="block text-lg font-normal text-slate-400 mt-2">
-            {t('landing.quickStart.subtitle')}
-          </span>
-        </h2>
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-          {t('landing.quickStart.description')}
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-1 gap-6 max-w-4xl mx-auto">
-        {steps.map((step, idx) => (
-          <div
-            key={idx}
-            className="relative p-6 rounded-2xl bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-300 animate-fade-up"
-            style={{ animationDelay: (idx * 0.1) + 's' }}
-          >
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 p-3 rounded-xl bg-cyan-500/10 text-cyan-400">
-                {step.icon}
-              </div>
-              <div className="flex-1 space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-100">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-slate-400">
-                    {step.description}
-                  </p>
-                </div>
-                <CodeBlock code={step.code} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="text-center pt-4 animate-fade-up">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30">
-          <span className="text-sm text-yellow-300">
-            {t('landing.quickStart.tip')}
-          </span>
-        </div>
-      </div>
-    </section>
-  )
-}
+import { PackageOpen, Terminal, Shield, Users, GitBranch, Search as SearchIcon, Settings } from 'lucide-react'
+import { QuickStartSection } from '@/shared/components/quick-start'
 
 export function LandingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { user, isLoading } = useAuth()
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [stats] = useState({
-    skills: '1000+',
-    downloads: '50K+',
-    teams: '200+',
-  })
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const resize = () => {
-      if (canvas) {
-        canvas.width = window.innerWidth
-        canvas.height = window.innerHeight
-      }
-    }
-    resize()
-    window.addEventListener('resize', resize)
-
-    class Particle {
-      x: number
-      y: number
-      vx: number
-      vy: number
-      radius: number
-
-      constructor(canvasWidth: number, canvasHeight: number) {
-        this.x = Math.random() * canvasWidth
-        this.y = Math.random() * canvasHeight
-        this.vx = (Math.random() - 0.5) * 0.3
-        this.vy = (Math.random() - 0.5) * 0.3
-        this.radius = Math.random() * 1.5 + 0.5
-      }
-
-      update(canvasWidth: number, canvasHeight: number) {
-        this.x += this.vx
-        this.y += this.vy
-        if (this.x < 0 || this.x > canvasWidth) this.vx *= -1
-        if (this.y < 0 || this.y > canvasHeight) this.vy *= -1
-      }
-
-      draw(context: CanvasRenderingContext2D) {
-        context.beginPath()
-        context.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
-        context.fillStyle = 'rgba(56, 189, 248, 0.6)'
-        context.fill()
-      }
-    }
-
-    const particles: Particle[] = []
-    const particleCount = 80
-
-    for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle(canvas.width, canvas.height))
-    }
-
-    const connectParticles = () => {
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x
-          const dy = particles[i].y - particles[j].y
-          const distance = Math.sqrt(dx * dx + dy * dy)
-
-          if (distance < 120) {
-            ctx.beginPath()
-            const opacity = 0.15 * (1 - distance / 120)
-            ctx.strokeStyle = 'rgba(56, 189, 248, ' + opacity + ')'
-            ctx.lineWidth = 0.5
-            ctx.moveTo(particles[i].x, particles[i].y)
-            ctx.lineTo(particles[j].x, particles[j].y)
-            ctx.stroke()
-          }
-        }
-      }
-    }
-
-    const animate = () => {
-      if (!canvas) return
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      particles.forEach(particle => {
-        particle.update(canvas.width, canvas.height)
-        particle.draw(ctx)
-      })
-
-      connectParticles()
-      requestAnimationFrame(animate)
-    }
-
-    animate()
-
-    return () => {
-      window.removeEventListener('resize', resize)
-    }
-  }, [])
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: normalizeSearchQuery(query), sort: 'relevance', page: 0, starredOnly: false } })
+    const normalized = normalizeSearchQuery(query)
+    navigate({
+      to: '/search',
+      search: { q: normalized, sort: 'relevance', page: 0, starredOnly: false },
+    })
   }
 
   const features = [
     {
-      icon: '🔒',
-      title: t('landing.featuresList.privateDeploy.title'),
-      description: t('landing.featuresList.privateDeploy.description'),
+      icon: <Shield className="w-6 h-6 text-white" strokeWidth={2} />,
+      title: t('landing.features.secure.title'),
+      description: t('landing.features.secure.description'),
     },
     {
-      icon: '📦',
-      title: t('landing.featuresList.versionControl.title'),
-      description: t('landing.featuresList.versionControl.description'),
+      icon: <Users className="w-6 h-6 text-white" strokeWidth={2} />,
+      title: t('landing.features.community.title'),
+      description: t('landing.features.community.description'),
     },
     {
-      icon: '🔍',
-      title: t('landing.featuresList.smartSearch.title'),
-      description: t('landing.featuresList.smartSearch.description'),
+      icon: <PackageOpen className="w-6 h-6 text-white" strokeWidth={2} />,
+      title: t('landing.features.integration.title'),
+      description: t('landing.features.integration.description'),
     },
     {
-      icon: '👥',
-      title: t('landing.featuresList.teamwork.title'),
-      description: t('landing.featuresList.teamwork.description'),
+      icon: <GitBranch className="w-6 h-6 text-white" strokeWidth={2} />,
+      title: t('landing.features.versionControl.title', { defaultValue: '版本控制' }),
+      description: t('landing.features.versionControl.description', { defaultValue: '完善的版本管理和发布流程，确保技能包的质量和可追溯性。' }),
     },
     {
-      icon: '✅',
-      title: t('landing.featuresList.governance.title'),
-      description: t('landing.featuresList.governance.description'),
+      icon: <Terminal className="w-6 h-6 text-white" strokeWidth={2} />,
+      title: t('landing.features.cli.title', { defaultValue: 'CLI 工具' }),
+      description: t('landing.features.cli.description', { defaultValue: '强大的命令行工具，支持快速发布、安装和管理技能包。' }),
     },
     {
-      icon: '⚡',
-      title: t('landing.featuresList.cliFirst.title'),
-      description: t('landing.featuresList.cliFirst.description'),
+      icon: <Settings className="w-6 h-6 text-white" strokeWidth={2} />,
+      title: t('landing.features.governance.title', { defaultValue: '审核治理' }),
+      description: t('landing.features.governance.description', { defaultValue: '内置审核流程和权限管理，保障企业级技能质量。' }),
     },
   ]
 
+  const stats = [
+    { value: '1000+', label: t('landing.stats.skills', { defaultValue: '项目库' }) },
+    { value: '50K+', label: t('landing.stats.downloads', { defaultValue: '下载量' }) },
+    { value: '200+', label: t('landing.stats.teams', { defaultValue: '团队' }) },
+  ]
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
-      <header className="sticky top-0 z-50 border-b border-slate-700/30 bg-slate-950/60 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-6 py-3">
-          <Link to="/" className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">
-            SkillHub
+    <>
+      {/* Hero Section */}
+      <main className="relative z-10 flex flex-col items-center pt-16 pb-20 px-4 md:pt-24">
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-brand-gradient mb-4">
+          SkillHub
+        </h1>
+        <h2
+          className="text-xl md:text-2xl font-semibold tracking-tight text-center mb-3"
+          style={{ color: 'hsl(var(--foreground))' }}
+        >
+          {t('landing.hero.title')}
+        </h2>
+        <p
+          className="text-base md:text-lg text-center max-w-2xl mb-10 leading-relaxed"
+          style={{ color: 'hsl(var(--text-secondary))' }}
+        >
+          {t('landing.hero.subtitle')}
+        </p>
+
+        {/* Search box */}
+        <div className="w-full max-w-2xl mb-8">
+          <div
+            className="flex items-center bg-white rounded-xl border shadow-sm px-5 py-3.5"
+            style={{ borderColor: 'hsl(var(--border))' }}
+          >
+            <SearchIcon className="w-5 h-5 flex-shrink-0 mr-3" style={{ color: 'hsl(var(--text-placeholder))' }} strokeWidth={1.5} />
+            <input
+              type="text"
+              placeholder={t('landing.hero.searchPlaceholder')}
+              className="hero-input flex-1 bg-transparent outline-none text-base"
+              style={{ color: 'hsl(var(--foreground))' }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch((e.target as HTMLInputElement).value)
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        {/* CTA buttons */}
+        <div className="flex flex-wrap justify-center gap-4 mb-14">
+          <Link
+            to="/search"
+            search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
+            className="px-8 py-3.5 rounded-xl text-base font-medium text-white bg-brand-gradient shadow-sm hover:opacity-95 transition-opacity"
+          >
+            {t('landing.hero.exploreSkills')}
           </Link>
-          <nav className="flex items-center gap-4">
-            <LanguageSwitcher className="text-slate-200 hover:text-cyan-300" />
-            {isLoading ? null : user ? (
-              <UserMenu user={user} triggerClassName="text-slate-200 hover:text-cyan-300" />
-            ) : (
-              <Link
-                to="/login"
-                search={{ returnTo: '' }}
-                className="text-sm text-slate-200 hover:text-cyan-400 transition-colors"
-              >
-                {t('nav.login')}
-              </Link>
-            )}
-          </nav>
+          <Link
+            to="/dashboard/publish"
+            className="px-8 py-3.5 rounded-xl text-base font-medium border transition-colors"
+            style={{
+              background: 'hsl(var(--secondary))',
+              borderColor: 'hsl(var(--muted-foreground))',
+              color: 'hsl(var(--muted-foreground))',
+            }}
+          >
+            {t('landing.hero.publishSkill', { defaultValue: '开始构建' })}
+          </Link>
         </div>
-      </header>
 
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 0.4 }}
-      />
-
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" style={{ animation: 'pulse 4s ease-in-out infinite' }} />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-3xl" style={{ animation: 'pulse 4s ease-in-out infinite 2s' }} />
-
-      <div className="relative z-10 container mx-auto px-6 py-20">
-        <div className="flex flex-col items-center text-center space-y-12 pt-20 pb-32">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 backdrop-blur-sm animate-fade-in">
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-sm text-cyan-300 font-medium">{t('landing.badge')}</span>
-          </div>
-
-          <div className="space-y-6 max-w-5xl">
-            <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-normal animate-fade-up">
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400">
-                SkillHub
+        {/* Stats */}
+        <div className="flex flex-row justify-center gap-16 md:gap-24">
+          {stats.map((stat) => (
+            <div key={stat.label} className="flex flex-col items-center">
+              <span className="text-3xl md:text-4xl font-bold tracking-tight text-brand-gradient mb-1">
+                {stat.value}
               </span>
-            </h1>
-            <p className="text-2xl md:text-3xl text-slate-300 font-light leading-relaxed animate-fade-up delay-1">
-              {t('landing.tagline')}
-              <span className="text-cyan-400 font-medium">{t('landing.taglineHighlight')}</span>
-            </p>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto animate-fade-up delay-2">
-              {t('landing.description')}
-            </p>
-          </div>
-
-          <div className="w-full max-w-3xl animate-fade-up delay-3">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-500" />
-              <div className="relative bg-slate-900/80 backdrop-blur-xl rounded-2xl p-2 border border-slate-700/50">
-                <SearchBar onSearch={handleSearch} />
-              </div>
+              <span className="text-sm font-normal" style={{ color: 'hsl(var(--foreground))' }}>
+                {stat.label}
+              </span>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 animate-fade-up delay-4">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 hover:scale-105"
-              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })}
-            >
-              {t('landing.hero.exploreSkills')}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-slate-600 hover:border-cyan-500 text-slate-200 hover:text-cyan-300 font-semibold px-8 py-6 text-lg rounded-xl backdrop-blur-sm bg-slate-800/30 hover:bg-slate-800/50 transition-all duration-300"
-              onClick={() => navigate({ to: '/dashboard/publish' })}
-            >
-              {t('landing.publishSkill')}
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-8 md:gap-16 pt-12 animate-fade-up delay-5">
-            {Object.entries(stats).map(([key, value]) => (
-              <div key={key} className="text-center group cursor-default">
-                <div className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-blue-400 group-hover:from-cyan-200 group-hover:to-blue-300 transition-all duration-300">
-                  {value}
-                </div>
-                <div className="text-sm md:text-base text-slate-400 mt-2 capitalize">
-                  {key === 'skills' && t('landing.statsSkills')}
-                  {key === 'downloads' && t('landing.statsDownloads')}
-                  {key === 'teams' && t('landing.statsTeams')}
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
+      </main>
 
-        <div className="py-20 space-y-16">
-          <div className="text-center space-y-4 animate-fade-up">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-100">
-              {t('landing.whyTitle')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-400">SkillHub</span>
+      {/* Features Section */}
+      <section className="relative z-10 w-full py-20 md:py-24 px-6" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
+              {t('landing.whySkillHub.title', { defaultValue: '为什么选择 SkillHub' })}
             </h2>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-              {t('landing.whyDescription')}
+            <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
+              {t('landing.whySkillHub.subtitle', { defaultValue: '专为企业打造的私有化 Agent 技能管理平台' })}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, idx) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature) => (
               <div
-                key={idx}
-                className="group relative p-6 rounded-2xl bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-300 hover:scale-105 animate-fade-up"
-                style={{ animationDelay: (idx * 0.1) + 's' }}
+                key={feature.title}
+                className="bg-white rounded-xl p-8 border shadow-sm transition-shadow hover:shadow-md"
+                style={{ borderColor: 'hsl(var(--border-card))' }}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative space-y-3">
-                  <div className="text-4xl">{feature.icon}</div>
-                  <h3 className="text-xl font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    {feature.description}
-                  </p>
+                <div className="feature-icon w-12 h-12 rounded-2xl flex items-center justify-center mb-6 mx-auto bg-brand-gradient">
+                  {feature.icon}
                 </div>
+                <h3 className="text-lg font-semibold text-center mb-3" style={{ color: 'hsl(var(--foreground))' }}>
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-center leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Quick Start Section */}
-        <QuickStartSection />
-
-      </div>
-
-      <div className="relative z-10 border-t border-slate-800/50 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-slate-400 text-sm">
-            <div>{t('landing.footerLicense')}</div>
-            <div className="flex items-center gap-6">
-              <a
-                href="https://github.com/iflytek/skillhub"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-cyan-400 transition-colors"
-              >
-                {t('landing.footerGithub')}
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Quick Start */}
+      <QuickStartSection variant="landing" ns="landing" />
+    </>
   )
 }

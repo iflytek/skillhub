@@ -39,9 +39,10 @@ export function TabsList({ children, className }: TabsListProps) {
   return (
     <div
       className={cn(
-        'inline-flex h-11 items-center gap-1 rounded-xl bg-secondary/60 p-1 text-muted-foreground',
+        'inline-flex items-center gap-6 border-b text-sm',
         className
       )}
+      style={{ borderColor: 'hsl(var(--border))' }}
     >
       {children}
     </div>
@@ -65,12 +66,13 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       type="button"
       onClick={() => context.setValue(value)}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center whitespace-nowrap py-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
         isActive
-          ? 'bg-card text-foreground shadow-sm border border-border/40'
-          : 'hover:text-foreground/80 hover:bg-secondary',
+          ? 'border-b-2 border-primary text-primary'
+          : 'text-muted-foreground hover:text-foreground/80',
         className
       )}
+      style={{ marginBottom: '-1px' }}
     >
       {children}
     </button>

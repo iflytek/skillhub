@@ -38,16 +38,14 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
   return (
     <>
       <Card
-        className="h-full p-5 cursor-pointer group relative overflow-hidden"
+        className="h-full p-5 cursor-pointer group relative overflow-hidden bg-white border shadow-sm transition-shadow hover:shadow-md"
+        style={{ borderColor: 'hsl(var(--border-card))' }}
         onClick={onClick}
       >
-        {/* Hover gradient border effect */}
-        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 pointer-events-none" />
-
-        <div className="relative z-10 flex h-full flex-col">
+        <div className="flex h-full flex-col">
           <div className="flex items-start justify-between mb-3">
             <div className="space-y-2">
-              <h3 className="font-semibold font-heading text-lg text-foreground group-hover:text-primary transition-colors">
+              <h3 className="font-semibold text-lg group-hover:text-primary transition-colors" style={{ color: 'hsl(var(--foreground))' }}>
                 {skill.displayName}
               </h3>
             </div>

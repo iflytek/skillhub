@@ -32,9 +32,8 @@ export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
     <div
       {...getRootProps()}
       className={cn(
-        'border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-300',
+        'upload-zone rounded-xl p-10 text-center cursor-pointer transition-all duration-300',
         isDragActive && 'border-primary bg-primary/5 scale-[1.01]',
-        !isDragActive && 'border-border/60 hover:border-primary/40 hover:bg-secondary/30',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
@@ -43,8 +42,8 @@ export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
         <div className="w-14 h-14 rounded-2xl bg-secondary/60 flex items-center justify-center">
           <svg
             className={cn(
-              'w-7 h-7 transition-colors',
-              isDragActive ? 'text-primary' : 'text-muted-foreground'
+              'w-7 h-7 upload-zone-icon transition-colors',
+              isDragActive && 'text-primary'
             )}
             fill="none"
             stroke="currentColor"

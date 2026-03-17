@@ -2,68 +2,91 @@ import { Suspense } from 'react'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import { LandingPage } from '@/pages/landing'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 
 export function Layout() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const isLanding = pathname === '/'
-  const { user, isLoading } = useAuth(!isLanding)
+  const { user, isLoading } = useAuth()
 
-  if (isLanding) {
-    return <LandingPage />
+  const navItems: Array<{
+    label: string
+    to: string
+    exact?: boolean
+    auth?: boolean
+  }> = [
+    { label: t('nav.landing'), to: '/', exact: true },
+    { label: t('nav.home'), to: '/skills' },
+    { label: t('nav.search'), to: '/search' },
+    { label: t('nav.skillDetail'), to: '/space/demo/example' },
+    { label: t('nav.dashboard'), to: '/dashboard', auth: true },
+    { label: t('nav.mySkills'), to: '/dashboard/skills', auth: true },
+    { label: t('nav.publish'), to: '/dashboard/publish', auth: true },
+  ]
+
+  const isActive = (to: string, exact?: boolean) => {
+    if (exact) return pathname === to
+    // 精确匹配，避免父路径也被高亮
+    return pathname === to
   }
 
   return (
-    <div className="min-h-screen bg-background bg-dots relative">
-      <div className="glow-orb-primary" style={{ top: '-10%', right: '10%' }} />
-      <div className="glow-orb-accent" style={{ bottom: '20%', left: '-5%' }} />
+    <div className="min-h-screen flex flex-col relative overflow-x-hidden" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+      {/* Decorative gradient orb */}
+      <div
+        className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90 pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(ellipse at 70% 20%, rgba(184,94,255,0.25) 0%, rgba(106,109,255,0.15) 40%, transparent 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
 
-      <header className="sticky top-0 z-50 glass-strong border-b border-border/40">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-glow">
-                <span className="text-primary-foreground font-bold text-sm">S</span>
-              </div>
-              <span className="text-xl font-bold font-heading text-foreground group-hover:text-primary transition-colors">
-                SkillHub
-              </span>
+      {/* Header */}
+      <header className="relative z-50 flex items-center justify-between px-6 py-4 md:px-12 bg-white border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+        <Link to="/" className="text-xl font-semibold tracking-tight text-brand-gradient">
+          SkillHub
+        </Link>
+
+        <nav className="hidden md:flex items-center gap-8 text-[15px] font-normal" style={{ color: 'hsl(var(--text-secondary))' }}>
+          {navItems.map((item) => {
+            if (item.auth && !user) return null
+            const active = isActive(item.to, item.exact)
+
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={
+                  active
+                    ? 'px-4 py-1.5 rounded-full bg-brand-gradient text-white shadow-sm'
+                    : 'hover:opacity-80 transition-opacity'
+                }
+              >
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="flex items-center gap-6 text-[15px] font-normal" style={{ color: 'hsl(var(--text-secondary))' }}>
+          <LanguageSwitcher />
+          {isLoading ? null : user ? (
+            <UserMenu user={user} />
+          ) : (
+            <Link
+              to="/login"
+              search={{ returnTo: '' }}
+              className="hover:opacity-80 transition-opacity"
+            >
+              {t('nav.login')}
             </Link>
-
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                to="/search"
-                search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                activeProps={{ className: 'text-primary' }}
-              >
-                {t('nav.explore')}
-              </Link>
-            </nav>
-          </div>
-
-          <nav className="flex items-center gap-6">
-            <LanguageSwitcher />
-            {isLoading ? null : user ? (
-              <UserMenu user={user} />
-            ) : (
-              <Link
-                to="/login"
-                search={{ returnTo: '' }}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                activeProps={{ className: 'text-primary' }}
-              >
-                {t('nav.login')}
-              </Link>
-            )}
-          </nav>
+          )}
         </div>
       </header>
 
-      <main className="container mx-auto px-4 lg:px-8 py-12 relative z-10">
+      {/* Main content */}
+      <main className={`flex-1 relative z-10${pathname === '/' ? '' : ' px-6 md:px-12 py-10'}`}>
         <Suspense
           fallback={
             <div className="space-y-4 animate-fade-up">
@@ -77,77 +100,84 @@ export function Layout() {
         </Suspense>
       </main>
 
-      <footer className="relative z-10 border-t border-border/40 bg-card/30 backdrop-blur-sm mt-24">
-        <div className="container mx-auto px-4 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-glow">
-                  <span className="text-primary-foreground font-bold text-sm">S</span>
+      {/* Footer */}
+      <footer className="relative z-10 border-t rounded-t-2xl mt-auto" style={{ background: '#F1F5F9', borderColor: 'hsl(var(--border))' }}>
+        <div className="max-w-6xl mx-auto px-6 md:px-12 py-10">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10 md:gap-12">
+            <div className="flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm bg-brand-gradient">
+                  S
                 </div>
-                <span className="text-xl font-bold font-heading text-foreground">SkillHub</span>
+                <span className="text-lg font-bold text-brand-gradient">SkillHub</span>
               </div>
-              <p className="text-sm text-muted-foreground max-w-sm">
+              <p className="text-sm max-w-xs" style={{ color: 'hsl(var(--text-secondary))' }}>
                 {t('layout.footerDescription')}
               </p>
             </div>
-
-            <div>
-              <h3 className="text-sm font-semibold font-heading text-foreground mb-3">{t('nav.home')}</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {t('nav.home')}
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/search"
-                    search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {t('nav.search')}
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {t('nav.dashboard')}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold font-heading text-foreground mb-3">{t('footer.resources')}</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {t('footer.docs')}
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {t('footer.api')}
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {t('footer.community')}
-                  </a>
-                </li>
-              </ul>
+            <div className="flex flex-wrap gap-12 md:gap-16">
+              <div>
+                <h4 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--foreground))' }}>
+                  {t('nav.home')}
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link to="/" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
+                      {t('nav.home')}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/search"
+                      search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
+                      className="hover:opacity-80 transition-opacity"
+                      style={{ color: 'hsl(var(--text-secondary))' }}
+                    >
+                      {t('nav.search')}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
+                      {t('nav.dashboard')}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--foreground))' }}>
+                  {t('footer.resources')}
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
+                      {t('footer.docs')}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
+                      {t('footer.api')}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
+                      {t('footer.community')}
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-
-          <div className="pt-6 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">
-              {t('footer.copyright')}
-            </p>
-            <div className="flex items-center gap-4">
-              <Link to="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+          <div
+            className="mt-10 pt-6 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs"
+            style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
+          >
+            <span>{t('footer.copyright')}</span>
+            <div className="flex items-center gap-2">
+              <Link to="/privacy" className="hover:opacity-80 transition-opacity">
                 {t('footer.privacy')}
               </Link>
-              <Link to="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              <span>|</span>
+              <Link to="/terms" className="hover:opacity-80 transition-opacity">
                 {t('footer.terms')}
               </Link>
             </div>

@@ -1,9 +1,13 @@
 {
   "nav": {
-    "home": "首页",
+    "landing": "首页",
+    "home": "技能中心",
+    "search": "搜索",
+    "skillDetail": "技能详情",
     "explore": "探索",
-    "search": "搜索技能",
     "dashboard": "控制台",
+    "mySkills": "我的技能",
+    "publish": "发布",
     "login": "登录"
   },
   "landing": {
@@ -848,7 +852,7 @@
     "community": "社区",
     "privacy": "隐私政策",
     "terms": "服务条款",
-    "copyright": "© 2024 SkillHub. 保留所有权利。"
+    "copyright": "© 2026 SkillHub. 保留所有权利。"
   },
   "publish": {
     "title": "发布技能",
