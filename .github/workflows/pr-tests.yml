@@ -21,9 +21,6 @@ jobs:
     name: Web Build And Test
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
 
     steps:
       - name: Check out repository
@@ -41,22 +38,16 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Build frontend
-        run: pnpm build
+        run: make build-frontend
 
       - name: Run frontend unit tests
-        run: pnpm test
+        run: make test-frontend
 
   server-tests:
     name: Server Unit Tests
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
 
     steps:
       - name: Check out repository
@@ -70,7 +61,7 @@ jobs:
           cache: maven
 
       - name: Ensure Maven wrapper is executable
-        run: chmod +x mvnw
+        run: chmod +x server/mvnw
 
       - name: Run backend unit tests
-        run: ./mvnw test
+        run: make test-backend
