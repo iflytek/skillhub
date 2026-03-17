@@ -151,6 +151,49 @@ class LocalAuthServiceTest {
     }
 
     @Test
+    void login_withPendingAccount_fails() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        user.setStatus(UserStatus.PENDING);
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.login("alice", "Abcd123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.accountPending");
+    }
+
+    @Test
+    void login_withMergedAccount_fails() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        user.setStatus(UserStatus.MERGED);
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.login("alice", "Abcd123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.accountMerged");
+    }
+
+    @Test
+    void login_withoutExplicitRoles_defaultsToUser() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("Abcd123!", "encoded")).willReturn(true);
+        given(userRoleBindingRepository.findByUserId("usr_1")).willReturn(List.of());
+
+        var principal = service.login("alice", "Abcd123!");
+
+        assertThat(principal.platformRoles()).containsExactly("USER");
+    }
+
+    @Test
     void register_rejectsInvalidEmailFormat() {
         given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(false);
 

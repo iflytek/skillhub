@@ -112,6 +112,22 @@ class AdminSkillReportControllerTest {
                 .andExpect(jsonPath("$.data.status").value("RESOLVED"));
     }
 
+    @Test
+    void listReports_withAuditorRole_returns403() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "auditor", "auditor", "auditor@example.com", "", "github", Set.of("AUDITOR")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_AUDITOR"))
+        );
+
+        mockMvc.perform(get("/api/v1/admin/skill-reports")
+                        .param("status", "PENDING")
+                        .with(authentication(auth)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+    }
+
     private UsernamePasswordAuthenticationToken adminAuth() {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "admin", "admin", "admin@example.com", "", "github", Set.of("SKILL_ADMIN")

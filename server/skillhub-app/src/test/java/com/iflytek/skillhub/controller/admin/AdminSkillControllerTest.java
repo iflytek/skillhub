@@ -86,4 +86,18 @@ class AdminSkillControllerTest {
             .andExpect(jsonPath("$.data.action").value("YANK"))
             .andExpect(jsonPath("$.data.status").value("YANKED"));
     }
+
+    @Test
+    void hideSkill_withUserAdminRole_returns403() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("USER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/admin/skills/10/hide")
+                .with(authentication(auth))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"policy\"}"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value(403));
+    }
 }
