@@ -1,10 +1,12 @@
 package com.iflytek.skillhub.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.dto.ApiResponseFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +16,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -25,13 +28,19 @@ public class AuthContextFilter extends OncePerRequestFilter {
 
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final UserAccountRepository userAccountRepository;
+    private final ApiResponseFactory apiResponseFactory;
+    private final ObjectMapper objectMapper;
     private final boolean enforceActiveUserCheck;
 
     public AuthContextFilter(NamespaceMemberRepository namespaceMemberRepository,
                              UserAccountRepository userAccountRepository,
+                             ApiResponseFactory apiResponseFactory,
+                             ObjectMapper objectMapper,
                              @Value("${skillhub.auth.enforce-active-user-check:true}") boolean enforceActiveUserCheck) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.userAccountRepository = userAccountRepository;
+        this.apiResponseFactory = apiResponseFactory;
+        this.objectMapper = objectMapper;
         this.enforceActiveUserCheck = enforceActiveUserCheck;
     }
 
@@ -44,7 +53,12 @@ public class AuthContextFilter extends OncePerRequestFilter {
         if (principal != null) {
             if (isInactiveUser(principal.userId())) {
                 clearAuthentication(request);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                objectMapper.writeValue(
+                        response.getOutputStream(),
+                        apiResponseFactory.error(HttpServletResponse.SC_UNAUTHORIZED, "error.auth.local.accountDisabled")
+                );
                 return;
             }
             request.setAttribute("userId", principal.userId());

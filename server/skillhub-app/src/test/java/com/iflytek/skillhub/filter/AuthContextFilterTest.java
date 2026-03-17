@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -7,17 +8,19 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
+import com.iflytek.skillhub.dto.ApiResponseFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.util.List;
-import java.util.Set;
+import org.springframework.context.support.StaticMessageSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -31,7 +34,20 @@ class AuthContextFilterTest {
 
     private final NamespaceMemberRepository namespaceMemberRepository = mock(NamespaceMemberRepository.class);
     private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
-    private final AuthContextFilter filter = new AuthContextFilter(namespaceMemberRepository, userAccountRepository, true);
+    private final AuthContextFilter filter;
+
+    AuthContextFilterTest() {
+        StaticMessageSource messageSource = new StaticMessageSource();
+        messageSource.addMessage("error.auth.local.accountDisabled", Locale.ENGLISH, "This account has been disabled");
+        ApiResponseFactory apiResponseFactory = new ApiResponseFactory(messageSource);
+        filter = new AuthContextFilter(
+                namespaceMemberRepository,
+                userAccountRepository,
+                apiResponseFactory,
+                new ObjectMapper(),
+                true
+        );
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -59,6 +75,7 @@ class AuthContextFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertEquals(401, response.getStatus());
+        assertTrue(response.getContentAsString().contains("This account has been disabled"));
         assertTrue(!request.isRequestedSessionIdValid() || request.getSession(false) == null);
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain, never()).doFilter(request, response);
