@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -24,11 +25,14 @@ public class AuthContextFilter extends OncePerRequestFilter {
 
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final UserAccountRepository userAccountRepository;
+    private final boolean enforceActiveUserCheck;
 
     public AuthContextFilter(NamespaceMemberRepository namespaceMemberRepository,
-                             UserAccountRepository userAccountRepository) {
+                             UserAccountRepository userAccountRepository,
+                             @Value("${skillhub.auth.enforce-active-user-check:true}") boolean enforceActiveUserCheck) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.userAccountRepository = userAccountRepository;
+        this.enforceActiveUserCheck = enforceActiveUserCheck;
     }
 
     @Override
@@ -56,6 +60,9 @@ public class AuthContextFilter extends OncePerRequestFilter {
     }
 
     private boolean isInactiveUser(String userId) {
+        if (!enforceActiveUserCheck) {
+            return false;
+        }
         return userAccountRepository.findById(userId)
                 .map(user -> !user.isActive())
                 .orElse(true);

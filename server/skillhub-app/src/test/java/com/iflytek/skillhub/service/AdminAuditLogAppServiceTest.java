@@ -52,7 +52,7 @@ class AdminAuditLogAppServiceTest {
         assertThat(response.total()).isEqualTo(1);
         assertThat(response.items()).hasSize(1);
         verify(jdbcTemplate).queryForObject(contains("al.actor_user_id = :userId"), any(MapSqlParameterSource.class), eq(Long.class));
-        verify(jdbcTemplate).query(contains("al.action = :action"), any(MapSqlParameterSource.class), any(RowMapper.class));
+        verify(jdbcTemplate).query(contains("al.action IN (:actions)"), any(MapSqlParameterSource.class), any(RowMapper.class));
         verify(jdbcTemplate).query(
                 contains("al.request_id = :requestId"),
                 any(MapSqlParameterSource.class),

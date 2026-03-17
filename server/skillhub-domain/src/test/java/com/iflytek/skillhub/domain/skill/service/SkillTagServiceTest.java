@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -174,6 +175,7 @@ class SkillTagServiceTest {
         setId(namespace, 1L);
         Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setLatestVersionId(3L);
         SkillTag tag1 = new SkillTag(1L, "stable", 1L, "user-100");
         SkillTag tag2 = new SkillTag(1L, "beta", 2L, "user-100");
 
@@ -186,7 +188,10 @@ class SkillTagServiceTest {
         List<SkillTag> result = service.listTags(namespaceSlug, skillSlug, null, java.util.Map.of());
 
         // Assert
-        assertEquals(2, result.size());
+        assertEquals(3, result.size());
+        assertEquals(
+                List.of("beta", "latest", "stable"),
+                result.stream().map(SkillTag::getTagName).sorted().collect(Collectors.toList()));
     }
 
     private void setId(Object entity, Long id) throws Exception {

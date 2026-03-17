@@ -6,6 +6,7 @@ import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.SkillSearchAppService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,6 +23,7 @@ public class SkillSearchController extends BaseApiController {
         this.skillSearchAppService = skillSearchAppService;
     }
 
+    @GetMapping
     @RateLimit(category = "search", authenticated = 60, anonymous = 20)
     public ApiResponse<SkillSearchAppService.SearchResponse> search(
             @RequestParam(required = false) String q,

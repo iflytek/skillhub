@@ -8,8 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.iflytek.skillhub.auth.local.LocalAuthService;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.security.AuthFailureThrottleService;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +46,12 @@ class DirectAuthControllerTest {
     @MockBean
     private AuthFailureThrottleService authFailureThrottleService;
 
+    @MockBean
+    private UserAccountRepository userAccountRepository;
+
+    @MockBean
+    private UserRoleBindingRepository userRoleBindingRepository;
+
     @Test
     void directLoginShouldAuthenticateViaConfiguredProvider() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -55,6 +64,9 @@ class DirectAuthControllerTest {
         );
         given(localAuthService.login("direct-user", "Abcd123!")).willReturn(principal);
         given(namespaceMemberRepository.findByUserId("usr_direct_1")).willReturn(List.of());
+        given(userAccountRepository.findById("usr_direct_1"))
+            .willReturn(java.util.Optional.of(new UserAccount("usr_direct_1", "direct-user", null, null)));
+        given(userRoleBindingRepository.findByUserId("usr_direct_1")).willReturn(List.of());
 
         MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/api/v1/auth/direct/login")
                 .with(csrf())

@@ -79,7 +79,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
+        given(apiTokenService.rotateToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .willThrow(new DomainBadRequestException("validation.token.name.size"));
 
         mockMvc.perform(post("/api/v1/tokens")
@@ -102,7 +102,7 @@ class TokenControllerTest {
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        given(apiTokenService.createToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
+        given(apiTokenService.rotateToken(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
                 .willThrow(new DomainBadRequestException("error.token.name.duplicate"));
 
         mockMvc.perform(post("/api/v1/tokens")
@@ -130,7 +130,7 @@ class TokenControllerTest {
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.LocalDateTime.of(2026, 3, 15, 12, 0));
         token.setExpiresAt(java.time.LocalDateTime.of(2026, 4, 15, 12, 0));
 
-        given(apiTokenService.createToken("user-42", "cli", "[\"skill:read\",\"skill:publish\"]", "2026-04-15T12:00:00"))
+        given(apiTokenService.rotateToken("user-42", "cli", "[\"skill:read\",\"skill:publish\"]", "2026-04-15T12:00:00"))
                 .willReturn(new ApiTokenService.TokenCreateResult("sk_raw", token));
 
         mockMvc.perform(post("/api/v1/tokens")

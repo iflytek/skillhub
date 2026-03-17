@@ -1,7 +1,10 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.security.AuthFailureThrottleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +58,12 @@ class AuthControllerTest {
     @MockBean
     private AuthFailureThrottleService authFailureThrottleService;
 
+    @MockBean
+    private UserAccountRepository userAccountRepository;
+
+    @MockBean
+    private UserRoleBindingRepository userRoleBindingRepository;
+
     @Test
     void meShouldReturnUnauthorizedForAnonymousRequest() throws Exception {
         mockMvc.perform(get("/api/v1/auth/me"))
@@ -65,6 +74,9 @@ class AuthControllerTest {
     @Test
     void meShouldReturnCurrentPrincipal() throws Exception {
         given(namespaceMemberRepository.findByUserId("user-42")).willReturn(List.of());
+        given(userAccountRepository.findById("user-42"))
+            .willReturn(java.util.Optional.of(new UserAccount("user-42", "tester", "tester@example.com", "https://example.com/avatar.png")));
+        given(userRoleBindingRepository.findByUserId("user-42")).willReturn(List.of());
 
         PlatformPrincipal principal = new PlatformPrincipal(
             "user-42",
@@ -90,7 +102,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.userId").value("user-42"))
             .andExpect(jsonPath("$.data.displayName").value("tester"))
             .andExpect(jsonPath("$.data.oauthProvider").value("github"))
-            .andExpect(jsonPath("$.data.platformRoles[0]").value("SUPER_ADMIN"))
+            .andExpect(jsonPath("$.data.platformRoles[0]").value("USER"))
             .andExpect(jsonPath("$.timestamp").isNotEmpty())
             .andExpect(jsonPath("$.requestId").isNotEmpty());
     }

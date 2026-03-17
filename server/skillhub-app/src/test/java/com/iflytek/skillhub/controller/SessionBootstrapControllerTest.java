@@ -1,8 +1,11 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -39,9 +42,18 @@ class SessionBootstrapControllerTest {
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
 
+    @MockBean
+    private UserAccountRepository userAccountRepository;
+
+    @MockBean
+    private UserRoleBindingRepository userRoleBindingRepository;
+
     @Test
     void sessionBootstrapShouldEstablishSessionWhenAuthenticatorSucceeds() throws Exception {
         given(namespaceMemberRepository.findByUserId("sso-user-1")).willReturn(List.of());
+        given(userAccountRepository.findById("sso-user-1"))
+            .willReturn(Optional.of(new UserAccount("sso-user-1", "Private SSO User", null, null)));
+        given(userRoleBindingRepository.findByUserId("sso-user-1")).willReturn(List.of());
 
         MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/api/v1/auth/session/bootstrap")
                 .with(csrf())

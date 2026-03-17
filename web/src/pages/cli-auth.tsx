@@ -209,7 +209,7 @@ export function CliAuthPage() {
             <Button
               className="w-full"
               onClick={() => {
-                const returnTo = `/cli/auth?${searchParams.toString()}`
+                const returnTo = `/cli/auth?${ORIGINAL_PARAMS.toString()}`
                 navigate({ to: '/login', search: { returnTo } })
               }}
             >

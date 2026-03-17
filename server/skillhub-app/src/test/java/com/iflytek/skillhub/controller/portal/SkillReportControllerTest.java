@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.report.SkillReportService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,9 @@ class SkillReportControllerTest {
     private SkillReportService skillReportService;
 
     @MockBean
+    private SkillSlugResolutionService skillSlugResolutionService;
+
+    @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
@@ -64,7 +68,8 @@ class SkillReportControllerTest {
         ReflectionTestUtils.setField(report, "id", 99L);
 
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
-        given(skillRepository.findByNamespaceIdAndSlug(1L, "demo-skill")).willReturn(java.util.List.of(skill));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "user-1", SkillSlugResolutionService.Preference.PUBLISHED))
+                .willReturn(skill);
         given(skillReportService.submitReport(eq(10L), eq("user-1"), eq("Spam"), eq("details"), nullable(String.class), nullable(String.class)))
                 .willReturn(report);
 
