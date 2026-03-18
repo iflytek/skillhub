@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import java.io.ByteArrayInputStream;
@@ -99,13 +100,29 @@ class SkillControllerDownloadTest {
     }
 
     @Test
-    void downloadVersion_requiresAuthentication() throws Exception {
+    void downloadVersion_allowsAnonymousForGlobalSkill() throws Exception {
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", null, java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-1.0.0.zip",
+                3L,
+                "application/zip",
+                null
+            ));
+
         mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
                 .with(csrf()))
-            .andDo(result -> {
-                System.out.println("Status: " + result.getResponse().getStatus());
-                System.out.println("Body: " + result.getResponse().getContentAsString());
-            })
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-1.0.0.zip\""));
+    }
+
+    @Test
+    void downloadVersion_forbidsAnonymousWhenServiceRejectsSkill() throws Exception {
+        given(skillDownloadService.downloadVersion("team-ai", "demo-skill", "1.0.0", null, java.util.Map.of()))
+            .willThrow(new DomainForbiddenException("error.skill.access.denied", "demo-skill"));
+
+        mockMvc.perform(get("/api/v1/skills/team-ai/demo-skill/versions/1.0.0/download")
+                .with(csrf()))
+            .andExpect(status().isForbidden());
     }
 }

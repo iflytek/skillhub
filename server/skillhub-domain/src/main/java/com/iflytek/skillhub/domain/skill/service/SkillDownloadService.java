@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.event.SkillDownloadedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -72,11 +73,7 @@ public class SkillDownloadService {
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-
-        // Visibility check
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
-        }
+        assertCanDownload(namespace, skill, currentUserId, userNsRoles);
 
         if (skill.getLatestVersionId() == null) {
             throw new DomainBadRequestException("error.skill.version.latest.unavailable", skillSlug);
@@ -97,11 +94,7 @@ public class SkillDownloadService {
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-
-        // Visibility check
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
-        }
+        assertCanDownload(namespace, skill, currentUserId, userNsRoles);
 
         SkillVersion version = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), versionStr)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionStr));
@@ -118,11 +111,7 @@ public class SkillDownloadService {
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-
-        // Visibility check
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
-        }
+        assertCanDownload(namespace, skill, currentUserId, userNsRoles);
 
         SkillTag tag = skillTagRepository.findBySkillIdAndTagName(skill.getId(), tagName)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.tag.notFound", tagName));
@@ -215,6 +204,23 @@ public class SkillDownloadService {
     private Namespace findNamespace(String slug) {
         return namespaceRepository.findBySlug(slug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
+    }
+
+    private void assertCanDownload(Namespace namespace,
+                                   Skill skill,
+                                   String currentUserId,
+                                   Map<Long, NamespaceRole> userNsRoles) {
+        if (currentUserId == null && !isAnonymousDownloadAllowed(namespace, skill)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
+        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
+    }
+
+    private boolean isAnonymousDownloadAllowed(Namespace namespace, Skill skill) {
+        return namespace.getType() == NamespaceType.GLOBAL
+                && skill.getVisibility() == SkillVisibility.PUBLIC;
     }
 
     private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {

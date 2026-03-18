@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { GovernanceNotification } from '@/api/types'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 
@@ -33,7 +34,7 @@ export function GovernanceNotifications({ items, isLoading, onMarkRead, isMarkin
           </div>
           {item.createdAt ? (
             <div className="text-xs text-muted-foreground">
-              {new Date(item.createdAt).toLocaleString(i18n.language)}
+              {formatLocalDateTime(item.createdAt, i18n.language)}
             </div>
           ) : null}
           {item.bodyJson ? <div className="text-sm text-muted-foreground break-all">{item.bodyJson}</div> : null}

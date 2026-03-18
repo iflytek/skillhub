@@ -1,5 +1,6 @@
 import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useNamespaceDetail } from '@/shared/hooks/use-skill-queries'
@@ -8,7 +9,7 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 
 function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data: pending } = useReviewList('PENDING', namespaceId)
   const { data: approved } = useReviewList('APPROVED', namespaceId)
   const { data: rejected } = useReviewList('REJECTED', namespaceId)
@@ -26,7 +27,7 @@ function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
                 <div className="font-semibold font-heading">{review.namespace}/{review.skillSlug}</div>
                 <div className="text-sm text-muted-foreground">{t('nsReviews.version', { version: review.version })}</div>
               </div>
-              <div className="text-sm text-muted-foreground">{new Date(review.submittedAt).toLocaleString('zh-CN')}</div>
+              <div className="text-sm text-muted-foreground">{formatLocalDateTime(review.submittedAt, i18n.language)}</div>
             </div>
             {review.reviewComment ? (
               <p className="mt-3 text-sm text-muted-foreground">{review.reviewComment}</p>

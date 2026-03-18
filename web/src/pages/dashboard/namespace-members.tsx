@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { AddNamespaceMemberDialog } from '@/features/namespace/add-namespace-member-dialog'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
@@ -217,7 +218,7 @@ export function NamespaceMembersPage() {
                           )}
                         </td>
                         <td className="p-4 text-sm text-muted-foreground">
-                          {new Date(member.createdAt).toLocaleDateString(i18n.language)}
+                          {formatLocalDateTime(member.createdAt, i18n.language, { dateStyle: 'medium' })}
                         </td>
                         <td className="p-4 text-right">
                           <Button

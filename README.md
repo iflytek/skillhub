@@ -6,6 +6,7 @@
 
 <div align="center">
 
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/iflytek/skillhub)
 [![Docs](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
@@ -301,21 +302,25 @@ Run it against a local backend:
 
 SkillHub works as a skill registry backend for several agent platforms. Point any of the clients below at your SkillHub instance to publish, discover, and install skills.
 
-### [openclaw](https://github.com/openclaw/openclaw)
+### [OpenClaw](https://github.com/openclaw/openclaw)
 
-[openclaw](https://github.com/openclaw/openclaw) is an open-source agent skill CLI. Configure it to use your SkillHub endpoint as the registry:
+[OpenClaw](https://github.com/openclaw/openclaw) is an open-source agent skill CLI. Configure it to use your SkillHub endpoint as the registry:
 
 ```bash
-# Log in to your SkillHub instance
-openclaw login --registry https://<your-skillhub-host>
-
-# Publish a skill
-openclaw push <skill-package>
+# Configure registry URL
+export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
 
 # Search and install skills
-openclaw search <keyword>
-openclaw install <namespace>/<skill>
+npx clawhub search email
+npx clawhub install my-skill
+npx clawhub install my-namespace--my-skill
+
+# Publish a skill
+npx clawhub publish ./my-skill
 ```
+
+📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
 
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 

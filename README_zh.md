@@ -255,6 +255,26 @@ SkillHub 采用清晰的分层架构：
 
 SkillHub 设计为与各种智能体平台和框架无缝集成。
 
+### [OpenClaw](https://github.com/openclaw/openclaw)
+
+[OpenClaw](https://github.com/openclaw/openclaw) 是开源的智能体技能 CLI 工具。配置它使用您的 SkillHub 端点作为注册中心：
+
+```bash
+# 配置注册中心地址
+export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+
+# 搜索和安装技能
+npx clawhub search email
+npx clawhub install my-skill
+npx clawhub install my-namespace--my-skill
+
+# 发布技能
+npx clawhub publish ./my-skill
+```
+
+📖 **[完整 OpenClaw 集成指南 →](./docs/openclaw-integration.md)**
+
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
 [AstronClaw](https://agent.xfyun.cn/astron-claw) 是科大讯飞星火平台提供的技能市场。您可以将其连接到自托管的 SkillHub 注册中心，在组织内管理和分发私有技能，或在星火平台上浏览公开共享的技能。

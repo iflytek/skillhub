@@ -3,10 +3,36 @@ import { useTranslation } from 'react-i18next'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { PackageOpen, Terminal, Shield, Users, GitBranch, Search as SearchIcon, Settings } from 'lucide-react'
 import { QuickStartSection } from '@/shared/components/quick-start'
+import { SkillCard } from '@/features/skill/skill-card'
+import { SkeletonList } from '@/shared/components/skeleton-loader'
+import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
+import { useInView } from '@/shared/hooks/use-in-view'
+import { Button } from '@/shared/ui/button'
 
 export function LandingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+
+  const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
+    sort: 'downloads',
+    size: 6,
+  })
+
+  const { data: latestSkills, isLoading: isLoadingLatest } = useSearchSkills({
+    sort: 'newest',
+    size: 6,
+  })
+
+  const handleSkillClick = (namespace: string, slug: string) => {
+    navigate({ to: `/space/${namespace}/${slug}` })
+  }
+
+  const heroView = useInView()
+  const statsView = useInView()
+  const featuresView = useInView()
+  const quickStartView = useInView()
+  const popularView = useInView()
+  const latestView = useInView()
 
   const handleSearch = (query: string) => {
     const normalized = normalizeSearchQuery(query)
@@ -58,7 +84,7 @@ export function LandingPage() {
   return (
     <>
       {/* Hero Section */}
-      <main className="relative z-10 flex flex-col items-center pt-16 pb-20 px-4 md:pt-24">
+      <main ref={heroView.ref} className={`relative z-10 flex flex-col items-center pt-16 pb-20 px-4 md:pt-24 scroll-fade-up${heroView.inView ? ' in-view' : ''}`}>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-brand-gradient mb-4">
           SkillHub
         </h1>
@@ -119,7 +145,7 @@ export function LandingPage() {
         </div>
 
         {/* Stats */}
-        <div className="flex flex-row justify-center gap-16 md:gap-24">
+        <div ref={statsView.ref} className={`flex flex-row justify-center gap-16 md:gap-24 scroll-fade-up${statsView.inView ? ' in-view' : ''}`} style={{ transitionDelay: '0.15s' }}>
           {stats.map((stat) => (
             <div key={stat.label} className="flex flex-col items-center">
               <span className="text-3xl md:text-4xl font-bold tracking-tight text-brand-gradient mb-1">
@@ -134,7 +160,7 @@ export function LandingPage() {
       </main>
 
       {/* Features Section */}
-      <section className="relative z-10 w-full py-20 md:py-24 px-6" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+      <section ref={featuresView.ref} className={`relative z-10 w-full py-20 md:py-24 px-6 scroll-fade-up${featuresView.inView ? ' in-view' : ''}`} style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
@@ -168,7 +194,77 @@ export function LandingPage() {
       </section>
 
       {/* Quick Start */}
-      <QuickStartSection variant="landing" ns="landing" />
+      <div ref={quickStartView.ref} className={`scroll-fade-up${quickStartView.inView ? ' in-view' : ''}`}>
+        <QuickStartSection variant="landing" ns="landing" />
+      </div>
+
+      {/* Popular Downloads Section */}
+      <section ref={popularView.ref} className={`relative z-10 w-full py-20 md:py-24 px-6 scroll-fade-up${popularView.inView ? ' in-view' : ''}`} style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
+                {t('home.popularTitle')}
+              </h2>
+              <p style={{ color: 'hsl(var(--text-secondary))' }}>{t('home.popularDescription')}</p>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0, starredOnly: false } })}
+            >
+              {t('home.viewAll')}
+            </Button>
+          </div>
+          {isLoadingPopular ? (
+            <SkeletonList count={6} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {popularSkills?.items.map((skill, idx) => (
+                <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
+                  <SkillCard
+                    skill={skill}
+                    onClick={() => handleSkillClick(skill.namespace, skill.slug)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Latest Releases Section */}
+      <section ref={latestView.ref} className={`relative z-10 w-full py-20 md:py-24 px-6 scroll-fade-up${latestView.inView ? ' in-view' : ''}`} style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
+                {t('home.latestTitle')}
+              </h2>
+              <p style={{ color: 'hsl(var(--text-secondary))' }}>{t('home.latestDescription')}</p>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}
+            >
+              {t('home.viewAll')}
+            </Button>
+          </div>
+          {isLoadingLatest ? (
+            <SkeletonList count={6} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {latestSkills?.items.map((skill, idx) => (
+                <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
+                  <SkillCard
+                    skill={skill}
+                    onClick={() => handleSkillClick(skill.namespace, skill.slug)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </>
   )
 }

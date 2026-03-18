@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { GovernanceInboxItem } from '@/api/types'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 
@@ -54,7 +55,7 @@ export function GovernanceInbox({ items, isLoading }: GovernanceInboxProps) {
               {item.subtitle ? <div className="text-sm text-muted-foreground">{item.subtitle}</div> : null}
             </div>
             <div className="text-xs text-muted-foreground">
-              {item.timestamp ? new Date(item.timestamp).toLocaleString(i18n.language) : '-'}
+              {item.timestamp ? formatLocalDateTime(item.timestamp, i18n.language) : '-'}
             </div>
           </div>
           <div className="flex justify-end">
