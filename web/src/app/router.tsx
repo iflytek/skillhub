@@ -60,7 +60,6 @@ const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'Sea
 const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
-const RegistrySkillPage = createLazyRouteComponent(() => import('@/pages/registry-skill'), 'RegistrySkillPage')
 const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
 const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
 const PublishPage = createLazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
@@ -215,12 +214,6 @@ const skillDetailRoute = createRoute({
   component: SkillDetailPage,
 })
 
-const registrySkillRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/registry/skill',
-  component: RegistrySkillPage,
-})
-
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard',
@@ -367,7 +360,6 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   namespaceRoute,
   skillDetailRoute,
-  registrySkillRoute,
   dashboardRoute,
   dashboardSkillsRoute,
   dashboardPublishRoute,

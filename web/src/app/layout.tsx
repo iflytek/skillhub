@@ -10,14 +10,6 @@ export function Layout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { user, isLoading } = useAuth()
 
-  if (pathname === '/registry/skill') {
-    return (
-      <Suspense fallback={null}>
-        <Outlet />
-      </Suspense>
-    )
-  }
-
   const navItems: Array<{
     label: string
     to: string
