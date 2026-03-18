@@ -1,0 +1,40 @@
+name: Claim Issue Reward
+on:
+  issues:
+    types:
+      - closed
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  claim-issue-reward:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Get Issue details
+        id: parse_issue
+        uses: stefanbuck/github-issue-parser@v3
+        with:
+          template-path: ".github/ISSUE_TEMPLATE/reward-task.yml"
+
+      - name: Calculate & Save Reward
+        run: |
+          deno --allow-all .github/scripts/share-reward.ts \
+            ${{ github.repository_owner }} \
+            ${{ github.event.repository.name }} \
+            ${{ github.event.issue.number }} \
+            "${{ steps.parse_issue.outputs.issueparser_payer || github.event.issue.user.login }}" \
+            "${{ steps.parse_issue.outputs.issueparser_currency }}" \
+            ${{ steps.parse_issue.outputs.issueparser_amount }}
