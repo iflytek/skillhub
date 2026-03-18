@@ -2,7 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { PackageOpen, Terminal, Shield, Users, GitBranch, Search as SearchIcon, Settings } from 'lucide-react'
-import { QuickStartSection } from '@/shared/components/quick-start'
+import { LandingQuickStartSection } from '@/shared/components/landing-quick-start'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
@@ -195,7 +195,7 @@ export function LandingPage() {
 
       {/* Quick Start */}
       <div ref={quickStartView.ref} className={`scroll-fade-up${quickStartView.inView ? ' in-view' : ''}`}>
-        <QuickStartSection variant="landing" ns="landing" />
+        <LandingQuickStartSection />
       </div>
 
       {/* Popular Downloads Section */}
