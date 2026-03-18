@@ -14,12 +14,13 @@ public record SkillDetailResponse(
         BigDecimal ratingAvg,
         Integer ratingCount,
         boolean hidden,
-        String latestVersion,
-        Long latestVersionId,
         String namespace,
         boolean canManageLifecycle,
         boolean canSubmitPromotion,
-        String viewingVersionStatus,
         boolean canInteract,
-        boolean canReport
+        boolean canReport,
+        SkillLifecycleVersionResponse headlineVersion,
+        SkillLifecycleVersionResponse publishedVersion,
+        SkillLifecycleVersionResponse ownerPreviewVersion,
+        String resolutionMode
 ) {}

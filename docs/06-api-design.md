@@ -76,7 +76,7 @@
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | 版本详情 |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/files` | 文件清单 |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/file?path=...` | 读取单个文件（query param 避免路径中 / 的解析问题） |
-| GET | `/api/v1/skills/{namespace}/{slug}/download` | 下载默认安装版本（latest_version_id 指向的版本） |
+| GET | `/api/v1/skills/{namespace}/{slug}/download` | 下载默认安装版本（最新已发布版本） |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/download` | 下载指定版本包 |
 | GET | `/api/v1/skills/{namespace}/{slug}/resolve` | 解析技能版本（支持 query param: `version`、`tag`、`hash`） |
 | GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | 按标签下载（解析标签指向的版本后下载） |
@@ -206,7 +206,7 @@ Public API 的可见性规则：
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/submit-review` | 将 DRAFT 版本提交审核 |
+| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/submit-review` | 将 `DRAFT` 版本再次提交审核（当前主要用于撤回后重提） |
 | POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | 撤回提审（PENDING_REVIEW → DRAFT，同时删除关联的 PENDING review_task） |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/draft` | 查看草稿详情（owner 或 namespace ADMIN 以上） |
 
@@ -226,6 +226,20 @@ Public API 的可见性规则：
 | POST | `/api/v1/skills/{namespace}/{slug}/unarchive` | 恢复归档（namespace ADMIN 或 owner） |
 | DELETE | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | 删除 DRAFT/REJECTED 版本 |
 
+当前代码中的 skill 生命周期读模型不再依赖 `latestVersionStatus` / `viewingVersionStatus` 一类拼装字段，而统一使用以下 projection：
+
+- `headlineVersion`：当前页面应展示的主版本
+- `publishedVersion`：当前最新可分发的已发布版本
+- `ownerPreviewVersion`：owner / namespace 管理者可见的待审核预览版本
+- `resolutionMode`：`PUBLISHED` / `OWNER_PREVIEW` / `NONE`
+
+其中：
+
+- 公开详情、公开安装、公开搜索一律只认 `publishedVersion`
+- owner 详情页在没有可展示发布版本时，才允许 `headlineVersion` 落到 `ownerPreviewVersion`
+- 推广到全局一律使用 `publishedVersion.id`
+- `hidden` 是独立治理覆盖层，不属于生命周期状态机
+
 发布成功响应中的 `data` 至少包含以下字段：
 
 - `skillId`
@@ -241,6 +255,7 @@ Public API 的可见性规则：
 - 普通用户发布成功后，`status` 为 `PENDING_REVIEW`
 - 持有 `SUPER_ADMIN` 的用户通过 Web、`/api/v1/publish`、`/api/v1/publish` 发布时，`status` 为 `PUBLISHED`，且不要求其必须是目标 namespace 成员
 - 当前版本保持该审核策略，不再提供“全员直发”的运行模式
+- 撤回审核不会删除版本记录，而是 `PENDING_REVIEW → DRAFT`
 
 ## 7.4 Token API（需登录）
 
@@ -336,14 +351,15 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 `latest` 自动跟随最新已发布版本，不可手动移动。
 
 - `skill.latest_version_id`：每次审核通过自动更新，始终指向最新 PUBLISHED 版本
+- `yank` 当前最新已发布版本时，需要同步重算 `latest_version_id` 指向下一个最新的 `PUBLISHED` 版本；若不存在则允许为 `null`
 - `latest` 标签：系统保留，只读，自动与 `latest_version_id` 同步
 - 自定义标签（如 `beta`、`stable-2026q1`）：允许人工创建和移动，用于固定安装通道
 
 | 场景 | 使用字段 | 说明 |
 |------|---------|------|
-| 搜索索引内容 | `latest_version_id` | 搜索文档取最新已发布版本内容 |
-| `/download`（不带版本号） | `latest_version_id` | 下载最新已发布版本 |
-| CLI `install @team/skill` | `latest_version_id` | 等同于 `@latest` |
+| 搜索索引内容 | `publishedVersion` / `latest_version_id` | 外部协议仍叫 latest，但内部语义必须等价于最新已发布版本 |
+| `/download`（不带版本号） | `publishedVersion` / `latest_version_id` | 下载最新已发布版本 |
+| CLI `install @team/skill` | `publishedVersion` / `latest_version_id` | 等同于 `@latest` |
 | CLI `install @team/skill@beta` | `skill_tag` 查询 | 自定义标签指向的版本 |
 
 ## 7.9 Resolve 接口说明
@@ -361,7 +377,7 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 2. 仅传 `version`：精确匹配版本号
 3. 仅传 `tag`：查询 `skill_tag` 表获取 `target_version_id`
 4. 仅传 `hash`：遍历已发布版本，比对 fingerprint
-5. 均不传：返回 `latest_version_id` 指向的版本
+5. 均不传：返回最新已发布版本；实现上可由 `latest_version_id` 或等价 published projection 解析
 
 响应：
 

@@ -41,6 +41,8 @@ class SkillDownloadServiceTest {
     @Mock
     private SkillVersionRepository skillVersionRepository;
     @Mock
+    private SkillVersionStatsRepository skillVersionStatsRepository;
+    @Mock
     private SkillFileRepository skillFileRepository;
     @Mock
     private SkillTagRepository skillTagRepository;
@@ -61,6 +63,7 @@ class SkillDownloadServiceTest {
                 namespaceRepository,
                 skillRepository,
                 skillVersionRepository,
+                skillVersionStatsRepository,
                 skillFileRepository,
                 skillTagRepository,
                 objectStorageService,
@@ -111,6 +114,7 @@ class SkillDownloadServiceTest {
         assertEquals(1000L, result.contentLength());
         assertNotNull(result.content());
         verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
@@ -155,6 +159,7 @@ class SkillDownloadServiceTest {
         assertEquals("Test Skill-1.0.0.zip", result.filename());
         assertNotNull(result.content());
         verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
@@ -193,6 +198,9 @@ class SkillDownloadServiceTest {
 
         assertEquals("http://minio.local/presigned", result.presignedUrl());
         assertNotNull(result.content());
+        verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
+        verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
     @Test
@@ -219,6 +227,9 @@ class SkillDownloadServiceTest {
 
         assertThrows(DomainBadRequestException.class, () ->
                 service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles));
+        verify(skillRepository, never()).incrementDownloadCount(anyLong());
+        verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
+        verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
     }
 
     @Test
@@ -266,6 +277,7 @@ class SkillDownloadServiceTest {
         }
 
         verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
@@ -299,6 +311,9 @@ class SkillDownloadServiceTest {
 
         assertNotNull(result);
         assertEquals("Demo Skill-1.0.0.zip", result.filename());
+        verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
+        verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
     @Test
@@ -319,6 +334,9 @@ class SkillDownloadServiceTest {
                 service.downloadVersion("team-ai", "demo-skill", "1.0.0", null, Map.of()));
 
         verify(visibilityChecker, never()).canAccess(any(), any(), anyMap());
+        verify(skillRepository, never()).incrementDownloadCount(anyLong());
+        verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
+        verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
     }
 
     private void setId(Object entity, Long id) throws Exception {

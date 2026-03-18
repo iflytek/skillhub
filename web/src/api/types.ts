@@ -138,12 +138,19 @@ export interface SkillSummary {
   starCount: number
   ratingAvg?: number
   ratingCount: number
-  latestVersion?: string
-  latestVersionId?: number
-  latestVersionStatus?: string
   namespace: string
   updatedAt: string
   canSubmitPromotion: boolean
+  headlineVersion?: SkillLifecycleVersion
+  publishedVersion?: SkillLifecycleVersion
+  ownerPreviewVersion?: SkillLifecycleVersion
+  resolutionMode?: string
+}
+
+export interface SkillLifecycleVersion {
+  id: number
+  version: string
+  status: string
 }
 
 export interface SkillDetail {
@@ -158,14 +165,15 @@ export interface SkillDetail {
   ratingAvg?: number
   ratingCount: number
   hidden: boolean
-  latestVersion?: string
-  latestVersionId?: number
   namespace: string
   canManageLifecycle: boolean
   canSubmitPromotion: boolean
-  viewingVersionStatus?: string
   canInteract: boolean
   canReport: boolean
+  headlineVersion?: SkillLifecycleVersion
+  publishedVersion?: SkillLifecycleVersion
+  ownerPreviewVersion?: SkillLifecycleVersion
+  resolutionMode?: string
 }
 
 export interface SubmitPromotionRequest {

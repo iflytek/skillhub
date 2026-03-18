@@ -241,7 +241,7 @@ public class ReviewService {
     }
 
     @Transactional
-    public void withdrawReview(Long skillVersionId, String userId) {
+    public SkillVersion withdrawReview(Long skillVersionId, String userId) {
         ReviewTask task = reviewTaskRepository.findBySkillVersionIdAndStatus(
                         skillVersionId, ReviewTaskStatus.PENDING)
                 .orElseThrow(() -> new DomainNotFoundException("review_task.not_found_for_version", skillVersionId));
@@ -259,7 +259,7 @@ public class ReviewService {
         Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
         assertNamespaceActive(namespace);
-        skillGovernanceService.withdrawPendingVersion(skill, skillVersion, userId);
+        return skillGovernanceService.withdrawPendingVersion(skill, skillVersion, userId);
     }
 
     public boolean canReviewNamespace(ReviewTask task,

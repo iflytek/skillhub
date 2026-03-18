@@ -377,7 +377,7 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 | 平台角色 | 职责 |
 |---------|------|
 | `SUPER_ADMIN` | 全部权限，硬判定短路 |
-| `SKILL_ADMIN` | 全局空间审核、提升审核、隐藏/撤回技能 |
+| `SKILL_ADMIN` | 全局空间审核、提升审核、隐藏/恢复技能、撤回已发布版本 |
 | `USER_ADMIN` | 准入审批、封禁/解封、角色分配（不可分配 SUPER_ADMIN） |
 | `AUDITOR` | 审计日志只读 |
 
@@ -402,7 +402,8 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 | 审核团队空间技能 | `review:approve` | 该 namespace 的 ADMIN 或 OWNER |
 | 审核全局空间技能 | `review:approve` | 持有 SKILL_ADMIN / SUPER_ADMIN |
 | 审核提升申请 | `promotion:approve` | 持有 SKILL_ADMIN / SUPER_ADMIN |
-| 隐藏/撤回技能 | `skill:manage` | 持有 SKILL_ADMIN / SUPER_ADMIN |
+| 隐藏/恢复技能 | `skill:manage` | 持有 SKILL_ADMIN / SUPER_ADMIN |
+| 撤回已发布版本（YANK） | `skill:manage` | 持有 SKILL_ADMIN / SUPER_ADMIN |
 | 管理用户角色 | `user:manage` | 持有 USER_ADMIN / SUPER_ADMIN |
 | 审批用户准入 | `user:approve` | 持有 USER_ADMIN / SUPER_ADMIN |
 | 查看审计日志 | `audit:read` | 持有 AUDITOR / SUPER_ADMIN |
@@ -600,7 +601,7 @@ window.location.href = '/oauth2/authorization/github'
 | `POST /api/v1/skills/{ns}/{slug}/star` | 已登录 | Session/Token |
 | `POST /api/v1/skills/{ns}/{slug}/rating` | 已登录 | Session/Token |
 | `POST .../versions/{ver}/submit-review` | namespace MEMBER 以上 | `namespace_member.role` |
-| `POST .../versions/{ver}/withdraw-review` | 提交人本人 或 namespace ADMIN | `review_task.submitted_by` 或 `namespace_member.role` |
+| `POST .../versions/{ver}/withdraw-review` | 提交人本人 | `review_task.submitted_by` |
 | `PUT /api/v1/skills/{ns}/{slug}/tags/{tag}` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
 | `POST /api/v1/skills/{ns}/{slug}/archive` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
 | `DELETE .../versions/{ver}` | namespace ADMIN 以上 或 owner（仅 DRAFT/REJECTED） | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |

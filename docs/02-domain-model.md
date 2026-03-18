@@ -64,8 +64,8 @@
 | owner_id | varchar(128) | 主要维护人（可转让） |
 | source_skill_id | bigint | 派生来源（团队技能提升到全局时记录原 skill ID），nullable |
 | visibility | enum | `PUBLIC` / `NAMESPACE_ONLY` / `PRIVATE` |
-| status | enum | `ACTIVE` / `HIDDEN` / `ARCHIVED` |
-| latest_version_id | bigint | 最新已发布版本（自动跟随，每次发布自动更新） |
+| status | enum | `ACTIVE` / `ARCHIVED` |
+| latest_version_id | bigint | latest published pointer，仅指向最新 `PUBLISHED` 版本；若不存在已发布版本则可为 `null` |
 | download_count | bigint | |
 | star_count | int | |
 | rating_avg | decimal(3,2) | 平均评分 |
@@ -76,6 +76,7 @@
 | updated_at | datetime | |
 
 - 唯一约束：`(namespace_id, slug)`
+- `status` 表示 skill 容器生命周期，不再承载“隐藏”语义。隐藏是独立的治理覆盖层，由 `hidden` / `hidden_at` / `hidden_by` 表达
 - `owner_id` 语义为"主要维护人"，可转让。权限主轴是 namespace role，不是 owner：
   - namespace ADMIN 对空间内所有 skill 有完整管理权（归档、版本管理、提升到全局），不受 owner 限制
   - owner 作为 MEMBER 时可管理自己创建的 skill（提交审核、编辑草稿）
@@ -102,8 +103,14 @@
 | published_at | datetime | |
 | created_at | datetime | |
 
-- `status` 覆盖完整审核生命周期
-- 状态机：`DRAFT → PENDING_REVIEW → PUBLISHED / REJECTED`，`PUBLISHED → YANKED`
+- `status` 表示 version 发布生命周期，和 skill 容器状态、review task 状态分离
+- 当前代码下的实际迁移约束：
+  - 普通用户首次上传/重传新版本后，版本直接进入 `PENDING_REVIEW`
+  - `SUPER_ADMIN` 直发时可直接进入 `PUBLISHED`
+  - 审核通过：`PENDING_REVIEW → PUBLISHED`
+  - 审核拒绝：`PENDING_REVIEW → REJECTED`
+  - 撤回审核：`PENDING_REVIEW → DRAFT`
+  - 已发布撤回：`PUBLISHED → YANKED`
 - 唯一约束：`(skill_id, version)` 防止重复发布
 - `YANKED` 状态：已发布后撤回
 
@@ -112,7 +119,7 @@
 | 版本状态 | 版本号处理 |
 |---------|-----------|
 | DRAFT | 可删除该版本记录，重新使用同版本号 |
-| PENDING_REVIEW | 可撤回到 DRAFT，然后删除 |
+| PENDING_REVIEW | 可撤回到 DRAFT |
 | REJECTED | 可删除该版本记录，重新使用同版本号 |
 | PUBLISHED | 版本号永久占用，不可复用 |
 | YANKED | 版本号永久占用，不可复用，版本列表中显示但标记为不可下载 |
@@ -144,7 +151,7 @@
 | updated_by | varchar(128) | |
 | updated_at | datetime | |
 
-- `latest` 是系统保留标签，只读，自动跟随 `skill.latest_version_id`，不允许 API 手动移动
+- `latest` 是系统保留标签，只读，自动跟随 `skill.latest_version_id`；其语义严格等价于“最新已发布版本”，不允许 API 手动移动
 - 自定义标签（如 `beta`、`stable-2026q1`）允许人工创建和移动
 - 唯一约束：`(skill_id, tag_name)`
 - `target_version_id` 必须指向 `status = PUBLISHED` 的版本，应用层校验
@@ -166,7 +173,7 @@
 
 - 仅用于普通发布审核，"提升到全局"使用独立的 `promotion_request` 表
 - `version` 字段用于乐观锁，防止多 Pod 并发审核
-- 业务约束：同一 `skill_version_id` 在 `status=PENDING` 时只能存在一条记录，重复提交返回 409 Conflict。撤回（PENDING → 删除 review_task + skill_version 回退到 DRAFT）后才能再次提交
+- 业务约束：同一 `skill_version_id` 在 `status=PENDING` 时只能存在一条记录，重复提交返回 409 Conflict。撤回时删除 `PENDING` review_task，并将 `skill_version` 回退到 `DRAFT`
 - PostgreSQL 并发约束落地：通过唯一索引 `(skill_version_id)` + 软删除标记实现。`review_task` 表增加 `deleted` 字段（bigint, 默认 0），唯一索引改为 `(skill_version_id, deleted)`。撤回时将 `deleted` 设为 `id`（非零值），新提交时 `deleted=0`，利用唯一索引防止并发重复提交。或者采用更简单的方案：撤回时物理删除 review_task 记录，依赖 `INSERT` 的唯一约束 `(skill_version_id)` 防并发。PostgreSQL 还支持 partial unique index 方案：`CREATE UNIQUE INDEX ON review_task (skill_version_id) WHERE status = 'PENDING'`，更优雅地实现"PENDING 状态唯一"约束
 
 ### promotion_request
@@ -293,7 +300,7 @@
 | 角色 code | 说明 | 典型权限 |
 |-----------|------|---------|
 | `SUPER_ADMIN` | 平台超管，拥有所有权限 | 全部 |
-| `SKILL_ADMIN` | 技能治理：全局空间审核、提升审核、隐藏/撤回 | `review:approve`, `skill:manage`, `promotion:approve` |
+| `SKILL_ADMIN` | 技能治理：全局空间审核、提升审核、隐藏/恢复、撤回已发布版本 | `review:approve`, `skill:manage`, `promotion:approve` |
 | `USER_ADMIN` | 用户治理：准入审批、封禁/解封、角色分配（不可分配 SUPER_ADMIN） | `user:manage`, `user:approve` |
 | `AUDITOR` | 审计只读：查看审计日志 | `audit:read` |
 
@@ -341,7 +348,7 @@
 
 ### skill_search_document
 
-一个 skill 对应一条搜索文档，内容取 `latest_version_id` 对应版本。
+一个 skill 对应一条搜索文档，内容取“最新已发布版本”。实现上可由 `latest_version_id` 作为缓存指针承载，但其语义只能是 latest published pointer。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|

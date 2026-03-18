@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest'
 import type { PagedResponse, SkillDetail, SkillSummary } from '@/api/types'
 import { incrementSkillDownloadCount } from './skill-download-cache'
 
+const publishedLifecycleVersion = {
+  id: 100,
+  version: '1.0.0',
+  status: 'PUBLISHED',
+} as const
+
 function createSkillSummary(overrides: Partial<SkillSummary> = {}): SkillSummary {
   return {
     id: 1,
@@ -14,12 +20,13 @@ function createSkillSummary(overrides: Partial<SkillSummary> = {}): SkillSummary
     starCount: 2,
     ratingAvg: 5,
     ratingCount: 1,
-    latestVersion: '1.0.0',
-    latestVersionId: 100,
-    latestVersionStatus: 'PUBLISHED',
     namespace: 'team',
     updatedAt: '2026-03-16T00:00:00Z',
     canSubmitPromotion: false,
+    headlineVersion: publishedLifecycleVersion,
+    publishedVersion: publishedLifecycleVersion,
+    ownerPreviewVersion: undefined,
+    resolutionMode: 'PUBLISHED',
     ...overrides,
   }
 }
@@ -37,14 +44,15 @@ function createSkillDetail(overrides: Partial<SkillDetail> = {}): SkillDetail {
     ratingAvg: 5,
     ratingCount: 1,
     hidden: false,
-    latestVersion: '1.0.0',
-    latestVersionId: 100,
     namespace: 'team',
     canManageLifecycle: false,
     canSubmitPromotion: false,
-    viewingVersionStatus: 'PUBLISHED',
     canInteract: true,
     canReport: true,
+    headlineVersion: publishedLifecycleVersion,
+    publishedVersion: publishedLifecycleVersion,
+    ownerPreviewVersion: undefined,
+    resolutionMode: 'PUBLISHED',
     ...overrides,
   }
 }

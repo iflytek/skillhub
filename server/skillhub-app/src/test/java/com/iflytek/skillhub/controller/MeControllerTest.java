@@ -5,6 +5,7 @@ import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.MySkillAppService;
 import org.junit.jupiter.api.Test;
@@ -67,12 +68,13 @@ class MeControllerTest {
                                 3,
                                 null,
                                 0,
-                                "1.0.0",
-                                11L,
-                                "PUBLISHED",
                                 "team-ai",
                                 LocalDateTime.of(2026, 3, 17, 12, 0),
-                                false
+                                false,
+                                new SkillLifecycleVersionResponse(11L, "1.0.0", "PUBLISHED"),
+                                new SkillLifecycleVersionResponse(11L, "1.0.0", "PUBLISHED"),
+                                null,
+                                "PUBLISHED"
                         )),
                         9,
                         1,

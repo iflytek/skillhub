@@ -131,7 +131,7 @@ public class SkillLifecycleController extends BaseApiController {
         Skill skill = findSkill(namespace, slug, userId);
         SkillVersion skillVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), version)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", version));
-        reviewService.withdrawReview(skillVersion.getId(), userId);
+        SkillVersion withdrawnVersion = reviewService.withdrawReview(skillVersion.getId(), userId);
         auditLogService.record(
                 userId,
                 "REVIEW_WITHDRAW",
@@ -144,7 +144,7 @@ public class SkillLifecycleController extends BaseApiController {
         );
 
         return ok("response.success.updated",
-                new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "WITHDRAW_REVIEW", "DELETED"));
+                new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "WITHDRAW_REVIEW", withdrawnVersion.getStatus().name()));
     }
 
     @PostMapping("/{namespace}/{slug}/versions/{version}/rerelease")

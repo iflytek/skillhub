@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,9 +53,9 @@ class SkillSearchAppServiceTest {
                 searchQueryService,
                 skillRepository,
                 namespaceRepository,
-                skillVersionRepository,
                 namespaceService,
-                new VisibilityChecker()
+                new VisibilityChecker(),
+                new SkillLifecycleProjectionService(skillVersionRepository)
         );
     }
 

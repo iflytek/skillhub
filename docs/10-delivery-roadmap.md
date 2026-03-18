@@ -100,7 +100,7 @@
 
 - 本地认证体系（用户名密码注册/登录 + BCrypt + 密码策略 + 账号锁定）
 - 多账号合并流程（发起 → 验证 → 确认 → 数据迁移）
-- 技能治理（隐藏/恢复 + 版本撤回 YANKED）
+- 技能治理（隐藏/恢复 + 已发布版本撤回 YANKED）
 - 审计日志查询 API（多条件筛选 + 分页）
 - Prometheus 指标暴露（Actuator + Micrometer 自定义业务指标）
 - 性能优化（数据库索引 + S3 预签名 URL + 连接池调优）
@@ -111,7 +111,7 @@
 - 注册页、登录页扩展（用户名密码 + OAuth 双模式）
 - 密码修改页、账号合并页
 - 审计日志查询页
-- 技能隐藏/撤回操作（管理员可见）
+- 技能隐藏/恢复/已发布版本撤回操作（管理员可见）
 - 前端代码分割（TanStack Router lazy routes）
 - rehype-sanitize XSS 防护
 - OpenAPI SDK 工程化：生成文件纳入 CI 校验，避免新增接口回退到手写调用
@@ -125,12 +125,12 @@
 
 ### 验收
 
-本地认证可用，多账号合并可用，技能隐藏/撤回可用，审计日志可查询，Prometheus 指标可拉取，`docker compose up` 一键启动，K8s 清单可部署，开源基础设施齐全
+本地认证可用，多账号合并可用，技能隐藏/恢复/已发布版本撤回可用，审计日志可查询，Prometheus 指标可拉取，`docker compose up` 一键启动，K8s 清单可部署，开源基础设施齐全
 
 ## Phase 5：治理闭环 + 社交
 
 - 评论功能
-- 举报/标记机制（用户举报 → 管理员处理 → 隐藏/撤回）
+- 举报/标记机制（用户举报 → 管理员处理 → 隐藏/已发布版本撤回）
 - 自动安全预检（`PrePublishValidator` 从当前 `NoOp` 扩展为真实校验链）
 - Webhook/事件通知（发布通知、审核结果通知）
 - 后续 OAuth Provider 扩展（GitLab、Google 等）
@@ -141,7 +141,7 @@
 | 风险 | 应对 |
 |------|------|
 | GitHub OAuth 回调配置复杂 | 本地用 MockAuthFilter 解耦，OAuth 联调可并行 |
-| 审核流程需求变更 | skill_version.status 已预留审核状态 |
+| 审核流程需求变更 | 生命周期状态机已收敛到 `DRAFT / PENDING_REVIEW / PUBLISHED / REJECTED / YANKED`，读模型通过统一 projection 暴露 |
 | 搜索效果不佳 | SPI 架构允许随时切换实现 |
 | 前后端接口频繁变更 | OpenAPI spec 先行，类型自动生成 |
 | 新增 OAuth Provider | Spring Security OAuth2 原生多 Provider 支持，只需配置 + 属性映射 |

@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
+import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
@@ -12,6 +13,7 @@ import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.ResolveVersionResponse;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
+import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillVersionDetailResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
 import com.iflytek.skillhub.ratelimit.RateLimit;
@@ -69,14 +71,15 @@ public class SkillController extends BaseApiController {
                 detail.ratingAvg(),
                 detail.ratingCount(),
                 detail.hidden(),
-                detail.latestVersion(),
-                detail.latestVersionId(),
                 namespace,
                 detail.canManageLifecycle(),
                 detail.canSubmitPromotion(),
-                detail.viewingVersionStatus(),
                 detail.canInteract(),
-                detail.canReport()
+                detail.canReport(),
+                toLifecycleVersion(detail.headlineVersion()),
+                toLifecycleVersion(detail.publishedVersion()),
+                toLifecycleVersion(detail.ownerPreviewVersion()),
+                detail.resolutionMode()
         );
 
         return ok("response.success.read", response);
@@ -361,5 +364,12 @@ public class SkillController extends BaseApiController {
             return "https".equalsIgnoreCase(forwardedProto);
         }
         return request.isSecure();
+    }
+
+    private SkillLifecycleVersionResponse toLifecycleVersion(SkillLifecycleProjectionService.VersionProjection projection) {
+        if (projection == null) {
+            return null;
+        }
+        return new SkillLifecycleVersionResponse(projection.id(), projection.version(), projection.status());
     }
 }
