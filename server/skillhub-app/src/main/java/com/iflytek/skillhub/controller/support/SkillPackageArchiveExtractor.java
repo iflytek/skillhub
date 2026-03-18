@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.support;
 
+import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
 import org.springframework.stereotype.Component;
@@ -15,11 +16,21 @@ import java.util.zip.ZipInputStream;
 @Component
 public class SkillPackageArchiveExtractor {
 
+    private final long maxTotalPackageSize;
+    private final long maxSingleFileSize;
+    private final int maxFileCount;
+
+    public SkillPackageArchiveExtractor(SkillPublishProperties properties) {
+        this.maxTotalPackageSize = properties.getMaxPackageSize();
+        this.maxSingleFileSize = properties.getMaxSingleFileSize();
+        this.maxFileCount = properties.getMaxFileCount();
+    }
+
     public List<PackageEntry> extract(MultipartFile file) throws IOException {
-        if (file.getSize() > SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE) {
+        if (file.getSize() > maxTotalPackageSize) {
             throw new IllegalArgumentException(
                     "Package too large: " + file.getSize() + " bytes (max: "
-                            + SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE + ")"
+                            + maxTotalPackageSize + ")"
             );
         }
 
@@ -34,19 +45,19 @@ public class SkillPackageArchiveExtractor {
                     continue;
                 }
 
-                if (entries.size() >= SkillPackagePolicy.MAX_FILE_COUNT) {
+                if (entries.size() >= maxFileCount) {
                     throw new IllegalArgumentException(
-                            "Too many files: more than " + SkillPackagePolicy.MAX_FILE_COUNT
+                            "Too many files: more than " + maxFileCount
                     );
                 }
 
                 String normalizedPath = SkillPackagePolicy.normalizeEntryPath(zipEntry.getName());
                 byte[] content = readEntry(zis, normalizedPath);
                 totalSize += content.length;
-                if (totalSize > SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE) {
+                if (totalSize > maxTotalPackageSize) {
                     throw new IllegalArgumentException(
                             "Package too large: " + totalSize + " bytes (max: "
-                                    + SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE + ")"
+                                    + maxTotalPackageSize + ")"
                     );
                 }
 
@@ -70,10 +81,10 @@ public class SkillPackageArchiveExtractor {
         int read;
         while ((read = zis.read(buffer)) != -1) {
             totalRead += read;
-            if (totalRead > SkillPackagePolicy.MAX_SINGLE_FILE_SIZE) {
+            if (totalRead > maxSingleFileSize) {
                 throw new IllegalArgumentException(
                         "File too large: " + path + " (" + totalRead + " bytes, max: "
-                                + SkillPackagePolicy.MAX_SINGLE_FILE_SIZE + ")"
+                                + maxSingleFileSize + ")"
                 );
             }
             outputStream.write(buffer, 0, read);
