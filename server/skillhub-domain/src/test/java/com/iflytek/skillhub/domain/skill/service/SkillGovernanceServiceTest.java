@@ -181,6 +181,10 @@ class SkillGovernanceServiceTest {
         SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
         setField(version, "id", 2L);
         version.setStatus(SkillVersionStatus.DRAFT);
+        SkillVersion otherVersion = new SkillVersion(2L, "2.0.0", "owner");
+        setField(otherVersion, "id", 3L);
+        otherVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(version, otherVersion));
         SkillFile readme = new SkillFile(version.getId(), "README.md", 10L, "text/markdown", "sha1", "skills/demo/readme");
         SkillFile icon = new SkillFile(version.getId(), "icon.png", 20L, "image/png", "sha2", "skills/demo/icon");
         given(skillFileRepository.findByVersionId(version.getId())).willReturn(java.util.List.of(readme, icon));
@@ -212,6 +216,21 @@ class SkillGovernanceServiceTest {
         verify(objectStorageService, never()).deleteObject(any());
     }
 
+    @Test
+    void deleteVersion_rejectsLastRemainingVersion() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 2L);
+        version.setStatus(SkillVersionStatus.DRAFT);
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(version));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.version.delete.lastVersion");
+
+        verify(skillVersionRepository, never()).delete(any());
+    }
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
