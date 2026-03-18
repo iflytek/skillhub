@@ -17,7 +17,7 @@ import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
-import { getHeadlineVersion, getPublishedVersion, isOwnerPreviewResolution } from '@/shared/lib/skill-lifecycle'
+import { getHeadlineVersion, getOwnerPreviewVersion, getPublishedVersion, isOwnerPreviewResolution } from '@/shared/lib/skill-lifecycle'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -97,6 +97,7 @@ export function SkillDetailPage() {
   const { data: versions } = useSkillVersions(namespace, slug)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
+  const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
@@ -113,6 +114,8 @@ export function SkillDetailPage() {
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
+  const hasPendingOwnerPreview = ownerPreviewVersion?.status === 'PENDING_REVIEW'
+  const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
@@ -559,7 +562,9 @@ export function SkillDetailPage() {
                           )}
                           {headlineVersion?.version === version.version && (
                             <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs text-primary-foreground">
-                              {t('skillDetail.currentVersion')}
+                              {t(hasPublishedPendingReview && publishedVersion?.version === version.version
+                                ? 'skillDetail.currentPublicVersion'
+                                : 'skillDetail.currentVersion')}
                             </span>
                           )}
                         </span>
@@ -693,6 +698,45 @@ export function SkillDetailPage() {
           </Card>
         )}
 
+        {hasPublishedPendingReview && ownerPreviewVersion && (
+          <Card className="border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
+            <div className="space-y-1">
+              <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</div>
+              <p className="text-sm text-muted-foreground">
+                {t('skillDetail.pendingReviewSectionDescription', {
+                  pendingVersion: ownerPreviewVersion.version,
+                  publishedVersion: publishedVersion?.version ?? '',
+                })}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-amber-500/20 bg-background/70 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('skillDetail.pendingReviewVersionLabel')}
+                </div>
+                <div className="mt-2 font-mono text-sm font-semibold text-foreground">
+                  v{ownerPreviewVersion.version}
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-500/20 bg-background/70 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('skillDetail.pendingReviewStatusLabel')}
+                </div>
+                <div className="mt-2 text-sm font-semibold text-amber-700">
+                  {t('skillDetail.pendingReviewStatusValue')}
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setWithdrawVersionTarget(ownerPreviewVersion.version)}
+              disabled={withdrawReviewMutation.isPending}
+            >
+              {withdrawReviewMutation.isPending ? t('skillDetail.processing') : t('skillDetail.withdrawReview')}
+            </Button>
+          </Card>
+        )}
+
         <Button
           className="w-full"
           variant="outline"
@@ -714,6 +758,34 @@ export function SkillDetailPage() {
                 ? t('skillDetail.archivedPublishHint')
                 : t('skillDetail.lifecycleHint')}
             </p>
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('skillDetail.lifecyclePublicVersionLabel')}
+                </div>
+                <div className="mt-2 text-sm font-semibold text-foreground">
+                  {publishedVersion ? `v${publishedVersion.version}` : t('skillDetail.lifecycleNoPublishedVersion')}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('skillDetail.lifecyclePendingVersionLabel')}
+                </div>
+                <div className="mt-2 text-sm font-semibold text-foreground">
+                  {hasPendingOwnerPreview && ownerPreviewVersion
+                    ? t('skillDetail.lifecyclePendingVersionValue', { version: ownerPreviewVersion.version })
+                    : t('skillDetail.lifecycleNoPendingVersion')}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('skillDetail.lifecycleContainerStateLabel')}
+                </div>
+                <div className="mt-2 text-sm font-semibold text-foreground">
+                  {resolveSkillStatusLabel(skill.status)}
+                </div>
+              </div>
+            </div>
             {skill.status === 'ARCHIVED' ? (
               <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
                 {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
