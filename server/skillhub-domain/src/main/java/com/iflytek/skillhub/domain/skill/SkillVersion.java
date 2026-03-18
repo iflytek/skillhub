@@ -43,6 +43,12 @@ public class SkillVersion {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    @Column(name = "bundle_ready", nullable = false)
+    private boolean bundleReady;
+
+    @Column(name = "download_ready", nullable = false)
+    private boolean downloadReady;
+
     @Column(name = "yanked_at")
     private LocalDateTime yankedAt;
 
@@ -114,6 +120,14 @@ public class SkillVersion {
         return publishedAt;
     }
 
+    public boolean isBundleReady() {
+        return bundleReady;
+    }
+
+    public boolean isDownloadReady() {
+        return downloadReady;
+    }
+
     public LocalDateTime getYankedAt() {
         return yankedAt;
     }
@@ -161,6 +175,14 @@ public class SkillVersion {
 
     public void setPublishedAt(LocalDateTime publishedAt) {
         this.publishedAt = publishedAt;
+    }
+
+    public void setBundleReady(boolean bundleReady) {
+        this.bundleReady = bundleReady;
+    }
+
+    public void setDownloadReady(boolean downloadReady) {
+        this.downloadReady = downloadReady;
     }
 
     public void setYankedAt(LocalDateTime yankedAt) {

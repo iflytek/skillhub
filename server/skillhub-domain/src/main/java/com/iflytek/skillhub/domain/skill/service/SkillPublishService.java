@@ -314,6 +314,8 @@ public class SkillPublishService {
         // 11. Update version stats
         version.setFileCount(skillFiles.size());
         version.setTotalSize(totalSize);
+        version.setBundleReady(true);
+        version.setDownloadReady(!skillFiles.isEmpty());
         skillVersionRepository.save(version);
 
         if (!autoPublish) {

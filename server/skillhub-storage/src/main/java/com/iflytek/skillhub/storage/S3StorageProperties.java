@@ -17,6 +17,10 @@ public class S3StorageProperties {
     private boolean forcePathStyle = true;
     private boolean autoCreateBucket = false;
     private Duration presignExpiry = Duration.ofMinutes(10);
+    private Integer maxConnections = 100;
+    private Duration connectionAcquisitionTimeout = Duration.ofSeconds(2);
+    private Duration apiCallAttemptTimeout = Duration.ofSeconds(10);
+    private Duration apiCallTimeout = Duration.ofSeconds(30);
 
     public String getEndpoint() { return endpoint; }
     public void setEndpoint(String endpoint) { this.endpoint = endpoint; }
@@ -36,4 +40,12 @@ public class S3StorageProperties {
     public void setAutoCreateBucket(boolean autoCreateBucket) { this.autoCreateBucket = autoCreateBucket; }
     public Duration getPresignExpiry() { return presignExpiry; }
     public void setPresignExpiry(Duration presignExpiry) { this.presignExpiry = presignExpiry; }
+    public Integer getMaxConnections() { return maxConnections; }
+    public void setMaxConnections(Integer maxConnections) { this.maxConnections = maxConnections; }
+    public Duration getConnectionAcquisitionTimeout() { return connectionAcquisitionTimeout; }
+    public void setConnectionAcquisitionTimeout(Duration connectionAcquisitionTimeout) { this.connectionAcquisitionTimeout = connectionAcquisitionTimeout; }
+    public Duration getApiCallAttemptTimeout() { return apiCallAttemptTimeout; }
+    public void setApiCallAttemptTimeout(Duration apiCallAttemptTimeout) { this.apiCallAttemptTimeout = apiCallAttemptTimeout; }
+    public Duration getApiCallTimeout() { return apiCallTimeout; }
+    public void setApiCallTimeout(Duration apiCallTimeout) { this.apiCallTimeout = apiCallTimeout; }
 }

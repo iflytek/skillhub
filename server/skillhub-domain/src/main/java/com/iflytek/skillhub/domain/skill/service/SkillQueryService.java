@@ -314,14 +314,7 @@ public class SkillQueryService {
         if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
             return false;
         }
-        if (objectStorageService.exists(getBundleStorageKey(version.getSkillId(), version.getId()))) {
-            return true;
-        }
-        return skillFileRepository.findByVersionId(version.getId()).stream()
-                .findAny()
-                .filter(file -> skillFileRepository.findByVersionId(version.getId()).stream()
-                        .allMatch(candidate -> objectStorageService.exists(candidate.getStorageKey())))
-                .isPresent();
+        return version.isDownloadReady();
     }
 
     public ResolvedVersionDTO resolveVersion(

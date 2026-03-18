@@ -112,7 +112,7 @@ class SkillDownloadServiceTest {
         assertNotNull(result);
         assertEquals("Test Skill-1.0.0.zip", result.filename());
         assertEquals(1000L, result.contentLength());
-        assertNotNull(result.content());
+        assertNotNull(result.openContent());
         verify(skillRepository).incrementDownloadCount(1L);
         verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
@@ -157,7 +157,7 @@ class SkillDownloadServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals("Test Skill-1.0.0.zip", result.filename());
-        assertNotNull(result.content());
+        assertNotNull(result.openContent());
         verify(skillRepository).incrementDownloadCount(1L);
         verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
@@ -197,7 +197,7 @@ class SkillDownloadServiceTest {
         SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
 
         assertEquals("http://minio.local/presigned", result.presignedUrl());
-        assertNotNull(result.content());
+        assertNotNull(result.openContent());
         verify(skillRepository).incrementDownloadCount(1L);
         verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
@@ -263,11 +263,12 @@ class SkillDownloadServiceTest {
         SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
 
         assertNull(result.presignedUrl());
+        assertTrue(result.fallbackBundle());
         assertEquals("Generate Commit Message-1.0.0.zip", result.filename());
         assertEquals("application/zip", result.contentType());
         assertTrue(result.contentLength() > 0);
 
-        try (ZipInputStream zipInputStream = new ZipInputStream(result.content())) {
+        try (ZipInputStream zipInputStream = new ZipInputStream(result.openContent())) {
             var entry = zipInputStream.getNextEntry();
             assertNotNull(entry);
             assertEquals("SKILL.md", entry.getName());

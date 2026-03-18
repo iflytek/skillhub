@@ -185,6 +185,7 @@ public class SkillGovernanceService {
         version.setYankedAt(LocalDateTime.now());
         version.setYankedBy(actorUserId);
         version.setYankReason(reason);
+        version.setDownloadReady(false);
         SkillVersion saved = skillVersionRepository.save(version);
         skillRepository.findById(version.getSkillId()).ifPresent(skill -> {
             if (versionId.equals(skill.getLatestVersionId())) {
