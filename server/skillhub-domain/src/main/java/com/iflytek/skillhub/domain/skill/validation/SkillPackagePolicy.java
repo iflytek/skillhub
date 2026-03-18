@@ -16,9 +16,15 @@ public final class SkillPackagePolicy {
     public static final long MAX_TOTAL_PACKAGE_SIZE = 100 * 1024 * 1024; // 100MB
     public static final String SKILL_MD_PATH = "SKILL.md";
     public static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-            ".md", ".txt", ".json", ".yaml", ".yml",
-            ".js", ".ts", ".py", ".sh",
-            ".png", ".jpg", ".svg"
+            // 文档
+            ".md", ".txt", ".json", ".yaml", ".yml", ".html", ".css", ".csv", ".pdf",
+            // 配置
+            ".toml", ".xml", ".ini", ".cfg", ".env",
+            // 脚本/语言
+            ".js", ".ts", ".py", ".sh", ".rb", ".go", ".rs", ".java", ".kt",
+            ".lua", ".sql", ".r", ".bat", ".ps1", ".zsh", ".bash",
+            // 图片
+            ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp", ".ico"
     );
 
     private SkillPackagePolicy() {
