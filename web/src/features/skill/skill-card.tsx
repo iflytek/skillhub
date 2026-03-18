@@ -1,9 +1,6 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
-import { useStar, useToggleStar } from '@/features/social/use-star'
-import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { useStar } from '@/features/social/use-star'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
@@ -17,29 +14,13 @@ interface SkillCardProps {
 }
 
 export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
-  const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)
-  const toggleStarMutation = useToggleStar(skill.id)
-  const showStarredBadge = highlightStarred && isAuthenticated && starStatus?.starred
+  const showStarredHighlight = highlightStarred && isAuthenticated && starStatus?.starred
   const headlineVersion = getHeadlineVersion(skill)
 
-  const handleStarredBadgeClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation()
-    setConfirmOpen(true)
-  }
-
-  const handleConfirmUnstar = async () => {
-    if (!starStatus?.starred) {
-      return
-    }
-    await toggleStarMutation.mutateAsync(starStatus.starred)
-  }
-
   return (
-    <>
-      <Card
+    <Card
         className="h-full p-5 cursor-pointer group relative overflow-hidden bg-white border shadow-sm transition-shadow hover:shadow-md"
         style={{ borderColor: 'hsl(var(--border-card))' }}
         onClick={onClick}
@@ -52,18 +33,6 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
               </h3>
             </div>
             <div className="flex items-center gap-2">
-              {showStarredBadge ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/12 px-2.5 py-1 text-[11px] font-semibold text-primary shadow-sm transition-colors hover:bg-primary/18"
-                  aria-label={t('skillCard.starred')}
-                  title={t('skillCard.starredAction')}
-                  onClick={handleStarredBadgeClick}
-                >
-                  <Bookmark className="h-3.5 w-3.5 fill-current" />
-                  {t('skillCard.starred')}
-                </button>
-              ) : null}
               <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
             </div>
           </div>
@@ -87,10 +56,9 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
               {formatCompactCount(skill.downloadCount)}
             </span>
             <span
-              className={`flex items-center gap-1 ${showStarredBadge ? 'font-semibold text-primary' : ''}`}
-              aria-label={showStarredBadge ? t('skillCard.starred') : undefined}
+              className={`flex items-center gap-1 ${showStarredHighlight ? 'font-semibold text-primary' : ''}`}
             >
-              <Bookmark className={`w-3.5 h-3.5 ${showStarredBadge ? 'fill-current' : ''}`} />
+              <Bookmark className={`w-3.5 h-3.5 ${showStarredHighlight ? 'fill-current' : ''}`} />
               {skill.starCount}
             </span>
             {skill.ratingAvg !== undefined && skill.ratingCount > 0 && (
@@ -104,15 +72,5 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
           </div>
         </div>
       </Card>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={t('skillCard.unstarTitle')}
-        description={t('skillCard.unstarDescription', { name: skill.displayName })}
-        confirmText={t('skillCard.unstarConfirm')}
-        onConfirm={handleConfirmUnstar}
-      />
-    </>
   )
 }
