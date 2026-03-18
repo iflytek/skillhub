@@ -58,6 +58,9 @@ export function MySkillsPage() {
     if (status === 'PUBLISHED') {
       return t('mySkills.statusPublished')
     }
+    if (status === 'REJECTED') {
+      return t('mySkills.statusRejected')
+    }
     return status
   }
 
@@ -70,6 +73,9 @@ export function MySkillsPage() {
     }
     if (status === 'PUBLISHED') {
       return 'status-pill status-pill--published'
+    }
+    if (status === 'REJECTED') {
+      return 'status-pill status-pill--rejected'
     }
     return 'status-pill'
   }

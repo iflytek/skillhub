@@ -344,6 +344,7 @@
 .status-pill--published { background: #16a34a; }
 .status-pill--review { background: #ea580c; }
 .status-pill--archived { background: #6b7280; }
+.status-pill--rejected { background: #dc2626; }
 
 /* ─── Role pill ─── */
 .role-pill {

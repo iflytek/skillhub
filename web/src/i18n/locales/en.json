@@ -289,6 +289,7 @@
     "statusArchived": "Archived",
     "statusPendingReview": "Pending Review",
     "statusPublished": "Published",
+    "statusRejected": "Rejected",
     "archiveConfirmTitle": "Archive skill",
     "archiveConfirmDescription": "After archiving, regular users will no longer be able to view or download \"{{skill}}\". Continue?",
     "unarchiveConfirmTitle": "Restore skill",

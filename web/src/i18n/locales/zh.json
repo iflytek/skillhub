@@ -289,6 +289,7 @@
     "statusArchived": "已归档",
     "statusPendingReview": "审核中",
     "statusPublished": "已发布",
+    "statusRejected": "已拒绝",
     "archiveConfirmTitle": "确认归档技能",
     "archiveConfirmDescription": "归档后普通用户将无法看到或下载“{{skill}}”，确定继续吗？",
     "unarchiveConfirmTitle": "确认恢复技能",
