@@ -25,7 +25,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,9 +69,9 @@ class MySkillAppServiceTest {
     @Test
     void listMyStars_loadsAllPagesOfStars() {
         SkillStar firstStar = new SkillStar(1L, "user-1");
-        ReflectionTestUtils.setField(firstStar, "createdAt", LocalDateTime.of(2026, 3, 14, 10, 0));
+        ReflectionTestUtils.setField(firstStar, "createdAt", Instant.parse("2026-03-14T10:00:00Z"));
         SkillStar secondStar = new SkillStar(2L, "user-1");
-        ReflectionTestUtils.setField(secondStar, "createdAt", LocalDateTime.of(2026, 3, 14, 11, 0));
+        ReflectionTestUtils.setField(secondStar, "createdAt", Instant.parse("2026-03-14T11:00:00Z"));
 
         given(skillStarRepository.findByUserId("user-1", PageRequest.of(1, 1)))
                 .willReturn(new PageImpl<>(List.of(secondStar), PageRequest.of(1, 1), 2));
