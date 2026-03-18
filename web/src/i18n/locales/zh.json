@@ -99,8 +99,20 @@
     "quickStart": {
       "title": "快速开始",
       "subtitle": "Quick Start",
-      "description": "只需几个简单步骤，即可开始使用 SkillHub",
+      "description": "选择你的使用方式，复制说明后继续完成接入",
       "tip": "💡 提示：访问技能详情页可获取带环境变量的一键复制安装命令",
+      "tabs": {
+        "agent": "我是 Agent",
+        "human": "我是 Human"
+      },
+      "agent": {
+        "description": "发送提示词给你的 Agent，以设置SkillHub Registry",
+        "command": "Read https://www.example.com/registry/skill and follow the instructions to setup SkillHub Skills Registry"
+      },
+      "human": {
+        "description": "使用CLI工具安装Skills",
+        "command": "npx clawhub search <keyword>"
+      },
       "steps": {
         "configureEnv": {
           "title": "1. 配置环境变量",

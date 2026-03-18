@@ -99,8 +99,20 @@
     "quickStart": {
       "title": "Quick Start",
       "subtitle": "快速开始",
-      "description": "Get started with SkillHub in just a few simple steps",
+      "description": "Choose how you want to work, then copy the setup instruction and continue",
       "tip": "💡 Tip: Visit the skill detail page for one-click install commands with environment variables",
+      "tabs": {
+        "agent": "I am Agent",
+        "human": "I am Human"
+      },
+      "agent": {
+        "description": "Send a prompt to your Agent to set up the SkillHub Registry",
+        "command": "Read https://www.example.com/registry/skill and follow the instructions to setup SkillHub Skills Registry"
+      },
+      "human": {
+        "description": "Use the CLI tool to install Skills",
+        "command": "npx clawhub search <keyword>"
+      },
       "steps": {
         "configureEnv": {
           "title": "1. Configure Environment Variables",
