@@ -15,13 +15,19 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final RateLimiter rateLimiter;
+    private final ClientIpResolver clientIpResolver;
+    private final AnonymousDownloadIdentityService anonymousDownloadIdentityService;
     private final ApiResponseFactory apiResponseFactory;
     private final ObjectMapper objectMapper;
 
     public RateLimitInterceptor(RateLimiter rateLimiter,
+                                ClientIpResolver clientIpResolver,
+                                AnonymousDownloadIdentityService anonymousDownloadIdentityService,
                                 ApiResponseFactory apiResponseFactory,
                                 ObjectMapper objectMapper) {
         this.rateLimiter = rateLimiter;
+        this.clientIpResolver = clientIpResolver;
+        this.anonymousDownloadIdentityService = anonymousDownloadIdentityService;
         this.apiResponseFactory = apiResponseFactory;
         this.objectMapper = objectMapper;
     }
@@ -46,12 +52,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         // Get limit based on authentication status
         int limit = isAuthenticated ? rateLimit.authenticated() : rateLimit.anonymous();
 
-        // Build rate limit key
-        String identifier = isAuthenticated ? "user:" + userId : "ip:" + getClientIp(request);
-        String key = "ratelimit:" + rateLimit.category() + ":" + identifier;
-
-        // Check rate limit
-        boolean allowed = rateLimiter.tryAcquire(key, limit, rateLimit.windowSeconds());
+        boolean allowed = isAuthenticated
+                ? rateLimiter.tryAcquire("ratelimit:" + rateLimit.category() + ":user:" + userId, limit, rateLimit.windowSeconds())
+                : checkAnonymousLimit(request, response, rateLimit, limit);
 
         if (!allowed) {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
@@ -64,18 +67,32 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
+    private boolean checkAnonymousLimit(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        RateLimit rateLimit,
+                                        int limit) {
+        if (!"download".equals(rateLimit.category())) {
+            return rateLimiter.tryAcquire(
+                    "ratelimit:" + rateLimit.category() + ":ip:" + clientIpResolver.resolve(request),
+                    limit,
+                    rateLimit.windowSeconds()
+            );
         }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
+
+        AnonymousDownloadIdentityService.AnonymousDownloadIdentity identity =
+                anonymousDownloadIdentityService.resolve(request, response);
+        boolean ipAllowed = rateLimiter.tryAcquire(
+                "ratelimit:download:ip:" + identity.ipHash(),
+                limit,
+                rateLimit.windowSeconds()
+        );
+        if (!ipAllowed) {
+            return false;
         }
-        // Take first IP if multiple
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
+        return rateLimiter.tryAcquire(
+                "ratelimit:download:anon:" + identity.cookieHash(),
+                limit,
+                rateLimit.windowSeconds()
+        );
     }
 }

@@ -24,6 +24,7 @@ import java.util.Map;
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
+    private static final int MAX_LOG_BODY_LENGTH = 512;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -86,7 +87,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         byte[] buf = request.getContentAsByteArray();
         if (buf.length > 0) {
             try {
-                return new String(buf, request.getCharacterEncoding());
+                return truncateBody(new String(buf, request.getCharacterEncoding()));
             } catch (UnsupportedEncodingException e) {
                 return "[unknown encoding]";
             }
@@ -98,11 +99,19 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         byte[] buf = response.getContentAsByteArray();
         if (buf.length > 0) {
             try {
-                return new String(buf, response.getCharacterEncoding());
+                return truncateBody(new String(buf, response.getCharacterEncoding()));
             } catch (UnsupportedEncodingException e) {
                 return "[unknown encoding]";
             }
         }
         return null;
+    }
+
+    private String truncateBody(String body) {
+        if (body == null || body.length() <= MAX_LOG_BODY_LENGTH) {
+            return body;
+        }
+        return body.substring(0, MAX_LOG_BODY_LENGTH)
+                + "... [truncated, original length=" + body.length() + "]";
     }
 }
