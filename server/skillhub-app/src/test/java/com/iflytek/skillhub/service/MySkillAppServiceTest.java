@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -82,7 +83,7 @@ class MySkillAppServiceTest {
         ReflectionTestUtils.setField(firstSkill, "id", 1L);
         ReflectionTestUtils.setField(firstSkill, "starCount", 1);
         ReflectionTestUtils.setField(firstSkill, "namespaceId", 101L);
-        ReflectionTestUtils.setField(firstSkill, "updatedAt", LocalDateTime.of(2026, 3, 14, 10, 0));
+        ReflectionTestUtils.setField(firstSkill, "updatedAt", Instant.parse("2026-03-14T10:00:00Z"));
 
         Skill secondSkill = new Skill(2L, "second-skill", "user-1", SkillVisibility.PUBLIC);
         secondSkill.setDisplayName("Second Skill");
@@ -90,7 +91,7 @@ class MySkillAppServiceTest {
         ReflectionTestUtils.setField(secondSkill, "id", 2L);
         ReflectionTestUtils.setField(secondSkill, "starCount", 2);
         ReflectionTestUtils.setField(secondSkill, "namespaceId", 101L);
-        ReflectionTestUtils.setField(secondSkill, "updatedAt", LocalDateTime.of(2026, 3, 14, 11, 0));
+        ReflectionTestUtils.setField(secondSkill, "updatedAt", Instant.parse("2026-03-14T11:00:00Z"));
 
         given(skillRepository.findByIdIn(List.of(2L))).willReturn(List.of(secondSkill));
         given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
@@ -110,12 +111,12 @@ class MySkillAppServiceTest {
         skill.setDisplayName("Draft Skill");
         skill.setSummary("pending review");
         ReflectionTestUtils.setField(skill, "id", 1L);
-        ReflectionTestUtils.setField(skill, "updatedAt", LocalDateTime.of(2026, 3, 15, 10, 0));
+        ReflectionTestUtils.setField(skill, "updatedAt", Instant.parse("2026-03-15T10:00:00Z"));
 
         SkillVersion pendingVersion = new SkillVersion(1L, "1.0.0", "user-1");
         pendingVersion.setStatus(SkillVersionStatus.PENDING_REVIEW);
         ReflectionTestUtils.setField(pendingVersion, "id", 11L);
-        ReflectionTestUtils.setField(pendingVersion, "createdAt", LocalDateTime.of(2026, 3, 15, 9, 30));
+        ReflectionTestUtils.setField(pendingVersion, "createdAt", Instant.parse("2026-03-15T09:30:00Z"));
 
         given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
@@ -140,12 +141,12 @@ class MySkillAppServiceTest {
         skill.setDisplayName("Team Skill");
         skill.setSummary("published");
         ReflectionTestUtils.setField(skill, "id", 2L);
-        ReflectionTestUtils.setField(skill, "updatedAt", LocalDateTime.of(2026, 3, 15, 11, 0));
+        ReflectionTestUtils.setField(skill, "updatedAt", Instant.parse("2026-03-15T11:00:00Z"));
 
         SkillVersion publishedVersion = new SkillVersion(2L, "1.2.0", "user-1");
         publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
         ReflectionTestUtils.setField(publishedVersion, "id", 22L);
-        ReflectionTestUtils.setField(publishedVersion, "createdAt", LocalDateTime.of(2026, 3, 15, 10, 30));
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", Instant.parse("2026-03-15T10:30:00Z"));
 
         Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
         ReflectionTestUtils.setField(namespace, "id", 101L);
@@ -176,7 +177,7 @@ class MySkillAppServiceTest {
         SkillVersion publishedVersion = new SkillVersion(2L, "1.2.0", "user-1");
         publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
         ReflectionTestUtils.setField(publishedVersion, "id", 22L);
-        ReflectionTestUtils.setField(publishedVersion, "createdAt", LocalDateTime.of(2026, 3, 15, 10, 30));
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", Instant.parse("2026-03-15T10:30:00Z"));
 
         Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
         ReflectionTestUtils.setField(namespace, "id", 101L);

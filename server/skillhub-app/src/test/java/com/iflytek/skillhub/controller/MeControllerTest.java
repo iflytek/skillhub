@@ -19,7 +19,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -69,7 +69,7 @@ class MeControllerTest {
                                 null,
                                 0,
                                 "team-ai",
-                                LocalDateTime.of(2026, 3, 17, 12, 0),
+                                Instant.parse("2026-03-17T12:00:00Z"),
                                 false,
                                 new SkillLifecycleVersionResponse(11L, "1.0.0", "PUBLISHED"),
                                 new SkillLifecycleVersionResponse(11L, "1.0.0", "PUBLISHED"),

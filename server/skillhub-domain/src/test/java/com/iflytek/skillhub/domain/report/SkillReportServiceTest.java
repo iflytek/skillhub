@@ -14,6 +14,9 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SkillReportServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-03-18T08:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private SkillRepository skillRepository;
@@ -48,7 +53,8 @@ class SkillReportServiceTest {
                 skillReportRepository,
                 auditLogService,
                 skillGovernanceService,
-                governanceNotificationService
+                governanceNotificationService,
+                CLOCK
         );
     }
 
@@ -103,6 +109,7 @@ class SkillReportServiceTest {
 
         assertThat(saved.getStatus()).isEqualTo(SkillReportStatus.RESOLVED);
         assertThat(saved.getHandledBy()).isEqualTo("admin");
+        assertThat(saved.getHandledAt()).isEqualTo(Instant.now(CLOCK));
     }
 
     @Test

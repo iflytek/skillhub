@@ -22,8 +22,11 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Map;
+import java.time.ZoneOffset;
 import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +36,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SkillGovernanceServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-03-18T09:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private SkillRepository skillRepository;
@@ -57,7 +62,8 @@ class SkillGovernanceServiceTest {
                 skillFileRepository,
                 objectStorageService,
                 auditLogService,
-                eventPublisher
+                eventPublisher,
+                CLOCK
         );
     }
 
@@ -71,6 +77,7 @@ class SkillGovernanceServiceTest {
 
         assertThat(result.isHidden()).isTrue();
         assertThat(result.getHiddenBy()).isEqualTo("admin");
+        assertThat(result.getHiddenAt()).isEqualTo(Instant.now(CLOCK));
         verify(auditLogService).record("admin", "HIDE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", "{\"reason\":\"policy\"}");
     }
 
@@ -125,6 +132,7 @@ class SkillGovernanceServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.YANKED);
         assertThat(result.getYankedBy()).isEqualTo("admin");
+        assertThat(result.getYankedAt()).isEqualTo(Instant.now(CLOCK));
         verify(auditLogService).record("admin", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
     }
 
@@ -151,12 +159,12 @@ class SkillGovernanceServiceTest {
         SkillVersion yanked = new SkillVersion(2L, "2.0.0", "owner");
         setField(yanked, "id", 22L);
         yanked.setStatus(SkillVersionStatus.PUBLISHED);
-        yanked.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 18, 10, 0));
+        yanked.setPublishedAt(Instant.parse("2026-03-18T10:00:00Z"));
 
         SkillVersion fallback = new SkillVersion(2L, "1.0.0", "owner");
         setField(fallback, "id", 11L);
         fallback.setStatus(SkillVersionStatus.PUBLISHED);
-        fallback.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 17, 10, 0));
+        fallback.setPublishedAt(Instant.parse("2026-03-17T10:00:00Z"));
 
         Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
         setField(skill, "id", 2L);

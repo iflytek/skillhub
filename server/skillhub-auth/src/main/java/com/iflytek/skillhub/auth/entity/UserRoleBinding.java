@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.auth.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_role_binding",
@@ -19,7 +20,7 @@ public class UserRoleBinding {
     private Role role;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     protected UserRoleBinding() {}
 
@@ -29,10 +30,11 @@ public class UserRoleBinding {
     }
 
     @PrePersist
-    void prePersist() { this.createdAt = LocalDateTime.now(); }
+    void prePersist() { this.createdAt = Instant.now(Clock.systemUTC()); }
 
     public Long getId() { return id; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public Role getRole() { return role; }
+    public Instant getCreatedAt() { return createdAt; }
 }

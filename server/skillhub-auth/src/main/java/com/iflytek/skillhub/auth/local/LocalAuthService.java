@@ -8,8 +8,9 @@ import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -38,19 +39,22 @@ public class LocalAuthService {
     private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
+    private final Clock clock;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
                             UserRoleBindingRepository userRoleBindingRepository,
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
-                            PasswordEncoder passwordEncoder) {
+                            PasswordEncoder passwordEncoder,
+                            Clock clock) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
         this.globalNamespaceMembershipService = globalNamespaceMembershipService;
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
+        this.clock = clock;
     }
 
     @Transactional
@@ -168,8 +172,9 @@ public class LocalAuthService {
     }
 
     private void ensureNotLocked(LocalCredential credential) {
-        if (credential.getLockedUntil() != null && credential.getLockedUntil().isAfter(LocalDateTime.now())) {
-            long minutes = Math.max(1, Duration.between(LocalDateTime.now(), credential.getLockedUntil()).toMinutes());
+        Instant now = currentTime();
+        if (credential.getLockedUntil() != null && credential.getLockedUntil().isAfter(now)) {
+            long minutes = Math.max(1, Duration.between(now, credential.getLockedUntil()).toMinutes());
             throw new AuthFlowException(HttpStatus.LOCKED, "error.auth.local.locked", minutes);
         }
     }
@@ -178,9 +183,13 @@ public class LocalAuthService {
         int failedAttempts = credential.getFailedAttempts() + 1;
         credential.setFailedAttempts(failedAttempts);
         if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-            credential.setLockedUntil(LocalDateTime.now().plus(LOCK_DURATION));
+            credential.setLockedUntil(currentTime().plus(LOCK_DURATION));
         }
         credentialRepository.save(credential);
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 
     private AuthFlowException invalidCredentials() {

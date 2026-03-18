@@ -12,6 +12,9 @@ import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpSession;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -41,7 +44,8 @@ class AuthContextFilterTest {
     AuthContextFilterTest() {
         StaticMessageSource messageSource = new StaticMessageSource();
         messageSource.addMessage("error.auth.local.accountDisabled", Locale.ENGLISH, "This account has been disabled");
-        ApiResponseFactory apiResponseFactory = new ApiResponseFactory(messageSource);
+        Clock clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
+        ApiResponseFactory apiResponseFactory = new ApiResponseFactory(messageSource, clock);
         filter = new AuthContextFilter(
                 namespaceMemberRepository,
                 userAccountRepository,

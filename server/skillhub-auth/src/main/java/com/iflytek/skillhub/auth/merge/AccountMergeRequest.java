@@ -7,7 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "account_merge_request")
@@ -35,20 +36,20 @@ public class AccountMergeRequest {
     private String verificationToken;
 
     @Column(name = "token_expires_at")
-    private LocalDateTime tokenExpiresAt;
+    private Instant tokenExpiresAt;
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     protected AccountMergeRequest() {}
 
     public AccountMergeRequest(String primaryUserId,
                                String secondaryUserId,
                                String verificationToken,
-                               LocalDateTime tokenExpiresAt) {
+                               Instant tokenExpiresAt) {
         this.primaryUserId = primaryUserId;
         this.secondaryUserId = secondaryUserId;
         this.verificationToken = verificationToken;
@@ -58,7 +59,7 @@ public class AccountMergeRequest {
 
     @PrePersist
     void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getId() { return id; }
@@ -68,9 +69,9 @@ public class AccountMergeRequest {
     public void setStatus(String status) { this.status = status; }
     public String getVerificationToken() { return verificationToken; }
     public void setVerificationToken(String verificationToken) { this.verificationToken = verificationToken; }
-    public LocalDateTime getTokenExpiresAt() { return tokenExpiresAt; }
-    public void setTokenExpiresAt(LocalDateTime tokenExpiresAt) { this.tokenExpiresAt = tokenExpiresAt; }
-    public LocalDateTime getCompletedAt() { return completedAt; }
-    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public Instant getTokenExpiresAt() { return tokenExpiresAt; }
+    public void setTokenExpiresAt(Instant tokenExpiresAt) { this.tokenExpiresAt = tokenExpiresAt; }
+    public Instant getCompletedAt() { return completedAt; }
+    public void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
+    public Instant getCreatedAt() { return createdAt; }
 }

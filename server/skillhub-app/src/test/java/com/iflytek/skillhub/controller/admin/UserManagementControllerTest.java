@@ -19,9 +19,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
-import java.time.LocalDateTime;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -74,7 +74,7 @@ class UserManagementControllerTest {
                                 "alice@example.com",
                                 "ACTIVE",
                                 List.of("AUDITOR"),
-                                LocalDateTime.of(2026, 3, 13, 9, 0))),
+                                Instant.parse("2026-03-13T09:00:00Z"))),
                         1,
                         0,
                         20));
@@ -86,6 +86,7 @@ class UserManagementControllerTest {
             .andExpect(jsonPath("$.data.total").value(1))
             .andExpect(jsonPath("$.data.items[0].id").value("user-1"))
             .andExpect(jsonPath("$.data.items[0].email").value("alice@example.com"))
+            .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-03-13T09:00:00Z"))
             .andExpect(jsonPath("$.data.items[0].platformRoles[0]").value("AUDITOR"));
     }
 

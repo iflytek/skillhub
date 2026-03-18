@@ -1,6 +1,6 @@
 package com.iflytek.skillhub.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record SkillVersionDetailResponse(
         Long id,
@@ -9,7 +9,7 @@ public record SkillVersionDetailResponse(
         String changelog,
         int fileCount,
         long totalSize,
-        LocalDateTime publishedAt,
+        Instant publishedAt,
         String parsedMetadataJson,
         String manifestJson
 ) {}

@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.iflytek.skillhub.auth.merge.AccountMergeService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ class AccountMergeControllerTest {
         PlatformPrincipal principal = new PlatformPrincipal("usr_primary", "primary", "p@example.com", "", "local", Set.of());
         var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of());
         given(accountMergeService.initiate("usr_primary", "secondary"))
-            .willReturn(new AccountMergeService.InitiationResult(1L, "usr_secondary", "merge-token", LocalDateTime.parse("2026-03-12T22:30:00")));
+            .willReturn(new AccountMergeService.InitiationResult(1L, "usr_secondary", "merge-token", Instant.parse("2026-03-12T22:30:00Z")));
 
         mockMvc.perform(post("/api/v1/account/merge/initiate")
                 .with(authentication(auth))
@@ -57,7 +57,8 @@ class AccountMergeControllerTest {
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.mergeRequestId").value(1))
             .andExpect(jsonPath("$.data.secondaryUserId").value("usr_secondary"))
-            .andExpect(jsonPath("$.data.verificationToken").value("merge-token"));
+            .andExpect(jsonPath("$.data.verificationToken").value("merge-token"))
+            .andExpect(jsonPath("$.data.expiresAt").value("2026-03-12T22:30:00Z"));
     }
 
     @Test

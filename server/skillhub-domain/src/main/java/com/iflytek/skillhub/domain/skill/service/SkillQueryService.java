@@ -79,8 +79,8 @@ public class SkillQueryService {
             Integer ratingCount,
             boolean hidden,
             Long namespaceId,
-            java.time.LocalDateTime createdAt,
-            java.time.LocalDateTime updatedAt,
+            java.time.Instant createdAt,
+            java.time.Instant updatedAt,
             boolean canManageLifecycle,
             boolean canSubmitPromotion,
             boolean canInteract,
@@ -98,7 +98,7 @@ public class SkillQueryService {
             String changelog,
             Integer fileCount,
             Long totalSize,
-            java.time.LocalDateTime publishedAt,
+            java.time.Instant publishedAt,
             String parsedMetadataJson,
             String manifestJson
     ) {}

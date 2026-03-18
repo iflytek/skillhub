@@ -28,7 +28,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +42,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SkillPublishServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-03-18T12:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private NamespaceRepository namespaceRepository;
@@ -82,7 +86,8 @@ class SkillPublishServiceTest {
                 prePublishValidator,
                 objectMapper,
                 reviewTaskRepository,
-                eventPublisher
+                eventPublisher,
+                CLOCK
         );
     }
 
@@ -284,7 +289,7 @@ class SkillPublishServiceTest {
         );
 
         assertEquals(SkillVersionStatus.PUBLISHED, result.version().getStatus());
-        assertNotNull(result.version().getPublishedAt());
+        assertEquals(Instant.now(CLOCK), result.version().getPublishedAt());
         verify(reviewTaskRepository, never()).save(any(ReviewTask.class));
         verify(skillRepository).save(argThat(savedSkill ->
                 savedSkill.getLatestVersionId() != null && savedSkill.getLatestVersionId().equals(10L)));
@@ -357,8 +362,7 @@ class SkillPublishServiceTest {
         SkillPublishService.PublishResult result = service.publishFromEntries(
                 namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of());
 
-        assertNotNull(result.version().getVersion());
-        assertFalse(result.version().getVersion().isBlank());
+        assertEquals("20260318.120000", result.version().getVersion());
     }
 
     @Test
@@ -513,7 +517,7 @@ class SkillPublishServiceTest {
         SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", publisherId);
         setId(sourceVersion, 21L);
         sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
-        sourceVersion.setPublishedAt(LocalDateTime.of(2026, 3, 15, 10, 0));
+        sourceVersion.setPublishedAt(Instant.parse("2026-03-15T10:00:00Z"));
 
         String sourceSkillMd = """
                 ---
@@ -565,6 +569,7 @@ class SkillPublishServiceTest {
 
         assertEquals("1.2.4", result.version().getVersion());
         assertEquals(SkillVersionStatus.PUBLISHED, result.version().getStatus());
+        assertEquals(Instant.now(CLOCK), result.version().getPublishedAt());
         assertEquals(30L, skill.getLatestVersionId());
         verify(reviewTaskRepository, never()).save(any());
         verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));

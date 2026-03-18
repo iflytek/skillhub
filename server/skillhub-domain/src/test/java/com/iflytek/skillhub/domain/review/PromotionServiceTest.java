@@ -19,6 +19,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,6 +31,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PromotionServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-03-18T11:00:00Z"), ZoneOffset.UTC);
 
     @Mock private PromotionRequestRepository promotionRequestRepository;
     @Mock private SkillRepository skillRepository;
@@ -53,7 +58,7 @@ class PromotionServiceTest {
     void setUp() {
         promotionService = new PromotionService(
                 promotionRequestRepository, skillRepository, skillVersionRepository,
-                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher, governanceNotificationService);
+                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher, governanceNotificationService, CLOCK);
     }
 
     private static void setField(Object target, String fieldName, Object value) {
@@ -444,7 +449,7 @@ class PromotionServiceTest {
             assertEquals("{\"version\":\"1.0.0\"}", newVersion.getManifestJson());
             assertEquals(3, newVersion.getFileCount());
             assertEquals(1024L, newVersion.getTotalSize());
-            assertNotNull(newVersion.getPublishedAt());
+            assertEquals(Instant.now(CLOCK), newVersion.getPublishedAt());
 
             // Verify files copied
             @SuppressWarnings("unchecked")

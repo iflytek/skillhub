@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Set;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -63,7 +63,7 @@ class ClawHubCompatControllerTest {
                                 BigDecimal.valueOf(4.5),
                                 2,
                                 "global",
-                                LocalDateTime.of(2026, 3, 13, 9, 0),
+                                Instant.parse("2026-03-13T09:00:00Z"),
                                 false,
                                 new SkillLifecycleVersionResponse(11L, "1.2.0", "PUBLISHED"),
                                 new SkillLifecycleVersionResponse(11L, "1.2.0", "PUBLISHED"),

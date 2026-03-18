@@ -15,9 +15,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -58,7 +59,7 @@ class SkillControllerTest {
                         "initial",
                         2,
                         128L,
-                        LocalDateTime.of(2026, 3, 12, 12, 0),
+                        Instant.parse("2026-03-12T12:00:00Z"),
                         "{\"name\":\"demo\"}",
                         "[{\"path\":\"SKILL.md\"}]"
                 ));
@@ -71,6 +72,39 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data.manifestJson").value("[{\"path\":\"SKILL.md\"}]"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void getVersionDetailShouldRemainUtcAcrossJvmDefaultTimeZones() throws Exception {
+        when(skillQueryService.getVersionDetail(
+                eq("team"),
+                eq("demo"),
+                eq("1.0.0"),
+                eq((String) null),
+                eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(new SkillQueryService.SkillVersionDetailDTO(
+                        10L,
+                        "1.0.0",
+                        "PUBLISHED",
+                        "initial",
+                        2,
+                        128L,
+                        Instant.parse("2026-03-12T12:00:00Z"),
+                        "{\"name\":\"demo\"}",
+                        "[{\"path\":\"SKILL.md\"}]"
+                ));
+
+        TimeZone original = TimeZone.getDefault();
+        try {
+            for (String zoneId : List.of("Asia/Shanghai", "America/Los_Angeles")) {
+                TimeZone.setDefault(TimeZone.getTimeZone(zoneId));
+                mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.data.publishedAt").value("2026-03-12T12:00:00Z"));
+            }
+        } finally {
+            TimeZone.setDefault(original);
+        }
     }
 
     @Test
@@ -124,8 +158,8 @@ class SkillControllerTest {
                         0,
                         false,
                         1L,
-                        LocalDateTime.of(2026, 3, 15, 10, 0),
-                        LocalDateTime.of(2026, 3, 15, 10, 0),
+                        Instant.parse("2026-03-15T10:00:00Z"),
+                        Instant.parse("2026-03-15T10:00:00Z"),
                         true,
                         false,
                         false,

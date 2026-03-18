@@ -16,8 +16,7 @@ import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillSearchAppService;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -155,7 +154,7 @@ public class ClawHubRegistryFacade {
         }
 
         SkillVersion entity = latestVersion.get();
-        LocalDateTime createdAt = entity.getPublishedAt() != null ? entity.getPublishedAt() : entity.getCreatedAt();
+        Instant createdAt = entity.getPublishedAt() != null ? entity.getPublishedAt() : entity.getCreatedAt();
         return new ClawHubRegistrySkillVersion(
                 entity.getVersion(),
                 toEpochMillis(createdAt),
@@ -206,10 +205,10 @@ public class ClawHubRegistryFacade {
         return Math.max(0.001d, 1.0d - (index * 0.001d));
     }
 
-    private long toEpochMillis(LocalDateTime timestamp) {
+    private long toEpochMillis(Instant timestamp) {
         if (timestamp == null) {
             return 0L;
         }
-        return timestamp.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return timestamp.toEpochMilli();
     }
 }

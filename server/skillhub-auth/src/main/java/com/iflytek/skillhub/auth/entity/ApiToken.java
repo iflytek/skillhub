@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.auth.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -35,16 +36,16 @@ public class ApiToken {
     private String scopeJson;
 
     @Column(name = "expires_at")
-    private LocalDateTime expiresAt;
+    private Instant expiresAt;
 
     @Column(name = "last_used_at")
-    private LocalDateTime lastUsedAt;
+    private Instant lastUsedAt;
 
     @Column(name = "revoked_at")
-    private LocalDateTime revokedAt;
+    private Instant revokedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     protected ApiToken() {}
 
@@ -59,7 +60,7 @@ public class ApiToken {
     }
 
     @PrePersist
-    void prePersist() { this.createdAt = LocalDateTime.now(); }
+    void prePersist() { this.createdAt = Instant.now(Clock.systemUTC()); }
 
     public Long getId() { return id; }
     public String getSubjectType() { return subjectType; }
@@ -71,14 +72,16 @@ public class ApiToken {
     public String getTokenPrefix() { return tokenPrefix; }
     public String getTokenHash() { return tokenHash; }
     public String getScopeJson() { return scopeJson; }
-    public LocalDateTime getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
-    public LocalDateTime getLastUsedAt() { return lastUsedAt; }
-    public void setLastUsedAt(LocalDateTime lastUsedAt) { this.lastUsedAt = lastUsedAt; }
-    public LocalDateTime getRevokedAt() { return revokedAt; }
-    public void setRevokedAt(LocalDateTime revokedAt) { this.revokedAt = revokedAt; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public Instant getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
+    public Instant getLastUsedAt() { return lastUsedAt; }
+    public void setLastUsedAt(Instant lastUsedAt) { this.lastUsedAt = lastUsedAt; }
+    public Instant getRevokedAt() { return revokedAt; }
+    public void setRevokedAt(Instant revokedAt) { this.revokedAt = revokedAt; }
+    public Instant getCreatedAt() { return createdAt; }
     public boolean isRevoked() { return revokedAt != null; }
-    public boolean isExpired() { return expiresAt != null && expiresAt.isBefore(LocalDateTime.now()); }
+    public boolean isExpired() { return isExpired(Instant.now(Clock.systemUTC())); }
+    public boolean isExpired(Instant referenceTime) { return expiresAt != null && expiresAt.isBefore(referenceTime); }
     public boolean isValid() { return !isRevoked() && !isExpired(); }
+    public boolean isValid(Instant referenceTime) { return !isRevoked() && !isExpired(referenceTime); }
 }

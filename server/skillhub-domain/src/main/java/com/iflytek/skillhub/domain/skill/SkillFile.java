@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.domain.skill;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "skill_file")
@@ -30,7 +31,7 @@ public class SkillFile {
     private String storageKey;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     protected SkillFile() {
     }
@@ -46,7 +47,7 @@ public class SkillFile {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now(Clock.systemUTC());
     }
 
     // Getters
@@ -78,7 +79,7 @@ public class SkillFile {
         return storageKey;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 }

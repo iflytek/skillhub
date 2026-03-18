@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -52,8 +53,8 @@ public class TokenController extends BaseApiController {
                 result.entity().getId(),
                 result.entity().getName(),
                 result.entity().getTokenPrefix(),
-                result.entity().getCreatedAt().toString(),
-                result.entity().getExpiresAt() != null ? result.entity().getExpiresAt().toString() : ""
+                formatInstant(result.entity().getCreatedAt()),
+                formatInstant(result.entity().getExpiresAt())
         ));
     }
 
@@ -67,9 +68,9 @@ public class TokenController extends BaseApiController {
             t.getId(),
             t.getName(),
             t.getTokenPrefix(),
-            t.getCreatedAt().toString(),
-            t.getExpiresAt() != null ? t.getExpiresAt().toString() : "",
-            t.getLastUsedAt() != null ? t.getLastUsedAt().toString() : ""
+            formatInstant(t.getCreatedAt()),
+            formatInstant(t.getExpiresAt()),
+            formatInstant(t.getLastUsedAt())
         ));
         return ok("response.success.read", PageResponse.from(result));
     }
@@ -92,9 +93,13 @@ public class TokenController extends BaseApiController {
                 token.getId(),
                 token.getName(),
                 token.getTokenPrefix(),
-                token.getCreatedAt().toString(),
-                token.getExpiresAt() != null ? token.getExpiresAt().toString() : "",
-                token.getLastUsedAt() != null ? token.getLastUsedAt().toString() : ""
+                formatInstant(token.getCreatedAt()),
+                formatInstant(token.getExpiresAt()),
+                formatInstant(token.getLastUsedAt())
         ));
+    }
+
+    private String formatInstant(Instant value) {
+        return value == null ? "" : value.toString();
     }
 }

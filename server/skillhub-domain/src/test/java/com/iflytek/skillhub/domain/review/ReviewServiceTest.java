@@ -28,11 +28,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -40,6 +43,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-03-18T10:00:00Z"), ZoneOffset.UTC);
 
     @Mock private ReviewTaskRepository reviewTaskRepository;
     @Mock private SkillVersionRepository skillVersionRepository;
@@ -65,7 +70,7 @@ class ReviewServiceTest {
         objectMapper = new ObjectMapper();
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService);
+                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService, CLOCK);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -243,7 +248,7 @@ class ReviewServiceTest {
 
             assertNotNull(result);
             assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
-            assertNotNull(sv.getPublishedAt());
+            assertEquals(Instant.now(CLOCK), sv.getPublishedAt());
             assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
             assertEquals("Approved Name", skill.getDisplayName());
             assertEquals("Approved Summary", skill.getSummary());

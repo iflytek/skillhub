@@ -22,7 +22,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class ReviewService {
     private final ObjectMapper objectMapper;
     private final SkillGovernanceService skillGovernanceService;
     private final GovernanceNotificationService governanceNotificationService;
+    private final Clock clock;
 
     public ReviewService(ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
@@ -49,7 +51,8 @@ public class ReviewService {
                          ApplicationEventPublisher eventPublisher,
                          ObjectMapper objectMapper,
                          SkillGovernanceService skillGovernanceService,
-                         GovernanceNotificationService governanceNotificationService) {
+                         GovernanceNotificationService governanceNotificationService,
+                         Clock clock) {
         this.reviewTaskRepository = reviewTaskRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
@@ -59,6 +62,7 @@ public class ReviewService {
         this.objectMapper = objectMapper;
         this.skillGovernanceService = skillGovernanceService;
         this.governanceNotificationService = governanceNotificationService;
+        this.clock = clock;
     }
 
     @Transactional
@@ -175,7 +179,7 @@ public class ReviewService {
         }
 
         skillVersion.setStatus(SkillVersionStatus.PUBLISHED);
-        skillVersion.setPublishedAt(LocalDateTime.now());
+        skillVersion.setPublishedAt(currentTime());
         skillVersionRepository.save(skillVersion);
 
         skill.setLatestVersionId(skillVersion.getId());
@@ -300,5 +304,9 @@ public class ReviewService {
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
         }
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 }

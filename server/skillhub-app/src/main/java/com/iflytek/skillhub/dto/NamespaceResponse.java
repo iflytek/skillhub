@@ -4,7 +4,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record NamespaceResponse(
         Long id,
@@ -15,8 +15,8 @@ public record NamespaceResponse(
         NamespaceType type,
         String avatarUrl,
         String createdBy,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
     public static NamespaceResponse from(Namespace namespace) {
         return new NamespaceResponse(

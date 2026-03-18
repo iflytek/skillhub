@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -120,7 +121,14 @@ class GovernanceControllerTest {
 
     @Test
     void notifications_returnsCurrentUserNotifications() throws Exception {
-        UserNotification notification = new UserNotification("admin", "REVIEW", "REVIEW_TASK", 99L, "Review approved", "{}");
+        UserNotification notification = new UserNotification(
+                "admin",
+                "REVIEW",
+                "REVIEW_TASK",
+                99L,
+                "Review approved",
+                "{}",
+                Instant.parse("2026-03-18T00:00:00Z"));
         when(governanceNotificationService.listNotifications("admin")).thenReturn(List.of(notification));
 
         mockMvc.perform(get("/api/v1/governance/notifications").with(auth("admin", Set.of("SKILL_ADMIN"))))
@@ -129,8 +137,40 @@ class GovernanceControllerTest {
     }
 
     @Test
+    void notifications_remainUtcAcrossJvmDefaultTimeZones() throws Exception {
+        UserNotification notification = new UserNotification(
+                "admin",
+                "REVIEW",
+                "REVIEW_TASK",
+                99L,
+                "Review approved",
+                "{}",
+                Instant.parse("2026-03-18T00:00:00Z"));
+        when(governanceNotificationService.listNotifications("admin")).thenReturn(List.of(notification));
+
+        TimeZone original = TimeZone.getDefault();
+        try {
+            for (String zoneId : List.of("Asia/Shanghai", "America/Los_Angeles")) {
+                TimeZone.setDefault(TimeZone.getTimeZone(zoneId));
+                mockMvc.perform(get("/api/v1/governance/notifications").with(auth("admin", Set.of("SKILL_ADMIN"))))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.data[0].createdAt").value("2026-03-18T00:00:00Z"));
+            }
+        } finally {
+            TimeZone.setDefault(original);
+        }
+    }
+
+    @Test
     void markRead_returnsUpdatedNotification() throws Exception {
-        UserNotification notification = new UserNotification("admin", "REVIEW", "REVIEW_TASK", 99L, "Review approved", "{}");
+        UserNotification notification = new UserNotification(
+                "admin",
+                "REVIEW",
+                "REVIEW_TASK",
+                99L,
+                "Review approved",
+                "{}",
+                Instant.parse("2026-03-18T00:00:00Z"));
         when(governanceNotificationService.markRead(10L, "admin")).thenReturn(notification);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/governance/notifications/10/read")

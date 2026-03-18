@@ -3,13 +3,18 @@ package com.iflytek.skillhub.domain.audit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
+
 @Service
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
+    private final Clock clock;
 
-    public AuditLogService(AuditLogRepository auditLogRepository) {
+    public AuditLogService(AuditLogRepository auditLogRepository, Clock clock) {
         this.auditLogRepository = auditLogRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -21,6 +26,7 @@ public class AuditLogService {
                            String clientIp,
                            String userAgent,
                            String detailJson) {
+        Instant createdAt = Instant.now(clock);
         return auditLogRepository.save(new AuditLog(
             actorUserId,
             action,
@@ -29,7 +35,8 @@ public class AuditLogService {
             requestId,
             clientIp,
             userAgent,
-            detailJson
+            detailJson,
+            createdAt
         ));
     }
 }

@@ -6,7 +6,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "skill_version_stats")
@@ -23,7 +24,7 @@ public class SkillVersionStats {
     private Long downloadCount = 0L;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     protected SkillVersionStats() {
     }
@@ -35,12 +36,12 @@ public class SkillVersionStats {
 
     @PrePersist
     protected void onCreate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now(Clock.systemUTC());
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getSkillVersionId() {
@@ -55,7 +56,7 @@ public class SkillVersionStats {
         return downloadCount;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }

@@ -17,7 +17,9 @@ import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -47,6 +49,7 @@ public class AccountMergeService {
     private final ApiTokenRepository apiTokenRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public AccountMergeService(AccountMergeRequestRepository mergeRequestRepository,
@@ -56,7 +59,8 @@ public class AccountMergeService {
                                UserRoleBindingRepository userRoleBindingRepository,
                                ApiTokenRepository apiTokenRepository,
                                NamespaceMemberRepository namespaceMemberRepository,
-                               PasswordEncoder passwordEncoder) {
+                               PasswordEncoder passwordEncoder,
+                               Clock clock) {
         this.mergeRequestRepository = mergeRequestRepository;
         this.userAccountRepository = userAccountRepository;
         this.localCredentialRepository = localCredentialRepository;
@@ -65,9 +69,10 @@ public class AccountMergeService {
         this.apiTokenRepository = apiTokenRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.passwordEncoder = passwordEncoder;
+        this.clock = clock;
     }
 
-    public record InitiationResult(Long mergeRequestId, String secondaryUserId, String verificationToken, LocalDateTime expiresAt) {}
+    public record InitiationResult(Long mergeRequestId, String secondaryUserId, String verificationToken, Instant expiresAt) {}
 
     @Transactional
     public InitiationResult initiate(String primaryUserId, String secondaryIdentifier) {
@@ -93,7 +98,7 @@ public class AccountMergeService {
             primaryUserId,
             secondaryUser.getId(),
             passwordEncoder.encode(rawToken),
-            LocalDateTime.now().plusMinutes(30)
+            currentTime().plus(Duration.ofMinutes(30))
         );
         request = mergeRequestRepository.save(request);
         return new InitiationResult(request.getId(), secondaryUser.getId(), rawToken, request.getTokenExpiresAt());
@@ -106,7 +111,7 @@ public class AccountMergeService {
         if (!AccountMergeRequest.STATUS_PENDING.equals(request.getStatus())) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.requestNotPending");
         }
-        if (request.getTokenExpiresAt() == null || request.getTokenExpiresAt().isBefore(LocalDateTime.now())) {
+        if (request.getTokenExpiresAt() == null || request.getTokenExpiresAt().isBefore(currentTime())) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.tokenExpired");
         }
         if (!passwordEncoder.matches(verificationToken, request.getVerificationToken())) {
@@ -152,7 +157,7 @@ public class AccountMergeService {
         userAccountRepository.save(secondaryUser);
 
         request.setStatus(AccountMergeRequest.STATUS_COMPLETED);
-        request.setCompletedAt(LocalDateTime.now());
+        request.setCompletedAt(currentTime());
         request.setVerificationToken(null);
         mergeRequestRepository.save(request);
     }
@@ -271,5 +276,9 @@ public class AccountMergeService {
         byte[] tokenBytes = new byte[24];
         secureRandom.nextBytes(tokenBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 }

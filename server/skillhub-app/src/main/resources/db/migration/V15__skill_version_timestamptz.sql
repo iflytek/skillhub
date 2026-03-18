@@ -1,0 +1,4 @@
+ALTER TABLE skill_version
+    ALTER COLUMN published_at TYPE TIMESTAMPTZ USING published_at AT TIME ZONE 'UTC',
+    ALTER COLUMN created_at TYPE TIMESTAMPTZ USING created_at AT TIME ZONE 'UTC',
+    ALTER COLUMN yanked_at TYPE TIMESTAMPTZ USING yanked_at AT TIME ZONE 'UTC';

@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.domain.skill;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -41,7 +42,7 @@ public class SkillVersion {
     private Long totalSize = 0L;
 
     @Column(name = "published_at")
-    private LocalDateTime publishedAt;
+    private Instant publishedAt;
 
     @Column(name = "bundle_ready", nullable = false)
     private boolean bundleReady;
@@ -50,7 +51,7 @@ public class SkillVersion {
     private boolean downloadReady;
 
     @Column(name = "yanked_at")
-    private LocalDateTime yankedAt;
+    private Instant yankedAt;
 
     @Column(name = "yanked_by", length = 128)
     private String yankedBy;
@@ -62,7 +63,7 @@ public class SkillVersion {
     private String createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     protected SkillVersion() {
     }
@@ -76,7 +77,7 @@ public class SkillVersion {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now(Clock.systemUTC());
     }
 
     // Getters
@@ -116,7 +117,7 @@ public class SkillVersion {
         return totalSize;
     }
 
-    public LocalDateTime getPublishedAt() {
+    public Instant getPublishedAt() {
         return publishedAt;
     }
 
@@ -128,7 +129,7 @@ public class SkillVersion {
         return downloadReady;
     }
 
-    public LocalDateTime getYankedAt() {
+    public Instant getYankedAt() {
         return yankedAt;
     }
 
@@ -144,7 +145,7 @@ public class SkillVersion {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
@@ -173,7 +174,7 @@ public class SkillVersion {
         this.totalSize = totalSize;
     }
 
-    public void setPublishedAt(LocalDateTime publishedAt) {
+    public void setPublishedAt(Instant publishedAt) {
         this.publishedAt = publishedAt;
     }
 
@@ -185,7 +186,7 @@ public class SkillVersion {
         this.downloadReady = downloadReady;
     }
 
-    public void setYankedAt(LocalDateTime yankedAt) {
+    public void setYankedAt(Instant yankedAt) {
         this.yankedAt = yankedAt;
     }
 

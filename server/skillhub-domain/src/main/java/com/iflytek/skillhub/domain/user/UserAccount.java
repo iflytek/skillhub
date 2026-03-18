@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.domain.user;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_account")
@@ -27,10 +28,10 @@ public class UserAccount {
     private String mergedToUserId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     protected UserAccount() {}
 
@@ -44,13 +45,13 @@ public class UserAccount {
 
     @PrePersist
     void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now(Clock.systemUTC());
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now(Clock.systemUTC());
     }
 
     public String getId() { return id; }
@@ -64,7 +65,7 @@ public class UserAccount {
     public void setStatus(UserStatus status) { this.status = status; }
     public String getMergedToUserId() { return mergedToUserId; }
     public void setMergedToUserId(String mergedToUserId) { this.mergedToUserId = mergedToUserId; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
     public boolean isActive() { return this.status == UserStatus.ACTIVE; }
 }

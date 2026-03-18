@@ -1,6 +1,6 @@
 package com.iflytek.skillhub.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record AdminUserSummaryResponse(
@@ -9,6 +9,6 @@ public record AdminUserSummaryResponse(
         String email,
         String status,
         List<String> platformRoles,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {
 }

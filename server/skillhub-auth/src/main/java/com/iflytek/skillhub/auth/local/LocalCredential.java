@@ -8,7 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "local_credential")
@@ -31,13 +32,13 @@ public class LocalCredential {
     private int failedAttempts;
 
     @Column(name = "locked_until")
-    private LocalDateTime lockedUntil;
+    private Instant lockedUntil;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     protected LocalCredential() {}
 
@@ -50,13 +51,13 @@ public class LocalCredential {
 
     @PrePersist
     void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now(Clock.systemUTC());
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getId() {
@@ -87,15 +88,23 @@ public class LocalCredential {
         this.failedAttempts = failedAttempts;
     }
 
-    public LocalDateTime getLockedUntil() {
+    public Instant getLockedUntil() {
         return lockedUntil;
     }
 
-    public void setLockedUntil(LocalDateTime lockedUntil) {
+    public void setLockedUntil(Instant lockedUntil) {
         this.lockedUntil = lockedUntil;
     }
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

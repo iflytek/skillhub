@@ -15,7 +15,8 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.storage.ObjectStorageService;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.context.ApplicationEventPublisher;
@@ -31,19 +32,22 @@ public class SkillGovernanceService {
     private final ObjectStorageService objectStorageService;
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     public SkillGovernanceService(SkillRepository skillRepository,
                                   SkillVersionRepository skillVersionRepository,
                                   SkillFileRepository skillFileRepository,
                                   ObjectStorageService objectStorageService,
                                   AuditLogService auditLogService,
-                                  ApplicationEventPublisher eventPublisher) {
+                                  ApplicationEventPublisher eventPublisher,
+                                  Clock clock) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillFileRepository = skillFileRepository;
         this.objectStorageService = objectStorageService;
         this.auditLogService = auditLogService;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Transactional
@@ -51,7 +55,7 @@ public class SkillGovernanceService {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
         skill.setHidden(true);
-        skill.setHiddenAt(LocalDateTime.now());
+        skill.setHiddenAt(currentInstant());
         skill.setHiddenBy(actorUserId);
         skill.setUpdatedBy(actorUserId);
         Skill saved = skillRepository.save(skill);
@@ -187,7 +191,7 @@ public class SkillGovernanceService {
             throw new DomainBadRequestException("error.skill.version.notPublished", version.getVersion());
         }
         version.setStatus(SkillVersionStatus.YANKED);
-        version.setYankedAt(LocalDateTime.now());
+        version.setYankedAt(currentInstant());
         version.setYankedBy(actorUserId);
         version.setYankReason(reason);
         version.setDownloadReady(false);
@@ -230,5 +234,9 @@ public class SkillGovernanceService {
             return null;
         }
         return "{\"reason\":\"" + reason.replace("\"", "\\\"") + "\"}";
+    }
+
+    private Instant currentInstant() {
+        return Instant.now(clock);
     }
 }

@@ -17,7 +17,9 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -44,12 +46,14 @@ class IdempotencyInterceptorTest {
     private HttpServletResponse response;
 
     private IdempotencyInterceptor interceptor;
+    private Clock clock;
 
     @BeforeEach
     void setUp() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        interceptor = new IdempotencyInterceptor(redisTemplate, idempotencyRecordRepository, objectMapper);
+        clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
+        interceptor = new IdempotencyInterceptor(redisTemplate, idempotencyRecordRepository, objectMapper, clock);
     }
 
     @Test
@@ -115,7 +119,7 @@ class IdempotencyInterceptorTest {
 
         IdempotencyRecord record = new IdempotencyRecord(
             "req-789", (String) null, (Long) null, IdempotencyStatus.PROCESSING, (Integer) null,
-            Instant.now(), Instant.now().plusSeconds(86400)
+            Instant.now(clock), Instant.now(clock).plusSeconds(86400)
         );
         when(idempotencyRecordRepository.findByRequestId("req-789")).thenReturn(Optional.of(record));
 
