@@ -56,7 +56,7 @@ npx clawhub info my-skill
 ### 4. Install Skills
 
 ```bash
-# Install latest version
+# Install latest published version
 npx clawhub install my-skill
 
 # Install specific version
@@ -88,6 +88,10 @@ SkillHub compatibility layer provides the following endpoints:
 | `/api/v1/skills/{slug}/star` | POST | Star a skill | Yes |
 | `/api/v1/skills/{slug}/unstar` | DELETE | Unstar a skill | Yes |
 | `/api/v1/publish` | POST | Publish a skill | Yes |
+
+Notes:
+- The compatibility layer may still expose the term "latest" externally, but it must strictly mean "latest published version"
+- Internally, compat responses should map from the unified lifecycle projection's `publishedVersion` rather than inferring an ad hoc "current version"
 
 \* Download endpoint authentication requirements:
 - **Global namespace (@global) PUBLIC skills**: No authentication required

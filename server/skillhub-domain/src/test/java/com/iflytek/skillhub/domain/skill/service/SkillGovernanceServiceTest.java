@@ -119,12 +119,59 @@ class SkillGovernanceServiceTest {
         version.setStatus(SkillVersionStatus.PUBLISHED);
         given(skillVersionRepository.findById(22L)).willReturn(Optional.of(version));
         given(skillVersionRepository.save(version)).willReturn(version);
+        given(skillRepository.findById(2L)).willReturn(Optional.empty());
 
         SkillVersion result = service.yankVersion(22L, "admin", "127.0.0.1", "JUnit", "broken");
 
         assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.YANKED);
         assertThat(result.getYankedBy()).isEqualTo("admin");
         verify(auditLogService).record("admin", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
+    }
+
+    @Test
+    void withdrawPendingVersion_demotesVersionToDraft() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        setField(version, "id", 2L);
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        given(skillVersionRepository.save(version)).willReturn(version);
+        given(skillRepository.save(skill)).willReturn(skill);
+
+        SkillVersion result = service.withdrawPendingVersion(skill, version, "owner");
+
+        assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.DRAFT);
+        verify(skillVersionRepository).save(version);
+        verify(skillRepository).save(skill);
+        verify(objectStorageService, never()).deleteObject(any());
+    }
+
+    @Test
+    void yankVersion_recomputesLatestPublishedPointer() {
+        SkillVersion yanked = new SkillVersion(2L, "2.0.0", "owner");
+        setField(yanked, "id", 22L);
+        yanked.setStatus(SkillVersionStatus.PUBLISHED);
+        yanked.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 18, 10, 0));
+
+        SkillVersion fallback = new SkillVersion(2L, "1.0.0", "owner");
+        setField(fallback, "id", 11L);
+        fallback.setStatus(SkillVersionStatus.PUBLISHED);
+        fallback.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 17, 10, 0));
+
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 2L);
+        skill.setLatestVersionId(22L);
+
+        given(skillVersionRepository.findById(22L)).willReturn(Optional.of(yanked));
+        given(skillVersionRepository.save(yanked)).willReturn(yanked);
+        given(skillRepository.findById(2L)).willReturn(Optional.of(skill));
+        given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(java.util.List.of(fallback));
+        given(skillRepository.save(skill)).willReturn(skill);
+
+        service.yankVersion(22L, "admin", "127.0.0.1", "JUnit", "broken");
+
+        assertThat(skill.getLatestVersionId()).isEqualTo(11L);
+        verify(skillRepository).save(skill);
     }
 
     @Test

@@ -17,6 +17,7 @@ import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
+import { getHeadlineVersion, getPublishedVersion, isOwnerPreviewResolution } from '@/shared/lib/skill-lifecycle'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -94,7 +95,9 @@ export function SkillDetailPage() {
 
   const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(namespace, slug)
   const { data: versions } = useSkillVersions(namespace, slug)
-  const selectedVersion = skill?.latestVersion ?? versions?.[0]?.version
+  const headlineVersion = skill ? getHeadlineVersion(skill) : null
+  const publishedVersion = skill ? getPublishedVersion(skill) : null
+  const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
   const documentationPath = resolveDocumentationFilePath(files)
@@ -109,7 +112,7 @@ export function SkillDetailPage() {
   const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
-  const isPendingPreview = skill?.viewingVersionStatus === 'PENDING_REVIEW'
+  const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
@@ -376,17 +379,17 @@ export function SkillDetailPage() {
   }
 
   const handleSubmitPromotion = async () => {
-    if (!skill?.latestVersionId) {
+    if (!skill || !publishedVersion) {
       return
     }
     try {
       await submitPromotionMutation.mutateAsync({
         sourceSkillId: skill.id,
-        sourceVersionId: skill.latestVersionId,
+        sourceVersionId: publishedVersion.id,
       })
       toast.success(
         t('skillDetail.promotionSuccessTitle'),
-        t('skillDetail.promotionSuccessDescription', { skill: skill.displayName, version: skill.latestVersion ?? '' }),
+        t('skillDetail.promotionSuccessDescription', { skill: skill.displayName, version: publishedVersion.version }),
       )
       setPromotionConfirmOpen(false)
     } catch (error) {
@@ -554,7 +557,7 @@ export function SkillDetailPage() {
                               {version.status}
                             </span>
                           )}
-                          {skill.latestVersion === version.version && (
+                          {headlineVersion?.version === version.version && (
                             <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs text-primary-foreground">
                               {t('skillDetail.currentVersion')}
                             </span>
@@ -627,7 +630,7 @@ export function SkillDetailPage() {
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
             <div className="font-semibold font-mono text-foreground">
-              {skill.latestVersion ? `v${skill.latestVersion}` : '—'}
+              {headlineVersion ? `v${headlineVersion.version}` : '—'}
             </div>
           </div>
 
@@ -676,7 +679,7 @@ export function SkillDetailPage() {
           </div>
         </Card>
 
-        {skill.latestVersion && canInteract && (
+        {publishedVersion && canInteract && (
           <Card className="p-5 space-y-4">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</div>
             {skill.status === 'ARCHIVED' && (
@@ -685,7 +688,7 @@ export function SkillDetailPage() {
             <InstallCommand
               namespace={namespace}
               slug={slug}
-              version={skill.latestVersion}
+              version={publishedVersion.version}
             />
           </Card>
         )}
@@ -723,11 +726,11 @@ export function SkillDetailPage() {
           </Card>
         )}
 
-        {skill.canSubmitPromotion && skill.latestVersion && skill.latestVersionId && (
+        {skill.canSubmitPromotion && publishedVersion && (
           <Card className="p-5 space-y-3">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</div>
             <p className="text-sm text-muted-foreground">
-              {t('skillDetail.promotionSectionDescription', { version: skill.latestVersion })}
+              {t('skillDetail.promotionSectionDescription', { version: publishedVersion.version })}
             </p>
             <Button variant="outline" onClick={() => setPromotionConfirmOpen(true)} disabled={submitPromotionMutation.isPending}>
               {submitPromotionMutation.isPending ? t('skillDetail.processing') : t('skillDetail.promoteToGlobal')}
@@ -797,7 +800,7 @@ export function SkillDetailPage() {
         title={t('skillDetail.promotionConfirmTitle')}
         description={t('skillDetail.promotionConfirmDescription', {
           skill: skill.displayName,
-          version: skill.latestVersion ?? '',
+          version: publishedVersion?.version ?? '',
         })}
         confirmText={t('skillDetail.promoteToGlobal')}
         onConfirm={handleSubmitPromotion}

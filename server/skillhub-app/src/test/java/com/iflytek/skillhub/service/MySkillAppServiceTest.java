@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.social.SkillStar;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,15 +51,18 @@ class MySkillAppServiceTest {
     private PromotionRequestRepository promotionRequestRepository;
 
     private MySkillAppService service;
+    private SkillLifecycleProjectionService skillLifecycleProjectionService;
 
     @BeforeEach
     void setUp() {
+        skillLifecycleProjectionService = new SkillLifecycleProjectionService(skillVersionRepository);
         service = new MySkillAppService(
                 skillRepository,
                 namespaceRepository,
                 skillVersionRepository,
                 skillStarRepository,
-                promotionRequestRepository
+                promotionRequestRepository,
+                skillLifecycleProjectionService
         );
     }
 
@@ -89,7 +93,7 @@ class MySkillAppServiceTest {
         ReflectionTestUtils.setField(secondSkill, "updatedAt", LocalDateTime.of(2026, 3, 14, 11, 0));
 
         given(skillRepository.findByIdIn(List.of(2L))).willReturn(List.of(secondSkill));
-        given(skillVersionRepository.findBySkillIdIn(List.of(2L))).willReturn(List.of());
+        given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(new Namespace("team-ai", "Team AI", "user-1")));
 
         var stars = service.listMyStars("user-1", 1, 1);
@@ -115,15 +119,18 @@ class MySkillAppServiceTest {
 
         given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
-        given(skillVersionRepository.findBySkillIdIn(List.of(1L))).willReturn(List.of(pendingVersion));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PENDING_REVIEW)).willReturn(List.of(pendingVersion));
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(new Namespace("team-ai", "Team AI", "user-1")));
 
         var skills = service.listMySkills("user-1", 0, 10);
 
         assertThat(skills.items()).hasSize(1);
-        assertThat(skills.items().get(0).latestVersion()).isEqualTo("1.0.0");
-        assertThat(skills.items().get(0).latestVersionId()).isEqualTo(11L);
-        assertThat(skills.items().get(0).latestVersionStatus()).isEqualTo("PENDING_REVIEW");
+        assertThat(skills.items().get(0).headlineVersion()).isNotNull();
+        assertThat(skills.items().get(0).headlineVersion().version()).isEqualTo("1.0.0");
+        assertThat(skills.items().get(0).headlineVersion().status()).isEqualTo("PENDING_REVIEW");
+        assertThat(skills.items().get(0).ownerPreviewVersion()).isNotNull();
+        assertThat(skills.items().get(0).ownerPreviewVersion().id()).isEqualTo(11L);
         assertThat(skills.items().get(0).canSubmitPromotion()).isFalse();
     }
 
@@ -145,7 +152,7 @@ class MySkillAppServiceTest {
 
         given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
-        given(skillVersionRepository.findBySkillIdIn(List.of(2L))).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
         given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
         given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
@@ -153,8 +160,10 @@ class MySkillAppServiceTest {
         var skills = service.listMySkills("user-1", 0, 10);
 
         assertThat(skills.items()).hasSize(1);
-        assertThat(skills.items().get(0).latestVersionId()).isEqualTo(22L);
-        assertThat(skills.items().get(0).latestVersionStatus()).isEqualTo("PUBLISHED");
+        assertThat(skills.items().get(0).publishedVersion()).isNotNull();
+        assertThat(skills.items().get(0).publishedVersion().id()).isEqualTo(22L);
+        assertThat(skills.items().get(0).headlineVersion()).isNotNull();
+        assertThat(skills.items().get(0).headlineVersion().status()).isEqualTo("PUBLISHED");
         assertThat(skills.items().get(0).canSubmitPromotion()).isTrue();
     }
 
@@ -174,7 +183,7 @@ class MySkillAppServiceTest {
 
         given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
-        given(skillVersionRepository.findBySkillIdIn(List.of(2L))).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
         given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.PENDING))
                 .willReturn(Optional.of(new PromotionRequest(2L, 22L, 999L, "user-1")));

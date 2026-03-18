@@ -56,7 +56,7 @@ npx clawhub info my-skill
 ### 4. 安装技能
 
 ```bash
-# 安装最新版本
+# 安装最新已发布版本
 npx clawhub install my-skill
 
 # 安装指定版本
@@ -88,6 +88,10 @@ SkillHub 兼容层提供以下端点：
 | `/api/v1/skills/{slug}/star` | POST | 收藏技能 | 必需 |
 | `/api/v1/skills/{slug}/unstar` | DELETE | 取消收藏 | 必需 |
 | `/api/v1/publish` | POST | 发布技能 | 必需 |
+
+说明：
+- 兼容层对外继续使用 “latest” 语义，但这里严格指向“最新已发布版本”
+- 兼容层内部实现应从统一 lifecycle projection 的 `publishedVersion` 映射，而不是自行推导“当前版本”
 
 \* 下载端点认证要求：
 - **全局命名空间（@global）的 PUBLIC 技能**：无需认证

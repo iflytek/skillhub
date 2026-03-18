@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import org.junit.jupiter.api.Test;
@@ -61,12 +62,13 @@ class ClawHubCompatControllerTest {
                                 5,
                                 BigDecimal.valueOf(4.5),
                                 2,
-                                "1.2.0",
-                                11L,
-                                "PUBLISHED",
                                 "global",
                                 LocalDateTime.of(2026, 3, 13, 9, 0),
-                                false)),
+                                false,
+                                new SkillLifecycleVersionResponse(11L, "1.2.0", "PUBLISHED"),
+                                new SkillLifecycleVersionResponse(11L, "1.2.0", "PUBLISHED"),
+                                null,
+                                "PUBLISHED")),
                         1,
                         0,
                         20

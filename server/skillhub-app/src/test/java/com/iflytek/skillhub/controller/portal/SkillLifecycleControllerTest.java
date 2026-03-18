@@ -172,6 +172,10 @@ class SkillLifecycleControllerTest {
         given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .willReturn(skill);
         given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).willReturn(java.util.Optional.of(version));
+        SkillVersion withdrawn = new SkillVersion(1L, "1.0.0", "owner");
+        setSkillVersionId(withdrawn, 2L);
+        withdrawn.setStatus(SkillVersionStatus.DRAFT);
+        given(reviewService.withdrawReview(2L, "usr_1")).willReturn(withdrawn);
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.0.0/withdraw-review")
                         .requestAttr("userId", "usr_1")
@@ -182,7 +186,7 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.skillId").value(1))
                 .andExpect(jsonPath("$.data.versionId").value(2))
                 .andExpect(jsonPath("$.data.action").value("WITHDRAW_REVIEW"))
-                .andExpect(jsonPath("$.data.status").value("DELETED"));
+                .andExpect(jsonPath("$.data.status").value("DRAFT"));
     }
 
     @Test

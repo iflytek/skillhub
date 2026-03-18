@@ -161,49 +161,50 @@ public class SkillGovernanceService {
     }
 
     @Transactional
-    public boolean withdrawPendingVersion(Skill skill,
-                                          SkillVersion version,
-                                          String actorUserId) {
+    public SkillVersion withdrawPendingVersion(Skill skill,
+                                               SkillVersion version,
+                                               String actorUserId) {
         if (version.getStatus() != SkillVersionStatus.PENDING_REVIEW) {
             throw new DomainBadRequestException("review.withdraw.not_pending", version.getId());
         }
-
-        List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
-        if (!files.isEmpty()) {
-            objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());
-        }
-        objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
-        skillFileRepository.deleteByVersionId(version.getId());
-        skillVersionRepository.delete(version);
-
-        List<SkillVersion> remainingVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
-                .filter(existing -> !existing.getId().equals(version.getId()))
-                .toList();
-
-        if (remainingVersions.isEmpty()) {
-            skillRepository.delete(skill);
-            return true;
-        }
-
-        if (version.getId().equals(skill.getLatestVersionId())) {
-            skill.setLatestVersionId(null);
-        }
+        version.setStatus(SkillVersionStatus.DRAFT);
+        SkillVersion savedVersion = skillVersionRepository.save(version);
         skill.setUpdatedBy(actorUserId);
         skillRepository.save(skill);
-        return false;
+        return savedVersion;
     }
 
     @Transactional
     public SkillVersion yankVersion(Long versionId, String actorUserId, String clientIp, String userAgent, String reason) {
         SkillVersion version = skillVersionRepository.findById(versionId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.version.notFound", versionId));
+        if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
+            throw new DomainBadRequestException("error.skill.version.notPublished", version.getVersion());
+        }
         version.setStatus(SkillVersionStatus.YANKED);
         version.setYankedAt(LocalDateTime.now());
         version.setYankedBy(actorUserId);
         version.setYankReason(reason);
         SkillVersion saved = skillVersionRepository.save(version);
+        skillRepository.findById(version.getSkillId()).ifPresent(skill -> {
+            if (versionId.equals(skill.getLatestVersionId())) {
+                skill.setLatestVersionId(findLatestPublishedVersionId(skill.getId()));
+                skill.setUpdatedBy(actorUserId);
+                skillRepository.save(skill);
+            }
+        });
         auditLogService.record(actorUserId, "YANK_SKILL_VERSION", "SKILL_VERSION", versionId, null, clientIp, userAgent, jsonReason(reason));
         return saved;
+    }
+
+    private Long findLatestPublishedVersionId(Long skillId) {
+        return skillVersionRepository.findBySkillIdAndStatus(skillId, SkillVersionStatus.PUBLISHED).stream()
+                .max(java.util.Comparator
+                        .comparing(SkillVersion::getPublishedAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .thenComparing(SkillVersion::getCreatedAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .thenComparing(SkillVersion::getId, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .map(SkillVersion::getId)
+                .orElse(null);
     }
 
     private void assertCanManageLifecycle(Skill skill,

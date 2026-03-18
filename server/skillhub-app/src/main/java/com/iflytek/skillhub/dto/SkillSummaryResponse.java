@@ -13,10 +13,11 @@ public record SkillSummaryResponse(
         Integer starCount,
         BigDecimal ratingAvg,
         Integer ratingCount,
-        String latestVersion,
-        Long latestVersionId,
-        String latestVersionStatus,
         String namespace,
         LocalDateTime updatedAt,
-        boolean canSubmitPromotion
+        boolean canSubmitPromotion,
+        SkillLifecycleVersionResponse headlineVersion,
+        SkillLifecycleVersionResponse publishedVersion,
+        SkillLifecycleVersionResponse ownerPreviewVersion,
+        String resolutionMode
 ) {}

@@ -8,8 +8,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.search.SearchQuery;
@@ -30,23 +29,23 @@ public class SkillSearchAppService {
     private final SearchQueryService searchQueryService;
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
-    private final SkillVersionRepository skillVersionRepository;
     private final NamespaceService namespaceService;
     private final VisibilityChecker visibilityChecker;
+    private final SkillLifecycleProjectionService skillLifecycleProjectionService;
 
     public SkillSearchAppService(
             SearchQueryService searchQueryService,
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
-            SkillVersionRepository skillVersionRepository,
             NamespaceService namespaceService,
-            VisibilityChecker visibilityChecker) {
+            VisibilityChecker visibilityChecker,
+            SkillLifecycleProjectionService skillLifecycleProjectionService) {
         this.searchQueryService = searchQueryService;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
-        this.skillVersionRepository = skillVersionRepository;
         this.namespaceService = namespaceService;
         this.visibilityChecker = visibilityChecker;
+        this.skillLifecycleProjectionService = skillLifecycleProjectionService;
     }
 
     public record SearchResponse(
@@ -151,16 +150,6 @@ public class SkillSearchAppService {
         Map<Long, Skill> skillsById = matchedSkills.stream()
                 .collect(Collectors.toMap(Skill::getId, Function.identity()));
 
-        List<Long> latestVersionIds = matchedSkills.stream()
-                .map(Skill::getLatestVersionId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Long, SkillVersion> versionsById = latestVersionIds.isEmpty()
-                ? Map.of()
-                : skillVersionRepository.findByIdIn(latestVersionIds).stream()
-                .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
-
         List<Long> namespaceIds = matchedSkills.stream()
                 .map(Skill::getNamespaceId)
                 .distinct()
@@ -177,19 +166,18 @@ public class SkillSearchAppService {
                 .filter(java.util.Objects::nonNull)
                 .filter(skill -> visibilityChecker.canAccess(skill, userId, userNsRoles != null ? userNsRoles : Map.of()))
                 .filter(skill -> namespaceVisible(skill.getNamespaceId(), namespacesById, userId, userNsRoles))
-                .map(skill -> toSummaryResponse(skill, versionsById, namespaceSlugsById))
+                .map(skill -> toSummaryResponse(skill, namespaceSlugsById))
                 .toList();
     }
 
     private SkillSummaryResponse toSummaryResponse(
             Skill skill,
-            Map<Long, SkillVersion> versionsById,
             Map<Long, String> namespaceSlugsById) {
-        String latestVersion = skill.getLatestVersionId() == null
-                ? null
-                : java.util.Optional.ofNullable(versionsById.get(skill.getLatestVersionId()))
-                        .map(SkillVersion::getVersion)
-                        .orElse(null);
+        SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForViewer(
+                skill,
+                null,
+                Map.of()
+        );
         String namespaceSlug = namespaceSlugsById.get(skill.getNamespaceId());
 
         return new SkillSummaryResponse(
@@ -202,12 +190,25 @@ public class SkillSearchAppService {
                 skill.getStarCount(),
                 skill.getRatingAvg(),
                 skill.getRatingCount(),
-                latestVersion,
-                skill.getLatestVersionId(),
-                latestVersion == null ? null : "PUBLISHED",
                 namespaceSlug,
                 skill.getUpdatedAt(),
-                false
+                false,
+                toLifecycleVersion(projection.headlineVersion()),
+                toLifecycleVersion(projection.publishedVersion()),
+                toLifecycleVersion(projection.ownerPreviewVersion()),
+                projection.resolutionMode().name()
+        );
+    }
+
+    private com.iflytek.skillhub.dto.SkillLifecycleVersionResponse toLifecycleVersion(
+            SkillLifecycleProjectionService.VersionProjection projection) {
+        if (projection == null) {
+            return null;
+        }
+        return new com.iflytek.skillhub.dto.SkillLifecycleVersionResponse(
+                projection.id(),
+                projection.version(),
+                projection.status()
         );
     }
 

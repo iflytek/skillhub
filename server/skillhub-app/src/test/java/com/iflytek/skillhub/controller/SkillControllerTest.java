@@ -123,26 +123,26 @@ class SkillControllerTest {
                         null,
                         0,
                         false,
-                        "1.1.0",
                         1L,
                         LocalDateTime.of(2026, 3, 15, 10, 0),
                         LocalDateTime.of(2026, 3, 15, 10, 0),
-                        null,
-                        11L,
                         true,
                         false,
-                        "PENDING_REVIEW",
                         false,
-                        false
+                        false,
+                        new com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService.VersionProjection(11L, "1.1.0", "PENDING_REVIEW"),
+                        null,
+                        new com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService.VersionProjection(11L, "1.1.0", "PENDING_REVIEW"),
+                        "OWNER_PREVIEW"
                 ));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.latestVersion").value("1.1.0"))
-                .andExpect(jsonPath("$.data.latestVersionId").value(11L))
                 .andExpect(jsonPath("$.data.canSubmitPromotion").value(false))
-                .andExpect(jsonPath("$.data.viewingVersionStatus").value("PENDING_REVIEW"))
+                .andExpect(jsonPath("$.data.headlineVersion.version").value("1.1.0"))
+                .andExpect(jsonPath("$.data.ownerPreviewVersion.id").value(11L))
+                .andExpect(jsonPath("$.data.resolutionMode").value("OWNER_PREVIEW"))
                 .andExpect(jsonPath("$.data.canInteract").value(false))
                 .andExpect(jsonPath("$.data.canReport").value(false));
     }

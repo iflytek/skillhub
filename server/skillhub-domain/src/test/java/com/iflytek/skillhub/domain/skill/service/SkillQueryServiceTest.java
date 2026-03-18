@@ -53,10 +53,12 @@ class SkillQueryServiceTest {
 
     private SkillQueryService service;
     private SkillSlugResolutionService skillSlugResolutionService;
+    private SkillLifecycleProjectionService skillLifecycleProjectionService;
 
     @BeforeEach
     void setUp() {
         skillSlugResolutionService = new SkillSlugResolutionService(skillRepository);
+        skillLifecycleProjectionService = new SkillLifecycleProjectionService(skillVersionRepository);
         service = new SkillQueryService(
                 namespaceRepository,
                 skillRepository,
@@ -66,7 +68,8 @@ class SkillQueryServiceTest {
                 objectStorageService,
                 visibilityChecker,
                 promotionRequestRepository,
-                skillSlugResolutionService
+                skillSlugResolutionService,
+                skillLifecycleProjectionService
         );
     }
 
@@ -88,6 +91,7 @@ class SkillQueryServiceTest {
 
         SkillVersion version = new SkillVersion(1L, "1.0.0", userId);
         setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
@@ -101,7 +105,8 @@ class SkillQueryServiceTest {
         assertNotNull(result);
         assertEquals(skillSlug, result.slug());
         assertEquals("Test Skill", result.displayName());
-        assertEquals("1.0.0", result.latestVersion());
+        assertNotNull(result.headlineVersion());
+        assertEquals("1.0.0", result.headlineVersion().version());
         assertFalse(result.canReport());
     }
 
@@ -127,6 +132,7 @@ class SkillQueryServiceTest {
 
         SkillVersion ownVersion = new SkillVersion(2L, "2.0.0", userId);
         setId(ownVersion, 22L);
+        ownVersion.setStatus(SkillVersionStatus.PUBLISHED);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(publishedSkill, ownSkill));
@@ -137,7 +143,8 @@ class SkillQueryServiceTest {
 
         assertEquals(2L, result.id());
         assertEquals("Own Skill", result.displayName());
-        assertEquals("2.0.0", result.latestVersion());
+        assertNotNull(result.headlineVersion());
+        assertEquals("2.0.0", result.headlineVersion().version());
         assertFalse(result.canReport());
     }
 
@@ -670,7 +677,8 @@ class SkillQueryServiceTest {
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
-        assertEquals(11L, result.latestVersionId());
+        assertNotNull(result.publishedVersion());
+        assertEquals(11L, result.publishedVersion().id());
         assertTrue(result.canSubmitPromotion());
     }
 
@@ -790,13 +798,17 @@ class SkillQueryServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
+                .thenReturn(List.of());
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PENDING_REVIEW))
                 .thenReturn(List.of(pending));
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
 
-        assertEquals("1.1.0", result.latestVersion());
-        assertEquals("PENDING_REVIEW", result.viewingVersionStatus());
+        assertNotNull(result.headlineVersion());
+        assertEquals("1.1.0", result.headlineVersion().version());
+        assertEquals("PENDING_REVIEW", result.headlineVersion().status());
+        assertEquals("OWNER_PREVIEW", result.resolutionMode());
         assertFalse(result.canInteract());
     }
 
@@ -829,8 +841,10 @@ class SkillQueryServiceTest {
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
 
-        assertEquals("1.0.0", result.latestVersion());
-        assertEquals("PUBLISHED", result.viewingVersionStatus());
+        assertNotNull(result.headlineVersion());
+        assertEquals("1.0.0", result.headlineVersion().version());
+        assertEquals("PUBLISHED", result.headlineVersion().status());
+        assertEquals("PUBLISHED", result.resolutionMode());
         assertTrue(result.canInteract());
     }
 

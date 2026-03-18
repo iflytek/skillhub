@@ -95,7 +95,7 @@ public class ClawHubRegistryFacade {
                 toEpochMillis(skill.getUpdatedAt())
         );
 
-        ClawHubRegistrySkillVersion latestVersion = buildLatestVersion(skill, detail.latestVersion());
+        ClawHubRegistrySkillVersion latestVersion = buildLatestVersion(skill, detail.publishedVersion());
         ClawHubRegistryOwner owner = buildOwner(skill.getOwnerId());
 
         return new ClawHubRegistrySkillResponse(
@@ -136,20 +136,22 @@ public class ClawHubRegistryFacade {
                 canonicalSlug,
                 normalizeDisplayName(item.displayName(), canonicalSlug),
                 item.summary(),
-                item.latestVersion(),
+                item.publishedVersion() != null ? item.publishedVersion().version() : null,
                 scoreFor(index),
                 toEpochMillis(item.updatedAt())
         );
     }
 
-    private ClawHubRegistrySkillVersion buildLatestVersion(Skill skill, String version) {
-        if (version == null || version.isBlank()) {
+    private ClawHubRegistrySkillVersion buildLatestVersion(
+            Skill skill,
+            com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService.VersionProjection projection) {
+        if (projection == null || projection.version() == null || projection.version().isBlank()) {
             return null;
         }
 
-        Optional<SkillVersion> latestVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), version);
+        Optional<SkillVersion> latestVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), projection.version());
         if (latestVersion.isEmpty()) {
-            return new ClawHubRegistrySkillVersion(version, 0L, "", null);
+            return new ClawHubRegistrySkillVersion(projection.version(), 0L, "", null);
         }
 
         SkillVersion entity = latestVersion.get();

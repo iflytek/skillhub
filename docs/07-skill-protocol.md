@@ -116,7 +116,7 @@ CLI 安装后在本地写入 `.astron/metadata.json`：
 skillhub 自有 CLI 支持完整 namespace 坐标：
 
 ```
-install @team/my-skill              → 最新已发布版本（latest_version_id）
+install @team/my-skill              → 最新已发布版本（实现上通常由 `latest_version_id` / published pointer 解析）
 install @team/my-skill@1.2.0        → 精确版本
 install @team/my-skill@latest        → 等同于不带版本号（系统保留标签，只读）
 install @team/my-skill@beta          → beta 标签（自定义标签）

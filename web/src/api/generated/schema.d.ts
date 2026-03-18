@@ -1557,6 +1557,7 @@ export interface components {
             slug?: string;
             displayName?: string;
             summary?: string;
+            status?: string;
             /** Format: int64 */
             downloadCount?: number;
             /** Format: int32 */
@@ -1564,10 +1565,14 @@ export interface components {
             ratingAvg?: number;
             /** Format: int32 */
             ratingCount?: number;
-            latestVersion?: string;
             namespace?: string;
             /** Format: date-time */
             updatedAt?: string;
+            canSubmitPromotion?: boolean;
+            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            resolutionMode?: string;
         };
         ApiResponseBoolean: {
             /** Format: int32 */
@@ -1617,8 +1622,21 @@ export interface components {
             /** Format: int32 */
             ratingCount?: number;
             hidden?: boolean;
-            latestVersion?: string;
             namespace?: string;
+            canManageLifecycle?: boolean;
+            canSubmitPromotion?: boolean;
+            canInteract?: boolean;
+            canReport?: boolean;
+            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            resolutionMode?: string;
+        };
+        SkillLifecycleVersionResponse: {
+            /** Format: int64 */
+            id?: number;
+            version?: string;
+            status?: string;
         };
         ApiResponsePageResponseSkillVersionResponse: {
             /** Format: int32 */

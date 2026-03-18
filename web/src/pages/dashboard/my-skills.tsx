@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
 import { useArchiveSkill, useMySkills, useSubmitPromotion, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
+import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPendingOwnerPreview } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
@@ -191,116 +192,126 @@ export function MySkillsPage() {
         <>
           <div className="grid grid-cols-1 gap-4">
             {skills.map((skill, idx) => (
-              <Card
-                key={skill.id}
-                className={`p-5 cursor-pointer group animate-fade-up delay-${Math.min(idx + 1, 6)}`}
-                onClick={() => handleSkillClick(skill.namespace, skill.slug)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold font-heading text-lg mb-1 group-hover:text-primary transition-colors">
-                      {skill.displayName}
-                    </h3>
-                    {skill.summary && (
-                      <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{skill.summary}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                      <span className="handle-tag">@{skill.namespace}</span>
-                      {skill.latestVersion ? (
-                        <span className="font-mono text-xs">v{skill.latestVersion}</span>
-                      ) : null}
-                      <span className="flex items-center gap-1">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              (() => {
+                const headlineVersion = getHeadlineVersion(skill)
+                const publishedVersion = getPublishedVersion(skill)
+                const ownerPreviewVersion = getOwnerPreviewVersion(skill)
+                const hasPendingPreview = hasPendingOwnerPreview(skill)
+
+                return (
+                  <Card
+                    key={skill.id}
+                    className={`p-5 cursor-pointer group animate-fade-up delay-${Math.min(idx + 1, 6)}`}
+                    onClick={() => handleSkillClick(skill.namespace, skill.slug)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold font-heading text-lg mb-1 group-hover:text-primary transition-colors">
+                          {skill.displayName}
+                        </h3>
+                        {skill.summary && (
+                          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{skill.summary}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                          <span className="handle-tag">@{skill.namespace}</span>
+                          {headlineVersion ? (
+                            <span className="font-mono text-xs">v{headlineVersion.version}</span>
+                          ) : null}
+                          <span className="flex items-center gap-1">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            {formatCompactCount(skill.downloadCount)}
+                          </span>
+                          {skill.status ? (
+                            <span className={resolveStatusClassName(skill.status)}>
+                              {resolveStatusLabel(skill.status)}
+                            </span>
+                          ) : null}
+                          {headlineVersion?.status ? (
+                            <span className={resolveStatusClassName(headlineVersion.status)}>
+                              {resolveStatusLabel(headlineVersion.status)}
+                            </span>
+                          ) : null}
+                          {hasPendingPreview && ownerPreviewVersion?.version !== headlineVersion?.version ? (
+                            <span className={resolveStatusClassName(ownerPreviewVersion?.status)}>
+                              {resolveStatusLabel(ownerPreviewVersion?.status)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pl-4">
+                        {hasPendingPreview && ownerPreviewVersion ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setWithdrawTarget({
+                                namespace: skill.namespace,
+                                slug: skill.slug,
+                                name: skill.displayName,
+                                version: ownerPreviewVersion.version,
+                              })
+                            }}
+                          >
+                            {t('mySkills.withdrawReview')}
+                          </Button>
+                        ) : skill.canSubmitPromotion && publishedVersion ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setPromotionTarget({
+                                skillId: skill.id,
+                                versionId: publishedVersion.id,
+                                name: skill.displayName,
+                                version: publishedVersion.version,
+                              })
+                            }}
+                          >
+                            {t('mySkills.promoteToGlobal')}
+                          </Button>
+                        ) : skill.status === 'ARCHIVED' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setUnarchiveTarget({
+                                namespace: skill.namespace,
+                                slug: skill.slug,
+                                name: skill.displayName,
+                              })
+                            }}
+                          >
+                            {t('mySkills.unarchive')}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setArchiveTarget({
+                                namespace: skill.namespace,
+                                slug: skill.slug,
+                                name: skill.displayName,
+                              })
+                            }}
+                          >
+                            {t('mySkills.archive')}
+                          </Button>
+                        )}
+                        <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
-                        {formatCompactCount(skill.downloadCount)}
-                      </span>
-                      {skill.status ? (
-                        <span className={resolveStatusClassName(skill.status)}>
-                          {resolveStatusLabel(skill.status)}
-                        </span>
-                      ) : null}
-                      {skill.latestVersionStatus ? (
-                        <span className={resolveStatusClassName(skill.latestVersionStatus)}>
-                          {resolveStatusLabel(skill.latestVersionStatus)}
-                        </span>
-                      ) : null}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 pl-4">
-                    {skill.latestVersionStatus === 'PENDING_REVIEW' && skill.latestVersion ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          const pendingVersion = skill.latestVersion
-                          if (!pendingVersion) {
-                            return
-                          }
-                          setWithdrawTarget({
-                            namespace: skill.namespace,
-                            slug: skill.slug,
-                            name: skill.displayName,
-                            version: pendingVersion,
-                          })
-                        }}
-                      >
-                        {t('mySkills.withdrawReview')}
-                      </Button>
-                    ) : skill.canSubmitPromotion && skill.latestVersionId && skill.latestVersion ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setPromotionTarget({
-                            skillId: skill.id,
-                            versionId: skill.latestVersionId!,
-                            name: skill.displayName,
-                            version: skill.latestVersion!,
-                          })
-                        }}
-                      >
-                        {t('mySkills.promoteToGlobal')}
-                      </Button>
-                    ) : skill.status === 'ARCHIVED' ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setUnarchiveTarget({
-                            namespace: skill.namespace,
-                            slug: skill.slug,
-                            name: skill.displayName,
-                          })
-                        }}
-                      >
-                        {t('mySkills.unarchive')}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setArchiveTarget({
-                            namespace: skill.namespace,
-                            slug: skill.slug,
-                            name: skill.displayName,
-                          })
-                        }}
-                      >
-                        {t('mySkills.archive')}
-                      </Button>
-                    )}
-                    <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </Card>
+                  </Card>
+                )
+              })()
             ))}
           </div>
 

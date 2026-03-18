@@ -6,6 +6,7 @@ import { useStar, useToggleStar } from '@/features/social/use-star'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
+import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { Bookmark } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
   const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)
   const toggleStarMutation = useToggleStar(skill.id)
   const showStarredBadge = highlightStarred && isAuthenticated && starStatus?.starred
+  const headlineVersion = getHeadlineVersion(skill)
 
   const handleStarredBadgeClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
@@ -73,9 +75,9 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
           )}
 
           <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground">
-            {skill.latestVersion && (
+            {headlineVersion && (
               <span className="px-2.5 py-1 rounded-full bg-secondary/60 font-mono">
-                v{skill.latestVersion}
+                v{headlineVersion.version}
               </span>
             )}
             <span className="flex items-center gap-1">

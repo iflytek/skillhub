@@ -115,6 +115,9 @@ ClawHub CLI 使用单一 slug 模型，slug 校验规则为 `[a-z0-9]([a-z0-9-]*
 - 团队技能提升到全局需平台管理员二次审核
 - 平台管理员只负责全局空间审核与提升审核，不介入团队空间审核
 - 当前不引入自动审核；`PrePublishValidator` 仅作为未来扩展点保留，默认实现为 `NoOp`
+- 撤回审核语义统一为 `PENDING_REVIEW → DRAFT`，不再走删除版本记录
+- skill 生命周期管理读模型统一为 `headlineVersion / publishedVersion / ownerPreviewVersion / resolutionMode`
+- `hidden` 是独立治理覆盖层，不属于 skill 容器状态机
 
 认证与权限：
 - OAuth2 标准登录（一期 GitHub OAuth）

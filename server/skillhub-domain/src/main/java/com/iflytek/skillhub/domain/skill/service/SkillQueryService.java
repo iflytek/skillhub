@@ -41,6 +41,7 @@ public class SkillQueryService {
     private final VisibilityChecker visibilityChecker;
     private final PromotionRequestRepository promotionRequestRepository;
     private final SkillSlugResolutionService skillSlugResolutionService;
+    private final SkillLifecycleProjectionService skillLifecycleProjectionService;
 
     public SkillQueryService(
             NamespaceRepository namespaceRepository,
@@ -51,7 +52,8 @@ public class SkillQueryService {
             ObjectStorageService objectStorageService,
             VisibilityChecker visibilityChecker,
             PromotionRequestRepository promotionRequestRepository,
-            SkillSlugResolutionService skillSlugResolutionService) {
+            SkillSlugResolutionService skillSlugResolutionService,
+            SkillLifecycleProjectionService skillLifecycleProjectionService) {
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -61,6 +63,7 @@ public class SkillQueryService {
         this.visibilityChecker = visibilityChecker;
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillSlugResolutionService = skillSlugResolutionService;
+        this.skillLifecycleProjectionService = skillLifecycleProjectionService;
     }
 
     public record SkillDetailDTO(
@@ -75,17 +78,17 @@ public class SkillQueryService {
             java.math.BigDecimal ratingAvg,
             Integer ratingCount,
             boolean hidden,
-            String latestVersion,
             Long namespaceId,
             java.time.LocalDateTime createdAt,
             java.time.LocalDateTime updatedAt,
-            SkillVersion latestVersionEntity,
-            Long latestVersionId,
             boolean canManageLifecycle,
             boolean canSubmitPromotion,
-            String viewingVersionStatus,
             boolean canInteract,
-            boolean canReport
+            boolean canReport,
+            SkillLifecycleProjectionService.VersionProjection headlineVersion,
+            SkillLifecycleProjectionService.VersionProjection publishedVersion,
+            SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion,
+            String resolutionMode
     ) {}
 
     public record SkillVersionDetailDTO(
@@ -125,11 +128,11 @@ public class SkillQueryService {
             throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
         }
 
-        String latestVersion = null;
-        SkillVersion latestVersionEntity = resolvePreviewVersion(skill, currentUserId);
-        if (latestVersionEntity != null) {
-            latestVersion = latestVersionEntity.getVersion();
-        }
+        SkillLifecycleProjectionService.Projection projection =
+                skillLifecycleProjectionService.projectForViewer(skill, currentUserId, userNsRoles);
+        SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
+        SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
+        SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
 
         return new SkillDetailDTO(
                 skill.getId(),
@@ -143,17 +146,17 @@ public class SkillQueryService {
                 skill.getRatingAvg(),
                 skill.getRatingCount(),
                 skill.isHidden(),
-                latestVersion,
                 skill.getNamespaceId(),
                 skill.getCreatedAt(),
                 skill.getUpdatedAt(),
-                latestVersionEntity,
-                latestVersionEntity != null ? latestVersionEntity.getId() : null,
                 canManageRestrictedSkill(skill, currentUserId, userNsRoles),
-                canSubmitPromotion(namespace, skill, latestVersionEntity, currentUserId, userNsRoles),
-                latestVersionEntity != null ? latestVersionEntity.getStatus().name() : null,
-                latestVersionEntity == null || latestVersionEntity.getStatus() == SkillVersionStatus.PUBLISHED,
-                currentUserId == null || !Objects.equals(skill.getOwnerId(), currentUserId)
+                canSubmitPromotion(namespace, skill, publishedVersion, currentUserId, userNsRoles),
+                headlineVersion == null || "PUBLISHED".equals(headlineVersion.status()),
+                currentUserId == null || !Objects.equals(skill.getOwnerId(), currentUserId),
+                headlineVersion,
+                publishedVersion,
+                ownerPreviewVersion,
+                projection.resolutionMode().name()
         );
     }
 
@@ -454,28 +457,6 @@ public class SkillQueryService {
         return latestVersion;
     }
 
-    private SkillVersion resolvePreviewVersion(Skill skill, String currentUserId) {
-        SkillVersion publishedVersion = null;
-        if (skill.getLatestVersionId() != null) {
-            publishedVersion = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
-        }
-        if (publishedVersion != null) {
-            return publishedVersion;
-        }
-        return resolveOwnerPendingPreview(skill, currentUserId);
-    }
-
-    private SkillVersion resolveOwnerPendingPreview(Skill skill, String currentUserId) {
-        if (!isOwner(skill, currentUserId)) {
-            return null;
-        }
-        return skillVersionRepository.findBySkillIdAndStatus(skill.getId(), SkillVersionStatus.PENDING_REVIEW).stream()
-                .max(Comparator
-                        .comparing(SkillVersion::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(SkillVersion::getId, Comparator.nullsLast(Comparator.naturalOrder())))
-                .orElse(null);
-    }
-
     private String computeFingerprint(SkillVersion version) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -528,7 +509,7 @@ public class SkillQueryService {
     private boolean canSubmitPromotion(
             Namespace namespace,
             Skill skill,
-            SkillVersion latestVersionEntity,
+            SkillLifecycleProjectionService.VersionProjection publishedVersion,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
         if (namespace.getType() == NamespaceType.GLOBAL) {
@@ -537,7 +518,7 @@ public class SkillQueryService {
         if (namespace.getStatus() != NamespaceStatus.ACTIVE || skill.getStatus() != SkillStatus.ACTIVE) {
             return false;
         }
-        if (latestVersionEntity == null || latestVersionEntity.getStatus() != SkillVersionStatus.PUBLISHED) {
+        if (publishedVersion == null || !"PUBLISHED".equals(publishedVersion.status())) {
             return false;
         }
         if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.PENDING).isPresent()) {

@@ -10,8 +10,10 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
+import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,25 +32,26 @@ public class MySkillAppService {
     private final SkillVersionRepository skillVersionRepository;
     private final SkillStarRepository skillStarRepository;
     private final PromotionRequestRepository promotionRequestRepository;
+    private final SkillLifecycleProjectionService skillLifecycleProjectionService;
 
     public MySkillAppService(
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             SkillVersionRepository skillVersionRepository,
             SkillStarRepository skillStarRepository,
-            PromotionRequestRepository promotionRequestRepository) {
+            PromotionRequestRepository promotionRequestRepository,
+            SkillLifecycleProjectionService skillLifecycleProjectionService) {
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillStarRepository = skillStarRepository;
         this.promotionRequestRepository = promotionRequestRepository;
+        this.skillLifecycleProjectionService = skillLifecycleProjectionService;
     }
 
     public PageResponse<SkillSummaryResponse> listMySkills(String userId, int page, int size) {
         Page<Skill> skillPage = skillRepository.findByOwnerId(userId, PageRequest.of(page, size));
         List<Skill> skills = skillPage.getContent();
-
-        Map<Long, SkillVersion> versionsBySkillId = loadLatestRelevantVersions(skills);
 
         List<Long> namespaceIds = skills.stream()
                 .map(Skill::getNamespaceId)
@@ -60,7 +63,7 @@ public class MySkillAppService {
                         .collect(Collectors.toMap(com.iflytek.skillhub.domain.namespace.Namespace::getId, Function.identity()));
 
         List<SkillSummaryResponse> items = skills.stream()
-                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespacesById))
+                .map(skill -> toSummaryResponse(skill, userId, namespacesById))
                 .toList();
 
         return new PageResponse<>(items, skillPage.getTotalElements(), skillPage.getNumber(), skillPage.getSize());
@@ -82,8 +85,6 @@ public class MySkillAppService {
                 : skillRepository.findByIdIn(skillIds).stream()
                         .collect(Collectors.toMap(Skill::getId, Function.identity()));
 
-        Map<Long, SkillVersion> versionsBySkillId = loadLatestRelevantVersions(skillsById.values());
-
         List<Long> namespaceIds = skillsById.values().stream()
                 .map(Skill::getNamespaceId)
                 .distinct()
@@ -96,7 +97,7 @@ public class MySkillAppService {
         List<SkillSummaryResponse> items = stars.stream()
                 .map(star -> skillsById.get(star.getSkillId()))
                 .filter(java.util.Objects::nonNull)
-                .map(skill -> toSummaryResponse(skill, versionsBySkillId, namespacesById))
+                .map(skill -> toSummaryResponse(skill, userId, namespacesById))
                 .toList();
 
         return new PageResponse<>(items, starPage.getTotalElements(), starPage.getNumber(), starPage.getSize());
@@ -104,10 +105,17 @@ public class MySkillAppService {
 
     private SkillSummaryResponse toSummaryResponse(
             Skill skill,
-            Map<Long, SkillVersion> versionsBySkillId,
+            String currentUserId,
             Map<Long, com.iflytek.skillhub.domain.namespace.Namespace> namespacesById) {
-        SkillVersion latestVersion = versionsBySkillId.get(skill.getId());
         com.iflytek.skillhub.domain.namespace.Namespace namespace = namespacesById.get(skill.getNamespaceId());
+        SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForViewer(
+                skill,
+                currentUserId,
+                Map.of()
+        );
+        SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
+        SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
+        SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
 
         return new SkillSummaryResponse(
                 skill.getId(),
@@ -119,18 +127,19 @@ public class MySkillAppService {
                 skill.getStarCount(),
                 skill.getRatingAvg(),
                 skill.getRatingCount(),
-                Optional.ofNullable(latestVersion).map(SkillVersion::getVersion).orElse(null),
-                Optional.ofNullable(latestVersion).map(SkillVersion::getId).orElse(null),
-                Optional.ofNullable(latestVersion).map(SkillVersion::getStatus).map(Enum::name).orElse(null),
                 namespace != null ? namespace.getSlug() : null,
                 skill.getUpdatedAt(),
-                canSubmitPromotion(skill, latestVersion, namespace)
+                canSubmitPromotion(skill, publishedVersion, namespace),
+                toLifecycleVersion(headlineVersion),
+                toLifecycleVersion(publishedVersion),
+                toLifecycleVersion(ownerPreviewVersion),
+                projection.resolutionMode().name()
         );
     }
 
     private boolean canSubmitPromotion(
             Skill skill,
-            SkillVersion latestVersion,
+            SkillLifecycleProjectionService.VersionProjection publishedVersion,
             com.iflytek.skillhub.domain.namespace.Namespace namespace) {
         if (namespace == null) {
             return false;
@@ -147,48 +156,13 @@ public class MySkillAppService {
         if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.APPROVED).isPresent()) {
             return false;
         }
-        return latestVersion != null && latestVersion.getStatus() == SkillVersionStatus.PUBLISHED;
+        return publishedVersion != null && "PUBLISHED".equals(publishedVersion.status());
     }
 
-    private Map<Long, SkillVersion> loadLatestRelevantVersions(java.util.Collection<Skill> skills) {
-        if (skills.isEmpty()) {
-            return Map.of();
+    private SkillLifecycleVersionResponse toLifecycleVersion(SkillLifecycleProjectionService.VersionProjection projection) {
+        if (projection == null) {
+            return null;
         }
-
-        List<Long> explicitLatestVersionIds = skills.stream()
-                .map(Skill::getLatestVersionId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Long, SkillVersion> versionsById = explicitLatestVersionIds.isEmpty()
-                ? Map.of()
-                : skillVersionRepository.findByIdIn(explicitLatestVersionIds).stream()
-                        .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
-
-        List<Long> skillIdsNeedingFallback = skills.stream()
-                .filter(skill -> skill.getLatestVersionId() == null || !versionsById.containsKey(skill.getLatestVersionId()))
-                .map(Skill::getId)
-                .distinct()
-                .toList();
-        Map<Long, SkillVersion> fallbackBySkillId = skillIdsNeedingFallback.isEmpty()
-                ? Map.of()
-                : skillVersionRepository.findBySkillIdIn(skillIdsNeedingFallback).stream()
-                        .filter(version -> version.getStatus() != SkillVersionStatus.YANKED)
-                        .collect(Collectors.toMap(
-                                SkillVersion::getSkillId,
-                                Function.identity(),
-                                (left, right) -> left.getCreatedAt().isAfter(right.getCreatedAt()) ? left : right
-                        ));
-
-        Map<Long, SkillVersion> resolvedVersions = new java.util.HashMap<>();
-        for (Skill skill : skills) {
-            SkillVersion resolvedVersion = skill.getLatestVersionId() != null
-                    ? versionsById.get(skill.getLatestVersionId())
-                    : fallbackBySkillId.get(skill.getId());
-            if (resolvedVersion != null) {
-                resolvedVersions.put(skill.getId(), resolvedVersion);
-            }
-        }
-        return resolvedVersions;
+        return new SkillLifecycleVersionResponse(projection.id(), projection.version(), projection.status());
     }
 }

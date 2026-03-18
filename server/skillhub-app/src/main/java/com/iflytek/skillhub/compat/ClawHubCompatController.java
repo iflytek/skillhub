@@ -119,7 +119,7 @@ public class ClawHubCompatController {
                 mapper.toCanonical(item.namespace(), item.slug()),
                 item.displayName(),
                 item.summary(),
-                item.latestVersion(),
+                item.publishedVersion() != null ? item.publishedVersion().version() : null,
                 calculateScore(item),
                 updatedAtEpoch
         );
@@ -268,9 +268,9 @@ public class ClawHubCompatController {
                 : 0;
 
         ClawHubSkillListResponse.SkillListItem.LatestVersion latestVersion = null;
-        if (item.latestVersion() != null) {
+        if (item.publishedVersion() != null) {
             latestVersion = new ClawHubSkillListResponse.SkillListItem.LatestVersion(
-                    item.latestVersion(),
+                    item.publishedVersion().version(),
                     updatedAt, // Use skill's updatedAt as version createdAt
                     "", // changelog not available in summary
                     null // license not available in summary

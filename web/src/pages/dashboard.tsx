@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import type { SkillSummary } from '@/api/types'
 import { useMySkills } from '@/shared/hooks/use-skill-queries'
+import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { limitPreviewItems } from './dashboard-preview'
@@ -131,9 +132,9 @@ export function DashboardPage() {
                       >
                         <div className="truncate text-sm font-medium">{skill.displayName}</div>
                         <div className="mt-1 truncate text-xs text-muted-foreground">@{skill.namespace}</div>
-                        {skill.latestVersion ? (
+                        {getHeadlineVersion(skill) ? (
                           <div className="mt-2 inline-flex rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                            v{skill.latestVersion}
+                            v{getHeadlineVersion(skill)?.version}
                           </div>
                         ) : null}
                       </Link>
