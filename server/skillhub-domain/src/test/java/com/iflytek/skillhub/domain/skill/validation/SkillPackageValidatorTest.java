@@ -288,4 +288,40 @@ class SkillPackageValidatorTest {
         assertFalse(result.passed());
         assertTrue(result.errors().stream().anyMatch(e -> e.contains("File content does not match extension")));
     }
+
+    @Test
+    void rejectsJpegWithWrongMagicBytes() {
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("photo.jpeg", new byte[]{0x00, 0x00}, 2, "image/jpeg")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("photo.jpeg")));
+    }
+
+    @Test
+    void acceptsValidGif() {
+        byte[] gifHeader = "GIF89a".getBytes();
+        byte[] content = new byte[20];
+        System.arraycopy(gifHeader, 0, content, 0, gifHeader.length);
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("anim.gif", content, content.length, "image/gif")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertTrue(result.passed());
+    }
+
+    private PackageEntry skillMdEntry() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            ---
+            Body
+            """;
+        return new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+    }
 }

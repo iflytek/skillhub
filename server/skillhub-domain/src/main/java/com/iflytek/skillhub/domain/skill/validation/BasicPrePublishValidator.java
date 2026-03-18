@@ -61,16 +61,18 @@ public class BasicPrePublishValidator implements PrePublishValidator {
 
     private boolean isTextLike(String path) {
         String lowerPath = path.toLowerCase(Locale.ROOT);
-        return lowerPath.endsWith(".md")
-                || lowerPath.endsWith(".txt")
-                || lowerPath.endsWith(".json")
-                || lowerPath.endsWith(".yaml")
-                || lowerPath.endsWith(".yml")
-                || lowerPath.endsWith(".js")
-                || lowerPath.endsWith(".ts")
-                || lowerPath.endsWith(".py")
-                || lowerPath.endsWith(".sh")
-                || lowerPath.endsWith(".svg");
+        return lowerPath.endsWith(".md") || lowerPath.endsWith(".txt")
+                || lowerPath.endsWith(".json") || lowerPath.endsWith(".yaml") || lowerPath.endsWith(".yml")
+                || lowerPath.endsWith(".js") || lowerPath.endsWith(".ts")
+                || lowerPath.endsWith(".py") || lowerPath.endsWith(".sh") || lowerPath.endsWith(".svg")
+                || lowerPath.endsWith(".html") || lowerPath.endsWith(".css") || lowerPath.endsWith(".csv")
+                || lowerPath.endsWith(".toml") || lowerPath.endsWith(".xml") || lowerPath.endsWith(".ini")
+                || lowerPath.endsWith(".cfg") || lowerPath.endsWith(".env")
+                || lowerPath.endsWith(".rb") || lowerPath.endsWith(".go") || lowerPath.endsWith(".rs")
+                || lowerPath.endsWith(".java") || lowerPath.endsWith(".kt") || lowerPath.endsWith(".lua")
+                || lowerPath.endsWith(".sql") || lowerPath.endsWith(".r")
+                || lowerPath.endsWith(".bat") || lowerPath.endsWith(".ps1")
+                || lowerPath.endsWith(".zsh") || lowerPath.endsWith(".bash");
     }
 
     private boolean isPlaceholderValue(String value) {
