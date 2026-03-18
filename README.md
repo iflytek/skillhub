@@ -76,7 +76,7 @@ curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runti
 Aliyun mirror shortcut:
 ```bash
 rm -rf /tmp/skillhub-aliyun
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version edge
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest
 ```
 
 If deployment runs into problems, clear the existing runtime home and retry.
