@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -56,7 +55,8 @@ public class AuditLog {
                     String requestId,
                     String clientIp,
                     String userAgent,
-                    String detailJson) {
+                    String detailJson,
+                    Instant createdAt) {
         this.actorUserId = actorUserId;
         this.action = action;
         this.targetType = targetType;
@@ -65,11 +65,7 @@ public class AuditLog {
         this.clientIp = clientIp;
         this.userAgent = userAgent;
         this.detailJson = detailJson;
-    }
-
-    @PrePersist
-    void prePersist() {
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
     }
 
     public Long getId() { return id; }

@@ -113,7 +113,7 @@ public class ClawHubCompatController {
 
     private ClawHubSearchResponse.ClawHubSearchResult toSearchResult(SkillSummaryResponse item) {
         Long updatedAtEpoch = item.updatedAt() != null
-                ? item.updatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                ? item.updatedAt().toEpochMilli()
                 : null;
         return new ClawHubSearchResponse.ClawHubSearchResult(
                 mapper.toCanonical(item.namespace(), item.slug()),
@@ -264,7 +264,7 @@ public class ClawHubCompatController {
     private ClawHubSkillListResponse.SkillListItem toSkillListItem(SkillSummaryResponse item) {
         long createdAt = 0;
         long updatedAt = item.updatedAt() != null
-                ? item.updatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                ? item.updatedAt().toEpochMilli()
                 : 0;
 
         ClawHubSkillListResponse.SkillListItem.LatestVersion latestVersion = null;
@@ -320,10 +320,10 @@ public class ClawHubCompatController {
 
         if (skill.getId() != null) {
             long createdAt = skill.getCreatedAt() != null
-                    ? skill.getCreatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                    ? skill.getCreatedAt().toEpochMilli()
                     : 0;
             long updatedAt = skill.getUpdatedAt() != null
-                    ? skill.getUpdatedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                    ? skill.getUpdatedAt().toEpochMilli()
                     : 0;
             skillInfo = new ClawHubSkillResponse.SkillInfo(
                     mapper.toCanonical(coord.namespace(), coord.slug()),
@@ -337,7 +337,7 @@ public class ClawHubCompatController {
 
             if (latestVersionEntity != null) {
                 long versionCreatedAt = latestVersionEntity.getPublishedAt() != null
-                        ? latestVersionEntity.getPublishedAt().toInstant(ZoneOffset.UTC).toEpochMilli()
+                        ? latestVersionEntity.getPublishedAt().toEpochMilli()
                         : 0;
                 versionInfo = new ClawHubSkillResponse.VersionInfo(
                         latestVersionEntity.getVersion(),

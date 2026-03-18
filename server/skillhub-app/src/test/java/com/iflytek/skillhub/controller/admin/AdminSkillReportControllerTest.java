@@ -19,7 +19,7 @@ import com.iflytek.skillhub.domain.report.SkillReportService;
 import com.iflytek.skillhub.dto.AdminSkillReportSummaryResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.service.AdminSkillReportAppService;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -71,7 +71,7 @@ class AdminSkillReportControllerTest {
                                 "PENDING",
                                 null,
                                 null,
-                                LocalDateTime.of(2026, 3, 15, 12, 0),
+                                Instant.parse("2026-03-15T12:00:00Z"),
                                 null
                         )),
                         1,
@@ -85,7 +85,8 @@ class AdminSkillReportControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.items[0].id").value(99))
-                .andExpect(jsonPath("$.data.items[0].skillSlug").value("demo-skill"));
+                .andExpect(jsonPath("$.data.items[0].skillSlug").value("demo-skill"))
+                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-03-15T12:00:00Z"));
     }
 
     @Test

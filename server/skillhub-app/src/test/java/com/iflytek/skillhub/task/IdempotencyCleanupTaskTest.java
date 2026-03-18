@@ -7,7 +7,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -22,7 +24,8 @@ class IdempotencyCleanupTaskTest {
 
     @BeforeEach
     void setUp() {
-        cleanupTask = new IdempotencyCleanupTask(idempotencyRecordRepository);
+        Clock clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
+        cleanupTask = new IdempotencyCleanupTask(idempotencyRecordRepository, clock);
     }
 
     @Test

@@ -529,7 +529,7 @@ class SkillQueryServiceTest {
         SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
         setId(published, 10L);
         published.setStatus(SkillVersionStatus.PUBLISHED);
-        published.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 1, 10, 0));
+        published.setPublishedAt(java.time.Instant.parse("2026-03-01T10:00:00Z"));
 
         SkillVersion pending = new SkillVersion(1L, "1.1.0", ownerId);
         setId(pending, 11L);
@@ -796,7 +796,7 @@ class SkillQueryServiceTest {
         SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
         setId(published, 11L);
         published.setStatus(SkillVersionStatus.PUBLISHED);
-        published.setPublishedAt(java.time.LocalDateTime.of(2026, 3, 1, 10, 0));
+        published.setPublishedAt(java.time.Instant.parse("2026-03-01T10:00:00Z"));
 
         SkillVersion pending = new SkillVersion(1L, "1.1.0", ownerId);
         setId(pending, 12L);

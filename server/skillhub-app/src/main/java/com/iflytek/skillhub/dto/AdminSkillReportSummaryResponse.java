@@ -1,6 +1,6 @@
 package com.iflytek.skillhub.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AdminSkillReportSummaryResponse(
         Long id,
@@ -14,6 +14,6 @@ public record AdminSkillReportSummaryResponse(
         String status,
         String handledBy,
         String handleComment,
-        LocalDateTime createdAt,
-        LocalDateTime handledAt
+        Instant createdAt,
+        Instant handledAt
 ) {}

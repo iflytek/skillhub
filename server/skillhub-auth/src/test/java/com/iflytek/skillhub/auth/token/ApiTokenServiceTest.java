@@ -10,7 +10,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,10 +29,12 @@ class ApiTokenServiceTest {
     private ApiTokenRepository tokenRepo;
 
     private ApiTokenService service;
+    private Clock clock;
 
     @BeforeEach
     void setUp() {
-        service = new ApiTokenService(tokenRepo);
+        clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
+        service = new ApiTokenService(tokenRepo, clock);
     }
 
     @Test
@@ -76,7 +80,7 @@ class ApiTokenServiceTest {
 
         var result = service.createToken("user-1", "CLI", "[]", "2099-03-20T10:15:00");
 
-        assertThat(result.entity().getExpiresAt()).isEqualTo(java.time.LocalDateTime.of(2099, 3, 20, 10, 15));
+        assertThat(result.entity().getExpiresAt()).isEqualTo(Instant.parse("2099-03-20T10:15:00Z"));
     }
 
     @Test

@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -25,13 +26,16 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
     private final StringRedisTemplate redisTemplate;
     private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     public IdempotencyInterceptor(StringRedisTemplate redisTemplate,
                                   IdempotencyRecordRepository idempotencyRecordRepository,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  Clock clock) {
         this.redisTemplate = redisTemplate;
         this.idempotencyRecordRepository = idempotencyRecordRepository;
         this.objectMapper = objectMapper;
+        this.clock = clock;
     }
 
     @Override
@@ -73,7 +77,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             }
         } else {
             // Create new record
-            Instant now = Instant.now();
+            Instant now = Instant.now(clock);
             IdempotencyRecord newRecord = new IdempotencyRecord(
                 requestId, (String) null, (Long) null, IdempotencyStatus.PROCESSING,
                 (Integer) null, now, now.plusSeconds(EXPIRY_HOURS * 3600));
@@ -120,7 +124,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
 
     private void writeDuplicateResponse(HttpServletResponse response) throws Exception {
         ApiResponse<Void> body = new ApiResponse<>(409, "error.request.duplicate", null,
-                Instant.now(), null);
+                Instant.now(clock), null);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }

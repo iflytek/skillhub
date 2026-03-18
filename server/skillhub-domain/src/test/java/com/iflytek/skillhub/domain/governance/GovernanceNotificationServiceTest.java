@@ -6,6 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,10 +24,12 @@ class GovernanceNotificationServiceTest {
     private UserNotificationRepository userNotificationRepository;
 
     private GovernanceNotificationService service;
+    private Clock clock;
 
     @BeforeEach
     void setUp() {
-        service = new GovernanceNotificationService(userNotificationRepository);
+        clock = Clock.fixed(Instant.parse("2026-03-18T01:02:03Z"), ZoneOffset.UTC);
+        service = new GovernanceNotificationService(userNotificationRepository, clock);
     }
 
     @Test
@@ -44,6 +49,7 @@ class GovernanceNotificationServiceTest {
         assertThat(notification.getUserId()).isEqualTo("user-1");
         assertThat(notification.getStatus()).isEqualTo(UserNotificationStatus.UNREAD);
         assertThat(notification.getCategory()).isEqualTo("REVIEW");
+        assertThat(notification.getCreatedAt()).isEqualTo(Instant.now(clock));
     }
 
     @Test
@@ -54,7 +60,8 @@ class GovernanceNotificationServiceTest {
                 "REVIEW_TASK",
                 99L,
                 "Review completed",
-                "{\"status\":\"APPROVED\"}"
+                "{\"status\":\"APPROVED\"}",
+                Instant.parse("2026-03-18T00:00:00Z")
         );
         setField(notification, "id", 10L);
         when(userNotificationRepository.findById(10L)).thenReturn(Optional.of(notification));
@@ -64,13 +71,35 @@ class GovernanceNotificationServiceTest {
 
     @Test
     void listNotifications_returnsNewestFirst() {
-        UserNotification unread = new UserNotification("user-1", "REVIEW", "REVIEW_TASK", 99L, "A", "{}");
-        UserNotification read = new UserNotification("user-1", "REPORT", "SKILL_REPORT", 88L, "B", "{}");
+        UserNotification unread = new UserNotification("user-1", "REVIEW", "REVIEW_TASK", 99L, "A", "{}", Instant.parse("2026-03-18T00:00:00Z"));
+        UserNotification read = new UserNotification("user-1", "REPORT", "SKILL_REPORT", 88L, "B", "{}", Instant.parse("2026-03-18T00:01:00Z"));
         when(userNotificationRepository.findByUserIdOrderByCreatedAtDesc("user-1")).thenReturn(List.of(unread, read));
 
         List<UserNotification> result = service.listNotifications("user-1");
 
         assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void markRead_setsReadTimestampFromClock() {
+        UserNotification notification = new UserNotification(
+                "user-1",
+                "REVIEW",
+                "REVIEW_TASK",
+                99L,
+                "Review completed",
+                "{\"status\":\"APPROVED\"}",
+                Instant.parse("2026-03-18T00:00:00Z")
+        );
+        setField(notification, "id", 10L);
+        when(userNotificationRepository.findById(10L)).thenReturn(Optional.of(notification));
+        when(userNotificationRepository.save(any(UserNotification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserNotification result = service.markRead(10L, "user-1");
+
+        assertThat(result.getStatus()).isEqualTo(UserNotificationStatus.READ);
+        assertThat(result.getReadAt()).isEqualTo(Instant.now(clock));
     }
 
     private void setField(Object target, String fieldName, Object value) {

@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.auth.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "identity_binding",
@@ -27,10 +28,10 @@ public class IdentityBinding {
     private String extraJson;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     protected IdentityBinding() {}
 
@@ -43,13 +44,13 @@ public class IdentityBinding {
 
     @PrePersist
     void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now(Clock.systemUTC());
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getId() { return id; }
@@ -63,4 +64,6 @@ public class IdentityBinding {
     public void setLoginName(String loginName) { this.loginName = loginName; }
     public String getExtraJson() { return extraJson; }
     public void setExtraJson(String extraJson) { this.extraJson = extraJson; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

@@ -9,7 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "skill_report")
@@ -45,10 +46,10 @@ public class SkillReport {
     private String handleComment;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "handled_at")
-    private LocalDateTime handledAt;
+    private Instant handledAt;
 
     protected SkillReport() {
     }
@@ -63,7 +64,7 @@ public class SkillReport {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getId() {
@@ -114,15 +115,15 @@ public class SkillReport {
         this.handleComment = handleComment;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public LocalDateTime getHandledAt() {
+    public Instant getHandledAt() {
         return handledAt;
     }
 
-    public void setHandledAt(LocalDateTime handledAt) {
+    public void setHandledAt(Instant handledAt) {
         this.handledAt = handledAt;
     }
 }

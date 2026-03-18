@@ -15,7 +15,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ public class PromotionService {
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final GovernanceNotificationService governanceNotificationService;
+    private final Clock clock;
 
     public PromotionService(PromotionRequestRepository promotionRequestRepository,
                             SkillRepository skillRepository,
@@ -40,7 +42,8 @@ public class PromotionService {
                             NamespaceRepository namespaceRepository,
                             ReviewPermissionChecker permissionChecker,
                             ApplicationEventPublisher eventPublisher,
-                            GovernanceNotificationService governanceNotificationService) {
+                            GovernanceNotificationService governanceNotificationService,
+                            Clock clock) {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -49,6 +52,7 @@ public class PromotionService {
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
         this.governanceNotificationService = governanceNotificationService;
+        this.clock = clock;
     }
 
     @Transactional
@@ -187,7 +191,7 @@ public class PromotionService {
         SkillVersion newVersion = new SkillVersion(newSkill.getId(), sourceVersion.getVersion(),
                 sourceVersion.getCreatedBy());
         newVersion.setStatus(SkillVersionStatus.PUBLISHED);
-        newVersion.setPublishedAt(LocalDateTime.now());
+        newVersion.setPublishedAt(currentTime());
         newVersion.setChangelog(sourceVersion.getChangelog());
         newVersion.setParsedMetadataJson(sourceVersion.getParsedMetadataJson());
         newVersion.setManifestJson(sourceVersion.getManifestJson());
@@ -268,5 +272,9 @@ public class PromotionService {
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
         }
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 }

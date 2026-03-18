@@ -2,7 +2,8 @@ package com.iflytek.skillhub.domain.social;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "skill_rating",
@@ -21,10 +22,10 @@ public class SkillRating {
     private Short score;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private Instant updatedAt;
 
     protected SkillRating() {}
 
@@ -38,7 +39,18 @@ public class SkillRating {
     public void updateScore(short newScore) {
         if (newScore < 1 || newScore > 5) throw new DomainBadRequestException("error.rating.score.invalid");
         this.score = newScore;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now(Clock.systemUTC());
+    }
+
+    @PrePersist
+    void prePersist() {
+        this.createdAt = Instant.now(Clock.systemUTC());
+        this.updatedAt = this.createdAt;
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        this.updatedAt = Instant.now(Clock.systemUTC());
     }
 
     // getters
@@ -46,6 +58,6 @@ public class SkillRating {
     public Long getSkillId() { return skillId; }
     public String getUserId() { return userId; }
     public Short getScore() { return score; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

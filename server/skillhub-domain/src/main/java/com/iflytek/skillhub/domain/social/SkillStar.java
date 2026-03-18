@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.domain.social;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "skill_star",
@@ -17,7 +18,7 @@ public class SkillStar {
     private String userId;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt;
 
     protected SkillStar() {}
 
@@ -26,9 +27,14 @@ public class SkillStar {
         this.userId = userId;
     }
 
+    @PrePersist
+    void prePersist() {
+        this.createdAt = Instant.now(Clock.systemUTC());
+    }
+
     // getters
     public Long getId() { return id; }
     public Long getSkillId() { return skillId; }
     public String getUserId() { return userId; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public Instant getCreatedAt() { return createdAt; }
 }

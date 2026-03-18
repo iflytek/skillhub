@@ -31,7 +31,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
@@ -44,6 +47,9 @@ import java.util.zip.ZipOutputStream;
 
 @Service
 public class SkillPublishService {
+
+    private static final DateTimeFormatter AUTO_VERSION_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneOffset.UTC);
 
     public record PublishResult(
             Long skillId,
@@ -63,6 +69,7 @@ public class SkillPublishService {
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     public SkillPublishService(
             NamespaceRepository namespaceRepository,
@@ -76,7 +83,8 @@ public class SkillPublishService {
             PrePublishValidator prePublishValidator,
             ObjectMapper objectMapper,
             ReviewTaskRepository reviewTaskRepository,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            Clock clock) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.skillRepository = skillRepository;
@@ -89,6 +97,7 @@ public class SkillPublishService {
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Transactional
@@ -173,8 +182,7 @@ public class SkillPublishService {
         String skillMdContent = new String(skillMd.content());
         SkillMetadata metadata = skillMetadataParser.parse(skillMdContent);
         if (metadata.version() == null || metadata.version().isBlank()) {
-            String autoVersion = java.time.LocalDateTime.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"));
+            String autoVersion = AUTO_VERSION_FORMATTER.format(currentTime());
             metadata = new SkillMetadata(metadata.name(), metadata.description(), autoVersion, metadata.body(), metadata.frontmatter());
         }
         String skillSlug = SlugValidator.slugify(metadata.name());
@@ -241,7 +249,7 @@ public class SkillPublishService {
         boolean autoPublish = forceAutoPublish || isSuperAdmin;
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
-            version.setPublishedAt(LocalDateTime.now());
+            version.setPublishedAt(currentTime());
         } else {
             version.setStatus(SkillVersionStatus.PENDING_REVIEW);
         }
@@ -386,6 +394,10 @@ public class SkillPublishService {
         if (!canManage) {
             throw new DomainForbiddenException("error.skill.lifecycle.noPermission");
         }
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 
     private List<PackageEntry> rebuildEntriesForRerelease(Long skillId, Long versionId, String targetVersion) {

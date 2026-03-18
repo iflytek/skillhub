@@ -14,8 +14,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.format.DateTimeParseException;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -29,9 +33,11 @@ public class ApiTokenService {
     private static final int MAX_NAME_LENGTH = 64;
     private final SecureRandom secureRandom = new SecureRandom();
     private final ApiTokenRepository tokenRepo;
+    private final Clock clock;
 
-    public ApiTokenService(ApiTokenRepository tokenRepo) {
+    public ApiTokenService(ApiTokenRepository tokenRepo, Clock clock) {
         this.tokenRepo = tokenRepo;
+        this.clock = clock;
     }
 
     public record TokenCreateResult(String rawToken, ApiToken entity) {}
@@ -45,7 +51,7 @@ public class ApiTokenService {
     public TokenCreateResult createToken(String userId, String name, String scopeJson, String expiresAt) {
         String normalizedName = normalizeName(name);
         validateTokenName(userId, normalizedName);
-        LocalDateTime parsedExpiresAt = parseExpiresAt(expiresAt);
+        Instant parsedExpiresAt = parseExpiresAt(expiresAt);
 
         byte[] randomBytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(randomBytes);
@@ -77,7 +83,7 @@ public class ApiTokenService {
         String normalizedName = normalizeName(name);
         tokenRepo.findByUserIdAndNameIgnoreCaseAndRevokedAtIsNull(userId, normalizedName)
                 .ifPresent(existing -> {
-                    existing.setRevokedAt(LocalDateTime.now());
+                    existing.setRevokedAt(currentTime());
                     tokenRepo.save(existing);
                 });
         return createToken(userId, name, scopeJson, expiresAt);
@@ -85,7 +91,7 @@ public class ApiTokenService {
 
     public Optional<ApiToken> validateToken(String rawToken) {
         String hash = sha256(rawToken);
-        return tokenRepo.findByTokenHash(hash).filter(ApiToken::isValid);
+        return tokenRepo.findByTokenHash(hash).filter(token -> token.isValid(currentTime()));
     }
 
     @Transactional
@@ -93,7 +99,7 @@ public class ApiTokenService {
         tokenRepo.findById(tokenId)
             .filter(t -> t.getUserId().equals(userId))
             .ifPresent(t -> {
-                t.setRevokedAt(LocalDateTime.now());
+                t.setRevokedAt(currentTime());
                 tokenRepo.save(t);
             });
     }
@@ -119,7 +125,7 @@ public class ApiTokenService {
 
     @Transactional
     public void touchLastUsed(ApiToken token) {
-        token.setLastUsedAt(LocalDateTime.now());
+        token.setLastUsedAt(currentTime());
         tokenRepo.save(token);
     }
 
@@ -152,19 +158,38 @@ public class ApiTokenService {
         }
     }
 
-    private LocalDateTime parseExpiresAt(String expiresAt) {
+    private Instant parseExpiresAt(String expiresAt) {
         if (expiresAt == null || expiresAt.isBlank()) {
             return null;
         }
 
         try {
-            LocalDateTime parsed = LocalDateTime.parse(expiresAt.trim());
-            if (!parsed.isAfter(LocalDateTime.now())) {
+            Instant parsed = parseInstant(expiresAt.trim());
+            if (!parsed.isAfter(currentTime())) {
                 throw new DomainBadRequestException("validation.token.expiresAt.future");
             }
             return parsed;
         } catch (DateTimeParseException ex) {
             throw new DomainBadRequestException("validation.token.expiresAt.invalid");
         }
+    }
+
+    private Instant parseInstant(String value) {
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return OffsetDateTime.parse(value).toInstant();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        // Legacy compatibility: treat naive timestamps as UTC instead of server-local time.
+        return LocalDateTime.parse(value).toInstant(ZoneOffset.UTC);
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 }

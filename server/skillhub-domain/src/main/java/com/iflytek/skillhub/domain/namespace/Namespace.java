@@ -1,7 +1,8 @@
 package com.iflytek.skillhub.domain.namespace;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "namespace")
@@ -34,10 +35,10 @@ public class Namespace {
     private String createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     protected Namespace() {}
 
@@ -49,13 +50,13 @@ public class Namespace {
 
     @PrePersist
     void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now(Clock.systemUTC());
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getId() { return id; }
@@ -71,6 +72,6 @@ public class Namespace {
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public String getCreatedBy() { return createdBy; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

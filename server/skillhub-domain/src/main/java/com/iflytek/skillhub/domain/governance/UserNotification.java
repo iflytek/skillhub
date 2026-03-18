@@ -7,7 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
@@ -55,23 +54,20 @@ public class UserNotification {
                             String entityType,
                             Long entityId,
                             String title,
-                            String bodyJson) {
+                            String bodyJson,
+                            Instant createdAt) {
         this.userId = userId;
         this.category = category;
         this.entityType = entityType;
         this.entityId = entityId;
         this.title = title;
         this.bodyJson = bodyJson;
+        this.createdAt = createdAt;
     }
 
-    @PrePersist
-    void onCreate() {
-        createdAt = Instant.now();
-    }
-
-    public void markRead() {
+    public void markRead(Instant readAt) {
         this.status = UserNotificationStatus.READ;
-        this.readAt = Instant.now();
+        this.readAt = readAt;
     }
 
     public Long getId() {

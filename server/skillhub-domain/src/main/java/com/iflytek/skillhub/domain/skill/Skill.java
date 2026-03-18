@@ -2,7 +2,8 @@ package com.iflytek.skillhub.domain.skill;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "skill")
@@ -48,7 +49,7 @@ public class Skill {
     private boolean hidden = false;
 
     @Column(name = "hidden_at")
-    private LocalDateTime hiddenAt;
+    private Instant hiddenAt;
 
     @Column(name = "hidden_by", length = 128)
     private String hiddenBy;
@@ -66,13 +67,13 @@ public class Skill {
     private String createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_by")
     private String updatedBy;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     protected Skill() {
     }
@@ -87,13 +88,13 @@ public class Skill {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = Instant.now(Clock.systemUTC());
+        updatedAt = createdAt;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now(Clock.systemUTC());
     }
 
     // Getters
@@ -145,7 +146,7 @@ public class Skill {
         return hidden;
     }
 
-    public LocalDateTime getHiddenAt() {
+    public Instant getHiddenAt() {
         return hiddenAt;
     }
 
@@ -169,7 +170,7 @@ public class Skill {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
@@ -177,7 +178,7 @@ public class Skill {
         return updatedBy;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
@@ -218,7 +219,7 @@ public class Skill {
         this.hidden = hidden;
     }
 
-    public void setHiddenAt(LocalDateTime hiddenAt) {
+    public void setHiddenAt(Instant hiddenAt) {
         this.hiddenAt = hiddenAt;
     }
 

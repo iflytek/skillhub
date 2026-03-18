@@ -24,7 +24,9 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import java.lang.reflect.Field;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,9 +57,11 @@ class AccountMergeServiceTest {
     private PasswordEncoder passwordEncoder;
 
     private AccountMergeService service;
+    private Clock clock;
 
     @BeforeEach
     void setUp() {
+        clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
         service = new AccountMergeService(
             mergeRequestRepository,
             userAccountRepository,
@@ -66,7 +70,8 @@ class AccountMergeServiceTest {
             userRoleBindingRepository,
             apiTokenRepository,
             namespaceMemberRepository,
-            passwordEncoder
+            passwordEncoder,
+            clock
         );
     }
 
@@ -89,6 +94,7 @@ class AccountMergeServiceTest {
 
         assertThat(result.secondaryUserId()).isEqualTo("usr_secondary");
         assertThat(result.verificationToken()).isNotBlank();
+        assertThat(result.expiresAt()).isEqualTo(Instant.parse("2026-03-18T00:30:00Z"));
         verify(mergeRequestRepository).save(any(AccountMergeRequest.class));
     }
 
@@ -145,6 +151,7 @@ class AccountMergeServiceTest {
         assertThat(secondary.getStatus()).isEqualTo(com.iflytek.skillhub.domain.user.UserStatus.MERGED);
         assertThat(secondary.getMergedToUserId()).isEqualTo("usr_primary");
         assertThat(request.getStatus()).isEqualTo(AccountMergeRequest.STATUS_COMPLETED);
+        assertThat(request.getCompletedAt()).isEqualTo(Instant.parse("2026-03-18T00:00:00Z"));
         assertThat(request.getVerificationToken()).isNull();
         verify(userRoleBindingRepository).save(any(UserRoleBinding.class));
         verify(userRoleBindingRepository).deleteAll(List.of(secondaryRole));
@@ -168,7 +175,7 @@ class AccountMergeServiceTest {
             primaryUserId,
             secondaryUserId,
             token,
-            LocalDateTime.now().plusMinutes(10)
+            Instant.now(clock).plusSeconds(600)
         );
         Field idField = AccountMergeRequest.class.getDeclaredField("id");
         idField.setAccessible(true);

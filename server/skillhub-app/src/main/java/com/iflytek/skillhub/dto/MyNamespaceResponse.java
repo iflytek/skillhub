@@ -6,7 +6,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record MyNamespaceResponse(
         Long id,
@@ -17,8 +17,8 @@ public record MyNamespaceResponse(
         NamespaceType type,
         String avatarUrl,
         String createdBy,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt,
+        Instant createdAt,
+        Instant updatedAt,
         NamespaceRole currentUserRole,
         boolean immutable,
         boolean canFreeze,

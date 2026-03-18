@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Component
@@ -16,15 +17,17 @@ public class IdempotencyCleanupTask {
     private static final long STALE_THRESHOLD_MINUTES = 30;
 
     private final IdempotencyRecordRepository idempotencyRecordRepository;
+    private final Clock clock;
 
-    public IdempotencyCleanupTask(IdempotencyRecordRepository idempotencyRecordRepository) {
+    public IdempotencyCleanupTask(IdempotencyRecordRepository idempotencyRecordRepository, Clock clock) {
         this.idempotencyRecordRepository = idempotencyRecordRepository;
+        this.clock = clock;
     }
 
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional
     public void cleanupExpiredRecords() {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         int deleted = idempotencyRecordRepository.deleteExpired(now);
         logger.info("Cleaned up {} expired idempotency records", deleted);
     }
@@ -32,7 +35,7 @@ public class IdempotencyCleanupTask {
     @Scheduled(fixedDelay = 300000)
     @Transactional
     public void cleanupStaleProcessing() {
-        Instant threshold = Instant.now().minusSeconds(STALE_THRESHOLD_MINUTES * 60);
+        Instant threshold = Instant.now(clock).minusSeconds(STALE_THRESHOLD_MINUTES * 60);
         int updated = idempotencyRecordRepository.markStaleAsFailed(threshold);
         if (updated > 0) {
             logger.info("Marked {} stale processing records as failed", updated);

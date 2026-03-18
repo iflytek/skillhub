@@ -1,7 +1,7 @@
 package com.iflytek.skillhub.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record SkillSummaryResponse(
         Long id,
@@ -14,7 +14,7 @@ public record SkillSummaryResponse(
         BigDecimal ratingAvg,
         Integer ratingCount,
         String namespace,
-        LocalDateTime updatedAt,
+        Instant updatedAt,
         boolean canSubmitPromotion,
         SkillLifecycleVersionResponse headlineVersion,
         SkillLifecycleVersionResponse publishedVersion,

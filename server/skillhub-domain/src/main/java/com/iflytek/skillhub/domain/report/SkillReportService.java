@@ -8,7 +8,8 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,17 +21,20 @@ public class SkillReportService {
     private final AuditLogService auditLogService;
     private final SkillGovernanceService skillGovernanceService;
     private final GovernanceNotificationService governanceNotificationService;
+    private final Clock clock;
 
     public SkillReportService(SkillRepository skillRepository,
                               SkillReportRepository skillReportRepository,
                               AuditLogService auditLogService,
                               SkillGovernanceService skillGovernanceService,
-                              GovernanceNotificationService governanceNotificationService) {
+                              GovernanceNotificationService governanceNotificationService,
+                              Clock clock) {
         this.skillRepository = skillRepository;
         this.skillReportRepository = skillReportRepository;
         this.auditLogService = auditLogService;
         this.skillGovernanceService = skillGovernanceService;
         this.governanceNotificationService = governanceNotificationService;
+        this.clock = clock;
     }
 
     @Transactional
@@ -93,7 +97,7 @@ public class SkillReportService {
         report.setStatus(SkillReportStatus.RESOLVED);
         report.setHandledBy(actorUserId);
         report.setHandleComment(normalize(comment));
-        report.setHandledAt(LocalDateTime.now());
+        report.setHandledAt(currentTime());
         SkillReport saved = skillReportRepository.save(report);
         auditLogService.record(actorUserId, "RESOLVE_SKILL_REPORT", "SKILL_REPORT", reportId, null, clientIp, userAgent, null);
         governanceNotificationService.notifyUser(
@@ -117,7 +121,7 @@ public class SkillReportService {
         report.setStatus(SkillReportStatus.DISMISSED);
         report.setHandledBy(actorUserId);
         report.setHandleComment(normalize(comment));
-        report.setHandledAt(LocalDateTime.now());
+        report.setHandledAt(currentTime());
         SkillReport saved = skillReportRepository.save(report);
         auditLogService.record(actorUserId, "DISMISS_SKILL_REPORT", "SKILL_REPORT", reportId, null, clientIp, userAgent, null);
         governanceNotificationService.notifyUser(
@@ -146,5 +150,9 @@ public class SkillReportService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Instant currentTime() {
+        return Instant.now(clock);
     }
 }

@@ -18,7 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -147,8 +147,8 @@ class AdminUserAppServiceTest {
     private UserAccount user(String id, String displayName, String email, UserStatus status) {
         UserAccount user = new UserAccount(id, displayName, email, null);
         user.setStatus(status);
-        ReflectionTestUtils.setField(user, "createdAt", LocalDateTime.of(2026, 3, 13, 9, 0));
-        ReflectionTestUtils.setField(user, "updatedAt", LocalDateTime.of(2026, 3, 13, 9, 0));
+        ReflectionTestUtils.setField(user, "createdAt", Instant.parse("2026-03-13T09:00:00Z"));
+        ReflectionTestUtils.setField(user, "updatedAt", Instant.parse("2026-03-13T09:00:00Z"));
         return user;
     }
 

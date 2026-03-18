@@ -17,7 +17,9 @@ import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class LocalAuthServiceTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-03-18T06:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private LocalCredentialRepository credentialRepository;
@@ -57,7 +61,8 @@ class LocalAuthServiceTest {
             userRoleBindingRepository,
             globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
-            passwordEncoder
+            passwordEncoder,
+            CLOCK
         );
     }
 
@@ -85,7 +90,7 @@ class LocalAuthServiceTest {
     void login_withValidPassword_resetsCounters() {
         LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
         credential.setFailedAttempts(3);
-        credential.setLockedUntil(LocalDateTime.now().minusMinutes(1));
+        credential.setLockedUntil(Instant.now(CLOCK).minusSeconds(60));
         UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
         Role role = mock(Role.class);
         given(role.getCode()).willReturn("USER_ADMIN");
@@ -119,6 +124,38 @@ class LocalAuthServiceTest {
 
         assertThat(credential.getFailedAttempts()).isEqualTo(1);
         verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    void login_afterMaxFailures_setsLockUsingInjectedClock() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        credential.setFailedAttempts(4);
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("bad", "encoded")).willReturn(false);
+
+        assertThatThrownBy(() -> service.login("alice", "bad"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(credential.getLockedUntil()).isEqualTo(Instant.now(CLOCK).plusSeconds(15 * 60));
+    }
+
+    @Test
+    void login_whileLocked_reportsRemainingMinutesFromInjectedClock() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        credential.setLockedUntil(Instant.now(CLOCK).plusSeconds(5 * 60));
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.login("alice", "Abcd123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.locked");
     }
 
     @Test
