@@ -119,7 +119,7 @@ export function TokenList() {
       tokenId: token.id,
       tokenName: token.name,
       mode: token.expiresAt ? 'custom' : 'never',
-      customExpiresAt: token.expiresAt ? token.expiresAt.slice(0, 16) : '',
+      customExpiresAt: token.expiresAt ? toLocalDateTimeInputValue(token.expiresAt) : '',
     })
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { formatLocalDateTime } from './date-time'
+import { formatLocalDateTime, toLocalDateTimeInputValue } from './date-time'
 
 describe('formatLocalDateTime', () => {
   it('returns an em dash for empty values', () => {
@@ -48,5 +48,11 @@ describe('formatLocalDateTime', () => {
     })
 
     spy.mockRestore()
+  })
+
+  it('converts utc timestamps to the same local datetime-local value as Date objects', () => {
+    expect(toLocalDateTimeInputValue('2026-03-17T12:30:00Z')).toBe(
+      toLocalDateTimeInputValue(new Date('2026-03-17T12:30:00Z'))
+    )
   })
 })
