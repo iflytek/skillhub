@@ -28,19 +28,19 @@ public class LocalFileStorageService implements ObjectStorageService {
                 data.transferTo(out);
             }
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException e) { throw new UncheckedIOException("Failed to put object: " + key, e); }
+        } catch (IOException e) { throw new StorageAccessException("putObject", key, e); }
     }
 
     @Override
     public InputStream getObject(String key) {
         try { return Files.newInputStream(resolve(key)); }
-        catch (IOException e) { throw new UncheckedIOException("Failed to get object: " + key, e); }
+        catch (IOException e) { throw new StorageAccessException("getObject", key, e); }
     }
 
     @Override
     public void deleteObject(String key) {
         try { Files.deleteIfExists(resolve(key)); }
-        catch (IOException e) { throw new UncheckedIOException("Failed to delete object: " + key, e); }
+        catch (IOException e) { throw new StorageAccessException("deleteObject", key, e); }
     }
 
     @Override
@@ -55,7 +55,7 @@ public class LocalFileStorageService implements ObjectStorageService {
             Path path = resolve(key);
             BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
             return new ObjectMetadata(attrs.size(), Files.probeContentType(path), attrs.lastModifiedTime().toInstant());
-        } catch (IOException e) { throw new UncheckedIOException("Failed to get metadata: " + key, e); }
+        } catch (IOException e) { throw new StorageAccessException("getMetadata", key, e); }
     }
 
     @Override

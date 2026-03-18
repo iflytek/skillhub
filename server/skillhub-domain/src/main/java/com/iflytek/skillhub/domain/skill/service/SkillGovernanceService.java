@@ -201,6 +201,7 @@ public class SkillGovernanceService {
         version.setYankedAt(LocalDateTime.now());
         version.setYankedBy(actorUserId);
         version.setYankReason(reason);
+        version.setDownloadReady(false);
         SkillVersion saved = skillVersionRepository.save(version);
         auditLogService.record(actorUserId, "YANK_SKILL_VERSION", "SKILL_VERSION", versionId, null, clientIp, userAgent, jsonReason(reason));
         return saved;

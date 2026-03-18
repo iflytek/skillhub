@@ -14,6 +14,7 @@ import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillVersionDetailResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
+import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
@@ -37,14 +38,17 @@ public class SkillController extends BaseApiController {
 
     private final SkillQueryService skillQueryService;
     private final SkillDownloadService skillDownloadService;
+    private final SkillHubMetrics metrics;
 
     public SkillController(
             SkillQueryService skillQueryService,
             SkillDownloadService skillDownloadService,
+            SkillHubMetrics metrics,
             ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.skillQueryService = skillQueryService;
         this.skillDownloadService = skillDownloadService;
+        this.metrics = metrics;
     }
 
     @GetMapping("/{namespace}/{slug}")
@@ -281,7 +285,7 @@ public class SkillController extends BaseApiController {
     }
 
     @GetMapping("/{namespace}/{slug}/download")
-    @RateLimit(category = "download", authenticated = 120, anonymous = 30)
+    @RateLimit(category = "download", authenticated = 30, anonymous = 10)
     public ResponseEntity<InputStreamResource> downloadLatest(
             @PathVariable String namespace,
             @PathVariable String slug,
@@ -296,7 +300,7 @@ public class SkillController extends BaseApiController {
     }
 
     @GetMapping("/{namespace}/{slug}/versions/{version}/download")
-    @RateLimit(category = "download", authenticated = 120, anonymous = 30)
+    @RateLimit(category = "download", authenticated = 30, anonymous = 10)
     public ResponseEntity<InputStreamResource> downloadVersion(
             @PathVariable String namespace,
             @PathVariable String slug,
@@ -312,7 +316,7 @@ public class SkillController extends BaseApiController {
     }
 
     @GetMapping("/{namespace}/{slug}/tags/{tagName}/download")
-    @RateLimit(category = "download", authenticated = 120, anonymous = 30)
+    @RateLimit(category = "download", authenticated = 30, anonymous = 10)
     public ResponseEntity<InputStreamResource> downloadByTag(
             @PathVariable String namespace,
             @PathVariable String slug,
@@ -329,16 +333,24 @@ public class SkillController extends BaseApiController {
 
     private ResponseEntity<InputStreamResource> buildDownloadResponse(HttpServletRequest request, SkillDownloadService.DownloadResult result) {
         if (shouldRedirectToPresignedUrl(request, result.presignedUrl())) {
+            metrics.recordDownloadDelivery("redirect", result.fallbackBundle());
+            if (result.fallbackBundle()) {
+                metrics.incrementBundleMissingFallback();
+            }
             return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, result.presignedUrl())
                 .build();
         }
 
+        metrics.recordDownloadDelivery("stream", result.fallbackBundle());
+        if (result.fallbackBundle()) {
+            metrics.incrementBundleMissingFallback();
+        }
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.filename() + "\"")
                 .contentType(MediaType.parseMediaType(result.contentType()))
                 .contentLength(result.contentLength())
-                .body(new InputStreamResource(result.content()));
+                .body(new InputStreamResource(result.openContent()));
     }
 
     private boolean shouldRedirectToPresignedUrl(HttpServletRequest request, String presignedUrl) {

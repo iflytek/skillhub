@@ -10,6 +10,8 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import com.iflytek.skillhub.storage.ObjectMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -20,11 +22,13 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
 public class SkillDownloadService {
+    private static final Logger log = LoggerFactory.getLogger(SkillDownloadService.class);
 
     private final NamespaceRepository namespaceRepository;
     private final SkillRepository skillRepository;
@@ -58,12 +62,17 @@ public class SkillDownloadService {
     }
 
     public record DownloadResult(
-            InputStream content,
+            Supplier<InputStream> contentSupplier,
             String filename,
             long contentLength,
             String contentType,
-            String presignedUrl
-    ) {}
+            String presignedUrl,
+            boolean fallbackBundle
+    ) {
+        public InputStream openContent() {
+            return contentSupplier.get();
+        }
+    }
 
     public DownloadResult downloadLatest(
             String namespaceSlug,
@@ -137,9 +146,21 @@ public class SkillDownloadService {
             ObjectMetadata metadata = objectStorageService.getMetadata(storageKey);
             String filename = buildFilename(skill, version);
             String presignedUrl = objectStorageService.generatePresignedUrl(storageKey, Duration.ofMinutes(10), filename);
-            InputStream content = objectStorageService.getObject(storageKey);
-            result = new DownloadResult(content, filename, metadata.size(), metadata.contentType(), presignedUrl);
+            result = new DownloadResult(
+                    () -> objectStorageService.getObject(storageKey),
+                    filename,
+                    metadata.size(),
+                    metadata.contentType(),
+                    presignedUrl,
+                    false
+            );
         } else {
+            log.warn(
+                    "Bundle missing for published version, falling back to per-file zip [skillId={}, versionId={}, version={}]",
+                    skill.getId(),
+                    version.getId(),
+                    version.getVersion()
+            );
             result = buildBundleFromFiles(skill, version);
         }
 
@@ -159,11 +180,12 @@ public class SkillDownloadService {
 
         byte[] bundle = createBundle(files);
         return new DownloadResult(
-                new ByteArrayInputStream(bundle),
+                () -> new ByteArrayInputStream(bundle),
                 buildFilename(skill, version),
                 bundle.length,
                 "application/zip",
-                null
+                null,
+                true
         );
     }
 

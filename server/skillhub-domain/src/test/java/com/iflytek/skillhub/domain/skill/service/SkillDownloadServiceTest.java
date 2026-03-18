@@ -90,7 +90,6 @@ class SkillDownloadServiceTest {
         setId(version, 10L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
         String storageKey = "packages/1/10/bundle.zip";
-        InputStream content = new ByteArrayInputStream("test".getBytes());
         ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
@@ -99,7 +98,7 @@ class SkillDownloadServiceTest {
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
-        when(objectStorageService.getObject(storageKey)).thenReturn(content);
+        when(objectStorageService.getObject(storageKey)).thenReturn(new ByteArrayInputStream("test".getBytes()));
         when(objectStorageService.generatePresignedUrl(eq(storageKey), any(), eq("Test Skill-1.0.0.zip"))).thenReturn(null);
 
         // Act
@@ -109,7 +108,9 @@ class SkillDownloadServiceTest {
         assertNotNull(result);
         assertEquals("Test Skill-1.0.0.zip", result.filename());
         assertEquals(1000L, result.contentLength());
-        assertNotNull(result.content());
+        try (InputStream content = result.openContent()) {
+            assertNotNull(content);
+        }
         verify(skillRepository).incrementDownloadCount(1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
@@ -134,7 +135,6 @@ class SkillDownloadServiceTest {
         setId(version, 10L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
         String storageKey = "packages/1/10/bundle.zip";
-        InputStream content = new ByteArrayInputStream("test".getBytes());
         ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
@@ -144,7 +144,7 @@ class SkillDownloadServiceTest {
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
-        when(objectStorageService.getObject(storageKey)).thenReturn(content);
+        when(objectStorageService.getObject(storageKey)).thenReturn(new ByteArrayInputStream("test".getBytes()));
         when(objectStorageService.generatePresignedUrl(eq(storageKey), any(), eq("Test Skill-1.0.0.zip"))).thenReturn(null);
 
         // Act
@@ -153,7 +153,9 @@ class SkillDownloadServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals("Test Skill-1.0.0.zip", result.filename());
-        assertNotNull(result.content());
+        try (InputStream content = result.openContent()) {
+            assertNotNull(content);
+        }
         verify(skillRepository).incrementDownloadCount(1L);
         verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
@@ -176,7 +178,6 @@ class SkillDownloadServiceTest {
         setId(version, 10L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
         String storageKey = "packages/1/10/bundle.zip";
-        InputStream content = new ByteArrayInputStream("test".getBytes());
         ObjectMetadata metadata = new ObjectMetadata(1000L, "application/zip", Instant.now());
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
@@ -185,14 +186,13 @@ class SkillDownloadServiceTest {
         when(skillVersionRepository.findBySkillIdAndVersion(1L, versionStr)).thenReturn(Optional.of(version));
         when(objectStorageService.exists(storageKey)).thenReturn(true);
         when(objectStorageService.getMetadata(storageKey)).thenReturn(metadata);
-        when(objectStorageService.getObject(storageKey)).thenReturn(content);
         when(objectStorageService.generatePresignedUrl(eq(storageKey), any(), eq("Generate Commit Message-1.0.0.zip")))
                 .thenReturn("http://minio.local/presigned");
 
         SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
 
         assertEquals("http://minio.local/presigned", result.presignedUrl());
-        assertNotNull(result.content());
+        verify(objectStorageService, never()).getObject(storageKey);
     }
 
     @Test
@@ -252,11 +252,12 @@ class SkillDownloadServiceTest {
         SkillDownloadService.DownloadResult result = service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles);
 
         assertNull(result.presignedUrl());
+        assertTrue(result.fallbackBundle());
         assertEquals("Generate Commit Message-1.0.0.zip", result.filename());
         assertEquals("application/zip", result.contentType());
         assertTrue(result.contentLength() > 0);
 
-        try (ZipInputStream zipInputStream = new ZipInputStream(result.content())) {
+        try (ZipInputStream zipInputStream = new ZipInputStream(result.openContent())) {
             var entry = zipInputStream.getNextEntry();
             assertNotNull(entry);
             assertEquals("SKILL.md", entry.getName());
