@@ -9,7 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -71,7 +73,38 @@ public class SkillPackageArchiveExtractor {
             }
         }
 
-        return entries;
+        return stripSingleRootDirectory(entries);
+    }
+
+    /**
+     * If all file paths share a single root directory prefix (e.g., "my-skill/xxx"),
+     * strip that prefix. Otherwise return entries unchanged.
+     */
+    static List<PackageEntry> stripSingleRootDirectory(List<PackageEntry> entries) {
+        if (entries.isEmpty()) return entries;
+
+        Set<String> rootSegments = new HashSet<>();
+        for (PackageEntry entry : entries) {
+            int slashIndex = entry.path().indexOf('/');
+            if (slashIndex < 0) {
+                // File at root level, no stripping
+                return entries;
+            }
+            rootSegments.add(entry.path().substring(0, slashIndex));
+        }
+
+        if (rootSegments.size() != 1) {
+            return entries;
+        }
+
+        String prefix = rootSegments.iterator().next() + "/";
+        return entries.stream()
+                .map(e -> new PackageEntry(
+                        e.path().substring(prefix.length()),
+                        e.content(),
+                        e.size(),
+                        e.contentType()))
+                .toList();
     }
 
     private byte[] readEntry(ZipInputStream zis, String path) throws IOException {

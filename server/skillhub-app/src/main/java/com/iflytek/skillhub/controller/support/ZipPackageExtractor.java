@@ -69,7 +69,7 @@ public class ZipPackageExtractor {
             }
         }
 
-        return entries;
+        return SkillPackageArchiveExtractor.stripSingleRootDirectory(entries);
     }
 
     private byte[] readEntry(ZipInputStream zis, String path) throws IOException {

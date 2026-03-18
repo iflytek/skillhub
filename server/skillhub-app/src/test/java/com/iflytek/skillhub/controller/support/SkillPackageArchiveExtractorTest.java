@@ -70,6 +70,61 @@ class SkillPackageArchiveExtractorTest {
         assertEquals(1, entries.size());
     }
 
+    @Test
+    void stripsRootDirectoryWhenSingleFolder() throws Exception {
+        byte[] zipBytes = createZip(Map.of(
+                "my-skill/SKILL.md", "---\nname: test\n---\n".getBytes(),
+                "my-skill/config.json", "{}".getBytes()
+        ));
+        MockMultipartFile file = new MockMultipartFile("file", "test.zip", "application/zip", zipBytes);
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertTrue(entries.stream().anyMatch(e -> e.path().equals("SKILL.md")));
+        assertTrue(entries.stream().anyMatch(e -> e.path().equals("config.json")));
+    }
+
+    @Test
+    void doesNotStripWhenMultipleRootEntries() throws Exception {
+        byte[] zipBytes = createZip(Map.of(
+                "SKILL.md", "---\nname: test\n---\n".getBytes(),
+                "config.json", "{}".getBytes()
+        ));
+        MockMultipartFile file = new MockMultipartFile("file", "test.zip", "application/zip", zipBytes);
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertTrue(entries.stream().anyMatch(e -> e.path().equals("SKILL.md")));
+    }
+
+    @Test
+    void stripsRootDirectoryWhenZipHasExplicitDirEntry() throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            zos.putNextEntry(new ZipEntry("my-skill/"));
+            zos.closeEntry();
+            zos.putNextEntry(new ZipEntry("my-skill/SKILL.md"));
+            zos.write("---\nname: test\n---".getBytes());
+            zos.closeEntry();
+        }
+        MockMultipartFile file = new MockMultipartFile("file", "test.zip", "application/zip", baos.toByteArray());
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertEquals(1, entries.size());
+        assertEquals("SKILL.md", entries.get(0).path());
+    }
+
+    @Test
+    void doesNotStripWhenMultipleRootDirectories() throws Exception {
+        byte[] zipBytes = createZip(Map.of(
+                "dir-a/SKILL.md", "---\nname: test\n---\n".getBytes(),
+                "dir-b/other.md", "# other".getBytes()
+        ));
+        MockMultipartFile file = new MockMultipartFile("file", "test.zip", "application/zip", zipBytes);
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertTrue(entries.stream().anyMatch(e -> e.path().equals("dir-a/SKILL.md")));
+        assertTrue(entries.stream().anyMatch(e -> e.path().equals("dir-b/other.md")));
+    }
+
     private byte[] createZip(String entryName, String content) throws Exception {
         return createZip(entryName, content.getBytes(StandardCharsets.UTF_8));
     }
