@@ -9,6 +9,7 @@ interface User {
   displayName: string
   avatarUrl?: string
   platformRoles?: string[]
+  oauthProvider?: string
 }
 
 interface UserMenuProps {
@@ -29,6 +30,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
   const isAuditor = hasRole('AUDITOR') || hasRole('SUPER_ADMIN')
+  const isLocalAccount = !user.oauthProvider
   const open = isHovered || isClickOpen
 
   const clearCloseTimer = () => {
@@ -174,9 +176,14 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
               </Link>
             ) : null}
             <div className="-mx-1 my-1 h-px bg-muted" />
-            <Link to="/settings/security" className={menuItemClassName} onClick={closeMenu}>
-              {t('user.menu.security')}
+            <Link to="/settings/profile" className={menuItemClassName} onClick={closeMenu}>
+              {t('user.menu.profile')}
             </Link>
+            {isLocalAccount ? (
+              <Link to="/settings/security" className={menuItemClassName} onClick={closeMenu}>
+                {t('user.menu.security')}
+              </Link>
+            ) : null}
             <div className="-mx-1 my-1 h-px bg-muted" />
             <button
               type="button"

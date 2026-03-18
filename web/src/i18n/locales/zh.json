@@ -509,6 +509,25 @@
     "prevPage": "上一页",
     "nextPage": "下一页"
   },
+  "profile": {
+    "title": "个人设置",
+    "subtitle": "管理你的昵称和个人信息。",
+    "displayName": "昵称",
+    "email": "邮箱",
+    "edit": "编辑",
+    "save": "保存",
+    "saving": "保存中...",
+    "cancel": "取消",
+    "successTitle": "修改成功",
+    "successDescription": "你的昵称已更新。",
+    "pendingReviewTitle": "已提交审核",
+    "pendingReviewDescription": "你的昵称修改正在等待审核，审核通过后将生效。",
+    "defaultError": "修改失败，请稍后重试。",
+    "validation": {
+      "length": "昵称长度需为 2-32 个字符。",
+      "pattern": "昵称只能包含中文、英文、数字、下划线和连字符。"
+    }
+  },
   "security": {
     "title": "安全设置",
     "subtitle": "已启用本地账号密码登录时，可以在这里更新密码。",
@@ -890,6 +909,7 @@
       "users": "用户管理",
       "auditLog": "审计日志",
       "security": "安全设置",
+      "profile": "个人设置",
       "accounts": "账号合并",
       "logout": "退出登录"
     }

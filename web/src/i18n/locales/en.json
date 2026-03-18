@@ -509,6 +509,25 @@
     "prevPage": "Previous",
     "nextPage": "Next"
   },
+  "profile": {
+    "title": "Profile Settings",
+    "subtitle": "Manage your display name and personal information.",
+    "displayName": "Display Name",
+    "email": "Email",
+    "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "successTitle": "Profile Updated",
+    "successDescription": "Your display name has been updated.",
+    "pendingReviewTitle": "Submitted for Review",
+    "pendingReviewDescription": "Your display name change is pending review and will take effect once approved.",
+    "defaultError": "Failed to update profile. Please try again.",
+    "validation": {
+      "length": "Display name must be 2-32 characters.",
+      "pattern": "Display name can only contain Chinese, English, digits, underscores, and hyphens."
+    }
+  },
   "security": {
     "title": "Security Settings",
     "subtitle": "Update your password when local account login is enabled.",
@@ -890,6 +909,7 @@
       "users": "User Management",
       "auditLog": "Audit Log",
       "security": "Security Settings",
+      "profile": "Profile Settings",
       "accounts": "Account Merge",
       "logout": "Logout"
     }

@@ -84,10 +84,20 @@ public class AuthController extends BaseApiController {
                 userRoleBindingRepository.findByUserId(principal.userId()).stream()
                         .map(binding -> binding.getRole().getCode())
                         .collect(Collectors.toSet()));
-        if (!freshRoles.equals(principal.platformRoles())) {
+
+        // Detect stale session: check if roles or profile fields have changed
+        boolean rolesChanged = !freshRoles.equals(principal.platformRoles());
+        boolean displayNameChanged = !user.getDisplayName().equals(principal.displayName());
+        boolean avatarChanged = !java.util.Objects.equals(user.getAvatarUrl(), principal.avatarUrl());
+
+        if (rolesChanged || displayNameChanged || avatarChanged) {
             principal = new PlatformPrincipal(
-                    principal.userId(), principal.displayName(), principal.email(),
-                    principal.avatarUrl(), principal.oauthProvider(), freshRoles);
+                    principal.userId(),
+                    user.getDisplayName(),    // use DB value (may have been updated via profile)
+                    principal.email(),
+                    user.getAvatarUrl(),      // use DB value
+                    principal.oauthProvider(),
+                    freshRoles);
             platformSessionService.establishSession(principal, request, false);
         }
         return ok("response.success.read", AuthMeResponse.from(principal));

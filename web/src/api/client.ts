@@ -858,6 +858,18 @@ export const meApi = {
   },
 }
 
+export const profileApi = {
+  async updateProfile(request: { displayName: string }): Promise<{ status: string }> {
+    return fetchJson<{ status: string }>('/api/v1/user/profile', {
+      method: 'PATCH',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+}
+
 export const adminApi = {
   async getUsers(params: { search?: string; status?: string; page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
