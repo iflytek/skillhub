@@ -71,12 +71,18 @@ export function PublishPage() {
         file: selectedFile,
         visibility,
       })
-      toast.success(
-        t('publish.success'),
-        t('publish.successDescription', {
-          skill: `${result.namespace}/${result.slug}@${result.version}`,
-        })
-      )
+      const skillLabel = `${result.namespace}/${result.slug}@${result.version}`
+      if (result.status === 'PUBLISHED') {
+        toast.success(
+          t('publish.publishedTitle'),
+          t('publish.publishedDescription', { skill: skillLabel })
+        )
+      } else {
+        toast.success(
+          t('publish.pendingReviewTitle'),
+          t('publish.pendingReviewDescription', { skill: skillLabel })
+        )
+      }
       navigate({ to: '/dashboard/skills' })
     } catch (error) {
       if (error instanceof ApiError && error.status === 408) {
