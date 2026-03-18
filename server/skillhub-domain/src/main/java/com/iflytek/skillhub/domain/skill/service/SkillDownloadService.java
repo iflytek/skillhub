@@ -29,6 +29,7 @@ public class SkillDownloadService {
     private final NamespaceRepository namespaceRepository;
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
+    private final SkillVersionStatsRepository skillVersionStatsRepository;
     private final SkillFileRepository skillFileRepository;
     private final SkillTagRepository skillTagRepository;
     private final ObjectStorageService objectStorageService;
@@ -40,6 +41,7 @@ public class SkillDownloadService {
             NamespaceRepository namespaceRepository,
             SkillRepository skillRepository,
             SkillVersionRepository skillVersionRepository,
+            SkillVersionStatsRepository skillVersionStatsRepository,
             SkillFileRepository skillFileRepository,
             SkillTagRepository skillTagRepository,
             ObjectStorageService objectStorageService,
@@ -49,6 +51,7 @@ public class SkillDownloadService {
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
+        this.skillVersionStatsRepository = skillVersionStatsRepository;
         this.skillFileRepository = skillFileRepository;
         this.skillTagRepository = skillTagRepository;
         this.objectStorageService = objectStorageService;
@@ -144,6 +147,7 @@ public class SkillDownloadService {
         }
 
         skillRepository.incrementDownloadCount(skill.getId());
+        skillVersionStatsRepository.incrementDownloadCount(version.getId(), skill.getId());
         eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
         return result;
     }
