@@ -7,7 +7,9 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
+import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.security.SensitiveLogSanitizer;
+import com.iflytek.skillhub.storage.StorageAccessException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,11 +29,14 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private final ApiResponseFactory apiResponseFactory;
     private final SensitiveLogSanitizer sensitiveLogSanitizer;
+    private final SkillHubMetrics metrics;
 
     public GlobalExceptionHandler(ApiResponseFactory apiResponseFactory,
-                                  SensitiveLogSanitizer sensitiveLogSanitizer) {
+                                  SensitiveLogSanitizer sensitiveLogSanitizer,
+                                  SkillHubMetrics metrics) {
         this.apiResponseFactory = apiResponseFactory;
         this.sensitiveLogSanitizer = sensitiveLogSanitizer;
+        this.metrics = metrics;
     }
 
     @ExceptionHandler(LocalizedException.class)
@@ -106,6 +111,23 @@ public class GlobalExceptionHandler {
         logHandledException(HttpStatus.FORBIDDEN, "error.forbidden", request);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                 apiResponseFactory.error(403, "error.forbidden"));
+    }
+
+    @ExceptionHandler(StorageAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStorageAccess(StorageAccessException ex, HttpServletRequest request) {
+        metrics.incrementStorageAccessFailure(ex.getOperation());
+        logger.warn(
+                "Object storage unavailable [requestId={}, method={}, path={}, userId={}, operation={}, key={}]",
+                MDC.get("requestId"),
+                request.getMethod(),
+                sensitiveLogSanitizer.sanitizeRequestTarget(request),
+                resolveUserId(request),
+                ex.getOperation(),
+                ex.getKey(),
+                ex
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                apiResponseFactory.error(503, "error.storage.unavailable"));
     }
 
     @ExceptionHandler(Exception.class)

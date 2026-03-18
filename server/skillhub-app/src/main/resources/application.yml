@@ -84,6 +84,10 @@ skillhub:
       force-path-style: ${SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE:true}
       auto-create-bucket: ${SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET:false}
       presign-expiry: ${SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY:PT10M}
+      max-connections: ${SKILLHUB_STORAGE_S3_MAX_CONNECTIONS:100}
+      connection-acquisition-timeout: ${SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT:PT2S}
+      api-call-attempt-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT:PT10S}
+      api-call-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT:PT30S}
   search:
     engine: postgres
     rebuild-on-startup: false

@@ -31,4 +31,30 @@ public class SkillHubMetrics {
             "status", status
         ).increment();
     }
+
+    public void recordDownloadDelivery(String mode, boolean fallbackBundle) {
+        meterRegistry.counter(
+            "skillhub.skill.download.delivery",
+            "mode", mode,
+            "fallback_bundle", Boolean.toString(fallbackBundle)
+        ).increment();
+    }
+
+    public void incrementBundleMissingFallback() {
+        meterRegistry.counter("skillhub.skill.download.bundle_missing_fallback").increment();
+    }
+
+    public void incrementRateLimitExceeded(String category) {
+        meterRegistry.counter(
+            "skillhub.ratelimit.exceeded",
+            "category", category
+        ).increment();
+    }
+
+    public void incrementStorageAccessFailure(String operation) {
+        meterRegistry.counter(
+            "skillhub.storage.failure",
+            "operation", operation
+        ).increment();
+    }
 }

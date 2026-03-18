@@ -422,23 +422,30 @@ class SkillQueryServiceTest {
         SkillVersion version = new SkillVersion(1L, "1.0.0", "user-100");
         setId(version, 10L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setDownloadReady(false);
 
         assertFalse(service.isDownloadAvailable(version));
-        verify(objectStorageService).exists("packages/1/10/bundle.zip");
     }
 
     @Test
-    void testIsDownloadAvailable_ShouldReturnTrueWhenBundleMissingButFilesExist() throws Exception {
+    void testIsDownloadAvailable_ShouldReturnTrueWhenPublishedVersionHasFiles() throws Exception {
         SkillVersion version = new SkillVersion(1L, "1.0.0", "user-100");
         setId(version, 10L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
-        SkillFile file = new SkillFile(10L, "SKILL.md", 10L, "text/markdown", "hash", "skills/1/10/SKILL.md");
-
-        when(objectStorageService.exists("packages/1/10/bundle.zip")).thenReturn(false);
-        when(skillFileRepository.findByVersionId(10L)).thenReturn(List.of(file));
-        when(objectStorageService.exists("skills/1/10/SKILL.md")).thenReturn(true);
+        version.setDownloadReady(true);
 
         assertTrue(service.isDownloadAvailable(version));
+    }
+
+    @Test
+    void testIsDownloadAvailable_ShouldNotHitObjectStorageForListSignals() throws Exception {
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "user-100");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setDownloadReady(true);
+
+        assertTrue(service.isDownloadAvailable(version));
+        verifyNoInteractions(objectStorageService, skillFileRepository);
     }
 
     @Test

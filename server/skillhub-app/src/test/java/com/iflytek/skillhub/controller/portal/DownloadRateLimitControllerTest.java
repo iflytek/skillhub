@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -60,15 +61,17 @@ class DownloadRateLimitControllerTest {
         given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
         given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", null, Map.of()))
                 .willReturn(new SkillDownloadService.DownloadResult(
-                        new ByteArrayInputStream("zip".getBytes()),
+                        () -> new ByteArrayInputStream("zip".getBytes()),
                         "demo-skill-1.0.0.zip",
                         3L,
                         "application/zip",
-                        null
+                        null,
+                        false
                 ));
 
         var result = mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
-                        .header("X-Forwarded-For", "203.0.113.10"))
+                        .header("X-Forwarded-For", "203.0.113.10")
+                        .with(user("anonymous-test")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-1.0.0.zip\""))
                 .andExpect(header().exists("Set-Cookie"))
@@ -83,8 +86,8 @@ class DownloadRateLimitControllerTest {
 
         ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
         verify(rateLimiter, times(2)).tryAcquire(keyCaptor.capture(), anyInt(), anyInt());
-        assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:download:ip:"));
-        assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:download:anon:"));
+        assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:download:ip:") && key.endsWith(":ns:global:slug:demo-skill:version:1.0.0"));
+        assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:download:anon:") && key.endsWith(":ns:global:slug:demo-skill:version:1.0.0"));
     }
 
     @Test
@@ -93,7 +96,8 @@ class DownloadRateLimitControllerTest {
                 ((String) invocation.getArgument(0)).startsWith("ratelimit:download:ip:") ? false : true);
 
         mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
-                        .header("X-Forwarded-For", "203.0.113.10"))
+                        .header("X-Forwarded-For", "203.0.113.10")
+                        .with(user("anonymous-test")))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value(429));
 
