@@ -43,15 +43,16 @@ class SkillPackageArchiveExtractorTest {
 
     @Test
     void shouldRejectOversizedZipEntry() throws Exception {
-        byte[] content = new byte[1024 * 1024 + 1];
-        MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "skill.zip",
-            "application/zip",
-            createZip("large.txt", content)
-        );
+        SkillPublishProperties props = new SkillPublishProperties();
+        props.setMaxSingleFileSize(1024); // 1KB limit
+        SkillPackageArchiveExtractor smallExtractor = new SkillPackageArchiveExtractor(props);
 
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> extractor.extract(file));
+        byte[] content = new byte[1025]; // >1KB
+        byte[] zip = createZip(Map.of("large.txt", content));
+        MockMultipartFile file = new MockMultipartFile("file", "test.zip", "application/zip", zip);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> smallExtractor.extract(file));
 
         assertTrue(error.getMessage().contains("File too large: large.txt"));
     }

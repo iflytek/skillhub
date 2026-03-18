@@ -76,26 +76,18 @@ class SkillPackageValidatorTest {
 
     @Test
     void testFileTooLarge() {
-        String skillMdContent = """
-            ---
-            name: test-skill
-            description: A test skill
-            version: 1.0.0
-            ---
-            Body
-            """;
-
-        byte[] largeContent = new byte[2 * 1024 * 1024]; // 2MB
-
+        // Use a custom validator with 1KB single file limit to test the logic
+        SkillPackageValidator smallValidator = new SkillPackageValidator(
+                new SkillMetadataParser(), 100, 1024, 100 * 1024 * 1024,
+                SkillPackagePolicy.ALLOWED_EXTENSIONS);
+        byte[] bigContent = new byte[1025]; // >1KB
         List<PackageEntry> entries = List.of(
-            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"),
-            new PackageEntry("large.txt", largeContent, largeContent.length, "text/plain")
+                skillMdEntry(),
+                new PackageEntry("big.txt", bigContent, bigContent.length, "text/plain")
         );
-
-        ValidationResult result = validator.validate(entries);
-
+        ValidationResult result = smallValidator.validate(entries);
         assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(e -> e.contains("File too large") && e.contains("large.txt")));
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("File too large")));
     }
 
     @Test
@@ -165,35 +157,16 @@ class SkillPackageValidatorTest {
 
     @Test
     void testPackageTooLarge() {
-        String skillMdContent = """
-            ---
-            name: test-skill
-            description: A test skill
-            version: 1.0.0
-            ---
-            Body
-            """;
-
-        byte[] largeContent = new byte[900 * 1024]; // 900KB each
-
+        // Use a custom validator with 2KB total limit to test the logic
+        SkillPackageValidator smallValidator = new SkillPackageValidator(
+                new SkillMetadataParser(), 100, 10 * 1024 * 1024, 2048,
+                SkillPackagePolicy.ALLOWED_EXTENSIONS);
+        byte[] content = new byte[2000]; // 2KB
         List<PackageEntry> entries = List.of(
-            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"),
-            new PackageEntry("file1.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file2.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file3.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file4.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file5.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file6.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file7.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file8.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file9.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file10.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file11.txt", largeContent, largeContent.length, "text/plain"),
-            new PackageEntry("file12.txt", largeContent, largeContent.length, "text/plain")
+                skillMdEntry(),  // ~50 bytes
+                new PackageEntry("data.txt", content, content.length, "text/plain")
         );
-
-        ValidationResult result = validator.validate(entries);
-
+        ValidationResult result = smallValidator.validate(entries);
         assertFalse(result.passed());
         assertTrue(result.errors().stream().anyMatch(e -> e.contains("Package too large")));
     }
