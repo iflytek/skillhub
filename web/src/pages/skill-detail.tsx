@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
+import {
+  getOverviewCollapseMaxHeight,
+  OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT,
+  shouldCollapseOverview,
+} from '@/features/skill/overview-collapse'
 import { resolveSkillActionErrorTitle } from '@/features/skill/skill-action-error'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
@@ -27,6 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { toast } from '@/shared/lib/toast'
+import { cn } from '@/shared/lib/utils'
 import {
   useSkillDetail,
   useSkillVersions,
@@ -90,6 +96,11 @@ export function SkillDetailPage() {
   const [targetVersionInput, setTargetVersionInput] = useState('')
   const [diffSourceVersion, setDiffSourceVersion] = useState<string | null>(null)
   const [diffCompareVersion, setDiffCompareVersion] = useState<string | null>(null)
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false)
+  const [isOverviewCollapsible, setIsOverviewCollapsible] = useState(false)
+  const [overviewMaxHeight, setOverviewMaxHeight] = useState(OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT)
+  const overviewContentRef = useRef<HTMLDivElement | null>(null)
+  const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
@@ -119,6 +130,62 @@ export function SkillDetailPage() {
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
+
+  useEffect(() => {
+    if (!readme || typeof window === 'undefined') {
+      setIsOverviewCollapsible(false)
+      setIsOverviewExpanded(false)
+      return
+    }
+
+    const updateOverviewState = () => {
+      if (!overviewContentRef.current) {
+        return
+      }
+
+      const nextMaxHeight = getOverviewCollapseMaxHeight(window.innerWidth, window.innerHeight)
+      const nextCollapsible = shouldCollapseOverview(
+        overviewContentRef.current.scrollHeight,
+        window.innerWidth,
+        window.innerHeight,
+      )
+
+      setOverviewMaxHeight(nextMaxHeight)
+      setIsOverviewCollapsible(nextCollapsible)
+
+      if (!nextCollapsible) {
+        setIsOverviewExpanded(false)
+      }
+    }
+
+    updateOverviewState()
+
+    window.addEventListener('resize', updateOverviewState)
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => updateOverviewState())
+      : null
+
+    if (resizeObserver && overviewContentRef.current) {
+      resizeObserver.observe(overviewContentRef.current)
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateOverviewState)
+      resizeObserver?.disconnect()
+    }
+  }, [readme])
+
+  const handleToggleOverview = () => {
+    if (!isOverviewExpanded) {
+      setIsOverviewExpanded(true)
+      return
+    }
+
+    setIsOverviewExpanded(false)
+    requestAnimationFrame(() => {
+      overviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   const refreshSkill = () => {
     queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
@@ -506,7 +573,37 @@ export function SkillDetailPage() {
                     {t('skillDetail.documentationSource', { path: documentationPath })}
                   </div>
                 ) : null}
-                <MarkdownRenderer content={readme} />
+                <div ref={overviewSectionRef} className="space-y-4">
+                  <div
+                    className={cn(
+                      'relative overflow-hidden transition-[max-height] duration-300 ease-out',
+                      !isOverviewExpanded && isOverviewCollapsible && 'rounded-2xl',
+                    )}
+                    style={!isOverviewExpanded && isOverviewCollapsible ? { maxHeight: `${overviewMaxHeight}px` } : undefined}
+                  >
+                    <div ref={overviewContentRef}>
+                      <MarkdownRenderer content={readme} />
+                    </div>
+                    {!isOverviewExpanded && isOverviewCollapsible ? (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-card via-card/95 to-transparent" />
+                    ) : null}
+                  </div>
+                  {isOverviewCollapsible ? (
+                    <div className="flex justify-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 rounded-full border-border/70 bg-background/90 px-5 shadow-sm backdrop-blur-sm"
+                        aria-expanded={isOverviewExpanded}
+                        onClick={handleToggleOverview}
+                      >
+                        {isOverviewExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {isOverviewExpanded ? t('skillDetail.collapseOverview') : t('skillDetail.expandOverview')}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               </Card>
             ) : readmeError ? (
               <Card className="p-8 text-center">

@@ -390,6 +390,65 @@
   border-radius: 12px;
 }
 
+/* ─── Markdown code highlighting ─── */
+.hljs {
+  display: block;
+  color: hsl(var(--foreground) / 0.92);
+  background: transparent;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: hsl(var(--muted-foreground) / 0.9);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-name,
+.hljs-section,
+.hljs-link {
+  color: hsl(var(--primary) / 0.95);
+  font-weight: 600;
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-attribute,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: hsl(var(--accent) / 0.9);
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-built_in,
+.hljs-params {
+  color: hsl(218 70% 45%);
+}
+
+.hljs-function,
+.hljs-title.function_,
+.hljs-title.class_ {
+  color: hsl(var(--foreground) / 0.95);
+  font-weight: 600;
+}
+
+.hljs-regexp,
+.hljs-subst,
+.hljs-doctag {
+  color: hsl(24 85% 52%);
+}
+
+.hljs-deletion {
+  color: hsl(var(--destructive) / 0.88);
+}
+
 /* ─── Upload zone ─── */
 .upload-zone {
   border: 2px dashed hsl(var(--border));

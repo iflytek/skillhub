@@ -556,6 +556,8 @@
     "documentationSource": "Source: {{path}}",
     "documentationUnavailableTitle": "Documentation is unavailable",
     "documentationUnavailable": "The documentation file could not be loaded. You can still inspect the package contents in the file list.",
+    "expandOverview": "Expand full overview",
+    "collapseOverview": "Collapse content",
     "noDocumentationTitle": "No package documentation",
     "noDocumentationDescription": "This skill version does not include a readable overview file.",
     "noDocumentationHint": "Many skills only ship executable files. You can continue with the file list and version details below.",

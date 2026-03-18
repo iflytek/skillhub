@@ -556,6 +556,8 @@
     "documentationSource": "来源：{{path}}",
     "documentationUnavailableTitle": "文档暂时不可用",
     "documentationUnavailable": "当前无法读取这个技能版本的文档文件。你仍然可以在文件列表里查看包内容。",
+    "expandOverview": "展开全文",
+    "collapseOverview": "收起内容",
     "noDocumentationTitle": "这个版本没有概览文档",
     "noDocumentationDescription": "该技能版本没有包含可直接展示的 README.md 或 SKILL.md。",
     "noDocumentationHint": "很多技能包只包含可执行文件或配置文件，可以继续查看下方文件列表和版本信息。",
