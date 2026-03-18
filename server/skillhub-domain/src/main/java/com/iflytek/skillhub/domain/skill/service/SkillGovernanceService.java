@@ -141,6 +141,11 @@ public class SkillGovernanceService {
             throw new DomainBadRequestException("error.skill.version.delete.unsupported", version.getVersion());
         }
 
+        long versionCount = skillVersionRepository.findBySkillId(skill.getId()).size();
+        if (versionCount <= 1) {
+            throw new DomainBadRequestException("error.skill.version.delete.lastVersion", version.getVersion());
+        }
+
         List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
         if (!files.isEmpty()) {
             objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());

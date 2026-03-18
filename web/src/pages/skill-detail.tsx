@@ -240,6 +240,7 @@ export function SkillDetailPage() {
   }
 
   const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED'
+  const isLastVersion = versions?.length === 1
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
 
@@ -590,7 +591,7 @@ export function SkillDetailPage() {
                               </Button>
                             </>
                           )}
-                          {skill.canManageLifecycle && canDeleteVersion(version.status) && (
+                          {skill.canManageLifecycle && canDeleteVersion(version.status) && !isLastVersion && (
                             <Button
                               size="sm"
                               variant="outline"
