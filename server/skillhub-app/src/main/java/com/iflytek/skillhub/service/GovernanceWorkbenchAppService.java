@@ -3,6 +3,7 @@ package com.iflytek.skillhub.service;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.report.SkillReport;
 import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.report.SkillReportStatus;
@@ -64,6 +65,7 @@ public class GovernanceWorkbenchAppService {
     private final SkillVersionRepository skillVersionRepository;
     private final NamespaceRepository namespaceRepository;
     private final AdminAuditLogAppService adminAuditLogAppService;
+    private final GovernanceNotificationService governanceNotificationService;
 
     public GovernanceWorkbenchAppService(ReviewTaskRepository reviewTaskRepository,
                                          PromotionRequestRepository promotionRequestRepository,
@@ -71,7 +73,8 @@ public class GovernanceWorkbenchAppService {
                                          SkillRepository skillRepository,
                                          SkillVersionRepository skillVersionRepository,
                                          NamespaceRepository namespaceRepository,
-                                         AdminAuditLogAppService adminAuditLogAppService) {
+                                         AdminAuditLogAppService adminAuditLogAppService,
+                                         GovernanceNotificationService governanceNotificationService) {
         this.reviewTaskRepository = reviewTaskRepository;
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillReportRepository = skillReportRepository;
@@ -79,6 +82,7 @@ public class GovernanceWorkbenchAppService {
         this.skillVersionRepository = skillVersionRepository;
         this.namespaceRepository = namespaceRepository;
         this.adminAuditLogAppService = adminAuditLogAppService;
+        this.governanceNotificationService = governanceNotificationService;
     }
 
     /**
@@ -95,7 +99,8 @@ public class GovernanceWorkbenchAppService {
                         : 0,
                 hasPlatformGovernanceRole(platformRoles)
                         ? skillReportRepository.findByStatus(SkillReportStatus.PENDING, PageRequest.of(0, SUMMARY_PAGE_SIZE)).getTotalElements()
-                        : 0
+                        : 0,
+                governanceNotificationService.countUnreadNotifications(userId)
         );
     }
 
@@ -109,20 +114,34 @@ public class GovernanceWorkbenchAppService {
                                                                String type,
                                                                int page,
                                                                int size) {
+        int fetchSize = Math.max((page + 1) * size, size);
         List<GovernanceInboxItemResponse> items = new ArrayList<>();
+        long total = 0;
         boolean includeAll = type == null || type.isBlank();
         if (includeAll || "REVIEW".equalsIgnoreCase(type)) {
-            visiblePendingReviews(namespaceRoles, platformRoles, size).getContent().stream()
+            Page<ReviewTask> reviews = visiblePendingReviews(namespaceRoles, platformRoles, fetchSize);
+            total += reviews.getTotalElements();
+            reviews.getContent().stream()
                     .map(this::toReviewInboxItem)
                     .forEach(items::add);
         }
         if (hasPlatformGovernanceRole(platformRoles) && (includeAll || "PROMOTION".equalsIgnoreCase(type))) {
-            promotionRequestRepository.findByStatus(ReviewTaskStatus.PENDING, PageRequest.of(page, size)).getContent().stream()
+            Page<PromotionRequest> promotions = promotionRequestRepository.findByStatus(
+                    ReviewTaskStatus.PENDING,
+                    PageRequest.of(0, fetchSize)
+            );
+            total += promotions.getTotalElements();
+            promotions.getContent().stream()
                     .map(this::toPromotionInboxItem)
                     .forEach(items::add);
         }
         if (hasPlatformGovernanceRole(platformRoles) && (includeAll || "REPORT".equalsIgnoreCase(type))) {
-            skillReportRepository.findByStatus(SkillReportStatus.PENDING, PageRequest.of(page, size)).getContent().stream()
+            Page<SkillReport> reports = skillReportRepository.findByStatus(
+                    SkillReportStatus.PENDING,
+                    PageRequest.of(0, fetchSize)
+            );
+            total += reports.getTotalElements();
+            reports.getContent().stream()
                     .map(this::toReportInboxItem)
                     .forEach(items::add);
         }
@@ -132,7 +151,7 @@ public class GovernanceWorkbenchAppService {
         ).reversed());
         int fromIndex = Math.min(page * size, items.size());
         int toIndex = Math.min(fromIndex + size, items.size());
-        return new PageResponse<>(items.subList(fromIndex, toIndex), items.size(), page, size);
+        return new PageResponse<>(items.subList(fromIndex, toIndex), total, page, size);
     }
 
     /**
@@ -167,7 +186,7 @@ public class GovernanceWorkbenchAppService {
                         item.timestamp() != null ? item.timestamp().toString() : null
                 ))
                 .toList();
-        return new PageResponse<>(items, items.size(), page, size);
+        return new PageResponse<>(items, raw.total(), raw.page(), raw.size());
     }
 
     private Page<ReviewTask> visiblePendingReviews(Map<Long, NamespaceRole> namespaceRoles,
@@ -176,12 +195,15 @@ public class GovernanceWorkbenchAppService {
         if (hasPlatformGovernanceRole(platformRoles)) {
             return reviewTaskRepository.findByStatus(ReviewTaskStatus.PENDING, PageRequest.of(0, size));
         }
-        List<ReviewTask> tasks = namespaceRoles.entrySet().stream()
+        List<Page<ReviewTask>> pages = namespaceRoles.entrySet().stream()
                 .filter(entry -> entry.getValue() == NamespaceRole.OWNER || entry.getValue() == NamespaceRole.ADMIN)
                 .map(entry -> reviewTaskRepository.findByNamespaceIdAndStatus(entry.getKey(), ReviewTaskStatus.PENDING, PageRequest.of(0, size)))
+                .toList();
+        List<ReviewTask> tasks = pages.stream()
                 .flatMap(pageResult -> pageResult.getContent().stream())
                 .toList();
-        return new org.springframework.data.domain.PageImpl<>(tasks, PageRequest.of(0, size), tasks.size());
+        long total = pages.stream().mapToLong(Page::getTotalElements).sum();
+        return new org.springframework.data.domain.PageImpl<>(tasks, PageRequest.of(0, size), total);
     }
 
     private GovernanceInboxItemResponse toReviewInboxItem(ReviewTask task) {
