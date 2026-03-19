@@ -11,8 +11,9 @@ description: 搜索和筛选技能
 在搜索框输入关键词，SkillHub 会在以下字段中搜索：
 - 技能名称
 - 技能描述
-- SKILL.md 正文内容
-- 关键词
+- 技能 slug
+- frontmatter 中除 `name`、`description`、`version` 外的其他字段
+- `keywords` / `tags` 等关键词字段
 
 ## 筛选条件
 
