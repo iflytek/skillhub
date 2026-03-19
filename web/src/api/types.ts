@@ -361,3 +361,27 @@ export interface AuditLogItem {
   timestamp: string
   ipAddress?: string
 }
+
+// Notification types
+export interface NotificationItem {
+  id: number
+  category: 'PUBLISH' | 'REVIEW' | 'PROMOTION' | 'REPORT'
+  eventType: string
+  title: string
+  bodyJson?: string
+  entityType?: string
+  entityId?: number
+  status: 'UNREAD' | 'READ'
+  createdAt: string
+  readAt?: string
+}
+
+export interface NotificationPreferenceItem {
+  category: string
+  channel: string
+  enabled: boolean
+}
+
+export interface NotificationUnreadCount {
+  count: number
+}

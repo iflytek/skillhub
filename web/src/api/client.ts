@@ -29,6 +29,9 @@ import type {
   CreateNamespaceRequest,
   NamespaceMember,
   NamespaceCandidateUser,
+  NotificationItem,
+  NotificationPreferenceItem,
+  NotificationUnreadCount,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -1007,6 +1010,50 @@ export const adminApi = {
       method: 'POST',
       headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ reason }),
+    })
+  },
+}
+
+export const notificationApi = {
+  async list(params: { page?: number; size?: number; category?: string }) {
+    const searchParams = new URLSearchParams()
+    if (params.page !== undefined) searchParams.set('page', String(params.page))
+    if (params.size !== undefined) searchParams.set('size', String(params.size))
+    if (params.category) searchParams.set('category', params.category)
+    return fetchJson<{ content: NotificationItem[]; totalElements: number; page: number; size: number }>(
+      `${WEB_API_PREFIX}/notifications?${searchParams.toString()}`,
+    )
+  },
+
+  async getUnreadCount() {
+    return fetchJson<NotificationUnreadCount>(`${WEB_API_PREFIX}/notifications/unread-count`)
+  },
+
+  async markRead(id: number) {
+    await fetchJson<void>(`${WEB_API_PREFIX}/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async markAllRead() {
+    return fetchJson<{ count: number }>(`${WEB_API_PREFIX}/notifications/read-all`, {
+      method: 'PUT',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async getPreferences() {
+    return fetchJson<NotificationPreferenceItem[]>(`${WEB_API_PREFIX}/notification-preferences`)
+  },
+
+  async updatePreferences(preferences: NotificationPreferenceItem[]) {
+    await fetchJson<void>(`${WEB_API_PREFIX}/notification-preferences`, {
+      method: 'PUT',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ preferences }),
     })
   },
 }
