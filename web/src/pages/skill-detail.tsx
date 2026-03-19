@@ -133,6 +133,7 @@ export function SkillDetailPage() {
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
   const hasPendingOwnerPreview = ownerPreviewVersion?.status === 'PENDING_REVIEW'
+  const hasRejectedVersion = versions?.some((v) => v.status === 'REJECTED') ?? false
   const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
@@ -556,6 +557,11 @@ export function SkillDetailPage() {
             {isPendingPreview && (
               <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
                 {t('skillDetail.pendingPreviewBadge')}
+              </span>
+            )}
+            {!isPendingPreview && hasRejectedVersion && skill.canManageLifecycle && (
+              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                {t('skillDetail.rejectedBadge')}
               </span>
             )}
           </div>

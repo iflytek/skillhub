@@ -250,6 +250,11 @@ export function MySkillsPage() {
                               {resolveStatusLabel(ownerPreviewVersion?.status)}
                             </span>
                           ) : null}
+                          {!hasPendingPreview && ownerPreviewVersion?.status === 'REJECTED' && ownerPreviewVersion?.version !== headlineVersion?.version ? (
+                            <span className={resolveStatusClassName('REJECTED')}>
+                              {resolveStatusLabel('REJECTED')}
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pl-4">
