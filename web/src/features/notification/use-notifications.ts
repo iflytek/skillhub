@@ -29,6 +29,17 @@ export function useUnreadCount() {
 }
 
 /**
+ * Fetches paginated notification list with optional category filter.
+ */
+export function useNotificationList(page = 0, size = 20, category?: string) {
+  return useQuery({
+    queryKey: ['notifications', 'list', page, size, category],
+    queryFn: () => notificationApi.list({ page, size, category }),
+    staleTime: 30_000,
+  })
+}
+
+/**
  * Marks all notifications as read and invalidates relevant queries.
  */
 export function useMarkAllRead() {
