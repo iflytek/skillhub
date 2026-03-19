@@ -73,6 +73,9 @@ rm -rf /tmp/skillhub-runtime
 curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up
 ```
 
+The default command pulls the `latest` stable release images. Use
+`--version edge` if you want the newest build from `main`.
+
 Aliyun mirror shortcut:
 ```bash
 rm -rf /tmp/skillhub-aliyun

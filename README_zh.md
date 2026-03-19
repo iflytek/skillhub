@@ -45,10 +45,13 @@ rm -rf /tmp/skillhub-runtime
 curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up
 ```
 
+默认命令会拉取 `latest` 稳定版镜像；如果你想跟随 `main`
+的最新构建，请显式传 `--version edge`。
+
 阿里云镜像快捷方式：
 ```bash
 rm -rf /tmp/skillhub-aliyun
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version edge
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest
 ```
 
 如果部署遇到问题，请清除现有的运行时目录并重试。
