@@ -4,6 +4,7 @@ import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.HashingSearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchQuery;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -143,6 +144,36 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void shortChineseKeywordsShouldStillUseSearchVectorInsteadOfTitlePrefixOptimization() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "中文",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20
+        ));
+
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("d.search_vector @@ to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("ts_rank_cd(to_tsvector('simple', coalesce(title, '')), to_tsquery('simple', :tsQuery))");
+    }
+
+    @Test
     void multipleTermsShouldBuildPrefixQueryForEachLexeme() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
@@ -168,6 +199,34 @@ class PostgresFullTextQueryServiceTest {
 
         verify(nativeQuery).setParameter("tsQuery", "self:* & improving:*");
         verify(countQuery).setParameter("tsQuery", "self:* & improving:*");
+    }
+
+    @Test
+    void chineseKeywordsShouldUseSegmentedTermsWithoutAsciiPrefixSuffix() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "中文技能搜索",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20
+        ));
+
+        verify(nativeQuery).setParameter("tsQuery", "中文 & 技能 & 搜索");
+        verify(countQuery).setParameter("tsQuery", "中文 & 技能 & 搜索");
     }
 
     @Test
@@ -391,6 +450,7 @@ class PostgresFullTextQueryServiceTest {
                 entityManager,
                 repository,
                 embeddingService,
+                new SearchTextTokenizer(),
                 true,
                 0.6D,
                 8,
@@ -430,6 +490,7 @@ class PostgresFullTextQueryServiceTest {
                 entityManager,
                 repository,
                 embeddingService,
+                new SearchTextTokenizer(),
                 true,
                 0.6D,
                 8,

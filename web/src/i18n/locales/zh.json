@@ -295,6 +295,14 @@
   "mySkills": {
     "title": "我的技能",
     "subtitle": "管理你发布的技能",
+    "filters": {
+      "ALL": "全部",
+      "PENDING_REVIEW": "待审核",
+      "PUBLISHED": "已发布",
+      "REJECTED": "已拒绝",
+      "ARCHIVED": "已归档",
+      "HIDDEN": "已隐藏"
+    },
     "publishNew": "发布新技能",
     "archive": "归档",
     "unarchive": "恢复",
@@ -302,6 +310,7 @@
     "statusPendingReview": "审核中",
     "statusPublished": "已发布",
     "statusRejected": "已拒绝",
+    "statusHidden": "已隐藏",
     "archiveConfirmTitle": "确认归档技能",
     "archiveConfirmDescription": "归档后普通用户将无法看到或下载“{{skill}}”，确定继续吗？",
     "unarchiveConfirmTitle": "确认恢复技能",
@@ -330,6 +339,14 @@
     "promotionErrorTitle": "提交提升申请失败",
     "emptyTitle": "还没有技能",
     "emptyDescription": "开始发布你的第一个技能吧",
+    "emptyFilteredTitle": "当前筛选下没有技能",
+    "emptyFilteredDescription": {
+      "PENDING_REVIEW": "当前没有处于待审核状态的技能。",
+      "PUBLISHED": "当前没有已发布的技能。",
+      "REJECTED": "当前没有已拒绝的技能。",
+      "ARCHIVED": "当前没有已归档的技能。",
+      "HIDDEN": "当前没有已隐藏的技能。"
+    },
     "publishSkill": "发布技能"
   },
   "myNamespaces": {

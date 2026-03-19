@@ -4,6 +4,7 @@ import type { GovernanceInboxItem } from '@/api/types'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
+import { GOVERNANCE_INBOX_SUBTITLE_CLASS_NAME } from './governance-inbox-style'
 
 interface GovernanceInboxProps {
   items?: GovernanceInboxItem[]
@@ -59,7 +60,7 @@ export function GovernanceInbox({ items, isLoading }: GovernanceInboxProps) {
                 </span>
                 <div className="font-semibold font-heading">{item.title}</div>
               </div>
-              {item.subtitle ? <div className="text-sm text-muted-foreground">{item.subtitle}</div> : null}
+              {item.subtitle ? <div className={GOVERNANCE_INBOX_SUBTITLE_CLASS_NAME}>{item.subtitle}</div> : null}
             </div>
             <div className="text-xs text-muted-foreground">
               {item.timestamp ? formatLocalDateTime(item.timestamp, i18n.language) : '-'}

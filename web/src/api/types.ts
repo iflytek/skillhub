@@ -305,6 +305,7 @@ export interface GovernanceSummary {
   pendingReviews: number
   pendingPromotions: number
   pendingReports: number
+  unreadNotifications: number
 }
 
 export interface GovernanceInboxItem {

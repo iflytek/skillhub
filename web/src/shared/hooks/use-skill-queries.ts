@@ -42,7 +42,7 @@ async function getSkillDocumentation(namespace: string, slug: string, version: s
   return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=${encodeURIComponent(path)}`)
 }
 
-async function getMySkills(params: { page?: number; size?: number } = {}): Promise<PagedResponse<SkillSummary>> {
+async function getMySkills(params: { page?: number; size?: number; filter?: string } = {}): Promise<PagedResponse<SkillSummary>> {
   return meApi.getSkills(params)
 }
 
@@ -159,7 +159,7 @@ export function useSkillVersionDetail(namespace: string, slug: string, version?:
   })
 }
 
-export function useMySkills(params: { page?: number; size?: number } = {}) {
+export function useMySkills(params: { page?: number; size?: number; filter?: string } = {}) {
   return useQuery({
     queryKey: ['skills', 'my', params],
     queryFn: () => getMySkills(params),

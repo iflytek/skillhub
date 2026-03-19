@@ -733,7 +733,7 @@ class SkillPublishServiceTest {
     }
 
     @Test
-    void testPublishFromEntries_ShouldUpdateVisibilityOnExistingSkill() throws Exception {
+    void testPublishFromEntries_ShouldDeferVisibilityChangeUntilApproval() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";
@@ -768,11 +768,18 @@ class SkillPublishServiceTest {
         });
         when(skillRepository.save(any())).thenReturn(skill);
 
-        // Act — publish with PUBLIC visibility on an existing PRIVATE skill
-        service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of());
+        // Act — submit with PUBLIC visibility on an existing PRIVATE skill
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug,
+                entries,
+                publisherId,
+                SkillVisibility.PUBLIC,
+                Set.of()
+        );
 
-        // Assert — visibility should be updated to PUBLIC
-        assertEquals(SkillVisibility.PUBLIC, skill.getVisibility());
+        // Assert — current published visibility stays unchanged until approval
+        assertEquals(SkillVisibility.PRIVATE, skill.getVisibility());
+        assertEquals(SkillVisibility.PUBLIC, result.version().getRequestedVisibility());
     }
 
     private void setId(Object entity, Long id) throws Exception {

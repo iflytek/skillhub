@@ -11,18 +11,20 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchRebuildService;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 /**
  * Reconstructs PostgreSQL search documents from canonical skill and namespace records.
@@ -37,17 +39,20 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     private final NamespaceRepository namespaceRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SearchIndexService searchIndexService;
+    private final SearchTextTokenizer searchTextTokenizer;
     private final ObjectMapper objectMapper;
 
     public PostgresSearchRebuildService(
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             SkillVersionRepository skillVersionRepository,
-            SearchIndexService searchIndexService) {
+            SearchIndexService searchIndexService,
+            SearchTextTokenizer searchTextTokenizer) {
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.searchIndexService = searchIndexService;
+        this.searchTextTokenizer = searchTextTokenizer;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -82,7 +87,6 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
 
     private SearchIndexPayload buildSearchPayload(Skill skill) {
         List<String> searchParts = new ArrayList<>();
-        addPart(searchParts, skill.getDisplayName());
         addPart(searchParts, skill.getSlug());
         addPart(searchParts, skill.getSummary());
 
@@ -94,8 +98,8 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 .ifPresent(frontmatter -> appendFrontmatter(frontmatter, keywords, searchParts));
 
         return new SearchIndexPayload(
-                String.join(", ", keywords),
-                String.join(" ", searchParts).trim()
+                searchTextTokenizer.enrichForIndex(String.join(" ", keywords)),
+                searchTextTokenizer.enrichForIndex(String.join(" ", searchParts).trim())
         );
     }
 
@@ -121,9 +125,13 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(Object value) {
         if (value instanceof Map<?, ?> map) {
-            return map.entrySet().stream()
-                    .filter(entry -> entry.getKey() != null)
-                    .collect(Collectors.toMap(entry -> String.valueOf(entry.getKey()), Map.Entry::getValue));
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    normalized.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+            }
+            return normalized;
         }
         return Map.of();
     }
@@ -135,8 +143,9 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
             if (value == null) {
                 continue;
             }
+            String normalizedFieldName = fieldName.toLowerCase(Locale.ROOT);
 
-            if (KEYWORD_FIELD_NAMES.contains(fieldName.toLowerCase())) {
+            if (KEYWORD_FIELD_NAMES.contains(normalizedFieldName)) {
                 flattenToStrings(value).forEach(keyword -> {
                     String normalized = keyword.trim();
                     if (!normalized.isBlank()) {
@@ -145,7 +154,8 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 });
             }
 
-            if (!RESERVED_FRONTMATTER_FIELDS.contains(fieldName.toLowerCase())) {
+            if (!RESERVED_FRONTMATTER_FIELDS.contains(normalizedFieldName)
+                    && !KEYWORD_FIELD_NAMES.contains(normalizedFieldName)) {
                 addPart(searchParts, fieldName);
                 flattenToStrings(value).forEach(text -> addPart(searchParts, text));
             }
@@ -153,6 +163,9 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     }
 
     private List<String> flattenToStrings(Object value) {
+        if (value == null) {
+            return List.of();
+        }
         if (value instanceof String text) {
             return List.of(text);
         }
@@ -165,7 +178,9 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 if (entry.getKey() != null) {
                     values.add(String.valueOf(entry.getKey()));
                 }
-                values.addAll(flattenToStrings(entry.getValue()));
+                if (entry.getValue() != null) {
+                    values.addAll(flattenToStrings(entry.getValue()));
+                }
             }
             return values;
         }

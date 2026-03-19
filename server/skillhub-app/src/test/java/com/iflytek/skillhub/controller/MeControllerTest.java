@@ -56,7 +56,7 @@ class MeControllerTest {
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        given(mySkillAppService.listMySkills("user-42", 1, 5))
+        given(mySkillAppService.listMySkills("user-42", 1, 5, null, Set.of("USER")))
                 .willReturn(new PageResponse<>(
                         List.of(new SkillSummaryResponse(
                                 7L,
@@ -91,6 +91,25 @@ class MeControllerTest {
                 .andExpect(jsonPath("$.data.total").value(9))
                 .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.size").value(5));
+    }
+
+    @Test
+    void listMySkills_forwardsFilterAndRoles() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "tester", "tester@example.com", "", "github", Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        given(mySkillAppService.listMySkills("user-42", 0, 10, "HIDDEN", Set.of("SUPER_ADMIN")))
+                .willReturn(new PageResponse<>(List.of(), 0, 0, 10));
+
+        mockMvc.perform(get("/api/v1/me/skills")
+                        .with(authentication(auth))
+                        .param("filter", "HIDDEN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
     }
 
     @Test

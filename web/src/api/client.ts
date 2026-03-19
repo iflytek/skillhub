@@ -20,6 +20,7 @@ import type {
   GovernanceInboxItem,
   GovernanceActivityItem,
   GovernanceNotification,
+  PagedResponse,
   ReportDisposition,
   AuthMethod,
   OAuthProvider,
@@ -807,7 +808,7 @@ export const governanceApi = {
     if (params.type) searchParams.set('type', params.type)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: GovernanceInboxItem[]; total: number; page: number; size: number }>(
+    return fetchJson<PagedResponse<GovernanceInboxItem>>(
       `${WEB_API_PREFIX}/governance/inbox?${searchParams.toString()}`,
     )
   },
@@ -816,13 +817,16 @@ export const governanceApi = {
     const searchParams = new URLSearchParams()
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: GovernanceActivityItem[]; total: number; page: number; size: number }>(
+    return fetchJson<PagedResponse<GovernanceActivityItem>>(
       `${WEB_API_PREFIX}/governance/activity?${searchParams.toString()}`,
     )
   },
 
-  async getNotifications(): Promise<GovernanceNotification[]> {
-    return fetchJson<GovernanceNotification[]>(`${WEB_API_PREFIX}/governance/notifications`)
+  async getNotifications(params: { page?: number; size?: number }): Promise<PagedResponse<GovernanceNotification>> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<PagedResponse<GovernanceNotification>>(`${WEB_API_PREFIX}/governance/notifications?${searchParams.toString()}`)
   },
 
   async markNotificationRead(id: number): Promise<GovernanceNotification> {
@@ -841,10 +845,13 @@ export const governanceApi = {
 }
 
 export const meApi = {
-  async getSkills(params?: { page?: number; size?: number }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
+  async getSkills(params?: { page?: number; size?: number; filter?: string }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
     const searchParams = new URLSearchParams()
     searchParams.set('page', String(params?.page ?? 0))
     searchParams.set('size', String(params?.size ?? 10))
+    if (params?.filter) {
+      searchParams.set('filter', params.filter)
+    }
     return fetchJson<{ items: SkillSummary[]; total: number; page: number; size: number }>(`${WEB_API_PREFIX}/me/skills?${searchParams.toString()}`)
   },
 

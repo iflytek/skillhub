@@ -164,6 +164,10 @@ export function ProfileReviewTable() {
   }
 
   function renderPagination(status: ReviewStatus, totalElements: number, totalPages: number) {
+    if (totalPages <= 1) {
+      return null
+    }
+
     const currentPage = pages[status]
 
     return (

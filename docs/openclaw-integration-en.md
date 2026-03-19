@@ -19,7 +19,7 @@ Set the SkillHub registry address in your OpenClaw configuration:
 
 ```bash
 # Via environment variable
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
 ### 2. Authentication (Optional)
@@ -31,8 +31,8 @@ For **global namespace (@global) PUBLIC skills**, no login is required to downlo
 - Write operations like publishing, starring, etc.
 
 ```bash
-# Using API Token
-export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+# Log in with an API token
+clawhub login --token YOUR_API_TOKEN
 ```
 
 #### Obtaining an API Token
@@ -141,19 +141,20 @@ ClawHub CLI is configured via environment variables:
 
 ```bash
 # Registry configuration
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
+
+# Authenticate once if needed
+clawhub login --token sk_your_api_token_here
 ```
 
 ### Environment Variables
 
 ```bash
 # Registry configuration
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 
-# Optional: Skip SSL verification (development only)
-export CLAWHUB_SKIP_SSL_VERIFY=false
+# Optionally log in before running authenticated commands
+clawhub login --token sk_your_api_token_here
 ```
 
 ## FAQ
@@ -162,7 +163,7 @@ export CLAWHUB_SKIP_SSL_VERIFY=false
 
 ```bash
 # Unset custom registry
-unset CLAWHUB_REGISTRY_URL
+unset CLAWHUB_REGISTRY
 
 # ClawHub CLI will use the default public registry
 ```
@@ -177,12 +178,12 @@ Possible causes:
 
 Solution:
 ```bash
-# Set new token
-export CLAWHUB_API_TOKEN=YOUR_NEW_TOKEN
+# Log in again with a new token
+clawhub login --token YOUR_NEW_TOKEN
 
 # Test connection
 curl https://skillhub.your-company.com/api/v1/whoami \
-  -H "Authorization: Bearer $CLAWHUB_API_TOKEN"
+  -H "Authorization: Bearer YOUR_NEW_TOKEN"
 ```
 
 **Tip**: Global namespace (@global) PUBLIC skills can be downloaded anonymously without authentication.
