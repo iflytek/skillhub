@@ -339,6 +339,14 @@
     "promotionErrorTitle": "提交提升申请失败",
     "emptyTitle": "还没有技能",
     "emptyDescription": "开始发布你的第一个技能吧",
+    "emptyFilteredTitle": "当前筛选下没有技能",
+    "emptyFilteredDescription": {
+      "PENDING_REVIEW": "当前没有处于待审核状态的技能。",
+      "PUBLISHED": "当前没有已发布的技能。",
+      "REJECTED": "当前没有已拒绝的技能。",
+      "ARCHIVED": "当前没有已归档的技能。",
+      "HIDDEN": "当前没有已隐藏的技能。"
+    },
     "publishSkill": "发布技能"
   },
   "myNamespaces": {

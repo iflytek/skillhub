@@ -13,7 +13,7 @@ import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPen
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
-import { getMySkillFilters, type MySkillFilter } from './my-skill-filters'
+import { getMySkillEmptyStateKey, getMySkillFilters, type MySkillFilter } from './my-skill-filters'
 
 const PAGE_SIZE = 10
 
@@ -47,6 +47,7 @@ export function MySkillsPage() {
   const skills = skillPage?.items ?? []
   const totalPages = skillPage ? Math.max(Math.ceil(skillPage.total / skillPage.size), 1) : 1
   const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
+  const emptyStateKey = getMySkillEmptyStateKey(filter)
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const withdrawMutation = useWithdrawSkillReview()
@@ -366,8 +367,8 @@ export function MySkillsPage() {
         </>
       ) : (
         <EmptyState
-          title={t('mySkills.emptyTitle')}
-          description={t('mySkills.emptyDescription')}
+          title={t(emptyStateKey.title)}
+          description={t(emptyStateKey.description)}
           action={
             <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
               {t('mySkills.publishSkill')}

@@ -339,6 +339,14 @@
     "promotionErrorTitle": "Failed to submit promotion request",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Start publishing your first skill",
+    "emptyFilteredTitle": "No skills match this filter",
+    "emptyFilteredDescription": {
+      "PENDING_REVIEW": "There are no skills waiting for review right now.",
+      "PUBLISHED": "There are no published skills right now.",
+      "REJECTED": "There are no rejected skills right now.",
+      "ARCHIVED": "There are no archived skills right now.",
+      "HIDDEN": "There are no hidden skills right now."
+    },
     "publishSkill": "Publish Skill"
   },
   "myNamespaces": {
