@@ -93,6 +93,7 @@ export function SkillDetailPage() {
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetails, setReportDetails] = useState('')
+  const [hasReported, setHasReported] = useState(false)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
   const [promotionConfirmOpen, setPromotionConfirmOpen] = useState(false)
@@ -288,6 +289,7 @@ export function SkillDetailPage() {
       setReportDialogOpen(false)
       setReportReason('')
       setReportDetails('')
+      setHasReported(true)
       toast.success(t('skillDetail.reportSuccessTitle'), t('skillDetail.reportSuccessDescription'))
     } catch (error) {
       toast.error(t(resolveSkillActionErrorTitle('report')), error instanceof Error ? error.message : '')
@@ -788,8 +790,8 @@ export function SkillDetailPage() {
                 <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
                 <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
                 {canReport ? (
-                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={reportMutation.isPending}>
-                    {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
+                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
+                    {hasReported ? t('skillDetail.reportedSkill') : reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
                   </Button>
                 ) : null}
               </>

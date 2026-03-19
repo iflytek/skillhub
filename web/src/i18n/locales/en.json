@@ -695,6 +695,7 @@
     "promotionAlreadyPromotedDescription": "This skill has already been promoted to the global namespace.",
     "promotionErrorTitle": "Failed to submit promotion request",
     "reportSkill": "Report Skill",
+    "reportedSkill": "Reported",
     "reportDialogTitle": "Report skill",
     "reportDialogDescription": "Provide a reason so administrators can review and act on it quickly.",
     "reportReasonPlaceholder": "Reason, for example policy violation, misleading content, or infringement",
