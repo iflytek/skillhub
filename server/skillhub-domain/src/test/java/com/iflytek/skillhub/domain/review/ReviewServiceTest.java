@@ -298,6 +298,7 @@ class ReviewServiceTest {
                     REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Needs work", task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "Needs work",
@@ -449,6 +450,7 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.rejectReview(
@@ -499,6 +501,7 @@ class ReviewServiceTest {
                     REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, USER_ID, "self rejected", task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
             ReviewTask result = reviewService.rejectReview(
