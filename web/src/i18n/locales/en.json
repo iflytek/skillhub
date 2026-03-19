@@ -569,6 +569,7 @@
     "documentationSource": "Source: {{path}}",
     "documentationUnavailableTitle": "Documentation is unavailable",
     "documentationUnavailable": "The documentation file could not be loaded. You can still inspect the package contents in the file list.",
+    "authorLabel": "By {{name}}",
     "expandOverview": "Expand full overview",
     "collapseOverview": "Collapse content",
     "noDocumentationTitle": "No package documentation",

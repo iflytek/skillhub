@@ -9,6 +9,8 @@ import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,8 @@ class SkillQueryServiceTest {
     private VisibilityChecker visibilityChecker;
     @Mock
     private PromotionRequestRepository promotionRequestRepository;
+    @Mock
+    private UserAccountRepository userAccountRepository;
 
     private SkillQueryService service;
     private SkillSlugResolutionService skillSlugResolutionService;
@@ -69,7 +73,8 @@ class SkillQueryServiceTest {
                 visibilityChecker,
                 promotionRequestRepository,
                 skillSlugResolutionService,
-                skillLifecycleProjectionService
+                skillLifecycleProjectionService,
+                userAccountRepository
         );
     }
 
@@ -97,6 +102,7 @@ class SkillQueryServiceTest {
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+        when(userAccountRepository.findById(userId)).thenReturn(Optional.of(new UserAccount(userId, "Alice", "alice@example.com", null)));
 
         // Act
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
@@ -105,6 +111,7 @@ class SkillQueryServiceTest {
         assertNotNull(result);
         assertEquals(skillSlug, result.slug());
         assertEquals("Test Skill", result.displayName());
+        assertEquals("Alice", result.ownerDisplayName());
         assertNotNull(result.headlineVersion());
         assertEquals("1.0.0", result.headlineVersion().version());
         assertFalse(result.canReport());

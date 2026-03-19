@@ -10,6 +10,8 @@ import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,6 +44,7 @@ public class SkillQueryService {
     private final PromotionRequestRepository promotionRequestRepository;
     private final SkillSlugResolutionService skillSlugResolutionService;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
+    private final UserAccountRepository userAccountRepository;
 
     public SkillQueryService(
             NamespaceRepository namespaceRepository,
@@ -53,7 +56,8 @@ public class SkillQueryService {
             VisibilityChecker visibilityChecker,
             PromotionRequestRepository promotionRequestRepository,
             SkillSlugResolutionService skillSlugResolutionService,
-            SkillLifecycleProjectionService skillLifecycleProjectionService) {
+            SkillLifecycleProjectionService skillLifecycleProjectionService,
+            UserAccountRepository userAccountRepository) {
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -64,12 +68,14 @@ public class SkillQueryService {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillSlugResolutionService = skillSlugResolutionService;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
+        this.userAccountRepository = userAccountRepository;
     }
 
     public record SkillDetailDTO(
             Long id,
             String slug,
             String displayName,
+            String ownerDisplayName,
             String summary,
             String visibility,
             String status,
@@ -133,11 +139,16 @@ public class SkillQueryService {
         SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
         SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
         SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
+        String ownerDisplayName = userAccountRepository.findById(skill.getOwnerId())
+                .map(UserAccount::getDisplayName)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse(null);
 
         return new SkillDetailDTO(
                 skill.getId(),
                 skill.getSlug(),
                 skill.getDisplayName(),
+                ownerDisplayName,
                 skill.getSummary(),
                 skill.getVisibility().name(),
                 skill.getStatus().name(),

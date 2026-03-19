@@ -68,6 +68,19 @@ function parseMetadataJson(parsed?: string) {
   }
 }
 
+function getAuthorMonogram(name?: string) {
+  if (!name) {
+    return '?'
+  }
+
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return '?'
+  }
+
+  return trimmed[0]!.toUpperCase()
+}
+
 function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending' | 'promotion.already_promoted' | null {
   if (error.serverMessageKey === 'promotion.duplicate_pending') {
     return 'promotion.duplicate_pending'
@@ -547,7 +560,17 @@ export function SkillDetailPage() {
               </span>
             )}
           </div>
-          <h1 className="text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
+          <h1 className="text-balance text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
+          {skill.ownerDisplayName && (
+            <div className="flex min-w-0">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/85 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm">
+                <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+                  {getAuthorMonogram(skill.ownerDisplayName)}
+                </span>
+                <span className="min-w-0 truncate">{t('skillDetail.authorLabel', { name: skill.ownerDisplayName })}</span>
+              </div>
+            </div>
+          )}
           {skill.summary && (
             <p className="text-lg text-muted-foreground leading-relaxed">{skill.summary}</p>
           )}

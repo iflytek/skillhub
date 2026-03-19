@@ -149,6 +149,7 @@ class SkillControllerTest {
                         1L,
                         "demo",
                         "Demo",
+                        "Alice",
                         "Pending preview",
                         "PUBLIC",
                         "ACTIVE",
@@ -173,6 +174,7 @@ class SkillControllerTest {
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.ownerDisplayName").value("Alice"))
                 .andExpect(jsonPath("$.data.canSubmitPromotion").value(false))
                 .andExpect(jsonPath("$.data.headlineVersion.version").value("1.1.0"))
                 .andExpect(jsonPath("$.data.ownerPreviewVersion.id").value(11L))

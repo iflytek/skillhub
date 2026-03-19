@@ -67,6 +67,7 @@ public class SkillController extends BaseApiController {
                 detail.id(),
                 detail.slug(),
                 detail.displayName(),
+                detail.ownerDisplayName(),
                 detail.summary(),
                 detail.visibility(),
                 detail.status(),
