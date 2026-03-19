@@ -695,6 +695,7 @@
     "promotionAlreadyPromotedDescription": "这个技能已经提升到全局命名空间，无需重复提交。",
     "promotionErrorTitle": "提交提升申请失败",
     "reportSkill": "举报技能",
+    "reportedSkill": "已举报",
     "reportDialogTitle": "举报技能",
     "reportDialogDescription": "请填写举报原因，帮助管理员快速判断和处理。",
     "reportReasonPlaceholder": "举报原因，例如包含违规内容、恶意误导、侵权等",
