@@ -26,10 +26,12 @@ import java.util.Set;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -171,5 +173,74 @@ class UserManagementControllerTest {
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.userId").value("user-123"))
             .andExpect(jsonPath("$.data.status").value("DISABLED"));
+    }
+
+    @Test
+    void approveUser_delegatesToActiveStatusMutation() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "admin", "admin@example.com", "", "github", Set.of("USER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER_ADMIN"))
+        );
+
+        when(adminUserAppService.updateUserStatus("user-123", "ACTIVE"))
+                .thenReturn(new AdminUserMutationResponse("user-123", null, "ACTIVE"));
+
+        mockMvc.perform(post("/api/v1/admin/users/user-123/approve")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.userId").value("user-123"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        verify(adminUserAppService).updateUserStatus("user-123", "ACTIVE");
+    }
+
+    @Test
+    void disableUser_delegatesToDisabledStatusMutation() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "admin", "admin@example.com", "", "github", Set.of("USER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER_ADMIN"))
+        );
+
+        when(adminUserAppService.updateUserStatus("user-123", "DISABLED"))
+                .thenReturn(new AdminUserMutationResponse("user-123", null, "DISABLED"));
+
+        mockMvc.perform(post("/api/v1/admin/users/user-123/disable")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.userId").value("user-123"))
+                .andExpect(jsonPath("$.data.status").value("DISABLED"));
+
+        verify(adminUserAppService).updateUserStatus("user-123", "DISABLED");
+    }
+
+    @Test
+    void enableUser_delegatesToActiveStatusMutation() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "admin", "admin@example.com", "", "github", Set.of("USER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER_ADMIN"))
+        );
+
+        when(adminUserAppService.updateUserStatus("user-123", "ACTIVE"))
+                .thenReturn(new AdminUserMutationResponse("user-123", null, "ACTIVE"));
+
+        mockMvc.perform(post("/api/v1/admin/users/user-123/enable")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.userId").value("user-123"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        verify(adminUserAppService).updateUserStatus("user-123", "ACTIVE");
     }
 }

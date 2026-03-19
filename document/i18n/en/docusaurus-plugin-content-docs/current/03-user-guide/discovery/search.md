@@ -11,8 +11,9 @@ description: Search and filter skills
 Enter keywords in the search box, SkillHub searches in the following fields:
 - Skill name
 - Skill description
-- SKILL.md body content
-- Keywords
+- Skill slug
+- Frontmatter fields other than `name`, `description`, and `version`
+- Keyword-style fields such as `keywords` and `tags`
 
 ## Filter Conditions
 
