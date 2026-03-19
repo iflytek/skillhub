@@ -89,7 +89,7 @@ export function ReviewDetailPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-3xl animate-fade-up">
+    <div className="max-w-7xl animate-fade-up space-y-8 xl:grid xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:items-start xl:gap-8 xl:space-y-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold font-heading mb-2">{t('review.detail')}</h1>
@@ -100,133 +100,135 @@ export function ReviewDetailPage() {
         </Button>
       </div>
 
-      <Card className="p-8 space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.namespace')}</Label>
-            <p className="font-semibold font-mono">{review.namespace}/{review.skillSlug}</p>
+      <div className="space-y-8 xl:sticky xl:top-6">
+        <Card className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.namespace')}</Label>
+              <p className="font-semibold font-mono">{review.namespace}/{review.skillSlug}</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.version')}</Label>
+              <p className="font-semibold">
+                <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
+                  {review.version}
+                </span>
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.status')}</Label>
+              <p className="font-semibold">
+                {review.status === 'PENDING' && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-sm">{t('review.statusPending')}</span>
+                )}
+                {review.status === 'APPROVED' && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-sm">{t('review.statusApproved')}</span>
+                )}
+                {review.status === 'REJECTED' && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-sm">{t('review.statusRejected')}</span>
+                )}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.submitter')}</Label>
+              <p className="font-semibold">{review.submittedByName || review.submittedBy}</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.submitTime')}</Label>
+              <p className="font-semibold text-muted-foreground">{formatDate(review.submittedAt)}</p>
+            </div>
+            {review.reviewedBy && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewer')}</Label>
+                  <p className="font-semibold">{review.reviewedByName || review.reviewedBy}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewTime')}</Label>
+                  <p className="font-semibold text-muted-foreground">
+                    {review.reviewedAt ? formatDate(review.reviewedAt) : '—'}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.version')}</Label>
-            <p className="font-semibold">
-              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
-                {review.version}
-              </span>
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.status')}</Label>
-            <p className="font-semibold">
-              {review.status === 'PENDING' && (
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-sm">{t('review.statusPending')}</span>
-              )}
-              {review.status === 'APPROVED' && (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-sm">{t('review.statusApproved')}</span>
-              )}
-              {review.status === 'REJECTED' && (
-                <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-sm">{t('review.statusRejected')}</span>
-              )}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.submitter')}</Label>
-            <p className="font-semibold">{review.submittedByName || review.submittedBy}</p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.submitTime')}</Label>
-            <p className="font-semibold text-muted-foreground">{formatDate(review.submittedAt)}</p>
-          </div>
-          {review.reviewedBy && (
-            <>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewer')}</Label>
-                <p className="font-semibold">{review.reviewedByName || review.reviewedBy}</p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewTime')}</Label>
-                <p className="font-semibold text-muted-foreground">
-                  {review.reviewedAt ? formatDate(review.reviewedAt) : '—'}
-                </p>
-              </div>
-            </>
-          )}
-        </div>
 
-        {review.reviewComment && (
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewComment')}</Label>
-            <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.reviewComment}</p>
-          </div>
+          {review.reviewComment && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.reviewComment')}</Label>
+              <p className="p-4 bg-secondary/50 rounded-xl text-sm leading-relaxed">{review.reviewComment}</p>
+            </div>
+          )}
+        </Card>
+
+        {review.status === 'PENDING' && (
+          <Card className="p-8 space-y-6">
+            <h2 className="text-xl font-bold font-heading">{t('review.actions')}</h2>
+
+            <div className="space-y-3">
+              <Label htmlFor="comment" className="text-sm font-semibold font-heading">{t('review.commentLabel')}</Label>
+              <Textarea
+                id="comment"
+                placeholder={t('review.commentPlaceholder')}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setApproveDialog(true)}
+                disabled={approveMutation.isPending || rejectMutation.isPending}
+              >
+                {t('review.approve')}
+              </Button>
+              {!showRejectForm ? (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowRejectForm(true)}
+                  disabled={approveMutation.isPending || rejectMutation.isPending}
+                >
+                  {t('review.reject')}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      if (!comment.trim()) {
+                        toast.error(t('review.rejectReasonRequired'))
+                        return
+                      }
+                      setRejectDialog(true)
+                    }}
+                    disabled={approveMutation.isPending || rejectMutation.isPending || !comment.trim()}
+                  >
+                    {t('review.confirmReject')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRejectForm(false)}
+                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                  >
+                    {t('review.cancelReject')}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {showRejectForm && !comment.trim() && (
+              <p className="text-sm text-destructive">{t('review.rejectReasonRequired')}</p>
+            )}
+          </Card>
         )}
-      </Card>
+      </div>
 
       <ReviewSkillDetailSection
         detail={reviewSkillDetail}
         isLoading={isLoadingReviewSkillDetail}
         hasError={Boolean(reviewSkillDetailError)}
       />
-
-      {review.status === 'PENDING' && (
-        <Card className="p-8 space-y-6">
-          <h2 className="text-xl font-bold font-heading">{t('review.actions')}</h2>
-
-          <div className="space-y-3">
-            <Label htmlFor="comment" className="text-sm font-semibold font-heading">{t('review.commentLabel')}</Label>
-            <Textarea
-              id="comment"
-              placeholder={t('review.commentPlaceholder')}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={4}
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              onClick={() => setApproveDialog(true)}
-              disabled={approveMutation.isPending || rejectMutation.isPending}
-            >
-              {t('review.approve')}
-            </Button>
-            {!showRejectForm ? (
-              <Button
-                variant="destructive"
-                onClick={() => setShowRejectForm(true)}
-                disabled={approveMutation.isPending || rejectMutation.isPending}
-              >
-                {t('review.reject')}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    if (!comment.trim()) {
-                      toast.error(t('review.rejectReasonRequired'))
-                      return
-                    }
-                    setRejectDialog(true)
-                  }}
-                  disabled={approveMutation.isPending || rejectMutation.isPending || !comment.trim()}
-                >
-                  {t('review.confirmReject')}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRejectForm(false)}
-                  disabled={approveMutation.isPending || rejectMutation.isPending}
-                >
-                  {t('review.cancelReject')}
-                </Button>
-              </>
-            )}
-          </div>
-
-          {showRejectForm && !comment.trim() && (
-            <p className="text-sm text-destructive">{t('review.rejectReasonRequired')}</p>
-          )}
-        </Card>
-      )}
 
       <ConfirmDialog
         open={approveDialog}

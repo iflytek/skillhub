@@ -42,7 +42,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError }: Review
   const documentation = getReviewSkillDocumentation(detail)
 
   return (
-    <Card className="p-8 space-y-6">
+    <Card className="p-8 space-y-6 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
