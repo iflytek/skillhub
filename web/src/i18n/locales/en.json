@@ -414,7 +414,10 @@
     "colSubmitter": "Submitted By",
     "colSubmitTime": "Submitted At",
     "colReviewer": "Reviewed By",
-    "colReviewTime": "Reviewed At"
+    "colReviewTime": "Reviewed At",
+    "pageSummary": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next"
   },
   "profileReview": {
     "queueTitle": "Profile Review Queue",

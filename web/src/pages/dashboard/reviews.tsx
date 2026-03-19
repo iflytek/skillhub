@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { FileCheck2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import {
@@ -17,6 +19,9 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { ProfileReviewTable } from './profile-review-table'
 
+type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+const PAGE_SIZE = 20
+
 /**
  * Dashboard review queue page. Each tab materializes one review status because
  * the moderation workflow treats pending, approved, and rejected queues as
@@ -26,6 +31,11 @@ export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { hasRole } = useAuth()
+  const [pages, setPages] = useState<Record<ReviewStatus, number>>({
+    PENDING: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+  })
 
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
@@ -34,9 +44,9 @@ export function ReviewsPage() {
   // Determine default top-level tab
   const defaultType = isSkillAdmin ? 'skill' : 'profile'
 
-  const { data: pendingReviews, isLoading: isPendingLoading } = useReviewList('PENDING')
-  const { data: approvedReviews, isLoading: isApprovedLoading } = useReviewList('APPROVED')
-  const { data: rejectedReviews, isLoading: isRejectedLoading } = useReviewList('REJECTED')
+  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE)
+  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE)
+  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE)
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
@@ -44,12 +54,46 @@ export function ReviewsPage() {
     navigate({ to: `/dashboard/reviews/${reviewId}` })
   }
 
+  function changePage(status: ReviewStatus, nextPage: number) {
+    setPages((current) => ({ ...current, [status]: nextPage }))
+  }
+
+  function renderPagination(status: ReviewStatus, totalElements: number, totalPages: number) {
+    if (totalPages <= 1) return null
+    const currentPage = pages[status]
+    return (
+      <div className="flex flex-col gap-3 border-t border-border/60 px-6 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <p>{t('reviews.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 0}
+            onClick={() => changePage(status, currentPage - 1)}
+          >
+            {t('reviews.prevPage')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages - 1}
+            onClick={() => changePage(status, currentPage + 1)}
+          >
+            {t('reviews.nextPage')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   /**
    * Keeps the table rendering logic in one local helper so the per-status tabs
    * stay declarative while still allowing columns to differ by workflow state.
    */
-  const renderReviewTable = (reviews: typeof pendingReviews, isLoading: boolean, status: string) => {
-    if (isLoading) {
+  const renderReviewTable = (query: typeof pendingQuery, status: ReviewStatus) => {
+    if (query.isLoading) {
       return (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
@@ -58,6 +102,7 @@ export function ReviewsPage() {
         </div>
       )
     }
+    const reviews = query.data?.items
     if (!reviews || reviews.length === 0) {
       return <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-muted-foreground">{t('reviews.empty')}</div>
     }
@@ -101,6 +146,7 @@ export function ReviewsPage() {
             ))}
           </TableBody>
         </Table>
+        {query.data && renderPagination(status, query.data.totalElements, query.data.totalPages)}
       </div>
     )
   }
@@ -144,13 +190,13 @@ export function ReviewsPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="PENDING" className="mt-6">
-              {renderReviewTable(pendingReviews, isPendingLoading, 'PENDING')}
+              {renderReviewTable(pendingQuery, 'PENDING')}
             </TabsContent>
             <TabsContent value="APPROVED" className="mt-6">
-              {renderReviewTable(approvedReviews, isApprovedLoading, 'APPROVED')}
+              {renderReviewTable(approvedQuery, 'APPROVED')}
             </TabsContent>
             <TabsContent value="REJECTED" className="mt-6">
-              {renderReviewTable(rejectedReviews, isRejectedLoading, 'REJECTED')}
+              {renderReviewTable(rejectedQuery, 'REJECTED')}
             </TabsContent>
           </Tabs>
         </CardContent>
