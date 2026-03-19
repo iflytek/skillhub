@@ -82,6 +82,7 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.keywords()).contains("automation");
         assertThat(document.keywords()).contains("workflow");
         assertThat(document.searchText()).contains("smart-agent");
+        assertThat(document.searchText()).contains("Builds workflows");
         assertThat(document.searchText()).contains("author");
         assertThat(document.searchText()).contains("Jane Doe");
         assertThat(document.searchText()).contains("config");
@@ -143,6 +144,7 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.keywords()).contains("搜索");
         assertThat(document.keywords()).contains("智能体");
         assertThat(document.searchText()).contains("smart-agent");
+        assertThat(document.searchText()).contains("Builds workflows");
         assertThat(document.searchText()).contains("maintainer");
         assertThat(document.searchText()).contains("新版维护者");
         assertThat(document.searchText()).doesNotContain("中文搜索");
@@ -200,11 +202,61 @@ class PostgresSearchRebuildServiceTest {
         SkillSearchDocument document = captor.getValue();
         assertThat(document.keywords()).contains("automation");
         assertThat(document.searchText()).contains("smart-agent");
+        assertThat(document.searchText()).contains("Builds workflows");
         assertThat(document.searchText()).contains("config");
         assertThat(document.searchText()).contains("provider");
         assertThat(document.searchText()).contains("openai");
         assertThat(document.searchText()).doesNotContain("maintainer");
         assertThat(document.searchText()).doesNotContain("automation");
         assertThat(document.searchText()).doesNotContain("region null");
+    }
+
+    @Test
+    void rebuildBySkill_shouldKeepChineseSummarySearchableThroughSearchText() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "smart-agent", "owner-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Smart Agent");
+        skill.setSummary("支持中文描述搜索");
+        skill.setLatestVersionId(102L);
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+        SkillVersion version = new SkillVersion(1L, "1.5.0", "owner-1");
+        version.setParsedMetadataJson("""
+                {
+                  "name": "Smart Agent",
+                  "description": "支持中文描述搜索",
+                  "version": "1.5.0",
+                  "frontmatter": {
+                    "author": "Jane Doe"
+                  }
+                }
+                """);
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(102L)).thenReturn(Optional.of(version));
+
+        PostgresSearchRebuildService service = new PostgresSearchRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService,
+                new SearchTextTokenizer()
+        );
+
+        service.rebuildBySkill(1L);
+
+        ArgumentCaptor<SkillSearchDocument> captor = ArgumentCaptor.forClass(SkillSearchDocument.class);
+        verify(searchIndexService).index(captor.capture());
+
+        SkillSearchDocument document = captor.getValue();
+        assertThat(document.searchText()).contains("支持中文描述搜索");
+        assertThat(document.searchText()).contains("中文");
+        assertThat(document.searchText()).contains("描述");
+        assertThat(document.searchText()).contains("搜索");
     }
 }
