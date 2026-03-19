@@ -18,7 +18,7 @@ import java.util.Optional;
 public class PostgresFullTextIndexService implements SearchIndexService {
     private static final int NAMESPACE_SLUG_MAX_LENGTH = 64;
     private static final int OWNER_ID_MAX_LENGTH = 128;
-    private static final int TITLE_MAX_LENGTH = 256;
+    private static final int TITLE_MAX_LENGTH = 512;
     private static final int VISIBILITY_MAX_LENGTH = 32;
     private static final int STATUS_MAX_LENGTH = 32;
 
@@ -84,7 +84,6 @@ public class PostgresFullTextIndexService implements SearchIndexService {
 
     private String buildSemanticVector(SkillSearchDocument document) {
         return searchEmbeddingService.embed(String.join("\n",
-                safe(document.title()),
                 safe(document.title()),
                 safe(document.summary()),
                 safe(document.keywords()),

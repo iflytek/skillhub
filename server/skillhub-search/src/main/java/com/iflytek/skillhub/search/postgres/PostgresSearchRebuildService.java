@@ -87,9 +87,7 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
 
     private SearchIndexPayload buildSearchPayload(Skill skill) {
         List<String> searchParts = new ArrayList<>();
-        addPart(searchParts, skill.getDisplayName());
         addPart(searchParts, skill.getSlug());
-        addPart(searchParts, skill.getSummary());
 
         Set<String> keywords = new TreeSet<>();
         resolveLatestVersion(skill)
@@ -155,7 +153,8 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 });
             }
 
-            if (!RESERVED_FRONTMATTER_FIELDS.contains(normalizedFieldName)) {
+            if (!RESERVED_FRONTMATTER_FIELDS.contains(normalizedFieldName)
+                    && !KEYWORD_FIELD_NAMES.contains(normalizedFieldName)) {
                 addPart(searchParts, fieldName);
                 flattenToStrings(value).forEach(text -> addPart(searchParts, text));
             }
