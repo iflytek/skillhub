@@ -30,5 +30,5 @@ skillhub:
 
 logging:
   level:
-    com.iflytek.skillhub: DEBUG
-    org.springframework.security: DEBUG
+    com.iflytek.skillhub: INFO
+    org.springframework.security: WARN
