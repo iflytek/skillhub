@@ -931,7 +931,7 @@
     "subtitle": "Upload skill package to SkillHub",
     "reviewNotice": {
       "title": "Review Notice",
-      "description": "Submitted skill packages require admin review before publication. Once approved, your skill will be visible to all users."
+      "description": "Submitted skill packages require admin review before publication."
     },
     "namespace": "Namespace",
     "selectNamespace": "Select namespace",

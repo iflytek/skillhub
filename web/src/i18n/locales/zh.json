@@ -931,7 +931,7 @@
     "subtitle": "上传技能包到 SkillHub",
     "reviewNotice": {
       "title": "发布审核说明",
-      "description": "技能包提交后需要经过管理员审核才能正式发布。审核通过后，您的技能将对所有用户可见。"
+      "description": "技能包提交后需要经过管理员审核才能正式发布。"
     },
     "namespace": "命名空间",
     "selectNamespace": "选择命名空间",
