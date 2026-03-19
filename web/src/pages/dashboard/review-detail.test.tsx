@@ -35,64 +35,68 @@ vi.mock('@/features/review/review-error', () => ({
   resolveReviewActionErrorDescription: () => 'error',
 }))
 
-vi.mock('@/features/review/use-review-detail', () => ({
-  useReviewDetail: () => ({
-    data: {
-      id: 13,
+const useReviewDetailMock = vi.fn<() => any>(() => ({
+  data: {
+    id: 13,
+    namespace: 'global',
+    skillSlug: 'demo-skill',
+    version: '1.2.0',
+    status: 'PENDING',
+    submittedBy: 'local-admin',
+    submittedByName: 'Local Admin',
+    submittedAt: '2026-03-19T00:00:00Z',
+    reviewedBy: null,
+    reviewedByName: null,
+    reviewedAt: null,
+    reviewComment: null,
+  },
+  isLoading: false,
+}))
+
+const useReviewSkillDetailMock = vi.fn<() => any>(() => ({
+  data: {
+    skill: {
+      id: 1,
+      slug: 'demo-skill',
+      displayName: 'Demo Skill',
+      visibility: 'PUBLIC',
+      status: 'ACTIVE',
+      downloadCount: 3,
+      starCount: 1,
+      ratingCount: 0,
+      hidden: false,
       namespace: 'global',
-      skillSlug: 'demo-skill',
-      version: '1.2.0',
-      status: 'PENDING',
-      submittedBy: 'local-admin',
-      submittedByName: 'Local Admin',
-      submittedAt: '2026-03-19T00:00:00Z',
-      reviewedBy: null,
-      reviewedByName: null,
-      reviewedAt: null,
-      reviewComment: null,
+      canManageLifecycle: false,
+      canSubmitPromotion: false,
+      canInteract: false,
+      canReport: false,
+      resolutionMode: 'REVIEW_TASK',
     },
-    isLoading: false,
-  }),
-  useReviewSkillDetail: () => ({
-    data: {
-      skill: {
-        id: 1,
-        slug: 'demo-skill',
-        displayName: 'Demo Skill',
-        visibility: 'PUBLIC',
-        status: 'ACTIVE',
-        downloadCount: 3,
-        starCount: 1,
-        ratingCount: 0,
-        hidden: false,
-        namespace: 'global',
-        canManageLifecycle: false,
-        canSubmitPromotion: false,
-        canInteract: false,
-        canReport: false,
-        resolutionMode: 'REVIEW_TASK',
+    versions: [
+      {
+        id: 10,
+        version: '1.2.0',
+        status: 'PENDING_REVIEW',
+        changelog: 'Pending update',
+        fileCount: 2,
+        totalSize: 120,
+        publishedAt: '2026-03-19T00:00:00Z',
+        downloadAvailable: true,
       },
-      versions: [
-        {
-          id: 10,
-          version: '1.2.0',
-          status: 'PENDING_REVIEW',
-          changelog: 'Pending update',
-          fileCount: 2,
-          totalSize: 120,
-          publishedAt: '2026-03-19T00:00:00Z',
-          downloadAvailable: true,
-        },
-      ],
-      files: [],
-      documentationPath: 'README.md',
-      documentationContent: '# Demo Skill',
-      downloadUrl: '/api/v1/reviews/13/download',
-      activeVersion: '1.2.0',
-    },
-    isLoading: false,
-    error: null,
-  }),
+    ],
+    files: [],
+    documentationPath: 'README.md',
+    documentationContent: '# Demo Skill',
+    downloadUrl: '/api/v1/reviews/13/download',
+    activeVersion: '1.2.0',
+  },
+  isLoading: false,
+  error: null,
+}))
+
+vi.mock('@/features/review/use-review-detail', () => ({
+  useReviewDetail: () => useReviewDetailMock(),
+  useReviewSkillDetail: () => useReviewSkillDetailMock(),
   useApproveReview: () => ({
     mutate: vi.fn(),
     isPending: false,
@@ -108,6 +112,65 @@ import { ReviewDetailPage } from './review-detail'
 describe('ReviewDetailPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    useReviewDetailMock.mockReset()
+    useReviewSkillDetailMock.mockReset()
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'global',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedByName: 'Local Admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+        reviewedBy: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewComment: null,
+      },
+      isLoading: false,
+    })
+    useReviewSkillDetailMock.mockReturnValue({
+      data: {
+        skill: {
+          id: 1,
+          slug: 'demo-skill',
+          displayName: 'Demo Skill',
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+          downloadCount: 3,
+          starCount: 1,
+          ratingCount: 0,
+          hidden: false,
+          namespace: 'global',
+          canManageLifecycle: false,
+          canSubmitPromotion: false,
+          canInteract: false,
+          canReport: false,
+          resolutionMode: 'REVIEW_TASK',
+        },
+        versions: [
+          {
+            id: 10,
+            version: '1.2.0',
+            status: 'PENDING_REVIEW',
+            changelog: 'Pending update',
+            fileCount: 2,
+            totalSize: 120,
+            publishedAt: '2026-03-19T00:00:00Z',
+            downloadAvailable: true,
+          },
+        ],
+        files: [],
+        documentationPath: 'README.md',
+        documentationContent: '# Demo Skill',
+        downloadUrl: '/api/v1/reviews/13/download',
+        activeVersion: '1.2.0',
+      },
+      isLoading: false,
+      error: null,
+    })
   })
 
   it('keeps the page in a single-column flow and leaves the skill detail behind a collapsed section', () => {
@@ -115,5 +178,16 @@ describe('ReviewDetailPage', () => {
 
     expect(html).toContain('max-w-3xl animate-fade-up')
     expect(html).toContain('aria-expanded="false"')
+  })
+
+  it('renders not-found state when the review record is missing', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: null,
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.notFound')
   })
 })

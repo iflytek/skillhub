@@ -63,6 +63,20 @@ describe('ReviewSkillDetailSection', () => {
 
     expect(html).toContain('aria-expanded="false"')
     expect(html).not.toContain('data-review-skill-detail-panel')
+    expect(html).not.toContain('/api/v1/reviews/1/download')
+    expect(html).not.toContain('README.md')
+  })
+
+  it('renders loading state while review detail is being fetched', () => {
+    const html = renderToStaticMarkup(<ReviewSkillDetailSection isLoading />)
+
+    expect(html).toContain('animate-shimmer')
+  })
+
+  it('returns no markup when there is no detail data and no error', () => {
+    const html = renderToStaticMarkup(<ReviewSkillDetailSection />)
+
+    expect(html).toBe('')
   })
 
   it('renders inline error state without requiring detail data', () => {
