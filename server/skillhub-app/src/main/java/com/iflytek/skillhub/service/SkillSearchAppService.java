@@ -2,14 +2,11 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.Namespace;
-import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
-import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
@@ -34,7 +31,6 @@ public class SkillSearchAppService {
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
     private final NamespaceService namespaceService;
-    private final VisibilityChecker visibilityChecker;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
 
     public SkillSearchAppService(
@@ -42,13 +38,11 @@ public class SkillSearchAppService {
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             NamespaceService namespaceService,
-            VisibilityChecker visibilityChecker,
             SkillLifecycleProjectionService skillLifecycleProjectionService) {
         this.searchQueryService = searchQueryService;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.namespaceService = namespaceService;
-        this.visibilityChecker = visibilityChecker;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
     }
 
@@ -72,7 +66,7 @@ public class SkillSearchAppService {
 
         SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
 
-        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, userId, userNsRoles, scope);
+        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, scope);
     }
 
     private Long resolveNamespaceId(String namespaceSlug, String userId, Map<Long, NamespaceRole> userNsRoles) {
@@ -106,46 +100,20 @@ public class SkillSearchAppService {
             String sortBy,
             int page,
             int size,
-            String userId,
-            Map<Long, NamespaceRole> userNsRoles,
             SearchVisibilityScope scope) {
-        int batchSize = Math.max(size, 20);
-        long rawTotal = Long.MAX_VALUE;
-        int rawPage = 0;
-        long visibleSeen = 0;
-        int visibleStart = page * size;
-        List<SkillSummaryResponse> pageItems = new java.util.ArrayList<>();
-
-        while ((long) rawPage * batchSize < rawTotal) {
-            SearchResult result = searchQueryService.search(new SearchQuery(
-                    keyword,
-                    namespaceId,
-                    scope,
-                    sortBy,
-                    rawPage,
-                    batchSize
-            ));
-            rawTotal = result.total();
-            List<SkillSummaryResponse> visibleBatch = mapVisibleSkillSummaries(result.skillIds(), userId, userNsRoles);
-            for (SkillSummaryResponse item : visibleBatch) {
-                if (visibleSeen >= visibleStart && pageItems.size() < size) {
-                    pageItems.add(item);
-                }
-                visibleSeen++;
-            }
-            if (result.skillIds().isEmpty()) {
-                break;
-            }
-            rawPage++;
-        }
-
-        return new SearchResponse(pageItems, visibleSeen, page, size);
+        SearchResult result = searchQueryService.search(new SearchQuery(
+                keyword,
+                namespaceId,
+                scope,
+                sortBy,
+                page,
+                size
+        ));
+        List<SkillSummaryResponse> pageItems = mapVisibleSkillSummaries(result.skillIds());
+        return new SearchResponse(pageItems, result.total(), page, size);
     }
 
-    private List<SkillSummaryResponse> mapVisibleSkillSummaries(
-            List<Long> skillIds,
-            String userId,
-            Map<Long, NamespaceRole> userNsRoles) {
+    private List<SkillSummaryResponse> mapVisibleSkillSummaries(List<Long> skillIds) {
         if (skillIds.isEmpty()) {
             return List.of();
         }
@@ -164,24 +132,20 @@ public class SkillSearchAppService {
                 .collect(Collectors.toMap(Namespace::getId, Function.identity()));
         Map<Long, String> namespaceSlugsById = namespacesById.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getSlug()));
+        Map<Long, SkillLifecycleProjectionService.Projection> projectionsBySkillId =
+                skillLifecycleProjectionService.projectPublishedSummaries(matchedSkills);
 
         return skillIds.stream()
                 .map(skillsById::get)
                 .filter(java.util.Objects::nonNull)
-                .filter(skill -> visibilityChecker.canAccess(skill, userId, userNsRoles != null ? userNsRoles : Map.of()))
-                .filter(skill -> namespaceVisible(skill.getNamespaceId(), namespacesById, userId, userNsRoles))
-                .map(skill -> toSummaryResponse(skill, namespaceSlugsById))
+                .map(skill -> toSummaryResponse(skill, namespaceSlugsById, projectionsBySkillId.get(skill.getId())))
                 .toList();
     }
 
     private SkillSummaryResponse toSummaryResponse(
             Skill skill,
-            Map<Long, String> namespaceSlugsById) {
-        SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForViewer(
-                skill,
-                null,
-                Map.of()
-        );
+            Map<Long, String> namespaceSlugsById,
+            SkillLifecycleProjectionService.Projection projection) {
         String namespaceSlug = namespaceSlugsById.get(skill.getNamespaceId());
 
         return new SkillSummaryResponse(
@@ -216,17 +180,4 @@ public class SkillSearchAppService {
         );
     }
 
-    private boolean namespaceVisible(
-            Long namespaceId,
-            Map<Long, Namespace> namespacesById,
-            String userId,
-            Map<Long, NamespaceRole> userNsRoles) {
-        NamespaceStatus status = java.util.Optional.ofNullable(namespacesById.get(namespaceId))
-                .map(Namespace::getStatus)
-                .orElse(NamespaceStatus.ACTIVE);
-        if (status != NamespaceStatus.ARCHIVED) {
-            return true;
-        }
-        return userId != null && userNsRoles != null && userNsRoles.containsKey(namespaceId);
-    }
 }

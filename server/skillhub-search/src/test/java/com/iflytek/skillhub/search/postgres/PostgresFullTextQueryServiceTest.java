@@ -8,6 +8,7 @@ import com.iflytek.skillhub.search.SearchVisibilityScope;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Set;
@@ -108,7 +109,7 @@ class PostgresFullTextQueryServiceTest {
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst()).contains("search_vector @@ to_tsquery('simple', :tsQuery)");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery))");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(d.search_vector, to_tsquery('simple', :tsQuery))");
     }
 
     @Test
@@ -233,7 +234,11 @@ class PostgresFullTextQueryServiceTest {
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst())
-                .contains("ORDER BY (SELECT download_count FROM skill WHERE id = skill_id) DESC, (SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC");
+                .contains("JOIN skill s ON s.id = d.skill_id")
+                .contains("JOIN namespace n ON n.id = d.namespace_id")
+                .contains("AND s.hidden = FALSE")
+                .contains("AND (n.status <> 'ARCHIVED' ")
+                .contains("ORDER BY s.download_count DESC, s.updated_at DESC, d.skill_id DESC");
     }
 
     @Test
@@ -263,7 +268,100 @@ class PostgresFullTextQueryServiceTest {
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst())
-                .contains("ORDER BY updated_at DESC, skill_id DESC");
+                .contains("ORDER BY s.updated_at DESC, d.skill_id DESC");
+    }
+
+    @Test
+    void authenticatedQueriesShouldAllowArchivedNamespacesForMembers() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                null,
+                null,
+                new SearchVisibilityScope("user-1", Set.of(7L), Set.of()),
+                "newest",
+                0,
+                12
+        ));
+
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("OR d.namespace_id IN :memberNamespaceIds");
+    }
+
+    @Test
+    void maliciousKeywordShouldBeBoundAsParameterInsteadOfInlinedIntoSql() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+        String payload = "x%' OR 1=1 --";
+
+        service.search(new SearchQuery(
+                payload,
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                12
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain(payload);
+        verify(nativeQuery).setParameter("titleLike", "%" + payload.toLowerCase() + "%");
+        verify(countQuery).setParameter("titleLike", "%" + payload.toLowerCase() + "%");
+    }
+
+    @Test
+    void maliciousSortShouldFallBackWithoutBeingInlinedIntoSql() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+        String payload = "newest desc; drop table skill; --";
+
+        service.search(new SearchQuery(
+                null,
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                payload,
+                0,
+                12
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst())
+                .doesNotContain(payload)
+                .contains("ORDER BY s.updated_at DESC, d.skill_id DESC");
     }
 
     @Test
