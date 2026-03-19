@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -227,6 +228,78 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.versionId").value(3))
                 .andExpect(jsonPath("$.data.action").value("RERELEASE_VERSION"))
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
+    }
+
+    @Test
+    void archiveSkill_acceptsAtPrefixedNamespaceSlug() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        given(skillGovernanceService.archiveSkill(eq(1L), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup")))
+                .willReturn(skillWithStatus(skill, com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED));
+
+        mockMvc.perform(post("/api/web/skills/@global/demo-skill/archive")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"cleanup\"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.action").value("ARCHIVE"))
+                .andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void rereleaseVersion_trimsTargetVersionBeforeDelegating() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion newVersion = new SkillVersion(1L, "1.2.4", "owner");
+        setSkillVersionId(newVersion, 3L);
+        newVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        SkillVersion sourceVersion = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(sourceVersion, 2L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(sourceVersion));
+        given(skillPublishService.rereleasePublishedVersion(
+                eq(1L),
+                eq("1.2.3"),
+                eq("1.2.4"),
+                eq("usr_1"),
+                anyMap()))
+                .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetVersion\":\" 1.2.4  \"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.versionId").value(3))
+                .andExpect(jsonPath("$.data.action").value("RERELEASE_VERSION"));
+
+        verify(skillPublishService).rereleasePublishedVersion(
+                eq(1L),
+                eq("1.2.3"),
+                eq("1.2.4"),
+                eq("usr_1"),
+                anyMap());
     }
 
     private Skill skillWithStatus(Skill skill, com.iflytek.skillhub.domain.skill.SkillStatus status) {
