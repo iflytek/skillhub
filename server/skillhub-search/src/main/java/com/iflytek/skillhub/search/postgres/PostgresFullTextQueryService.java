@@ -98,22 +98,33 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 : query.visibilityScope().adminNamespaceIds();
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT skill_id FROM skill_search_document WHERE 1=1 ");
+        sql.append("SELECT d.skill_id ");
+        sql.append("FROM skill_search_document d ");
+        sql.append("JOIN skill s ON s.id = d.skill_id ");
+        sql.append("JOIN namespace n ON n.id = d.namespace_id ");
+        sql.append("WHERE 1=1 ");
 
         // Visibility filtering
-        sql.append("AND (visibility = 'PUBLIC' ");
+        sql.append("AND (d.visibility = 'PUBLIC' ");
         if (query.visibilityScope().userId() != null) {
-            sql.append("OR (visibility = 'NAMESPACE_ONLY' AND namespace_id IN :memberNamespaceIds) ");
-            sql.append("OR (visibility = 'PRIVATE' AND (namespace_id IN :adminNamespaceIds OR owner_id = :userId)) ");
+            sql.append("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespace_id IN :memberNamespaceIds) ");
+            sql.append("OR (d.visibility = 'PRIVATE' AND (d.namespace_id IN :adminNamespaceIds OR d.owner_id = :userId)) ");
         }
         sql.append(") ");
 
         // Status filtering
-        sql.append("AND status = 'ACTIVE' ");
+        sql.append("AND d.status = 'ACTIVE' ");
+        sql.append("AND s.status = 'ACTIVE' ");
+        sql.append("AND s.hidden = FALSE ");
+        sql.append("AND (n.status <> 'ARCHIVED' ");
+        if (query.visibilityScope().userId() != null) {
+            sql.append("OR d.namespace_id IN :memberNamespaceIds ");
+        }
+        sql.append(") ");
 
         // Namespace filtering
         if (query.namespaceId() != null) {
-            sql.append("AND namespace_id = :namespaceId ");
+            sql.append("AND d.namespace_id = :namespaceId ");
         }
 
         // Full-text search
@@ -123,7 +134,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 if (useShortPrefixTitleSearch) {
                     sql.append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
                 } else {
-                    sql.append("search_vector @@ to_tsquery('simple', :tsQuery) ");
+                    sql.append("d.search_vector @@ to_tsquery('simple', :tsQuery) ");
                 }
                 sql.append(" OR ");
             }
@@ -133,13 +144,11 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         // Sorting
         if ("downloads".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT download_count FROM skill WHERE id = skill_id) DESC, ");
-            sql.append("(SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
+            sql.append("ORDER BY s.download_count DESC, s.updated_at DESC, d.skill_id DESC ");
         } else if ("rating".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT rating_avg FROM skill WHERE id = skill_id) DESC, ");
-            sql.append("(SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
+            sql.append("ORDER BY s.rating_avg DESC, s.updated_at DESC, d.skill_id DESC ");
         } else if ("newest".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
+            sql.append("ORDER BY s.updated_at DESC, d.skill_id DESC ");
         } else if (useRelevanceOrdering) {
             sql.append("ORDER BY CASE ");
             sql.append("WHEN ").append(TITLE_SQL).append(" = :titleExact THEN 4 ");
@@ -148,14 +157,14 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("ELSE 1 END DESC, ");
             if (useShortPrefixTitleSearch) {
                 sql.append("ts_rank_cd(").append(TITLE_VECTOR_SQL)
-                        .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC, skill_id DESC ");
+                        .append(", to_tsquery('simple', :tsQuery)) DESC, d.updated_at DESC, d.skill_id DESC ");
             } else if (hasTsQuery) {
-                sql.append("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC, skill_id DESC ");
+                sql.append("ts_rank_cd(d.search_vector, to_tsquery('simple', :tsQuery)) DESC, d.updated_at DESC, d.skill_id DESC ");
             } else {
-                sql.append("updated_at DESC, skill_id DESC ");
+                sql.append("d.updated_at DESC, d.skill_id DESC ");
             }
         } else {
-            sql.append("ORDER BY updated_at DESC, skill_id DESC ");
+            sql.append("ORDER BY s.updated_at DESC, d.skill_id DESC ");
         }
 
         // Pagination
@@ -193,7 +202,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 .toList();
 
         // Count total
-        String countSql = sql.toString().replaceFirst("SELECT skill_id", "SELECT COUNT(*)");
+        String countSql = sql.toString().replaceFirst("SELECT d\\.skill_id", "SELECT COUNT(*)");
         int orderByIndex = countSql.indexOf("ORDER BY");
         if (orderByIndex >= 0) {
             countSql = countSql.substring(0, orderByIndex);

@@ -19,11 +19,17 @@ public interface SkillVersionJpaRepository extends JpaRepository<SkillVersion, L
     List<SkillVersion> findByIdIn(List<Long> ids);
     List<SkillVersion> findBySkillId(Long skillId);
     List<SkillVersion> findBySkillIdIn(List<Long> skillIds);
+    List<SkillVersion> findBySkillIdInAndStatusOrderByCreatedAtDesc(List<Long> skillIds, SkillVersionStatus status);
     Optional<SkillVersion> findBySkillIdAndVersion(Long skillId, String version);
 
     @Override
     default List<SkillVersion> findBySkillIdAndStatus(Long skillId, SkillVersionStatus status) {
         return findBySkillIdAndStatusOrderByCreatedAtDesc(skillId, status);
+    }
+
+    @Override
+    default List<SkillVersion> findBySkillIdInAndStatus(List<Long> skillIds, SkillVersionStatus status) {
+        return findBySkillIdInAndStatusOrderByCreatedAtDesc(skillIds, status);
     }
 
     List<SkillVersion> findBySkillIdAndStatusOrderByCreatedAtDesc(Long skillId, SkillVersionStatus status);
