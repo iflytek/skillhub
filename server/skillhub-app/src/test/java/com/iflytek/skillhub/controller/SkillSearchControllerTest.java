@@ -55,4 +55,25 @@ class SkillSearchControllerTest {
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
+
+    @Test
+    void searchShouldPassExplicitSortPageAndSize() throws Exception {
+        when(skillSearchAppService.search(
+                eq(null),
+                eq(null),
+                eq("newest"),
+                eq(0),
+                eq(12),
+                any(),
+                any()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 12));
+
+        mockMvc.perform(get("/api/web/skills")
+                        .param("sort", "newest")
+                        .param("page", "0")
+                        .param("size", "12"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(12))
+                .andExpect(jsonPath("$.data.page").value(0));
+    }
 }

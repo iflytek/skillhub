@@ -8,6 +8,9 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /**
@@ -62,6 +65,44 @@ public class SkillLifecycleProjectionService {
         return new Projection(headlineVersion, publishedVersion, ownerPreviewVersion, resolutionMode);
     }
 
+    public Map<Long, Projection> projectPublishedSummaries(List<Skill> skills) {
+        if (skills.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, SkillVersion> latestVersionsById = skillVersionRepository.findByIdIn(
+                        skills.stream()
+                                .map(Skill::getLatestVersionId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
+
+        Map<Long, SkillVersion> publishedBySkillId = new java.util.HashMap<>();
+        List<Long> unresolvedSkillIds = new java.util.ArrayList<>();
+        for (Skill skill : skills) {
+            SkillVersion latestVersion = latestVersionsById.get(skill.getLatestVersionId());
+            if (latestVersion != null && latestVersion.getStatus() == SkillVersionStatus.PUBLISHED) {
+                publishedBySkillId.put(skill.getId(), latestVersion);
+            } else {
+                unresolvedSkillIds.add(skill.getId());
+            }
+        }
+
+        if (!unresolvedSkillIds.isEmpty()) {
+            for (SkillVersion version : skillVersionRepository.findBySkillIdInAndStatus(unresolvedSkillIds, SkillVersionStatus.PUBLISHED)) {
+                publishedBySkillId.merge(version.getSkillId(), version, this::newerVersion);
+            }
+        }
+
+        return skills.stream().collect(Collectors.toMap(Skill::getId, skill -> {
+            VersionProjection publishedVersion = toProjection(publishedBySkillId.get(skill.getId()));
+            ResolutionMode resolutionMode = publishedVersion == null ? ResolutionMode.NONE : ResolutionMode.PUBLISHED;
+            return new Projection(publishedVersion, publishedVersion, null, resolutionMode);
+        }));
+    }
+
     private SkillVersion resolvePublishedVersion(Skill skill) {
         if (skill.getLatestVersionId() != null) {
             SkillVersion latest = skillVersionRepository.findById(skill.getLatestVersionId()).orElse(null);
@@ -107,6 +148,10 @@ public class SkillLifecycleProjectionService {
                 .comparing(SkillVersion::getPublishedAt, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(SkillVersion::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(SkillVersion::getId, Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    private SkillVersion newerVersion(SkillVersion left, SkillVersion right) {
+        return versionComparator().compare(left, right) >= 0 ? left : right;
     }
 
     private VersionProjection toProjection(SkillVersion version) {

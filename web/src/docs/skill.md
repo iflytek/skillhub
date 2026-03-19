@@ -29,7 +29,7 @@ Key facts:
 Point `clawhub` at the SkillHub base URL:
 
 ```bash
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
 Alternatively, use the `--registry` parameter every time, for example:
