@@ -239,6 +239,35 @@ class SkillGovernanceServiceTest {
 
         verify(skillVersionRepository, never()).delete(any());
     }
+
+    @Test
+    void deleteVersion_updatesLatestVersionPointerWhenDeletingArchivedSkillsLatestDraft() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setLatestVersionId(2L);
+
+        SkillVersion draftVersion = new SkillVersion(1L, "2.0.0-rc1", "owner");
+        setField(draftVersion, "id", 2L);
+        draftVersion.setStatus(SkillVersionStatus.DRAFT);
+
+        SkillVersion publishedVersion = new SkillVersion(1L, "1.0.0", "owner");
+        setField(publishedVersion, "id", 3L);
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        publishedVersion.setPublishedAt(Instant.parse("2026-03-17T10:00:00Z"));
+
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(draftVersion, publishedVersion));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
+                .willReturn(java.util.List.of(publishedVersion));
+        given(skillRepository.save(skill)).willReturn(skill);
+        given(skillFileRepository.findByVersionId(2L)).willReturn(java.util.List.of());
+
+        service.deleteVersion(skill, draftVersion, "owner", Map.of(), "127.0.0.1", "JUnit");
+
+        assertThat(skill.getLatestVersionId()).isEqualTo(3L);
+        verify(skillRepository).save(skill);
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

@@ -3,7 +3,7 @@ import { inferMarkdownCodeLanguage } from './code-language'
 
 describe('inferMarkdownCodeLanguage', () => {
   it('infers python code blocks', () => {
-    expect(inferMarkdownCodeLanguage('from pypdf import PdfReader\nprint(\"ok\")')).toBe('python')
+    expect(inferMarkdownCodeLanguage('from pypdf import PdfReader\nprint("ok")')).toBe('python')
   })
 
   it('infers bash command blocks', () => {
@@ -11,7 +11,7 @@ describe('inferMarkdownCodeLanguage', () => {
   })
 
   it('infers json payloads', () => {
-    expect(inferMarkdownCodeLanguage('{\n  \"name\": \"skillhub\"\n}')).toBe('json')
+    expect(inferMarkdownCodeLanguage('{\n  "name": "skillhub"\n}')).toBe('json')
   })
 
   it('infers yaml frontmatter style snippets', () => {
