@@ -28,11 +28,6 @@ public record ProfileModerationProperties(
         boolean humanReview
 ) implements ProfileModerationConfig {
 
-    /** Default constructor — both switches off (open-source mode). */
-    public ProfileModerationProperties() {
-        this(false, false);
-    }
-
     /** Returns true if any form of moderation is active. */
     public boolean isAnyModerationEnabled() {
         return machineReview || humanReview;

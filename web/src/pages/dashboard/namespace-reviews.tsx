@@ -15,12 +15,13 @@ function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
   const { data: rejected } = useReviewList('REJECTED', namespaceId)
 
   const renderItems = (items?: typeof pending) => {
-    if (!items || items.length === 0) {
+    const list = items?.items
+    if (!list || list.length === 0) {
       return <Card className="p-10 text-center text-muted-foreground">{t('nsReviews.empty')}</Card>
     }
     return (
       <Card className="divide-y divide-border/40">
-        {items.map((review) => (
+        {list.map((review) => (
           <div key={review.id} className="p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
