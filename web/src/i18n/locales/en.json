@@ -525,7 +525,7 @@
     "defaultError": "Failed to update profile. Please try again.",
     "validation": {
       "length": "Display name must be 2-32 characters.",
-      "pattern": "Display name can only contain Chinese, English, digits, underscores, and hyphens."
+      "pattern": "Display name can only contain Chinese, English, digits, spaces, underscores, and hyphens."
     }
   },
   "security": {
