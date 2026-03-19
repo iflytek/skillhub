@@ -81,14 +81,14 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.keywords()).contains("assistant");
         assertThat(document.keywords()).contains("automation");
         assertThat(document.keywords()).contains("workflow");
-        assertThat(document.searchText()).contains("Smart Agent");
         assertThat(document.searchText()).contains("smart-agent");
-        assertThat(document.searchText()).contains("Builds workflows");
         assertThat(document.searchText()).contains("author");
         assertThat(document.searchText()).contains("Jane Doe");
         assertThat(document.searchText()).contains("config");
         assertThat(document.searchText()).contains("provider");
         assertThat(document.searchText()).contains("openai");
+        assertThat(document.searchText()).doesNotContain("agentic");
+        assertThat(document.searchText()).doesNotContain("assistant");
         assertThat(document.searchText()).doesNotContain("# ignored");
     }
 
@@ -142,8 +142,11 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.keywords()).contains("中文");
         assertThat(document.keywords()).contains("搜索");
         assertThat(document.keywords()).contains("智能体");
+        assertThat(document.searchText()).contains("smart-agent");
         assertThat(document.searchText()).contains("maintainer");
         assertThat(document.searchText()).contains("新版维护者");
+        assertThat(document.searchText()).doesNotContain("中文搜索");
+        assertThat(document.searchText()).doesNotContain("智能体");
     }
 
     @Test
@@ -196,10 +199,12 @@ class PostgresSearchRebuildServiceTest {
 
         SkillSearchDocument document = captor.getValue();
         assertThat(document.keywords()).contains("automation");
+        assertThat(document.searchText()).contains("smart-agent");
         assertThat(document.searchText()).contains("config");
         assertThat(document.searchText()).contains("provider");
         assertThat(document.searchText()).contains("openai");
         assertThat(document.searchText()).doesNotContain("maintainer");
+        assertThat(document.searchText()).doesNotContain("automation");
         assertThat(document.searchText()).doesNotContain("region null");
     }
 }

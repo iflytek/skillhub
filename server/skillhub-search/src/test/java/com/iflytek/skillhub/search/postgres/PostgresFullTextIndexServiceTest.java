@@ -48,7 +48,7 @@ class PostgresFullTextIndexServiceTest {
         SkillSearchDocumentEntity entity = captor.getValue();
         assertThat(entity.getNamespaceSlug()).hasSize(64);
         assertThat(entity.getOwnerId()).hasSize(128);
-        assertThat(entity.getTitle()).hasSize(256);
+        assertThat(entity.getTitle()).hasSize(300);
         assertThat(entity.getKeywords()).hasSize(700);
         assertThat(entity.getSearchText()).isEqualTo("search text");
     }

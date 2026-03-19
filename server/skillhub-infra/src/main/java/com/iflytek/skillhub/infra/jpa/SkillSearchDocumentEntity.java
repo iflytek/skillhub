@@ -23,7 +23,7 @@ public class SkillSearchDocumentEntity {
     @Column(name = "owner_id", nullable = false, length = 128)
     private String ownerId;
 
-    @Column(length = 256)
+    @Column(length = 512)
     private String title;
 
     @Column(columnDefinition = "TEXT")
