@@ -111,7 +111,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
         type="button"
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn('flex items-center gap-3 text-foreground hover:opacity-80 transition-opacity', triggerClassName)}
+        className={cn('flex items-center gap-3 text-foreground hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-md', triggerClassName)}
         onClick={() => setIsClickOpen((current) => !current)}
       >
         {user.avatarUrl && (
