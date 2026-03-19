@@ -14,6 +14,11 @@ import { useReviewList } from '@/features/review/use-review-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 
+/**
+ * Dashboard review queue page. Each tab materializes one review status because
+ * the moderation workflow treats pending, approved, and rejected queues as
+ * distinct operator views rather than one filterable table.
+ */
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -29,6 +34,10 @@ export function ReviewsPage() {
     navigate({ to: `/dashboard/reviews/${reviewId}` })
   }
 
+  /**
+   * Keeps the table rendering logic in one local helper so the per-status tabs
+   * stay declarative while still allowing columns to differ by workflow state.
+   */
   const renderReviewTable = (reviews: typeof pendingReviews, isLoading: boolean, status: string) => {
     if (isLoading) {
       return (

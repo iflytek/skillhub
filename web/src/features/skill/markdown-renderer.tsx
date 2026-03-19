@@ -13,6 +13,11 @@ interface MarkdownRendererProps {
   className?: string
 }
 
+/**
+ * Renders markdown from skill packages using a constrained plugin stack.
+ * Frontmatter is stripped before render because package metadata is surfaced in
+ * dedicated UI sections and should not appear twice in the document body.
+ */
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   const containerClassName = [
     className,

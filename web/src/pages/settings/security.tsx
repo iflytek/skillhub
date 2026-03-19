@@ -9,6 +9,11 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 
+/**
+ * Security settings page for password changes. After a successful change the
+ * user is logged out so all existing authenticated state is re-established with
+ * the new credential.
+ */
 export function SecuritySettingsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -18,6 +23,10 @@ export function SecuritySettingsPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  /**
+   * Submits the password change request and clears local auth state afterward,
+   * even if the explicit logout request fails.
+   */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setErrorMessage('')

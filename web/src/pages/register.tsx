@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
+/**
+ * Registration page for local accounts with an alternate OAuth-based entry path.
+ */
 export function RegisterPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()

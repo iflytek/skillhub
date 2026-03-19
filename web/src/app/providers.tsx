@@ -4,6 +4,12 @@ import { Toaster } from '@/shared/components/toaster'
 import { handleApiError } from '@/shared/lib/api-error'
 import { router } from './router'
 
+/**
+ * Front-end application root.
+ *
+ * It wires TanStack Query, TanStack Router, and the global toaster so all pages share one query
+ * cache and one navigation context.
+ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

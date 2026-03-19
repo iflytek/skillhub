@@ -8,6 +8,10 @@ import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
+/**
+ * Renders one promotion queue lane. Pending items expose moderation actions,
+ * while historical lanes stay read-only and surface the review comment only.
+ */
 function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECTED' }) {
   const { t, i18n } = useTranslation()
   const { data: items, isLoading } = usePromotionList(status)
@@ -68,6 +72,9 @@ function PromotionSection({ status }: { status: 'PENDING' | 'APPROVED' | 'REJECT
   )
 }
 
+/**
+ * Dashboard page for namespace promotion requests.
+ */
 export function PromotionsPage() {
   const { t } = useTranslation()
   return (

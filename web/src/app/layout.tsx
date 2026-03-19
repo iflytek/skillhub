@@ -5,6 +5,12 @@ import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 
+/**
+ * Application shell shared by all routed pages.
+ *
+ * It owns the global header, footer, language switcher, auth-aware navigation, and suspense
+ * fallback used while lazy route modules are loading.
+ */
 export function Layout() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -25,7 +31,7 @@ export function Layout() {
 
   const isActive = (to: string, exact?: boolean) => {
     if (exact) return pathname === to
-    // 精确匹配，避免父路径也被高亮
+    // Keep matching strict so parent dashboard paths do not highlight unrelated child links.
     return pathname === to
   }
 

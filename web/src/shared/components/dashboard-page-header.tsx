@@ -9,6 +9,9 @@ interface DashboardPageHeaderProps {
   actions?: React.ReactNode
 }
 
+/**
+ * Standard header used by dashboard sub-pages so navigation and page framing stay consistent.
+ */
 export function DashboardPageHeader({ title, subtitle, actions }: DashboardPageHeaderProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()

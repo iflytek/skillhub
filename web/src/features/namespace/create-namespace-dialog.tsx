@@ -46,6 +46,10 @@ const MIN_SLUG_LENGTH = 2
 const MAX_DISPLAY_NAME_LENGTH = 128
 const MAX_DESCRIPTION_LENGTH = 512
 
+/**
+ * Performs client-side validation that mirrors the backend namespace rules so
+ * users get immediate feedback before the create request is sent.
+ */
 function buildFieldErrors(request: CreateNamespaceRequest, t: (key: string, options?: Record<string, unknown>) => string): FieldErrors {
   const errors: FieldErrors = {}
   const slug = request.slug.trim()
@@ -77,6 +81,11 @@ function buildFieldErrors(request: CreateNamespaceRequest, t: (key: string, opti
   return errors
 }
 
+/**
+ * Collects and validates namespace creation input before delegating the actual
+ * mutation to the shared query layer. The dialog owns normalization because the
+ * same slug/display-name constraints are also reflected in the local UI copy.
+ */
 export function CreateNamespaceDialog({ children }: CreateNamespaceDialogProps) {
   const { t } = useTranslation()
   const createMutation = useCreateNamespace()

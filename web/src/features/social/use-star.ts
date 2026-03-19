@@ -5,6 +5,11 @@ interface StarStatus {
   starred: boolean
 }
 
+/**
+ * Star-state hooks for one skill.
+ *
+ * Anonymous users are treated as unstarred instead of surfacing authorization failures into the UI.
+ */
 async function getStarStatus(skillId: number): Promise<StarStatus> {
   try {
     const starred = await fetchJson<boolean>(`${WEB_API_PREFIX}/skills/${skillId}/star`)
@@ -45,6 +50,8 @@ export function useToggleStar(skillId: number) {
   return useMutation({
     mutationFn: (starred: boolean) => toggleStar(skillId, starred),
     onSuccess: () => {
+      // Star actions affect both the local button state and starred-skill collections elsewhere in
+      // the app.
       queryClient.invalidateQueries({ queryKey: ['skills', skillId, 'star'] })
       queryClient.invalidateQueries({ queryKey: ['skills'] })
       queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })

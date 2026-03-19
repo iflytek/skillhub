@@ -9,6 +9,12 @@ import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useInView } from '@/shared/hooks/use-in-view'
 import { Button } from '@/shared/ui/button'
 
+/**
+ * Marketing-style landing page for unauthenticated and first-time visitors.
+ *
+ * The page mixes static positioning content with live skill queries so popular and latest skills
+ * stay aligned with the current registry state.
+ */
 export function LandingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -60,25 +66,25 @@ export function LandingPage() {
     },
     {
       icon: <GitBranch className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.versionControl.title', { defaultValue: '版本控制' }),
-      description: t('landing.features.versionControl.description', { defaultValue: '完善的版本管理和发布流程，确保技能包的质量和可追溯性。' }),
+      title: t('landing.features.versionControl.title', { defaultValue: 'Version control' }),
+      description: t('landing.features.versionControl.description', { defaultValue: 'Managed release flows keep skill packages traceable and easier to review.' }),
     },
     {
       icon: <Terminal className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.cli.title', { defaultValue: 'CLI 工具' }),
-      description: t('landing.features.cli.description', { defaultValue: '强大的命令行工具，支持快速发布、安装和管理技能包。' }),
+      title: t('landing.features.cli.title', { defaultValue: 'CLI tooling' }),
+      description: t('landing.features.cli.description', { defaultValue: 'Command-line workflows support publishing, installing, and operating skills quickly.' }),
     },
     {
       icon: <Settings className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.governance.title', { defaultValue: '审核治理' }),
-      description: t('landing.features.governance.description', { defaultValue: '内置审核流程和权限管理，保障企业级技能质量。' }),
+      title: t('landing.features.governance.title', { defaultValue: 'Governance' }),
+      description: t('landing.features.governance.description', { defaultValue: 'Built-in review and permission flows help teams enforce skill quality.' }),
     },
   ]
 
   const stats = [
-    { value: '1000+', label: t('landing.stats.skills', { defaultValue: '项目库' }) },
-    { value: '50K+', label: t('landing.stats.downloads', { defaultValue: '下载量' }) },
-    { value: '200+', label: t('landing.stats.teams', { defaultValue: '团队' }) },
+    { value: '1000+', label: t('landing.stats.skills', { defaultValue: 'Registry items' }) },
+    { value: '50K+', label: t('landing.stats.downloads', { defaultValue: 'Downloads' }) },
+    { value: '200+', label: t('landing.stats.teams', { defaultValue: 'Teams' }) },
   ]
 
   return (

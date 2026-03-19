@@ -2,6 +2,9 @@ import { useTranslation } from 'react-i18next'
 import { TokenList } from '@/features/token/token-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
+/**
+ * Dedicated dashboard page for managing personal API tokens.
+ */
 export function TokensPage() {
   const { t } = useTranslation()
   return (

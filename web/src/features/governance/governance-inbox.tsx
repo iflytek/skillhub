@@ -10,6 +10,11 @@ interface GovernanceInboxProps {
   isLoading: boolean
 }
 
+/**
+ * Shows actionable governance work items and routes each item type to the most
+ * relevant review surface. Navigation stays local because the backend payload is
+ * intentionally generic and does not expose a single canonical frontend route.
+ */
 export function GovernanceInbox({ items, isLoading }: GovernanceInboxProps) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -23,6 +28,8 @@ export function GovernanceInbox({ items, isLoading }: GovernanceInboxProps) {
   }
 
   const openItem = (item: GovernanceInboxItem) => {
+    // Inbox items aggregate multiple workflows, so the UI resolves the target
+    // screen from item type instead of relying on one backend-provided URL.
     if (item.type === 'REVIEW') {
       navigate({ to: `/dashboard/reviews/${item.id}` })
       return

@@ -11,6 +11,12 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
+/**
+ * Authentication entry page.
+ *
+ * It combines password login, OAuth entry points, and optional session-bootstrap support while
+ * preserving the route the user originally intended to visit.
+ */
 export function LoginPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()

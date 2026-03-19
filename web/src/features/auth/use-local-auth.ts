@@ -2,6 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
 import type { LocalLoginRequest, LocalRegisterRequest, User } from '@/api/types'
 
+/**
+ * Local-account auth mutations for classic username-password login and registration.
+ */
 export function useLocalLogin() {
   const queryClient = useQueryClient()
 

@@ -28,6 +28,12 @@ import { TOKEN_TABLE_ACTIONS_HEAD_CLASS_NAME, TOKEN_TABLE_HEAD_CLASS_NAME } from
 const PAGE_SIZE = 10
 type TokenPage = { items: ApiToken[]; total: number; page: number; size: number }
 
+/**
+ * Dashboard token-management panel.
+ *
+ * It owns token pagination, optimistic deletion, expiration editing, and creation entry points for
+ * personal API credentials.
+ */
 export function TokenList() {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
@@ -71,6 +77,8 @@ export function TokenList() {
   const deleteMutation = useMutation({
     mutationFn: (tokenId: number) => tokenApi.deleteToken(tokenId),
     onMutate: async (tokenId) => {
+      // Remove the token optimistically so the table feels responsive while the server processes the
+      // revocation request.
       await queryClient.cancelQueries({ queryKey: ['tokens'] })
 
       const previousPages = queryClient.getQueriesData<TokenPage>({ queryKey: ['tokens'] })

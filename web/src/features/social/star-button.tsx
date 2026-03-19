@@ -10,6 +10,11 @@ interface StarButtonProps {
   onRequireLogin?: () => void
 }
 
+/**
+ * Toggles the current user's star state for a skill while delegating the login
+ * prompt to the surrounding page. The read query is kept separate so pages can
+ * decide independently whether star controls should be rendered at all.
+ */
 export function StarButton({ skillId, starCount, onRequireLogin }: StarButtonProps) {
   const { t } = useTranslation()
   const { data: starStatus, isLoading } = useStar(skillId)

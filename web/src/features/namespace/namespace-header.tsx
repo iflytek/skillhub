@@ -7,6 +7,9 @@ interface NamespaceHeaderProps {
   namespace: Namespace
 }
 
+/**
+ * Header block for namespace pages and namespace-oriented dashboard views.
+ */
 export function NamespaceHeader({ namespace }: NamespaceHeaderProps) {
   const { t } = useTranslation()
   const statusLabel = namespace.status === 'FROZEN'

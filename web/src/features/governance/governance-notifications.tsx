@@ -11,6 +11,11 @@ interface GovernanceNotificationsProps {
   isMarkingRead: boolean
 }
 
+/**
+ * Displays governance notifications and exposes the minimal interaction needed
+ * by the dashboard: mark unread items as read. More complex navigation remains
+ * outside this component because notification payloads are heterogeneous.
+ */
 export function GovernanceNotifications({ items, isLoading, onMarkRead, isMarkingRead }: GovernanceNotificationsProps) {
   const { t, i18n } = useTranslation()
 

@@ -14,6 +14,12 @@ interface SearchBarProps {
   onSearch?: (query: string) => void
 }
 
+/**
+ * Shared search bar used by search-driven pages and landing surfaces.
+ *
+ * It supports both controlled and uncontrolled usage so page-level containers can decide whether
+ * query text should be driven from URL state or local form state.
+ */
 export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch }: SearchBarProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(defaultValue)

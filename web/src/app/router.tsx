@@ -5,6 +5,12 @@ import { getCurrentUser } from '@/api/client'
 import { RoleGuard } from '@/shared/components/role-guard'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
+/**
+ * Central route registry for the SkillHub web app.
+ *
+ * This file keeps route declarations, auth redirects, role-based wrappers, and search-param
+ * normalization in one place so route behavior remains explicit.
+ */
 // Capture original URL before TanStack Router rewrites it
 const ORIGINAL_URL_SEARCH = typeof window !== 'undefined' ? window.location.search : ''
 
@@ -15,6 +21,8 @@ function createLazyRouteComponent<TModule extends Record<string, unknown>>(
   importer: () => Promise<TModule>,
   exportName: keyof TModule,
 ) {
+  // Lazy route modules are wrapped in a uniform suspense fallback so route transitions behave
+  // consistently across public and dashboard pages.
   const LazyComponent = lazy(async () => {
     const module = await importer()
     return { default: module[exportName] as ComponentType<any> }
@@ -40,6 +48,7 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
   exportName: keyof TModule,
   allowedRoles: readonly string[],
 ) {
+  // Role checks stay at the route edge so page modules can assume the minimum permission level.
   const RouteComponent = createLazyRouteComponent(importer, exportName)
 
   return function RoleProtectedRouteComponent(props: Record<string, unknown>) {
@@ -136,6 +145,7 @@ function buildReturnTo(location: { pathname: string; searchStr?: string; hash?: 
 }
 
 async function requireAuth({ location }: { location: { pathname: string; searchStr?: string; hash?: string } }) {
+  // Resolve the current session before entering protected areas and preserve the full return URL.
   const user = await getCurrentUser()
   if (!user) {
     throw redirect({

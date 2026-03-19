@@ -6,6 +6,11 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 
+/**
+ * Account linking settings page for the multi-step account merge workflow.
+ * The route intentionally keeps all three steps visible because operators often
+ * need to paste ids or tokens across systems while completing the merge.
+ */
 export function AccountSettingsPage() {
   const { t } = useTranslation()
   const [secondaryIdentifier, setSecondaryIdentifier] = useState('')
@@ -17,6 +22,10 @@ export function AccountSettingsPage() {
   const verifyMutation = useVerifyAccountMerge()
   const confirmMutation = useConfirmAccountMerge()
 
+  /**
+   * Starts the merge flow and surfaces the request id plus verification token
+   * returned by the backend for the following steps.
+   */
   async function handleInitiate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setStatusMessage('')
@@ -32,6 +41,9 @@ export function AccountSettingsPage() {
     }
   }
 
+  /**
+   * Verifies ownership of the secondary account before the final merge step.
+   */
   async function handleVerify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setStatusMessage('')
@@ -48,6 +60,9 @@ export function AccountSettingsPage() {
     }
   }
 
+  /**
+   * Finalizes the merge after verification has succeeded.
+   */
   async function handleConfirm() {
     setStatusMessage('')
     try {

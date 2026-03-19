@@ -6,6 +6,9 @@ interface LoginButtonProps {
   returnTo?: string
 }
 
+/**
+ * Renders OAuth login buttons from the auth-method catalog returned by the backend.
+ */
 export function LoginButton({ returnTo }: LoginButtonProps) {
   const { t } = useTranslation()
   const { data, isLoading } = useAuthMethods(returnTo)

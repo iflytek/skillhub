@@ -10,6 +10,12 @@ import { limitPreviewItems } from './dashboard-preview'
 
 const DASHBOARD_PREVIEW_LIMIT = 5
 
+/**
+ * Default dashboard landing page for authenticated users.
+ *
+ * It surfaces account context, quick links, and a lightweight preview of the user's latest skills
+ * and tokens before they move into more specialized dashboard sub-pages.
+ */
 export function DashboardPage() {
   const skillPreviewPageSize = DASHBOARD_PREVIEW_LIMIT
   const { t } = useTranslation()

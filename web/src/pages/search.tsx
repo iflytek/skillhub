@@ -15,6 +15,12 @@ import { Button } from '@/shared/ui/button'
 
 const PAGE_SIZE = 12
 
+/**
+ * Skill discovery page with synchronized URL state.
+ *
+ * Search text, sorting, pagination, and the starred-only filter are mirrored into router search
+ * params so the page can be shared, restored, and revisited without losing state.
+ */
 function filterStarredSkills(skills: SkillSummary[], query: string): SkillSummary[] {
   const normalizedQuery = query.trim().toLowerCase()
   if (!normalizedQuery) {
@@ -69,6 +75,8 @@ export function SearchPage() {
   } = useMyStars(starredOnly && isAuthenticated)
 
   useEffect(() => {
+    // Debounce URL updates while the user is typing so query state stays shareable without
+    // triggering a navigation on every keystroke.
     const normalizedQuery = normalizeSearchQuery(queryInput)
     if (normalizedQuery === q) {
       return

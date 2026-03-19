@@ -47,6 +47,12 @@ import {
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
 
+/**
+ * Detail page for one skill and its version history.
+ *
+ * This page coordinates documentation rendering, file browsing, downloads, lifecycle actions,
+ * promotion/report dialogs, and social interactions for the selected skill.
+ */
 function suggestNextVersion(version: string) {
   const semverMatch = version.match(/^(\d+)\.(\d+)\.(\d+)$/)
   if (semverMatch) {
@@ -132,6 +138,8 @@ export function SkillDetailPage() {
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
+    // Recompute collapse rules whenever rendered documentation height changes so the page can keep
+    // a readable summary section on different screen sizes.
     if (!readme || typeof window === 'undefined') {
       setIsOverviewCollapsible(false)
       setIsOverviewExpanded(false)
@@ -188,6 +196,8 @@ export function SkillDetailPage() {
   }
 
   const refreshSkill = () => {
+    // Several actions mutate derived lifecycle state; refresh the shared skill detail and common
+    // list caches together to keep the rest of the app consistent.
     queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
     queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug, 'versions'] })
     queryClient.invalidateQueries({ queryKey: ['skills'] })

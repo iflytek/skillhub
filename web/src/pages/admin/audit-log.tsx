@@ -35,6 +35,10 @@ const ACTION_OPTIONS = [
   { value: 'YANK_SKILL_VERSION', labelKey: 'auditLog.filterYankVersion' },
 ] as const
 
+/**
+ * Admin audit log page with server-backed filtering. The route owns filter state
+ * because the query model maps almost one-to-one to the backend search API.
+ */
 export function AuditLogPage() {
   const { t, i18n } = useTranslation()
   const [actionFilter, setActionFilter] = useState<string>('')

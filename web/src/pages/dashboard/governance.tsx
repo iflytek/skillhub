@@ -16,6 +16,10 @@ import {
 
 type GovernanceInboxTab = 'ALL' | 'REVIEW' | 'PROMOTION' | 'REPORT'
 
+/**
+ * Dashboard page that aggregates governance summary counts, inbox queues, notifications, and
+ * recent moderation activity.
+ */
 function SummaryCard({ label, value }: { label: string; value?: number }) {
   return (
     <Card className="p-5">

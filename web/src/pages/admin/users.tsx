@@ -25,6 +25,10 @@ import { Label } from '@/shared/ui/label'
 import { useAdminUsers, useApproveUser, useDisableUser, useEnableUser, useUpdateUserRole } from '@/features/admin/use-admin-users'
 import type { AdminUser } from '@/features/admin/use-admin-users'
 
+/**
+ * Admin user management page that combines search, status filtering, approval,
+ * activation control, and role changes in one route-level container.
+ */
 export function AdminUsersPage() {
   const { t, i18n } = useTranslation()
   const roleOptions = [
@@ -81,6 +85,8 @@ export function AdminUsersPage() {
 
   const handleChangeRole = (user: AdminUser) => {
     setSelectedUser(user)
+    // The current backend model effectively treats the first platform role as
+    // the primary editable role in this screen.
     setNewRole(user.platformRoles[0] || 'USER')
     setRoleDialogOpen(true)
   }

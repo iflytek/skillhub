@@ -9,6 +9,10 @@ interface SessionBootstrapEntryProps {
   methodDisplayName?: string
 }
 
+/**
+ * Optional login entry that attempts to bootstrap a browser session from an upstream enterprise
+ * identity before showing manual login choices.
+ */
 export function SessionBootstrapEntry({ onAuthenticated, methodDisplayName }: SessionBootstrapEntryProps) {
   const { t } = useTranslation()
   const config = getSessionBootstrapRuntimeConfig()
@@ -17,6 +21,8 @@ export function SessionBootstrapEntry({ onAuthenticated, methodDisplayName }: Se
   const providerName = methodDisplayName || t('login.enterpriseSsoTitle')
 
   useEffect(() => {
+    // Auto-bootstrap should only be attempted once per page load; if it fails the page must remain
+    // usable for normal login options.
     if (!config.enabled || !config.provider || !config.auto || attemptedRef.current) {
       return
     }

@@ -13,6 +13,9 @@ interface SkillCardProps {
   highlightStarred?: boolean
 }
 
+/**
+ * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
+ */
 export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
   const { isAuthenticated } = useAuth()
   const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)

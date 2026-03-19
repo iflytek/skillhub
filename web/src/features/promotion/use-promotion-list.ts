@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { promotionApi } from '@/api/client'
 import type { PromotionTask } from '@/api/types'
 
+/**
+ * Returns the promotion queue for a given status. The hook unwraps the backend
+ * page object because promotion screens currently consume the item list only.
+ */
 export function usePromotionList(status = 'PENDING') {
   return useQuery({
     queryKey: ['promotions', status],
@@ -12,6 +16,9 @@ export function usePromotionList(status = 'PENDING') {
   })
 }
 
+/**
+ * Loads a single promotion task used by governance detail screens.
+ */
 export function usePromotionDetail(id: number) {
   return useQuery({
     queryKey: ['promotions', id],
@@ -20,6 +27,10 @@ export function usePromotionDetail(id: number) {
   })
 }
 
+/**
+ * Approves a promotion request and refreshes both the promotion list and the
+ * governance dashboard, which also embeds promotion-derived widgets.
+ */
 export function useApprovePromotion() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -31,6 +42,9 @@ export function useApprovePromotion() {
   })
 }
 
+/**
+ * Rejects a promotion request and keeps dependent governance queries in sync.
+ */
 export function useRejectPromotion() {
   const queryClient = useQueryClient()
   return useMutation({

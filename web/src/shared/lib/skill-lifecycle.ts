@@ -3,6 +3,10 @@ import type { SkillDetail, SkillLifecycleVersion, SkillSummary } from '@/api/typ
 type SkillLifecycleCarrier = Pick<SkillSummary, 'headlineVersion' | 'publishedVersion' | 'ownerPreviewVersion' | 'resolutionMode'>
   | Pick<SkillDetail, 'headlineVersion' | 'publishedVersion' | 'ownerPreviewVersion' | 'resolutionMode'>
 
+/**
+ * Small lifecycle helpers shared by list cards and detail pages so version-display rules stay
+ * aligned with backend projections.
+ */
 export function getHeadlineVersion(skill: SkillLifecycleCarrier): SkillLifecycleVersion | null {
   return skill.headlineVersion ?? null
 }
