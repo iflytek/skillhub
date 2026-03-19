@@ -110,12 +110,16 @@ make dev-web        # 仅前端
 ```bash
 make help                    # 显示所有可用命令
 make test                    # 运行后端测试
+make test-backend-app        # 运行 skillhub-app 及其依赖模块测试
+make build-backend-app       # 构建 skillhub-app 及其依赖模块
 make typecheck-web          # TypeScript 类型检查
 make build-web              # 构建前端
 make generate-api           # 重新生成 OpenAPI 类型
 ./scripts/check-openapi-generated.sh  # 验证 API 契约同步
 ./scripts/smoke-test.sh http://localhost:8080  # 运行冒烟测试
 ```
+
+说明：不要在 `server/` 下直接执行 `./mvnw -pl skillhub-app clean test`。`skillhub-app` 依赖同仓库的 sibling modules，单独 clean 构建时会回退到本地 Maven 仓库里的旧产物并出现大量 `cannot find symbol` / 签名不匹配错误。需要使用 `-am`，或者直接使用上面的 `make test-backend-app` / `make build-backend-app`。
 
 ### 项目结构
 

@@ -170,6 +170,12 @@ build-backend: ## 构建后端
 test-backend: ## 运行后端单元测试
 	cd server && JDK_JAVA_OPTIONS="$(BACKEND_TEST_JAVA_OPTIONS)" ./mvnw test
 
+build-backend-app: ## 构建 skillhub-app 及其依赖模块
+	cd server && ./mvnw -pl skillhub-app -am clean package -DskipTests
+
+test-backend-app: ## 运行 skillhub-app 及其依赖模块测试
+	cd server && JDK_JAVA_OPTIONS="$(BACKEND_TEST_JAVA_OPTIONS)" ./mvnw -pl skillhub-app -am test
+
 build: build-backend build-frontend ## 完整构建前后端
 
 test: test-backend test-frontend ## 运行前后端完整单元测试

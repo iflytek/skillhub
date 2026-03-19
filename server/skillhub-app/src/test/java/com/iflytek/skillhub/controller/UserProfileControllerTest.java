@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeRequestRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeStatus;
@@ -78,6 +79,9 @@ class UserProfileControllerTest {
 
     @MockBean
     private PlatformSessionService platformSessionService;
+
+    @MockBean
+    private AuditLogService auditLogService;
 
     // -- Helper --
 
@@ -225,4 +229,3 @@ class UserProfileControllerTest {
                 .andExpect(status().isBadRequest());
     }
 }
-
