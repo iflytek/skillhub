@@ -27,6 +27,10 @@ skillhub:
   auth:
     mock:
       enabled: true
+  profile:
+    moderation:
+      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true}
+      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true}
 
 logging:
   level:

@@ -402,7 +402,9 @@
   },
   "reviews": {
     "title": "审核中心",
-    "subtitle": "管理技能版本审核",
+    "subtitle": "管理平台审核事务",
+    "typeSkill": "技能审核",
+    "typeProfile": "资料审核",
     "tabPending": "待审核",
     "tabApproved": "已通过",
     "tabRejected": "已拒绝",
@@ -413,6 +415,39 @@
     "colSubmitTime": "提交时间",
     "colReviewer": "审核者",
     "colReviewTime": "审核时间"
+  },
+  "profileReview": {
+    "queueTitle": "资料审核队列",
+    "queueSubtitle": "处理用户昵称变更申请，支持状态切换、分页浏览和审核操作。",
+    "empty": "暂无资料审核任务",
+    "colUser": "用户",
+    "colCurrentName": "当前昵称",
+    "colRequestedName": "请求昵称",
+    "colSubmittedAt": "提交时间",
+    "colMachineResult": "机器审核",
+    "colActions": "操作",
+    "colReviewInfo": "审核信息",
+    "approve": "批准",
+    "reject": "拒绝",
+    "approveSuccess": "资料变更已批准",
+    "approveFailed": "批准失败",
+    "rejectSuccess": "资料变更已拒绝",
+    "rejectFailed": "拒绝失败",
+    "confirmApproveTitle": "确认批准",
+    "confirmApproveDesc": "确认将「{{from}}」改为「{{to}}」？",
+    "confirmRejectTitle": "拒绝变更",
+    "confirmRejectDesc": "请填写拒绝原因。",
+    "rejectPlaceholder": "拒绝原因...",
+    "userId": "用户 ID",
+    "reviewer": "审核人",
+    "comment": "备注",
+    "totalItems": "当前共 {{total}} 条资料审核记录",
+    "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "tabPending": "待审核",
+    "tabApproved": "已通过",
+    "tabRejected": "已拒绝"
   },
   "stars": {
     "title": "我的收藏",
@@ -526,7 +561,10 @@
     "validation": {
       "length": "昵称长度需为 2-32 个字符。",
       "pattern": "昵称只能包含中文、英文、数字、下划线和连字符。"
-    }
+    },
+    "pendingReview": "你的昵称变更为「{{name}}」正在审核中。",
+    "rejected": "你的昵称变更被拒绝。",
+    "rejectedReason": "原因：{{reason}}"
   },
   "security": {
     "title": "安全设置",

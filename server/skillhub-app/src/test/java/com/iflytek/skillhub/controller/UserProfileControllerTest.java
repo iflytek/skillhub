@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.user.ProfileChangeRequest;
 import com.iflytek.skillhub.domain.user.ProfileChangeRequestRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeStatus;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -199,8 +200,10 @@ class UserProfileControllerTest {
         var user = new UserAccount("user-1", "CurrentName", "user@example.com", "https://example.com/avatar.png");
 
         given(userAccountRepository.findById("user-1")).willReturn(Optional.of(user));
-        given(changeRequestRepository.findByUserIdAndStatus("user-1", ProfileChangeStatus.PENDING))
-                .willReturn(List.of());
+        given(changeRequestRepository.findFirstByUserIdAndStatusInOrderByCreatedAtDesc(
+                "user-1",
+                List.of(ProfileChangeStatus.PENDING, ProfileChangeStatus.REJECTED)))
+                .willReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/user/profile")
                         .with(authentication(testAuth(principal))))
@@ -209,6 +212,34 @@ class UserProfileControllerTest {
                 .andExpect(jsonPath("$.data.displayName").value("CurrentName"))
                 .andExpect(jsonPath("$.data.email").value("user@example.com"))
                 .andExpect(jsonPath("$.data.pendingChanges").isEmpty());
+    }
+
+    @Test
+    void getProfile_pendingChanges_shouldReturnLatestPrivateValues() throws Exception {
+        var principal = testPrincipal();
+        var user = new UserAccount("user-1", "CurrentName", "user@example.com", "https://example.com/avatar.png");
+        var request = new ProfileChangeRequest(
+                "user-1",
+                "{\"displayName\":\"NewName\",\"avatarUrl\":\"https://example.com/new-avatar.png\"}",
+                "{\"displayName\":\"CurrentName\",\"avatarUrl\":\"https://example.com/avatar.png\"}",
+                ProfileChangeStatus.PENDING,
+                "PASS",
+                null
+        );
+
+        given(userAccountRepository.findById("user-1")).willReturn(Optional.of(user));
+        given(changeRequestRepository.findFirstByUserIdAndStatusInOrderByCreatedAtDesc(
+                "user-1",
+                List.of(ProfileChangeStatus.PENDING, ProfileChangeStatus.REJECTED)))
+                .willReturn(Optional.of(request));
+
+        mockMvc.perform(get("/api/v1/user/profile")
+                        .with(authentication(testAuth(principal))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.displayName").value("NewName"))
+                .andExpect(jsonPath("$.data.avatarUrl").value("https://example.com/new-avatar.png"))
+                .andExpect(jsonPath("$.data.pendingChanges.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.pendingChanges.changes.displayName").value("NewName"));
     }
 
     // ===== AC-S-003: XSS attempt =====
@@ -225,4 +256,3 @@ class UserProfileControllerTest {
                 .andExpect(status().isBadRequest());
     }
 }
-

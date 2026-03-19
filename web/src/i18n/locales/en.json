@@ -402,7 +402,9 @@
   },
   "reviews": {
     "title": "Review Center",
-    "subtitle": "Manage skill version reviews",
+    "subtitle": "Manage platform review tasks",
+    "typeSkill": "Skill Reviews",
+    "typeProfile": "Profile Reviews",
     "tabPending": "Pending",
     "tabApproved": "Approved",
     "tabRejected": "Rejected",
@@ -413,6 +415,39 @@
     "colSubmitTime": "Submitted At",
     "colReviewer": "Reviewed By",
     "colReviewTime": "Reviewed At"
+  },
+  "profileReview": {
+    "queueTitle": "Profile Review Queue",
+    "queueSubtitle": "Process display-name change requests with status filters, pagination, and review actions.",
+    "empty": "No profile review tasks",
+    "colUser": "User",
+    "colCurrentName": "Current Name",
+    "colRequestedName": "Requested Name",
+    "colSubmittedAt": "Submitted At",
+    "colMachineResult": "Machine Review",
+    "colActions": "Actions",
+    "colReviewInfo": "Review Info",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveSuccess": "Profile change approved",
+    "approveFailed": "Failed to approve",
+    "rejectSuccess": "Profile change rejected",
+    "rejectFailed": "Failed to reject",
+    "confirmApproveTitle": "Confirm Approval",
+    "confirmApproveDesc": "Approve changing \"{{from}}\" to \"{{to}}\"?",
+    "confirmRejectTitle": "Reject Change",
+    "confirmRejectDesc": "Please provide a reason for rejection.",
+    "rejectPlaceholder": "Rejection reason...",
+    "userId": "User ID",
+    "reviewer": "Reviewer",
+    "comment": "Comment",
+    "totalItems": "{{total}} profile review records in total",
+    "pageSummary": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabRejected": "Rejected"
   },
   "stars": {
     "title": "My Stars",
@@ -526,7 +561,10 @@
     "validation": {
       "length": "Display name must be 2-32 characters.",
       "pattern": "Display name can only contain Chinese, English, digits, underscores, and hyphens."
-    }
+    },
+    "pendingReview": "Your display name change to \"{{name}}\" is pending review.",
+    "rejected": "Your display name change was rejected.",
+    "rejectedReason": "Reason: {{reason}}"
   },
   "security": {
     "title": "Security Settings",

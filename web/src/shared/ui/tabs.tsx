@@ -65,14 +65,14 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
     <button
       type="button"
       onClick={() => context.setValue(value)}
+      data-state={isActive ? 'active' : 'inactive'}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap py-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex -mb-px items-center justify-center whitespace-nowrap py-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
         isActive
           ? 'border-b-2 border-primary text-primary'
           : 'text-muted-foreground hover:text-foreground/80',
         className
       )}
-      style={{ marginBottom: '-1px' }}
     >
       {children}
     </button>

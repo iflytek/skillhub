@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -73,17 +74,24 @@ public class UserProfileController extends BaseApiController {
         UserAccount user = userAccountRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("error.auth.required"));
 
-        // Look up any PENDING change request for this user
+        // Look up the most recent PENDING or REJECTED change request
         PendingChangesResponse pendingChanges = changeRequestRepository
-                .findByUserIdAndStatus(principal.userId(), ProfileChangeStatus.PENDING)
-                .stream()
-                .findFirst()
+                .findFirstByUserIdAndStatusInOrderByCreatedAtDesc(
+                        principal.userId(),
+                        List.of(ProfileChangeStatus.PENDING, ProfileChangeStatus.REJECTED))
                 .map(this::toPendingChangesResponse)
                 .orElse(null);
 
+        String displayName = user.getDisplayName();
+        String avatarUrl = user.getAvatarUrl();
+        if (pendingChanges != null && ProfileChangeStatus.PENDING.name().equals(pendingChanges.status())) {
+            displayName = pendingChanges.changes().getOrDefault("displayName", displayName);
+            avatarUrl = pendingChanges.changes().getOrDefault("avatarUrl", avatarUrl);
+        }
+
         var response = new UserProfileResponse(
-                user.getDisplayName(),
-                user.getAvatarUrl(),
+                displayName,
+                avatarUrl,
                 user.getEmail(),
                 pendingChanges
         );
@@ -180,6 +188,7 @@ public class UserProfileController extends BaseApiController {
             return new PendingChangesResponse(
                     request.getStatus().name(),
                     changes,
+                    request.getReviewComment(),
                     request.getCreatedAt()
             );
         } catch (Exception e) {
