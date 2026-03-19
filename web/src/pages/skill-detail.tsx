@@ -93,6 +93,7 @@ export function SkillDetailPage() {
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetails, setReportDetails] = useState('')
+  const [hasReported, setHasReported] = useState(false)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
   const [promotionConfirmOpen, setPromotionConfirmOpen] = useState(false)
@@ -132,6 +133,7 @@ export function SkillDetailPage() {
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
   const hasPendingOwnerPreview = ownerPreviewVersion?.status === 'PENDING_REVIEW'
+  const hasRejectedVersion = versions?.some((v) => v.status === 'REJECTED') ?? false
   const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
@@ -288,6 +290,7 @@ export function SkillDetailPage() {
       setReportDialogOpen(false)
       setReportReason('')
       setReportDetails('')
+      setHasReported(true)
       toast.success(t('skillDetail.reportSuccessTitle'), t('skillDetail.reportSuccessDescription'))
     } catch (error) {
       toast.error(t(resolveSkillActionErrorTitle('report')), error instanceof Error ? error.message : '')
@@ -556,6 +559,11 @@ export function SkillDetailPage() {
                 {t('skillDetail.pendingPreviewBadge')}
               </span>
             )}
+            {!isPendingPreview && hasRejectedVersion && skill.canManageLifecycle && (
+              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                {t('skillDetail.rejectedBadge')}
+              </span>
+            )}
           </div>
           <h1 className="text-balance text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
           {skill.ownerDisplayName && (
@@ -668,8 +676,8 @@ export function SkillDetailPage() {
                 <div className="space-y-0 divide-y divide-border/40">
                   {versions.map((version) => (
                     <div key={version.id} className="py-5 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold font-heading text-foreground flex items-center gap-2">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <span className="font-semibold font-heading text-foreground flex items-center gap-2 flex-wrap min-w-0">
                           <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
                             v{version.version}
                           </span>
@@ -686,7 +694,7 @@ export function SkillDetailPage() {
                             </span>
                           )}
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-shrink-0">
                           <span className="text-sm text-muted-foreground">
                             {formatLocalDateTime(version.publishedAt, i18n.language)}
                           </span>
@@ -788,8 +796,8 @@ export function SkillDetailPage() {
                 <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
                 <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
                 {canReport ? (
-                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={reportMutation.isPending}>
-                    {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
+                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
+                    {hasReported ? t('skillDetail.reportedSkill') : reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
                   </Button>
                 ) : null}
               </>

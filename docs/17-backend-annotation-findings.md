@@ -2,7 +2,30 @@
 
 This document records architecture and structure issues that became consistently visible while enriching backend comments. The goal is to preserve concrete observations discovered during code reading, not to propose a full redesign.
 
+## Status Update (2026-03-19)
+
+This document was re-checked after the refactor branch work for findings 1, 2, and 4.
+
+- Finding 1 is now handled in code.
+- Finding 2 is partially handled in code.
+- Finding 4 is now handled in code.
+
+Validation completed on the standard regression path:
+
+- `make test`
+- backend Maven tests: `208` passed
+- frontend Vitest tests: `61` passed
+
+Double-check notes:
+
+- The admin-user refactor removed an overlapping, unused application service rather than changing the controller-facing workflow owner.
+- The namespace and skill-lifecycle refactors moved orchestration out of controllers, but preserved the same downstream domain-service calls, request parameters, audit fields, response message keys, and mutation response shapes.
+- The security refactor centralized route metadata into one registry, but preserved the same route authorization rules, API-token scope behavior, and CSRF-ignore behavior.
+- `AuthContextFilter` is now scoped to API paths when projecting request attributes. This narrows unnecessary work on non-API requests, but it does not change existing business behavior because `userId` and `userNsRoles` consumers are API-side controllers and interceptors.
+
 ## 1. Admin user management is split across overlapping application services
+
+Status: handled on branch `docs/backend-annotation-findings-discussion`
 
 Observed files:
 
@@ -19,7 +42,15 @@ Suggested direction:
 
 - Either consolidate them into one application service, or split them with an explicit boundary such as query vs. command, or account governance vs. account operations.
 
+Current state:
+
+- `AdminUserManagementService` has been removed.
+- `UserManagementController` continues to use `AdminUserAppService` as the single application-service entry point.
+- Behavior review found no business-logic drift here because the deleted service had no active controller call path.
+
 ## 2. Several controllers still perform orchestration that belongs in application services
+
+Status: partially handled on branch `docs/backend-annotation-findings-discussion`
 
 Observed files:
 
@@ -38,6 +69,13 @@ Why this stands out:
 Suggested direction:
 
 - Move multi-step orchestration into dedicated application services and keep controllers focused on transport concerns.
+
+Current state:
+
+- `NamespaceController` has been slimmed down by moving orchestration into `NamespacePortalQueryAppService` and `NamespacePortalCommandAppService`.
+- `SkillLifecycleController` has been slimmed down by moving orchestration into `SkillLifecycleAppService`.
+- This branch preserved the original domain-service calls and response contracts for the refactored endpoints.
+- `ReviewController`, `PromotionController`, and `ClawHubCompatController` still exhibit the same structural issue and remain future work.
 
 ## 3. Compatibility endpoints are tightly coupled to canonical domain and repository internals
 
@@ -58,6 +96,8 @@ Suggested direction:
 
 ## 4. Security route policy is spread across configuration and implementation classes
 
+Status: handled on branch `docs/backend-annotation-findings-discussion`
+
 Observed files:
 
 - `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/config/SecurityConfig.java`
@@ -72,6 +112,12 @@ Why this stands out:
 Suggested direction:
 
 - Centralize route policy metadata or at least define one authoritative mapping between path patterns, authentication modes, and scope requirements.
+
+Current state:
+
+- Route metadata is now centralized in `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistry.java`.
+- `SecurityConfig`, `ApiTokenScopeService`, and `AuthContextFilter` now depend on that shared registry instead of maintaining separate route lists.
+- Double-check review confirmed that the refactor preserved the previous access model while removing duplication.
 
 ## 5. Governance behavior is distributed across multiple services without one clear workflow owner
 

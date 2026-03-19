@@ -831,6 +831,13 @@ export const governanceApi = {
       headers: getCsrfHeaders(),
     })
   },
+
+  async rebuildSearchIndex(): Promise<void> {
+    await fetchJson<void>('/api/v1/admin/search/rebuild', {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
 }
 
 export const meApi = {

@@ -68,7 +68,7 @@ WHERE (visibility = 'PUBLIC')
 | title | varchar(256) | |
 | summary | varchar(512) | |
 | keywords | varchar(512) | |
-| search_text | text | SKILL.md 正文 + frontmatter 拼接 |
+| search_text | text | `displayName`、`slug`、`summary`，以及 frontmatter 中除 `name` / `description` / `version` 外的字段展开结果 |
 | visibility | enum | 冗余，避免搜索时 join |
 | status | enum | |
 | updated_at | datetime | |

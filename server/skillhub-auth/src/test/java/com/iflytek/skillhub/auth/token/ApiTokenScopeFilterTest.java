@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,7 +28,8 @@ import static org.mockito.Mockito.verify;
 
 class ApiTokenScopeFilterTest {
 
-    private final ApiTokenScopeService scopeService = new ApiTokenScopeService(new ObjectMapper());
+    private final ApiTokenScopeService scopeService =
+            new ApiTokenScopeService(new ObjectMapper(), new RouteSecurityPolicyRegistry());
 
     @AfterEach
     void clearSecurityContext() {

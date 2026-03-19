@@ -1,12 +1,20 @@
-import type { Code, Root } from 'mdast'
-import { visit } from 'unist-util-visit'
-
 const BASH_PREFIX_PATTERN = /^(?:\$ |pip3? |python3? -m |python3? |npm |pnpm |yarn |npx |git |make |curl |wget |docker(?:-compose)? |kubectl |helm |cd |ls |cat |cp |mv |rm |mkdir |chmod |export |set |echo )/m
 const PYTHON_PATTERN = /(?:^|\n)(?:from [\w.]+ import |import [\w.]+|def \w+\(|class \w+|with open\(|print\(|if __name__ == ['"]__main__['"]|for \w+ in |try:|except )/
 const SQL_PATTERN = /^(?:select|insert\s+into|update|delete\s+from|create\s+table|alter\s+table|with\s+\w+\s+as)\b/im
 const TYPESCRIPT_PATTERN = /(?:^|\n)(?:interface \w+|type \w+\s*=|import type |export type |export interface |const \w+:\s|:\s(?:string|number|boolean|Record<|Array<)|as const\b)/
 const JAVASCRIPT_PATTERN = /(?:^|\n)(?:const |let |var |function \w+\(|export default |export function |module\.exports|import .* from |=>)/
 const YAML_LINE_PATTERN = /^(\s*-\s+)?[\w"'./-]+:\s*.+$/m
+
+type MarkdownCodeNode = {
+  type?: string
+  lang?: string
+  value: string
+}
+
+type MarkdownNode = {
+  type?: string
+  children?: unknown[]
+}
 
 function looksLikeJson(value: string) {
   try {
@@ -56,11 +64,28 @@ export function inferMarkdownCodeLanguage(value: string): string | undefined {
 }
 
 export function remarkInferCodeLanguage() {
-  return (tree: Root) => {
-    visit(tree, 'code', (node: Code) => {
+  return (tree: MarkdownNode) => {
+    visitCodeNodes(tree, (node) => {
       if (!node.lang) {
         node.lang = inferMarkdownCodeLanguage(node.value)
       }
     })
+  }
+}
+
+function visitCodeNodes(node: unknown, callback: (node: MarkdownCodeNode) => void) {
+  if (!node || typeof node !== 'object') {
+    return
+  }
+
+  const current = node as MarkdownNode
+  if (current.type === 'code') {
+    callback(current as MarkdownCodeNode)
+  }
+
+  if (Array.isArray(current.children)) {
+    for (const child of current.children) {
+      visitCodeNodes(child, callback)
+    }
   }
 }

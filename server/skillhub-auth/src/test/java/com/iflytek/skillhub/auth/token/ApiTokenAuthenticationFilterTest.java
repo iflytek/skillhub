@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
@@ -31,7 +32,8 @@ class ApiTokenAuthenticationFilterTest {
     private final ApiTokenService apiTokenService = mock(ApiTokenService.class);
     private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
     private final UserRoleBindingRepository roleBindingRepository = mock(UserRoleBindingRepository.class);
-    private final ApiTokenScopeService scopeService = new ApiTokenScopeService(new ObjectMapper());
+    private final ApiTokenScopeService scopeService =
+            new ApiTokenScopeService(new ObjectMapper(), new RouteSecurityPolicyRegistry());
     private final ApiTokenAuthenticationFilter filter = new ApiTokenAuthenticationFilter(
         apiTokenService,
         userAccountRepository,
