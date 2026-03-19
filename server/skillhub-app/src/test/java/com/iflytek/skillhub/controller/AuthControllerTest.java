@@ -107,6 +107,36 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 
+    // ===== AC-P-002: Session refresh when displayName changes =====
+
+    @Test
+    void meShouldRefreshSessionWhenDisplayNameChanges() throws Exception {
+        given(namespaceMemberRepository.findByUserId("user-42")).willReturn(List.of());
+        var user = new UserAccount("user-42", "UpdatedName", "tester@example.com", "https://example.com/avatar.png");
+        given(userAccountRepository.findById("user-42")).willReturn(java.util.Optional.of(user));
+        given(userRoleBindingRepository.findByUserId("user-42")).willReturn(List.of());
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+            "user-42",
+            "OldName",  // stale displayName in session
+            "tester@example.com",
+            "https://example.com/avatar.png",
+            "github",
+            Set.of("USER")
+        );
+
+        var auth = new UsernamePasswordAuthenticationToken(
+            principal,
+            null,
+            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        mockMvc.perform(get("/api/v1/auth/me").with(authentication(auth)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.displayName").value("UpdatedName"));  // should return DB value
+    }
+
     @Test
     void providersShouldExposeGithubLoginEntry() throws Exception {
         mockMvc.perform(get("/api/v1/auth/providers"))

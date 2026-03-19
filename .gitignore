@@ -68,9 +68,8 @@ __pycache__/
 # Superpowers (AI planning artifacts)
 docs/superpowers/
 docs/review/
+docs/requirements/
 CLAUDE.md
 
 # oh-my-claudecode
 .omc
-
-
