@@ -266,7 +266,9 @@ SkillHub 设计为与各种智能体平台和框架无缝集成。
 ```bash
 # 配置注册中心地址
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+
+# 如需认证，先登录一次
+clawhub login --token YOUR_API_TOKEN
 
 # 搜索和安装技能
 npx clawhub search email

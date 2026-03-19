@@ -42,7 +42,7 @@ npx clawhub install my-skill --registry https://skillhub.your-company.com
 If you need authenticated access, provide an API token:
 
 ```bash
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
+clawhub login --token sk_your_api_token_here
 ```
 
 Optional local check:
