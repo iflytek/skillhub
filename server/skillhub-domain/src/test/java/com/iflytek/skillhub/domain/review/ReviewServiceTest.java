@@ -258,6 +258,34 @@ class ReviewServiceTest {
         }
 
         @Test
+        void shouldApplyRequestedVisibilityOnlyWhenReviewIsApproved() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
+            skill.setVisibility(SkillVisibility.PUBLIC);
+            sv.setRequestedVisibility(SkillVisibility.PRIVATE);
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(eq(task), eq(REVIEWER_ID), eq(ns.getType()), anyMap(), anySet()))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            reviewService.approveReview(
+                    REVIEW_TASK_ID, REVIEWER_ID, "LGTM",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
+
+            assertEquals(SkillVisibility.PRIVATE, skill.getVisibility());
+        }
+
+        @Test
         void shouldPublishCorrectEvent() {
             ReviewTask task = createPendingReviewTask();
             Namespace ns = createTeamNamespace();
