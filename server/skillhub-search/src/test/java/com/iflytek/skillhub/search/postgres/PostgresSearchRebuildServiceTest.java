@@ -8,6 +8,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.search.SearchIndexService;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -64,7 +65,8 @@ class PostgresSearchRebuildServiceTest {
                 skillRepository,
                 namespaceRepository,
                 skillVersionRepository,
-                searchIndexService
+                searchIndexService,
+                new SearchTextTokenizer()
         );
 
         service.rebuildBySkill(1L);
@@ -73,7 +75,12 @@ class PostgresSearchRebuildServiceTest {
         verify(searchIndexService).index(captor.capture());
 
         SkillSearchDocument document = captor.getValue();
-        assertThat(document.keywords()).isEqualTo("agentic, assistant, automation, workflow");
+        assertThat(document.title()).isEqualTo("Smart Agent");
+        assertThat(document.summary()).isEqualTo("Builds workflows");
+        assertThat(document.keywords()).contains("agentic");
+        assertThat(document.keywords()).contains("assistant");
+        assertThat(document.keywords()).contains("automation");
+        assertThat(document.keywords()).contains("workflow");
         assertThat(document.searchText()).contains("Smart Agent");
         assertThat(document.searchText()).contains("smart-agent");
         assertThat(document.searchText()).contains("Builds workflows");

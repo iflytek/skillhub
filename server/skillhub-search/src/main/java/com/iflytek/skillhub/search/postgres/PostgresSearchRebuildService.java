@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchRebuildService;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import org.springframework.stereotype.Service;
 
@@ -37,17 +38,20 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     private final NamespaceRepository namespaceRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SearchIndexService searchIndexService;
+    private final SearchTextTokenizer searchTextTokenizer;
     private final ObjectMapper objectMapper;
 
     public PostgresSearchRebuildService(
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             SkillVersionRepository skillVersionRepository,
-            SearchIndexService searchIndexService) {
+            SearchIndexService searchIndexService,
+            SearchTextTokenizer searchTextTokenizer) {
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.searchIndexService = searchIndexService;
+        this.searchTextTokenizer = searchTextTokenizer;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -94,8 +98,8 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 .ifPresent(frontmatter -> appendFrontmatter(frontmatter, keywords, searchParts));
 
         return new SearchIndexPayload(
-                String.join(", ", keywords),
-                String.join(" ", searchParts).trim()
+                searchTextTokenizer.enrichForIndex(String.join(" ", keywords)),
+                searchTextTokenizer.enrichForIndex(String.join(" ", searchParts).trim())
         );
     }
 

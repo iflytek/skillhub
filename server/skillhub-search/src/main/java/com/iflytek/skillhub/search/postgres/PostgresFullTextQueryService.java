@@ -6,6 +6,7 @@ import com.iflytek.skillhub.search.SearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.util.Comparator;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * PostgreSQL-backed implementation of {@link SearchQueryService}.
@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
  */
 @Service
 public class PostgresFullTextQueryService implements SearchQueryService {
-    private static final Pattern QUERY_TERM_SPLITTER = Pattern.compile("[^\\p{L}\\p{N}_]+");
     private static final int MAX_QUERY_TERMS = 8;
     private static final int SHORT_PREFIX_LENGTH = 2;
     private static final String TITLE_VECTOR_SQL = "to_tsvector('simple', coalesce(title, ''))";
@@ -37,19 +36,21 @@ public class PostgresFullTextQueryService implements SearchQueryService {
     private final EntityManager entityManager;
     private final SkillSearchDocumentJpaRepository searchDocumentRepository;
     private final SearchEmbeddingService searchEmbeddingService;
+    private final SearchTextTokenizer searchTextTokenizer;
     private final boolean semanticEnabled;
     private final double semanticWeight;
     private final int candidateMultiplier;
     private final int maxCandidates;
 
     public PostgresFullTextQueryService(EntityManager entityManager) {
-        this(entityManager, null, null, false, 0.35D, 8, 120);
+        this(entityManager, null, null, new SearchTextTokenizer(), false, 0.35D, 8, 120);
     }
 
     @Autowired
     public PostgresFullTextQueryService(EntityManager entityManager,
                                         SkillSearchDocumentJpaRepository searchDocumentRepository,
                                         SearchEmbeddingService searchEmbeddingService,
+                                        SearchTextTokenizer searchTextTokenizer,
                                         @Value("${skillhub.search.semantic.enabled:true}") boolean semanticEnabled,
                                         @Value("${skillhub.search.semantic.weight:0.35}") double semanticWeight,
                                         @Value("${skillhub.search.semantic.candidate-multiplier:8}") int candidateMultiplier,
@@ -57,6 +58,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         this.entityManager = entityManager;
         this.searchDocumentRepository = searchDocumentRepository;
         this.searchEmbeddingService = searchEmbeddingService;
+        this.searchTextTokenizer = searchTextTokenizer;
         this.semanticEnabled = semanticEnabled;
         this.semanticWeight = semanticWeight;
         this.candidateMultiplier = candidateMultiplier;
@@ -74,7 +76,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         boolean hasKeyword = normalizedKeyword != null;
         boolean hasTsQuery = tsQuery != null;
         boolean useRelevanceOrdering = "relevance".equals(query.sortBy()) && hasKeyword;
-        boolean useShortPrefixTitleSearch = hasTsQuery && normalizedKeyword.length() <= SHORT_PREFIX_LENGTH;
+        boolean useShortPrefixTitleSearch = hasTsQuery && isShortAsciiPrefixSearch(normalizedKeyword);
         boolean useSemanticRerank = semanticEnabled
                 && hasKeyword
                 && "relevance".equals(query.sortBy())
@@ -299,10 +301,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             return null;
         }
 
-        List<String> terms = QUERY_TERM_SPLITTER.splitAsStream(keyword.toLowerCase())
-                .map(String::trim)
-                .filter(term -> !term.isBlank())
-                .distinct()
+        List<String> terms = searchTextTokenizer.tokenizeForQuery(keyword).stream()
                 .limit(MAX_QUERY_TERMS)
                 .toList();
 
@@ -319,13 +318,25 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         return tsQueryTerms.stream()
-                .map(term -> term + ":*")
+                .map(term -> usePrefixMatch(term) ? term + ":*" : term)
                 .reduce((left, right) -> left + " & " + right)
                 .orElse(null);
     }
 
     private boolean isTsQueryCompatibleTerm(String term) {
-        return term.chars().anyMatch(ch -> Character.isLetter(ch) || ch == '_');
+        return term.chars().anyMatch(ch -> Character.isLetter(ch) || Character.isIdeographic(ch) || ch == '_');
+    }
+
+    private boolean usePrefixMatch(String term) {
+        return term.chars().allMatch(ch -> ch < 128) && term.chars().anyMatch(Character::isLetter);
+    }
+
+    private boolean isShortAsciiPrefixSearch(String keyword) {
+        if (keyword == null || keyword.length() > SHORT_PREFIX_LENGTH) {
+            return false;
+        }
+        List<String> terms = searchTextTokenizer.tokenizeForQuery(keyword);
+        return !terms.isEmpty() && terms.stream().allMatch(this::usePrefixMatch);
     }
 
     private record RankedSkill(Long skillId, double score) {
