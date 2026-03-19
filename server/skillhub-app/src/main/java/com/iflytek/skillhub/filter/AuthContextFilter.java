@@ -23,6 +23,9 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Projects the authenticated principal into request attributes consumed by the controller layer.
+ */
 @Component
 public class AuthContextFilter extends OncePerRequestFilter {
 

@@ -9,6 +9,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+/**
+ * JPA-backed repository for skill abuse reports and report queues ordered by creation time.
+ */
 public interface SkillReportJpaRepository extends JpaRepository<SkillReport, Long>, SkillReportRepository {
     boolean existsBySkillIdAndReporterIdAndStatus(Long skillId, String reporterId, SkillReportStatus status);
     Page<SkillReport> findByStatusOrderByCreatedAtDesc(SkillReportStatus status, Pageable pageable);

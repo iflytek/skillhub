@@ -9,6 +9,10 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
+/**
+ * Shared package-policy rules for path normalization, extension allowlists, and lightweight file
+ * signature validation.
+ */
 public final class SkillPackagePolicy {
 
     public static final int MAX_FILE_COUNT = 100;
@@ -16,14 +20,14 @@ public final class SkillPackagePolicy {
     public static final long MAX_TOTAL_PACKAGE_SIZE = 100 * 1024 * 1024; // 100MB
     public static final String SKILL_MD_PATH = "SKILL.md";
     public static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-            // 文档
+            // Documentation
             ".md", ".txt", ".json", ".yaml", ".yml", ".html", ".css", ".csv", ".pdf",
-            // 配置
+            // Configuration
             ".toml", ".xml", ".ini", ".cfg", ".env",
-            // 脚本/语言
+            // Scripts and source code
             ".js", ".ts", ".py", ".sh", ".rb", ".go", ".rs", ".java", ".kt",
             ".lua", ".sql", ".r", ".bat", ".ps1", ".zsh", ".bash",
-            // 图片
+            // Images
             ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp", ".ico"
     );
 

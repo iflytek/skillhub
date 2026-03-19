@@ -8,6 +8,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Keeps the stored star count in sync with the star/unstar event stream.
+ */
 @Component
 public class SkillStarEventListener {
     private final JdbcTemplate jdbcTemplate;

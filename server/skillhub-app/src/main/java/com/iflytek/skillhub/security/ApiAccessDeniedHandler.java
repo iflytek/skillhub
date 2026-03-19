@@ -15,6 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * Converts authorization failures on API routes into the platform's standard JSON error envelope.
+ */
 @Component
 public class ApiAccessDeniedHandler implements AccessDeniedHandler {
 

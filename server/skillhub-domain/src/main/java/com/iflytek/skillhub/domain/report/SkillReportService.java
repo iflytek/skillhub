@@ -13,6 +13,10 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles skill abuse reports from submission through moderation outcome
+ * handling.
+ */
 @Service
 public class SkillReportService {
 

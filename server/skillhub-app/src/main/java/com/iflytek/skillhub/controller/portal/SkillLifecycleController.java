@@ -29,6 +29,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Endpoints that mutate skill lifecycle state, including archive, unarchive,
+ * withdraw-review, delete-version, and rerelease operations.
+ */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillLifecycleController extends BaseApiController {

@@ -16,6 +16,10 @@ import java.util.UUID;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Resolves external OAuth identities to platform users, creating or updating
+ * bindings and user records as needed.
+ */
 @Service
 public class IdentityBindingService {
 

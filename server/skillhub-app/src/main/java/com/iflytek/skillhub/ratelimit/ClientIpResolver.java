@@ -5,6 +5,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
+/**
+ * Resolves the best-effort client IP address from proxy-aware request headers.
+ */
 @Component
 public class ClientIpResolver {
 

@@ -23,6 +23,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles governance-oriented mutations on skills and versions, including
+ * hiding, archiving, restoring, and destructive cleanup.
+ */
 @Service
 public class SkillGovernanceService {
 

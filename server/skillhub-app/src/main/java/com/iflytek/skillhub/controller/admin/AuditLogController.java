@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 
+/**
+ * Read-only audit log endpoints for auditors and super administrators.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")
 public class AuditLogController extends BaseApiController {

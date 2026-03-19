@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Domain service for creating or updating user ratings on skills and emitting
+ * the corresponding social event.
+ */
 @Service
 public class SkillRatingService {
     private final SkillRatingRepository ratingRepository;

@@ -6,6 +6,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Domain repository contract for user-account identity lookups and administrative searches.
+ */
 public interface UserAccountRepository {
     Optional<UserAccount> findById(String id);
     List<UserAccount> findByIdIn(List<String> ids);

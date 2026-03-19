@@ -10,6 +10,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 
+/**
+ * JPA repository that persists idempotency records and exposes cleanup operations used by
+ * background maintenance.
+ */
 @Repository
 public interface JpaIdempotencyRecordRepository extends JpaRepository<IdempotencyRecord, String>, IdempotencyRecordRepository {
 

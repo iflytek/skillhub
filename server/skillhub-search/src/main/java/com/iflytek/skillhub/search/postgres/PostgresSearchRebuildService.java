@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Reconstructs PostgreSQL search documents from canonical skill and namespace records.
+ */
 @Service
 public class PostgresSearchRebuildService implements SearchRebuildService {
 

@@ -29,6 +29,10 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
+/**
+ * Central Spring Security configuration for browser sessions, API tokens, and
+ * public versus protected endpoints.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -75,6 +79,13 @@ public class SecurityConfig {
         this.mockAuthFilterProvider = mockAuthFilterProvider;
     }
 
+    /**
+     * Builds the ordered security filter chain used by both browser and API
+     * clients.
+     *
+     * <p>The chain mixes session-based authentication, bearer token support,
+     * CSRF rules for browser traffic, and method-level authorization.
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
@@ -210,6 +221,10 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Provides the password encoder shared by local credentials and bootstrap
+     * flows.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);

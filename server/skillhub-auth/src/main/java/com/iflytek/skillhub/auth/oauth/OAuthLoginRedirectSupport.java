@@ -1,5 +1,8 @@
 package com.iflytek.skillhub.auth.oauth;
 
+/**
+ * Utility methods and constants for safely handling post-login redirect targets in OAuth flows.
+ */
 public final class OAuthLoginRedirectSupport {
 
     public static final String SESSION_RETURN_TO_ATTRIBUTE = "skillhub.oauth.returnTo";

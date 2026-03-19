@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 
+/**
+ * Production rate limiter backed by Redis and a Lua script for atomic sliding-window checks.
+ */
 @Component
 @Profile("!test")
 public class RedisSlidingWindowRateLimiter implements RateLimiter {

@@ -19,6 +19,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+/**
+ * PostgreSQL-backed implementation of {@link SearchQueryService}.
+ *
+ * <p>The query pipeline combines structured visibility filters, full-text
+ * ranking, and an optional semantic re-ranking pass over a bounded candidate
+ * set.
+ */
 @Service
 public class PostgresFullTextQueryService implements SearchQueryService {
     private static final Pattern QUERY_TERM_SPLITTER = Pattern.compile("[^\\p{L}\\p{N}_]+");
@@ -56,6 +63,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         this.maxCandidates = maxCandidates;
     }
 
+    /**
+     * Executes a search query against the denormalized search document table
+     * and optionally re-ranks candidates using embeddings.
+     */
     @Override
     public SearchResult search(SearchQuery query) {
         String normalizedKeyword = normalizeKeyword(query.keyword());

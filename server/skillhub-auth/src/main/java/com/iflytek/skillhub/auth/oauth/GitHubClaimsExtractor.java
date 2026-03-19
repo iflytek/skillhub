@@ -12,6 +12,10 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import java.util.Map;
 
+/**
+ * Provider-specific claims extractor that enriches GitHub OAuth users with their primary verified
+ * email when necessary.
+ */
 @Component
 public class GitHubClaimsExtractor implements OAuthClaimsExtractor {
 

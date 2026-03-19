@@ -10,6 +10,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * JPA-backed repository for per-version statistics, including atomic download counter increments.
+ */
 @Repository
 public interface SkillVersionStatsJpaRepository extends JpaRepository<SkillVersionStats, Long>, SkillVersionStatsRepository {
 

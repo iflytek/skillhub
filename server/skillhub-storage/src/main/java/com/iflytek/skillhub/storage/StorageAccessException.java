@@ -1,5 +1,8 @@
 package com.iflytek.skillhub.storage;
 
+/**
+ * Wraps provider-specific storage failures with normalized operation and object-key context.
+ */
 public class StorageAccessException extends RuntimeException {
 
     private final String operation;

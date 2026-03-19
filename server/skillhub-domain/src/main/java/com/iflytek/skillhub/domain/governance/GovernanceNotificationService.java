@@ -8,6 +8,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Persists and manages governance notifications delivered to end users.
+ */
 @Service
 public class GovernanceNotificationService {
 

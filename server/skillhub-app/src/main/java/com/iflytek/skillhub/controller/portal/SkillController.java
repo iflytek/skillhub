@@ -34,6 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Read-oriented skill endpoints for detail pages, lifecycle inspection, file
+ * browsing, version resolution, and download delivery.
+ */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillController extends BaseApiController {
@@ -53,6 +57,10 @@ public class SkillController extends BaseApiController {
         this.metrics = metrics;
     }
 
+    /**
+     * Returns the viewer-specific projection of a skill, including lifecycle
+     * pointers and interaction permissions derived from the caller context.
+     */
     @GetMapping("/{namespace}/{slug}")
     public ApiResponse<SkillDetailResponse> getSkillDetail(
             @PathVariable String namespace,
@@ -90,6 +98,10 @@ public class SkillController extends BaseApiController {
         return ok("response.success.read", response);
     }
 
+    /**
+     * Lists versions visible to the caller rather than every persisted version
+     * of the skill.
+     */
     @GetMapping("/{namespace}/{slug}/versions")
     public ApiResponse<PageResponse<SkillVersionResponse>> listVersions(
             @PathVariable String namespace,
@@ -120,6 +132,10 @@ public class SkillController extends BaseApiController {
         return ok("response.success.read", response);
     }
 
+    /**
+     * Returns metadata for a concrete version that the current caller is
+     * allowed to inspect.
+     */
     @GetMapping("/{namespace}/{slug}/versions/{version}")
     public ApiResponse<SkillVersionDetailResponse> getVersionDetail(
             @PathVariable String namespace,
@@ -150,6 +166,10 @@ public class SkillController extends BaseApiController {
         return ok("response.success.read", response);
     }
 
+    /**
+     * Lists packaged files for a concrete version after visibility checks have
+     * been applied.
+     */
     @GetMapping("/{namespace}/{slug}/versions/{version}/files")
     public ApiResponse<List<SkillFileResponse>> listFiles(
             @PathVariable String namespace,
@@ -208,6 +228,10 @@ public class SkillController extends BaseApiController {
         return ok("response.success.read", response);
     }
 
+    /**
+     * Streams a single packaged file directly from object storage through the
+     * application API.
+     */
     @GetMapping("/{namespace}/{slug}/versions/{version}/file")
     public ResponseEntity<InputStreamResource> getFileContent(
             @PathVariable String namespace,
@@ -254,6 +278,10 @@ public class SkillController extends BaseApiController {
                 .body(new InputStreamResource(content));
     }
 
+    /**
+     * Resolves a human-facing version selector to the exact version that would
+     * be downloaded by the caller.
+     */
     @GetMapping("/{namespace}/{slug}/resolve")
     public ApiResponse<ResolveVersionResponse> resolveVersion(
             @PathVariable String namespace,

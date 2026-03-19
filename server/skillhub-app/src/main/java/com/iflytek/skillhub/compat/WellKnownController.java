@@ -5,6 +5,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * Serves well-known compatibility metadata used by external clients to discover the API base.
+ */
 @RestController
 public class WellKnownController {
 

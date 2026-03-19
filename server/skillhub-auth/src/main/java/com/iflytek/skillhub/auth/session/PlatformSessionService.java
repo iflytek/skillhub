@@ -10,13 +10,25 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Service;
 
+/**
+ * Synchronizes {@link PlatformPrincipal} snapshots with Spring Security's
+ * session-backed authentication context.
+ */
 @Service
 public class PlatformSessionService {
 
+    /**
+     * Establishes a new authenticated session and rotates the session id to
+     * reduce fixation risk.
+     */
     public void establishSession(PlatformPrincipal principal, HttpServletRequest request) {
         establishSession(principal, request, true);
     }
 
+    /**
+     * Establishes a session for the supplied principal and optionally rotates
+     * the underlying servlet session id.
+     */
     public void establishSession(PlatformPrincipal principal,
                                  HttpServletRequest request,
                                  boolean rotateSessionId) {
@@ -27,6 +39,10 @@ public class PlatformSessionService {
         persist(principal, authentication, request, rotateSessionId);
     }
 
+    /**
+     * Rebinds an updated principal to an already authenticated request without
+     * discarding the existing authentication object.
+     */
     public void attachToAuthenticatedSession(PlatformPrincipal principal,
                                              Authentication authentication,
                                              HttpServletRequest request) {

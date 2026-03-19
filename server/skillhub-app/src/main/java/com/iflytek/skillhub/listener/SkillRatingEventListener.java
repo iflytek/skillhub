@@ -7,6 +7,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Updates denormalized skill rating counters when rating events are emitted by
+ * the social domain.
+ */
 @Component
 public class SkillRatingEventListener {
     private final JdbcTemplate jdbcTemplate;

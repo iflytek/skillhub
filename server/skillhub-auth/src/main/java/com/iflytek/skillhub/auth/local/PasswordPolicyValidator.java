@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
+/**
+ * Validates local-account passwords against the platform's length and character diversity rules.
+ */
 @Component
 public class PasswordPolicyValidator {
 

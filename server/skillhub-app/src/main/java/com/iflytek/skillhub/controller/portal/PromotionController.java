@@ -40,6 +40,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Promotion workflow endpoints that expose submission, review, and query
+ * operations for cross-namespace promotion requests.
+ */
 @RestController
 @RequestMapping({"/api/v1/promotions", "/api/web/promotions"})
 public class PromotionController extends BaseApiController {

@@ -14,6 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Builds a publishable package model from multipart form uploads while enforcing package safety
+ * and size constraints.
+ */
 @Component
 public class MultipartPackageExtractor {
 

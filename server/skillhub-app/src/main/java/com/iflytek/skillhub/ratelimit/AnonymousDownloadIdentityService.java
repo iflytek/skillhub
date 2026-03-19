@@ -16,6 +16,10 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
+/**
+ * Assigns stable anonymous identities for download rate limiting by combining client IP data with
+ * a signed cookie.
+ */
 @Component
 public class AnonymousDownloadIdentityService {
 

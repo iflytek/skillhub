@@ -41,6 +41,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Endpoints for submitting, browsing, approving, rejecting, and withdrawing
+ * review tasks.
+ */
 @RestController
 @RequestMapping({"/api/v1/reviews", "/api/web/reviews"})
 public class ReviewController extends BaseApiController {

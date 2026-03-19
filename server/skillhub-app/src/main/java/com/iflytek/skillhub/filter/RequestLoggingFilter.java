@@ -19,6 +19,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Logs inbound HTTP requests and responses with truncation suitable for operational debugging.
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class RequestLoggingFilter extends OncePerRequestFilter {

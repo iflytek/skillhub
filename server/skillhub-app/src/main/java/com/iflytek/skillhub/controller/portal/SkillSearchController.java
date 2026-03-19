@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * Portal search endpoint that adapts HTTP query parameters to the search
+ * application service and visibility scope.
+ */
 @RestController
 @RequestMapping({"/api/web/skills"})
 public class SkillSearchController extends BaseApiController {

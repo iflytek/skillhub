@@ -15,6 +15,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Administrative endpoints for listing users and mutating user roles or
+ * account status.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/users")
 public class UserManagementController extends BaseApiController {

@@ -6,6 +6,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 
+/**
+ * Records audit log entries for administrative and security-relevant actions.
+ */
 @Service
 public class AuditLogService {
 

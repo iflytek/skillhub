@@ -24,6 +24,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Alternative user-management aggregation service that combines user records
+ * with role bindings for management-oriented views.
+ */
 @Service
 public class AdminUserManagementService {
 

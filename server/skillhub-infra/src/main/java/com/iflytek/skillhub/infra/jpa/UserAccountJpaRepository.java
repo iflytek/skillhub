@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JPA-backed user-account repository that provides filtered admin search over account records.
+ */
 @Repository
 public interface UserAccountJpaRepository
         extends JpaRepository<UserAccount, String>, JpaSpecificationExecutor<UserAccount>, UserAccountRepository {

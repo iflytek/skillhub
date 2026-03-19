@@ -8,6 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+/**
+ * Tracks repeated authentication failures and throttles abusive identifiers or client addresses.
+ */
 @Service
 public class AuthFailureThrottleService {
 

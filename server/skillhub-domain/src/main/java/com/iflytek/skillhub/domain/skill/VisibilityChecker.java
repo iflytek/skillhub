@@ -4,6 +4,10 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 
 import java.util.Map;
 
+/**
+ * Evaluates whether a caller may read a skill based on publication state, visibility, ownership,
+ * and namespace roles.
+ */
 public class VisibilityChecker {
 
     public boolean canAccess(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNamespaceRoles) {

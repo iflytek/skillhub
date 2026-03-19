@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Minimal liveness endpoint used by tests, probes, and basic uptime checks.
+ */
 @RestController
 @RequestMapping("/api/v1")
 public class HealthController extends BaseApiController {

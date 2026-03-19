@@ -8,6 +8,10 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
 
+/**
+ * Wires application-level Spring beans that adapt configurable infrastructure into domain-facing
+ * ports.
+ */
 @Configuration
 public class DomainBeanConfig {
 

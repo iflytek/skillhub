@@ -9,6 +9,12 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * Local-disk implementation of {@link ObjectStorageService}.
+ *
+ * <p>This adapter is intended for development or single-node deployments where
+ * storing objects on the application filesystem is acceptable.
+ */
 @Service
 @ConditionalOnProperty(name = "skillhub.storage.provider", havingValue = "local", matchIfMissing = true)
 public class LocalFileStorageService implements ObjectStorageService {
@@ -18,6 +24,10 @@ public class LocalFileStorageService implements ObjectStorageService {
         this.basePath = Paths.get(properties.getLocal().getBasePath()).toAbsolutePath().normalize();
     }
 
+    /**
+     * Stores the incoming stream atomically by writing to a temporary sibling
+     * file before replacing the final path.
+     */
     @Override
     public void putObject(String key, InputStream data, long size, String contentType) {
         try {
@@ -31,12 +41,18 @@ public class LocalFileStorageService implements ObjectStorageService {
         } catch (IOException e) { throw new StorageAccessException("putObject", key, e); }
     }
 
+    /**
+     * Opens the stored object as a streaming input.
+     */
     @Override
     public InputStream getObject(String key) {
         try { return Files.newInputStream(resolve(key)); }
         catch (IOException e) { throw new StorageAccessException("getObject", key, e); }
     }
 
+    /**
+     * Resolves and deletes a single stored object if it exists.
+     */
     @Override
     public void deleteObject(String key) {
         try { Files.deleteIfExists(resolve(key)); }

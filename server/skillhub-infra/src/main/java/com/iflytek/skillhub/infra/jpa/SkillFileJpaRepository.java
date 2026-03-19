@@ -7,6 +7,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * JPA-backed repository for package files attached to one skill version.
+ */
 @Repository
 public interface SkillFileJpaRepository extends JpaRepository<SkillFile, Long>, SkillFileRepository {
     List<SkillFile> findByVersionId(Long versionId);

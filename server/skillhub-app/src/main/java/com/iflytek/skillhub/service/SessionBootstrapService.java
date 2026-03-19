@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
+/**
+ * Restores a platform session from a passive authenticator and persists the
+ * resulting principal into Spring Security's session context.
+ */
 @Service
 public class SessionBootstrapService {
 
