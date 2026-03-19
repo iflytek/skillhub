@@ -99,11 +99,11 @@
 
 - `V12__governance_notifications.sql`
   - `user_notification.created_at / read_at`
-- `V13__api_token_timestamptz.sql`
+- `V24__api_token_timestamptz.sql`
   - `api_token.expires_at / last_used_at / revoked_at / created_at`
-- `V14__account_merge_request_timestamptz.sql`
+- `V25__account_merge_request_timestamptz.sql`
   - `account_merge_request.token_expires_at / completed_at / created_at`
-- `V15__skill_version_timestamptz.sql`
+- `V26__skill_version_timestamptz.sql`
   - `skill_version.published_at / created_at / yanked_at`
 - `V16__skill_hidden_at_timestamptz.sql`
   - `skill.hidden_at`
