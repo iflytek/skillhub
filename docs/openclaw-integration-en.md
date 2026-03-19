@@ -19,7 +19,7 @@ Set the SkillHub registry address in your OpenClaw configuration:
 
 ```bash
 # Via environment variable
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
 ### 2. Authentication (Optional)
@@ -141,7 +141,7 @@ ClawHub CLI is configured via environment variables:
 
 ```bash
 # Registry configuration
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 export CLAWHUB_API_TOKEN=sk_your_api_token_here
 ```
 
@@ -149,7 +149,7 @@ export CLAWHUB_API_TOKEN=sk_your_api_token_here
 
 ```bash
 # Registry configuration
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 export CLAWHUB_API_TOKEN=sk_your_api_token_here
 
 # Optional: Skip SSL verification (development only)
@@ -162,7 +162,7 @@ export CLAWHUB_SKIP_SSL_VERIFY=false
 
 ```bash
 # Unset custom registry
-unset CLAWHUB_REGISTRY_URL
+unset CLAWHUB_REGISTRY
 
 # ClawHub CLI will use the default public registry
 ```
