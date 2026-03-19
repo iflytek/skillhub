@@ -676,8 +676,8 @@ export function SkillDetailPage() {
                 <div className="space-y-0 divide-y divide-border/40">
                   {versions.map((version) => (
                     <div key={version.id} className="py-5 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold font-heading text-foreground flex items-center gap-2">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <span className="font-semibold font-heading text-foreground flex items-center gap-2 flex-wrap min-w-0">
                           <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
                             v{version.version}
                           </span>
@@ -694,7 +694,7 @@ export function SkillDetailPage() {
                             </span>
                           )}
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-shrink-0">
                           <span className="text-sm text-muted-foreground">
                             {formatLocalDateTime(version.publishedAt, i18n.language)}
                           </span>
