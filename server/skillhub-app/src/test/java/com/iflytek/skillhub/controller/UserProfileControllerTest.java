@@ -135,6 +135,25 @@ class UserProfileControllerTest {
                 .andExpect(jsonPath("$.data.status").value("APPLIED"));
     }
 
+    @Test
+    void updateProfile_displayNameWithSpaces_shouldReturn200() throws Exception {
+        var principal = testPrincipal();
+        var user = new UserAccount("user-1", "OldName", "user@example.com", "https://example.com/avatar.png");
+
+        given(userAccountRepository.findById("user-1")).willReturn(Optional.of(user));
+        given(namespaceMemberRepository.findByUserId("user-1")).willReturn(List.of());
+        given(userRoleBindingRepository.findByUserId("user-1")).willReturn(List.of());
+
+        mockMvc.perform(patch("/api/v1/user/profile")
+                        .with(authentication(testAuth(principal)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"New Name\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.status").value("APPLIED"));
+    }
+
     // ===== AC-E-001: Display name too short =====
 
     @Test
