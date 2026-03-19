@@ -6,6 +6,8 @@ import { cn } from '@/shared/lib/utils'
 import { remarkInferCodeLanguage } from './code-language'
 import { stripMarkdownFrontmatter } from './markdown-frontmatter'
 
+export const MARKDOWN_IMAGE_CLASS_NAME = 'h-auto max-w-full'
+
 interface MarkdownRendererProps {
   content: string
   className?: string
@@ -181,7 +183,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             </td>
           ),
           img: ({ className: imageClassName, alt, ...props }) => (
-            <img className={cn('w-full', imageClassName)} alt={alt ?? ''} {...props} />
+            <img className={cn(MARKDOWN_IMAGE_CLASS_NAME, imageClassName)} alt={alt ?? ''} {...props} />
           ),
         }}
       >
