@@ -236,6 +236,9 @@ public class SkillPublishService {
                     return skillRepository.save(newSkill);
                 });
 
+        // Update visibility to match the latest publish request
+        skill.setVisibility(visibility);
+
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
         }
