@@ -6,7 +6,7 @@
   "scripts": {
     "install:ci": "pnpm install --frozen-lockfile",
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/inject-docs.mjs",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -48,7 +48,6 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "marked": "^15.0.12",
     "openapi-typescript": "^7.6.1",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
