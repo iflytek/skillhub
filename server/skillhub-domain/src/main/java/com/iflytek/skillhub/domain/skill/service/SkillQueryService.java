@@ -31,6 +31,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Read-side domain service for skill detail, version browsing, and packaged
+ * file inspection.
+ *
+ * <p>Unlike search, this service works from the authoritative skill model and
+ * applies viewer-specific visibility rules before returning data.
+ */
 @Service
 public class SkillQueryService {
 
@@ -171,6 +178,10 @@ public class SkillQueryService {
         );
     }
 
+    /**
+     * Lists skills within a namespace after filtering out records the caller is
+     * not allowed to discover.
+     */
     public Page<Skill> listSkillsByNamespace(
             String namespaceSlug,
             String currentUserId,
@@ -193,6 +204,10 @@ public class SkillQueryService {
         return new PageImpl<>(pageContent, pageable, accessibleSkills.size());
     }
 
+    /**
+     * Returns metadata for a visible version, including the stored manifest and
+     * parsed metadata payload.
+     */
     public SkillVersionDetailDTO getVersionDetail(
             String namespaceSlug,
             String skillSlug,
@@ -247,6 +262,10 @@ public class SkillQueryService {
         return availableFiles(skillVersion.getId());
     }
 
+    /**
+     * Opens a single file stream from object storage after verifying that the
+     * caller may inspect the requested version.
+     */
     public InputStream getFileContent(
             String namespaceSlug,
             String skillSlug,
@@ -328,6 +347,10 @@ public class SkillQueryService {
         return version.isDownloadReady();
     }
 
+    /**
+     * Resolves a version selector such as an exact version, tag, or implicit
+     * latest reference into a concrete download target.
+     */
     public ResolvedVersionDTO resolveVersion(
             String namespaceSlug,
             String skillSlug,

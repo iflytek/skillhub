@@ -6,6 +6,10 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Applies namespace lifecycle transitions such as freeze, unfreeze, archive,
+ * and restore while recording audit history.
+ */
 @Service
 public class NamespaceGovernanceService {
 

@@ -4,6 +4,9 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.TreeSet;
 
+/**
+ * Utility methods for normalizing platform role sets and ensuring a baseline user role.
+ */
 public final class PlatformRoleDefaults {
 
     public static final String DEFAULT_USER_ROLE = "USER";

@@ -11,6 +11,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * JPA-backed namespace repository that also fulfills the domain namespace repository contract.
+ */
 @Repository
 public interface NamespaceJpaRepository
         extends JpaRepository<Namespace, Long>, NamespaceRepository {

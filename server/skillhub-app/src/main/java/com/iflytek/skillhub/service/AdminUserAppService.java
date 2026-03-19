@@ -29,6 +29,10 @@ import java.util.TreeSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Administrative user-management application service built around the main
+ * search and mutation use cases exposed by the admin API.
+ */
 @Service
 public class AdminUserAppService {
 

@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 
+/**
+ * Periodic maintenance task that expires old idempotency records and marks stale processing
+ * entries as failed.
+ */
 @Component
 public class IdempotencyCleanupTask {
 

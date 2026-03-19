@@ -23,6 +23,10 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Application service that adapts search queries to the search backend and
+ * enriches results with authoritative skill metadata and viewer permissions.
+ */
 @Service
 public class SkillSearchAppService {
 

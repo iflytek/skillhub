@@ -18,6 +18,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Namespace portal endpoints for discovery, membership management, and
+ * namespace governance operations.
+ */
 @RestController
 @RequestMapping({"/api/v1", "/api/web"})
 public class NamespaceController extends BaseApiController {

@@ -12,6 +12,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Primary JPA-backed adapter that fulfills the domain-level {@link SkillRepository} contract.
+ */
 @Repository
 @Primary
 public class JpaSkillRepositoryAdapter implements SkillRepository {

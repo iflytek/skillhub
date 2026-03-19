@@ -2,6 +2,10 @@ package com.iflytek.skillhub.domain.namespace;
 
 import org.springframework.stereotype.Component;
 
+/**
+ * Encapsulates namespace lifecycle rules that determine which management actions are currently
+ * allowed.
+ */
 @Component
 public class NamespaceAccessPolicy {
 

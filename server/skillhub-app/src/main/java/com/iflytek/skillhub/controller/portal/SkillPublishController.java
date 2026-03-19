@@ -19,6 +19,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Upload endpoints for skill packages.
+ *
+ * <p>The controller is responsible for archive extraction and request shaping,
+ * while the domain service owns all publication validation and state changes.
+ */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillPublishController extends BaseApiController {
@@ -37,6 +43,10 @@ public class SkillPublishController extends BaseApiController {
         this.skillHubMetrics = skillHubMetrics;
     }
 
+    /**
+     * Publishes an uploaded package into the target namespace after archive
+     * extraction and visibility parsing.
+     */
     @PostMapping("/{namespace}/publish")
     @RateLimit(category = "publish", authenticated = 10, anonymous = 0)
     public ApiResponse<PublishResponse> publish(

@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Administrative endpoints for reviewing and resolving user-submitted skill
+ * reports.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/skill-reports")
 public class AdminSkillReportController extends BaseApiController {

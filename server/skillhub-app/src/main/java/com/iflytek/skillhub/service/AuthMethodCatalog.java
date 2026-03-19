@@ -15,6 +15,10 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties;
 import org.springframework.stereotype.Service;
 
+/**
+ * Builds the catalog of authentication methods and OAuth providers that the UI
+ * can render dynamically.
+ */
 @Service
 public class AuthMethodCatalog {
 

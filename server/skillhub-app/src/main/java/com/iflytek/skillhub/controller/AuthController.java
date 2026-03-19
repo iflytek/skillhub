@@ -38,6 +38,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Authentication-facing HTTP endpoints.
+ *
+ * <p>This controller keeps transport concerns at the boundary and delegates the
+ * actual authentication, session bootstrap, and direct-login workflows to
+ * dedicated application or auth services.
+ */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController extends BaseApiController {
@@ -68,6 +75,10 @@ public class AuthController extends BaseApiController {
         this.userAccountRepository = userAccountRepository;
     }
 
+    /**
+     * Returns the current authenticated principal and refreshes the session if
+     * the persisted user state has diverged from the in-session snapshot.
+     */
     @GetMapping("/me")
     public ApiResponse<AuthMeResponse> me(@AuthenticationPrincipal PlatformPrincipal principal,
                                           Authentication authentication,
@@ -103,18 +114,32 @@ public class AuthController extends BaseApiController {
         return ok("response.success.read", AuthMeResponse.from(principal));
     }
 
+    /**
+     * Lists browser-based authentication providers that can initiate an OAuth
+     * login flow for the current client.
+     */
     @GetMapping("/providers")
     public ApiResponse<List<AuthProviderResponse>> providers(
             @RequestParam(name = "returnTo", required = false) String returnTo) {
         return ok("response.success.read", authMethodCatalog.listOAuthProviders(returnTo));
     }
 
+    /**
+     * Lists all authentication methods exposed to the UI, including direct and
+     * OAuth-based flows.
+     */
     @GetMapping("/methods")
     public ApiResponse<List<AuthMethodResponse>> methods(
             @RequestParam(name = "returnTo", required = false) String returnTo) {
         return ok("response.success.read", authMethodCatalog.listMethods(returnTo));
     }
 
+    /**
+     * Rebuilds an authenticated session from an upstream identity assertion.
+     *
+     * <p>This endpoint is used by trusted frontends or gateway flows that have
+     * already authenticated the user elsewhere.
+     */
     @PostMapping("/session/bootstrap")
     @RateLimit(category = "auth-session-bootstrap", authenticated = 30, anonymous = 15, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> bootstrapSession(@Valid @RequestBody SessionBootstrapRequest request,
@@ -125,6 +150,10 @@ public class AuthController extends BaseApiController {
         );
     }
 
+    /**
+     * Executes a direct-login flow and establishes a first-party web session on
+     * success.
+     */
     @PostMapping("/direct/login")
     @RateLimit(category = "auth-direct-login", authenticated = 20, anonymous = 10, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> directLogin(@Valid @RequestBody DirectLoginRequest request,

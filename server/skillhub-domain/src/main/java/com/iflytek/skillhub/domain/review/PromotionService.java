@@ -22,6 +22,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Handles promotion requests that copy approved skills into the global
+ * namespace.
+ *
+ * <p>Promotion is intentionally modeled separately from normal review because
+ * it creates or updates a distinct target skill lineage.
+ */
 @Service
 public class PromotionService {
 
@@ -55,6 +62,10 @@ public class PromotionService {
         this.clock = clock;
     }
 
+    /**
+     * Submits a promotion request for a published source version using both
+     * namespace and platform roles for authorization.
+     */
     @Transactional
     public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
                                             Long targetNamespaceId, String userId,
@@ -148,6 +159,10 @@ public class PromotionService {
         return promotionRequestRepository.save(request);
     }
 
+    /**
+     * Approves a promotion request and materializes a published copy of the
+     * source version in the target global namespace.
+     */
     @Transactional
     public PromotionRequest approvePromotion(Long promotionId, String reviewerId,
                                              String comment, Set<String> platformRoles) {
@@ -230,6 +245,9 @@ public class PromotionService {
         return savedRequest;
     }
 
+    /**
+     * Rejects a pending promotion request without changing the source skill.
+     */
     @Transactional
     public PromotionRequest rejectPromotion(Long promotionId, String reviewerId,
                                             String comment, Set<String> platformRoles) {

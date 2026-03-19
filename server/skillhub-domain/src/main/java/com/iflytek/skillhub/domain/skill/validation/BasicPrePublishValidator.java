@@ -9,6 +9,10 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Default pre-publish validator that scans text-like package files for likely secrets and
+ * accidental real credentials.
+ */
 @Component
 public class BasicPrePublishValidator implements PrePublishValidator {
 

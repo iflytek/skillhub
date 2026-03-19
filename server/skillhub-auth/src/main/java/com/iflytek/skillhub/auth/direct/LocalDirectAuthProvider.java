@@ -4,6 +4,9 @@ import com.iflytek.skillhub.auth.local.LocalAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import org.springframework.stereotype.Component;
 
+/**
+ * Direct-auth provider that delegates username and password verification to the local auth flow.
+ */
 @Component
 public class LocalDirectAuthProvider implements DirectAuthProvider {
 

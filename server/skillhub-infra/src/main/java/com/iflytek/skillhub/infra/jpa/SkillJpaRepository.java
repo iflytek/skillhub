@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Base Spring Data JPA repository for persisted skill aggregates and common skill queries.
+ */
 @Repository
 public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRepository {
     List<Skill> findByIdIn(List<Long> ids);

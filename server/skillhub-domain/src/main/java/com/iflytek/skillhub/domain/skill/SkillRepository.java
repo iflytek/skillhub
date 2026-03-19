@@ -6,6 +6,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Domain repository contract for loading and persisting skill aggregates and common read models.
+ */
 public interface SkillRepository {
     Optional<Skill> findById(Long id);
     List<Skill> findByIdIn(List<Long> ids);

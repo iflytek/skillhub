@@ -3,6 +3,9 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 
+/**
+ * Minimal controller base class that centralizes access to the standard API response factory.
+ */
 public abstract class BaseApiController {
 
     private final ApiResponseFactory responseFactory;

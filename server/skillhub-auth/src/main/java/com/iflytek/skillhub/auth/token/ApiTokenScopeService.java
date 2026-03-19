@@ -9,6 +9,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Parses token scopes and evaluates whether a token may access a given HTTP
+ * method and path combination.
+ */
 @Service
 public class ApiTokenScopeService {
 

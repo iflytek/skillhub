@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * Self-service API token management endpoints for authenticated users.
+ */
 @RestController
 @RequestMapping("/api/v1/tokens")
 public class TokenController extends BaseApiController {

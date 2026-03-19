@@ -12,6 +12,10 @@ import java.util.Map;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
+/**
+ * Dispatches direct-login requests to a configured provider and then binds the
+ * resulting principal to the current HTTP session.
+ */
 @Service
 public class DirectAuthService {
 

@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * PostgreSQL-backed search index writer that stores searchable documents and semantic vectors.
+ */
 @Service
 public class PostgresFullTextIndexService implements SearchIndexService {
 

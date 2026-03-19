@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Resolves platform roles and permissions for a user from persisted RBAC
+ * bindings.
+ */
 @Service
 public class RbacService {
 

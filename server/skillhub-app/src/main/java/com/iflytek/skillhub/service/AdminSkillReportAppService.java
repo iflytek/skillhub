@@ -17,6 +17,10 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+/**
+ * Application service that enriches raw skill report records with skill and
+ * namespace context required by admin UIs.
+ */
 @Service
 public class AdminSkillReportAppService {
 

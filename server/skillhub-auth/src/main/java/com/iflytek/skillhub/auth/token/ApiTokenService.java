@@ -25,6 +25,9 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Issues, rotates, validates, and revokes API tokens for non-browser clients.
+ */
 @Service
 public class ApiTokenService {
 
@@ -42,11 +45,18 @@ public class ApiTokenService {
 
     public record TokenCreateResult(String rawToken, ApiToken entity) {}
 
+    /**
+     * Creates a token without an explicit expiration timestamp.
+     */
     @Transactional
     public TokenCreateResult createToken(String userId, String name, String scopeJson) {
         return createToken(userId, name, scopeJson, null);
     }
 
+    /**
+     * Creates a new token and returns the raw secret exactly once to the
+     * caller.
+     */
     @Transactional
     public TokenCreateResult createToken(String userId, String name, String scopeJson, String expiresAt) {
         String normalizedName = normalizeName(name);
@@ -78,6 +88,10 @@ public class ApiTokenService {
         return rotateToken(userId, name, scopeJson, null);
     }
 
+    /**
+     * Rotates a token name by revoking the previous active token before issuing
+     * a replacement.
+     */
     @Transactional
     public TokenCreateResult rotateToken(String userId, String name, String scopeJson, String expiresAt) {
         String normalizedName = normalizeName(name);
@@ -89,11 +103,18 @@ public class ApiTokenService {
         return createToken(userId, name, scopeJson, expiresAt);
     }
 
+    /**
+     * Validates a raw bearer token against its hash and lifecycle timestamps.
+     */
     public Optional<ApiToken> validateToken(String rawToken) {
         String hash = sha256(rawToken);
         return tokenRepo.findByTokenHash(hash).filter(token -> token.isValid(currentTime()));
     }
 
+    /**
+     * Revokes a token owned by the current user. Missing or foreign tokens are
+     * ignored to keep revocation idempotent.
+     */
     @Transactional
     public void revokeToken(Long tokenId, String userId) {
         tokenRepo.findById(tokenId)
@@ -104,6 +125,9 @@ public class ApiTokenService {
             });
     }
 
+    /**
+     * Updates the expiration timestamp of an active token owned by the caller.
+     */
     @Transactional
     public ApiToken updateExpiration(Long tokenId, String userId, String expiresAt) {
         ApiToken token = tokenRepo.findById(tokenId)

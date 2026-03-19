@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Local-development filter that can establish a session for a requested mock user header.
+ */
 @Component
 @Profile("local")
 @ConditionalOnProperty(name = "skillhub.auth.mock.enabled", havingValue = "true")

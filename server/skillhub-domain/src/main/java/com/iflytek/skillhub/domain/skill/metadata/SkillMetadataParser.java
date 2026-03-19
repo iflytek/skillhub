@@ -6,6 +6,10 @@ import org.yaml.snakeyaml.Yaml;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Parses `SKILL.md` frontmatter and body content into the normalized metadata model used by the
+ * publish pipeline.
+ */
 public class SkillMetadataParser {
 
     private static final String FRONTMATTER_DELIMITER = "---";

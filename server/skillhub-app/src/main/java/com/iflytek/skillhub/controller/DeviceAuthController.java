@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * API endpoints for the CLI-style device authorization flow.
+ */
 @RestController
 @RequestMapping("/api/v1/auth/device")
 public class DeviceAuthController extends BaseApiController {

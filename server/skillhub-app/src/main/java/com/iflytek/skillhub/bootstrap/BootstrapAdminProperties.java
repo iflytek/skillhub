@@ -3,6 +3,9 @@ package com.iflytek.skillhub.bootstrap;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+/**
+ * Configuration properties for bootstrapping a default admin account in controlled environments.
+ */
 @Component
 @ConfigurationProperties(prefix = "skillhub.bootstrap.admin")
 public class BootstrapAdminProperties {

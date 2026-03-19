@@ -8,6 +8,9 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+/**
+ * JPA-backed repository for skill star relationships and user star listings.
+ */
 @Repository
 public interface JpaSkillStarRepository extends JpaRepository<SkillStar, Long>, SkillStarRepository {
     Optional<SkillStar> findBySkillIdAndUserId(Long skillId, String userId);

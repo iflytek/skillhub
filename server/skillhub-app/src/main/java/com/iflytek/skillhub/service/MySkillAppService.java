@@ -25,6 +25,10 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Application service that assembles the current user's owned and starred
+ * skill lists with lifecycle context.
+ */
 @Service
 public class MySkillAppService {
     private final SkillRepository skillRepository;

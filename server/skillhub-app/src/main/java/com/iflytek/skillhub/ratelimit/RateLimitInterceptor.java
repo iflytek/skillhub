@@ -15,6 +15,10 @@ import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.Map;
 
+/**
+ * Enforces the {@link RateLimit} annotation by resolving caller identity and delegating quota
+ * checks to the configured rate limiter implementation.
+ */
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
 

@@ -8,6 +8,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Domain service for starring and unstarring skills in an idempotent manner.
+ */
 @Service
 public class SkillStarService {
     private final SkillStarRepository starRepository;

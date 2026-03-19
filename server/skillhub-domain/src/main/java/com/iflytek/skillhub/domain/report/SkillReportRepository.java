@@ -6,6 +6,9 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+/**
+ * Domain repository contract for abuse reports filed against skills.
+ */
 public interface SkillReportRepository {
     SkillReport save(SkillReport report);
     Optional<SkillReport> findById(Long id);

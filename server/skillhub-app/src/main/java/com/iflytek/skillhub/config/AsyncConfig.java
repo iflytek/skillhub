@@ -8,6 +8,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/**
+ * Enables asynchronous event handling and other background execution features used by the
+ * application module.
+ */
 @Configuration
 @EnableAsync
 public class AsyncConfig {

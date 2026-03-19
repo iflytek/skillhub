@@ -20,6 +20,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Seeds predictable users, memberships, and admin roles for the local development profile.
+ */
 @Component
 @Profile("local")
 public class LocalDevDataInitializer implements ApplicationRunner {

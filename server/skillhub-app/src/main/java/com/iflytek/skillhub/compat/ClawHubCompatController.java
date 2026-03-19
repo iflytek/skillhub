@@ -43,6 +43,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Compatibility controller that exposes SkillHub content using ClawHub-style routes and payload
+ * shapes expected by legacy clients.
+ */
 @RestController
 @RequestMapping("/api/v1")
 public class ClawHubCompatController {

@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Centralizes review and promotion permission checks derived from namespace and platform roles.
+ */
 @Component
 public class ReviewPermissionChecker {
 

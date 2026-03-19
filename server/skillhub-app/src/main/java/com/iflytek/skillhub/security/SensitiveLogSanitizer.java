@@ -8,6 +8,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+/**
+ * Applies lightweight redaction rules before sensitive strings are written to logs.
+ */
 @Component
 public class SensitiveLogSanitizer {
 

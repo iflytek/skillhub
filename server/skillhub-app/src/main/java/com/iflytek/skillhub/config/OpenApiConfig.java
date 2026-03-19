@@ -8,6 +8,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+/**
+ * OpenAPI metadata configuration for generated API documentation.
+ */
 @Configuration
 public class OpenApiConfig {
 

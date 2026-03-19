@@ -16,6 +16,13 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Prevents duplicate execution of mutating HTTP requests identified by
+ * {@code X-Request-Id}.
+ *
+ * <p>Redis is treated as the fast-path cache, while PostgreSQL remains the
+ * durable source of truth when cache access fails.
+ */
 @Component
 public class IdempotencyInterceptor implements HandlerInterceptor {
 
@@ -38,6 +45,10 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         this.clock = clock;
     }
 
+    /**
+     * Rejects duplicate mutating requests before controller execution and
+     * creates a processing marker for first-seen request identifiers.
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String method = request.getMethod();
@@ -94,6 +105,10 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         return true;
     }
 
+    /**
+     * Finalizes the idempotency record with the observed response status once
+     * request processing has completed.
+     */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         String method = request.getMethod();

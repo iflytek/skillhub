@@ -8,6 +8,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * JPA repository for personal API tokens and token listings scoped to one user.
+ */
 @Repository
 public interface ApiTokenRepository extends JpaRepository<ApiToken, Long> {
     Optional<ApiToken> findByTokenHash(String tokenHash);

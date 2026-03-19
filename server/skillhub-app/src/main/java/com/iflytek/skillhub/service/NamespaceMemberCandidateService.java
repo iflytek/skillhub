@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Finds candidate users that can be invited into a namespace while excluding
+ * existing members and immutable namespaces.
+ */
 @Service
 public class NamespaceMemberCandidateService {
 
