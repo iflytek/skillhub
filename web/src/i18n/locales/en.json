@@ -493,6 +493,9 @@
     "filterUnhideSkill": "Skill Unhidden",
     "filterUnarchiveSkill": "Skill Restored",
     "filterYankVersion": "Version Yanked",
+    "filterRebuildSearchIndex": "Search Index Rebuilt",
+    "quickFilterSearchRebuild": "Search index rebuilds only",
+    "clearFilters": "Clear filters",
     "userIdPlaceholder": "User ID...",
     "requestIdPlaceholder": "Request ID...",
     "ipPlaceholder": "IP address...",
@@ -762,7 +765,17 @@
     "activityTitle": "Governance activity",
     "activitySubtitle": "Recent audit events for review, promotion, report, and lifecycle actions.",
     "emptyActivity": "No recent governance activity.",
-    "unknownActor": "Unknown actor"
+    "unknownActor": "Unknown actor",
+    "searchMaintenanceTitle": "Search Index Maintenance",
+    "searchMaintenanceDescription": "Rebuild the full skill search index. This action is available only to super administrators and is intended for full backfills after search rule changes.",
+    "searchMaintenanceHint": "This may take a while. Avoid triggering it repeatedly.",
+    "searchRebuildAction": "Rebuild full search index",
+    "searchRebuildRunning": "Rebuilding...",
+    "searchRebuildConfirmTitle": "Rebuild the full search index?",
+    "searchRebuildConfirmDescription": "The system will rebuild search documents for all skills using the current indexing rules. This operation may take some time.",
+    "searchRebuildSuccessTitle": "Search index rebuild started",
+    "searchRebuildSuccessDescription": "The system is rebuilding the full search index using the current rules.",
+    "searchRebuildErrorTitle": "Search index rebuild failed"
   },
   "members": {
     "title": "Member Management",
