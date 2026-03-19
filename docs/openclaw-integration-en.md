@@ -31,8 +31,8 @@ For **global namespace (@global) PUBLIC skills**, no login is required to downlo
 - Write operations like publishing, starring, etc.
 
 ```bash
-# Using API Token
-export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+# Log in with an API token
+clawhub login --token YOUR_API_TOKEN
 ```
 
 #### Obtaining an API Token
@@ -142,7 +142,9 @@ ClawHub CLI is configured via environment variables:
 ```bash
 # Registry configuration
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
+
+# Authenticate once if needed
+clawhub login --token sk_your_api_token_here
 ```
 
 ### Environment Variables
@@ -150,10 +152,9 @@ export CLAWHUB_API_TOKEN=sk_your_api_token_here
 ```bash
 # Registry configuration
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
 
-# Optional: Skip SSL verification (development only)
-export CLAWHUB_SKIP_SSL_VERIFY=false
+# Optionally log in before running authenticated commands
+clawhub login --token sk_your_api_token_here
 ```
 
 ## FAQ
@@ -177,12 +178,12 @@ Possible causes:
 
 Solution:
 ```bash
-# Set new token
-export CLAWHUB_API_TOKEN=YOUR_NEW_TOKEN
+# Log in again with a new token
+clawhub login --token YOUR_NEW_TOKEN
 
 # Test connection
 curl https://skillhub.your-company.com/api/v1/whoami \
-  -H "Authorization: Bearer $CLAWHUB_API_TOKEN"
+  -H "Authorization: Bearer YOUR_NEW_TOKEN"
 ```
 
 **Tip**: Global namespace (@global) PUBLIC skills can be downloaded anonymously without authentication.

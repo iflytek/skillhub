@@ -31,8 +31,8 @@ export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 - 发布、收藏等写操作
 
 ```bash
-# 使用 API Token
-export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+# 使用 API Token 登录
+clawhub login --token YOUR_API_TOKEN
 ```
 
 #### 获取 API Token
@@ -142,7 +142,9 @@ ClawHub CLI 通过环境变量配置：
 ```bash
 # Registry 配置
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
+
+# 如需认证，先登录一次
+clawhub login --token sk_your_api_token_here
 ```
 
 ### 环境变量配置
@@ -150,10 +152,9 @@ export CLAWHUB_API_TOKEN=sk_your_api_token_here
 ```bash
 # Registry 配置
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=sk_your_api_token_here
 
-# 可选：跳过 SSL 验证（仅用于开发环境）
-export CLAWHUB_SKIP_SSL_VERIFY=false
+# 可选：登录后再执行需要认证的命令
+clawhub login --token sk_your_api_token_here
 ```
 
 ## 常见问题
@@ -177,12 +178,12 @@ unset CLAWHUB_REGISTRY
 
 解决方法：
 ```bash
-# 设置新的 Token
-export CLAWHUB_API_TOKEN=YOUR_NEW_TOKEN
+# 设置新的 Token 并重新登录
+clawhub login --token YOUR_NEW_TOKEN
 
 # 测试连接
 curl https://skillhub.your-company.com/api/v1/whoami \
-  -H "Authorization: Bearer $CLAWHUB_API_TOKEN"
+  -H "Authorization: Bearer YOUR_NEW_TOKEN"
 ```
 
 **提示**：全局命名空间（@global）的 PUBLIC 技能可以匿名下载，无需认证。
