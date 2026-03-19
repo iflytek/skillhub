@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
@@ -66,19 +66,6 @@ function parseMetadataJson(parsed?: string) {
   } catch {
     return {}
   }
-}
-
-function getAuthorMonogram(name?: string) {
-  if (!name) {
-    return '?'
-  }
-
-  const trimmed = name.trim()
-  if (!trimmed) {
-    return '?'
-  }
-
-  return trimmed[0]!.toUpperCase()
 }
 
 function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending' | 'promotion.already_promoted' | null {
@@ -565,7 +552,7 @@ export function SkillDetailPage() {
             <div className="flex min-w-0">
               <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/85 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm">
                 <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-                  {getAuthorMonogram(skill.ownerDisplayName)}
+                  <User className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 truncate">{t('skillDetail.authorLabel', { name: skill.ownerDisplayName })}</span>
               </div>
