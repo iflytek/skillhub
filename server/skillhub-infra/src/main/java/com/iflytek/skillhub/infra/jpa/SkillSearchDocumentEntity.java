@@ -20,7 +20,7 @@ public class SkillSearchDocumentEntity {
     @Column(name = "namespace_slug", nullable = false, length = 64)
     private String namespaceSlug;
 
-    @Column(name = "owner_id", nullable = false)
+    @Column(name = "owner_id", nullable = false, length = 128)
     private String ownerId;
 
     @Column(length = 256)
@@ -38,10 +38,10 @@ public class SkillSearchDocumentEntity {
     @Column(name = "semantic_vector", columnDefinition = "TEXT")
     private String semanticVector;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 32)
     private String visibility;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 32)
     private String status;
 
     @Column(name = "updated_at", nullable = false)
