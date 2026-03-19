@@ -493,6 +493,9 @@
     "filterUnhideSkill": "恢复隐藏",
     "filterUnarchiveSkill": "恢复归档",
     "filterYankVersion": "版本撤回",
+    "filterRebuildSearchIndex": "重建搜索索引",
+    "quickFilterSearchRebuild": "仅看搜索索引重建",
+    "clearFilters": "清空筛选",
     "userIdPlaceholder": "用户 ID...",
     "requestIdPlaceholder": "请求 ID...",
     "ipPlaceholder": "IP 地址...",
@@ -762,7 +765,17 @@
     "activityTitle": "治理活动",
     "activitySubtitle": "最近的审核、提升、举报和生命周期治理审计记录。",
     "emptyActivity": "暂无治理活动。",
-    "unknownActor": "未知操作者"
+    "unknownActor": "未知操作者",
+    "searchMaintenanceTitle": "搜索索引维护",
+    "searchMaintenanceDescription": "重新构建全部技能搜索索引。该操作仅超级管理员可执行，适用于搜索规则变更后的全量回填。",
+    "searchMaintenanceHint": "执行期间可能耗时较长，请避免频繁触发。",
+    "searchRebuildAction": "重建全部搜索索引",
+    "searchRebuildRunning": "重建中...",
+    "searchRebuildConfirmTitle": "确认重建全部搜索索引？",
+    "searchRebuildConfirmDescription": "系统会按当前搜索规则重建所有技能的搜索文档。该操作可能持续一段时间。",
+    "searchRebuildSuccessTitle": "已触发搜索索引重建",
+    "searchRebuildSuccessDescription": "系统正在按当前规则重建全部搜索索引。",
+    "searchRebuildErrorTitle": "搜索索引重建失败"
   },
   "members": {
     "title": "成员管理",

@@ -2,6 +2,7 @@ package com.iflytek.skillhub.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +53,8 @@ class AuthContextFilterTest {
                 userAccountRepository,
                 apiResponseFactory,
                 new ObjectMapper().registerModule(new JavaTimeModule()),
-                true
+                true,
+                new RouteSecurityPolicyRegistry()
         );
     }
 
@@ -67,6 +70,7 @@ class AuthContextFilterTest {
         user.setStatus(UserStatus.DISABLED);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/auth/me");
         MockHttpSession session = (MockHttpSession) request.getSession(true);
         session.setAttribute("platformPrincipal", principal);
         SecurityContextHolder.getContext().setAuthentication(
@@ -95,6 +99,7 @@ class AuthContextFilterTest {
         NamespaceMember member = new NamespaceMember(9L, "user-2", NamespaceRole.ADMIN);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/auth/me");
         request.getSession(true).setAttribute("platformPrincipal", principal);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, List.of())
@@ -111,5 +116,21 @@ class AuthContextFilterTest {
         assertEquals("user-2", request.getAttribute("userId"));
         assertEquals(NamespaceRole.ADMIN, ((java.util.Map<Long, NamespaceRole>) request.getAttribute("userNsRoles")).get(9L));
         verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void anonymousRequest_shouldPassThroughWithoutLoadingUserContext() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/assets/app.js");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertNull(request.getAttribute("userId"));
+        assertNull(request.getAttribute("userNsRoles"));
+        verify(filterChain).doFilter(same(request), same(response));
+        verify(userAccountRepository, never()).findById(org.mockito.ArgumentMatchers.anyString());
+        verify(namespaceMemberRepository, never()).findByUserId(org.mockito.ArgumentMatchers.anyString());
     }
 }

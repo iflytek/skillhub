@@ -49,3 +49,9 @@ export function useMarkGovernanceNotificationRead() {
     },
   })
 }
+
+export function useRebuildSearchIndex() {
+  return useMutation({
+    mutationFn: () => governanceApi.rebuildSearchIndex(),
+  })
+}
