@@ -218,6 +218,7 @@ public class PromotionService {
                 sourceVersion.getCreatedBy());
         newVersion.setStatus(SkillVersionStatus.PUBLISHED);
         newVersion.setPublishedAt(currentTime());
+        newVersion.setRequestedVisibility(SkillVisibility.PUBLIC);
         newVersion.setChangelog(sourceVersion.getChangelog());
         newVersion.setParsedMetadataJson(sourceVersion.getParsedMetadataJson());
         newVersion.setManifestJson(sourceVersion.getManifestJson());

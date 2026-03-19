@@ -236,9 +236,6 @@ public class SkillPublishService {
                     return skillRepository.save(newSkill);
                 });
 
-        // Update visibility to match the latest publish request
-        skill.setVisibility(visibility);
-
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
         }
@@ -265,6 +262,7 @@ public class SkillPublishService {
 
         // 8. Create SkillVersion
         SkillVersion version = new SkillVersion(skill.getId(), metadata.version(), publisherId);
+        version.setRequestedVisibility(visibility);
         boolean autoPublish = forceAutoPublish || isSuperAdmin;
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
@@ -355,6 +353,7 @@ public class SkillPublishService {
         skill.setSummary(metadata.description());
         if (autoPublish) {
             skill.setLatestVersionId(version.getId());
+            skill.setVisibility(visibility);
         }
         skill.setUpdatedBy(publisherId);
         skillRepository.save(skill);

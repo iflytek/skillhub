@@ -1,6 +1,8 @@
 spring:
   main:
     allow-bean-definition-overriding: true
+    banner-mode: "off"
+    log-startup-info: false
   datasource:
     url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
@@ -38,3 +40,9 @@ skillhub:
     enforce-active-user-check: false
   access-policy:
     mode: OPEN
+
+logging:
+  level:
+    root: ERROR
+    com.iflytek.skillhub: ERROR
+    org.springframework: ERROR

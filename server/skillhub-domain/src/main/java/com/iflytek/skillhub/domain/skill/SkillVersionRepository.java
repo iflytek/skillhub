@@ -10,6 +10,7 @@ public interface SkillVersionRepository {
     Optional<SkillVersion> findById(Long id);
     List<SkillVersion> findByIdIn(List<Long> ids);
     List<SkillVersion> findBySkillIdIn(List<Long> skillIds);
+    List<SkillVersion> findBySkillIdInAndStatus(List<Long> skillIds, SkillVersionStatus status);
     List<SkillVersion> findBySkillId(Long skillId);
     Optional<SkillVersion> findBySkillIdAndVersion(Long skillId, String version);
     List<SkillVersion> findBySkillIdAndStatus(Long skillId, SkillVersionStatus status);

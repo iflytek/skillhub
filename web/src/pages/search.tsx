@@ -12,6 +12,7 @@ import { Pagination } from '@/shared/components/pagination'
 import { useMyStars, useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
+import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 
 const PAGE_SIZE = 12
 
@@ -149,7 +150,7 @@ export function SearchPage() {
   const resultCount = starredOnly ? filteredStarredSkills.length : (data?.total ?? 0)
 
   return (
-    <div className="space-y-8 animate-fade-up">
+    <div className={APP_SHELL_PAGE_CLASS_NAME}>
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
         <SearchBar

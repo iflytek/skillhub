@@ -295,6 +295,14 @@
   "mySkills": {
     "title": "我的技能",
     "subtitle": "管理你发布的技能",
+    "filters": {
+      "ALL": "全部",
+      "PENDING_REVIEW": "待审核",
+      "PUBLISHED": "已发布",
+      "REJECTED": "已拒绝",
+      "ARCHIVED": "已归档",
+      "HIDDEN": "已隐藏"
+    },
     "publishNew": "发布新技能",
     "archive": "归档",
     "unarchive": "恢复",
@@ -302,6 +310,7 @@
     "statusPendingReview": "审核中",
     "statusPublished": "已发布",
     "statusRejected": "已拒绝",
+    "statusHidden": "已隐藏",
     "archiveConfirmTitle": "确认归档技能",
     "archiveConfirmDescription": "归档后普通用户将无法看到或下载“{{skill}}”，确定继续吗？",
     "unarchiveConfirmTitle": "确认恢复技能",
@@ -330,6 +339,14 @@
     "promotionErrorTitle": "提交提升申请失败",
     "emptyTitle": "还没有技能",
     "emptyDescription": "开始发布你的第一个技能吧",
+    "emptyFilteredTitle": "当前筛选下没有技能",
+    "emptyFilteredDescription": {
+      "PENDING_REVIEW": "当前没有处于待审核状态的技能。",
+      "PUBLISHED": "当前没有已发布的技能。",
+      "REJECTED": "当前没有已拒绝的技能。",
+      "ARCHIVED": "当前没有已归档的技能。",
+      "HIDDEN": "当前没有已隐藏的技能。"
+    },
     "publishSkill": "发布技能"
   },
   "myNamespaces": {
@@ -402,7 +419,9 @@
   },
   "reviews": {
     "title": "审核中心",
-    "subtitle": "管理技能版本审核",
+    "subtitle": "管理平台审核事务",
+    "typeSkill": "技能审核",
+    "typeProfile": "资料审核",
     "tabPending": "待审核",
     "tabApproved": "已通过",
     "tabRejected": "已拒绝",
@@ -412,7 +431,43 @@
     "colSubmitter": "提交者",
     "colSubmitTime": "提交时间",
     "colReviewer": "审核者",
-    "colReviewTime": "审核时间"
+    "colReviewTime": "审核时间",
+    "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页"
+  },
+  "profileReview": {
+    "queueTitle": "资料审核队列",
+    "queueSubtitle": "处理用户昵称变更申请，支持状态切换、分页浏览和审核操作。",
+    "empty": "暂无资料审核任务",
+    "colUser": "用户",
+    "colCurrentName": "当前昵称",
+    "colRequestedName": "请求昵称",
+    "colSubmittedAt": "提交时间",
+    "colMachineResult": "机器审核",
+    "colActions": "操作",
+    "colReviewInfo": "审核信息",
+    "approve": "批准",
+    "reject": "拒绝",
+    "approveSuccess": "资料变更已批准",
+    "approveFailed": "批准失败",
+    "rejectSuccess": "资料变更已拒绝",
+    "rejectFailed": "拒绝失败",
+    "confirmApproveTitle": "确认批准",
+    "confirmApproveDesc": "确认将「{{from}}」改为「{{to}}」？",
+    "confirmRejectTitle": "拒绝变更",
+    "confirmRejectDesc": "请填写拒绝原因。",
+    "rejectPlaceholder": "拒绝原因...",
+    "userId": "用户 ID",
+    "reviewer": "审核人",
+    "comment": "备注",
+    "totalItems": "当前共 {{total}} 条资料审核记录",
+    "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "tabPending": "待审核",
+    "tabApproved": "已通过",
+    "tabRejected": "已拒绝"
   },
   "stars": {
     "title": "我的收藏",
@@ -529,7 +584,10 @@
     "validation": {
       "length": "昵称长度需为 2-32 个字符。",
       "pattern": "昵称只能包含中文、英文、数字、空格、下划线和连字符。"
-    }
+    },
+    "pendingReview": "你的昵称变更为「{{name}}」正在审核中。",
+    "rejected": "你的昵称变更被拒绝。",
+    "rejectedReason": "原因：{{reason}}"
   },
   "security": {
     "title": "安全设置",

@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 class GovernanceNotificationServiceTest {
@@ -78,6 +80,20 @@ class GovernanceNotificationServiceTest {
         List<UserNotification> result = service.listNotifications("user-1");
 
         assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void listNotificationsPage_returnsPageMetadata() {
+        UserNotification unread = new UserNotification("user-1", "REVIEW", "REVIEW_TASK", 99L, "A", "{}", Instant.parse("2026-03-18T00:00:00Z"));
+        when(userNotificationRepository.findByUserIdOrderByCreatedAtDesc("user-1", PageRequest.of(1, 10)))
+                .thenReturn(new PageImpl<>(List.of(unread), PageRequest.of(1, 10), 21));
+
+        var result = service.listNotifications("user-1", 1, 10);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getTotalElements()).isEqualTo(21);
+        assertThat(result.getNumber()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(10);
     }
 
     @Test

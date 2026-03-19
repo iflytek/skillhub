@@ -20,6 +20,7 @@ import type {
   GovernanceInboxItem,
   GovernanceActivityItem,
   GovernanceNotification,
+  PagedResponse,
   ReportDisposition,
   AuthMethod,
   OAuthProvider,
@@ -810,7 +811,7 @@ export const governanceApi = {
     if (params.type) searchParams.set('type', params.type)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: GovernanceInboxItem[]; total: number; page: number; size: number }>(
+    return fetchJson<PagedResponse<GovernanceInboxItem>>(
       `${WEB_API_PREFIX}/governance/inbox?${searchParams.toString()}`,
     )
   },
@@ -819,13 +820,16 @@ export const governanceApi = {
     const searchParams = new URLSearchParams()
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: GovernanceActivityItem[]; total: number; page: number; size: number }>(
+    return fetchJson<PagedResponse<GovernanceActivityItem>>(
       `${WEB_API_PREFIX}/governance/activity?${searchParams.toString()}`,
     )
   },
 
-  async getNotifications(): Promise<GovernanceNotification[]> {
-    return fetchJson<GovernanceNotification[]>(`${WEB_API_PREFIX}/governance/notifications`)
+  async getNotifications(params: { page?: number; size?: number }): Promise<PagedResponse<GovernanceNotification>> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<PagedResponse<GovernanceNotification>>(`${WEB_API_PREFIX}/governance/notifications?${searchParams.toString()}`)
   },
 
   async markNotificationRead(id: number): Promise<GovernanceNotification> {
@@ -844,10 +848,13 @@ export const governanceApi = {
 }
 
 export const meApi = {
-  async getSkills(params?: { page?: number; size?: number }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
+  async getSkills(params?: { page?: number; size?: number; filter?: string }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
     const searchParams = new URLSearchParams()
     searchParams.set('page', String(params?.page ?? 0))
     searchParams.set('size', String(params?.size ?? 10))
+    if (params?.filter) {
+      searchParams.set('filter', params.filter)
+    }
     return fetchJson<{ items: SkillSummary[]; total: number; page: number; size: number }>(`${WEB_API_PREFIX}/me/skills?${searchParams.toString()}`)
   },
 
@@ -877,6 +884,19 @@ export const meApi = {
 }
 
 export const profileApi = {
+  async getProfile(): Promise<{
+    displayName: string
+    avatarUrl: string | null
+    email: string | null
+    pendingChanges: {
+      status: string
+      changes: Record<string, string>
+      reviewComment: string | null
+      createdAt: string
+    } | null
+  }> {
+    return fetchJson('/api/v1/user/profile')
+  },
   async updateProfile(request: { displayName: string }): Promise<{ status: string }> {
     return fetchJson<{ status: string }>('/api/v1/user/profile', {
       method: 'PATCH',
@@ -1010,6 +1030,53 @@ export const adminApi = {
       method: 'POST',
       headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ reason }),
+    })
+  },
+
+  async getProfileReviews(params: { status?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.status) searchParams.set('status', params.status)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    const response = await fetchJson<{
+      items: Array<{
+        id: number
+        userId: string
+        username: string
+        currentDisplayName: string | null
+        requestedDisplayName: string | null
+        status: string
+        machineResult: string | null
+        reviewerId: string | null
+        reviewerName: string | null
+        reviewComment: string | null
+        createdAt: string
+        reviewedAt: string | null
+      }>
+      total: number
+      page: number
+      size: number
+    }>(`/api/v1/admin/profile-reviews?${searchParams}`)
+
+    return {
+      ...response,
+      totalElements: response.total,
+      totalPages: response.size > 0 ? Math.ceil(response.total / response.size) : 0,
+    }
+  },
+
+  async approveProfileReview(id: number): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/profile-reviews/${id}/approve`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async rejectProfileReview(id: number, comment: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/profile-reviews/${id}/reject`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ comment }),
     })
   },
 }

@@ -88,7 +88,7 @@ const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/
 const ReviewsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/reviews'),
   'ReviewsPage',
-  ['SKILL_ADMIN', 'NAMESPACE_ADMIN', 'SUPER_ADMIN'],
+  ['SKILL_ADMIN', 'NAMESPACE_ADMIN', 'USER_ADMIN', 'SUPER_ADMIN'],
 )
 const ReportsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/reports'),

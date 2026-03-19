@@ -7,6 +7,7 @@ import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { limitPreviewItems } from './dashboard-preview'
 
 const DASHBOARD_PREVIEW_LIMIT = 5
@@ -26,7 +27,7 @@ export function DashboardPage() {
   const skillPreview = limitPreviewItems<SkillSummary>(skillPage?.items ?? [], DASHBOARD_PREVIEW_LIMIT)
 
   return (
-    <div className="space-y-8 animate-fade-up">
+    <div className={APP_SHELL_PAGE_CLASS_NAME}>
       <div>
         <h1 className="text-4xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>{t('dashboard.title')}</h1>
         <p className="mt-2 text-lg" style={{ color: 'hsl(var(--text-secondary))' }}>

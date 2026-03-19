@@ -28,6 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
@@ -61,13 +63,14 @@ class GovernanceControllerTest {
     void summary_returnsGovernanceSummary() throws Exception {
         when(rbacService.getUserRoleCodes("admin")).thenReturn(Set.of("SKILL_ADMIN"));
         when(governanceWorkbenchAppService.getSummary("admin", Map.of(), Set.of("SKILL_ADMIN")))
-                .thenReturn(new GovernanceSummaryResponse(3, 2, 1));
+                .thenReturn(new GovernanceSummaryResponse(3, 2, 1, 4));
 
         mockMvc.perform(get("/api/v1/governance/summary").with(auth("admin", Set.of("SKILL_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.pendingReviews").value(3))
                 .andExpect(jsonPath("$.data.pendingPromotions").value(2))
-                .andExpect(jsonPath("$.data.pendingReports").value(1));
+                .andExpect(jsonPath("$.data.pendingReports").value(1))
+                .andExpect(jsonPath("$.data.unreadNotifications").value(4));
     }
 
     @Test
@@ -129,11 +132,13 @@ class GovernanceControllerTest {
                 "Review approved",
                 "{}",
                 Instant.parse("2026-03-18T00:00:00Z"));
-        when(governanceNotificationService.listNotifications("admin")).thenReturn(List.of(notification));
+        when(governanceNotificationService.listNotifications("admin", 0, 20))
+                .thenReturn(new PageImpl<>(List.of(notification), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/v1/governance/notifications").with(auth("admin", Set.of("SKILL_ADMIN"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].category").value("REVIEW"));
+                .andExpect(jsonPath("$.data.items[0].category").value("REVIEW"))
+                .andExpect(jsonPath("$.data.total").value(1));
     }
 
     @Test
@@ -146,7 +151,8 @@ class GovernanceControllerTest {
                 "Review approved",
                 "{}",
                 Instant.parse("2026-03-18T00:00:00Z"));
-        when(governanceNotificationService.listNotifications("admin")).thenReturn(List.of(notification));
+        when(governanceNotificationService.listNotifications("admin", 0, 20))
+                .thenReturn(new PageImpl<>(List.of(notification), PageRequest.of(0, 20), 1));
 
         TimeZone original = TimeZone.getDefault();
         try {
@@ -154,7 +160,7 @@ class GovernanceControllerTest {
                 TimeZone.setDefault(TimeZone.getTimeZone(zoneId));
                 mockMvc.perform(get("/api/v1/governance/notifications").with(auth("admin", Set.of("SKILL_ADMIN"))))
                         .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.data[0].createdAt").value("2026-03-18T00:00:00Z"));
+                        .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-03-18T00:00:00Z"));
             }
         } finally {
             TimeZone.setDefault(original);

@@ -31,6 +31,10 @@ skillhub:
     cleanup:
       read-retention-days: 30
       unread-retention-days: 90
+  profile:
+    moderation:
+      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true}
+      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true}
 
 logging:
   level:

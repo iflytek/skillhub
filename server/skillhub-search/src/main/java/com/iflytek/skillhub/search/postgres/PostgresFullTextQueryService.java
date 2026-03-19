@@ -6,10 +6,12 @@ import com.iflytek.skillhub.search.SearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * PostgreSQL-backed implementation of {@link SearchQueryService}.
@@ -28,7 +29,6 @@ import java.util.regex.Pattern;
  */
 @Service
 public class PostgresFullTextQueryService implements SearchQueryService {
-    private static final Pattern QUERY_TERM_SPLITTER = Pattern.compile("[^\\p{L}\\p{N}_]+");
     private static final int MAX_QUERY_TERMS = 8;
     private static final int SHORT_PREFIX_LENGTH = 2;
     private static final String TITLE_VECTOR_SQL = "to_tsvector('simple', coalesce(title, ''))";
@@ -37,19 +37,21 @@ public class PostgresFullTextQueryService implements SearchQueryService {
     private final EntityManager entityManager;
     private final SkillSearchDocumentJpaRepository searchDocumentRepository;
     private final SearchEmbeddingService searchEmbeddingService;
+    private final SearchTextTokenizer searchTextTokenizer;
     private final boolean semanticEnabled;
     private final double semanticWeight;
     private final int candidateMultiplier;
     private final int maxCandidates;
 
     public PostgresFullTextQueryService(EntityManager entityManager) {
-        this(entityManager, null, null, false, 0.35D, 8, 120);
+        this(entityManager, null, null, new SearchTextTokenizer(), false, 0.35D, 8, 120);
     }
 
     @Autowired
     public PostgresFullTextQueryService(EntityManager entityManager,
                                         SkillSearchDocumentJpaRepository searchDocumentRepository,
                                         SearchEmbeddingService searchEmbeddingService,
+                                        SearchTextTokenizer searchTextTokenizer,
                                         @Value("${skillhub.search.semantic.enabled:true}") boolean semanticEnabled,
                                         @Value("${skillhub.search.semantic.weight:0.35}") double semanticWeight,
                                         @Value("${skillhub.search.semantic.candidate-multiplier:8}") int candidateMultiplier,
@@ -57,6 +59,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         this.entityManager = entityManager;
         this.searchDocumentRepository = searchDocumentRepository;
         this.searchEmbeddingService = searchEmbeddingService;
+        this.searchTextTokenizer = searchTextTokenizer;
         this.semanticEnabled = semanticEnabled;
         this.semanticWeight = semanticWeight;
         this.candidateMultiplier = candidateMultiplier;
@@ -74,7 +77,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         boolean hasKeyword = normalizedKeyword != null;
         boolean hasTsQuery = tsQuery != null;
         boolean useRelevanceOrdering = "relevance".equals(query.sortBy()) && hasKeyword;
-        boolean useShortPrefixTitleSearch = hasTsQuery && normalizedKeyword.length() <= SHORT_PREFIX_LENGTH;
+        boolean useShortPrefixTitleSearch = hasTsQuery && isShortAsciiPrefixSearch(normalizedKeyword);
         boolean useSemanticRerank = semanticEnabled
                 && hasKeyword
                 && "relevance".equals(query.sortBy())
@@ -98,22 +101,33 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 : query.visibilityScope().adminNamespaceIds();
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT skill_id FROM skill_search_document WHERE 1=1 ");
+        sql.append("SELECT d.skill_id ");
+        sql.append("FROM skill_search_document d ");
+        sql.append("JOIN skill s ON s.id = d.skill_id ");
+        sql.append("JOIN namespace n ON n.id = d.namespace_id ");
+        sql.append("WHERE 1=1 ");
 
         // Visibility filtering
-        sql.append("AND (visibility = 'PUBLIC' ");
+        sql.append("AND (d.visibility = 'PUBLIC' ");
         if (query.visibilityScope().userId() != null) {
-            sql.append("OR (visibility = 'NAMESPACE_ONLY' AND namespace_id IN :memberNamespaceIds) ");
-            sql.append("OR (visibility = 'PRIVATE' AND (namespace_id IN :adminNamespaceIds OR owner_id = :userId)) ");
+            sql.append("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespace_id IN :memberNamespaceIds) ");
+            sql.append("OR (d.visibility = 'PRIVATE' AND (d.namespace_id IN :adminNamespaceIds OR d.owner_id = :userId)) ");
         }
         sql.append(") ");
 
         // Status filtering
-        sql.append("AND status = 'ACTIVE' ");
+        sql.append("AND d.status = 'ACTIVE' ");
+        sql.append("AND s.status = 'ACTIVE' ");
+        sql.append("AND s.hidden = FALSE ");
+        sql.append("AND (n.status <> 'ARCHIVED' ");
+        if (query.visibilityScope().userId() != null) {
+            sql.append("OR d.namespace_id IN :memberNamespaceIds ");
+        }
+        sql.append(") ");
 
         // Namespace filtering
         if (query.namespaceId() != null) {
-            sql.append("AND namespace_id = :namespaceId ");
+            sql.append("AND d.namespace_id = :namespaceId ");
         }
 
         // Full-text search
@@ -123,7 +137,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 if (useShortPrefixTitleSearch) {
                     sql.append(TITLE_VECTOR_SQL).append(" @@ to_tsquery('simple', :tsQuery) ");
                 } else {
-                    sql.append("search_vector @@ to_tsquery('simple', :tsQuery) ");
+                    sql.append("d.search_vector @@ to_tsquery('simple', :tsQuery) ");
                 }
                 sql.append(" OR ");
             }
@@ -133,13 +147,11 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         // Sorting
         if ("downloads".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT download_count FROM skill WHERE id = skill_id) DESC, ");
-            sql.append("(SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
+            sql.append("ORDER BY s.download_count DESC, s.updated_at DESC, d.skill_id DESC ");
         } else if ("rating".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT rating_avg FROM skill WHERE id = skill_id) DESC, ");
-            sql.append("(SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
+            sql.append("ORDER BY s.rating_avg DESC, s.updated_at DESC, d.skill_id DESC ");
         } else if ("newest".equals(query.sortBy())) {
-            sql.append("ORDER BY (SELECT updated_at FROM skill WHERE id = skill_id) DESC, skill_id DESC ");
+            sql.append("ORDER BY s.updated_at DESC, d.skill_id DESC ");
         } else if (useRelevanceOrdering) {
             sql.append("ORDER BY CASE ");
             sql.append("WHEN ").append(TITLE_SQL).append(" = :titleExact THEN 4 ");
@@ -148,14 +160,14 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("ELSE 1 END DESC, ");
             if (useShortPrefixTitleSearch) {
                 sql.append("ts_rank_cd(").append(TITLE_VECTOR_SQL)
-                        .append(", to_tsquery('simple', :tsQuery)) DESC, updated_at DESC, skill_id DESC ");
+                        .append(", to_tsquery('simple', :tsQuery)) DESC, d.updated_at DESC, d.skill_id DESC ");
             } else if (hasTsQuery) {
-                sql.append("ts_rank_cd(search_vector, to_tsquery('simple', :tsQuery)) DESC, updated_at DESC, skill_id DESC ");
+                sql.append("ts_rank_cd(d.search_vector, to_tsquery('simple', :tsQuery)) DESC, d.updated_at DESC, d.skill_id DESC ");
             } else {
-                sql.append("updated_at DESC, skill_id DESC ");
+                sql.append("d.updated_at DESC, d.skill_id DESC ");
             }
         } else {
-            sql.append("ORDER BY updated_at DESC, skill_id DESC ");
+            sql.append("ORDER BY s.updated_at DESC, d.skill_id DESC ");
         }
 
         // Pagination
@@ -178,10 +190,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 nativeQuery.setParameter("tsQuery", tsQuery);
             }
             if (useRelevanceOrdering) {
-                nativeQuery.setParameter("titleExact", normalizedKeyword.toLowerCase());
-                nativeQuery.setParameter("titlePrefix", normalizedKeyword.toLowerCase() + "%");
+                nativeQuery.setParameter("titleExact", normalizedKeyword.toLowerCase(Locale.ROOT));
+                nativeQuery.setParameter("titlePrefix", normalizedKeyword.toLowerCase(Locale.ROOT) + "%");
             }
-            nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
+            nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase(Locale.ROOT) + "%");
         }
 
         nativeQuery.setParameter("limit", sqlLimit);
@@ -193,7 +205,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 .toList();
 
         // Count total
-        String countSql = sql.toString().replaceFirst("SELECT skill_id", "SELECT COUNT(*)");
+        String countSql = sql.toString().replaceFirst("SELECT d\\.skill_id", "SELECT COUNT(*)");
         int orderByIndex = countSql.indexOf("ORDER BY");
         if (orderByIndex >= 0) {
             countSql = countSql.substring(0, orderByIndex);
@@ -219,7 +231,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             if (hasTsQuery) {
                 countQuery.setParameter("tsQuery", tsQuery);
             }
-            countQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
+            countQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase(Locale.ROOT) + "%");
         }
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
@@ -282,7 +294,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
-        return keyword.trim().toLowerCase();
+        return keyword.trim().toLowerCase(Locale.ROOT);
     }
 
     private String buildPrefixTsQuery(String keyword) {
@@ -290,10 +302,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             return null;
         }
 
-        List<String> terms = QUERY_TERM_SPLITTER.splitAsStream(keyword.toLowerCase())
-                .map(String::trim)
-                .filter(term -> !term.isBlank())
-                .distinct()
+        List<String> terms = searchTextTokenizer.tokenizeForQuery(keyword).stream()
                 .limit(MAX_QUERY_TERMS)
                 .toList();
 
@@ -310,13 +319,25 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         }
 
         return tsQueryTerms.stream()
-                .map(term -> term + ":*")
+                .map(term -> usePrefixMatch(term) ? term + ":*" : term)
                 .reduce((left, right) -> left + " & " + right)
                 .orElse(null);
     }
 
     private boolean isTsQueryCompatibleTerm(String term) {
-        return term.chars().anyMatch(ch -> Character.isLetter(ch) || ch == '_');
+        return term.chars().anyMatch(ch -> Character.isLetter(ch) || Character.isIdeographic(ch) || ch == '_');
+    }
+
+    private boolean usePrefixMatch(String term) {
+        return term.chars().allMatch(ch -> ch < 128) && term.chars().anyMatch(Character::isLetter);
+    }
+
+    private boolean isShortAsciiPrefixSearch(String keyword) {
+        if (keyword == null || keyword.length() > SHORT_PREFIX_LENGTH) {
+            return false;
+        }
+        List<String> terms = searchTextTokenizer.tokenizeForQuery(keyword);
+        return !terms.isEmpty() && terms.stream().allMatch(this::usePrefixMatch);
     }
 
     private record RankedSkill(Long skillId, double score) {

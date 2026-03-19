@@ -322,8 +322,10 @@ SkillHub works as a skill registry backend for several agent platforms. Point an
 
 ```bash
 # Configure registry URL
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
+
+# Authenticate once if needed
+clawhub login --token YOUR_API_TOKEN
 
 # Search and install skills
 npx clawhub search email

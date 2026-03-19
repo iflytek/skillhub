@@ -213,6 +213,9 @@ public class ReviewService {
         skillVersionRepository.save(skillVersion);
 
         skill.setLatestVersionId(skillVersion.getId());
+        if (skillVersion.getRequestedVisibility() != null) {
+            skill.setVisibility(skillVersion.getRequestedVisibility());
+        }
         applyPublishedMetadata(skill, skillVersion);
         skill.setUpdatedBy(reviewerId);
         skillRepository.save(skill);

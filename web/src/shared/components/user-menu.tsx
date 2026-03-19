@@ -32,6 +32,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
   const isAuditor = hasRole('AUDITOR') || hasRole('SUPER_ADMIN')
+  const canAccessReviewCenter = isReviewer || isUserAdmin
   const isLocalAccount = !user.oauthProvider
   const open = isHovered || isClickOpen
 
@@ -153,7 +154,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             <Link to="/dashboard/stars" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.stars')}
             </Link>
-            {isReviewer ? (
+            {canAccessReviewCenter ? (
               <Link to="/dashboard/reviews" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.reviews')}
               </Link>

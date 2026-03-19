@@ -1,10 +1,12 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 import { NotificationBell } from '@/features/notification/notification-bell'
+import { getAppHeaderClassName } from './layout-header-style'
+import { getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
 
 /**
  * Application shell shared by all routed pages.
@@ -14,8 +16,29 @@ import { NotificationBell } from '@/features/notification/notification-bell'
  */
 export function Layout() {
   const { t } = useTranslation()
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const { pathname, resolvedPathname } = useRouterState({
+    select: (s) => ({
+      pathname: s.location.pathname,
+      resolvedPathname: s.resolvedLocation?.pathname,
+    }),
+  })
   const { user, isLoading } = useAuth()
+  const [isHeaderElevated, setIsHeaderElevated] = useState(false)
+  const contentLayoutPathname = resolveAppMainContentPathname(pathname, resolvedPathname)
+  const mainContentLayout = getAppMainContentLayout(contentLayoutPathname)
+
+  useEffect(() => {
+    const updateHeaderElevation = () => {
+      setIsHeaderElevated(window.scrollY > 0)
+    }
+
+    updateHeaderElevation()
+    window.addEventListener('scroll', updateHeaderElevation, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', updateHeaderElevation)
+    }
+  }, [])
 
   const navItems: Array<{
     label: string
@@ -37,7 +60,7 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-x-hidden" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+    <div className="min-h-screen flex flex-col relative overflow-x-clip" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
       {/* Decorative gradient orb */}
       <div
         className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90 pointer-events-none z-0"
@@ -48,7 +71,7 @@ export function Layout() {
       />
 
       {/* Header */}
-      <header className="relative z-50 flex items-center justify-between px-6 py-4 md:px-12 bg-white border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+      <header className={getAppHeaderClassName(isHeaderElevated)} style={{ borderColor: 'hsl(var(--border))' }}>
         <Link to="/" className="text-xl font-semibold tracking-tight text-brand-gradient">
           SkillHub
         </Link>
@@ -65,7 +88,7 @@ export function Layout() {
                 className={
                   active
                     ? 'px-4 py-1.5 rounded-full bg-brand-gradient text-white shadow-sm'
-                    : 'hover:opacity-80 transition-opacity'
+                    : 'hover:opacity-80 transition-opacity duration-150'
                 }
               >
                 {item.label}
@@ -92,7 +115,7 @@ export function Layout() {
       </header>
 
       {/* Main content */}
-      <main className={`flex-1 relative z-10${pathname === '/' ? '' : ' px-6 md:px-12 py-10'}`}>
+      <main className={mainContentLayout.mainClassName}>
         <Suspense
           fallback={
             <div className="space-y-4 animate-fade-up">
@@ -102,7 +125,9 @@ export function Layout() {
             </div>
           }
         >
-          <Outlet />
+          <div className={mainContentLayout.contentClassName}>
+            <Outlet />
+          </div>
         </Suspense>
       </main>
 

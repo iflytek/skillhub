@@ -4,15 +4,17 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Pending profile changes awaiting human review.
- * Null when no PENDING request exists for the user.
+ * Most recent profile change request status for the current user.
+ * Null when no active (PENDING or recently REJECTED) request exists.
  *
- * @param status    always "PENDING" when present
- * @param changes   map of field name → requested new value
- * @param createdAt when the change request was submitted
+ * @param status        request status: PENDING or REJECTED
+ * @param changes       map of field name → requested new value
+ * @param reviewComment rejection reason (null when PENDING or approved)
+ * @param createdAt     when the change request was submitted
  */
 public record PendingChangesResponse(
         String status,
         Map<String, String> changes,
+        String reviewComment,
         Instant createdAt
 ) {}

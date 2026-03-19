@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/features/auth/use-auth'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/components/empty-state'
@@ -12,6 +13,7 @@ import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPen
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
+import { getMySkillEmptyStateKey, getMySkillFilters, type MySkillFilter } from './my-skill-filters'
 
 const PAGE_SIZE = 10
 
@@ -34,14 +36,18 @@ function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending'
 export function MySkillsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
   const [page, setPage] = useState(0)
+  const [filter, setFilter] = useState<MySkillFilter>('ALL')
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
-  const { data: skillPage, isLoading } = useMySkills({ page, size: PAGE_SIZE })
+  const { data: skillPage, isLoading } = useMySkills({ page, size: PAGE_SIZE, filter: filter === 'ALL' ? undefined : filter })
   const skills = skillPage?.items ?? []
   const totalPages = skillPage ? Math.max(Math.ceil(skillPage.total / skillPage.size), 1) : 1
+  const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
+  const emptyStateKey = getMySkillEmptyStateKey(filter)
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const withdrawMutation = useWithdrawSkillReview()
@@ -55,6 +61,9 @@ export function MySkillsPage() {
   }
 
   const resolveStatusLabel = (status?: string) => {
+    if (status === 'HIDDEN') {
+      return t('mySkills.statusHidden')
+    }
     if (status === 'ARCHIVED') {
       return t('mySkills.statusArchived')
     }
@@ -71,6 +80,9 @@ export function MySkillsPage() {
   }
 
   const resolveStatusClassName = (status?: string) => {
+    if (status === 'HIDDEN') {
+      return 'status-pill status-pill--archived'
+    }
     if (status === 'ARCHIVED') {
       return 'status-pill status-pill--archived'
     }
@@ -200,6 +212,23 @@ export function MySkillsPage() {
         )}
       />
 
+      <div className="flex flex-wrap gap-2">
+        {availableFilters.map((option) => (
+          <Button
+            key={option}
+            type="button"
+            size="sm"
+            variant={filter === option ? 'default' : 'outline'}
+            onClick={() => {
+              setFilter(option)
+              setPage(0)
+            }}
+          >
+            {t(`mySkills.filters.${option}`)}
+          </Button>
+        ))}
+      </div>
+
       {skillPage && skillPage.total > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-4">
@@ -235,9 +264,9 @@ export function MySkillsPage() {
                             </svg>
                             {formatCompactCount(skill.downloadCount)}
                           </span>
-                          {skill.status ? (
-                            <span className={resolveStatusClassName(skill.status)}>
-                              {resolveStatusLabel(skill.status)}
+                          {skill.status || filter === 'HIDDEN' ? (
+                            <span className={resolveStatusClassName(filter === 'HIDDEN' ? 'HIDDEN' : skill.status)}>
+                              {resolveStatusLabel(filter === 'HIDDEN' ? 'HIDDEN' : skill.status)}
                             </span>
                           ) : null}
                           {headlineVersion?.status ? (
@@ -338,8 +367,8 @@ export function MySkillsPage() {
         </>
       ) : (
         <EmptyState
-          title={t('mySkills.emptyTitle')}
-          description={t('mySkills.emptyDescription')}
+          title={t(emptyStateKey.title)}
+          description={t(emptyStateKey.description)}
           action={
             <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
               {t('mySkills.publishSkill')}

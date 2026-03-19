@@ -5,6 +5,8 @@ import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,19 @@ public class GovernanceNotificationService {
     @Transactional(readOnly = true)
     public List<UserNotification> listNotifications(String userId) {
         return userNotificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserNotification> listNotifications(String userId, int page, int size) {
+        return userNotificationRepository.findByUserIdOrderByCreatedAtDesc(
+                userId,
+                PageRequest.of(page, size)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public long countUnreadNotifications(String userId) {
+        return userNotificationRepository.countByUserIdAndStatus(userId, UserNotificationStatus.UNREAD);
     }
 
     @Transactional

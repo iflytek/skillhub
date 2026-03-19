@@ -295,6 +295,14 @@
   "mySkills": {
     "title": "My Skills",
     "subtitle": "Manage your published skills",
+    "filters": {
+      "ALL": "All",
+      "PENDING_REVIEW": "Pending Review",
+      "PUBLISHED": "Published",
+      "REJECTED": "Rejected",
+      "ARCHIVED": "Archived",
+      "HIDDEN": "Hidden"
+    },
     "publishNew": "Publish New Skill",
     "archive": "Archive",
     "unarchive": "Restore",
@@ -302,6 +310,7 @@
     "statusPendingReview": "Pending Review",
     "statusPublished": "Published",
     "statusRejected": "Rejected",
+    "statusHidden": "Hidden",
     "archiveConfirmTitle": "Archive skill",
     "archiveConfirmDescription": "After archiving, regular users will no longer be able to view or download \"{{skill}}\". Continue?",
     "unarchiveConfirmTitle": "Restore skill",
@@ -330,6 +339,14 @@
     "promotionErrorTitle": "Failed to submit promotion request",
     "emptyTitle": "No skills yet",
     "emptyDescription": "Start publishing your first skill",
+    "emptyFilteredTitle": "No skills match this filter",
+    "emptyFilteredDescription": {
+      "PENDING_REVIEW": "There are no skills waiting for review right now.",
+      "PUBLISHED": "There are no published skills right now.",
+      "REJECTED": "There are no rejected skills right now.",
+      "ARCHIVED": "There are no archived skills right now.",
+      "HIDDEN": "There are no hidden skills right now."
+    },
     "publishSkill": "Publish Skill"
   },
   "myNamespaces": {
@@ -402,7 +419,9 @@
   },
   "reviews": {
     "title": "Review Center",
-    "subtitle": "Manage skill version reviews",
+    "subtitle": "Manage platform review tasks",
+    "typeSkill": "Skill Reviews",
+    "typeProfile": "Profile Reviews",
     "tabPending": "Pending",
     "tabApproved": "Approved",
     "tabRejected": "Rejected",
@@ -412,7 +431,43 @@
     "colSubmitter": "Submitted By",
     "colSubmitTime": "Submitted At",
     "colReviewer": "Reviewed By",
-    "colReviewTime": "Reviewed At"
+    "colReviewTime": "Reviewed At",
+    "pageSummary": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next"
+  },
+  "profileReview": {
+    "queueTitle": "Profile Review Queue",
+    "queueSubtitle": "Process display-name change requests with status filters, pagination, and review actions.",
+    "empty": "No profile review tasks",
+    "colUser": "User",
+    "colCurrentName": "Current Name",
+    "colRequestedName": "Requested Name",
+    "colSubmittedAt": "Submitted At",
+    "colMachineResult": "Machine Review",
+    "colActions": "Actions",
+    "colReviewInfo": "Review Info",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveSuccess": "Profile change approved",
+    "approveFailed": "Failed to approve",
+    "rejectSuccess": "Profile change rejected",
+    "rejectFailed": "Failed to reject",
+    "confirmApproveTitle": "Confirm Approval",
+    "confirmApproveDesc": "Approve changing \"{{from}}\" to \"{{to}}\"?",
+    "confirmRejectTitle": "Reject Change",
+    "confirmRejectDesc": "Please provide a reason for rejection.",
+    "rejectPlaceholder": "Rejection reason...",
+    "userId": "User ID",
+    "reviewer": "Reviewer",
+    "comment": "Comment",
+    "totalItems": "{{total}} profile review records in total",
+    "pageSummary": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabRejected": "Rejected"
   },
   "stars": {
     "title": "My Stars",
@@ -529,7 +584,10 @@
     "validation": {
       "length": "Display name must be 2-32 characters.",
       "pattern": "Display name can only contain Chinese, English, digits, spaces, underscores, and hyphens."
-    }
+    },
+    "pendingReview": "Your display name change to \"{{name}}\" is pending review.",
+    "rejected": "Your display name change was rejected.",
+    "rejectedReason": "Reason: {{reason}}"
   },
   "security": {
     "title": "Security Settings",
