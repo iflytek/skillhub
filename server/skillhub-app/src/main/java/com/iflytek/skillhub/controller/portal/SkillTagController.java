@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Endpoints for reading and mutating named tags that point to skill versions.
+ */
 @RestController
 @RequestMapping({
         "/api/v1/skills/{namespace}/{slug}/tags",

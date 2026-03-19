@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Portal endpoints that expose governance dashboards, inbox items, activity,
+ * and user-facing governance notifications.
+ */
 @RestController
 @RequestMapping({"/api/v1/governance", "/api/web/governance"})
 public class GovernanceController extends BaseApiController {

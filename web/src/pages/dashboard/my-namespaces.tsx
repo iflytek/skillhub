@@ -18,6 +18,11 @@ type PendingNamespaceAction =
   | { action: 'archive'; slug: string; name: string }
   | { action: 'restore'; slug: string; name: string }
 
+/**
+ * Dashboard page for namespaces the current user can manage or review. It owns
+ * namespace lifecycle actions because each action combines permissions, copy,
+ * and optimistic follow-up behavior that are specific to this route.
+ */
 export function MyNamespacesPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -77,6 +82,10 @@ export function MyNamespacesPage() {
     return t('myNamespaces.activeHint')
   }
 
+  /**
+   * Centralizes dialog copy so lifecycle operations can reuse one confirmation
+   * component without scattering user-facing strings across event handlers.
+   */
   const resolveActionCopy = (action: PendingNamespaceAction['action'], name: string) => {
     if (action === 'freeze') {
       return {

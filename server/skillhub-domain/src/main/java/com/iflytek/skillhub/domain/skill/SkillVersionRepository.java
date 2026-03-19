@@ -3,6 +3,9 @@ package com.iflytek.skillhub.domain.skill;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Domain repository contract for skill version history and publication-state queries.
+ */
 public interface SkillVersionRepository {
     Optional<SkillVersion> findById(Long id);
     List<SkillVersion> findByIdIn(List<Long> ids);

@@ -13,6 +13,10 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Read-only application service that queries audit logs with dynamic filtering
+ * tailored to administration screens.
+ */
 @Service
 public class AdminAuditLogAppService {
 

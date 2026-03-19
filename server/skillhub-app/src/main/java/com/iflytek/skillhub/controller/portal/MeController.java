@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Portal endpoints scoped to the current authenticated user, such as owned and
+ * starred skill listings.
+ */
 @RestController
 @RequestMapping({"/api/v1/me", "/api/web/me"})
 public class MeController extends BaseApiController {

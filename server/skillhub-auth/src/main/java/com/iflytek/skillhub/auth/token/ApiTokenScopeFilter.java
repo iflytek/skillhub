@@ -17,6 +17,9 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Enforces fine-grained API token scopes after token authentication has established the principal.
+ */
 @Component
 public class ApiTokenScopeFilter extends OncePerRequestFilter {
 

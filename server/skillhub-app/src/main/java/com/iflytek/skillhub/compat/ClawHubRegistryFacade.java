@@ -22,6 +22,10 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
+/**
+ * Facade that assembles registry-style compatibility responses from the platform's canonical search
+ * and skill services.
+ */
 @Component
 public class ClawHubRegistryFacade {
 

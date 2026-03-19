@@ -4,6 +4,12 @@ import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, promotionApi
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
 import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
+/**
+ * Shared TanStack Query hooks for skill, namespace, and related dashboard data.
+ *
+ * This file currently acts as a broad query gateway for several features, centralizing cache keys,
+ * backend fetchers, and invalidation rules used throughout the app.
+ */
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
 
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
@@ -103,7 +109,8 @@ async function publishSkill(params: { namespace: string; file: File; visibility:
   })
 }
 
-// Hooks
+// Query hooks stay close to the low-level fetchers so cache keys and invalidation rules remain
+// consistent across pages and feature wrappers.
 export function useSearchSkills(params: SearchParams) {
   return useQuery({
     queryKey: ['skills', 'search', params],

@@ -12,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
+/**
+ * JPA-backed repository for promotion requests, including optimistic status updates.
+ */
 @Repository
 public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRequest, Long>,
                                                        PromotionRequestRepository {

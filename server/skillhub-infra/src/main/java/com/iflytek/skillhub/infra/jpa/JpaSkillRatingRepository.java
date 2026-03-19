@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
+/**
+ * JPA-backed repository for per-user skill ratings and their derived aggregates.
+ */
 @Repository
 public interface JpaSkillRatingRepository extends JpaRepository<SkillRating, Long>, SkillRatingRepository {
     Optional<SkillRating> findBySkillIdAndUserId(Long skillId, String userId);

@@ -21,6 +21,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles username-and-password registration and login for first-party local
+ * accounts.
+ */
 @Service
 public class LocalAuthService {
 
@@ -57,6 +61,10 @@ public class LocalAuthService {
         this.clock = clock;
     }
 
+    /**
+     * Registers a new local user, creates the credential record, and ensures
+     * the user is enrolled in the global namespace.
+     */
     @Transactional
     public PlatformPrincipal register(String username, String password, String email) {
         String normalizedUsername = normalizeUsername(username);
@@ -96,6 +104,10 @@ public class LocalAuthService {
         return buildPrincipal(user);
     }
 
+    /**
+     * Authenticates a local account and returns the principal snapshot used to
+     * establish a web session.
+     */
     @Transactional
     public PlatformPrincipal login(String username, String password) {
         String normalizedUsername = normalizeUsername(username);
@@ -124,6 +136,9 @@ public class LocalAuthService {
         return buildPrincipal(user);
     }
 
+    /**
+     * Changes the stored password for an already authenticated local account.
+     */
     @Transactional
     public void changePassword(String userId, String currentPassword, String newPassword) {
         LocalCredential credential = credentialRepository.findByUserId(userId)

@@ -11,6 +11,12 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Implements the device authorization flow used by CLI-style clients.
+ *
+ * <p>State is stored in Redis so the browser authorization step and token
+ * polling step can rendezvous without holding server-side session state.
+ */
 @Service
 public class DeviceAuthService {
 
@@ -38,6 +44,10 @@ public class DeviceAuthService {
         this.verificationUri = verificationUri;
     }
 
+    /**
+     * Starts a new device flow and returns both the polling token and the
+     * user-facing verification code.
+     */
     public DeviceCodeResponse generateDeviceCode() {
         String deviceCode = generateRandomDeviceCode();
         String userCode = generateUserCode();
@@ -52,6 +62,9 @@ public class DeviceAuthService {
         return new DeviceCodeResponse(deviceCode, userCode, verificationUri, EXPIRES_IN_SECONDS, POLL_INTERVAL_SECONDS);
     }
 
+    /**
+     * Marks a user code as authorized by a concrete authenticated user.
+     */
     public void authorizeDeviceCode(String userCode, String userId) {
         String deviceCode = (String) redisTemplate.opsForValue().get(USER_CODE_PREFIX + userCode);
         if (deviceCode == null) {
@@ -79,6 +92,10 @@ public class DeviceAuthService {
         }
     }
 
+    /**
+     * Polls the device code and either returns a pending response or redeems it
+     * into an API token exactly once.
+     */
     public DeviceTokenResponse pollToken(String deviceCode) {
         DeviceCodeData data = (DeviceCodeData) redisTemplate.opsForValue().get(DEVICE_CODE_PREFIX + deviceCode);
 

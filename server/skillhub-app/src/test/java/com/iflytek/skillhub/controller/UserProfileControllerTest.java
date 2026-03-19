@@ -3,8 +3,9 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
-import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeRequest;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeRequestRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeStatus;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -80,6 +81,8 @@ class UserProfileControllerTest {
     @MockBean
     private PlatformSessionService platformSessionService;
 
+    @MockBean
+    private AuditLogService auditLogService;
     // -- Helper --
 
     private PlatformPrincipal testPrincipal() {
@@ -132,6 +135,24 @@ class UserProfileControllerTest {
                 .andExpect(jsonPath("$.data.status").value("APPLIED"));
     }
 
+    @Test
+    void updateProfile_displayNameWithSpaces_shouldReturn200() throws Exception {
+        var principal = testPrincipal();
+        var user = new UserAccount("user-1", "OldName", "user@example.com", "https://example.com/avatar.png");
+
+        given(userAccountRepository.findById("user-1")).willReturn(Optional.of(user));
+        given(namespaceMemberRepository.findByUserId("user-1")).willReturn(List.of());
+        given(userRoleBindingRepository.findByUserId("user-1")).willReturn(List.of());
+
+        mockMvc.perform(patch("/api/v1/user/profile")
+                        .with(authentication(testAuth(principal)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"New Name\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.status").value("APPLIED"));
+    }
     // ===== AC-E-001: Display name too short =====
 
     @Test
@@ -241,7 +262,6 @@ class UserProfileControllerTest {
                 .andExpect(jsonPath("$.data.pendingChanges.status").value("PENDING"))
                 .andExpect(jsonPath("$.data.pendingChanges.changes.displayName").value("NewName"));
     }
-
     // ===== AC-S-003: XSS attempt =====
 
     @Test

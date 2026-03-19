@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { reportApi } from '@/api/client'
 import type { ReportDisposition } from '@/api/types'
 
+/**
+ * Loads reported skills for the requested moderation status.
+ */
 export function useSkillReports(status: string) {
   return useQuery({
     queryKey: ['skill-reports', status],
@@ -12,12 +15,19 @@ export function useSkillReports(status: string) {
   })
 }
 
+/**
+ * Submits a report for the current skill detail page.
+ */
 export function useSubmitSkillReport(namespace: string, slug: string) {
   return useMutation({
     mutationFn: (request: { reason: string; details?: string }) => reportApi.submitSkillReport(namespace, slug, request),
   })
 }
 
+/**
+ * Resolves a report and refreshes both report lists and governance widgets that
+ * derive unread or pending counts from the same backend sources.
+ */
 export function useResolveSkillReport() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -30,6 +40,9 @@ export function useResolveSkillReport() {
   })
 }
 
+/**
+ * Dismisses a report without taking the heavier resolution path.
+ */
 export function useDismissSkillReport() {
   const queryClient = useQueryClient()
   return useMutation({

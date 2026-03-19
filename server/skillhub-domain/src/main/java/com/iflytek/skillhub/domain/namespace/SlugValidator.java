@@ -5,6 +5,9 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+/**
+ * Validates and normalizes namespace-style slugs used across public identifiers.
+ */
 public class SlugValidator {
 
     private static final int MIN_LENGTH = 2;

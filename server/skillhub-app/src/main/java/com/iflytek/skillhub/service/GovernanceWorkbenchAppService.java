@@ -30,6 +30,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+/**
+ * Application-facing aggregation service for the governance workbench.
+ *
+ * <p>It joins review, promotion, report, namespace, and audit sources into the
+ * composite read models consumed by governance screens.
+ */
 @Service
 public class GovernanceWorkbenchAppService {
 
@@ -75,6 +81,10 @@ public class GovernanceWorkbenchAppService {
         this.adminAuditLogAppService = adminAuditLogAppService;
     }
 
+    /**
+     * Returns top-level counts for the governance dashboard, scoped by the
+     * caller's namespace and platform roles.
+     */
     public GovernanceSummaryResponse getSummary(String userId,
                                                 Map<Long, NamespaceRole> namespaceRoles,
                                                 Set<String> platformRoles) {
@@ -89,6 +99,10 @@ public class GovernanceWorkbenchAppService {
         );
     }
 
+    /**
+     * Builds the governance inbox by combining pending reviews, promotions, and
+     * reports that the caller is allowed to see.
+     */
     public PageResponse<GovernanceInboxItemResponse> listInbox(String userId,
                                                                Map<Long, NamespaceRole> namespaceRoles,
                                                                Set<String> platformRoles,
@@ -121,6 +135,10 @@ public class GovernanceWorkbenchAppService {
         return new PageResponse<>(items.subList(fromIndex, toIndex), items.size(), page, size);
     }
 
+    /**
+     * Returns audit-derived governance activity entries for callers with
+     * platform-wide visibility.
+     */
     public PageResponse<GovernanceActivityItemResponse> listActivity(Set<String> platformRoles, int page, int size) {
         if (!canReadActivity(platformRoles)) {
             return new PageResponse<>(List.of(), 0, page, size);

@@ -27,6 +27,10 @@ interface CreateTokenDialogProps {
 
 const MAX_TOKEN_NAME_LENGTH = 64
 
+/**
+ * Handles API token creation, including duplicate-name checks, expiration
+ * selection, and the one-time reveal of the raw token value after creation.
+ */
 export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenDialogProps) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -114,6 +118,8 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
   const minDateTime = toLocalDateTimeInputValue(new Date())
 
   return (
+    // Reopening the dialog resets transient creation state because the raw token
+    // is only meant to be shown once, immediately after a successful create call.
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (nextOpen) {
         setCreatedToken(null)

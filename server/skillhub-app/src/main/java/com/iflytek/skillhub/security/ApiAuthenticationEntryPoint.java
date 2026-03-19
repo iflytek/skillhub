@@ -15,6 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * Converts unauthenticated API access attempts into a consistent JSON 401 response.
+ */
 @Component
 public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
 

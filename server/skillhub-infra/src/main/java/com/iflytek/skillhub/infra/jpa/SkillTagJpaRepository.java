@@ -8,6 +8,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * JPA-backed repository for tags associated with a skill.
+ */
 @Repository
 public interface SkillTagJpaRepository extends JpaRepository<SkillTag, Long>, SkillTagRepository {
     Optional<SkillTag> findBySkillIdAndTagName(Long skillId, String tagName);

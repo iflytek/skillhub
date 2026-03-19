@@ -23,6 +23,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles governance-oriented mutations on skills and versions, including
+ * hiding, archiving, restoring, and destructive cleanup.
+ */
 @Service
 public class SkillGovernanceService {
 
@@ -157,6 +161,11 @@ public class SkillGovernanceService {
         objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
         skillFileRepository.deleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
+        if (version.getId().equals(skill.getLatestVersionId())) {
+            skill.setLatestVersionId(findLatestPublishedVersionId(skill.getId()));
+            skill.setUpdatedBy(actorUserId);
+            skillRepository.save(skill);
+        }
         auditLogService.record(
                 actorUserId,
                 "DELETE_SKILL_VERSION",

@@ -6,6 +6,10 @@ interface UserRating {
   rated: boolean
 }
 
+/**
+ * Reads the current user's rating. Unauthenticated users are normalized to an
+ * unrated state so the rating widget can stay renderable without a hard error.
+ */
 async function getUserRating(skillId: number): Promise<UserRating> {
   try {
     return await fetchJson<UserRating>(`${WEB_API_PREFIX}/skills/${skillId}/rating`)
@@ -17,6 +21,9 @@ async function getUserRating(skillId: number): Promise<UserRating> {
   }
 }
 
+/**
+ * Submits or updates the current user's score for a skill.
+ */
 async function rateSkill(skillId: number, rating: number): Promise<void> {
   await fetchJson<void>(`${WEB_API_PREFIX}/skills/${skillId}/rating`, {
     method: 'PUT',
@@ -27,6 +34,9 @@ async function rateSkill(skillId: number, rating: number): Promise<void> {
   })
 }
 
+/**
+ * Exposes the user-specific rating query for one skill.
+ */
 export function useUserRating(skillId: number) {
   return useQuery({
     queryKey: ['skills', skillId, 'rating'],
@@ -35,6 +45,10 @@ export function useUserRating(skillId: number) {
   })
 }
 
+/**
+ * Updates the current user's rating and refreshes both the focused rating query
+ * and broader skill queries that may embed aggregate rating values.
+ */
 export function useRate(skillId: number) {
   const queryClient = useQueryClient()
 

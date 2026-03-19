@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Registers MVC interceptors related to request rate limiting.
+ */
 @Configuration
 public class WebMvcRateLimitConfig implements WebMvcConfigurer {
 

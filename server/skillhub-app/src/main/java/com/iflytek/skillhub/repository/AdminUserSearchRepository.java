@@ -18,6 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Custom query repository that builds pageable admin-user search results with optional filters.
+ */
 @Repository
 public class AdminUserSearchRepository {
 

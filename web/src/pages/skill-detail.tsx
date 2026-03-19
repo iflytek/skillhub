@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
@@ -47,6 +47,12 @@ import {
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
 
+/**
+ * Detail page for one skill and its version history.
+ *
+ * This page coordinates documentation rendering, file browsing, downloads, lifecycle actions,
+ * promotion/report dialogs, and social interactions for the selected skill.
+ */
 function suggestNextVersion(version: string) {
   const semverMatch = version.match(/^(\d+)\.(\d+)\.(\d+)$/)
   if (semverMatch) {
@@ -68,19 +74,6 @@ function parseMetadataJson(parsed?: string) {
   }
 }
 
-function getAuthorMonogram(name?: string) {
-  if (!name) {
-    return '?'
-  }
-
-  const trimmed = name.trim()
-  if (!trimmed) {
-    return '?'
-  }
-
-  return trimmed[0]!.toUpperCase()
-}
-
 function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending' | 'promotion.already_promoted' | null {
   if (error.serverMessageKey === 'promotion.duplicate_pending') {
     return 'promotion.duplicate_pending'
@@ -100,6 +93,7 @@ export function SkillDetailPage() {
   const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetails, setReportDetails] = useState('')
+  const [hasReported, setHasReported] = useState(false)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
   const [promotionConfirmOpen, setPromotionConfirmOpen] = useState(false)
@@ -139,12 +133,15 @@ export function SkillDetailPage() {
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
   const hasPendingOwnerPreview = ownerPreviewVersion?.status === 'PENDING_REVIEW'
+  const hasRejectedVersion = versions?.some((v) => v.status === 'REJECTED') ?? false
   const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
+    // Recompute collapse rules whenever rendered documentation height changes so the page can keep
+    // a readable summary section on different screen sizes.
     if (!readme || typeof window === 'undefined') {
       setIsOverviewCollapsible(false)
       setIsOverviewExpanded(false)
@@ -201,6 +198,8 @@ export function SkillDetailPage() {
   }
 
   const refreshSkill = () => {
+    // Several actions mutate derived lifecycle state; refresh the shared skill detail and common
+    // list caches together to keep the rest of the app consistent.
     queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
     queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug, 'versions'] })
     queryClient.invalidateQueries({ queryKey: ['skills'] })
@@ -291,6 +290,7 @@ export function SkillDetailPage() {
       setReportDialogOpen(false)
       setReportReason('')
       setReportDetails('')
+      setHasReported(true)
       toast.success(t('skillDetail.reportSuccessTitle'), t('skillDetail.reportSuccessDescription'))
     } catch (error) {
       toast.error(t(resolveSkillActionErrorTitle('report')), error instanceof Error ? error.message : '')
@@ -559,13 +559,18 @@ export function SkillDetailPage() {
                 {t('skillDetail.pendingPreviewBadge')}
               </span>
             )}
+            {!isPendingPreview && hasRejectedVersion && skill.canManageLifecycle && (
+              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                {t('skillDetail.rejectedBadge')}
+              </span>
+            )}
           </div>
           <h1 className="text-balance text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
           {skill.ownerDisplayName && (
             <div className="flex min-w-0">
               <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/85 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm">
                 <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-                  {getAuthorMonogram(skill.ownerDisplayName)}
+                  <User className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 truncate">{t('skillDetail.authorLabel', { name: skill.ownerDisplayName })}</span>
               </div>
@@ -671,8 +676,8 @@ export function SkillDetailPage() {
                 <div className="space-y-0 divide-y divide-border/40">
                   {versions.map((version) => (
                     <div key={version.id} className="py-5 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold font-heading text-foreground flex items-center gap-2">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <span className="font-semibold font-heading text-foreground flex items-center gap-2 flex-wrap min-w-0">
                           <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
                             v{version.version}
                           </span>
@@ -689,7 +694,7 @@ export function SkillDetailPage() {
                             </span>
                           )}
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-shrink-0">
                           <span className="text-sm text-muted-foreground">
                             {formatLocalDateTime(version.publishedAt, i18n.language)}
                           </span>
@@ -791,8 +796,8 @@ export function SkillDetailPage() {
                 <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
                 <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
                 {canReport ? (
-                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={reportMutation.isPending}>
-                    {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
+                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
+                    {hasReported ? t('skillDetail.reportedSkill') : reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
                   </Button>
                 ) : null}
               </>

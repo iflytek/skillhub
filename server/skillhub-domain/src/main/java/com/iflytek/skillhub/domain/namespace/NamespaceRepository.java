@@ -6,6 +6,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Domain repository contract for namespace aggregates and management-oriented reads.
+ */
 public interface NamespaceRepository {
     Optional<Namespace> findById(Long id);
     List<Namespace> findByIdIn(List<Long> ids);

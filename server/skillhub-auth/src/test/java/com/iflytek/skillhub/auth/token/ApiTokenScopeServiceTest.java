@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -11,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApiTokenScopeServiceTest {
 
-    private final ApiTokenScopeService scopeService = new ApiTokenScopeService(new ObjectMapper());
+    private final ApiTokenScopeService scopeService =
+            new ApiTokenScopeService(new ObjectMapper(), new RouteSecurityPolicyRegistry());
 
     @Test
     void parseScopesShouldNormalizeJsonArray() {
@@ -73,5 +75,27 @@ class ApiTokenScopeServiceTest {
 
         assertFalse(decision.allowed());
         assertEquals("API token cannot access endpoint: /api/v1/me/skills", decision.message());
+    }
+
+    @Test
+    void authorizeShouldAllowPublicNamespaceReadWithoutScope() {
+        ApiTokenScopeService.AuthorizationDecision decision = scopeService.authorize(
+                "GET",
+                "/api/v1/namespaces/team-a",
+                Set.of()
+        );
+
+        assertTrue(decision.allowed());
+    }
+
+    @Test
+    void authorizeShouldPermitAuthMeWithoutScope() {
+        ApiTokenScopeService.AuthorizationDecision decision = scopeService.authorize(
+                "GET",
+                "/api/v1/auth/me",
+                Set.of()
+        );
+
+        assertTrue(decision.allowed());
     }
 }

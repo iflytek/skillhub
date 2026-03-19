@@ -8,6 +8,9 @@ import com.iflytek.skillhub.domain.social.SkillStarService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Endpoints for starring, unstarring, and checking star state on a skill.
+ */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillStarController extends BaseApiController {

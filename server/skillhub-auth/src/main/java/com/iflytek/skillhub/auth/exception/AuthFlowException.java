@@ -2,6 +2,10 @@ package com.iflytek.skillhub.auth.exception;
 
 import org.springframework.http.HttpStatus;
 
+/**
+ * Auth-layer exception that carries both an HTTP status and a localized message code for API
+ * rendering.
+ */
 public class AuthFlowException extends RuntimeException {
 
     private final HttpStatus status;

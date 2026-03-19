@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Endpoints that let authenticated users report a skill for moderation.
+ */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillReportController extends BaseApiController {

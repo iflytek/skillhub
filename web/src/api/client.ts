@@ -33,6 +33,12 @@ import type {
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
 
+/**
+ * Front-end API foundation for generated OpenAPI calls and hand-written convenience wrappers.
+ *
+ * This module centralizes runtime-config lookup, CSRF handling, localized request headers, envelope
+ * unwrapping, and exported API groups used throughout feature hooks.
+ */
 export { ApiError }
 
 export const WEB_API_PREFIX = '/api/web'
@@ -116,6 +122,8 @@ function hasDataProperty<T>(value: unknown): value is { data: T } {
 }
 
 async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
+  // The backend returns a standard response envelope; normalize both success and error payloads
+  // here so feature hooks can work with plain values and one ApiError shape.
   const { data, error, response } = await promise
   const envelope = isApiEnvelope<T>(data) ? data : isApiEnvelope<T>(error) ? error : null
 
@@ -823,6 +831,13 @@ export const governanceApi = {
       headers: getCsrfHeaders(),
     })
   },
+
+  async rebuildSearchIndex(): Promise<void> {
+    await fetchJson<void>('/api/v1/admin/search/rebuild', {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
 }
 
 export const meApi = {
@@ -872,7 +887,6 @@ export const profileApi = {
   }> {
     return fetchJson('/api/v1/user/profile')
   },
-
   async updateProfile(request: { displayName: string }): Promise<{ status: string }> {
     return fetchJson<{ status: string }>('/api/v1/user/profile', {
       method: 'PATCH',

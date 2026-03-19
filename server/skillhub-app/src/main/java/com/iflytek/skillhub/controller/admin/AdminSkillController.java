@@ -16,6 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Administrative skill-governance endpoints reserved for platform-level
+ * moderation actions such as hide and unhide.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/skills")
 public class AdminSkillController extends BaseApiController {

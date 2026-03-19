@@ -29,6 +29,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Coordinates the review workflow for skill versions.
+ *
+ * <p>This service owns transitions between draft, pending review, approved,
+ * and rejected states together with the review task record that tracks the
+ * moderation decision.
+ */
 @Service
 public class ReviewService {
 
@@ -65,6 +72,10 @@ public class ReviewService {
         this.clock = clock;
     }
 
+    /**
+     * Submits a draft version into the review queue using both namespace roles
+     * and platform roles to determine permission.
+     */
     @Transactional
     public ReviewTask submitReview(Long skillVersionId,
                                    String userId,
@@ -98,6 +109,10 @@ public class ReviewService {
         }
     }
 
+    /**
+     * Legacy overload that evaluates submission rights only from namespace
+     * memberships.
+     */
     @Transactional
     public ReviewTask submitReview(Long skillVersionId,
                                    String userId,
@@ -130,6 +145,10 @@ public class ReviewService {
         }
     }
 
+    /**
+     * Approves a pending review task, publishes the underlying version, and
+     * emits downstream notifications and publication events.
+     */
     @Transactional
     public ReviewTask approveReview(Long reviewTaskId, String reviewerId, String comment,
                                     Map<Long, NamespaceRole> userNamespaceRoles,
@@ -202,6 +221,10 @@ public class ReviewService {
         return reviewTaskRepository.findById(reviewTaskId).orElse(task);
     }
 
+    /**
+     * Rejects a pending review task and returns the underlying version to a
+     * non-published state with reviewer metadata captured on the task.
+     */
     @Transactional
     public ReviewTask rejectReview(Long reviewTaskId, String reviewerId, String comment,
                                    Map<Long, NamespaceRole> userNamespaceRoles,
@@ -244,6 +267,10 @@ public class ReviewService {
         return reviewTaskRepository.findById(reviewTaskId).orElse(task);
     }
 
+    /**
+     * Withdraws a previously submitted review request and puts the version back
+     * into draft so the owner can amend and resubmit it.
+     */
     @Transactional
     public SkillVersion withdrawReview(Long skillVersionId, String userId) {
         ReviewTask task = reviewTaskRepository.findBySkillVersionIdAndStatus(

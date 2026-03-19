@@ -22,6 +22,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * S3-compatible object storage implementation used for persisted skill packages and generated
+ * download URLs.
+ */
 @Service
 @ConditionalOnProperty(name = "skillhub.storage.provider", havingValue = "s3")
 public class S3StorageService implements ObjectStorageService {

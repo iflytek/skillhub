@@ -5,17 +5,18 @@ import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
 import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
 import com.iflytek.skillhub.auth.mock.MockAuthFilter;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.token.ApiTokenAuthenticationFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenScopeFilter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,6 +30,10 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
+/**
+ * Central Spring Security configuration for browser sessions, API tokens, and
+ * public versus protected endpoints.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -54,6 +59,7 @@ public class SecurityConfig {
     private final AuthenticationEntryPoint apiAuthenticationEntryPoint;
     private final AccessDeniedHandler apiAccessDeniedHandler;
     private final ObjectProvider<MockAuthFilter> mockAuthFilterProvider;
+    private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
                           SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
@@ -63,7 +69,8 @@ public class SecurityConfig {
                           ApiTokenScopeFilter apiTokenScopeFilter,
                           AuthenticationEntryPoint apiAuthenticationEntryPoint,
                           AccessDeniedHandler apiAccessDeniedHandler,
-                          ObjectProvider<MockAuthFilter> mockAuthFilterProvider) {
+                          ObjectProvider<MockAuthFilter> mockAuthFilterProvider,
+                          RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
@@ -73,8 +80,16 @@ public class SecurityConfig {
         this.apiAuthenticationEntryPoint = apiAuthenticationEntryPoint;
         this.apiAccessDeniedHandler = apiAccessDeniedHandler;
         this.mockAuthFilterProvider = mockAuthFilterProvider;
+        this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
     }
 
+    /**
+     * Builds the ordered security filter chain used by both browser and API
+     * clients.
+     *
+     * <p>The chain mixes session-based authentication, bearer token support,
+     * CSRF rules for browser traffic, and method-level authorization.
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
@@ -82,15 +97,7 @@ public class SecurityConfig {
         RequestMatcher csrfIgnoreMatcher = request -> {
             String path = request.getRequestURI();
             String authorization = request.getHeader("Authorization");
-            if (authorization != null && authorization.startsWith("Bearer ")) {
-                return true;
-            }
-            if (path == null) {
-                return false;
-            }
-            return path.startsWith("/api/")
-                    || path.equals("/api/v1/publish")
-                    || path.startsWith("/api/v1/auth/device/");
+            return routeSecurityPolicyRegistry.shouldIgnoreCsrf(path, authorization);
         };
 
         http
@@ -99,75 +106,10 @@ public class SecurityConfig {
                 .csrfTokenRequestHandler(csrfHandler)
                 .ignoringRequestMatchers(csrfIgnoreMatcher)
             )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/v1/health",
-                    "/api/v1/search",
-                    "/api/v1/resolve/**",
-                    "/api/v1/download/**",
-                    "/api/v1/auth/providers",
-                    "/api/v1/auth/methods",
-                    "/api/v1/auth/me",
-                    "/api/v1/auth/session/bootstrap",
-                    "/api/v1/auth/direct/login",
-                    "/api/v1/auth/local/**",
-                    "/api/v1/auth/device/**",
-                    "/api/v1/check",
-                    "/actuator/health",
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                    "/.well-known/**",
-                    "/api/v1/search",
-                    "/api/v1/resolve/**",
-                    "/api/v1/download/**"
-                ).permitAll()
-                .requestMatchers("/actuator/prometheus").hasAnyRole("SUPER_ADMIN", "AUDITOR")
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/v1/skills/*/star",
-                    "/api/v1/skills/*/rating",
-                    "/api/web/skills/*/star",
-                    "/api/web/skills/*/rating"
-                ).authenticated()
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/v1/skills",
-                    "/api/v1/skills/*/*",
-                    "/api/v1/skills/*/*/versions",
-                    "/api/v1/skills/*/*/versions/*",
-                    "/api/v1/skills/*/*/download",
-                    "/api/v1/skills/*/*/versions/*/download",
-                    "/api/v1/skills/*/*/versions/*/files",
-                    "/api/v1/skills/*/*/versions/*/file",
-                    "/api/v1/skills/*/*/resolve",
-                    "/api/v1/skills/*/*/tags",
-                    "/api/v1/skills/*/*/tags/*/download",
-                    "/api/v1/skills/*/*/tags/*/files",
-                    "/api/v1/skills/*/*/tags/*/file",
-                    "/api/web/skills",
-                    "/api/web/skills/*/*",
-                    "/api/web/skills/*/*/versions",
-                    "/api/web/skills/*/*/versions/*",
-                    "/api/web/skills/*/*/download",
-                    "/api/web/skills/*/*/versions/*/download",
-                    "/api/web/skills/*/*/versions/*/files",
-                    "/api/web/skills/*/*/versions/*/file",
-                    "/api/web/skills/*/*/resolve",
-                    "/api/web/skills/*/*/tags",
-                    "/api/web/skills/*/*/tags/*/download",
-                    "/api/web/skills/*/*/tags/*/files",
-                    "/api/web/skills/*/*/tags/*/file"
-                ).permitAll()
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/v1/namespaces",
-                    "/api/v1/namespaces/*",
-                    "/api/web/namespaces",
-                    "/api/web/namespaces/*"
-                ).permitAll()
-                .requestMatchers("/api/v1/admin/**").authenticated()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                configureRoutePolicies(auth);
+                auth.anyRequest().authenticated();
+            })
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequestResolver))
                 .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
@@ -210,8 +152,22 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Provides the password encoder shared by local credentials and bootstrap
+     * flows.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
+    }
+
+    private void configureRoutePolicies(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
+        for (RouteSecurityPolicyRegistry.RouteAuthorizationPolicy policy : routeSecurityPolicyRegistry.authorizationPolicies()) {
+            switch (policy.accessLevel()) {
+                case PERMIT_ALL -> auth.requestMatchers(policy.toRequestMatcher()).permitAll();
+                case AUTHENTICATED -> auth.requestMatchers(policy.toRequestMatcher()).authenticated();
+                case ROLE_PROTECTED -> auth.requestMatchers(policy.toRequestMatcher()).hasAnyRole(policy.roles());
+            }
+        }
     }
 }

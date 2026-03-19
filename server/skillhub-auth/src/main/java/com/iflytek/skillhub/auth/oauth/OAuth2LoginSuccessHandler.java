@@ -13,6 +13,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * Login success handler that copies the resolved platform principal into the
+ * HTTP session and then redirects to the stored return target.
+ */
 @Component
 public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 

@@ -16,7 +16,7 @@
       "subtitle": "Build powerful AI agents with community-driven skills",
       "searchPlaceholder": "Search skills...",
       "exploreSkills": "Explore Skills",
-      "publishSkill": "Start Building"
+      "publishSkill": "Publish Skill"
     },
     "features": {
       "secure": {
@@ -528,6 +528,9 @@
     "filterUnhideSkill": "Skill Unhidden",
     "filterUnarchiveSkill": "Skill Restored",
     "filterYankVersion": "Version Yanked",
+    "filterRebuildSearchIndex": "Search Index Rebuilt",
+    "quickFilterSearchRebuild": "Search index rebuilds only",
+    "clearFilters": "Clear filters",
     "userIdPlaceholder": "User ID...",
     "requestIdPlaceholder": "Request ID...",
     "ipPlaceholder": "IP address...",
@@ -560,7 +563,7 @@
     "defaultError": "Failed to update profile. Please try again.",
     "validation": {
       "length": "Display name must be 2-32 characters.",
-      "pattern": "Display name can only contain Chinese, English, digits, underscores, and hyphens."
+      "pattern": "Display name can only contain Chinese, English, digits, spaces, underscores, and hyphens."
     },
     "pendingReview": "Your display name change to \"{{name}}\" is pending review.",
     "rejected": "Your display name change was rejected.",
@@ -652,6 +655,7 @@
     "statusArchived": "Archived",
     "statusHidden": "Hidden",
     "pendingPreviewBadge": "Pending Preview",
+    "rejectedBadge": "Review Rejected",
     "pendingPreviewTitle": "You are previewing a pending version",
     "pendingPreviewDescription": "This version is only visible to you. Before review approval, you can inspect the README, files, and version information, but you cannot star, rate, report, or download it.",
     "pendingPreviewInteractionHint": "Stars, ratings, and reports are disabled while this version is pending review.",
@@ -733,6 +737,7 @@
     "promotionAlreadyPromotedDescription": "This skill has already been promoted to the global namespace.",
     "promotionErrorTitle": "Failed to submit promotion request",
     "reportSkill": "Report Skill",
+    "reportedSkill": "Reported",
     "reportDialogTitle": "Report skill",
     "reportDialogDescription": "Provide a reason so administrators can review and act on it quickly.",
     "reportReasonPlaceholder": "Reason, for example policy violation, misleading content, or infringement",
@@ -798,7 +803,17 @@
     "activityTitle": "Governance activity",
     "activitySubtitle": "Recent audit events for review, promotion, report, and lifecycle actions.",
     "emptyActivity": "No recent governance activity.",
-    "unknownActor": "Unknown actor"
+    "unknownActor": "Unknown actor",
+    "searchMaintenanceTitle": "Search Index Maintenance",
+    "searchMaintenanceDescription": "Rebuild the full skill search index. This action is available only to super administrators and is intended for full backfills after search rule changes.",
+    "searchMaintenanceHint": "This may take a while. Avoid triggering it repeatedly.",
+    "searchRebuildAction": "Rebuild full search index",
+    "searchRebuildRunning": "Rebuilding...",
+    "searchRebuildConfirmTitle": "Rebuild the full search index?",
+    "searchRebuildConfirmDescription": "The system will rebuild search documents for all skills using the current indexing rules. This operation may take some time.",
+    "searchRebuildSuccessTitle": "Search index rebuild started",
+    "searchRebuildSuccessDescription": "The system is rebuilding the full search index using the current rules.",
+    "searchRebuildErrorTitle": "Search index rebuild failed"
   },
   "members": {
     "title": "Member Management",
@@ -967,7 +982,7 @@
     "subtitle": "Upload skill package to SkillHub",
     "reviewNotice": {
       "title": "Review Notice",
-      "description": "Submitted skill packages require admin review before publication. Once approved, your skill will be visible to all users."
+      "description": "Submitted skill packages require admin review before publication."
     },
     "namespace": "Namespace",
     "selectNamespace": "Select namespace",

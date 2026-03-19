@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Browser-side endpoint that lets an authenticated user authorize a pending
+ * device code and records the operation in the audit log.
+ */
 @RestController
 @RequestMapping("/api/v1/device")
 public class DeviceAuthWebController extends BaseApiController {

@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import type { AuditLogItem } from '@/api/types'
 
+/**
+ * Admin audit-log query hook with server-side filtering and pagination parameters.
+ */
 export interface AuditLogParams {
   action?: string
   userId?: string

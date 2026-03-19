@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -23,6 +24,9 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Projects the authenticated principal into request attributes consumed by the controller layer.
+ */
 @Component
 public class AuthContextFilter extends OncePerRequestFilter {
 
@@ -31,17 +35,20 @@ public class AuthContextFilter extends OncePerRequestFilter {
     private final ApiResponseFactory apiResponseFactory;
     private final ObjectMapper objectMapper;
     private final boolean enforceActiveUserCheck;
+    private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
 
     public AuthContextFilter(NamespaceMemberRepository namespaceMemberRepository,
                              UserAccountRepository userAccountRepository,
                              ApiResponseFactory apiResponseFactory,
                              ObjectMapper objectMapper,
-                             @Value("${skillhub.auth.enforce-active-user-check:true}") boolean enforceActiveUserCheck) {
+                             @Value("${skillhub.auth.enforce-active-user-check:true}") boolean enforceActiveUserCheck,
+                             RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.userAccountRepository = userAccountRepository;
         this.apiResponseFactory = apiResponseFactory;
         this.objectMapper = objectMapper;
         this.enforceActiveUserCheck = enforceActiveUserCheck;
+        this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
     }
 
     @Override
@@ -49,6 +56,10 @@ public class AuthContextFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
+        if (!routeSecurityPolicyRegistry.shouldProjectRequestContext(request.getRequestURI())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         PlatformPrincipal principal = resolvePrincipal(request);
         if (principal != null) {
             if (isInactiveUser(principal.userId())) {

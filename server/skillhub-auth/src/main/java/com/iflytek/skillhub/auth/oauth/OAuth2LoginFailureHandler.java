@@ -12,6 +12,10 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Failure handler for OAuth logins that normalizes policy and account-state
+ * failures into predictable user-facing redirects.
+ */
 @Component
 public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/features/auth/use-auth'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/lib/toast'
+import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { GovernanceInbox } from '@/features/governance/governance-inbox'
@@ -10,12 +14,17 @@ import {
   useGovernanceActivity,
   useGovernanceInbox,
   useGovernanceNotifications,
+  useRebuildSearchIndex,
   useGovernanceSummary,
   useMarkGovernanceNotificationRead,
 } from '@/features/governance/use-governance'
 
 type GovernanceInboxTab = 'ALL' | 'REVIEW' | 'PROMOTION' | 'REPORT'
 
+/**
+ * Dashboard page that aggregates governance summary counts, inbox queues, notifications, and
+ * recent moderation activity.
+ */
 function SummaryCard({ label, value }: { label: string; value?: number }) {
   return (
     <Card className="p-5">
@@ -27,14 +36,28 @@ function SummaryCard({ label, value }: { label: string; value?: number }) {
 
 export function GovernancePage() {
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
   const [inboxType, setInboxType] = useState<GovernanceInboxTab>('ALL')
+  const [rebuildDialogOpen, setRebuildDialogOpen] = useState(false)
   const { data: summary, isLoading: isSummaryLoading } = useGovernanceSummary()
   const { data: inboxItems, isLoading: isInboxLoading } = useGovernanceInbox(inboxType === 'ALL' ? undefined : inboxType)
   const { data: activityItems, isLoading: isActivityLoading } = useGovernanceActivity()
   const { data: notifications, isLoading: isNotificationsLoading } = useGovernanceNotifications()
   const markReadMutation = useMarkGovernanceNotificationRead()
+  const rebuildSearchIndexMutation = useRebuildSearchIndex()
 
   const unreadCount = notifications?.filter((item) => item.status === 'UNREAD').length ?? 0
+  const canRebuildSearchIndex = hasRole('SUPER_ADMIN')
+
+  const handleRebuildSearchIndex = async () => {
+    try {
+      await rebuildSearchIndexMutation.mutateAsync()
+      toast.success(t('governance.searchRebuildSuccessTitle'), t('governance.searchRebuildSuccessDescription'))
+    } catch (error) {
+      toast.error(t('governance.searchRebuildErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
 
   return (
     <div className="space-y-8 animate-fade-up">
@@ -97,6 +120,37 @@ export function GovernancePage() {
           <GovernanceActivity items={activityItems} isLoading={isActivityLoading} />
         </Card>
       </div>
+
+      {canRebuildSearchIndex ? (
+        <>
+          <Card className="p-5 space-y-4 border border-amber-500/20 bg-amber-500/5">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold font-heading">{t('governance.searchMaintenanceTitle')}</h2>
+              <p className="text-sm text-muted-foreground">{t('governance.searchMaintenanceDescription')}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRebuildDialogOpen(true)}
+                disabled={rebuildSearchIndexMutation.isPending}
+              >
+                {rebuildSearchIndexMutation.isPending ? t('governance.searchRebuildRunning') : t('governance.searchRebuildAction')}
+              </Button>
+              <span className="text-xs text-muted-foreground">{t('governance.searchMaintenanceHint')}</span>
+            </div>
+          </Card>
+
+          <ConfirmDialog
+            open={rebuildDialogOpen}
+            onOpenChange={setRebuildDialogOpen}
+            title={t('governance.searchRebuildConfirmTitle')}
+            description={t('governance.searchRebuildConfirmDescription')}
+            confirmText={t('governance.searchRebuildAction')}
+            onConfirm={handleRebuildSearchIndex}
+          />
+        </>
+      ) : null}
     </div>
   )
 }

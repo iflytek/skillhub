@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
 /**
  * Repository for {@link ProfileChangeRequest} entities.
  * Implementations are provided by the infra layer (JPA).

@@ -11,6 +11,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * JPA-backed repository for skill version history and status-oriented version queries.
+ */
 @Repository
 public interface SkillVersionJpaRepository extends JpaRepository<SkillVersion, Long>, SkillVersionRepository {
     List<SkillVersion> findByIdIn(List<Long> ids);

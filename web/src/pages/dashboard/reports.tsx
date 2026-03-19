@@ -12,6 +12,11 @@ import { REPORT_TEXT_WRAP_CLASS_NAME } from '@/features/report/report-text'
 import { toast } from '@/shared/lib/toast'
 import type { ReportDisposition } from '@/api/types'
 
+/**
+ * Moderation page for skill reports. The route keeps the confirmation state
+ * because different resolution dispositions map to different user-facing copy
+ * and backend side effects.
+ */
 export function ReportsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -57,6 +62,10 @@ export function ReportsPage() {
     }
   }
 
+  /**
+   * Reuses one list renderer across status tabs while keeping pending-only
+   * moderation actions colocated with the rendered report card.
+   */
   const renderList = (reports: typeof pendingReports, isLoading: boolean, status: 'PENDING' | 'RESOLVED' | 'DISMISSED') => {
     if (isLoading) {
       return (
@@ -184,30 +193,46 @@ export function ReportsPage() {
   )
 }
 
+/**
+ * Resolves the action label used by the confirmation dialog from the selected
+ * moderation disposition.
+ */
 function resolveConfirmText(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHide')
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchive')
   return t('reports.resolve')
 }
 
+/**
+ * Chooses the confirmation body copy for the pending moderation action.
+ */
 function resolveConfirmDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string, skillLabel: string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideConfirmDescription', { skill: skillLabel })
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveConfirmDescription', { skill: skillLabel })
   return t('reports.resolveConfirmDescription', { skill: skillLabel })
 }
 
+/**
+ * Chooses the toast title shown after a successful resolution flow.
+ */
 function resolveSuccessTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideSuccessTitle')
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveSuccessTitle')
   return t('reports.resolveSuccessTitle')
 }
 
+/**
+ * Chooses the toast body shown after a successful resolution flow.
+ */
 function resolveSuccessDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string, skillLabel: string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideSuccessDescription', { skill: skillLabel })
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveSuccessDescription', { skill: skillLabel })
   return t('reports.resolveSuccessDescription', { skill: skillLabel })
 }
 
+/**
+ * Chooses the toast title shown when the resolution flow fails.
+ */
 function resolveErrorTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideErrorTitle')
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveErrorTitle')

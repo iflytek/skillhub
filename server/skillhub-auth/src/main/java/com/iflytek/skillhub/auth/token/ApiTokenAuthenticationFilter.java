@@ -23,6 +23,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Authenticates bearer tokens and projects them into a Spring Security
+ * principal with both roles and token scopes.
+ */
 @Component
 public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
 

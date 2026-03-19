@@ -11,6 +11,12 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
+/**
+ * Authentication entry page.
+ *
+ * It combines password login, OAuth entry points, and optional session-bootstrap support while
+ * preserving the route the user originally intended to visit.
+ */
 export function LoginPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -141,7 +147,7 @@ export function LoginPage() {
                         onClick={() => setShowPassword((current) => !current)}
                         className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                       >
-                        {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                     {fieldErrors.password ? (

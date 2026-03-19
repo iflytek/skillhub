@@ -6,6 +6,9 @@ import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
 import { useNamespaceDetail, useSearchSkills } from '@/shared/hooks/use-skill-queries'
 
+/**
+ * Public namespace page showing namespace metadata and the skills currently discoverable inside it.
+ */
 export function NamespacePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()

@@ -1,23 +1,14 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
-import com.iflytek.skillhub.domain.audit.AuditLogService;
-import com.iflytek.skillhub.domain.namespace.Namespace;
-import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
-import com.iflytek.skillhub.domain.review.ReviewService;
-import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
-import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
-import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
-import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
+import com.iflytek.skillhub.service.AuditRequestContext;
+import com.iflytek.skillhub.service.SkillLifecycleAppService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
@@ -29,34 +20,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Endpoints that mutate skill lifecycle state, including archive, unarchive,
+ * withdraw-review, delete-version, and rerelease operations.
+ */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillLifecycleController extends BaseApiController {
 
-    private final NamespaceRepository namespaceRepository;
-    private final SkillVersionRepository skillVersionRepository;
-    private final SkillGovernanceService skillGovernanceService;
-    private final ReviewService reviewService;
-    private final SkillPublishService skillPublishService;
-    private final AuditLogService auditLogService;
-    private final SkillSlugResolutionService skillSlugResolutionService;
+    private final SkillLifecycleAppService skillLifecycleAppService;
 
-    public SkillLifecycleController(NamespaceRepository namespaceRepository,
-                                    SkillVersionRepository skillVersionRepository,
-                                    SkillGovernanceService skillGovernanceService,
-                                    ReviewService reviewService,
-                                    SkillPublishService skillPublishService,
-                                    AuditLogService auditLogService,
-                                    SkillSlugResolutionService skillSlugResolutionService,
+    public SkillLifecycleController(SkillLifecycleAppService skillLifecycleAppService,
                                     ApiResponseFactory responseFactory) {
         super(responseFactory);
-        this.namespaceRepository = namespaceRepository;
-        this.skillVersionRepository = skillVersionRepository;
-        this.skillGovernanceService = skillGovernanceService;
-        this.reviewService = reviewService;
-        this.skillPublishService = skillPublishService;
-        this.auditLogService = auditLogService;
-        this.skillSlugResolutionService = skillSlugResolutionService;
+        this.skillLifecycleAppService = skillLifecycleAppService;
     }
 
     @PostMapping("/{namespace}/{slug}/archive")
@@ -66,18 +43,14 @@ public class SkillLifecycleController extends BaseApiController {
                                                                     @RequestAttribute("userId") String userId,
                                                                     @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                     HttpServletRequest httpRequest) {
-        Skill skill = findSkill(namespace, slug, userId);
-        Skill archived = skillGovernanceService.archiveSkill(
-                skill.getId(),
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of(),
-                httpRequest.getRemoteAddr(),
-                httpRequest.getHeader("User-Agent"),
-                request != null ? request.reason() : null
-        );
-
         return ok("response.success.updated",
-                new SkillLifecycleMutationResponse(archived.getId(), null, "ARCHIVE", archived.getStatus().name()));
+                skillLifecycleAppService.archiveSkill(
+                        namespace,
+                        slug,
+                        request,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
     }
 
     @PostMapping("/{namespace}/{slug}/unarchive")
@@ -86,17 +59,13 @@ public class SkillLifecycleController extends BaseApiController {
                                                                       @RequestAttribute("userId") String userId,
                                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                       HttpServletRequest httpRequest) {
-        Skill skill = findSkill(namespace, slug, userId);
-        Skill restored = skillGovernanceService.unarchiveSkill(
-                skill.getId(),
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of(),
-                httpRequest.getRemoteAddr(),
-                httpRequest.getHeader("User-Agent")
-        );
-
         return ok("response.success.updated",
-                new SkillLifecycleMutationResponse(restored.getId(), null, "UNARCHIVE", restored.getStatus().name()));
+                skillLifecycleAppService.unarchiveSkill(
+                        namespace,
+                        slug,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
     }
 
     @DeleteMapping("/{namespace}/{slug}/versions/{version}")
@@ -106,20 +75,14 @@ public class SkillLifecycleController extends BaseApiController {
                                                                      @RequestAttribute("userId") String userId,
                                                                      @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                      HttpServletRequest httpRequest) {
-        Skill skill = findSkill(namespace, slug, userId);
-        SkillVersion skillVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), version)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", version));
-        skillGovernanceService.deleteVersion(
-                skill,
-                skillVersion,
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of(),
-                httpRequest.getRemoteAddr(),
-                httpRequest.getHeader("User-Agent")
-        );
-
         return ok("response.success.deleted",
-                new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "DELETE_VERSION", version));
+                skillLifecycleAppService.deleteVersion(
+                        namespace,
+                        slug,
+                        version,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
     }
 
     @PostMapping("/{namespace}/{slug}/versions/{version}/withdraw-review")
@@ -128,23 +91,13 @@ public class SkillLifecycleController extends BaseApiController {
                                                                      @PathVariable String version,
                                                                      @RequestAttribute("userId") String userId,
                                                                      HttpServletRequest httpRequest) {
-        Skill skill = findSkill(namespace, slug, userId);
-        SkillVersion skillVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), version)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", version));
-        SkillVersion withdrawnVersion = reviewService.withdrawReview(skillVersion.getId(), userId);
-        auditLogService.record(
-                userId,
-                "REVIEW_WITHDRAW",
-                "SKILL_VERSION",
-                skillVersion.getId(),
-                null,
-                httpRequest.getRemoteAddr(),
-                httpRequest.getHeader("User-Agent"),
-                "{\"version\":\"" + version.replace("\"", "\\\"") + "\"}"
-        );
-
         return ok("response.success.updated",
-                new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "WITHDRAW_REVIEW", withdrawnVersion.getStatus().name()));
+                skillLifecycleAppService.withdrawReview(
+                        namespace,
+                        slug,
+                        version,
+                        userId,
+                        AuditRequestContext.from(httpRequest)));
     }
 
     @PostMapping("/{namespace}/{slug}/versions/{version}/rerelease")
@@ -155,44 +108,14 @@ public class SkillLifecycleController extends BaseApiController {
                                                                         @RequestAttribute("userId") String userId,
                                                                         @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                         HttpServletRequest httpRequest) {
-        Skill skill = findSkill(namespace, slug, userId);
-        SkillVersion skillVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), version)
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", version));
-        SkillPublishService.PublishResult result = skillPublishService.rereleasePublishedVersion(
-                skill.getId(),
-                skillVersion.getVersion(),
-                request.targetVersion().trim(),
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of()
-        );
-        auditLogService.record(
-                userId,
-                "RERELEASE_SKILL_VERSION",
-                "SKILL_VERSION",
-                skillVersion.getId(),
-                null,
-                httpRequest.getRemoteAddr(),
-                httpRequest.getHeader("User-Agent"),
-                "{\"sourceVersion\":\"" + version.replace("\"", "\\\"")
-                        + "\",\"targetVersion\":\"" + request.targetVersion().trim().replace("\"", "\\\"") + "\"}"
-        );
-
         return ok("response.success.updated",
-                new SkillLifecycleMutationResponse(result.skillId(), result.version().getId(), "RERELEASE_VERSION", result.version().getStatus().name()));
-    }
-
-    private Skill findSkill(String namespaceSlug, String skillSlug, String currentUserId) {
-        String cleanNamespace = namespaceSlug.startsWith("@") ? namespaceSlug.substring(1) : namespaceSlug;
-        Namespace namespace = namespaceRepository.findBySlug(cleanNamespace)
-                .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", cleanNamespace));
-        return resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-    }
-
-    private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {
-        return skillSlugResolutionService.resolve(
-                namespaceId,
-                slug,
-                currentUserId,
-                SkillSlugResolutionService.Preference.CURRENT_USER);
+                skillLifecycleAppService.rereleaseVersion(
+                        namespace,
+                        slug,
+                        version,
+                        request,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
     }
 }

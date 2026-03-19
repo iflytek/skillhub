@@ -10,6 +10,9 @@ interface RoleGuardProps {
   children: ReactNode
 }
 
+/**
+ * Client-side role guard used by protected route components after authentication has resolved.
+ */
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -19,6 +22,8 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const isAllowed = canAccessRoute(user?.platformRoles, allowedRoles)
 
   useEffect(() => {
+    // Only handle the forbidden path once per mount so toasts and redirects do not repeat while the
+    // auth query refetches.
     if (isLoading || !user || isAllowed || hasHandledForbiddenRef.current) {
       return
     }

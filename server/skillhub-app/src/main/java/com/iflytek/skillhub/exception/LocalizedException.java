@@ -2,6 +2,9 @@ package com.iflytek.skillhub.exception;
 
 import org.springframework.http.HttpStatus;
 
+/**
+ * Base class for application-layer exceptions that carry a localized message code and HTTP status.
+ */
 public abstract class LocalizedException extends RuntimeException implements LocalizedError {
 
     private final String messageCode;

@@ -6,12 +6,21 @@ interface FileTreeProps {
   onFileClick?: (file: SkillFile) => void
 }
 
+/**
+ * Formats file sizes for the package browser without pulling in a heavier
+ * generic formatting dependency.
+ */
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/**
+ * Presents the flat file list returned by the backend package endpoint.
+ * The UI keeps a simple list rather than reconstructing a nested tree because
+ * package inspection is currently optimized for quick file selection.
+ */
 export function FileTree({ files, onFileClick }: FileTreeProps) {
   const { t } = useTranslation()
   return (

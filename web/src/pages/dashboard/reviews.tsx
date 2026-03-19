@@ -17,6 +17,11 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { ProfileReviewTable } from './profile-review-table'
 
+/**
+ * Dashboard review queue page. Each tab materializes one review status because
+ * the moderation workflow treats pending, approved, and rejected queues as
+ * distinct operator views rather than one filterable table.
+ */
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -35,7 +40,15 @@ export function ReviewsPage() {
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
-  function renderSkillReviewTable(reviews: typeof pendingReviews, isLoading: boolean, status: string) {
+  const handleRowClick = (reviewId: number) => {
+    navigate({ to: `/dashboard/reviews/${reviewId}` })
+  }
+
+  /**
+   * Keeps the table rendering logic in one local helper so the per-status tabs
+   * stay declarative while still allowing columns to differ by workflow state.
+   */
+  const renderReviewTable = (reviews: typeof pendingReviews, isLoading: boolean, status: string) => {
     if (isLoading) {
       return (
         <div className="space-y-3">
@@ -71,7 +84,7 @@ export function ReviewsPage() {
               <TableRow
                 key={review.id}
                 className="cursor-pointer transition-colors hover:bg-muted/30"
-                onClick={() => navigate({ to: `/dashboard/reviews/${review.id}` })}
+                onClick={() => handleRowClick(review.id)}
               >
                 <TableCell className="font-medium">{review.namespace}/{review.skillSlug}</TableCell>
                 <TableCell>{review.version}</TableCell>
@@ -131,13 +144,13 @@ export function ReviewsPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="PENDING" className="mt-6">
-              {renderSkillReviewTable(pendingReviews, isPendingLoading, 'PENDING')}
+              {renderReviewTable(pendingReviews, isPendingLoading, 'PENDING')}
             </TabsContent>
             <TabsContent value="APPROVED" className="mt-6">
-              {renderSkillReviewTable(approvedReviews, isApprovedLoading, 'APPROVED')}
+              {renderReviewTable(approvedReviews, isApprovedLoading, 'APPROVED')}
             </TabsContent>
             <TabsContent value="REJECTED" className="mt-6">
-              {renderSkillReviewTable(rejectedReviews, isRejectedLoading, 'REJECTED')}
+              {renderReviewTable(rejectedReviews, isRejectedLoading, 'REJECTED')}
             </TabsContent>
           </Tabs>
         </CardContent>

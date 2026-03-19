@@ -3,6 +3,9 @@ import { adminApi } from '@/api/client'
 import type { AdminUser } from '@/api/types'
 export type { AdminUser } from '@/api/types'
 
+/**
+ * Admin user-management hooks for listing users and mutating their role or account status.
+ */
 export interface AdminUsersParams {
   search?: string
   status?: string
@@ -42,6 +45,8 @@ export function useUpdateUserRole() {
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
       updateUserRole(userId, role),
     onSuccess: () => {
+      // User role changes affect both the admin list and the current session when an administrator
+      // edits their own account.
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
     },

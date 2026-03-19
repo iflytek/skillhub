@@ -12,6 +12,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
+/**
+ * JPA-backed repository for review tasks, including optimistic update support for moderation
+ * decisions.
+ */
 @Repository
 public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>, ReviewTaskRepository {
 

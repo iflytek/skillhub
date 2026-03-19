@@ -112,8 +112,8 @@ skillhub:
     allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.html,.css,.csv,.pdf,.toml,.xml,.ini,.cfg,.env,.js,.ts,.py,.sh,.rb,.go,.rs,.java,.kt,.lua,.sql,.r,.bat,.ps1,.zsh,.bash,.png,.jpg,.jpeg,.svg,.gif,.webp,.ico
   profile:
     moderation:
-      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true} # Enable machine review (e.g. sensitive word detection)
-      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true} # Enable human review queue
+      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:false} # Enable machine review (e.g. sensitive word detection)
+      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:false} # Enable human review queue
   device-auth:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
   bootstrap:

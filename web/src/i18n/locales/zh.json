@@ -16,7 +16,7 @@
       "subtitle": "使用社区驱动的技能构建强大的 AI 代理",
       "searchPlaceholder": "搜索技能...",
       "exploreSkills": "探索技能",
-      "publishSkill": "开始构建"
+      "publishSkill": "发布技能"
     },
     "features": {
       "secure": {
@@ -528,6 +528,9 @@
     "filterUnhideSkill": "恢复隐藏",
     "filterUnarchiveSkill": "恢复归档",
     "filterYankVersion": "版本撤回",
+    "filterRebuildSearchIndex": "重建搜索索引",
+    "quickFilterSearchRebuild": "仅看搜索索引重建",
+    "clearFilters": "清空筛选",
     "userIdPlaceholder": "用户 ID...",
     "requestIdPlaceholder": "请求 ID...",
     "ipPlaceholder": "IP 地址...",
@@ -560,7 +563,7 @@
     "defaultError": "修改失败，请稍后重试。",
     "validation": {
       "length": "昵称长度需为 2-32 个字符。",
-      "pattern": "昵称只能包含中文、英文、数字、下划线和连字符。"
+      "pattern": "昵称只能包含中文、英文、数字、空格、下划线和连字符。"
     },
     "pendingReview": "你的昵称变更为「{{name}}」正在审核中。",
     "rejected": "你的昵称变更被拒绝。",
@@ -652,6 +655,7 @@
     "statusArchived": "已归档",
     "statusHidden": "已隐藏",
     "pendingPreviewBadge": "待审核预览",
+    "rejectedBadge": "审核未通过",
     "pendingPreviewTitle": "当前正在预览待审核版本",
     "pendingPreviewDescription": "该版本仅你本人可见。审核通过前，你可以查看 README、文件和版本信息，但不能收藏、评分、举报或下载。",
     "pendingPreviewInteractionHint": "待审核预览期间不可收藏、评分或举报。",
@@ -733,6 +737,7 @@
     "promotionAlreadyPromotedDescription": "这个技能已经提升到全局命名空间，无需重复提交。",
     "promotionErrorTitle": "提交提升申请失败",
     "reportSkill": "举报技能",
+    "reportedSkill": "已举报",
     "reportDialogTitle": "举报技能",
     "reportDialogDescription": "请填写举报原因，帮助管理员快速判断和处理。",
     "reportReasonPlaceholder": "举报原因，例如包含违规内容、恶意误导、侵权等",
@@ -798,7 +803,17 @@
     "activityTitle": "治理活动",
     "activitySubtitle": "最近的审核、提升、举报和生命周期治理审计记录。",
     "emptyActivity": "暂无治理活动。",
-    "unknownActor": "未知操作者"
+    "unknownActor": "未知操作者",
+    "searchMaintenanceTitle": "搜索索引维护",
+    "searchMaintenanceDescription": "重新构建全部技能搜索索引。该操作仅超级管理员可执行，适用于搜索规则变更后的全量回填。",
+    "searchMaintenanceHint": "执行期间可能耗时较长，请避免频繁触发。",
+    "searchRebuildAction": "重建全部搜索索引",
+    "searchRebuildRunning": "重建中...",
+    "searchRebuildConfirmTitle": "确认重建全部搜索索引？",
+    "searchRebuildConfirmDescription": "系统会按当前搜索规则重建所有技能的搜索文档。该操作可能持续一段时间。",
+    "searchRebuildSuccessTitle": "已触发搜索索引重建",
+    "searchRebuildSuccessDescription": "系统正在按当前规则重建全部搜索索引。",
+    "searchRebuildErrorTitle": "搜索索引重建失败"
   },
   "members": {
     "title": "成员管理",
@@ -967,7 +982,7 @@
     "subtitle": "上传技能包到 SkillHub",
     "reviewNotice": {
       "title": "发布审核说明",
-      "description": "技能包提交后需要经过管理员审核才能正式发布。审核通过后，您的技能将对所有用户可见。"
+      "description": "技能包提交后需要经过管理员审核才能正式发布。"
     },
     "namespace": "命名空间",
     "selectNamespace": "选择命名空间",

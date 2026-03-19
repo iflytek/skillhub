@@ -9,8 +9,8 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 
-/** Regex matching allowed display name characters: Chinese, English, digits, underscore, hyphen. */
-const DISPLAY_NAME_PATTERN = /^[\u4e00-\u9fa5a-zA-Z0-9_-]+$/
+/** Regex matching allowed display name characters: Chinese, English, digits, spaces, underscore, hyphen. */
+const DISPLAY_NAME_PATTERN = /^[\u4e00-\u9fa5a-zA-Z0-9_ -]+$/
 
 export function ProfileSettingsPage() {
   const { t } = useTranslation()

@@ -33,8 +33,13 @@ const ACTION_OPTIONS = [
   { value: 'UNHIDE_SKILL', labelKey: 'auditLog.filterUnhideSkill' },
   { value: 'UNARCHIVE_SKILL', labelKey: 'auditLog.filterUnarchiveSkill' },
   { value: 'YANK_SKILL_VERSION', labelKey: 'auditLog.filterYankVersion' },
+  { value: 'REBUILD_SEARCH_INDEX', labelKey: 'auditLog.filterRebuildSearchIndex' },
 ] as const
 
+/**
+ * Admin audit log page with server-backed filtering. The route owns filter state
+ * because the query model maps almost one-to-one to the backend search API.
+ */
 export function AuditLogPage() {
   const { t, i18n } = useTranslation()
   const [actionFilter, setActionFilter] = useState<string>('')
@@ -64,6 +69,24 @@ export function AuditLogPage() {
     return formatLocalDateTime(dateString, i18n.language)
   }
 
+  const applySearchIndexRebuildFilter = () => {
+    setActionFilter('REBUILD_SEARCH_INDEX')
+    setResourceTypeFilter('SEARCH_INDEX')
+    setPage(0)
+  }
+
+  const clearFilters = () => {
+    setActionFilter('')
+    setUserIdFilter('')
+    setRequestIdFilter('')
+    setIpFilter('')
+    setResourceTypeFilter('')
+    setResourceIdFilter('')
+    setStartTimeFilter('')
+    setEndTimeFilter('')
+    setPage(0)
+  }
+
   return (
     <div className="space-y-8 animate-fade-up">
       <div>
@@ -72,6 +95,15 @@ export function AuditLogPage() {
       </div>
 
       <Card className="p-5">
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={applySearchIndexRebuildFilter}>
+            {t('auditLog.quickFilterSearchRebuild')}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+            {t('auditLog.clearFilters')}
+          </Button>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Select value={actionFilter} onChange={(e) => {
             setActionFilter(e.target.value)

@@ -2,6 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
 import type { User } from '@/api/types'
 
+/**
+ * Auth session hook used throughout the app.
+ *
+ * It polls and refetches the current user aggressively enough to keep role-based UI and protected
+ * routes aligned with the latest server session state.
+ */
 export function getAuthQueryOptions(enabled = true) {
   return {
     queryKey: ['auth', 'me'] as const,

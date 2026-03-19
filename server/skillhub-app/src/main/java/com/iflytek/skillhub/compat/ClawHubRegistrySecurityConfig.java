@@ -7,6 +7,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Declares a dedicated stateless security chain for public compatibility endpoints used by
+ * registry-style clients.
+ */
 @Configuration
 public class ClawHubRegistrySecurityConfig {
 

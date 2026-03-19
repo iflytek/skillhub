@@ -8,6 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Manages namespace membership additions, removals, and role changes under the
+ * namespace governance rules.
+ */
 @Service
 public class NamespaceMemberService {
 

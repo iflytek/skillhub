@@ -15,20 +15,31 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Set;
 
+/**
+ * Logs inbound HTTP requests with only core parameters to keep log files compact.
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
-    private static final int MAX_LOG_BODY_LENGTH = 512;
+    private static final int MAX_LOG_BODY_LENGTH = 200;
+
+    private static final Set<String> SKIP_PREFIXES = Set.of(
+            "/actuator", "/favicon.ico", "/assets/"
+    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        String uri = request.getRequestURI();
+        if (shouldSkip(uri)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         ContentCachingRequestWrapper cachedRequest = new ContentCachingRequestWrapper(request);
         ContentCachingResponseWrapper cachedResponse = new ContentCachingResponseWrapper(response);
@@ -49,45 +60,43 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         String queryString = request.getQueryString();
         String fullUrl = queryString != null ? requestUri + "?" + queryString : requestUri;
 
+        String contentType = request.getContentType();
+        String userAgent = request.getHeader("User-Agent");
+
         StringBuilder sb = new StringBuilder();
-        sb.append("\n========== HTTP Request ==========\n");
-        sb.append("URL: ").append(request.getMethod()).append(" ").append(fullUrl).append("\n");
-        sb.append("Remote Address: ").append(request.getRemoteAddr()).append("\n");
-        sb.append("Headers: ").append(getHeaders(request)).append("\n");
+        sb.append(request.getMethod()).append(" ").append(fullUrl);
+        sb.append(" | ").append(response.getStatus());
+        sb.append(" | ").append(duration).append("ms");
+        sb.append(" | ").append(request.getRemoteAddr());
+        if (contentType != null) {
+            sb.append(" | Content-Type: ").append(contentType);
+        }
+        if (userAgent != null) {
+            sb.append(" | UA: ").append(truncate(userAgent, 80));
+        }
 
         String requestBody = getRequestBody(request);
         if (requestBody != null && !requestBody.isBlank()) {
-            sb.append("Request Body: ").append(requestBody).append("\n");
+            sb.append(" | Body: ").append(requestBody);
         }
-
-        sb.append("Response Status: ").append(response.getStatus()).append("\n");
-
-        String responseBody = getResponseBody(response);
-        if (responseBody != null && !responseBody.isBlank()) {
-            sb.append("Response Body: ").append(responseBody).append("\n");
-        }
-
-        sb.append("Duration: ").append(duration).append("ms\n");
-        sb.append("===================================");
 
         log.info(sb.toString());
     }
 
-    private Map<String, String> getHeaders(HttpServletRequest request) {
-        Map<String, String> headers = new HashMap<>();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            headers.put(headerName, request.getHeader(headerName));
+    private boolean shouldSkip(String uri) {
+        for (String prefix : SKIP_PREFIXES) {
+            if (uri.startsWith(prefix)) {
+                return true;
+            }
         }
-        return headers;
+        return false;
     }
 
     private String getRequestBody(ContentCachingRequestWrapper request) {
         byte[] buf = request.getContentAsByteArray();
         if (buf.length > 0) {
             try {
-                return truncateBody(new String(buf, request.getCharacterEncoding()));
+                return truncate(new String(buf, request.getCharacterEncoding()), MAX_LOG_BODY_LENGTH);
             } catch (UnsupportedEncodingException e) {
                 return "[unknown encoding]";
             }
@@ -95,23 +104,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private String getResponseBody(ContentCachingResponseWrapper response) {
-        byte[] buf = response.getContentAsByteArray();
-        if (buf.length > 0) {
-            try {
-                return truncateBody(new String(buf, response.getCharacterEncoding()));
-            } catch (UnsupportedEncodingException e) {
-                return "[unknown encoding]";
-            }
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
         }
-        return null;
-    }
-
-    private String truncateBody(String body) {
-        if (body == null || body.length() <= MAX_LOG_BODY_LENGTH) {
-            return body;
-        }
-        return body.substring(0, MAX_LOG_BODY_LENGTH)
-                + "... [truncated, original length=" + body.length() + "]";
+        return value.substring(0, maxLength) + "...[truncated]";
     }
 }

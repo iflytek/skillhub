@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Reacts to committed skill lifecycle events and keeps the search index synchronized.
+ */
 @Component
 public class SearchIndexEventListener {
 

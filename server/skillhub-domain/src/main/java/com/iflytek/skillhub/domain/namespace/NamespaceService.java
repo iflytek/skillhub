@@ -7,6 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
+/**
+ * Domain service for namespace lifecycle and membership-gated mutations.
+ */
 @Service
 public class NamespaceService {
 
@@ -22,6 +25,10 @@ public class NamespaceService {
         this.namespaceAccessPolicy = namespaceAccessPolicy;
     }
 
+    /**
+     * Creates a team namespace and grants the creator the owner role in the
+     * same transaction.
+     */
     @Transactional
     public Namespace createNamespace(String slug, String displayName, String description, String creatorUserId) {
         SlugValidator.validate(slug);
@@ -41,6 +48,9 @@ public class NamespaceService {
         return namespace;
     }
 
+    /**
+     * Updates mutable namespace profile fields after policy and role checks.
+     */
     @Transactional
     public Namespace updateNamespace(Long namespaceId, String displayName, String description, String avatarUrl,
                                      String operatorUserId) {
@@ -63,11 +73,19 @@ public class NamespaceService {
         return namespaceRepository.save(namespace);
     }
 
+    /**
+     * Loads a namespace by slug and fails with a business exception when it is
+     * missing.
+     */
     public Namespace getNamespaceBySlug(String slug) {
         return namespaceRepository.findBySlug(slug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
     }
 
+    /**
+     * Returns archived namespaces only to callers that already belong to them;
+     * all other callers see archived namespaces as not found.
+     */
     public Namespace getNamespaceBySlugForRead(String slug, String userId, Map<Long, NamespaceRole> userNsRoles) {
         Namespace namespace = getNamespaceBySlug(slug);
         if (namespace.getStatus() != NamespaceStatus.ARCHIVED) {
@@ -84,6 +102,9 @@ public class NamespaceService {
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.id.notFound", namespaceId));
     }
 
+    /**
+     * Ensures the caller holds an owner or admin membership in the namespace.
+     */
     public void assertAdminOrOwner(Long namespaceId, String userId) {
         NamespaceRole role = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .map(NamespaceMember::getRole)
@@ -93,6 +114,9 @@ public class NamespaceService {
         }
     }
 
+    /**
+     * Ensures the caller is at least a member of the namespace.
+     */
     public void assertMember(Long namespaceId, String userId) {
         namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));

@@ -3,6 +3,9 @@ package com.iflytek.skillhub.metrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
+/**
+ * Small facade over Micrometer that centralizes metric names and tags used by backend flows.
+ */
 @Component
 public class SkillHubMetrics {
 

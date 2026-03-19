@@ -11,6 +11,11 @@ import { toast } from '@/shared/lib/toast'
 import { resolveReviewActionErrorDescription } from '@/features/review/review-error'
 import { useReviewDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
 
+/**
+ * Review task detail page for moderators. The route owns the approve/reject
+ * interaction state because both actions depend on route-local confirmation
+ * dialogs, comment input, and redirect behavior after completion.
+ */
 export function ReviewDetailPage() {
   const { id } = useParams({ from: '/dashboard/reviews/$id' })
   const navigate = useNavigate()
@@ -51,6 +56,8 @@ export function ReviewDetailPage() {
   }
 
   const handleReject = async () => {
+    // Rejections require explicit operator feedback so submitters can understand
+    // what must change before the package is resubmitted.
     if (!comment.trim()) {
       toast.error(t('review.rejectReasonRequired'))
       return

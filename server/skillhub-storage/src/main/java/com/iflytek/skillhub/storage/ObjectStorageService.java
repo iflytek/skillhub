@@ -4,6 +4,9 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * Storage abstraction for binary skill assets and bundles regardless of the backing provider.
+ */
 public interface ObjectStorageService {
     void putObject(String key, InputStream data, long size, String contentType);
     InputStream getObject(String key);

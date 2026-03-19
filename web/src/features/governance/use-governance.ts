@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { governanceApi } from '@/api/client'
 
+/**
+ * Governance query and mutation hooks shared by dashboard moderation pages.
+ */
 export function useGovernanceSummary() {
   return useQuery({
     queryKey: ['governance', 'summary'],
@@ -40,7 +43,15 @@ export function useMarkGovernanceNotificationRead() {
   return useMutation({
     mutationFn: (id: number) => governanceApi.markNotificationRead(id),
     onSuccess: () => {
+      // Notifications affect the global governance badge state, so keep the whole notification list
+      // fresh after marking one item as read.
       queryClient.invalidateQueries({ queryKey: ['governance', 'notifications'] })
     },
+  })
+}
+
+export function useRebuildSearchIndex() {
+  return useMutation({
+    mutationFn: () => governanceApi.rebuildSearchIndex(),
   })
 }

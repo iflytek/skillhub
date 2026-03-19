@@ -11,6 +11,12 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
+/**
+ * Skill publish page used inside the dashboard.
+ *
+ * It coordinates namespace selection, visibility selection, zip upload, and backend publish error
+ * translation into user-facing toasts.
+ */
 function isVersionExistsMessage(message?: string): boolean {
   if (!message) {
     return false

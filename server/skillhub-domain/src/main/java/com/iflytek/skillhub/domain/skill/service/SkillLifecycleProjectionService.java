@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
+/**
+ * Builds lightweight lifecycle projections that describe which skill version should be surfaced to
+ * a given viewer.
+ */
 @Service
 public class SkillLifecycleProjectionService {
 

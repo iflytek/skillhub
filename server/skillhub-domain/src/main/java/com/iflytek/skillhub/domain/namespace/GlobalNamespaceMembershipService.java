@@ -3,6 +3,9 @@ package com.iflytek.skillhub.domain.namespace;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Ensures newly active users belong to the built-in global namespace.
+ */
 @Service
 public class GlobalNamespaceMembershipService {
 

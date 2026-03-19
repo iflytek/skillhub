@@ -45,6 +45,12 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Publishes packaged skill artifacts into persisted skill and version records.
+ *
+ * <p>The service validates archive contents, parses metadata, stores files,
+ * creates review tasks when needed, and updates the skill's lifecycle pointer.
+ */
 @Service
 public class SkillPublishService {
 
@@ -100,6 +106,12 @@ public class SkillPublishService {
         this.clock = clock;
     }
 
+    /**
+     * Publishes an extracted package into the target namespace.
+     *
+     * <p>Super administrators may auto-publish, while regular publishers
+     * usually create a pending-review version.
+     */
     @Transactional
     public PublishResult publishFromEntries(
             String namespaceSlug,
@@ -110,6 +122,10 @@ public class SkillPublishService {
         return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles, false, false);
     }
 
+    /**
+     * Rebuilds a new version from an already published version by copying its
+     * stored files and rewriting the embedded metadata version field.
+     */
     @Transactional
     public PublishResult rereleasePublishedVersion(
             Long skillId,
@@ -219,6 +235,9 @@ public class SkillPublishService {
                     newSkill.setCreatedBy(publisherId);
                     return skillRepository.save(newSkill);
                 });
+
+        // Update visibility to match the latest publish request
+        skill.setVisibility(visibility);
 
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);

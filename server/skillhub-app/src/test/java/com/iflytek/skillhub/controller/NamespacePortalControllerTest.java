@@ -4,7 +4,9 @@ import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceGovernanceService;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
@@ -53,6 +55,9 @@ class NamespacePortalControllerTest {
 
     @MockBean
     private NamespaceGovernanceService namespaceGovernanceService;
+
+    @MockBean
+    private NamespaceMemberService namespaceMemberService;
 
     @MockBean
     private com.iflytek.skillhub.domain.namespace.NamespaceRepository namespaceRepository;
@@ -117,6 +122,33 @@ class NamespacePortalControllerTest {
     }
 
     @Test
+    void updateNamespace_returnsUpdatedNamespace() throws Exception {
+        Namespace existing = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        Namespace updated = new Namespace("team-a", "Team A+", "owner-1");
+        setField(updated, "id", 1L);
+        updated.setStatus(NamespaceStatus.ACTIVE);
+        updated.setType(NamespaceType.TEAM);
+        updated.setDescription("Updated description");
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(existing);
+        given(namespaceService.updateNamespace(1L, "Team A+", "Updated description", null, "owner-1"))
+                .willReturn(updated);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/namespaces/team-a")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"slug":"team-a","displayName":"Team A+","description":"Updated description"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("team-a"))
+                .andExpect(jsonPath("$.data.displayName").value("Team A+"))
+                .andExpect(jsonPath("$.data.description").value("Updated description"));
+    }
+
+    @Test
     void listMembers_forNonMember_returns403() throws Exception {
         Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
         given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
@@ -150,6 +182,64 @@ class NamespacePortalControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].userId").value("user-2"))
                 .andExpect(jsonPath("$.data[0].displayName").value("alice"));
+    }
+
+    @Test
+    void addMember_returnsCreatedMember() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        NamespaceMember member = new NamespaceMember(1L, "user-2", NamespaceRole.ADMIN);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+        given(namespaceMemberService.addMember(1L, "user-2", NamespaceRole.ADMIN, "owner-1"))
+                .willReturn(member);
+
+        mockMvc.perform(post("/api/v1/namespaces/team-a/members")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"userId":"user-2","role":"ADMIN"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.userId").value("user-2"))
+                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+    }
+
+    @Test
+    void removeMember_returnsSuccessMessage() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/namespaces/team-a/members/user-2")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.message").value("Member removed successfully"));
+    }
+
+    @Test
+    void updateMemberRole_returnsUpdatedMember() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        NamespaceMember member = new NamespaceMember(1L, "user-2", NamespaceRole.OWNER);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+        given(namespaceMemberService.updateMemberRole(1L, "user-2", NamespaceRole.OWNER, "owner-1"))
+                .willReturn(member);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/namespaces/team-a/members/user-2/role")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"role":"OWNER"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.userId").value("user-2"))
+                .andExpect(jsonPath("$.data.role").value("OWNER"));
     }
 
     @Test

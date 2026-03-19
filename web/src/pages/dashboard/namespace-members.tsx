@@ -22,6 +22,11 @@ type PendingRemoval = {
   userId: string
 }
 
+/**
+ * Member management page for a namespace. The route computes mutability from
+ * both namespace state and the current user's role because the backend model
+ * allows namespaces to become read-only for several independent reasons.
+ */
 export function NamespaceMembersPage() {
   const { t, i18n } = useTranslation()
   const params = useParams({ from: '/dashboard/namespaces/$slug/members' })
@@ -40,6 +45,8 @@ export function NamespaceMembersPage() {
   const currentNamespace = myNamespaces?.find((item) => item.slug === slug)
   const currentUserRole = currentNamespace?.currentUserRole
   const isReadOnly = namespace?.type === 'GLOBAL' || namespace?.status !== 'ACTIVE'
+  // Membership changes are only allowed in active team namespaces and only for
+  // elevated roles surfaced through the current user's namespace membership.
   const canManageMembers = !isReadOnly && (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN')
 
   const readOnlyMessage = namespace?.type === 'GLOBAL'

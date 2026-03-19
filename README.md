@@ -123,6 +123,20 @@ make dev-all-reset
 
 Run `make help` to see all available commands.
 
+Useful backend commands:
+
+```bash
+make test
+make test-backend-app
+make build-backend-app
+```
+
+Do not run `./mvnw -pl skillhub-app clean test` directly under `server/`.
+`skillhub-app` depends on sibling modules in the same repo, and a standalone clean build
+can fall back to stale artifacts from the local Maven repository, which surfaces misleading
+`cannot find symbol` and signature-mismatch errors. Use `-am`, or the `make test-backend-app`
+and `make build-backend-app` targets above.
+
 For the full development workflow (local dev → staging → PR), see [docs/dev-workflow.md](docs/dev-workflow.md).
 
 ### API Contract Sync

@@ -26,6 +26,12 @@ import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Domain service that delivers packaged skills to callers.
+ *
+ * <p>It combines visibility checks, version resolution, object-storage access,
+ * and download tracking into a single download-oriented API.
+ */
 @Service
 public class SkillDownloadService {
     private static final Logger log = LoggerFactory.getLogger(SkillDownloadService.class);
@@ -77,6 +83,9 @@ public class SkillDownloadService {
         }
     }
 
+    /**
+     * Downloads the latest published version available to the caller.
+     */
     public DownloadResult downloadLatest(
             String namespaceSlug,
             String skillSlug,
@@ -97,6 +106,10 @@ public class SkillDownloadService {
         return downloadVersion(skill, version);
     }
 
+    /**
+     * Downloads an explicit version when the caller has permission to access
+     * the containing skill.
+     */
     public DownloadResult downloadVersion(
             String namespaceSlug,
             String skillSlug,
@@ -114,6 +127,9 @@ public class SkillDownloadService {
         return downloadVersion(skill, version);
     }
 
+    /**
+     * Downloads the version pointed to by a mutable tag name.
+     */
     public DownloadResult downloadByTag(
             String namespaceSlug,
             String skillSlug,

@@ -8,6 +8,11 @@ interface GovernanceActivityProps {
   isLoading: boolean
 }
 
+/**
+ * Renders a read-only timeline of governance actions surfaced on the dashboard.
+ * The component stays intentionally thin: formatting and empty/loading states live
+ * here, while filtering and retrieval are owned by the parent query layer.
+ */
 export function GovernanceActivity({ items, isLoading }: GovernanceActivityProps) {
   const { t, i18n } = useTranslation()
 

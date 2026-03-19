@@ -8,6 +8,11 @@ interface UploadZoneProps {
   disabled?: boolean
 }
 
+/**
+ * Provides the publish page dropzone for uploading one zip package at a time.
+ * The component is intentionally stateless so packaging validation can remain in
+ * the publish flow that knows the surrounding form and backend constraints.
+ */
 export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
   const { t } = useTranslation()
   const onDrop = useCallback(

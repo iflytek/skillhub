@@ -6,6 +6,9 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Builds the active external-access policy from configuration properties.
+ */
 @Configuration
 @ConfigurationProperties(prefix = "skillhub.access-policy")
 public class AccessPolicyFactory {

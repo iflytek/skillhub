@@ -7,6 +7,9 @@ import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+/**
+ * Test-profile rate limiter that keeps sliding-window counters in memory.
+ */
 @Component
 @Profile("test")
 public class InMemorySlidingWindowRateLimiter implements RateLimiter {

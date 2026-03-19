@@ -22,6 +22,10 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Spring Security OAuth user-service bridge that extracts provider claims,
+ * evaluates access policy, and maps the result to a {@link PlatformPrincipal}.
+ */
 @Service
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 

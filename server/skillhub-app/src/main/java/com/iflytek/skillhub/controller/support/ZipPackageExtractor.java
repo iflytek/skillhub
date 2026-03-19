@@ -17,6 +17,9 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+/**
+ * Extracts zip uploads into validated package entries that can be consumed by the publish flow.
+ */
 @Component
 public class ZipPackageExtractor {
 

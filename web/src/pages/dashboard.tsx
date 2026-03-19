@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import type { SkillSummary } from '@/api/types'
 import { useMySkills } from '@/shared/hooks/use-skill-queries'
+import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -10,11 +11,17 @@ import { limitPreviewItems } from './dashboard-preview'
 
 const DASHBOARD_PREVIEW_LIMIT = 5
 
+/**
+ * Default dashboard landing page for authenticated users.
+ *
+ * It surfaces account context, quick links, and a lightweight preview of the user's latest skills
+ * and tokens before they move into more specialized dashboard sub-pages.
+ */
 export function DashboardPage() {
   const skillPreviewPageSize = DASHBOARD_PREVIEW_LIMIT
   const { t } = useTranslation()
-  const { user, hasRole } = useAuth()
-  const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
+  const { user } = useAuth()
+  const governanceVisible = canViewGovernanceCenter(user?.platformRoles)
   const { data: skillPage, isLoading: isLoadingSkills } = useMySkills({ page: 0, size: skillPreviewPageSize })
   const skillPreview = limitPreviewItems<SkillSummary>(skillPage?.items ?? [], DASHBOARD_PREVIEW_LIMIT)
 
@@ -87,12 +94,14 @@ export function DashboardPage() {
             {t('dashboard.openTokens')}
           </Link>
         </Card>
-        <Card className="p-5">
-          <div className="text-sm text-muted-foreground">{t('dashboard.governanceTitle')}</div>
-          <Link to="/dashboard/governance" className="mt-2 inline-block font-semibold text-primary hover:underline">
-            {t('dashboard.viewGovernance')}
-          </Link>
-        </Card>
+        {governanceVisible ? (
+          <Card className="p-5">
+            <div className="text-sm text-muted-foreground">{t('dashboard.governanceTitle')}</div>
+            <Link to="/dashboard/governance" className="mt-2 inline-block font-semibold text-primary hover:underline">
+              {t('dashboard.viewGovernance')}
+            </Link>
+          </Card>
+        ) : null}
         {governanceVisible ? (
           <Card className="p-5">
             <div className="text-sm text-muted-foreground">{t('dashboard.reportsTitle')}</div>

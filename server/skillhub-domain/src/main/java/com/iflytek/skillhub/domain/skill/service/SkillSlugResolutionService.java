@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Resolves ambiguous namespace-slug pairs to the most appropriate skill record for the caller.
+ */
 @Service
 public class SkillSlugResolutionService {
 

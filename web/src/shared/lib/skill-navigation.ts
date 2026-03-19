@@ -1,3 +1,6 @@
+/**
+ * Helpers for constructing and validating navigation state around skill-detail pages.
+ */
 export function getSkillSquareSearch() {
   return {
     q: '',

@@ -10,6 +10,10 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Validates uploaded skill packages against structural, metadata, and size constraints before
+ * publish-time domain processing continues.
+ */
 public class SkillPackageValidator {
     private static final Pattern YAML_LINE_COLUMN = Pattern.compile("line\\s+(\\d+),\\s+column\\s+(\\d+)");
 

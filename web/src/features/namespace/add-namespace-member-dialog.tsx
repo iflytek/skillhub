@@ -24,6 +24,11 @@ interface AddNamespaceMemberDialogProps {
 
 const ROLE_OPTIONS: NamespaceRole[] = ['MEMBER', 'ADMIN']
 
+/**
+ * Handles the namespace member invitation flow, including optional candidate
+ * lookup and direct user-id entry. Local state is reset on close so reopening
+ * the dialog never leaks stale search or validation state from prior attempts.
+ */
 export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberDialogProps) {
   const { t } = useTranslation()
   const addMemberMutation = useAddNamespaceMember()
@@ -60,6 +65,8 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
 
   const handleSearch = () => {
     const keyword = searchInput.trim()
+    // Short keywords usually generate low-signal candidate lists and create
+    // needless backend traffic, so the UI enforces a small minimum length.
     if (keyword.length > 0 && keyword.length < 2) {
       setSearchError(t('members.searchTooShort'))
       return

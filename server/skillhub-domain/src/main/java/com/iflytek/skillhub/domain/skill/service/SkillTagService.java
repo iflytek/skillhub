@@ -12,6 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Manages named tags that resolve to skill versions while enforcing
+ * visibility and membership constraints.
+ */
 @Service
 public class SkillTagService {
 

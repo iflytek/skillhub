@@ -3,6 +3,9 @@ package com.iflytek.skillhub.auth.policy;
 import com.iflytek.skillhub.auth.oauth.OAuthClaims;
 import java.util.Set;
 
+/**
+ * Access policy that allows login only when the OAuth email belongs to an approved domain.
+ */
 public class EmailDomainAccessPolicy implements AccessPolicy {
     private final Set<String> allowedDomains;
 

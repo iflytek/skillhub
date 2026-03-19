@@ -15,6 +15,12 @@ import { ApiError } from '@/api/client'
 
 const PAGE_SIZE = 10
 
+/**
+ * Dashboard page for skills owned by the current user.
+ *
+ * It combines lifecycle display, archive and unarchive actions, review withdrawal, and promotion
+ * submission into one management surface.
+ */
 function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending' | 'promotion.already_promoted' | null {
   if (error.serverMessageKey === 'promotion.duplicate_pending') {
     return 'promotion.duplicate_pending'
@@ -242,6 +248,11 @@ export function MySkillsPage() {
                           {hasPendingPreview && ownerPreviewVersion?.version !== headlineVersion?.version ? (
                             <span className={resolveStatusClassName(ownerPreviewVersion?.status)}>
                               {resolveStatusLabel(ownerPreviewVersion?.status)}
+                            </span>
+                          ) : null}
+                          {!hasPendingPreview && ownerPreviewVersion?.status === 'REJECTED' && ownerPreviewVersion?.version !== headlineVersion?.version ? (
+                            <span className={resolveStatusClassName('REJECTED')}>
+                              {resolveStatusLabel('REJECTED')}
                             </span>
                           ) : null}
                         </div>

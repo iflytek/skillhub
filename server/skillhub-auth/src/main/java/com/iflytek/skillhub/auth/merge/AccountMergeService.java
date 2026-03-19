@@ -32,6 +32,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Coordinates account merge requests and consolidates credentials, bindings,
+ * roles, memberships, and tokens into a single primary user.
+ */
 @Service
 public class AccountMergeService {
 
