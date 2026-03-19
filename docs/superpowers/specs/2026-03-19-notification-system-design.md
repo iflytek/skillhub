@@ -115,16 +115,17 @@ The following existing services need `ApplicationEventPublisher` injected and `p
 
 | Service | Method | Event to Publish |
 |---------|--------|-----------------|
-| `SkillReviewService.submitForReview()` | After review record created | `ReviewSubmittedEvent` |
-| `SkillReviewService.approve()` | After status set to APPROVED | `ReviewApprovedEvent` |
-| `SkillReviewService.reject()` | After status set to REJECTED | `ReviewRejectedEvent` |
-| `SkillPromotionService.submit()` | After promotion request created | `PromotionSubmittedEvent` |
-| `SkillPromotionService.approve()` | After promotion approved | `PromotionApprovedEvent` |
-| `SkillPromotionService.reject()` | After promotion rejected | `PromotionRejectedEvent` |
-| `SkillReportService.report()` | After report created | `ReportSubmittedEvent` |
-| `SkillReportService.resolve()` / `dismiss()` | After report resolved | `ReportResolvedEvent` |
+| `ReviewService.submitReview()` | After review record created | `ReviewSubmittedEvent` |
+| `ReviewService.approveReview()` | After status set to APPROVED | `ReviewApprovedEvent` |
+| `ReviewService.rejectReview()` | After status set to REJECTED | `ReviewRejectedEvent` |
+| `PromotionService.submitPromotion()` | After promotion request created | `PromotionSubmittedEvent` |
+| `PromotionService.approvePromotion()` | After promotion approved | `PromotionApprovedEvent` |
+| `PromotionService.rejectPromotion()` | After promotion rejected | `PromotionRejectedEvent` |
+| `SkillReportService.submitReport()` | After report created | `ReportSubmittedEvent` |
+| `SkillReportService.resolveReport()` / `dismissReport()` | After report resolved | `ReportResolvedEvent` |
 
 `SkillPublishService` already publishes `SkillPublishedEvent` — no change needed.
+`SkillReportService` does not currently inject `ApplicationEventPublisher` — it needs to be added.
 
 ### New Repository Methods for Recipient Resolution
 
@@ -151,10 +152,10 @@ The following existing services need `ApplicationEventPublisher` injected and `p
 
 New Maven module: `skillhub-notification`
 
-Dependencies: `skillhub-notification` → `skillhub-domain` (domain events, entities, repositories). The `NotificationEventListener` lives in `skillhub-app` (following the existing pattern of `SkillStarEventListener` and `SkillRatingEventListener`), where it can access both `skillhub-notification` services and `skillhub-auth` for role resolution.
+Dependencies: `skillhub-notification` → `skillhub-domain` (domain events, entities, repositories). Both `NotificationEventListener` and `RecipientResolver` live in `skillhub-app` (following the existing pattern of `SkillStarEventListener` and `SkillRatingEventListener`), where they can access `skillhub-notification` services, `skillhub-domain` repositories, and `skillhub-auth` for role resolution. This avoids a cross-module dependency from `skillhub-notification` to `skillhub-auth`.
 
 ```
-skillhub-notification/                    -- new module
+skillhub-notification/                    -- new module (depends on: skillhub-domain)
 ├── domain/
 │   ├── Notification.java
 │   ├── NotificationCategory.java        -- enum: PUBLISH, REVIEW, PROMOTION, REPORT
@@ -166,14 +167,13 @@ skillhub-notification/                    -- new module
 │   ├── NotificationService.java         -- CRUD: create, list, mark read, batch read, unread count
 │   ├── NotificationPreferenceService.java  -- preference CRUD + default fallback
 │   └── NotificationDispatcher.java      -- route by channel (currently IN_APP only)
-├── sse/
-│   └── SseEmitterManager.java           -- manage SSE connections: register, push, heartbeat, cleanup
-└── resolver/
-    └── RecipientResolver.java           -- resolve recipient list per event type
+└── sse/
+    └── SseEmitterManager.java           -- manage SSE connections: register, push, heartbeat, cleanup
 
 skillhub-app/                             -- existing module
 └── listener/
-    └── NotificationEventListener.java   -- consume domain events, call RecipientResolver + Dispatcher
+    ├── NotificationEventListener.java   -- consume domain events, call RecipientResolver + Dispatcher
+    └── RecipientResolver.java           -- resolve recipient list per event type (needs auth + domain repos)
 ```
 
 ## SSE Real-Time Push
@@ -235,6 +235,7 @@ Response format follows existing SkillHub API conventions (code + data wrapper).
 - Unread notifications: retain 90 days
 - Retention periods configurable
 - Use `ShedLock` or database advisory lock to ensure single-instance execution in multi-pod deployments
+- If using ShedLock: add `shedlock-spring` + `shedlock-provider-jdbc-template` as new Maven dependencies
 
 ## Configuration
 
