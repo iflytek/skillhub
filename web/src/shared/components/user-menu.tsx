@@ -183,6 +183,9 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             <Link to="/settings/profile" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.profile')}
             </Link>
+            <Link to="/settings/notifications" className={menuItemClassName} onClick={closeMenu}>
+              {t('user.menu.notifications')}
+            </Link>
             {isLocalAccount ? (
               <Link to="/settings/security" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.security')}

@@ -117,6 +117,10 @@ const ProfileSettingsPage = createLazyRouteComponent(
   () => import('@/pages/settings/profile'),
   'ProfileSettingsPage',
 )
+const NotificationSettingsPage = createLazyRouteComponent(
+  () => import('@/pages/settings/notification-settings'),
+  'NotificationSettingsPage',
+)
 const AdminUsersPage = createRoleProtectedRouteComponent(
   () => import('@/pages/admin/users'),
   'AdminUsersPage',
@@ -356,6 +360,13 @@ const settingsProfileRoute = createRoute({
   component: ProfileSettingsPage,
 })
 
+const settingsNotificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'settings/notifications',
+  beforeLoad: requireAuth,
+  component: NotificationSettingsPage,
+})
+
 const settingsAccountsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'settings/accounts',
@@ -406,6 +417,7 @@ const routeTree = rootRoute.addChildren([
   cliAuthRoute,
   settingsSecurityRoute,
   settingsProfileRoute,
+  settingsNotificationsRoute,
   settingsAccountsRoute,
   adminUsersRoute,
   adminAuditLogRoute,

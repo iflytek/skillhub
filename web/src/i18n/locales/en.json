@@ -926,6 +926,7 @@
       "auditLog": "Audit Log",
       "security": "Security Settings",
       "profile": "Profile Settings",
+      "notifications": "Notification Settings",
       "accounts": "Account Merge",
       "logout": "Logout"
     }

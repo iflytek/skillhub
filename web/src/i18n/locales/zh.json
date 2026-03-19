@@ -926,6 +926,7 @@
       "auditLog": "审计日志",
       "security": "安全设置",
       "profile": "个人设置",
+      "notifications": "通知设置",
       "accounts": "账号合并",
       "logout": "退出登录"
     }
