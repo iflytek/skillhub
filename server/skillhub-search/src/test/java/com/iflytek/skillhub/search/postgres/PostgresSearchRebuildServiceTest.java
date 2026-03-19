@@ -91,4 +91,58 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.searchText()).contains("openai");
         assertThat(document.searchText()).doesNotContain("# ignored");
     }
+
+    @Test
+    void rebuildBySkill_shouldUseLatestVersionMetadataWhenPublishedVersionAdvances() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "smart-agent", "owner-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Smart Agent");
+        skill.setSummary("Builds workflows");
+        skill.setLatestVersionId(100L);
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+
+        SkillVersion latestVersion = new SkillVersion(1L, "1.3.0", "owner-1");
+        latestVersion.setParsedMetadataJson("""
+                {
+                  "name": "Smart Agent",
+                  "description": "Builds workflows",
+                  "version": "1.3.0",
+                  "frontmatter": {
+                    "tags": ["中文搜索"],
+                    "keywords": ["智能体"],
+                    "maintainer": "新版维护者"
+                  }
+                }
+                """);
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(100L)).thenReturn(Optional.of(latestVersion));
+
+        PostgresSearchRebuildService service = new PostgresSearchRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService,
+                new SearchTextTokenizer()
+        );
+
+        service.rebuildBySkill(1L);
+
+        ArgumentCaptor<SkillSearchDocument> captor = ArgumentCaptor.forClass(SkillSearchDocument.class);
+        verify(searchIndexService).index(captor.capture());
+
+        SkillSearchDocument document = captor.getValue();
+        assertThat(document.keywords()).contains("中文搜索");
+        assertThat(document.keywords()).contains("中文");
+        assertThat(document.keywords()).contains("搜索");
+        assertThat(document.keywords()).contains("智能体");
+        assertThat(document.searchText()).contains("maintainer");
+        assertThat(document.searchText()).contains("新版维护者");
+    }
 }
