@@ -11,6 +11,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -189,10 +190,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 nativeQuery.setParameter("tsQuery", tsQuery);
             }
             if (useRelevanceOrdering) {
-                nativeQuery.setParameter("titleExact", normalizedKeyword.toLowerCase());
-                nativeQuery.setParameter("titlePrefix", normalizedKeyword.toLowerCase() + "%");
+                nativeQuery.setParameter("titleExact", normalizedKeyword.toLowerCase(Locale.ROOT));
+                nativeQuery.setParameter("titlePrefix", normalizedKeyword.toLowerCase(Locale.ROOT) + "%");
             }
-            nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
+            nativeQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase(Locale.ROOT) + "%");
         }
 
         nativeQuery.setParameter("limit", sqlLimit);
@@ -230,7 +231,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             if (hasTsQuery) {
                 countQuery.setParameter("tsQuery", tsQuery);
             }
-            countQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase() + "%");
+            countQuery.setParameter("titleLike", "%" + normalizedKeyword.toLowerCase(Locale.ROOT) + "%");
         }
 
         long total = ((Number) countQuery.getSingleResult()).longValue();
@@ -293,7 +294,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
-        return keyword.trim().toLowerCase();
+        return keyword.trim().toLowerCase(Locale.ROOT);
     }
 
     private String buildPrefixTsQuery(String keyword) {

@@ -145,4 +145,61 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.searchText()).contains("maintainer");
         assertThat(document.searchText()).contains("新版维护者");
     }
+
+    @Test
+    void rebuildBySkill_shouldIgnoreNullFrontmatterValues() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "smart-agent", "owner-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Smart Agent");
+        skill.setSummary("Builds workflows");
+        skill.setLatestVersionId(101L);
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+
+        SkillVersion version = new SkillVersion(1L, "1.4.0", "owner-1");
+        version.setParsedMetadataJson("""
+                {
+                  "name": "Smart Agent",
+                  "description": "Builds workflows",
+                  "version": "1.4.0",
+                  "frontmatter": {
+                    "tags": ["automation"],
+                    "maintainer": null,
+                    "config": {
+                      "provider": "openai",
+                      "region": null
+                    }
+                  }
+                }
+                """);
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(101L)).thenReturn(Optional.of(version));
+
+        PostgresSearchRebuildService service = new PostgresSearchRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService,
+                new SearchTextTokenizer()
+        );
+
+        service.rebuildBySkill(1L);
+
+        ArgumentCaptor<SkillSearchDocument> captor = ArgumentCaptor.forClass(SkillSearchDocument.class);
+        verify(searchIndexService).index(captor.capture());
+
+        SkillSearchDocument document = captor.getValue();
+        assertThat(document.keywords()).contains("automation");
+        assertThat(document.searchText()).contains("config");
+        assertThat(document.searchText()).contains("provider");
+        assertThat(document.searchText()).contains("openai");
+        assertThat(document.searchText()).doesNotContain("maintainer");
+        assertThat(document.searchText()).doesNotContain("region null");
+    }
 }
