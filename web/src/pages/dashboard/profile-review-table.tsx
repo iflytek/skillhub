@@ -47,7 +47,7 @@ type ReviewItem = {
   reviewedAt: string | null
 }
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 export function ProfileReviewTable() {
   const { t, i18n } = useTranslation()
@@ -60,10 +60,11 @@ export function ProfileReviewTable() {
     APPROVED: 0,
     REJECTED: 0,
   })
+  const [activeStatus, setActiveStatus] = useState<ReviewStatus>('PENDING')
 
-  const pendingQuery = useProfileReviewList('PENDING', pages.PENDING, PAGE_SIZE)
-  const approvedQuery = useProfileReviewList('APPROVED', pages.APPROVED, PAGE_SIZE)
-  const rejectedQuery = useProfileReviewList('REJECTED', pages.REJECTED, PAGE_SIZE)
+  const pendingQuery = useProfileReviewList('PENDING', pages.PENDING, PAGE_SIZE, activeStatus === 'PENDING')
+  const approvedQuery = useProfileReviewList('APPROVED', pages.APPROVED, PAGE_SIZE, activeStatus === 'APPROVED')
+  const rejectedQuery = useProfileReviewList('REJECTED', pages.REJECTED, PAGE_SIZE, activeStatus === 'REJECTED')
 
   const approveMutation = useApproveProfileReview()
   const rejectMutation = useRejectProfileReview()
@@ -325,7 +326,7 @@ export function ProfileReviewTable() {
               {renderPendingSummaryCard(pendingCount)}
             </div>
 
-            <Tabs defaultValue="PENDING">
+            <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as ReviewStatus)}>
               <TabsList className="gap-4 rounded-xl border-b-0 bg-muted/70 p-1 shadow-none">
                 <TabsTrigger
                   value="PENDING"

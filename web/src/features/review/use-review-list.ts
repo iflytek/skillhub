@@ -17,10 +17,10 @@ async function getReviewList(status: string, namespaceId?: number, page = 0, siz
 /**
  * Exposes the review list query used by dashboard moderation views.
  */
-export function useReviewList(status: string, namespaceId?: number, page = 0, size = 20) {
+export function useReviewList(status: string, namespaceId?: number, page = 0, size = 20, enabled = true) {
   return useQuery({
     queryKey: ['reviews', status, namespaceId, page, size],
     queryFn: () => getReviewList(status, namespaceId, page, size),
-    enabled: namespaceId === undefined || namespaceId > 0,
+    enabled: enabled && (namespaceId === undefined || namespaceId > 0),
   })
 }
