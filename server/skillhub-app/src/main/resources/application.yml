@@ -114,6 +114,13 @@ skillhub:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:false} # Enable machine review (e.g. sensitive word detection)
       human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:false} # Enable human review queue
+    fields:
+      displayName:
+        editable: true
+        requires-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:false}
+      email:
+        editable: false
+        requires-review: false
   device-auth:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
   bootstrap:

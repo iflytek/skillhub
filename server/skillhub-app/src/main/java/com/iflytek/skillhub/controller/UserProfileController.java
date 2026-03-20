@@ -11,8 +11,10 @@ import com.iflytek.skillhub.domain.user.UpdateProfileResult;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserProfileService;
+import com.iflytek.skillhub.domain.user.ProfileFieldPolicyConfig;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.FieldPolicyResponse;
 import com.iflytek.skillhub.dto.PendingChangesResponse;
 import com.iflytek.skillhub.dto.ProfileUpdateStatus;
 import com.iflytek.skillhub.dto.UpdateProfileRequest;
@@ -50,17 +52,20 @@ public class UserProfileController extends BaseApiController {
     private final UserAccountRepository userAccountRepository;
     private final ProfileChangeRequestRepository changeRequestRepository;
     private final PlatformSessionService platformSessionService;
+    private final ProfileFieldPolicyConfig fieldPolicyConfig;
 
     public UserProfileController(ApiResponseFactory responseFactory,
                                   UserProfileService userProfileService,
                                   UserAccountRepository userAccountRepository,
                                   ProfileChangeRequestRepository changeRequestRepository,
-                                  PlatformSessionService platformSessionService) {
+                                  PlatformSessionService platformSessionService,
+                                  ProfileFieldPolicyConfig fieldPolicyConfig) {
         super(responseFactory);
         this.userProfileService = userProfileService;
         this.userAccountRepository = userAccountRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.platformSessionService = platformSessionService;
+        this.fieldPolicyConfig = fieldPolicyConfig;
     }
 
     /**
@@ -89,11 +94,17 @@ public class UserProfileController extends BaseApiController {
             avatarUrl = pendingChanges.changes().getOrDefault("avatarUrl", avatarUrl);
         }
 
+        // Build field policies for the frontend
+        Map<String, FieldPolicyResponse> fieldPolicies = new LinkedHashMap<>();
+        fieldPolicyConfig.fieldPolicies().forEach((field, policy) ->
+                fieldPolicies.put(field, new FieldPolicyResponse(policy.editable(), policy.requiresReview())));
+
         var response = new UserProfileResponse(
                 displayName,
                 avatarUrl,
                 user.getEmail(),
-                pendingChanges
+                pendingChanges,
+                fieldPolicies
         );
         return ok("response.success.read", response);
     }
