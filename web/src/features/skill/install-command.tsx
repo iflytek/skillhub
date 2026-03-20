@@ -9,31 +9,36 @@ interface InstallCommandProps {
   version?: string
 }
 
-function getAppBaseUrl(): string {
+export function buildInstallTarget(namespace: string, slug: string): string {
+  return namespace === 'global' ? slug : `${namespace}--${slug}`
+}
+
+export function getRegistryUrl(): string {
   if (typeof window === 'undefined') {
     return ''
   }
   const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
+  if (runtimeConfig?.registryUrl) {
+    return runtimeConfig.registryUrl
+  }
   if (runtimeConfig?.appBaseUrl) {
     return runtimeConfig.appBaseUrl
   }
   return `${window.location.protocol}//${window.location.host}`
 }
 
-export function InstallCommand({ slug }: InstallCommandProps) {
+export function buildInstallCommand(namespace: string, slug: string, registryUrl: string): string {
+  const installTarget = buildInstallTarget(namespace, slug)
+  return `npx clawhub install ${installTarget} --registry ${registryUrl}`
+}
+
+export function InstallCommand({ namespace, slug }: InstallCommandProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
-  const baseUrl = useMemo(() => getAppBaseUrl(), [])
+  const registryUrl = useMemo(() => getRegistryUrl(), [])
 
-  const command = useMemo(() => {
-    const installCmd = `clawhub install ${slug} `
-    // 如果是默认的 clawhub.ai 不需要环境变量，否则显示完整配置
-    if (baseUrl && !baseUrl.includes('clawhub.ai') && !baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
-      return `CLAWHUB_SITE=${baseUrl} CLAWHUB_REGISTRY=${baseUrl} ${installCmd}`
-    }
-    return installCmd
-  }, [baseUrl, slug])
+  const command = useMemo(() => buildInstallCommand(namespace, slug, registryUrl), [namespace, registryUrl, slug])
 
   const handleCopy = async () => {
     try {
