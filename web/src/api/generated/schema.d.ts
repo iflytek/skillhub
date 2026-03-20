@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/skills/{skillId}/star": {
+    "/api/web/skills/{skillId}/star": {
         parameters: {
             query?: never;
             header?: never;
@@ -20,7 +20,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{skillId}/rating": {
+    "/api/v1/skills/{skillId}/star": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["checkStarred_1"];
+        put: operations["starSkill_1"];
+        post?: never;
+        delete: operations["unstarSkill_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{skillId}/rating": {
         parameters: {
             query?: never;
             header?: never;
@@ -36,7 +52,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}": {
+    "/api/v1/skills/{skillId}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getUserRating_1"];
+        put: operations["rateSkill_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}": {
         parameters: {
             query?: never;
             header?: never;
@@ -47,6 +79,54 @@ export interface paths {
         put: operations["createOrMoveTag"];
         post?: never;
         delete: operations["deleteTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["createOrMoveTag_1"];
+        post?: never;
+        delete: operations["deleteTag_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMemberRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMemberRole_1"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -68,7 +148,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/namespaces/{slug}/members/{userId}/role": {
+    "/api/web/namespaces/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNamespace_1"];
+        put: operations["updateNamespace_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens/{id}/expiration": {
         parameters: {
             query?: never;
             header?: never;
@@ -76,7 +172,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["updateMemberRole"];
+        put: operations["updateExpiration"];
         post?: never;
         delete?: never;
         options?: never;
@@ -116,23 +212,167 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tokens": {
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get?: never;
         put?: never;
-        post: operations["create"];
+        post: operations["withdrawReview"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{namespace}/publish": {
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawReview_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rereleaseVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/rerelease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rereleaseVersion_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unarchiveSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unarchiveSkill_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitReport_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archiveSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archiveSkill_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/publish": {
         parameters: {
             query?: never;
             header?: never;
@@ -148,16 +388,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reviews": {
+    "/api/v1/skills/{namespace}/publish": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listReviews"];
+        get?: never;
         put?: never;
-        post: operations["submitReview"];
+        post: operations["publish_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawReview_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -173,7 +429,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["withdrawReview"];
+        post: operations["withdrawReview_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -196,7 +452,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reviews/{id}/approve": {
+    "/api/web/reviews/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectReview_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{id}/approve": {
         parameters: {
             query?: never;
             header?: never;
@@ -212,16 +484,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/promotions": {
+    "/api/v1/reviews/{id}/approve": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listPromotions"];
+        get?: never;
         put?: never;
-        post: operations["submitPromotion"];
+        post: operations["approveReview_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReviews"];
+        put?: never;
+        post: operations["submitReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReviews_1"];
+        put?: never;
+        post: operations["submitReview_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -244,6 +548,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/promotions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectPromotion_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/promotions/{id}/approve": {
         parameters: {
             query?: never;
@@ -260,7 +580,215 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/namespaces": {
+    "/api/web/promotions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvePromotion_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPromotions"];
+        put?: never;
+        post: operations["submitPromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPromotions_1"];
+        put?: never;
+        post: operations["submitPromotion_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unfreezeNamespace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unfreezeNamespace_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restoreNamespace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restoreNamespace_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMembers"];
+        put?: never;
+        post: operations["addMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMembers_1"];
+        put?: never;
+        post: operations["addMember_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["freezeNamespace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["freezeNamespace_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archiveNamespace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archiveNamespace_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces": {
         parameters: {
             query?: never;
             header?: never;
@@ -276,16 +804,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/namespaces/{slug}/members": {
+    "/api/v1/namespaces": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listMembers"];
+        get: operations["listNamespaces_1"];
         put?: never;
-        post: operations["addMember"];
+        post: operations["createNamespace_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markNotificationRead_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stars/{canonicalSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["starSkill_2"];
+        delete: operations["unstarSkill_2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSkills"];
+        put?: never;
+        post: operations["publishSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{canonicalSlug}/undelete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["undeleteSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["publish_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -308,7 +948,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/publish": {
+    "/api/v1/auth/session/bootstrap": {
         parameters: {
             query?: never;
             header?: never;
@@ -317,55 +957,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["publish_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["check"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/device/token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["pollToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/device/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["requestDeviceCode"];
+        post: operations["bootstrapSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -414,6 +1006,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/direct/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["directLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/device/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pollToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/device/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestDeviceCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -516,6 +1156,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/skill-reports/{reportId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolveReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/skill-reports/{reportId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["dismissReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/search/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rebuildAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/profile-reviews/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/profile-reviews/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/account/merge/verify": {
         parameters: {
             query?: never;
@@ -564,23 +1284,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/publish": {
+    "/api/v1/user/profile": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getProfile"];
         put?: never;
-        post: operations["publish_2"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["updateProfile"];
         trace?: never;
     };
-    "/api/v1/skills": {
+    "/api/web/skills": {
         parameters: {
             query?: never;
             header?: never;
@@ -596,55 +1316,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{namespace}/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getSkillDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listVersions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getVersionDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/files": {
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/files": {
         parameters: {
             query?: never;
             header?: never;
@@ -660,7 +1332,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/file": {
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFiles_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/file": {
         parameters: {
             query?: never;
             header?: never;
@@ -668,6 +1356,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getFileContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFileContent_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -692,6 +1396,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadVersion_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVersionDetail"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteVersion"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVersionDetail_1"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteVersion_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVersions_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFilesByTag"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFilesByTag_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFileContentByTag"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFileContentByTag_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadByTag"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadByTag_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/skills/{namespace}/{slug}/tags": {
         parameters: {
             query?: never;
@@ -708,14 +1588,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files": {
+    "/api/web/skills/{namespace}/{slug}/tags": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listFilesByTag"];
+        get: operations["listTags_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -724,30 +1604,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file": {
+    "/api/web/skills/{namespace}/{slug}/resolve": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getFileContentByTag"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadByTag"];
+        get: operations["resolveVersion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -763,7 +1627,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["resolveVersion"];
+        get: operations["resolveVersion_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -788,6 +1652,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/skills/{namespace}/{slug}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadLatest_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSkillDetail"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteSkill_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSkillDetail_1"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteSkill"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{id}/skill-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReviewSkillDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{id}/skill-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReviewSkillDetail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadReviewVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadReviewVersion_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reviews/{id}": {
         parameters: {
             query?: never;
@@ -804,7 +1780,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reviews/pending": {
+    "/api/web/reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReviewDetail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/pending": {
         parameters: {
             query?: never;
             header?: never;
@@ -812,6 +1804,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listPendingReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPendingReviews_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -836,7 +1844,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/promotions/{id}": {
+    "/api/web/reviews/my-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMySubmissions_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -852,7 +1876,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/promotions/pending": {
+    "/api/v1/promotions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPromotionDetail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions/pending": {
         parameters: {
             query?: never;
             header?: never;
@@ -868,7 +1908,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/stars": {
+    "/api/v1/promotions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPendingPromotions_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchMemberCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchMemberCandidates_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/stars": {
         parameters: {
             query?: never;
             header?: never;
@@ -876,6 +1964,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listMyStars"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/stars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyStars_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -900,14 +2004,174 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/health": {
+    "/api/web/me/skills": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["health"];
+        get: operations["listMySkills_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyNamespaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyNamespaces_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["summary_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["notifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["notifications_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["inbox_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["activity_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -932,7 +2196,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/resolve/{namespace}/{slug}": {
+    "/api/v1/skills/{canonicalSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSkill"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteSkill_2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["resolveByQuery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resolve/{canonicalSlug}": {
         parameters: {
             query?: never;
             header?: never;
@@ -940,6 +2252,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["resolve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadByQuery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/download/{canonicalSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadByPath"];
         put?: never;
         post?: never;
         delete?: never;
@@ -956,6 +2316,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["methods"];
         put?: never;
         post?: never;
         delete?: never;
@@ -996,6 +2372,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/skill-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/profile-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -1004,70 +2412,6 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listAuditLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/whoami": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["whoami_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["search_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/resolve/{canonicalSlug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["resolve_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/download/{canonicalSlug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["download"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1092,22 +2436,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tokens/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["revoke"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/namespaces/{slug}/members/{userId}": {
         parameters: {
             query?: never;
@@ -1119,6 +2447,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeMember_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1163,6 +2523,32 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        UpdateMemberRoleRequest: {
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+        };
+        ApiResponseMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["MemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        MemberResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            namespaceId?: number;
+            userId?: string;
+            /** @enum {string} */
+            role?: "OWNER" | "ADMIN" | "MEMBER";
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         NamespaceRequest: {
             slug: string;
             displayName: string;
@@ -1194,31 +2580,26 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
-        UpdateMemberRoleRequest: {
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
+        TokenExpirationUpdateRequest: {
+            expiresAt?: string;
         };
-        ApiResponseMemberResponse: {
+        ApiResponseTokenSummaryResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["MemberResponse"];
+            data?: components["schemas"]["TokenSummaryResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        MemberResponse: {
+        TokenSummaryResponse: {
             /** Format: int64 */
             id?: number;
-            /** Format: int64 */
-            namespaceId?: number;
-            userId?: string;
-            /** @enum {string} */
-            role?: "OWNER" | "ADMIN" | "MEMBER";
-            /** Format: date-time */
+            name?: string;
+            tokenPrefix?: string;
             createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
+            expiresAt?: string;
+            lastUsedAt?: string;
         };
         AdminUserStatusUpdateRequest: {
             status: string;
@@ -1240,27 +2621,46 @@ export interface components {
         AdminUserRoleUpdateRequest: {
             role: string;
         };
-        TokenCreateRequest: {
-            name: string;
-            scopes?: string[];
-        };
-        ApiResponseTokenCreateResponse: {
+        ApiResponseSkillLifecycleMutationResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["TokenCreateResponse"];
+            data?: components["schemas"]["SkillLifecycleMutationResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        TokenCreateResponse: {
-            token?: string;
+        SkillLifecycleMutationResponse: {
             /** Format: int64 */
-            id?: number;
-            name?: string;
-            tokenPrefix?: string;
-            createdAt?: string;
-            expiresAt?: string;
+            skillId?: number;
+            /** Format: int64 */
+            versionId?: number;
+            action?: string;
+            status?: string;
+        };
+        SkillVersionRereleaseRequest: {
+            targetVersion: string;
+        };
+        SkillReportSubmitRequest: {
+            reason?: string;
+            details?: string;
+        };
+        ApiResponseSkillReportMutationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillReportMutationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SkillReportMutationResponse: {
+            /** Format: int64 */
+            reportId?: number;
+            status?: string;
+        };
+        AdminSkillActionRequest: {
+            reason?: string;
         };
         ApiResponsePublishResponse: {
             /** Format: int32 */
@@ -1283,9 +2683,8 @@ export interface components {
             /** Format: int64 */
             totalSize?: number;
         };
-        ReviewTaskRequest: {
-            /** Format: int64 */
-            skillVersionId?: number;
+        ReviewActionRequest: {
+            comment?: string;
         };
         ApiResponseReviewTaskResponse: {
             /** Format: int32 */
@@ -1315,16 +2714,12 @@ export interface components {
             /** Format: date-time */
             reviewedAt?: string;
         };
-        ReviewActionRequest: {
-            comment?: string;
+        ReviewTaskRequest: {
+            /** Format: int64 */
+            skillVersionId?: number;
         };
-        PromotionRequestDto: {
-            /** Format: int64 */
-            sourceSkillId?: number;
-            /** Format: int64 */
-            sourceVersionId?: number;
-            /** Format: int64 */
-            targetNamespaceId?: number;
+        PromotionActionRequest: {
+            comment?: string;
         };
         ApiResponsePromotionResponseDto: {
             /** Format: int32 */
@@ -1357,13 +2752,79 @@ export interface components {
             /** Format: date-time */
             reviewedAt?: string;
         };
-        PromotionActionRequest: {
-            comment?: string;
+        PromotionRequestDto: {
+            /** Format: int64 */
+            sourceSkillId?: number;
+            /** Format: int64 */
+            sourceVersionId?: number;
+            /** Format: int64 */
+            targetNamespaceId?: number;
         };
         MemberRequest: {
             userId: string;
             /** @enum {string} */
             role: "OWNER" | "ADMIN" | "MEMBER";
+        };
+        NamespaceLifecycleRequest: {
+            reason?: string;
+        };
+        ApiResponseGovernanceNotificationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GovernanceNotificationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        GovernanceNotificationResponse: {
+            /** Format: int64 */
+            id?: number;
+            category?: string;
+            entityType?: string;
+            /** Format: int64 */
+            entityId?: number;
+            title?: string;
+            bodyJson?: string;
+            status?: string;
+            createdAt?: string;
+            readAt?: string;
+        };
+        TokenCreateRequest: {
+            name: string;
+            scopes?: string[];
+            expiresAt?: string;
+        };
+        ApiResponseTokenCreateResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["TokenCreateResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        TokenCreateResponse: {
+            token?: string;
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            tokenPrefix?: string;
+            createdAt?: string;
+            expiresAt?: string;
+        };
+        ClawHubStarResponse: {
+            ok?: boolean;
+            starred?: boolean;
+            alreadyStarred?: boolean;
+        };
+        ClawHubPublishResponse: {
+            ok?: boolean;
+            skillId?: string;
+            versionId?: string;
+        };
+        ClawHubDeleteResponse: {
+            ok?: boolean;
         };
         AuthorizeRequest: {
             userCode?: string;
@@ -1380,22 +2841,43 @@ export interface components {
         MessageResponse: {
             message?: string;
         };
-        ApiResponseSkillCheckResponse: {
+        SessionBootstrapRequest: {
+            provider: string;
+        };
+        ApiResponseAuthMeResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["SkillCheckResponse"];
+            data?: components["schemas"]["AuthMeResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        SkillCheckResponse: {
-            valid?: boolean;
-            errors?: string[];
-            /** Format: int32 */
-            fileCount?: number;
-            /** Format: int64 */
-            totalSize?: number;
+        AuthMeResponse: {
+            userId?: string;
+            displayName?: string;
+            email?: string;
+            avatarUrl?: string;
+            oauthProvider?: string;
+            platformRoles?: string[];
+        };
+        LocalRegisterRequest: {
+            username: string;
+            password: string;
+            email?: string;
+        };
+        LocalLoginRequest: {
+            username: string;
+            password: string;
+        };
+        ChangePasswordRequest: {
+            currentPassword: string;
+            newPassword: string;
+        };
+        DirectLoginRequest: {
+            provider: string;
+            username: string;
+            password: string;
         };
         TokenRequest: {
             deviceCode?: string;
@@ -1432,36 +2914,6 @@ export interface components {
             /** Format: int32 */
             interval?: number;
         };
-        LocalRegisterRequest: {
-            username: string;
-            password: string;
-            email?: string;
-        };
-        ApiResponseAuthMeResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["AuthMeResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        AuthMeResponse: {
-            userId?: string;
-            displayName?: string;
-            email?: string;
-            avatarUrl?: string;
-            oauthProvider?: string;
-            platformRoles?: string[];
-        };
-        LocalLoginRequest: {
-            username: string;
-            password: string;
-        };
-        ChangePasswordRequest: {
-            currentPassword: string;
-            newPassword: string;
-        };
         AdminSkillMutationResponse: {
             /** Format: int64 */
             skillId?: number;
@@ -1479,8 +2931,26 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
-        AdminSkillActionRequest: {
-            reason?: string;
+        AdminSkillReportActionRequest: {
+            comment?: string;
+            disposition?: string;
+        };
+        ProfileReviewRejectRequest: {
+            comment: string;
+        };
+        ApiResponseProfileReviewMutationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ProfileReviewMutationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ProfileReviewMutationResponse: {
+            /** Format: int64 */
+            id?: number;
+            status?: string;
         };
         MergeVerifyRequest: {
             /** Format: int64 */
@@ -1510,28 +2980,28 @@ export interface components {
             /** Format: int64 */
             mergeRequestId: number;
         };
-        ClawHubPublishResponse: {
-            canonicalSlug?: string;
-            version?: string;
-            status?: string;
+        UpdateProfileRequest: {
+            displayName?: string;
         };
-        ApiResponseListTokenSummaryResponse: {
+        ApiResponseUpdateProfileResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["TokenSummaryResponse"][];
+            data?: components["schemas"]["UpdateProfileResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        TokenSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            name?: string;
-            tokenPrefix?: string;
-            createdAt?: string;
-            expiresAt?: string;
-            lastUsedAt?: string;
+        UpdateProfileResponse: {
+            /** @enum {string} */
+            status?: "APPLIED" | "PENDING_REVIEW" | "PARTIALLY_APPLIED";
+            message?: string;
+            appliedFields?: {
+                [key: string]: string;
+            };
+            pendingFields?: {
+                [key: string]: string;
+            };
         };
         ApiResponseSearchResponse: {
             /** Format: int32 */
@@ -1550,6 +3020,12 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        SkillLifecycleVersionResponse: {
+            /** Format: int64 */
+            id?: number;
+            version?: string;
+            status?: string;
         };
         SkillSummaryResponse: {
             /** Format: int64 */
@@ -1597,46 +3073,47 @@ export interface components {
             score?: number;
             rated?: boolean;
         };
-        ApiResponseSkillDetailResponse: {
+        ApiResponseListSkillFileResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["SkillDetailResponse"];
+            data?: components["schemas"]["SkillFileResponse"][];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        SkillDetailResponse: {
+        SkillFileResponse: {
             /** Format: int64 */
             id?: number;
-            slug?: string;
-            displayName?: string;
-            summary?: string;
-            visibility?: string;
-            status?: string;
+            filePath?: string;
             /** Format: int64 */
-            downloadCount?: number;
-            /** Format: int32 */
-            starCount?: number;
-            ratingAvg?: number;
-            /** Format: int32 */
-            ratingCount?: number;
-            hidden?: boolean;
-            namespace?: string;
-            canManageLifecycle?: boolean;
-            canSubmitPromotion?: boolean;
-            canInteract?: boolean;
-            canReport?: boolean;
-            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            resolutionMode?: string;
+            fileSize?: number;
+            contentType?: string;
+            sha256?: string;
         };
-        SkillLifecycleVersionResponse: {
+        ApiResponseSkillVersionDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillVersionDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SkillVersionDetailResponse: {
             /** Format: int64 */
             id?: number;
             version?: string;
             status?: string;
+            changelog?: string;
+            /** Format: int32 */
+            fileCount?: number;
+            /** Format: int64 */
+            totalSize?: number;
+            /** Format: date-time */
+            publishedAt?: string;
+            parsedMetadataJson?: string;
+            manifestJson?: string;
         };
         ApiResponsePageResponseSkillVersionResponse: {
             /** Format: int32 */
@@ -1668,48 +3145,7 @@ export interface components {
             totalSize?: number;
             /** Format: date-time */
             publishedAt?: string;
-        };
-        ApiResponseSkillVersionDetailResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillVersionDetailResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillVersionDetailResponse: {
-            /** Format: int64 */
-            id?: number;
-            version?: string;
-            status?: string;
-            changelog?: string;
-            /** Format: int32 */
-            fileCount?: number;
-            /** Format: int64 */
-            totalSize?: number;
-            /** Format: date-time */
-            publishedAt?: string;
-            parsedMetadataJson?: string;
-            manifestJson?: string;
-        };
-        ApiResponseListSkillFileResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillFileResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillFileResponse: {
-            /** Format: int64 */
-            id?: number;
-            filePath?: string;
-            /** Format: int64 */
-            fileSize?: number;
-            contentType?: string;
-            sha256?: string;
+            downloadAvailable?: boolean;
         };
         ApiResponseListTagResponse: {
             /** Format: int32 */
@@ -1740,6 +3176,61 @@ export interface components {
             fingerprint?: string;
             matched?: boolean;
             downloadUrl?: string;
+        };
+        ApiResponseSkillDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SkillDetailResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
+            ownerId?: string;
+            ownerDisplayName?: string;
+            summary?: string;
+            visibility?: string;
+            status?: string;
+            /** Format: int64 */
+            downloadCount?: number;
+            /** Format: int32 */
+            starCount?: number;
+            ratingAvg?: number;
+            /** Format: int32 */
+            ratingCount?: number;
+            hidden?: boolean;
+            namespace?: string;
+            canManageLifecycle?: boolean;
+            canSubmitPromotion?: boolean;
+            canInteract?: boolean;
+            canReport?: boolean;
+            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            resolutionMode?: string;
+        };
+        ApiResponseReviewSkillDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ReviewSkillDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ReviewSkillDetailResponse: {
+            skill?: components["schemas"]["SkillDetailResponse"];
+            versions?: components["schemas"]["SkillVersionResponse"][];
+            files?: components["schemas"]["SkillFileResponse"][];
+            documentationPath?: string;
+            documentationContent?: string;
+            downloadUrl?: string;
+            activeVersion?: string;
         };
         ApiResponsePageResponseReviewTaskResponse: {
             /** Format: int32 */
@@ -1784,24 +3275,6 @@ export interface components {
             size?: number;
             sort?: string[];
         };
-        ApiResponsePageResponseNamespaceResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseNamespaceResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseNamespaceResponse: {
-            items?: components["schemas"]["NamespaceResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
         ApiResponsePageResponseMemberResponse: {
             /** Format: int32 */
             code?: number;
@@ -1820,31 +3293,319 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
-        ApiResponseListSkillSummaryResponse: {
+        ApiResponseListNamespaceCandidateUserResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["SkillSummaryResponse"][];
+            data?: components["schemas"]["NamespaceCandidateUserResponse"][];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        ApiResponseCliWhoamiResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliWhoamiResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliWhoamiResponse: {
+        NamespaceCandidateUserResponse: {
             userId?: string;
             displayName?: string;
             email?: string;
+            status?: string;
+        };
+        ApiResponsePageResponseNamespaceResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseNamespaceResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseNamespaceResponse: {
+            items?: components["schemas"]["NamespaceResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponsePageResponseSkillSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseSkillSummaryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseSkillSummaryResponse: {
+            items?: components["schemas"]["SkillSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponseListMyNamespaceResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["MyNamespaceResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        MyNamespaceResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "FROZEN" | "ARCHIVED";
+            description?: string;
+            /** @enum {string} */
+            type?: "GLOBAL" | "TEAM";
             avatarUrl?: string;
-            authType?: string;
-            platformRoles?: string[];
+            createdBy?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** @enum {string} */
+            currentUserRole?: "OWNER" | "ADMIN" | "MEMBER";
+            immutable?: boolean;
+            canFreeze?: boolean;
+            canUnfreeze?: boolean;
+            canArchive?: boolean;
+            canRestore?: boolean;
+        };
+        ApiResponseGovernanceSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GovernanceSummaryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        GovernanceSummaryResponse: {
+            /** Format: int64 */
+            pendingReviews?: number;
+            /** Format: int64 */
+            pendingPromotions?: number;
+            /** Format: int64 */
+            pendingReports?: number;
+            /** Format: int64 */
+            unreadNotifications?: number;
+        };
+        ApiResponsePageResponseGovernanceNotificationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseGovernanceNotificationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseGovernanceNotificationResponse: {
+            items?: components["schemas"]["GovernanceNotificationResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponsePageResponseGovernanceInboxItemResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseGovernanceInboxItemResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        GovernanceInboxItemResponse: {
+            type?: string;
+            /** Format: int64 */
+            id?: number;
+            title?: string;
+            subtitle?: string;
+            timestamp?: string;
+            namespace?: string;
+            skillSlug?: string;
+        };
+        PageResponseGovernanceInboxItemResponse: {
+            items?: components["schemas"]["GovernanceInboxItemResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponsePageResponseGovernanceActivityItemResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseGovernanceActivityItemResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        GovernanceActivityItemResponse: {
+            /** Format: int64 */
+            id?: number;
+            action?: string;
+            actorUserId?: string;
+            actorDisplayName?: string;
+            targetType?: string;
+            targetId?: string;
+            details?: string;
+            timestamp?: string;
+        };
+        PageResponseGovernanceActivityItemResponse: {
+            items?: components["schemas"]["GovernanceActivityItemResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ClawHubWhoamiResponse: {
+            user?: components["schemas"]["User"];
+        };
+        User: {
+            handle?: string;
+            displayName?: string;
+            image?: string;
+        };
+        ApiResponseUserProfileResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["UserProfileResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        FieldPolicyResponse: {
+            editable?: boolean;
+            requiresReview?: boolean;
+        };
+        PendingChangesResponse: {
+            status?: string;
+            changes?: {
+                [key: string]: string;
+            };
+            reviewComment?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        UserProfileResponse: {
+            displayName?: string;
+            avatarUrl?: string;
+            email?: string;
+            pendingChanges?: components["schemas"]["PendingChangesResponse"];
+            fieldPolicies?: {
+                [key: string]: components["schemas"]["FieldPolicyResponse"];
+            };
+        };
+        ApiResponsePageResponseTokenSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseTokenSummaryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseTokenSummaryResponse: {
+            items?: components["schemas"]["TokenSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ClawHubSkillListResponse: {
+            items?: components["schemas"]["SkillListItem"][];
+            nextCursor?: string;
+        };
+        LatestVersion: {
+            version?: string;
+            /** Format: int64 */
+            createdAt?: number;
+            changelog?: string;
+            license?: string;
+        };
+        SkillListItem: {
+            slug?: string;
+            displayName?: string;
+            summary?: string;
+            tags?: Record<string, never>;
+            stats?: Record<string, never>;
+            /** Format: int64 */
+            createdAt?: number;
+            /** Format: int64 */
+            updatedAt?: number;
+            latestVersion?: components["schemas"]["LatestVersion"];
+        };
+        ClawHubSkillResponse: {
+            skill?: components["schemas"]["SkillInfo"];
+            latestVersion?: components["schemas"]["VersionInfo"];
+            owner?: components["schemas"]["OwnerInfo"];
+            moderation?: components["schemas"]["ModerationInfo"];
+        };
+        ModerationInfo: {
+            isSuspicious?: boolean;
+            isMalwareBlocked?: boolean;
+            verdict?: string;
+            reasonCodes?: string[];
+            /** Format: int64 */
+            updatedAt?: number;
+            engineVersion?: string;
+            summary?: string;
+        };
+        OwnerInfo: {
+            handle?: string;
+            displayName?: string;
+            image?: string;
+        };
+        SkillInfo: {
+            slug?: string;
+            displayName?: string;
+            summary?: string;
+            tags?: Record<string, never>;
+            stats?: Record<string, never>;
+            /** Format: int64 */
+            createdAt?: number;
+            /** Format: int64 */
+            updatedAt?: number;
+        };
+        VersionInfo: {
+            version?: string;
+            /** Format: int64 */
+            createdAt?: number;
+            changelog?: string;
+            license?: string;
+        };
+        ClawHubSearchResponse: {
+            results?: components["schemas"]["ClawHubSearchResult"][];
+        };
+        ClawHubSearchResult: {
+            slug?: string;
+            displayName?: string;
+            summary?: string;
+            version?: string;
+            /** Format: double */
+            score?: number;
+            /** Format: int64 */
+            updatedAt?: number;
+        };
+        ClawHubResolveResponse: {
+            match?: components["schemas"]["VersionInfo"];
+            latestVersion?: components["schemas"]["VersionInfo"];
         };
         ApiResponseListAuthProviderResponse: {
             /** Format: int32 */
@@ -1860,12 +3621,28 @@ export interface components {
             name?: string;
             authorizationUrl?: string;
         };
+        ApiResponseListAuthMethodResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["AuthMethodResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        AuthMethodResponse: {
+            id?: string;
+            methodType?: string;
+            provider?: string;
+            displayName?: string;
+            actionUrl?: string;
+        };
         AdminUserSummaryResponse: {
-            userId?: string;
+            id?: string;
             username?: string;
             email?: string;
-            platformRoles?: string[];
             status?: string;
+            platformRoles?: string[];
             /** Format: date-time */
             createdAt?: string;
         };
@@ -1887,6 +3664,78 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
+        AdminSkillReportSummaryResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            skillId?: number;
+            namespace?: string;
+            skillSlug?: string;
+            skillDisplayName?: string;
+            reporterId?: string;
+            reason?: string;
+            details?: string;
+            status?: string;
+            handledBy?: string;
+            handleComment?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            handledAt?: string;
+        };
+        ApiResponsePageResponseAdminSkillReportSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseAdminSkillReportSummaryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseAdminSkillReportSummaryResponse: {
+            items?: components["schemas"]["AdminSkillReportSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponsePageResponseProfileReviewSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseProfileReviewSummaryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseProfileReviewSummaryResponse: {
+            items?: components["schemas"]["ProfileReviewSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ProfileReviewSummaryResponse: {
+            /** Format: int64 */
+            id?: number;
+            userId?: string;
+            username?: string;
+            currentDisplayName?: string;
+            requestedDisplayName?: string;
+            status?: string;
+            machineResult?: string;
+            reviewerId?: string;
+            reviewerName?: string;
+            reviewComment?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            reviewedAt?: string;
+        };
         ApiResponsePageResponseAuditLogItemResponse: {
             /** Format: int32 */
             code?: number;
@@ -1897,14 +3746,18 @@ export interface components {
             requestId?: string;
         };
         AuditLogItemResponse: {
-            id?: string;
-            userId?: string;
+            /** Format: int64 */
+            id?: number;
             action?: string;
+            userId?: string;
+            username?: string;
+            details?: string;
+            ipAddress?: string;
+            requestId?: string;
             resourceType?: string;
             resourceId?: string;
             /** Format: date-time */
             timestamp?: string;
-            ipAddress?: string;
         };
         PageResponseAuditLogItemResponse: {
             items?: components["schemas"]["AuditLogItemResponse"][];
@@ -1915,25 +3768,26 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
-        ClawHubWhoamiResponse: {
-            userId?: string;
-            displayName?: string;
-            email?: string;
-        };
-        ClawHubSearchResponse: {
-            items?: components["schemas"]["ClawHubSkillItem"][];
-        };
-        ClawHubSkillItem: {
-            canonicalSlug?: string;
-            description?: string;
-            latestVersion?: string;
+        ApiResponseSkillDeleteResponse: {
             /** Format: int32 */
-            starCount?: number;
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillDeleteResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
-        ClawHubResolveResponse: {
-            canonicalSlug?: string;
-            version?: string;
-            downloadUrl?: string;
+        SkillDeleteResponse: {
+            /** Format: int64 */
+            skillId?: number;
+            namespace?: string;
+            slug?: string;
+            deleted?: boolean;
+        };
+        ClawHubUnstarResponse: {
+            ok?: boolean;
+            unstarred?: boolean;
+            alreadyUnstarred?: boolean;
         };
     };
     responses: never;
@@ -2010,6 +3864,72 @@ export interface operations {
             };
         };
     };
+    checkStarred_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseBoolean"];
+                };
+            };
+        };
+    };
+    starSkill_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    unstarSkill_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
     getUserRating: {
         parameters: {
             query?: never;
@@ -2033,6 +3953,54 @@ export interface operations {
         };
     };
     rateSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillRatingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    getUserRating_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillRatingStatusResponse"];
+                };
+            };
+        };
+    };
+    rateSkill_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2110,6 +4078,112 @@ export interface operations {
             };
         };
     };
+    createOrMoveTag_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseTagResponse"];
+                };
+            };
+        };
+    };
+    deleteTag_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
+    updateMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    updateMemberRole_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                };
+            };
+        };
+    };
     getNamespace: {
         parameters: {
             query?: never;
@@ -2158,19 +4232,40 @@ export interface operations {
             };
         };
     };
-    updateMemberRole: {
+    getNamespace_1: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 slug: string;
-                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    updateNamespace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
+                "application/json": components["schemas"]["NamespaceRequest"];
             };
         };
         responses: {
@@ -2180,7 +4275,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    updateExpiration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenExpirationUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseTokenSummaryResponse"];
                 };
             };
         };
@@ -2237,11 +4358,15 @@ export interface operations {
             };
         };
     };
-    list: {
+    withdrawReview: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -2252,21 +4377,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListTokenSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
                 };
             };
         };
     };
-    create: {
+    withdrawReview_1: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    rereleaseVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TokenCreateRequest"];
+                "application/json": components["schemas"]["SkillVersionRereleaseRequest"];
             };
         };
         responses: {
@@ -2276,7 +4429,189 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseTokenCreateResponse"];
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    rereleaseVersion_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillVersionRereleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    unarchiveSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    unarchiveSkill_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    submitReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillReportSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
+                };
+            };
+        };
+    };
+    submitReport_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillReportSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
+                };
+            };
+        };
+    };
+    archiveSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminSkillActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    archiveSkill_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminSkillActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
                 };
             };
         };
@@ -2308,6 +4643,185 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePublishResponse"];
+                };
+            };
+        };
+    };
+    publish_1: {
+        parameters: {
+            query: {
+                visibility: string;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePublishResponse"];
+                };
+            };
+        };
+    };
+    withdrawReview_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    withdrawReview_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    rejectReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
+                };
+            };
+        };
+    };
+    rejectReview_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
+                };
+            };
+        };
+    };
+    approveReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
+                };
+            };
+        };
+    };
+    approveReview_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
                 };
             };
         };
@@ -2361,13 +4875,16 @@ export interface operations {
             };
         };
     };
-    withdrawReview: {
+    listReviews_1: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
+            query: {
+                status: string;
+                namespaceId?: number;
+                page?: number;
+                size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -2378,23 +4895,21 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
+                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
                 };
             };
         };
     };
-    rejectReview: {
+    submitReview_1: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: number;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["ReviewActionRequest"];
+                "application/json": components["schemas"]["ReviewTaskRequest"];
             };
         };
         responses: {
@@ -2409,7 +4924,7 @@ export interface operations {
             };
         };
     };
-    approveReview: {
+    rejectPromotion: {
         parameters: {
             query?: never;
             header?: never;
@@ -2420,7 +4935,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["ReviewActionRequest"];
+                "application/json": components["schemas"]["PromotionActionRequest"];
             };
         };
         responses: {
@@ -2430,7 +4945,85 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
+                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
+                };
+            };
+        };
+    };
+    rejectPromotion_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
+                };
+            };
+        };
+    };
+    approvePromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
+                };
+            };
+        };
+    };
+    approvePromotion_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
                 };
             };
         };
@@ -2483,62 +5076,12 @@ export interface operations {
             };
         };
     };
-    rejectPromotion: {
+    listPromotions_1: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PromotionActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    approvePromotion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PromotionActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    listNamespaces: {
-        parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -2552,12 +5095,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseNamespaceResponse"];
+                    "*/*": components["schemas"]["ApiResponsePageResponsePromotionResponseDto"];
                 };
             };
         };
     };
-    createNamespace: {
+    submitPromotion_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2566,9 +5109,97 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["NamespaceRequest"];
+                "application/json": components["schemas"]["PromotionRequestDto"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
+                };
+            };
+        };
+    };
+    unfreezeNamespace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    unfreezeNamespace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    restoreNamespace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    restoreNamespace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -2631,6 +5262,485 @@ export interface operations {
             };
         };
     };
+    listMembers_1: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    addMember_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    freezeNamespace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    freezeNamespace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    archiveNamespace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    archiveNamespace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    listNamespaces: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    createNamespace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamespaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    listNamespaces_1: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    createNamespace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamespaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
+                };
+            };
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGovernanceNotificationResponse"];
+                };
+            };
+        };
+    };
+    markNotificationRead_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGovernanceNotificationResponse"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseTokenSummaryResponse"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseTokenCreateResponse"];
+                };
+            };
+        };
+    };
+    starSkill_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubStarResponse"];
+                };
+            };
+        };
+    };
+    unstarSkill_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubUnstarResponse"];
+                };
+            };
+        };
+    };
+    listSkills: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubSkillListResponse"];
+                };
+            };
+        };
+    };
+    publishSkill: {
+        parameters: {
+            query: {
+                payload: string;
+                files: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubPublishResponse"];
+                };
+            };
+        };
+    };
+    undeleteSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubDeleteResponse"];
+                };
+            };
+        };
+    };
+    publish_2: {
+        parameters: {
+            query: {
+                namespace: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubPublishResponse"];
+                };
+            };
+        };
+    };
     authorizeDevice: {
         parameters: {
             query?: never;
@@ -2655,64 +5765,7 @@ export interface operations {
             };
         };
     };
-    publish_1: {
-        parameters: {
-            query: {
-                namespace: string;
-                visibility: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    /** Format: binary */
-                    file: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePublishResponse"];
-                };
-            };
-        };
-    };
-    check: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    /** Format: binary */
-                    file: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillCheckResponse"];
-                };
-            };
-        };
-    };
-    pollToken: {
+    bootstrapSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -2721,7 +5774,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TokenRequest"];
+                "application/json": components["schemas"]["SessionBootstrapRequest"];
             };
         };
         responses: {
@@ -2731,27 +5784,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseDeviceTokenResponse"];
-                };
-            };
-        };
-    };
-    requestDeviceCode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDeviceCodeResponse"];
+                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
                 };
             };
         };
@@ -2824,6 +5857,74 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    directLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
+                };
+            };
+        };
+    };
+    pollToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDeviceTokenResponse"];
+                };
+            };
+        };
+    };
+    requestDeviceCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDeviceCodeResponse"];
                 };
             };
         };
@@ -2968,6 +6069,126 @@ export interface operations {
             };
         };
     };
+    resolveReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminSkillReportActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
+                };
+            };
+        };
+    };
+    dismissReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminSkillReportActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
+                };
+            };
+        };
+    };
+    rebuildAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileReviewRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseProfileReviewMutationResponse"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseProfileReviewMutationResponse"];
+                };
+            };
+        };
+    };
     verify: {
         parameters: {
             query?: never;
@@ -3040,21 +6261,36 @@ export interface operations {
             };
         };
     };
-    publish_2: {
+    getProfile: {
         parameters: {
-            query: {
-                namespace: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    /** Format: binary */
-                    file: string;
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
                 };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUserProfileResponse"];
+                };
+            };
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
             };
         };
         responses: {
@@ -3064,7 +6300,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ClawHubPublishResponse"];
+                    "*/*": components["schemas"]["ApiResponseUpdateProfileResponse"];
                 };
             };
         };
@@ -3095,56 +6331,7 @@ export interface operations {
             };
         };
     };
-    getSkillDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDetailResponse"];
-                };
-            };
-        };
-    };
-    listVersions: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillVersionResponse"];
-                };
-            };
-        };
-    };
-    getVersionDetail: {
+    listFiles: {
         parameters: {
             query?: never;
             header?: never;
@@ -3163,12 +6350,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseSkillVersionDetailResponse"];
+                    "*/*": components["schemas"]["ApiResponseListSkillFileResponse"];
                 };
             };
         };
     };
-    listFiles: {
+    listFiles_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3218,6 +6405,32 @@ export interface operations {
             };
         };
     };
+    getFileContent_1: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
     downloadVersion: {
         parameters: {
             query?: never;
@@ -3242,9 +6455,132 @@ export interface operations {
             };
         };
     };
-    listTags: {
+    downloadVersion_1: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    getVersionDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillVersionDetailResponse"];
+                };
+            };
+        };
+    };
+    deleteVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    getVersionDetail_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillVersionDetailResponse"];
+                };
+            };
+        };
+    };
+    deleteVersion_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    listVersions: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path: {
                 namespace: string;
@@ -3260,12 +6596,62 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListTagResponse"];
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillVersionResponse"];
+                };
+            };
+        };
+    };
+    listVersions_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillVersionResponse"];
                 };
             };
         };
     };
     listFilesByTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillFileResponse"];
+                };
+            };
+        };
+    };
+    listFilesByTag_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3315,6 +6701,32 @@ export interface operations {
             };
         };
     };
+    getFileContentByTag_1: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
     downloadByTag: {
         parameters: {
             query?: never;
@@ -3339,7 +6751,104 @@ export interface operations {
             };
         };
     };
+    downloadByTag_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    listTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListTagResponse"];
+                };
+            };
+        };
+    };
+    listTags_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListTagResponse"];
+                };
+            };
+        };
+    };
     resolveVersion: {
+        parameters: {
+            query?: {
+                version?: string;
+                tag?: string;
+                hash?: string;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseResolveVersionResponse"];
+                };
+            };
+        };
+    };
+    resolveVersion_1: {
         parameters: {
             query?: {
                 version?: string;
@@ -3389,6 +6898,209 @@ export interface operations {
             };
         };
     };
+    downloadLatest_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    getSkillDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillDetailResponse"];
+                };
+            };
+        };
+    };
+    deleteSkill_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
+    getSkillDetail_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillDetailResponse"];
+                };
+            };
+        };
+    };
+    deleteSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
+    getReviewSkillDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewSkillDetailResponse"];
+                };
+            };
+        };
+    };
+    getReviewSkillDetail_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewSkillDetailResponse"];
+                };
+            };
+        };
+    };
+    downloadReviewVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    downloadReviewVersion_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
     getReviewDetail: {
         parameters: {
             query?: never;
@@ -3411,7 +7123,53 @@ export interface operations {
             };
         };
     };
+    getReviewDetail_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
+                };
+            };
+        };
+    };
     listPendingReviews: {
+        parameters: {
+            query: {
+                namespaceId: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
+                };
+            };
+        };
+    };
+    listPendingReviews_1: {
         parameters: {
             query: {
                 namespaceId: number;
@@ -3458,7 +7216,52 @@ export interface operations {
             };
         };
     };
+    listMySubmissions_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
+                };
+            };
+        };
+    };
     getPromotionDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
+                };
+            };
+        };
+    };
+    getPromotionDetail_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3503,9 +7306,12 @@ export interface operations {
             };
         };
     };
-    listMyStars: {
+    listPendingPromotions_1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3518,13 +7324,157 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponsePageResponsePromotionResponseDto"];
+                };
+            };
+        };
+    };
+    searchMemberCandidates: {
+        parameters: {
+            query: {
+                search: string;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNamespaceCandidateUserResponse"];
+                };
+            };
+        };
+    };
+    searchMemberCandidates_1: {
+        parameters: {
+            query: {
+                search: string;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNamespaceCandidateUserResponse"];
+                };
+            };
+        };
+    };
+    listMyStars: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
+                };
+            };
+        };
+    };
+    listMyStars_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
                 };
             };
         };
     };
     listMySkills: {
         parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                filter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
+                };
+            };
+        };
+    };
+    listMySkills_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                filter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
+                };
+            };
+        };
+    };
+    listMyNamespaces: {
+        parameters: {
             query?: never;
             header?: never;
             path?: never;
@@ -3538,7 +7488,343 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponseListMyNamespaceResponse"];
+                };
+            };
+        };
+    };
+    listMyNamespaces_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListMyNamespaceResponse"];
+                };
+            };
+        };
+    };
+    summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGovernanceSummaryResponse"];
+                };
+            };
+        };
+    };
+    summary_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGovernanceSummaryResponse"];
+                };
+            };
+        };
+    };
+    notifications: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceNotificationResponse"];
+                };
+            };
+        };
+    };
+    notifications_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceNotificationResponse"];
+                };
+            };
+        };
+    };
+    inbox: {
+        parameters: {
+            query?: {
+                type?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceInboxItemResponse"];
+                };
+            };
+        };
+    };
+    inbox_1: {
+        parameters: {
+            query?: {
+                type?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceInboxItemResponse"];
+                };
+            };
+        };
+    };
+    activity: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceActivityItemResponse"];
+                };
+            };
+        };
+    };
+    activity_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceActivityItemResponse"];
+                };
+            };
+        };
+    };
+    whoami: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubWhoamiResponse"];
+                };
+            };
+        };
+    };
+    getSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubSkillResponse"];
+                };
+            };
+        };
+    };
+    deleteSkill_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubDeleteResponse"];
+                };
+            };
+        };
+    };
+    search_1: {
+        parameters: {
+            query: {
+                q: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubSearchResponse"];
+                };
+            };
+        };
+    };
+    resolveByQuery: {
+        parameters: {
+            query: {
+                slug: string;
+                version?: string;
+                hash?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubResolveResponse"];
+                };
+            };
+        };
+    };
+    resolve: {
+        parameters: {
+            query?: {
+                version?: string;
+            };
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClawHubResolveResponse"];
                 };
             };
         };
@@ -3563,9 +7849,12 @@ export interface operations {
             };
         };
     };
-    whoami: {
+    downloadByQuery: {
         parameters: {
-            query?: never;
+            query: {
+                slug: string;
+                version?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3577,23 +7866,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCliWhoamiResponse"];
-                };
+                content?: never;
             };
         };
     };
-    resolve: {
+    downloadByPath: {
         parameters: {
             query?: {
                 version?: string;
-                tag?: string;
-                hash?: string;
             };
             header?: never;
             path: {
-                namespace: string;
-                slug: string;
+                canonicalSlug: string;
             };
             cookie?: never;
         };
@@ -3604,15 +7888,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseResolveVersionResponse"];
-                };
+                content?: never;
             };
         };
     };
     providers: {
         parameters: {
-            query?: never;
+            query?: {
+                returnTo?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3626,6 +7910,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListAuthProviderResponse"];
+                };
+            };
+        };
+    };
+    methods: {
+        parameters: {
+            query?: {
+                returnTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListAuthMethodResponse"];
                 };
             };
         };
@@ -3675,6 +7981,54 @@ export interface operations {
             };
         };
     };
+    listReports: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseAdminSkillReportSummaryResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseProfileReviewSummaryResponse"];
+                };
+            };
+        };
+    };
     listAuditLogs: {
         parameters: {
             query?: {
@@ -3682,6 +8036,12 @@ export interface operations {
                 size?: number;
                 userId?: string;
                 action?: string;
+                requestId?: string;
+                ipAddress?: string;
+                resourceType?: string;
+                resourceId?: string;
+                startTime?: string;
+                endTime?: string;
             };
             header?: never;
             path?: never;
@@ -3697,94 +8057,6 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseAuditLogItemResponse"];
                 };
-            };
-        };
-    };
-    whoami_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubWhoamiResponse"];
-                };
-            };
-        };
-    };
-    search_1: {
-        parameters: {
-            query: {
-                q: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubSearchResponse"];
-                };
-            };
-        };
-    };
-    resolve_1: {
-        parameters: {
-            query?: {
-                version?: string;
-            };
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubResolveResponse"];
-                };
-            };
-        };
-    };
-    download: {
-        parameters: {
-            query?: {
-                version?: string;
-            };
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -3810,28 +8082,6 @@ export interface operations {
             };
         };
     };
-    revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
     removeMember: {
         parameters: {
             query?: never;
@@ -3852,6 +8102,49 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["ApiResponseMessageResponse"];
                 };
+            };
+        };
+    };
+    removeMember_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
