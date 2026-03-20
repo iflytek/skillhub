@@ -162,6 +162,16 @@ public class UserProfileController extends BaseApiController {
                     ProfileUpdateStatus.PENDING_REVIEW,
                     "response.profile.pendingReview"
             );
+            case UpdateProfileResult.Mixed(var appliedFields, var pendingFields) -> {
+                // Refresh session with the immediately-applied fields
+                refreshSession(principal, authentication, appliedFields, httpRequest);
+                yield new UpdateProfileResponse(
+                        ProfileUpdateStatus.PARTIALLY_APPLIED,
+                        "response.profile.partiallyApplied",
+                        appliedFields,
+                        pendingFields
+                );
+            }
         };
 
         return ok("response.success.update", response);
