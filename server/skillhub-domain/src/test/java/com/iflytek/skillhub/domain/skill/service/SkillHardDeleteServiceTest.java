@@ -23,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.InOrder;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -114,7 +116,10 @@ class SkillHardDeleteServiceTest {
 
         service.hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
 
-        verify(skillRepository).save(skill);
+        InOrder inOrder = inOrder(skillRepository, skillVersionRepository);
+        inOrder.verify(skillRepository).save(skill);
+        inOrder.verify(skillRepository).flush();
+        inOrder.verify(skillVersionRepository).deleteBySkillId(7L);
         verify(reviewTaskRepository).deleteBySkillVersionIdIn(List.of(21L, 22L));
         verify(promotionRequestRepository).deleteBySourceSkillIdOrTargetSkillId(7L, 7L);
         verify(skillTagRepository).deleteBySkillId(7L);
@@ -130,7 +135,6 @@ class SkillHardDeleteServiceTest {
                         && keys.size() == 4));
         verify(skillFileRepository).deleteByVersionId(21L);
         verify(skillFileRepository).deleteByVersionId(22L);
-        verify(skillVersionRepository).deleteBySkillId(7L);
         verify(skillRepository).delete(skill);
         verify(auditLogService).record(
                 "super-1",
