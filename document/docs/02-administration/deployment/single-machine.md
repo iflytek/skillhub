@@ -55,6 +55,7 @@ curl -i http://127.0.0.1:8080/actuator/health
 ## 首登配置
 
 1. 使用 `BOOTSTRAP_ADMIN_USERNAME` 和 `BOOTSTRAP_ADMIN_PASSWORD` 登录
+   从 `.env.release.example` 复制配置时，默认占位值是 `replace-this-admin-password`，需要先改掉
 2. 立即修改管理员密码
 3. 配置企业 SSO（可选）
 4. 创建团队命名空间
