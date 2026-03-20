@@ -90,6 +90,7 @@ Examples:
 - `docs(deploy): clarify runtime image usage`
 
 **IMPORTANT**: Never add `Co-Authored-By` trailers to commit messages unless explicitly requested by the user.
+**IMPORTANT**: Git commit authors must be a real user or team identity and must not contain model or tool CLI names such as `Claude Code`, `Codex`, or `Gemini`.
 
 ### Code Style
 - **Backend**: Follow standard Java conventions, Spring Boot best practices
