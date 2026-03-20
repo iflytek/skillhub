@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.user.ProfileChangeStatus;
 import com.iflytek.skillhub.domain.user.ProfileReviewService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.repository.JpaProfileReviewQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +31,12 @@ class AdminProfileReviewAppServiceTest {
     private UserAccountRepository userAccountRepository;
 
     private AdminProfileReviewAppService service;
+    private JpaProfileReviewQueryRepository profileReviewQueryRepository;
 
     @BeforeEach
     void setUp() {
-        service = new AdminProfileReviewAppService(profileReviewService, userAccountRepository);
+        profileReviewQueryRepository = new JpaProfileReviewQueryRepository(userAccountRepository);
+        service = new AdminProfileReviewAppService(profileReviewService, profileReviewQueryRepository);
     }
 
     @Test

@@ -50,6 +50,11 @@ storage → (独立抽象)     # 纯 SPI，不依赖 domain
 - Controller 聚合：公开查询、认证后写接口、CLI API、兼容层、管理后台
 - 全局异常处理、请求日志、OpenAPI 配置
 - 配置文件与环境 profile
+- 应用层 boundary 约定：
+  - Controller 只负责 transport：鉴权上下文提取、请求参数绑定、响应包装
+  - App Service 负责 workflow orchestration：跨 domain service 协调、分页入口、审计字段传递、调用 dedicated query repository
+  - App Service 不直接承担复杂 read-model 拼装；当一个响应需要 join 多个聚合、快照字段、JSON 解析、展示态投影时，应优先抽成 query repository
+  - `skillhub-app/repository` 包中的 query repository 只服务应用层读模型，不承载领域写规则
 
 ### skillhub-domain
 - 核心实体：Skill, SkillVersion, SkillFile, SkillTag, Namespace, NamespaceMember, ReviewTask, PromotionRequest, AuditLog, SkillStar, SkillRating, IdempotencyRecord
@@ -165,3 +170,71 @@ skillhub/
 - 认证：Spring Security OAuth2 Client（一期 GitHub）
 - 镜像发布：GitHub Actions 推送至 GHCR，默认维护 `edge` 与语义化版本标签
 - 运行时兼容：发布镜像默认输出 `linux/amd64` + `linux/arm64` 多架构 manifest
+
+## 11. Repository / Query Boundary 约定
+
+为了减少“应用层直接拼读模型”和“repository 风格混用”带来的认知成本，后端按下面的规则收敛：
+
+### 11.1 Domain Repository Port
+
+- 放在 `skillhub-domain`
+- 服务于聚合读写、状态迁移、规则判断
+- 可以被 domain service 直接依赖
+- 返回值以领域对象和领域查询语义为主；当前代码里允许继续使用 Spring Data 的 `Page` / `Pageable`，但这是现阶段接受的折中，不代表所有新读模型都应继续扩大这一模式
+
+适用场景：
+
+- `SkillRepository`、`ReviewTaskRepository`、`PromotionRequestRepository`
+- 领域规则需要读取或持久化聚合本身
+- 一个用例的核心价值在“改变状态”而不是“拼响应”
+
+### 11.2 App Query Repository
+
+- 放在 `skillhub-app/repository`
+- 服务于 controller / app service 需要的 read model，而不是领域写规则
+- 输入通常是领域对象列表、分页结果内容或稳定 ID 集合
+- 输出通常是 DTO、summary card、inbox item、admin list row 之类的展示态模型
+
+适用场景：
+
+- 需要 join 多个 repository / service 结果
+- 需要做展示态投影、兼容层映射、旧字段快照回填、JSON 提取
+- 同一类 read-model 组装逻辑会被多个 app service / controller 复用
+
+当前样例：
+
+- `GovernanceQueryRepository`
+- `MySkillQueryRepository`
+- `ProfileReviewQueryRepository`
+
+### 11.3 App Service
+
+- 放在 `skillhub-app/service`
+- 负责 workflow owner 语义，而不是底层数据拼接细节
+- 可以同时调用 domain service、domain repository port、app query repository
+- 应优先表达“这个入口做什么”，而不是“这个入口怎样拼 DTO”
+
+允许：
+
+- 解析筛选条件、分页参数、平台角色
+- 选择调用哪条 domain workflow
+- 调用 query repository 组装最终 read model
+
+不鼓励：
+
+- 在 app service 里重复写批量 user lookup、namespace join、version projection、JSON 字段提取
+- 让多个 app service 各自复制同类 summary/inbox/list row 组装代码
+
+### 11.4 直接 Persistence Access
+
+- 仅在少数场景允许，例如高度专用的搜索 SQL、管理端特殊检索、兼容层过渡适配
+- 这类入口应尽量集中，并通过命名或 package docs 明确“它为什么没有走 domain repository port 或 app query repository”
+
+### 11.5 选择规则
+
+面对一个新读用例时，按下面顺序判断：
+
+1. 如果它主要服务状态迁移或领域规则判断，优先放在 domain repository port / domain service。
+2. 如果它主要服务页面、列表、详情响应组装，而且需要 join 多个来源，优先建 app query repository。
+3. 如果它只是一个很薄的单聚合读取，不需要额外投影或 join，可以直接由 app service 调用现有 domain repository/query service。
+4. 如果必须直接写 SQL 或 `EntityManager`，需要在类注释里说明原因和边界，避免它演变成默认模式。

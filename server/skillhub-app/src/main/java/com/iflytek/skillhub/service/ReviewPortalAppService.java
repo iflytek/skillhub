@@ -11,14 +11,9 @@ import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
-import com.iflytek.skillhub.domain.user.UserAccount;
-import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
+import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,27 +28,21 @@ public class ReviewPortalAppService {
 
     private final ReviewService reviewService;
     private final ReviewTaskRepository reviewTaskRepository;
-    private final SkillRepository skillRepository;
-    private final SkillVersionRepository skillVersionRepository;
     private final NamespaceRepository namespaceRepository;
-    private final UserAccountRepository userAccountRepository;
+    private final GovernanceQueryRepository governanceQueryRepository;
     private final RbacService rbacService;
     private final AuditLogService auditLogService;
 
     public ReviewPortalAppService(ReviewService reviewService,
                                   ReviewTaskRepository reviewTaskRepository,
-                                  SkillRepository skillRepository,
-                                  SkillVersionRepository skillVersionRepository,
                                   NamespaceRepository namespaceRepository,
-                                  UserAccountRepository userAccountRepository,
+                                  GovernanceQueryRepository governanceQueryRepository,
                                   RbacService rbacService,
                                   AuditLogService auditLogService) {
         this.reviewService = reviewService;
         this.reviewTaskRepository = reviewTaskRepository;
-        this.skillRepository = skillRepository;
-        this.skillVersionRepository = skillVersionRepository;
         this.namespaceRepository = namespaceRepository;
-        this.userAccountRepository = userAccountRepository;
+        this.governanceQueryRepository = governanceQueryRepository;
         this.rbacService = rbacService;
         this.auditLogService = auditLogService;
     }
@@ -69,7 +58,7 @@ public class ReviewPortalAppService {
                 platformRoles(userId)
         );
         recordAudit("REVIEW_SUBMIT", userId, task.getId(), auditContext, "{\"skillVersionId\":" + skillVersionId + "}");
-        return toResponse(task);
+        return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
     public ReviewTaskResponse approveReview(Long reviewTaskId,
@@ -85,7 +74,7 @@ public class ReviewPortalAppService {
                 platformRoles(userId)
         );
         recordAudit("REVIEW_APPROVE", userId, task.getId(), auditContext, detailWithComment(comment));
-        return toResponse(task);
+        return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
     public ReviewTaskResponse rejectReview(Long reviewTaskId,
@@ -101,7 +90,7 @@ public class ReviewPortalAppService {
                 platformRoles(userId)
         );
         recordAudit("REVIEW_REJECT", userId, task.getId(), auditContext, detailWithComment(comment));
-        return toResponse(task);
+        return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
     public void withdrawReview(Long reviewTaskId,
@@ -146,12 +135,15 @@ public class ReviewPortalAppService {
             tasks = reviewTaskRepository.findByStatus(reviewStatus, PageRequest.of(page, size));
         }
 
-        List<ReviewTaskResponse> visibleItems = tasks.getContent().stream()
+        List<ReviewTask> visibleItems = tasks.getContent().stream()
                 .filter(task -> canViewReview(task, userId, namespaceRoles))
-                .map(this::toResponse)
                 .toList();
 
-        return PageResponse.from(new PageImpl<>(visibleItems, tasks.getPageable(), visibleItems.size()));
+        return PageResponse.from(new PageImpl<>(
+                governanceQueryRepository.getReviewTaskResponses(visibleItems),
+                tasks.getPageable(),
+                visibleItems.size()
+        ));
     }
 
     public PageResponse<ReviewTaskResponse> listPendingReviews(Long namespaceId,
@@ -173,13 +165,21 @@ public class ReviewPortalAppService {
 
         Page<ReviewTask> tasks = reviewTaskRepository.findByNamespaceIdAndStatus(
                 namespaceId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
-        return PageResponse.from(tasks.map(this::toResponse));
+        return PageResponse.from(new PageImpl<>(
+                governanceQueryRepository.getReviewTaskResponses(tasks.getContent()),
+                tasks.getPageable(),
+                tasks.getTotalElements()
+        ));
     }
 
     public PageResponse<ReviewTaskResponse> listMySubmissions(int page, int size, String userId) {
         Page<ReviewTask> tasks = reviewTaskRepository.findBySubmittedByAndStatus(
                 userId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
-        return PageResponse.from(tasks.map(this::toResponse));
+        return PageResponse.from(new PageImpl<>(
+                governanceQueryRepository.getReviewTaskResponses(tasks.getContent()),
+                tasks.getPageable(),
+                tasks.getTotalElements()
+        ));
     }
 
     public ReviewTaskResponse getReviewDetail(Long reviewTaskId,
@@ -197,39 +197,7 @@ public class ReviewPortalAppService {
                 platformRoles(userId))) {
             throw new DomainForbiddenException("review.no_permission");
         }
-        return toResponse(task);
-    }
-
-    private ReviewTaskResponse toResponse(ReviewTask task) {
-        SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
-                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
-        Skill skill = skillRepository.findById(skillVersion.getSkillId())
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
-        Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
-                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
-
-        String submittedByName = userAccountRepository.findById(task.getSubmittedBy())
-                .map(UserAccount::getDisplayName)
-                .orElse(null);
-        String reviewedByName = task.getReviewedBy() != null
-                ? userAccountRepository.findById(task.getReviewedBy()).map(UserAccount::getDisplayName).orElse(null)
-                : null;
-
-        return new ReviewTaskResponse(
-                task.getId(),
-                task.getSkillVersionId(),
-                namespace.getSlug(),
-                skill.getSlug(),
-                skillVersion.getVersion(),
-                task.getStatus().name(),
-                task.getSubmittedBy(),
-                submittedByName,
-                task.getReviewedBy(),
-                reviewedByName,
-                task.getReviewComment(),
-                task.getSubmittedAt(),
-                task.getReviewedAt()
-        );
+        return governanceQueryRepository.getReviewTaskResponse(task);
     }
 
     private boolean canViewReview(ReviewTask task, String userId, Map<Long, NamespaceRole> namespaceRoles) {

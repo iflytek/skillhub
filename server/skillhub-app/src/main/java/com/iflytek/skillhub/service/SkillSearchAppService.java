@@ -21,8 +21,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Application service that adapts search queries to the search backend and
- * enriches results with authoritative skill metadata and viewer permissions.
+ * Application service that assembles discovery responses from search matches.
+ *
+ * <p>{@link com.iflytek.skillhub.search.SearchQueryService} remains the match
+ * engine, while this service enriches matched ids into API-facing summaries.
+ * Authoritative detail, version, and file reads remain in
+ * {@link com.iflytek.skillhub.domain.skill.service.SkillQueryService}.
  */
 @Service
 public class SkillSearchAppService {

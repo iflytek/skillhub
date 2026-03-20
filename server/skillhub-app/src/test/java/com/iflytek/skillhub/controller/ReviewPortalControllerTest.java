@@ -13,19 +13,14 @@ import com.iflytek.skillhub.domain.review.ReviewService;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
-import com.iflytek.skillhub.domain.skill.SkillVisibility;
-import com.iflytek.skillhub.domain.user.UserAccount;
-import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
+import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import com.iflytek.skillhub.service.ReviewSkillDetailAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,12 +64,6 @@ class ReviewPortalControllerTest {
     private ReviewTaskRepository reviewTaskRepository;
 
     @MockBean
-    private SkillRepository skillRepository;
-
-    @MockBean
-    private SkillVersionRepository skillVersionRepository;
-
-    @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
@@ -84,7 +73,7 @@ class ReviewPortalControllerTest {
     private com.iflytek.skillhub.domain.namespace.NamespaceRepository namespaceRepository;
 
     @MockBean
-    private UserAccountRepository userAccountRepository;
+    private GovernanceQueryRepository governanceQueryRepository;
 
     @MockBean
     private RbacService rbacService;
@@ -243,16 +232,21 @@ class ReviewPortalControllerTest {
     }
 
     private void stubReviewResponse(ReviewTask task) {
-        SkillVersion version = new SkillVersion(30L, "1.0.0", task.getSubmittedBy());
-        setField(version, "id", task.getSkillVersionId());
-        Skill skill = new Skill(task.getNamespaceId(), "skill-a", task.getSubmittedBy(), SkillVisibility.PUBLIC);
-        setField(skill, "id", 30L);
-        UserAccount submitter = new UserAccount(task.getSubmittedBy(), "Submitter", "submitter@example.com", "");
-
-        given(skillVersionRepository.findById(task.getSkillVersionId())).willReturn(Optional.of(version));
-        given(skillRepository.findById(30L)).willReturn(Optional.of(skill));
-        given(namespaceRepository.findById(task.getNamespaceId())).willReturn(Optional.of(createNamespace(task.getNamespaceId(), "team-a")));
-        given(userAccountRepository.findById(task.getSubmittedBy())).willReturn(Optional.of(submitter));
+        given(governanceQueryRepository.getReviewTaskResponse(task)).willReturn(new ReviewTaskResponse(
+                task.getId(),
+                task.getSkillVersionId(),
+                "team-a",
+                "skill-a",
+                "1.0.0",
+                task.getStatus().name(),
+                task.getSubmittedBy(),
+                "Submitter",
+                task.getReviewedBy(),
+                null,
+                task.getReviewComment(),
+                task.getSubmittedAt(),
+                task.getReviewedAt()
+        ));
     }
 
     private void stubNamespaceRoles(String userId, List<NamespaceMember> members) {

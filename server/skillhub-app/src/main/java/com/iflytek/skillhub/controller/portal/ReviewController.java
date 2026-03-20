@@ -11,8 +11,7 @@ import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
 import com.iflytek.skillhub.dto.ReviewTaskRequest;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.service.AuditRequestContext;
-import com.iflytek.skillhub.service.ReviewPortalAppService;
-import com.iflytek.skillhub.service.ReviewSkillDetailAppService;
+import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.core.io.InputStreamResource;
@@ -37,15 +36,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping({"/api/v1/reviews", "/api/web/reviews"})
 public class ReviewController extends BaseApiController {
 
-    private final ReviewPortalAppService reviewPortalAppService;
-    private final ReviewSkillDetailAppService reviewSkillDetailAppService;
+    private final GovernanceWorkflowAppService governanceWorkflowAppService;
 
-    public ReviewController(ReviewPortalAppService reviewPortalAppService,
-                            ReviewSkillDetailAppService reviewSkillDetailAppService,
+    public ReviewController(GovernanceWorkflowAppService governanceWorkflowAppService,
                             ApiResponseFactory responseFactory) {
         super(responseFactory);
-        this.reviewPortalAppService = reviewPortalAppService;
-        this.reviewSkillDetailAppService = reviewSkillDetailAppService;
+        this.governanceWorkflowAppService = governanceWorkflowAppService;
     }
 
     @PostMapping
@@ -55,7 +51,7 @@ public class ReviewController extends BaseApiController {
                                                         HttpServletRequest httpRequest) {
         return ok(
                 "response.success.created",
-                reviewPortalAppService.submitReview(
+                governanceWorkflowAppService.submitReview(
                         request.skillVersionId(),
                         userId,
                         userNsRoles,
@@ -72,7 +68,7 @@ public class ReviewController extends BaseApiController {
         String comment = request != null ? request.comment() : null;
         return ok(
                 "response.success.updated",
-                reviewPortalAppService.approveReview(
+                governanceWorkflowAppService.approveReview(
                         id,
                         comment,
                         userId,
@@ -90,7 +86,7 @@ public class ReviewController extends BaseApiController {
         String comment = request != null ? request.comment() : null;
         return ok(
                 "response.success.updated",
-                reviewPortalAppService.rejectReview(
+                governanceWorkflowAppService.rejectReview(
                         id,
                         comment,
                         userId,
@@ -103,7 +99,7 @@ public class ReviewController extends BaseApiController {
     public ApiResponse<Void> withdrawReview(@PathVariable Long id,
                                             @RequestAttribute("userId") String userId,
                                             HttpServletRequest httpRequest) {
-        reviewPortalAppService.withdrawReview(id, userId, AuditRequestContext.from(httpRequest));
+        governanceWorkflowAppService.withdrawReviewTask(id, userId, AuditRequestContext.from(httpRequest));
         return ok("response.success.updated", null);
     }
 
@@ -116,7 +112,7 @@ public class ReviewController extends BaseApiController {
                                                                      @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         return ok(
                 "response.success.read",
-                reviewPortalAppService.listReviews(status, namespaceId, page, size, userId, userNsRoles)
+                governanceWorkflowAppService.listReviews(status, namespaceId, page, size, userId, userNsRoles)
         );
     }
 
@@ -128,7 +124,7 @@ public class ReviewController extends BaseApiController {
                                                                             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         return ok(
                 "response.success.read",
-                reviewPortalAppService.listPendingReviews(namespaceId, page, size, userId, userNsRoles)
+                governanceWorkflowAppService.listPendingReviews(namespaceId, page, size, userId, userNsRoles)
         );
     }
 
@@ -136,14 +132,14 @@ public class ReviewController extends BaseApiController {
     public ApiResponse<PageResponse<ReviewTaskResponse>> listMySubmissions(@RequestParam(defaultValue = "0") int page,
                                                                            @RequestParam(defaultValue = "20") int size,
                                                                            @RequestAttribute("userId") String userId) {
-        return ok("response.success.read", reviewPortalAppService.listMySubmissions(page, size, userId));
+        return ok("response.success.read", governanceWorkflowAppService.listMyReviewSubmissions(page, size, userId));
     }
 
     @GetMapping("/{id}")
     public ApiResponse<ReviewTaskResponse> getReviewDetail(@PathVariable Long id,
                                                            @RequestAttribute("userId") String userId,
                                                            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return ok("response.success.read", reviewPortalAppService.getReviewDetail(id, userId, userNsRoles));
+        return ok("response.success.read", governanceWorkflowAppService.getReviewDetail(id, userId, userNsRoles));
     }
 
     @GetMapping("/{id}/skill-detail")
@@ -152,7 +148,7 @@ public class ReviewController extends BaseApiController {
                                                                        @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         return ok(
                 "response.success.read",
-                reviewSkillDetailAppService.getReviewSkillDetail(id, userId, userNsRoles != null ? userNsRoles : Map.of())
+                governanceWorkflowAppService.getReviewSkillDetail(id, userId, userNsRoles)
         );
     }
 
@@ -161,10 +157,10 @@ public class ReviewController extends BaseApiController {
                                                                      HttpServletRequest request,
                                                                      @RequestAttribute("userId") String userId,
                                                                      @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        SkillDownloadService.DownloadResult result = reviewSkillDetailAppService.downloadReviewPackage(
+        SkillDownloadService.DownloadResult result = governanceWorkflowAppService.downloadReviewPackage(
                 id,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles
         );
         return buildDownloadResponse(request, result);
     }

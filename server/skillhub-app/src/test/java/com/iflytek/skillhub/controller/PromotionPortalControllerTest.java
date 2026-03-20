@@ -4,7 +4,6 @@ import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
-import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -13,13 +12,8 @@ import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.PromotionService;
 import com.iflytek.skillhub.domain.review.ReviewPermissionChecker;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
-import com.iflytek.skillhub.domain.skill.SkillVisibility;
-import com.iflytek.skillhub.domain.user.UserAccount;
-import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.dto.PromotionResponseDto;
+import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -62,12 +56,6 @@ class PromotionPortalControllerTest {
     private PromotionRequestRepository promotionRequestRepository;
 
     @MockBean
-    private SkillRepository skillRepository;
-
-    @MockBean
-    private SkillVersionRepository skillVersionRepository;
-
-    @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
@@ -77,7 +65,7 @@ class PromotionPortalControllerTest {
     private com.iflytek.skillhub.domain.namespace.NamespaceRepository namespaceRepository;
 
     @MockBean
-    private UserAccountRepository userAccountRepository;
+    private GovernanceQueryRepository governanceQueryRepository;
 
     @MockBean
     private RbacService rbacService;
@@ -149,21 +137,23 @@ class PromotionPortalControllerTest {
     }
 
     private void stubPromotionResponse(PromotionRequest request) {
-        Skill skill = new Skill(5L, "skill-a", request.getSubmittedBy(), SkillVisibility.PUBLIC);
-        setField(skill, "id", request.getSourceSkillId());
-        SkillVersion version = new SkillVersion(request.getSourceSkillId(), "1.0.0", request.getSubmittedBy());
-        setField(version, "id", request.getSourceVersionId());
-        Namespace sourceNamespace = new Namespace("team-a", "Team A", "owner-1");
-        setField(sourceNamespace, "id", 5L);
-        Namespace targetNamespace = new Namespace("global", "Global", "owner-2");
-        setField(targetNamespace, "id", request.getTargetNamespaceId());
-        UserAccount submitter = new UserAccount(request.getSubmittedBy(), "Submitter", "submitter@example.com", "");
-
-        given(skillRepository.findById(request.getSourceSkillId())).willReturn(Optional.of(skill));
-        given(skillVersionRepository.findById(request.getSourceVersionId())).willReturn(Optional.of(version));
-        given(namespaceRepository.findById(5L)).willReturn(Optional.of(sourceNamespace));
-        given(namespaceRepository.findById(request.getTargetNamespaceId())).willReturn(Optional.of(targetNamespace));
-        given(userAccountRepository.findById(request.getSubmittedBy())).willReturn(Optional.of(submitter));
+        given(governanceQueryRepository.getPromotionResponse(request)).willReturn(new PromotionResponseDto(
+                request.getId(),
+                request.getSourceSkillId(),
+                "team-a",
+                "skill-a",
+                "1.0.0",
+                "global",
+                request.getTargetSkillId(),
+                request.getStatus().name(),
+                request.getSubmittedBy(),
+                "Submitter",
+                request.getReviewedBy(),
+                null,
+                request.getReviewComment(),
+                request.getSubmittedAt(),
+                request.getReviewedAt()
+        ));
     }
 
     private void stubNamespaceRoles(String userId, List<NamespaceMember> members) {

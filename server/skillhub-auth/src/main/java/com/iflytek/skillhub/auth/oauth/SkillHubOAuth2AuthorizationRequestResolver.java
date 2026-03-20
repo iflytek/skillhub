@@ -15,34 +15,28 @@ public class SkillHubOAuth2AuthorizationRequestResolver
         implements org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver {
 
     private final DefaultOAuth2AuthorizationRequestResolver delegate;
+    private final OAuthLoginFlowService oauthLoginFlowService;
 
-    public SkillHubOAuth2AuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository) {
+    public SkillHubOAuth2AuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository,
+                                                      OAuthLoginFlowService oauthLoginFlowService) {
         this.delegate = new DefaultOAuth2AuthorizationRequestResolver(
                 clientRegistrationRepository,
                 "/oauth2/authorization"
         );
+        this.oauthLoginFlowService = oauthLoginFlowService;
     }
 
     @Override
     public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
         OAuth2AuthorizationRequest authorizationRequest = delegate.resolve(request);
-        rememberReturnTo(request);
+        oauthLoginFlowService.rememberReturnTo(request);
         return authorizationRequest;
     }
 
     @Override
     public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
         OAuth2AuthorizationRequest authorizationRequest = delegate.resolve(request, clientRegistrationId);
-        rememberReturnTo(request);
+        oauthLoginFlowService.rememberReturnTo(request);
         return authorizationRequest;
-    }
-
-    private void rememberReturnTo(HttpServletRequest request) {
-        String returnTo = OAuthLoginRedirectSupport.sanitizeReturnTo(request.getParameter("returnTo"));
-        if (returnTo == null) {
-            request.getSession().removeAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
-            return;
-        }
-        request.getSession().setAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE, returnTo);
     }
 }
