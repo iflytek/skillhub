@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
@@ -15,10 +17,16 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatsRepository;
 import com.iflytek.skillhub.domain.social.SkillRatingRepository;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Permanently deletes a skill and all of its persisted artifacts so the slug
@@ -26,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class SkillHardDeleteService {
+
+    private static final Logger log = LoggerFactory.getLogger(SkillHardDeleteService.class);
 
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -39,6 +49,7 @@ public class SkillHardDeleteService {
     private final SkillVersionStatsRepository skillVersionStatsRepository;
     private final ObjectStorageService objectStorageService;
     private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
 
     public SkillHardDeleteService(SkillRepository skillRepository,
                                   SkillVersionRepository skillVersionRepository,
@@ -51,7 +62,8 @@ public class SkillHardDeleteService {
                                   SkillReportRepository skillReportRepository,
                                   SkillVersionStatsRepository skillVersionStatsRepository,
                                   ObjectStorageService objectStorageService,
-                                  AuditLogService auditLogService) {
+                                  AuditLogService auditLogService,
+                                  ObjectMapper objectMapper) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillFileRepository = skillFileRepository;
@@ -64,6 +76,7 @@ public class SkillHardDeleteService {
         this.skillVersionStatsRepository = skillVersionStatsRepository;
         this.objectStorageService = objectStorageService;
         this.auditLogService = auditLogService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -78,11 +91,9 @@ public class SkillHardDeleteService {
                     .map(SkillFile::getStorageKey)
                     .filter(key -> key != null && !key.isBlank())
                     .forEach(storageKeys::add);
-            storageKeys.add(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
+            storageKeys.add(buildBundleStorageKey(skill.getId(), version.getId()));
         }
-        if (!storageKeys.isEmpty()) {
-            objectStorageService.deleteObjects(storageKeys);
-        }
+        deleteStorageAfterCommit(storageKeys);
 
         skill.setLatestVersionId(null);
         skill.setUpdatedBy(actorUserId);
@@ -112,11 +123,42 @@ public class SkillHardDeleteService {
                 null,
                 clientIp,
                 userAgent,
-                "{\"namespaceId\":" + skill.getNamespaceId() + ",\"slug\":\"" + escapeJson(skill.getSlug()) + "\"}"
+                toAuditPayload(skill)
         );
     }
 
-    private String escapeJson(String value) {
-        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+    private void deleteStorageAfterCommit(List<String> storageKeys) {
+        if (storageKeys.isEmpty()) {
+            return;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            objectStorageService.deleteObjects(storageKeys);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    objectStorageService.deleteObjects(storageKeys);
+                } catch (RuntimeException ex) {
+                    log.error("Failed to delete storage objects after hard delete commit [keys={}]", storageKeys, ex);
+                }
+            }
+        });
+    }
+
+    private String buildBundleStorageKey(Long skillId, Long versionId) {
+        return String.format("packages/%d/%d/bundle.zip", skillId, versionId);
+    }
+
+    private String toAuditPayload(Skill skill) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("namespaceId", skill.getNamespaceId());
+        payload.put("slug", skill.getSlug());
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize hard-delete audit payload", e);
+        }
     }
 }

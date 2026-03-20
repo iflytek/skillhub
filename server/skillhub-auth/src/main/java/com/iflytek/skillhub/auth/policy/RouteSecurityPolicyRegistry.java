@@ -63,6 +63,7 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/skills/*/*/tags/*/download"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/skills/*/*/tags/*/files"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/skills/*/*/tags/*/file"),
+            RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/*/*", "SUPER_ADMIN"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/namespaces"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/namespaces/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/namespaces"),
@@ -132,15 +133,11 @@ public class RouteSecurityPolicyRegistry {
         if (path == null) {
             return false;
         }
-        return path.startsWith("/api/")
-                || path.equals("/api/v1/publish")
-                || path.startsWith("/api/v1/auth/device/");
+        return path.startsWith("/api/");
     }
 
     public boolean shouldProjectRequestContext(String path) {
-        return path != null && (path.startsWith("/api/v1/")
-                || path.startsWith("/api/web/")
-                || path.startsWith("/api/"));
+        return path != null && path.startsWith("/api/");
     }
 
     private boolean isApiPath(String path) {

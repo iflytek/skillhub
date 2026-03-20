@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
@@ -18,13 +19,17 @@ import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,6 +62,13 @@ class SkillHardDeleteServiceTest {
 
     private SkillHardDeleteService service;
 
+    @AfterEach
+    void tearDown() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
     @BeforeEach
     void setUp() {
         service = new SkillHardDeleteService(
@@ -71,7 +83,8 @@ class SkillHardDeleteServiceTest {
                 skillReportRepository,
                 skillVersionStatsRepository,
                 objectStorageService,
-                auditLogService
+                auditLogService,
+                new ObjectMapper()
         );
     }
 
@@ -124,6 +137,35 @@ class SkillHardDeleteServiceTest {
                 "JUnit",
                 "{\"namespaceId\":9,\"slug\":\"demo-skill\"}"
         );
+    }
+
+    @Test
+    void hardDeleteSkill_deletesStorageAfterCommitWhenSynchronizationIsActive() {
+        Skill skill = new Skill(9L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 7L);
+
+        SkillVersion version = new SkillVersion(7L, "1.0.0", "owner-1");
+        setField(version, "id", 22L);
+
+        given(skillVersionRepository.findBySkillId(7L)).willReturn(List.of(version));
+        given(skillFileRepository.findByVersionId(22L)).willReturn(List.of(
+                new SkillFile(22L, "README.md", 20L, "text/markdown", "sha2", "skills/7/22/README.md")
+        ));
+
+        TransactionSynchronizationManager.initSynchronization();
+
+        service.hardDeleteSkill(skill, "super-1", "127.0.0.1", "JUnit");
+
+        verify(objectStorageService, never()).deleteObjects(argThat(keys -> !keys.isEmpty()));
+
+        for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+            synchronization.afterCommit();
+        }
+
+        verify(objectStorageService).deleteObjects(argThat(keys ->
+                keys.contains("skills/7/22/README.md")
+                        && keys.contains("packages/7/22/bundle.zip")
+                        && keys.size() == 2));
     }
 
     private void setField(Object target, String fieldName, Object value) {
