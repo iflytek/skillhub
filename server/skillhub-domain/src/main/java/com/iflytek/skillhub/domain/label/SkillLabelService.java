@@ -78,8 +78,9 @@ public class SkillLabelService {
     }
 
     private LabelDefinition findLabel(String labelSlug) {
-        return labelDefinitionRepository.findBySlug(labelSlug)
-                .orElseThrow(() -> new DomainBadRequestException("label.not_found", labelSlug));
+        String normalizedSlug = LabelSlugValidator.normalize(labelSlug);
+        return labelDefinitionRepository.findBySlugIgnoreCase(normalizedSlug)
+                .orElseThrow(() -> new DomainBadRequestException("label.not_found", normalizedSlug));
     }
 
     private void requireSkillLabelPermission(Skill skill,

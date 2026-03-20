@@ -571,6 +571,7 @@
     "removeTranslation": "Remove",
     "validationSlugTitle": "Slug required",
     "validationSlugDescription": "Enter a stable slug before saving this label.",
+    "validationSlugPatternDescription": "Use lowercase letters, numbers, and single hyphens only. The slug must start and end with a letter or number.",
     "validationTranslationsTitle": "Translations required",
     "validationTranslationsDescription": "At least one complete locale and display name pair is required.",
     "validationDuplicateLocaleDescription": "Each translation locale can only appear once.",

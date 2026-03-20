@@ -31,6 +31,9 @@ skillhub:
     cleanup:
       read-retention-days: 30
       unread-retention-days: 90
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
   profile:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true}

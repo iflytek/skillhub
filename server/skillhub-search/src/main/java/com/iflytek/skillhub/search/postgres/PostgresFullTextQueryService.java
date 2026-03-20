@@ -140,7 +140,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("AND d.skill_id IN (");
             sql.append("SELECT sl.skill_id FROM skill_label sl ");
             sql.append("JOIN label_definition ld ON ld.id = sl.label_id ");
-            sql.append("WHERE ld.slug IN :labelSlugs");
+            sql.append("WHERE LOWER(ld.slug) IN :labelSlugs");
             sql.append(") ");
         }
 
