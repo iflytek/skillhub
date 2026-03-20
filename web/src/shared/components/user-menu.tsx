@@ -32,6 +32,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
   const isAuditor = hasRole('AUDITOR') || hasRole('SUPER_ADMIN')
+  const isSuperAdmin = hasRole('SUPER_ADMIN')
   const canAccessReviewCenter = isReviewer || isUserAdmin
   const isLocalAccount = !user.oauthProvider
   const open = isHovered || isClickOpen
@@ -169,10 +170,15 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
                 {t('user.menu.reports')}
               </Link>
             ) : null}
-            {isUserAdmin || isAuditor ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}
+            {isUserAdmin || isAuditor || isSuperAdmin ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}
             {isUserAdmin ? (
               <Link to="/admin/users" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.users')}
+              </Link>
+            ) : null}
+            {isSuperAdmin ? (
+              <Link to="/admin/labels" className={menuItemClassName} onClick={closeMenu}>
+                {t('user.menu.labels')}
               </Link>
             ) : null}
             {isAuditor ? (

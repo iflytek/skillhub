@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
+import com.iflytek.skillhub.domain.user.ProfileFieldPolicyConfig;
 import com.iflytek.skillhub.domain.user.ProfileChangeRequest;
 import com.iflytek.skillhub.domain.user.ProfileChangeRequestRepository;
 import com.iflytek.skillhub.domain.user.ProfileChangeStatus;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -43,6 +45,9 @@ class UserProfileControllerUnitTest {
     @Mock
     private PlatformSessionService platformSessionService;
 
+    @Mock
+    private ProfileFieldPolicyConfig fieldPolicyConfig;
+
     private UserProfileController controller;
 
     @BeforeEach
@@ -58,8 +63,12 @@ class UserProfileControllerUnitTest {
                 userProfileService,
                 userAccountRepository,
                 changeRequestRepository,
-                platformSessionService
+                platformSessionService,
+                fieldPolicyConfig
         );
+        given(fieldPolicyConfig.fieldPolicies()).willReturn(Map.of(
+                "displayName", new ProfileFieldPolicyConfig.FieldPolicy(true, false),
+                "email", new ProfileFieldPolicyConfig.FieldPolicy(false, false)));
         setLocale(Locale.getDefault());
     }
 

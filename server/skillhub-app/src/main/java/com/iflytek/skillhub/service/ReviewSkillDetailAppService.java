@@ -70,6 +70,7 @@ public class ReviewSkillDetailAppService {
                 snapshot.skill().getRatingCount(),
                 snapshot.skill().isHidden(),
                 context.namespace().getSlug(),
+                List.of(),
                 false,
                 false,
                 false,

@@ -263,6 +263,39 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void labelFiltersShouldBeAppliedToSearchAndCountQueries() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "review",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20,
+                List.of("code-generation", "official")
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("JOIN label_definition ld ON ld.id = sl.label_id");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE ld.slug IN :labelSlugs");
+        verify(nativeQuery).setParameter("labelSlugs", List.of("code-generation", "official"));
+        verify(countQuery).setParameter("labelSlugs", List.of("code-generation", "official"));
+    }
+
+    @Test
     void downloadsSortShouldNotBindRelevanceOnlyParameters() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
@@ -511,5 +544,38 @@ class PostgresFullTextQueryServiceTest {
         verify(repository, never()).findBySkillIdIn(org.mockito.ArgumentMatchers.anyList());
         assertThat(result.skillIds()).containsExactly(201L, 202L);
         assertThat(result.total()).isEqualTo(1000L);
+    }
+
+    @Test
+    void labelFiltersShouldAppendStructuredSqlConstraint() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "agent",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of()),
+                "relevance",
+                0,
+                20,
+                List.of("official", "code-generation")
+        ));
+
+        verify(nativeQuery).setParameter("labelSlugs", List.of("official", "code-generation"));
+        verify(countQuery).setParameter("labelSlugs", List.of("official", "code-generation"));
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("JOIN label_definition ld ON ld.id = sl.label_id");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE ld.slug IN :labelSlugs");
     }
 }

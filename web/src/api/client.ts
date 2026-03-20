@@ -34,6 +34,9 @@ import type {
   NotificationItem,
   NotificationPreferenceItem,
   NotificationUnreadCount,
+  AdminLabelInput,
+  LabelDefinition,
+  LabelItem,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -503,6 +506,91 @@ function normalizeNamespaceSlug(namespace: string): string {
   return namespace.startsWith('@') ? namespace.slice(1) : namespace
 }
 
+export const labelApi = {
+  async listVisible(): Promise<LabelItem[]> {
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/labels`)
+  },
+
+  async listSkillLabels(namespace: string, slug: string): Promise<LabelItem[]> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels`)
+  },
+
+  async attachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<LabelItem> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    return fetchJson<LabelItem>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async detachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<void> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listAdminDefinitions(): Promise<LabelDefinition[]> {
+    return fetchJson<LabelDefinition[]>('/api/v1/admin/labels')
+  },
+
+  async createAdminDefinition(request: AdminLabelInput): Promise<LabelDefinition> {
+    return fetchJson<LabelDefinition>('/api/v1/admin/labels', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        slug: request.slug.trim(),
+        type: request.type,
+        visibleInFilter: request.visibleInFilter,
+        sortOrder: request.sortOrder,
+        translations: request.translations.map((translation) => ({
+          locale: translation.locale.trim(),
+          displayName: translation.displayName.trim(),
+        })),
+      }),
+    })
+  },
+
+  async updateAdminDefinition(slug: string, request: Omit<AdminLabelInput, 'slug'>): Promise<LabelDefinition> {
+    return fetchJson<LabelDefinition>(`/api/v1/admin/labels/${encodeURIComponent(slug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        type: request.type,
+        visibleInFilter: request.visibleInFilter,
+        sortOrder: request.sortOrder,
+        translations: request.translations.map((translation) => ({
+          locale: translation.locale.trim(),
+          displayName: translation.displayName.trim(),
+        })),
+      }),
+    })
+  },
+
+  async deleteAdminDefinition(slug: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/labels/${encodeURIComponent(slug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async updateAdminSortOrder(items: Array<{ slug: string; sortOrder: number }>): Promise<LabelDefinition[]> {
+    return fetchJson<LabelDefinition[]>('/api/v1/admin/labels/sort-order', {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ items }),
+    })
+  },
+}
+
 export const namespaceApi = {
   async create(request: CreateNamespaceRequest): Promise<Namespace> {
     const namespace = await unwrap<Namespace>(client.POST('/api/v1/namespaces', {
@@ -907,11 +995,16 @@ export const profileApi = {
       reviewComment: string | null
       createdAt: string
     } | null
+    fieldPolicies: Record<string, { editable: boolean; requiresReview: boolean }>
   }> {
     return fetchJson('/api/v1/user/profile')
   },
-  async updateProfile(request: { displayName: string }): Promise<{ status: string }> {
-    return fetchJson<{ status: string }>('/api/v1/user/profile', {
+  async updateProfile(request: Record<string, string>): Promise<{
+    status: string
+    appliedFields?: Record<string, string>
+    pendingFields?: Record<string, string>
+  }> {
+    return fetchJson<{ status: string; appliedFields?: Record<string, string>; pendingFields?: Record<string, string> }>('/api/v1/user/profile', {
       method: 'PATCH',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',

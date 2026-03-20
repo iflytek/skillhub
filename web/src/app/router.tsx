@@ -131,6 +131,11 @@ const AuditLogPage = createRoleProtectedRouteComponent(
   'AuditLogPage',
   ['AUDITOR', 'SUPER_ADMIN'],
 )
+const AdminLabelsPage = createRoleProtectedRouteComponent(
+  () => import('@/pages/admin/labels'),
+  'AdminLabelsPage',
+  ['SUPER_ADMIN'],
+)
 
 function DefaultNotFound() {
   return (
@@ -202,9 +207,10 @@ const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'search',
   component: SearchPage,
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): { q: string; label?: string; sort: string; page: number; starredOnly: boolean } => {
     return {
       q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
+      label: typeof search.label === 'string' && search.label ? search.label : undefined,
       sort: (search.sort as string) || 'newest',
       page: Number(search.page) || 0,
       starredOnly: search.starredOnly === true || search.starredOnly === 'true',
@@ -390,6 +396,13 @@ const adminAuditLogRoute = createRoute({
   component: AuditLogPage,
 })
 
+const adminLabelsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin/labels',
+  beforeLoad: requireAuth,
+  component: AdminLabelsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   landingRoute,
   skillsRoute,
@@ -421,6 +434,7 @@ const routeTree = rootRoute.addChildren([
   settingsAccountsRoute,
   adminUsersRoute,
   adminAuditLogRoute,
+  adminLabelsRoute,
 ])
 
 export const router = createRouter({

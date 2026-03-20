@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -174,6 +175,19 @@ class SkillSearchAppServiceTest {
         verify(skillVersionRepository, times(1)).findByIdIn(List.of(101L, 102L));
         verify(skillVersionRepository, times(1))
                 .findBySkillIdInAndStatus(List.of(10L, 11L), com.iflytek.skillhub.domain.skill.SkillVersionStatus.PUBLISHED);
+    }
+
+    @Test
+    void search_shouldNormalizeAndPassLabelSlugs() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search("skill", null, "newest", 0, 20, List.of(" Code-Generation ", "official", "official"), null, null);
+
+        ArgumentCaptor<com.iflytek.skillhub.search.SearchQuery> captor =
+                ArgumentCaptor.forClass(com.iflytek.skillhub.search.SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        assertEquals(List.of("code-generation", "official"), captor.getValue().labelSlugs());
     }
 
     private void setField(Object target, String fieldName, Object value) {

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record SkillDetailResponse(
         Long id,
@@ -17,6 +18,7 @@ public record SkillDetailResponse(
         Integer ratingCount,
         boolean hidden,
         String namespace,
+        List<SkillLabelDto> labels,
         boolean canManageLifecycle,
         boolean canSubmitPromotion,
         boolean canInteract,

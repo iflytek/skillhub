@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.user;
 
+import java.util.Map;
+
 /**
  * Result of a profile update operation.
  *
@@ -16,6 +18,10 @@ public sealed interface UpdateProfileResult {
     /** Changes are queued for human review (not yet applied). */
     record PendingReview() implements UpdateProfileResult {}
 
+    /** Some fields applied immediately, others queued for review. */
+    record Mixed(Map<String, String> appliedFields, Map<String, String> pendingFields)
+            implements UpdateProfileResult {}
+
     /** Convenience factory for the applied case. */
     static UpdateProfileResult applied() {
         return new Applied();
@@ -24,5 +30,10 @@ public sealed interface UpdateProfileResult {
     /** Convenience factory for the pending-review case. */
     static UpdateProfileResult pendingReview() {
         return new PendingReview();
+    }
+
+    /** Convenience factory for the mixed case. */
+    static UpdateProfileResult mixed(Map<String, String> appliedFields, Map<String, String> pendingFields) {
+        return new Mixed(appliedFields, pendingFields);
     }
 }

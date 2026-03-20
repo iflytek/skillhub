@@ -147,6 +147,36 @@ export interface SkillSummary {
   resolutionMode?: string
 }
 
+export type LabelItem = Omit<components['schemas']['SkillLabelDto'], 'slug' | 'type' | 'displayName'> & {
+  slug: string
+  type: 'RECOMMENDED' | 'PRIVILEGED' | string
+  displayName: string
+}
+
+export type LabelTranslation = Omit<components['schemas']['LabelTranslationResponse'], 'locale' | 'displayName'> & {
+  locale: string
+  displayName: string
+}
+
+export type LabelDefinition = Omit<
+  components['schemas']['LabelDefinitionResponse'],
+  'slug' | 'type' | 'translations' | 'sortOrder' | 'visibleInFilter'
+> & {
+  slug: string
+  type: 'RECOMMENDED' | 'PRIVILEGED' | string
+  visibleInFilter: boolean
+  sortOrder: number
+  translations: LabelTranslation[]
+}
+
+export interface AdminLabelInput {
+  slug: string
+  type: 'RECOMMENDED' | 'PRIVILEGED'
+  visibleInFilter: boolean
+  sortOrder: number
+  translations: LabelTranslation[]
+}
+
 export interface SkillLifecycleVersion {
   id: number
   version: string
@@ -168,6 +198,7 @@ export interface SkillDetail {
   ratingCount: number
   hidden: boolean
   namespace: string
+  labels?: LabelItem[]
   canManageLifecycle: boolean
   canSubmitPromotion: boolean
   canInteract: boolean
@@ -226,6 +257,7 @@ export interface SkillTag {
 export interface SearchParams {
   q?: string
   namespace?: string
+  label?: string
   sort?: string
   page?: number
   size?: number
