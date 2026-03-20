@@ -126,6 +126,11 @@ const AuditLogPage = createRoleProtectedRouteComponent(
   'AuditLogPage',
   ['AUDITOR', 'SUPER_ADMIN'],
 )
+const AdminLabelsPage = createRoleProtectedRouteComponent(
+  () => import('@/pages/admin/labels'),
+  'AdminLabelsPage',
+  ['SUPER_ADMIN'],
+)
 
 function DefaultNotFound() {
   return (
@@ -372,6 +377,13 @@ const adminAuditLogRoute = createRoute({
   component: AuditLogPage,
 })
 
+const adminLabelsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin/labels',
+  beforeLoad: requireAuth,
+  component: AdminLabelsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   landingRoute,
   skillsRoute,
@@ -401,6 +413,7 @@ const routeTree = rootRoute.addChildren([
   settingsAccountsRoute,
   adminUsersRoute,
   adminAuditLogRoute,
+  adminLabelsRoute,
 ])
 
 export const router = createRouter({

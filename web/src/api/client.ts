@@ -31,6 +31,7 @@ import type {
   CreateNamespaceRequest,
   NamespaceMember,
   NamespaceCandidateUser,
+  AdminLabelInput,
   LabelDefinition,
   LabelItem,
 } from './types'
@@ -530,6 +531,60 @@ export const labelApi = {
 
   async listAdminDefinitions(): Promise<LabelDefinition[]> {
     return fetchJson<LabelDefinition[]>('/api/v1/admin/labels')
+  },
+
+  async createAdminDefinition(request: AdminLabelInput): Promise<LabelDefinition> {
+    return fetchJson<LabelDefinition>('/api/v1/admin/labels', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        slug: request.slug.trim(),
+        type: request.type,
+        visibleInFilter: request.visibleInFilter,
+        sortOrder: request.sortOrder,
+        translations: request.translations.map((translation) => ({
+          locale: translation.locale.trim(),
+          displayName: translation.displayName.trim(),
+        })),
+      }),
+    })
+  },
+
+  async updateAdminDefinition(slug: string, request: Omit<AdminLabelInput, 'slug'>): Promise<LabelDefinition> {
+    return fetchJson<LabelDefinition>(`/api/v1/admin/labels/${encodeURIComponent(slug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        type: request.type,
+        visibleInFilter: request.visibleInFilter,
+        sortOrder: request.sortOrder,
+        translations: request.translations.map((translation) => ({
+          locale: translation.locale.trim(),
+          displayName: translation.displayName.trim(),
+        })),
+      }),
+    })
+  },
+
+  async deleteAdminDefinition(slug: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/labels/${encodeURIComponent(slug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async updateAdminSortOrder(items: Array<{ slug: string; sortOrder: number }>): Promise<LabelDefinition[]> {
+    return fetchJson<LabelDefinition[]>('/api/v1/admin/labels/sort-order', {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ items }),
+    })
   },
 }
 

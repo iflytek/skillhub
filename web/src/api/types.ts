@@ -169,6 +169,14 @@ export type LabelDefinition = Omit<
   translations: LabelTranslation[]
 }
 
+export interface AdminLabelInput {
+  slug: string
+  type: 'RECOMMENDED' | 'PRIVILEGED'
+  visibleInFilter: boolean
+  sortOrder: number
+  translations: LabelTranslation[]
+}
+
 export interface SkillLifecycleVersion {
   id: number
   version: string
