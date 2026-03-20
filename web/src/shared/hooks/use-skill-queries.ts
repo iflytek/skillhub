@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole, LabelItem, LabelDefinition } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, labelApi, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
+import i18n from '@/i18n/config'
 import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
 /**
@@ -11,6 +12,26 @@ import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './sk
  * backend fetchers, and invalidation rules used throughout the app.
  */
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
+
+export function getI18nCacheKey() {
+  return i18n.resolvedLanguage || i18n.language || 'en'
+}
+
+export function getSkillDetailQueryKey(namespace: string, slug: string) {
+  return ['skills', namespace, slug, getI18nCacheKey()] as const
+}
+
+export function getVisibleLabelsQueryKey() {
+  return ['labels', 'visible', getI18nCacheKey()] as const
+}
+
+export function getSkillLabelsQueryKey(namespace: string, slug: string) {
+  return ['labels', 'skill', namespace, slug, getI18nCacheKey()] as const
+}
+
+export function getAdminLabelDefinitionsQueryKey() {
+  return ['labels', 'admin', getI18nCacheKey()] as const
+}
 
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
   return fetchJson<PagedResponse<SkillSummary>>(buildSkillSearchUrl(params))
@@ -141,7 +162,7 @@ export function useSearchSkills(params: SearchParams) {
 
 export function useSkillDetail(namespace: string, slug: string) {
   return useQuery({
-    queryKey: ['skills', namespace, slug],
+    queryKey: getSkillDetailQueryKey(namespace, slug),
     queryFn: () => getSkillDetail(namespace, slug),
     enabled: !!namespace && !!slug,
   })
@@ -149,7 +170,7 @@ export function useSkillDetail(namespace: string, slug: string) {
 
 export function useVisibleLabels(enabled = true) {
   return useQuery({
-    queryKey: ['labels', 'visible'],
+    queryKey: getVisibleLabelsQueryKey(),
     queryFn: getVisibleLabels,
     enabled,
   })
@@ -157,7 +178,7 @@ export function useVisibleLabels(enabled = true) {
 
 export function useSkillLabels(namespace: string, slug: string, enabled = true) {
   return useQuery({
-    queryKey: ['labels', 'skill', namespace, slug],
+    queryKey: getSkillLabelsQueryKey(namespace, slug),
     queryFn: () => getSkillLabels(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
   })
@@ -165,7 +186,7 @@ export function useSkillLabels(namespace: string, slug: string, enabled = true) 
 
 export function useAdminLabelDefinitions(enabled = true) {
   return useQuery({
-    queryKey: ['labels', 'admin'],
+    queryKey: getAdminLabelDefinitionsQueryKey(),
     queryFn: getAdminLabelDefinitions,
     enabled,
   })
