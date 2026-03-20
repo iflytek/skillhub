@@ -33,7 +33,7 @@ public class LabelDefinitionService {
     }
 
     public List<LabelDefinition> listVisibleFilters() {
-        return labelDefinitionRepository.findByVisibleInFilterTrueAndTypeOrderBySortOrderAscIdAsc(LabelType.RECOMMENDED);
+        return labelDefinitionRepository.findByVisibleInFilterTrueOrderBySortOrderAscIdAsc();
     }
 
     public List<LabelDefinition> listByIds(List<Long> labelIds) {
@@ -142,6 +142,7 @@ public class LabelDefinitionService {
         List<LabelTranslation> existingTranslations = labelTranslationRepository.findByLabelId(labelId);
         if (!existingTranslations.isEmpty()) {
             labelTranslationRepository.deleteAll(existingTranslations);
+            labelTranslationRepository.flush();
         }
         if (!translations.isEmpty()) {
             labelTranslationRepository.saveAll(translations.stream()
@@ -197,7 +198,7 @@ public class LabelDefinitionService {
     private DomainBadRequestException mapConstraintViolation(String slug, DataIntegrityViolationException ex) {
         String message = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
         if (message != null && message.contains("label_translation")) {
-            return new DomainBadRequestException("label.translation.locale.duplicate");
+            return new DomainBadRequestException("label.translation.locale.conflict");
         }
         return new DomainBadRequestException("label.slug.duplicate", slug);
     }
