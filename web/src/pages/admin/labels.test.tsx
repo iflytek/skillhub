@@ -33,7 +33,7 @@ vi.mock('@/features/admin/use-admin-labels', () => ({
   useUpdateAdminLabelSortOrder: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
-import { AdminLabelsPage } from './labels'
+import { AdminLabelsPage, normalizeLabelFormState, validateLabelFormState } from './labels'
 
 describe('AdminLabelsPage', () => {
   beforeEach(() => {
@@ -70,5 +70,49 @@ describe('AdminLabelsPage', () => {
     expect(html).toContain('Official')
     expect(html).toContain('adminLabels.editAction')
     expect(html).toContain('adminLabels.deleteAction')
+  })
+
+  it('normalizes slugs and locales before submission', () => {
+    const normalized = normalizeLabelFormState({
+      slug: ' Code-Generation ',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: Number.NaN,
+      translations: [
+        { locale: ' ZH_cn ', displayName: ' 代码生成 ' },
+        { locale: ' ', displayName: ' ' },
+      ],
+    })
+
+    expect(normalized.slug).toBe('code-generation')
+    expect(normalized.sortOrder).toBe(0)
+    expect(normalized.translations).toEqual([{ locale: 'zh-cn', displayName: '代码生成' }])
+  })
+
+  it('rejects invalid slug patterns and duplicate locales in validation', () => {
+    expect(validateLabelFormState({
+      slug: 'code_generation',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: 0,
+      translations: [{ locale: 'en', displayName: 'Code Generation' }],
+    })).toEqual({
+      titleKey: 'adminLabels.validationSlugTitle',
+      descriptionKey: 'adminLabels.validationSlugPatternDescription',
+    })
+
+    expect(validateLabelFormState({
+      slug: 'code-generation',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: 0,
+      translations: [
+        { locale: 'en', displayName: 'Code Generation' },
+        { locale: 'en', displayName: 'Code Generation Copy' },
+      ],
+    })).toEqual({
+      titleKey: 'adminLabels.validationTranslationsTitle',
+      descriptionKey: 'adminLabels.validationDuplicateLocaleDescription',
+    })
   })
 })

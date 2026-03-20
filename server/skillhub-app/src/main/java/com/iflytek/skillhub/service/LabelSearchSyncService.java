@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class LabelSearchSyncService {
 
+    static final int REBUILD_BATCH_SIZE = 50;
+
     private static final Logger log = LoggerFactory.getLogger(LabelSearchSyncService.class);
 
     private final SearchRebuildService searchRebuildService;
@@ -24,11 +26,18 @@ public class LabelSearchSyncService {
 
     @Async("skillhubEventExecutor")
     public void rebuildSkills(List<Long> skillIds) {
-        for (Long skillId : skillIds) {
-            try {
-                searchRebuildService.rebuildBySkill(skillId);
-            } catch (RuntimeException ex) {
-                log.error("Failed to rebuild search document for skill {} after label change", skillId, ex);
+        List<Long> normalizedSkillIds = skillIds == null ? List.of() : skillIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        for (int i = 0; i < normalizedSkillIds.size(); i += REBUILD_BATCH_SIZE) {
+            List<Long> batch = normalizedSkillIds.subList(i, Math.min(i + REBUILD_BATCH_SIZE, normalizedSkillIds.size()));
+            for (Long skillId : batch) {
+                try {
+                    searchRebuildService.rebuildBySkill(skillId);
+                } catch (RuntimeException ex) {
+                    log.error("Failed to rebuild search document for skill {} after label change", skillId, ex);
+                }
             }
         }
     }

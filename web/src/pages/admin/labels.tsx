@@ -35,6 +35,7 @@ import {
 type LabelFormState = AdminLabelInput
 
 const EMPTY_TRANSLATION: LabelTranslation = { locale: '', displayName: '' }
+const LABEL_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
 function toFormState(definition?: LabelDefinition): LabelFormState {
   if (!definition) {
@@ -56,18 +57,52 @@ function toFormState(definition?: LabelDefinition): LabelFormState {
   }
 }
 
-function normalizeFormState(form: LabelFormState): LabelFormState {
+export function normalizeLabelFormState(form: LabelFormState): LabelFormState {
   return {
     ...form,
     slug: form.slug.trim().toLowerCase(),
     sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
     translations: form.translations
       .map((translation) => ({
-        locale: translation.locale.trim(),
+        locale: translation.locale.trim().replaceAll('_', '-').toLowerCase(),
         displayName: translation.displayName.trim(),
       }))
       .filter((translation) => translation.locale && translation.displayName),
   }
+}
+
+export function validateLabelFormState(form: LabelFormState): {
+  titleKey: string
+  descriptionKey: string
+} | null {
+  if (!form.slug) {
+    return {
+      titleKey: 'adminLabels.validationSlugTitle',
+      descriptionKey: 'adminLabels.validationSlugDescription',
+    }
+  }
+  if (!LABEL_SLUG_PATTERN.test(form.slug) || form.slug.includes('--')) {
+    return {
+      titleKey: 'adminLabels.validationSlugTitle',
+      descriptionKey: 'adminLabels.validationSlugPatternDescription',
+    }
+  }
+  if (form.translations.length === 0) {
+    return {
+      titleKey: 'adminLabels.validationTranslationsTitle',
+      descriptionKey: 'adminLabels.validationTranslationsDescription',
+    }
+  }
+
+  const uniqueLocales = new Set(form.translations.map((translation) => translation.locale))
+  if (uniqueLocales.size !== form.translations.length) {
+    return {
+      titleKey: 'adminLabels.validationTranslationsTitle',
+      descriptionKey: 'adminLabels.validationDuplicateLocaleDescription',
+    }
+  }
+
+  return null
 }
 
 function moveItem(definitions: LabelDefinition[], fromIndex: number, toIndex: number) {
@@ -146,19 +181,10 @@ export function AdminLabelsPage() {
   }
 
   const handleSubmit = async () => {
-    const normalized = normalizeFormState(form)
-    if (!normalized.slug) {
-      toast.error(t('adminLabels.validationSlugTitle'), t('adminLabels.validationSlugDescription'))
-      return
-    }
-    if (normalized.translations.length === 0) {
-      toast.error(t('adminLabels.validationTranslationsTitle'), t('adminLabels.validationTranslationsDescription'))
-      return
-    }
-
-    const uniqueLocales = new Set(normalized.translations.map((translation) => translation.locale))
-    if (uniqueLocales.size !== normalized.translations.length) {
-      toast.error(t('adminLabels.validationTranslationsTitle'), t('adminLabels.validationDuplicateLocaleDescription'))
+    const normalized = normalizeLabelFormState(form)
+    const validationError = validateLabelFormState(normalized)
+    if (validationError) {
+      toast.error(t(validationError.titleKey), t(validationError.descriptionKey))
       return
     }
 

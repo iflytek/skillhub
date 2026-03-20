@@ -125,7 +125,7 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 |------|------|:---:|:---:|:---:|:---:|
 | CRUD 标签定义 | label_definition | ✅ | ❌ | ❌ | ❌ |
 | 管理翻译 | label_translation | ✅ | ❌ | ❌ | ❌ |
-| 赋予/移除 RECOMMENDED label | skill_label | ✅ | ✅（本空间） | ✅（自己的 skill） | ❌ |
+| 赋予/移除 RECOMMENDED label | skill_label | ✅ | ✅（本空间，仅限搜索页可见的 RECOMMENDED 标签） | ✅（自己的 skill，仅限搜索页可见的 RECOMMENDED 标签） | ❌ |
 | 赋予/移除 PRIVILEGED label | skill_label | ✅ | ❌ | ❌ | ❌ |
 | 查看 label | 所有表 | ✅ | ✅ | ✅ | ✅（受 skill 可见性约束） |
 
@@ -210,7 +210,7 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 
 ### 4.4 分类筛选
 
-搜索页分类板块的筛选不走全文搜索，而是通过 `skill_label` JOIN `label_definition` 精确过滤 `label_id`，再与搜索结果取交集。避免全文搜索的模糊性问题。
+搜索页分类板块的筛选不走全文搜索，而是通过 `skill_label` JOIN `label_definition` 按 slug 做大小写不敏感过滤，再与搜索结果取交集。避免全文搜索的模糊性问题。
 
 当前搜索入口为：
 ```
@@ -430,7 +430,7 @@ ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 
 - 在 skill 信息区域以 chip/badge 形式展示该 skill 的所有 label
 - 特权标签使用不同的视觉样式区分（不同颜色或图标）
 - 有权限的用户（owner / 命名空间管理员 / 超级管理员）看到编辑入口
-- 编辑交互：弹出面板，从系统推荐标签列表中勾选/取消勾选
+- 编辑交互：弹出面板；超级管理员可从全部 label definition 中勾选/取消勾选，owner / 命名空间管理员仅可操作搜索页可见的 RECOMMENDED 标签
 - 特权标签区域仅超级管理员可见和可操作
 
 补充说明：

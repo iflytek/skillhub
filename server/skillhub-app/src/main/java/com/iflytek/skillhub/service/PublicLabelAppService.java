@@ -19,18 +19,22 @@ public class PublicLabelAppService {
     }
 
     public List<SkillLabelDto> listVisibleFilters() {
-        return labelDefinitionService.listVisibleFilters().stream()
-                .map(this::toDto)
+        List<LabelDefinition> definitions = labelDefinitionService.listVisibleFilters();
+        java.util.Map<Long, java.util.List<com.iflytek.skillhub.domain.label.LabelTranslation>> translationsByLabelId =
+                labelDefinitionService.listTranslationsByLabelIds(definitions.stream().map(LabelDefinition::getId).toList());
+        return definitions.stream()
+                .map(labelDefinition -> toDto(labelDefinition, translationsByLabelId))
                 .toList();
     }
 
-    private SkillLabelDto toDto(LabelDefinition labelDefinition) {
+    private SkillLabelDto toDto(LabelDefinition labelDefinition,
+                                java.util.Map<Long, java.util.List<com.iflytek.skillhub.domain.label.LabelTranslation>> translationsByLabelId) {
         return new SkillLabelDto(
                 labelDefinition.getSlug(),
                 labelDefinition.getType().name(),
                 labelLocalizationService.resolveDisplayName(
                         labelDefinition.getSlug(),
-                        labelDefinitionService.listTranslations(labelDefinition.getId()))
+                        translationsByLabelId.getOrDefault(labelDefinition.getId(), List.of()))
         );
     }
 }
