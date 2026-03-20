@@ -31,17 +31,17 @@
 CREATE TABLE label_definition (
     id          BIGSERIAL PRIMARY KEY,
     slug        VARCHAR(64) UNIQUE NOT NULL,   -- 英文标识，必填，如 code-generation
-    type        VARCHAR(16) NOT NULL,          -- RECOMMENDED | PRIVILEGED
+    type        VARCHAR(16) NOT NULL CHECK (type IN ('RECOMMENDED', 'PRIVILEGED')),
     visible_in_filter BOOLEAN NOT NULL DEFAULT true, -- 是否在搜索页分类板块展示
     sort_order  INTEGER NOT NULL DEFAULT 0,    -- 分类板块显示顺序
     created_by  VARCHAR(128) REFERENCES user_account(id),
-    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
 - `slug` 即英文名称，作为语言无关的唯一标识
-- `type` 区分系统推荐标签和特权标签，决定权限控制策略
+- `type` 区分系统推荐标签和特权标签，决定权限控制策略。DDL 层通过 CHECK 约束限制合法值；应用层权限校验对未知 type 采用 deny-by-default 策略
 - `visible_in_filter` 控制是否出现在搜索页分类板块，RECOMMENDED 和 PRIVILEGED 均可配置
 
 ### 2.2 label_translation（标签翻译表）
@@ -52,8 +52,8 @@ CREATE TABLE label_translation (
     label_id    BIGINT NOT NULL REFERENCES label_definition(id) ON DELETE CASCADE,
     locale      VARCHAR(16) NOT NULL,          -- 语言代码，如 en、zh、ja
     display_name VARCHAR(128) NOT NULL,        -- 该语言的显示名称
-    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(label_id, locale)
 );
 ```
@@ -69,13 +69,17 @@ CREATE TABLE skill_label (
     skill_id    BIGINT NOT NULL REFERENCES skill(id) ON DELETE CASCADE,
     label_id    BIGINT NOT NULL REFERENCES label_definition(id) ON DELETE CASCADE,
     created_by  VARCHAR(128) REFERENCES user_account(id),
-    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(skill_id, label_id)
 );
+
+CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 ```
 
 - Label 挂在 skill 级别，与版本无关
 - 级联删除：删除 label_definition 时自动清理关联
+- `(label_id)` 索引用于分类筛选时按 label 查找关联 skill 的性能优化
+- 单个 skill 最多关联 10 个 label（应用层校验）
 
 ### 2.4 兼容性设计：用户自定义标签
 
@@ -107,11 +111,24 @@ CREATE TABLE skill_label (
 - 赋予 label 到 skill 的权限取决于 label 的 type
 - 查看权限跟随 skill 本身的可见性规则，不额外控制
 
+### 3.1 跨空间权限边界
+
+- 命名空间管理员只能管理其所管理空间内 skill 的 label
+- 如果 skill 通过 promotion 从团队空间提升到全局空间，原空间管理员不再有权管理该 skill 的 label，权限跟随 skill 当前所在空间
+
 ## 4. Search Integration
 
 采用翻译文本展开写入搜索文档方案。
 
-### 4.1 Keywords 字段写入
+### 4.1 搜索架构现状
+
+当前搜索基于 PostgreSQL Full-Text Search：
+- `skill_search_document` 表有 `search_vector` 列，类型为 `tsvector GENERATED ALWAYS AS ... STORED`
+- 权重体系：title (A) > summary/keywords (B) > search_text (C)
+- `search_vector` 在 keywords 等字段更新时自动重新生成，无需手动维护
+- 查询时通过 `d.search_vector @@ to_tsquery('simple', :tsQuery)` 进行全文匹配
+
+### 4.2 Keywords 字段写入
 
 在构建 `SkillSearchDocument` 时，将 skill 关联的所有 label 的所有语言翻译文本追加到 `keywords` 字段。
 
@@ -122,7 +139,7 @@ CREATE TABLE skill_label (
 [原有 keywords 内容] Code Generation 代码生成 Official 官方推荐
 ```
 
-### 4.2 搜索文档重建触发时机
+### 4.3 搜索文档重建触发时机
 
 | 事件 | 影响范围 | 处理方式 |
 |------|---------|---------|
@@ -130,18 +147,52 @@ CREATE TABLE skill_label (
 | label_translation 被修改 | 所有关联该 label 的 skill | 异步批量重建 |
 | label_definition 被删除 | 所有关联该 label 的 skill | 异步批量重建 |
 
-### 4.3 分类筛选
+#### 异步批量重建方案
+
+- 使用 Spring `@Async` 执行异步任务
+- `SearchRebuildService` 新增 `rebuildByLabelId(Long labelId)` 方法：查询 `skill_label` 获取关联的 skill_id 列表，分批调用 `rebuildBySkill(Long)`
+- 批量大小：每批 50 个 skill，批次间无需间隔（数据库写入压力可控，系统推荐标签数量有限）
+- 错误处理：单个 skill 重建失败不影响其他 skill，记录错误日志，不重试（下次 label 变更或手动 rebuildAll 时会修复）
+
+### 4.4 分类筛选
 
 搜索页分类板块的筛选不走全文搜索，而是通过 `skill_label` JOIN `label_definition` 精确过滤 `label_id`，再与搜索结果取交集。避免全文搜索的模糊性问题。
 
-搜索 API 增加可选 query parameter：
+搜索 API 增加可选 query parameter，支持多值以预留未来组合筛选能力（一期前端只做单选）：
 ```
 GET /api/v1/skills/search?q=xxx&label=code-generation
+GET /api/v1/skills/search?q=xxx&label=code-generation&label=official  (未来)
 ```
 
-### 4.4 tsvector 权重
+#### SearchQuery 改动
 
-不改变现有权重体系，keywords 保持 B 权重：
+`SearchQuery` record 新增 `labelSlugs` 字段：
+```java
+public record SearchQuery(
+    String keyword,
+    Long namespaceId,
+    SearchVisibilityScope visibilityScope,
+    List<String> labelSlugs,   // 新增，可为空列表
+    String sortBy,
+    int page,
+    int size
+) {}
+```
+
+`PostgresFullTextQueryService` 的 SQL 拼接逻辑中，当 `labelSlugs` 非空时追加：
+```sql
+AND d.skill_id IN (
+    SELECT sl.skill_id FROM skill_label sl
+    JOIN label_definition ld ON ld.id = sl.label_id
+    WHERE ld.slug IN (:labelSlugs)
+)
+```
+
+count 查询同步追加相同条件。语义重排在 label 过滤后的候选集上执行，无需额外处理。
+
+### 4.5 tsvector 权重
+
+不改变现有权重体系。`search_vector` 是 `GENERATED ALWAYS AS ... STORED` 列，keywords 字段更新后自动重新生成，无需手动维护：
 - A 权重：title (displayName)
 - B 权重：summary / keywords（含 label 翻译文本）
 - C 权重：searchText
@@ -150,11 +201,29 @@ GET /api/v1/skills/search?q=xxx&label=code-generation
 
 ### 5.1 管理后台 API（超级管理员）
 
+所有响应遵循项目统一响应规范 `{ code, msg, data, timestamp, requestId }`。
+
 #### 列出所有标签定义
 ```
 GET /api/v1/admin/labels
 ```
-Response: 所有 label_definition + 关联的 label_translation 列表
+Response `data`:
+```json
+[
+  {
+    "slug": "code-generation",
+    "type": "RECOMMENDED",
+    "visibleInFilter": true,
+    "sortOrder": 10,
+    "translations": [
+      { "locale": "en", "displayName": "Code Generation" },
+      { "locale": "zh", "displayName": "代码生成" }
+    ],
+    "createdAt": "2026-03-20T10:00:00Z"
+  }
+]
+```
+不分页，系统标签数量有限（建议上限 100 个 label_definition）。
 
 #### 创建标签定义
 ```
@@ -177,13 +246,25 @@ POST /api/v1/admin/labels
 ```
 PUT /api/v1/admin/labels/{slug}
 ```
-Body 同创建，slug 不可修改。
+Body 不包含 slug 字段（slug 不可修改，以 path 参数为准）：
+```json
+{
+  "type": "RECOMMENDED",
+  "visibleInFilter": true,
+  "sortOrder": 10,
+  "translations": [
+    { "locale": "en", "displayName": "Code Generation" },
+    { "locale": "zh", "displayName": "代码生成" }
+  ]
+}
+```
+translations 采用全量替换策略：请求中的 translations 列表完全替代现有翻译。如果删除了某个语言的翻译，会触发关联 skill 的异步搜索文档重建。
 
 #### 删除标签定义
 ```
 DELETE /api/v1/admin/labels/{slug}
 ```
-级联删除关联的 translations 和 skill_label 记录，触发异步搜索文档重建。
+硬删除。级联删除关联的 translations 和 skill_label 记录，触发异步搜索文档重建。删除操作会记录到 audit_log。
 
 #### 批量更新排序
 ```
@@ -204,6 +285,22 @@ PUT /api/v1/admin/labels/sort-order
 ```
 GET /api/v1/skills/{namespace}/{slug}/labels
 ```
+Response `data`:
+```json
+[
+  {
+    "slug": "code-generation",
+    "type": "RECOMMENDED",
+    "displayName": "代码生成"
+  },
+  {
+    "slug": "official",
+    "type": "PRIVILEGED",
+    "displayName": "官方推荐"
+  }
+]
+```
+`displayName` 根据请求语言返回，fallback 顺序：当前语言 → en → slug。
 
 #### 赋予 label
 ```
@@ -223,7 +320,21 @@ DELETE /api/v1/skills/{namespace}/{slug}/labels/{labelSlug}
 ```
 GET /api/v1/labels
 ```
-返回 `visible_in_filter=true` 的标签，按 `sort_order` 排序，包含当前请求语言的翻译。
+返回 `visible_in_filter=true` 的标签，按 `sort_order` 排序。Response `data`:
+```json
+[
+  {
+    "slug": "code-generation",
+    "type": "RECOMMENDED",
+    "displayName": "代码生成"
+  }
+]
+```
+`displayName` 根据请求语言返回，fallback 顺序：当前语言 → en → slug。不分页。
+
+## 6. ClawHub 兼容层
+
+ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 筛选。ClawHub 协议中没有 label 概念，无需兼容。
 
 ## 6. Frontend Design
 
