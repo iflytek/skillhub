@@ -1,14 +1,8 @@
 name: DeepWiki Documentation Crawler
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'docs/**'
-      - '**.md'
-      - 'server/src/**'
-      - 'web/src/**'
-  workflow_dispatch:
+  release:
+    types: [published]
 
 concurrency:
   group: deepwiki-${{ github.ref }}
