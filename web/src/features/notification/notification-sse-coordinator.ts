@@ -1,8 +1,8 @@
 const SHARED_BROWSER_SSE_ENABLED = false
 
 export type NotificationSseConnection = {
-  addEventListener: EventSource['addEventListener']
-  close: EventSource['close']
+  addEventListener: (type: string, listener: (event: MessageEvent) => void) => void
+  close: () => void
 }
 
 export function isSharedBrowserSseEnabled() {
