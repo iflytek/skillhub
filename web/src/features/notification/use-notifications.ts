@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { notificationApi } from '@/api/client'
 import type { NotificationItem, PagedResponse } from '@/api/types'
+import { decrementUnreadCount, resetUnreadCount } from './notification-unread-cache'
 import { getNotificationQueryKeyScope } from './notification-session'
 
 export const NOTIFICATION_QUERY_KEYS = {
@@ -55,11 +56,12 @@ export function useNotificationList(userId?: string | null, page = 0, size = 20,
 /**
  * Marks all notifications as read and invalidates relevant queries.
  */
-export function useMarkAllRead() {
+export function useMarkAllRead(userId?: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => notificationApi.markAllRead(),
     onSuccess: () => {
+      resetUnreadCount(queryClient, userId)
       void queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
@@ -68,11 +70,12 @@ export function useMarkAllRead() {
 /**
  * Marks a single notification as read and invalidates relevant queries.
  */
-export function useMarkRead() {
+export function useMarkRead(userId?: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => notificationApi.markRead(id),
     onSuccess: () => {
+      decrementUnreadCount(queryClient, userId)
       void queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })

@@ -33,8 +33,8 @@ export function NotificationDropdown({ onClose }: Props) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const { data, isLoading } = useNotifications(user?.userId, 0, 5)
-  const markAllRead = useMarkAllRead()
-  const markRead = useMarkRead()
+  const markAllRead = useMarkAllRead(user?.userId)
+  const markRead = useMarkRead(user?.userId)
 
   const notifications = getNotificationItems(data)
 

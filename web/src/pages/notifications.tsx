@@ -65,8 +65,8 @@ export function NotificationsPage() {
 
   const categoryParam = activeCategory === 'ALL' ? undefined : activeCategory
   const { data, isLoading } = useNotificationList(user?.userId, page, PAGE_SIZE, categoryParam)
-  const markAllRead = useMarkAllRead()
-  const markRead = useMarkRead()
+  const markAllRead = useMarkAllRead(user?.userId)
+  const markRead = useMarkRead(user?.userId)
 
   const notifications = getNotificationItems(data)
   const totalPages = Math.max(Math.ceil(getNotificationTotal(data) / PAGE_SIZE), 1)

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { WEB_API_PREFIX } from '@/api/client'
+import { incrementUnreadCount } from './notification-unread-cache'
 import { createNotificationSseConnection } from './notification-sse-coordinator'
 import { NOTIFICATION_QUERY_KEYS } from './use-notifications'
 
@@ -31,7 +32,7 @@ export function useNotificationSse(userId?: string | null) {
     })
 
     es.addEventListener('notification', () => {
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(userId) })
+      incrementUnreadCount(queryClient, userId)
       void queryClient.invalidateQueries({ queryKey: ['notifications', userId, 'list'] })
     })
 
