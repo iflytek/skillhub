@@ -6,8 +6,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
-import com.iflytek.skillhub.domain.namespace.Namespace;
-import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.report.SkillReport;
@@ -18,18 +16,14 @@ import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
-import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.dto.AuditLogItemResponse;
+import com.iflytek.skillhub.dto.GovernanceInboxItemResponse;
 import com.iflytek.skillhub.dto.GovernanceSummaryResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,13 +46,7 @@ class GovernanceWorkbenchAppServiceTest {
     private SkillReportRepository skillReportRepository;
 
     @Mock
-    private SkillRepository skillRepository;
-
-    @Mock
-    private SkillVersionRepository skillVersionRepository;
-
-    @Mock
-    private NamespaceRepository namespaceRepository;
+    private GovernanceQueryRepository governanceQueryRepository;
 
     @Mock
     private AdminAuditLogAppService adminAuditLogAppService;
@@ -74,9 +62,7 @@ class GovernanceWorkbenchAppServiceTest {
                 reviewTaskRepository,
                 promotionRequestRepository,
                 skillReportRepository,
-                skillRepository,
-                skillVersionRepository,
-                namespaceRepository,
+                governanceQueryRepository,
                 adminAuditLogAppService,
                 governanceNotificationService
         );
@@ -123,9 +109,6 @@ class GovernanceWorkbenchAppServiceTest {
         ReviewTask reviewTask = createReviewTask(1L, 11L, 101L, "owner");
         PromotionRequest promotionRequest = createPromotionRequest(2L, 101L, 12L, "owner");
         SkillReport report = createReport(3L, 101L, 11L, "reporter");
-        stubReviewContext(reviewTask, "team-a", "skill-a");
-        stubPromotionContext(promotionRequest, "team-a", "skill-a", "global");
-        stubReportContext(report, "team-a", "skill-a");
 
         when(reviewTaskRepository.findByStatus(ReviewTaskStatus.PENDING, PageRequest.of(0, 20)))
                 .thenReturn(new PageImpl<>(List.of(reviewTask)));
@@ -133,6 +116,36 @@ class GovernanceWorkbenchAppServiceTest {
                 .thenReturn(new PageImpl<>(List.of(promotionRequest)));
         when(skillReportRepository.findByStatus(SkillReportStatus.PENDING, PageRequest.of(0, 20)))
                 .thenReturn(new PageImpl<>(List.of(report)));
+        when(governanceQueryRepository.getReviewInboxItems(List.of(reviewTask)))
+                .thenReturn(List.of(new GovernanceInboxItemResponse(
+                        "REVIEW",
+                        1L,
+                        "team-a/skill-a@1.0.0",
+                        "Pending review",
+                        "2026-03-16T02:00:00Z",
+                        "team-a",
+                        "skill-a"
+                )));
+        when(governanceQueryRepository.getPromotionInboxItems(List.of(promotionRequest)))
+                .thenReturn(List.of(new GovernanceInboxItemResponse(
+                        "PROMOTION",
+                        2L,
+                        "team-a/skill-a@1.0.0",
+                        "Promote to @global",
+                        "2026-03-16T02:00:00Z",
+                        "team-a",
+                        "skill-a"
+                )));
+        when(governanceQueryRepository.getReportInboxItems(List.of(report)))
+                .thenReturn(List.of(new GovernanceInboxItemResponse(
+                        "REPORT",
+                        3L,
+                        "team-a/skill-a",
+                        "Spam",
+                        "2026-03-16T02:00:00Z",
+                        "team-a",
+                        "skill-a"
+                )));
 
         PageResponse<?> response = service.listInbox("admin", Map.of(), Set.of("SKILL_ADMIN"), null, 0, 20);
 
@@ -200,11 +213,30 @@ class GovernanceWorkbenchAppServiceTest {
         ReviewTask laterReviewTask = createReviewTask(2L, 11L, 102L, "owner");
         setField(reviewTask, "submittedAt", Instant.parse("2026-03-16T02:00:00Z"));
         setField(laterReviewTask, "submittedAt", Instant.parse("2026-03-16T03:00:00Z"));
-        stubReviewContext(reviewTask, "team-a", "skill-a");
-        stubReviewContext(laterReviewTask, "team-a", "skill-b");
 
         when(reviewTaskRepository.findByStatus(ReviewTaskStatus.PENDING, PageRequest.of(0, 2)))
                 .thenReturn(new PageImpl<>(List.of(laterReviewTask, reviewTask), PageRequest.of(0, 2), 2));
+        when(governanceQueryRepository.getReviewInboxItems(List.of(laterReviewTask, reviewTask)))
+                .thenReturn(List.of(
+                        new GovernanceInboxItemResponse(
+                                "REVIEW",
+                                2L,
+                                "team-a/skill-b@1.0.0",
+                                "Pending review",
+                                "2026-03-16T03:00:00Z",
+                                "team-a",
+                                "skill-b"
+                        ),
+                        new GovernanceInboxItemResponse(
+                                "REVIEW",
+                                1L,
+                                "team-a/skill-a@1.0.0",
+                                "Pending review",
+                                "2026-03-16T02:00:00Z",
+                                "team-a",
+                                "skill-a"
+                        )
+                ));
 
         PageResponse<?> response = service.listInbox("admin", Map.of(), Set.of("SKILL_ADMIN"), "REVIEW", 1, 1);
 
@@ -251,43 +283,6 @@ class GovernanceWorkbenchAppServiceTest {
 
         assertThat(response.total()).isEqualTo(42);
         assertThat(response.page()).isEqualTo(1);
-    }
-
-    private void stubReviewContext(ReviewTask task, String namespaceSlug, String skillSlug) {
-        SkillVersion version = new SkillVersion(task.getSkillVersionId(), "1.0.0", task.getSubmittedBy());
-        setField(version, "id", task.getSkillVersionId());
-        setField(version, "skillId", task.getSkillVersionId());
-        Skill skill = new Skill(task.getNamespaceId(), skillSlug, task.getSubmittedBy(), SkillVisibility.PUBLIC);
-        setField(skill, "id", task.getSkillVersionId());
-        Namespace namespace = new Namespace(namespaceSlug, namespaceSlug, task.getSubmittedBy());
-        setField(namespace, "id", task.getNamespaceId());
-        when(skillVersionRepository.findById(task.getSkillVersionId())).thenReturn(Optional.of(version));
-        when(skillRepository.findById(task.getSkillVersionId())).thenReturn(Optional.of(skill));
-        when(namespaceRepository.findById(task.getNamespaceId())).thenReturn(Optional.of(namespace));
-    }
-
-    private void stubPromotionContext(PromotionRequest request, String sourceNamespaceSlug, String skillSlug, String targetNamespaceSlug) {
-        Skill skill = new Skill(11L, skillSlug, request.getSubmittedBy(), SkillVisibility.PUBLIC);
-        setField(skill, "id", request.getSourceSkillId());
-        SkillVersion version = new SkillVersion(request.getSourceSkillId(), "1.0.0", request.getSubmittedBy());
-        setField(version, "id", request.getSourceVersionId());
-        Namespace sourceNamespace = new Namespace(sourceNamespaceSlug, sourceNamespaceSlug, request.getSubmittedBy());
-        setField(sourceNamespace, "id", 11L);
-        Namespace targetNamespace = new Namespace(targetNamespaceSlug, targetNamespaceSlug, request.getSubmittedBy());
-        setField(targetNamespace, "id", request.getTargetNamespaceId());
-        when(skillRepository.findById(request.getSourceSkillId())).thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findById(request.getSourceVersionId())).thenReturn(Optional.of(version));
-        when(namespaceRepository.findById(11L)).thenReturn(Optional.of(sourceNamespace));
-        when(namespaceRepository.findById(request.getTargetNamespaceId())).thenReturn(Optional.of(targetNamespace));
-    }
-
-    private void stubReportContext(SkillReport report, String namespaceSlug, String skillSlug) {
-        Skill skill = new Skill(report.getNamespaceId(), skillSlug, report.getReporterId(), SkillVisibility.PUBLIC);
-        setField(skill, "id", report.getSkillId());
-        Namespace namespace = new Namespace(namespaceSlug, namespaceSlug, report.getReporterId());
-        setField(namespace, "id", report.getNamespaceId());
-        when(skillRepository.findById(report.getSkillId())).thenReturn(Optional.of(skill));
-        when(namespaceRepository.findById(report.getNamespaceId())).thenReturn(Optional.of(namespace));
     }
 
     private ReviewTask createReviewTask(Long id, Long namespaceId, Long skillVersionId, String submittedBy) {

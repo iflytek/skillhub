@@ -15,6 +15,7 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.social.SkillStar;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
+import com.iflytek.skillhub.repository.JpaMySkillQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,16 +55,21 @@ class MySkillAppServiceTest {
 
     private MySkillAppService service;
     private SkillLifecycleProjectionService skillLifecycleProjectionService;
+    private JpaMySkillQueryRepository mySkillQueryRepository;
 
     @BeforeEach
     void setUp() {
         skillLifecycleProjectionService = new SkillLifecycleProjectionService(skillVersionRepository);
+        mySkillQueryRepository = new JpaMySkillQueryRepository(
+                namespaceRepository,
+                promotionRequestRepository,
+                skillLifecycleProjectionService
+        );
         service = new MySkillAppService(
                 skillRepository,
-                namespaceRepository,
                 skillVersionRepository,
                 skillStarRepository,
-                promotionRequestRepository,
+                mySkillQueryRepository,
                 skillLifecycleProjectionService
         );
     }

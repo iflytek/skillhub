@@ -9,7 +9,7 @@ import com.iflytek.skillhub.dto.PromotionActionRequest;
 import com.iflytek.skillhub.dto.PromotionRequestDto;
 import com.iflytek.skillhub.dto.PromotionResponseDto;
 import com.iflytek.skillhub.service.AuditRequestContext;
-import com.iflytek.skillhub.service.PromotionPortalAppService;
+import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,12 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping({"/api/v1/promotions", "/api/web/promotions"})
 public class PromotionController extends BaseApiController {
 
-    private final PromotionPortalAppService promotionPortalAppService;
+    private final GovernanceWorkflowAppService governanceWorkflowAppService;
 
-    public PromotionController(PromotionPortalAppService promotionPortalAppService,
+    public PromotionController(GovernanceWorkflowAppService governanceWorkflowAppService,
                                ApiResponseFactory responseFactory) {
         super(responseFactory);
-        this.promotionPortalAppService = promotionPortalAppService;
+        this.governanceWorkflowAppService = governanceWorkflowAppService;
     }
 
     @PostMapping
@@ -44,7 +44,7 @@ public class PromotionController extends BaseApiController {
                                                              HttpServletRequest httpRequest) {
         return ok(
                 "response.success.created",
-                promotionPortalAppService.submitPromotion(
+                governanceWorkflowAppService.submitPromotion(
                         request.sourceSkillId(),
                         request.sourceVersionId(),
                         request.targetNamespaceId(),
@@ -62,7 +62,7 @@ public class PromotionController extends BaseApiController {
         String comment = request != null ? request.comment() : null;
         return ok(
                 "response.success.updated",
-                promotionPortalAppService.approvePromotion(id, comment, userId, AuditRequestContext.from(httpRequest))
+                governanceWorkflowAppService.approvePromotion(id, comment, userId, AuditRequestContext.from(httpRequest))
         );
     }
 
@@ -74,7 +74,7 @@ public class PromotionController extends BaseApiController {
         String comment = request != null ? request.comment() : null;
         return ok(
                 "response.success.updated",
-                promotionPortalAppService.rejectPromotion(id, comment, userId, AuditRequestContext.from(httpRequest))
+                governanceWorkflowAppService.rejectPromotion(id, comment, userId, AuditRequestContext.from(httpRequest))
         );
     }
 
@@ -83,19 +83,19 @@ public class PromotionController extends BaseApiController {
                                                                           @RequestParam(defaultValue = "0") int page,
                                                                           @RequestParam(defaultValue = "20") int size,
                                                                           @RequestAttribute("userId") String userId) {
-        return ok("response.success.read", promotionPortalAppService.listPromotions(status, page, size, userId));
+        return ok("response.success.read", governanceWorkflowAppService.listPromotions(status, page, size, userId));
     }
 
     @GetMapping("/pending")
     public ApiResponse<PageResponse<PromotionResponseDto>> listPendingPromotions(@RequestParam(defaultValue = "0") int page,
                                                                                  @RequestParam(defaultValue = "20") int size,
                                                                                  @RequestAttribute("userId") String userId) {
-        return ok("response.success.read", promotionPortalAppService.listPendingPromotions(page, size, userId));
+        return ok("response.success.read", governanceWorkflowAppService.listPendingPromotions(page, size, userId));
     }
 
     @GetMapping("/{id}")
     public ApiResponse<PromotionResponseDto> getPromotionDetail(@PathVariable Long id,
                                                                 @RequestAttribute("userId") String userId) {
-        return ok("response.success.read", promotionPortalAppService.getPromotionDetail(id, userId));
+        return ok("response.success.read", governanceWorkflowAppService.getPromotionDetail(id, userId));
     }
 }

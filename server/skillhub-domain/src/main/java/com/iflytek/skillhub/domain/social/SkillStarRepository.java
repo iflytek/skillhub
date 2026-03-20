@@ -11,6 +11,7 @@ public interface SkillStarRepository {
     SkillStar save(SkillStar star);
     Optional<SkillStar> findBySkillIdAndUserId(Long skillId, String userId);
     void delete(SkillStar star);
+    void deleteBySkillId(Long skillId);
     Page<SkillStar> findByUserId(String userId, Pageable pageable);
     long countBySkillId(Long skillId);
 }

@@ -137,6 +137,8 @@ Current state:
 
 ## 5. Governance behavior is distributed across multiple services without one clear workflow owner
 
+Status: improved but still present on branch `docs/backend-annotation-findings-discussion`
+
 Observed files:
 
 - `server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceGovernanceService.java`
@@ -153,7 +155,16 @@ Suggested direction:
 
 - Keep the domain split, but introduce a clearer workflow owner or workflow-facing facade for governance use cases.
 
+Current state:
+
+- `GovernanceWorkflowAppService` now acts as an application-layer facade for governance workflows spanning namespace lifecycle, skill lifecycle, review moderation, and promotion moderation.
+- `ReviewController`, `PromotionController`, `SkillLifecycleController`, and the namespace lifecycle endpoints in `NamespaceController` now route through that shared governance facade instead of each controller naming a different workflow owner.
+- The underlying domain split is unchanged: `NamespaceGovernanceService`, `SkillGovernanceService`, `ReviewService`, and `PromotionService` still own their local business rules.
+- This improves discoverability of the end-to-end moderation path, but the deeper domain workflow is still distributed, so the finding remains open.
+
 ## 6. Search-related read paths are split in a way that is hard to follow at first glance
+
+Status: improved but still present on branch `docs/backend-annotation-findings-discussion`
 
 Observed files:
 
@@ -170,7 +181,16 @@ Suggested direction:
 
 - Clarify the boundary in naming or package-level docs, especially around "search result assembly" vs. "authoritative skill detail query."
 
+Current state:
+
+- Search package docs now explicitly describe `SearchQueryService` as the backend match engine only.
+- `SkillSearchAppService` now documents itself as the application-side search result assembler, and its class-level Javadoc points readers to `SkillQueryService` for authoritative detail reads.
+- The runtime structure is unchanged, but the entry-point responsibilities are now easier to recover from code reading alone.
+- The finding remains open because the read path is still split across multiple modules and service types.
+
 ## 7. Event-driven counter maintenance is useful but not yet modeled as a distinct projection concern
+
+Status: improved but still present on branch `docs/backend-annotation-findings-discussion`
 
 Observed files:
 
@@ -185,6 +205,12 @@ Why this stands out:
 Suggested direction:
 
 - Consider naming this area more explicitly as projection maintenance or read-model synchronization if the pattern continues to grow.
+
+Current state:
+
+- Star and rating counter updates now delegate to `SkillEngagementProjectionService` under an explicit `projection` package.
+- The event listeners remain as asynchronous transport adapters, while the denormalized read-model maintenance logic now has a named workflow owner.
+- The implementation is still a lightweight JDBC-backed projection updater rather than a broader projection subsystem, so the finding is improved but not fully closed.
 
 ## 8. Exception modeling is duplicated across application, domain, and auth layers
 
@@ -239,10 +265,22 @@ Current state:
 
 - This branch reduced some of the most visible mixing at the entrypoint layer by removing direct repository orchestration from `ReviewController`, `PromotionController`, and `ClawHubCompatController`.
 - Compatibility-specific skill lookup and version lookup now live behind `CompatSkillLookupService` instead of being duplicated across compatibility entry points.
+- Governance-facing review, promotion, and inbox read models now start to move behind a dedicated `GovernanceQueryRepository` instead of being assembled ad hoc inside multiple app services.
+- Owner-facing skill summary cards for `MySkillAppService` now also move behind a dedicated `MySkillQueryRepository`, so namespace joins and lifecycle-summary assembly are no longer embedded directly in that app service.
+- Admin-facing profile review list summaries now move behind a dedicated `ProfileReviewQueryRepository`, so user lookups and JSON field extraction are no longer embedded directly in `AdminProfileReviewAppService`.
+- Admin-facing skill report list summaries now move behind a dedicated `AdminSkillReportQueryRepository`, while `AdminUserSearchRepository` remains as a documented management-search exception that uses direct criteria queries intentionally.
+- `docs/01-system-architecture.md` and the `skillhub-app` package docs now explicitly document when to use domain repository ports, app query repositories, and direct persistence access.
+- The remaining intentional exceptions are now narrower and documented in code:
+  - `AdminUserSearchRepository`: admin-console-only dynamic criteria search over `UserAccount`
+  - `AdminAuditLogAppService`: filter-heavy SQL over append-only audit records
+  - `PostgresFullTextQueryService`: storage-engine-specific PostgreSQL FTS and ranking adapter
+  - `RbacService`: auth-module-local permission expansion query
 - The broader architectural pattern is still mixed: some flows still use domain repository ports, some use dedicated query repositories, and some app-layer read paths still use direct persistence access.
 - This finding should stay open until the codebase documents or enforces a clearer rule for choosing among those access patterns.
 
 ## 10. OAuth login behavior is decomposed into many small classes without one visible flow owner
+
+Status: improved but still present on branch `docs/backend-annotation-findings-discussion`
 
 Observed files:
 
@@ -261,6 +299,13 @@ Why this stands out:
 Suggested direction:
 
 - Keep the provider-specific strategy types, but consider a clearer flow owner or a compact architecture note that names the stages of the OAuth pipeline.
+
+Current state:
+
+- `OAuthLoginFlowService` now acts as the visible workflow owner for browser OAuth login.
+- Provider claim loading, access-policy evaluation, account provisioning, return-target persistence, and failure redirect resolution now live behind that one flow-oriented service.
+- `SkillHubOAuth2AuthorizationRequestResolver`, `CustomOAuth2UserService`, `OAuth2LoginSuccessHandler`, and `OAuth2LoginFailureHandler` now act as transport adapters around the shared flow owner.
+- The package still uses multiple strategy and handler types, so the decomposition remains, but the orchestration path is now much easier to follow.
 
 ## 11. Some domain repository ports leak Spring Data pagination types
 

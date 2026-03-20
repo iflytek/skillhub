@@ -16,6 +16,7 @@ public interface SkillReportJpaRepository extends JpaRepository<SkillReport, Lon
     boolean existsBySkillIdAndReporterIdAndStatus(Long skillId, String reporterId, SkillReportStatus status);
     Page<SkillReport> findByStatusOrderByCreatedAtDesc(SkillReportStatus status, Pageable pageable);
     List<SkillReport> findBySkillIdIn(Collection<Long> skillIds);
+    void deleteBySkillId(Long skillId);
 
     @Override
     default Page<SkillReport> findByStatus(SkillReportStatus status, Pageable pageable) {

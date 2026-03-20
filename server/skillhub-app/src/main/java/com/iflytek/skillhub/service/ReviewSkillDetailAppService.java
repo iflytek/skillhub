@@ -59,6 +59,7 @@ public class ReviewSkillDetailAppService {
                 snapshot.skill().getId(),
                 snapshot.skill().getSlug(),
                 snapshot.skill().getDisplayName(),
+                snapshot.skill().getOwnerId(),
                 snapshot.ownerDisplayName(),
                 snapshot.skill().getSummary(),
                 snapshot.skill().getVisibility().name(),

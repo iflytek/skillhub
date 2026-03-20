@@ -34,4 +34,5 @@ public interface SkillVersionJpaRepository extends JpaRepository<SkillVersion, L
 
     List<SkillVersion> findBySkillIdAndStatusOrderByCreatedAtDesc(Long skillId, SkillVersionStatus status);
     Page<SkillVersion> findBySkillIdAndStatus(Long skillId, SkillVersionStatus status, Pageable pageable);
+    void deleteBySkillId(Long skillId);
 }

@@ -149,6 +149,7 @@ class SkillControllerTest {
                         1L,
                         "demo",
                         "Demo",
+                        "owner-1",
                         "Alice",
                         "Pending preview",
                         "PUBLIC",

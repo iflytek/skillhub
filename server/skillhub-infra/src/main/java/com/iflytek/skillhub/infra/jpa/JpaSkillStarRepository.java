@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface JpaSkillStarRepository extends JpaRepository<SkillStar, Long>, SkillStarRepository {
     Optional<SkillStar> findBySkillIdAndUserId(Long skillId, String userId);
+    void deleteBySkillId(Long skillId);
     Page<SkillStar> findByUserId(String userId, Pageable pageable);
     long countBySkillId(Long skillId);
 }

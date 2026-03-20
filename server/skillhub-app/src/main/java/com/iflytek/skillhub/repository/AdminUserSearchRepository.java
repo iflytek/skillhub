@@ -19,7 +19,15 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Custom query repository that builds pageable admin-user search results with optional filters.
+ * Custom query repository that builds pageable admin-user search results with
+ * optional filters.
+ *
+ * <p>This class is an intentional exception to the usual domain-port vs.
+ * app-query-repository split. The admin user search screen needs an ad hoc,
+ * pageable, multi-field filter over {@link UserAccount} that is not used by
+ * domain mutation workflows, and expressing it as a dedicated criteria-based
+ * query is clearer than widening the domain repository port for one management
+ * console use case.
  */
 @Repository
 public class AdminUserSearchRepository {

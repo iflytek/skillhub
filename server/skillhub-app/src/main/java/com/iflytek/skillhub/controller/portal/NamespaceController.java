@@ -16,6 +16,7 @@ import com.iflytek.skillhub.dto.NamespaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.UpdateMemberRoleRequest;
 import com.iflytek.skillhub.service.AuditRequestContext;
+import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import com.iflytek.skillhub.service.NamespacePortalCommandAppService;
 import com.iflytek.skillhub.service.NamespacePortalQueryAppService;
 import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
@@ -39,15 +40,18 @@ public class NamespaceController extends BaseApiController {
     private final NamespacePortalQueryAppService namespacePortalQueryAppService;
     private final NamespacePortalCommandAppService namespacePortalCommandAppService;
     private final NamespaceMemberCandidateService namespaceMemberCandidateService;
+    private final GovernanceWorkflowAppService governanceWorkflowAppService;
 
     public NamespaceController(NamespacePortalQueryAppService namespacePortalQueryAppService,
                                NamespacePortalCommandAppService namespacePortalCommandAppService,
                                NamespaceMemberCandidateService namespaceMemberCandidateService,
+                               GovernanceWorkflowAppService governanceWorkflowAppService,
                                ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.namespacePortalQueryAppService = namespacePortalQueryAppService;
         this.namespacePortalCommandAppService = namespacePortalCommandAppService;
         this.namespaceMemberCandidateService = namespaceMemberCandidateService;
+        this.governanceWorkflowAppService = governanceWorkflowAppService;
     }
 
     @GetMapping("/namespaces")
@@ -93,7 +97,7 @@ public class NamespaceController extends BaseApiController {
                                                           @RequestAttribute("userId") String userId,
                                                           HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                namespacePortalCommandAppService.freezeNamespace(
+                governanceWorkflowAppService.freezeNamespace(
                         slug,
                         request,
                         userId,
@@ -105,7 +109,7 @@ public class NamespaceController extends BaseApiController {
                                                             @RequestAttribute("userId") String userId,
                                                             HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                namespacePortalCommandAppService.unfreezeNamespace(
+                governanceWorkflowAppService.unfreezeNamespace(
                         slug,
                         userId,
                         AuditRequestContext.from(httpRequest)));
@@ -117,7 +121,7 @@ public class NamespaceController extends BaseApiController {
                                                            @RequestAttribute("userId") String userId,
                                                            HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                namespacePortalCommandAppService.archiveNamespace(
+                governanceWorkflowAppService.archiveNamespace(
                         slug,
                         request,
                         userId,
@@ -129,7 +133,7 @@ public class NamespaceController extends BaseApiController {
                                                            @RequestAttribute("userId") String userId,
                                                            HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                namespacePortalCommandAppService.restoreNamespace(
+                governanceWorkflowAppService.restoreNamespace(
                         slug,
                         userId,
                         AuditRequestContext.from(httpRequest)));

@@ -10,4 +10,5 @@ public interface SkillRatingRepository {
     Optional<SkillRating> findBySkillIdAndUserId(Long skillId, String userId);
     double averageScoreBySkillId(Long skillId);
     int countBySkillId(Long skillId);
+    void deleteBySkillId(Long skillId);
 }
