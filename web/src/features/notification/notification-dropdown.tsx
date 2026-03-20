@@ -2,20 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import type { NotificationItem } from '@/api/types'
 import { useNotifications, useMarkAllRead, useMarkRead } from './use-notifications'
+import { resolveNotificationTarget } from './notification-target'
 
 interface Props {
   onClose: () => void
-}
-
-function getEntityPath(item: NotificationItem): string {
-  switch (item.entityType) {
-    case 'review':
-      return '/dashboard/reviews'
-    case 'report':
-      return '/dashboard/reports'
-    default:
-      return '/dashboard/notifications'
-  }
 }
 
 function formatRelativeTime(dateStr: string, lang: string): string {
@@ -90,7 +80,7 @@ export function NotificationDropdown({ onClose }: Props) {
           notifications.map((item) => (
             <li key={item.id}>
               <Link
-                to={getEntityPath(item)}
+                to={resolveNotificationTarget(item)}
                 onClick={() => handleItemClick(item)}
                 className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
               >

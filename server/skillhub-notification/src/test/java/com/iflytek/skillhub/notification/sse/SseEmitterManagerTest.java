@@ -1,58 +1,174 @@
 package com.iflytek.skillhub.notification.sse;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 class SseEmitterManagerTest {
 
+    private Queue<TestEmitter> emitters;
     private SseEmitterManager manager;
 
     @BeforeEach
     void setUp() {
-        manager = new SseEmitterManager();
+        emitters = new ArrayDeque<>();
+        manager = new SseEmitterManager(userId -> {
+            TestEmitter emitter = emitters.remove();
+            emitter.registerUser(userId);
+            return emitter;
+        });
     }
 
     @Test
     void register_shouldReturnEmitter() {
+        emitters.add(new TestEmitter());
+
         SseEmitter emitter = manager.register("user-1");
+
         assertNotNull(emitter);
+        assertEquals(1, manager.totalEmitters());
+        assertEquals(1, manager.emittersForUser("user-1"));
     }
 
     @Test
-    void register_shouldEvictOldestWhenPerUserLimitReached() {
-        // In test context, SseEmitter.send() throws IOException (no real HTTP connection),
-        // which triggers the cleanup callback and removes the emitter from the list.
-        // So each register() call results in a net-zero change to the tracked list.
-        // We verify the eviction path doesn't throw and returns a valid emitter each time.
-        List<SseEmitter> emitters = new ArrayList<>();
+    void register_shouldKeepAccurateCountWhenEvictingOldestEmitter() {
         for (int i = 0; i < 6; i++) {
-            SseEmitter emitter = manager.register("user-evict");
-            assertNotNull(emitter, "register() should always return a non-null emitter");
-            emitters.add(emitter);
+            emitters.add(new TestEmitter());
         }
-        // All 6 calls succeeded without exception — eviction logic ran without error
-        assertEquals(6, emitters.size());
+
+        for (int i = 0; i < 6; i++) {
+            manager.register("user-evict");
+        }
+
+        assertEquals(5, manager.totalEmitters());
+        assertEquals(5, manager.emittersForUser("user-evict"));
+    }
+
+    @Test
+    void push_shouldRemoveEmitterWhenSendFails() {
+        TestEmitter healthy = new TestEmitter();
+        TestEmitter broken = new TestEmitter();
+        broken.failAfterConnected();
+        emitters.add(healthy);
+        emitters.add(broken);
+        manager.register("user-1");
+        manager.register("user-1");
+
+        manager.push("user-1", "payload");
+
+        assertEquals(1, manager.totalEmitters());
+        assertEquals(1, manager.emittersForUser("user-1"));
+    }
+
+    @Test
+    void heartbeat_shouldRemoveEmitterWhenSendFails() {
+        TestEmitter healthy = new TestEmitter();
+        TestEmitter broken = new TestEmitter();
+        broken.failAfterConnected();
+        emitters.add(healthy);
+        emitters.add(broken);
+        manager.register("user-1");
+        manager.register("user-1");
+
+        manager.heartbeat();
+
+        assertEquals(1, manager.totalEmitters());
+        assertEquals(1, manager.emittersForUser("user-1"));
+    }
+
+    @Test
+    void cleanup_shouldBeIdempotent() {
+        TestEmitter emitter = new TestEmitter();
+        emitters.add(emitter);
+        manager.register("user-1");
+
+        emitter.fireError();
+        emitter.fireError();
+
+        assertEquals(0, manager.totalEmitters());
+        assertEquals(0, manager.emittersForUser("user-1"));
     }
 
     @Test
     void push_shouldDoNothingForUnregisteredUser() {
-        // Should not throw even when no emitters exist for the user
         assertDoesNotThrow(() -> manager.push("unknown-user", "some-data"));
+        assertEquals(0, manager.totalEmitters());
     }
 
     @Test
     void register_multipleUsers_shouldTrackSeparately() {
+        emitters.add(new TestEmitter());
+        emitters.add(new TestEmitter());
+
         SseEmitter emitter1 = manager.register("user-1");
         SseEmitter emitter2 = manager.register("user-2");
 
         assertNotNull(emitter1);
         assertNotNull(emitter2);
-        assertNotSame(emitter1, emitter2);
+        assertEquals(2, manager.totalEmitters());
+        assertEquals(1, manager.emittersForUser("user-1"));
+        assertEquals(1, manager.emittersForUser("user-2"));
+    }
+
+    private static final class TestEmitter extends SseEmitter {
+        private final AtomicInteger errorCallbacks = new AtomicInteger(0);
+        private Runnable completionCallback = () -> {};
+        private Runnable timeoutCallback = () -> {};
+        private java.util.function.Consumer<Throwable> errorCallback = error -> {};
+        private String userId;
+        private boolean failAfterConnected;
+        private int sendCount;
+
+        private TestEmitter() {
+            super(60_000L);
+        }
+
+        void registerUser(String userId) {
+            this.userId = userId;
+        }
+
+        void failAfterConnected() {
+            this.failAfterConnected = true;
+        }
+
+        void fireError() {
+            errorCallback.accept(new IOException("boom-" + userId + "-" + errorCallbacks.incrementAndGet()));
+        }
+
+        @Override
+        public synchronized void onCompletion(Runnable callback) {
+            this.completionCallback = callback;
+        }
+
+        @Override
+        public synchronized void onTimeout(Runnable callback) {
+            this.timeoutCallback = callback;
+        }
+
+        @Override
+        public synchronized void onError(java.util.function.Consumer<Throwable> callback) {
+            this.errorCallback = callback;
+        }
+
+        @Override
+        public void complete() {
+            completionCallback.run();
+        }
+
+        @Override
+        public void send(SseEventBuilder builder) throws IOException {
+            sendCount++;
+            if (failAfterConnected && sendCount > 1) {
+                throw new IOException("send failed");
+            }
+        }
     }
 }

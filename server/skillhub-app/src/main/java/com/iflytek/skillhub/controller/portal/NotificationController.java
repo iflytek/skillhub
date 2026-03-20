@@ -1,18 +1,20 @@
 package com.iflytek.skillhub.controller.portal;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.dto.*;
 import com.iflytek.skillhub.notification.domain.Notification;
 import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.service.NotificationService;
 import com.iflytek.skillhub.notification.sse.SseEmitterManager;
+import java.util.Collections;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/v1/notifications", "/api/web/notifications"})
@@ -20,13 +22,16 @@ public class NotificationController extends BaseApiController {
 
     private final NotificationService notificationService;
     private final SseEmitterManager sseEmitterManager;
+    private final ObjectMapper objectMapper;
 
     public NotificationController(NotificationService notificationService,
                                   SseEmitterManager sseEmitterManager,
+                                  ObjectMapper objectMapper,
                                   ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.notificationService = notificationService;
         this.sseEmitterManager = sseEmitterManager;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping
@@ -67,6 +72,7 @@ public class NotificationController extends BaseApiController {
     }
 
     private NotificationResponse toResponse(Notification n) {
+        NotificationTarget target = resolveTarget(n);
         return new NotificationResponse(
                 n.getId(),
                 n.getCategory().name(),
@@ -77,7 +83,46 @@ public class NotificationController extends BaseApiController {
                 n.getEntityId(),
                 n.getStatus().name(),
                 n.getCreatedAt() != null ? n.getCreatedAt().toString() : null,
-                n.getReadAt() != null ? n.getReadAt().toString() : null
+                n.getReadAt() != null ? n.getReadAt().toString() : null,
+                target.targetType(),
+                target.targetId(),
+                target.targetRoute()
         );
     }
+
+    private NotificationTarget resolveTarget(Notification notification) {
+        String eventType = notification.getEventType();
+        String entityType = notification.getEntityType();
+        Long entityId = notification.getEntityId();
+        Map<String, Object> body = parseBody(notification.getBodyJson());
+        String namespace = body.get("namespace") instanceof String value ? value : null;
+        String slug = body.get("slug") instanceof String value ? value : null;
+
+        if ("REVIEW_SUBMITTED".equals(eventType) && entityId != null) {
+            return new NotificationTarget("REVIEW", entityId, "/dashboard/reviews/" + entityId);
+        }
+        if ("PROMOTION_SUBMITTED".equals(eventType)) {
+            return new NotificationTarget("PROMOTION", entityId, "/dashboard/promotions");
+        }
+        if ("REPORT_SUBMITTED".equals(eventType)) {
+            return new NotificationTarget("REPORT", entityId, "/dashboard/reports");
+        }
+        if (namespace != null && slug != null && ("SKILL".equals(entityType) || notification.getCategory() == NotificationCategory.PUBLISH)) {
+            return new NotificationTarget("SKILL", entityId, "/space/" + namespace + "/" + slug);
+        }
+        return new NotificationTarget(entityType, entityId, "/dashboard/notifications");
+    }
+
+    private Map<String, Object> parseBody(String bodyJson) {
+        if (bodyJson == null || bodyJson.isBlank()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return objectMapper.readValue(bodyJson, new TypeReference<>() {});
+        } catch (Exception ex) {
+            return Collections.emptyMap();
+        }
+    }
+
+    private record NotificationTarget(String targetType, Long targetId, String targetRoute) {}
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NotificationItem } from '@/api/types'
+import { resolveNotificationTarget } from '@/features/notification/notification-target'
 import { useNotificationList, useMarkAllRead, useMarkRead } from '@/features/notification/use-notifications'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
@@ -21,14 +22,6 @@ function getCategoryKey(cat: Category): string {
     case 'REVIEW': return 'notification.review'
     case 'PROMOTION': return 'notification.promotion'
     case 'REPORT': return 'notification.report'
-  }
-}
-
-function getEntityPath(item: NotificationItem): string {
-  switch (item.entityType) {
-    case 'review': return '/dashboard/reviews'
-    case 'report': return '/dashboard/reports'
-    default: return '/dashboard/notifications'
   }
 }
 
@@ -83,7 +76,7 @@ export function NotificationsPage() {
     if (item.status === 'UNREAD') {
       markRead.mutate(item.id)
     }
-    void navigate({ to: getEntityPath(item) })
+    void navigate({ to: resolveNotificationTarget(item) })
   }
 
   return (

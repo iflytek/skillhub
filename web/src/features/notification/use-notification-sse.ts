@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { WEB_API_PREFIX } from '@/api/client'
+import { createNotificationSseConnection } from './notification-sse-coordinator'
 import { NOTIFICATION_QUERY_KEYS } from './use-notifications'
 
 const SSE_URL = `${WEB_API_PREFIX}/notifications/sse`
@@ -12,13 +13,13 @@ const SSE_URL = `${WEB_API_PREFIX}/notifications/sse`
  */
 export function useNotificationSse(enabled: boolean) {
   const queryClient = useQueryClient()
-  const esRef = useRef<EventSource | null>(null)
+  const esRef = useRef<ReturnType<typeof createNotificationSseConnection> | null>(null)
   const connectedRef = useRef(false)
 
   useEffect(() => {
     if (!enabled) return
 
-    const es = new EventSource(SSE_URL, { withCredentials: true })
+    const es = createNotificationSseConnection(SSE_URL)
     esRef.current = es
 
     es.addEventListener('open', () => {

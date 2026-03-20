@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import java.util.LinkedHashSet;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -30,9 +31,12 @@ public class RecipientResolver {
     }
 
     public List<String> resolvePlatformSkillAdmins() {
-        return userRoleBindingRepository.findByRole_Code("SKILL_ADMIN")
+        return userRoleBindingRepository.findByRole_CodeIn(Set.of("SKILL_ADMIN", "SUPER_ADMIN"))
                 .stream()
                 .map(binding -> binding.getUserId())
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(LinkedHashSet::new),
+                        List::copyOf
+                ));
     }
 }

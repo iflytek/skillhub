@@ -383,6 +383,9 @@ export interface NotificationItem {
   bodyJson?: string
   entityType?: string
   entityId?: number
+  targetType?: string
+  targetId?: number
+  targetRoute?: string
   status: 'UNREAD' | 'READ'
   createdAt: string
   readAt?: string

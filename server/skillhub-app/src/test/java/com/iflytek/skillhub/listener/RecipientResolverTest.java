@@ -57,10 +57,27 @@ class RecipientResolverTest {
         UserRoleBinding b2 = mock(UserRoleBinding.class);
         when(b1.getUserId()).thenReturn("admin-1");
         when(b2.getUserId()).thenReturn("admin-2");
-        when(userRoleBindingRepository.findByRole_Code("SKILL_ADMIN")).thenReturn(List.of(b1, b2));
+        when(userRoleBindingRepository.findByRole_CodeIn(Set.of("SKILL_ADMIN", "SUPER_ADMIN")))
+                .thenReturn(List.of(b1, b2));
 
         List<String> result = resolver.resolvePlatformSkillAdmins();
 
         assertThat(result).containsExactlyInAnyOrder("admin-1", "admin-2");
+    }
+
+    @Test
+    void resolvePlatformSkillAdmins_shouldIncludeSuperAdminsAndDeduplicateUsers() {
+        UserRoleBinding skillAdmin = mock(UserRoleBinding.class);
+        UserRoleBinding superAdmin = mock(UserRoleBinding.class);
+        UserRoleBinding duplicate = mock(UserRoleBinding.class);
+        when(skillAdmin.getUserId()).thenReturn("skill-admin");
+        when(superAdmin.getUserId()).thenReturn("super-admin");
+        when(duplicate.getUserId()).thenReturn("skill-admin");
+        when(userRoleBindingRepository.findByRole_CodeIn(Set.of("SKILL_ADMIN", "SUPER_ADMIN")))
+                .thenReturn(List.of(skillAdmin, superAdmin, duplicate));
+
+        List<String> result = resolver.resolvePlatformSkillAdmins();
+
+        assertThat(result).containsExactly("skill-admin", "super-admin");
     }
 }

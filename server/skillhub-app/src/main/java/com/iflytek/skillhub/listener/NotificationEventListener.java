@@ -3,9 +3,9 @@ package com.iflytek.skillhub.listener;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.event.*;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.service.NotificationDispatcher;
@@ -26,17 +26,20 @@ public class NotificationEventListener {
 
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
+    private final NamespaceRepository namespaceRepository;
     private final RecipientResolver recipientResolver;
     private final NotificationDispatcher dispatcher;
     private final ObjectMapper objectMapper;
 
     public NotificationEventListener(SkillRepository skillRepository,
                                       SkillVersionRepository skillVersionRepository,
+                                      NamespaceRepository namespaceRepository,
                                       RecipientResolver recipientResolver,
                                       NotificationDispatcher dispatcher,
                                       ObjectMapper objectMapper) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
+        this.namespaceRepository = namespaceRepository;
         this.recipientResolver = recipientResolver;
         this.dispatcher = dispatcher;
         this.objectMapper = objectMapper;
@@ -66,9 +69,9 @@ public class NotificationEventListener {
             versionLabel(event.versionId(), body);
             String json = toJson(body);
             List<String> admins = recipientResolver.resolveNamespaceAdmins(event.namespaceId());
-            for (String admin : admins) {
+            for (String admin : admins.stream().distinct().toList()) {
                 dispatcher.dispatch(admin, NotificationCategory.REVIEW,
-                        "REVIEW_SUBMITTED", title, json, "SKILL", event.skillId());
+                        "REVIEW_SUBMITTED", title, json, "REVIEW", event.reviewId());
             }
         });
     }
@@ -115,9 +118,9 @@ public class NotificationEventListener {
             versionLabel(event.versionId(), body);
             String json = toJson(body);
             List<String> admins = recipientResolver.resolvePlatformSkillAdmins();
-            for (String admin : admins) {
+            for (String admin : admins.stream().distinct().toList()) {
                 dispatcher.dispatch(admin, NotificationCategory.PROMOTION,
-                        "PROMOTION_SUBMITTED", title, json, "SKILL", event.skillId());
+                        "PROMOTION_SUBMITTED", title, json, "PROMOTION", event.promotionId());
             }
         });
     }
@@ -161,9 +164,9 @@ public class NotificationEventListener {
             body.put("reporterId", event.reporterId());
             String json = toJson(body);
             List<String> admins = recipientResolver.resolvePlatformSkillAdmins();
-            for (String admin : admins) {
+            for (String admin : admins.stream().distinct().toList()) {
                 dispatcher.dispatch(admin, NotificationCategory.REPORT,
-                        "REPORT_SUBMITTED", title, json, "SKILL", event.skillId());
+                        "REPORT_SUBMITTED", title, json, "REPORT", event.reportId());
             }
         });
     }
@@ -195,6 +198,8 @@ public class NotificationEventListener {
         map.put("skillId", skill.getId());
         map.put("skillName", skillDisplayName(skill));
         map.put("slug", skill.getSlug());
+        namespaceRepository.findById(skill.getNamespaceId())
+                .ifPresent(namespace -> map.put("namespace", namespace.getSlug()));
         return map;
     }
 
