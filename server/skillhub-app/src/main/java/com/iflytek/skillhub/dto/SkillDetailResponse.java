@@ -6,6 +6,7 @@ public record SkillDetailResponse(
         Long id,
         String slug,
         String displayName,
+        String ownerId,
         String ownerDisplayName,
         String summary,
         String visibility,

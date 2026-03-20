@@ -178,6 +178,7 @@ class ReviewPortalControllerTest {
                                 30L,
                                 "skill-a",
                                 "Skill A",
+                                "owner-1",
                                 "Owner",
                                 "Summary",
                                 "PUBLIC",

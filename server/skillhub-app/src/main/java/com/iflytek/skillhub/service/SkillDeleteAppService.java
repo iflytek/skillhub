@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillHardDeleteService;
@@ -33,9 +35,27 @@ public class SkillDeleteAppService {
                                     String slug,
                                     String actorUserId,
                                     AuditRequestContext auditRequestContext) {
+        return deleteSkillForActor(namespace, slug, actorUserId, auditRequestContext);
+    }
+
+    @Transactional
+    public DeleteResult deleteSkillFromPortal(String namespace,
+                                              String slug,
+                                              PlatformPrincipal principal,
+                                              AuditRequestContext auditRequestContext) {
         String normalizedNamespace = normalizeNamespace(namespace);
         return skillRepository.findByNamespaceSlugAndSlug(normalizedNamespace, slug)
-                .map(skill -> deleteExistingSkill(skill, normalizedNamespace, slug, actorUserId, auditRequestContext))
+                .map(skill -> deleteExistingSkill(skill, normalizedNamespace, slug, principal.userId(), auditRequestContext, true, principal))
+                .orElseGet(() -> new DeleteResult(null, normalizedNamespace, slug, false));
+    }
+
+    private DeleteResult deleteSkillForActor(String namespace,
+                                             String slug,
+                                             String actorUserId,
+                                             AuditRequestContext auditRequestContext) {
+        String normalizedNamespace = normalizeNamespace(namespace);
+        return skillRepository.findByNamespaceSlugAndSlug(normalizedNamespace, slug)
+                .map(skill -> deleteExistingSkill(skill, normalizedNamespace, slug, actorUserId, auditRequestContext, false, null))
                 .orElseGet(() -> new DeleteResult(null, normalizedNamespace, slug, false));
     }
 
@@ -43,9 +63,15 @@ public class SkillDeleteAppService {
                                              String namespace,
                                              String slug,
                                              String actorUserId,
-                                             AuditRequestContext auditRequestContext) {
+                                             AuditRequestContext auditRequestContext,
+                                             boolean enforcePortalOwnership,
+                                             PlatformPrincipal principal) {
+        if (enforcePortalOwnership && !canDeleteFromPortal(skill, principal)) {
+            throw new DomainForbiddenException("error.forbidden");
+        }
         skillHardDeleteService.hardDeleteSkill(
                 skill,
+                namespace,
                 actorUserId,
                 auditRequestContext != null ? auditRequestContext.clientIp() : null,
                 auditRequestContext != null ? auditRequestContext.userAgent() : null
@@ -59,5 +85,13 @@ public class SkillDeleteAppService {
             return null;
         }
         return namespace.startsWith("@") ? namespace.substring(1) : namespace;
+    }
+
+    private boolean canDeleteFromPortal(Skill skill, PlatformPrincipal principal) {
+        if (principal == null) {
+            return false;
+        }
+        return principal.platformRoles().contains("SUPER_ADMIN")
+                || principal.userId().equals(skill.getOwnerId());
     }
 }

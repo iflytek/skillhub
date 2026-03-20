@@ -48,6 +48,7 @@ public class SkillHardDeleteService {
     private final SkillReportRepository skillReportRepository;
     private final SkillVersionStatsRepository skillVersionStatsRepository;
     private final ObjectStorageService objectStorageService;
+    private final SkillStorageDeletionCompensationService compensationService;
     private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +63,7 @@ public class SkillHardDeleteService {
                                   SkillReportRepository skillReportRepository,
                                   SkillVersionStatsRepository skillVersionStatsRepository,
                                   ObjectStorageService objectStorageService,
+                                  SkillStorageDeletionCompensationService compensationService,
                                   AuditLogService auditLogService,
                                   ObjectMapper objectMapper) {
         this.skillRepository = skillRepository;
@@ -75,12 +77,13 @@ public class SkillHardDeleteService {
         this.skillReportRepository = skillReportRepository;
         this.skillVersionStatsRepository = skillVersionStatsRepository;
         this.objectStorageService = objectStorageService;
+        this.compensationService = compensationService;
         this.auditLogService = auditLogService;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public void hardDeleteSkill(Skill skill, String actorUserId, String clientIp, String userAgent) {
+    public void hardDeleteSkill(Skill skill, String namespaceSlug, String actorUserId, String clientIp, String userAgent) {
         List<SkillVersion> versions = skillVersionRepository.findBySkillId(skill.getId());
         List<Long> versionIds = versions.stream().map(SkillVersion::getId).toList();
 
@@ -93,7 +96,7 @@ public class SkillHardDeleteService {
                     .forEach(storageKeys::add);
             storageKeys.add(buildBundleStorageKey(skill.getId(), version.getId()));
         }
-        deleteStorageAfterCommit(storageKeys);
+        deleteStorageAfterCommit(skill, namespaceSlug, storageKeys);
 
         skill.setLatestVersionId(null);
         skill.setUpdatedBy(actorUserId);
@@ -127,24 +130,35 @@ public class SkillHardDeleteService {
         );
     }
 
-    private void deleteStorageAfterCommit(List<String> storageKeys) {
+    private void deleteStorageAfterCommit(Skill skill, String namespaceSlug, List<String> storageKeys) {
         if (storageKeys.isEmpty()) {
             return;
         }
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            objectStorageService.deleteObjects(storageKeys);
+            deleteStorageWithCompensation(skill, namespaceSlug, storageKeys);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                try {
-                    objectStorageService.deleteObjects(storageKeys);
-                } catch (RuntimeException ex) {
-                    log.error("Failed to delete storage objects after hard delete commit [keys={}]", storageKeys, ex);
-                }
+                deleteStorageWithCompensation(skill, namespaceSlug, storageKeys);
             }
         });
+    }
+
+    private void deleteStorageWithCompensation(Skill skill, String namespaceSlug, List<String> storageKeys) {
+        try {
+            objectStorageService.deleteObjects(storageKeys);
+        } catch (RuntimeException ex) {
+            compensationService.recordFailure(
+                    skill.getId(),
+                    namespaceSlug,
+                    skill.getSlug(),
+                    storageKeys,
+                    ex.getMessage()
+            );
+            log.error("Failed to delete storage objects after hard delete commit [keys={}]", storageKeys, ex);
+        }
     }
 
     private String buildBundleStorageKey(Long skillId, Long versionId) {
