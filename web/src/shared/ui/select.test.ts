@@ -10,8 +10,12 @@ describe('shared select contract', () => {
   it('keeps the trigger aligned with the existing input styling language', () => {
     expect(SELECT_TRIGGER_CLASS_NAME).toContain('h-11')
     expect(SELECT_TRIGGER_CLASS_NAME).toContain('rounded-lg')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('border-border')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus:ring-primary/40')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('border-border/60')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('bg-secondary/50')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:outline-none')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-2')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-primary/40')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:border-primary/50')
   })
 
   it('uses themed panel and item classes for the floating listbox', () => {
@@ -21,8 +25,10 @@ describe('shared select contract', () => {
     expect(SELECT_ITEM_CLASS_NAME).toContain('data-[disabled]:opacity-50')
   })
 
-  it('maps empty string form state to an undefined Radix value', () => {
+  it('maps empty and nullish form state to an undefined Radix value', () => {
     expect(normalizeSelectValue('')).toBeUndefined()
+    expect(normalizeSelectValue(null)).toBeUndefined()
+    expect(normalizeSelectValue(undefined)).toBeUndefined()
     expect(normalizeSelectValue('PUBLIC')).toBe('PUBLIC')
   })
 })
