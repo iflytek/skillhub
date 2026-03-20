@@ -587,7 +587,11 @@
     },
     "pendingReview": "Your display name change to \"{{name}}\" is pending review.",
     "rejected": "Your display name change was rejected.",
-    "rejectedReason": "Reason: {{reason}}"
+    "rejectedReason": "Reason: {{reason}}",
+    "reviewHint": "Some changes require admin review before taking effect.",
+    "partiallyAppliedTitle": "Partially Applied",
+    "partiallyAppliedDescription": "Some changes were applied immediately. Others are pending admin review.",
+    "noChanges": "No changes to save."
   },
   "security": {
     "title": "Security Settings",

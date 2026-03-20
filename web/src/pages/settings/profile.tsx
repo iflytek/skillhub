@@ -12,86 +12,129 @@ import { Input } from '@/shared/ui/input'
 /** Regex matching allowed display name characters: Chinese, English, digits, spaces, underscore, hyphen. */
 const DISPLAY_NAME_PATTERN = /^[\u4e00-\u9fa5a-zA-Z0-9_ -]+$/
 
+type FieldValidator = (value: string, t: (key: string) => string) => string | null
+
+const FIELD_VALIDATORS: Record<string, FieldValidator> = {
+  displayName: (value, t) => {
+    const trimmed = value.trim()
+    if (trimmed.length < 2 || trimmed.length > 32) return t('profile.validation.length')
+    if (!DISPLAY_NAME_PATTERN.test(trimmed)) return t('profile.validation.pattern')
+    return null
+  },
+}
+
+/** Map field key to the profile data property holding its current value. */
+function getFieldValue(
+  field: string,
+  profile: { displayName: string; avatarUrl: string | null; email: string | null },
+): string {
+  switch (field) {
+    case 'displayName': return profile.displayName ?? ''
+    case 'email': return profile.email ?? ''
+    default: return ''
+  }
+}
+
 export function ProfileSettingsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [displayName, setDisplayName] = useState(user?.displayName ?? '')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [formValues, setFormValues] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Fetch profile to get pending/rejected change request status
   const { data: profileData } = useQuery({
     queryKey: ['profile'],
     queryFn: () => profileApi.getProfile(),
     staleTime: 30_000,
   })
+
   const pendingChanges = profileData?.pendingChanges
+  const fieldPolicies = profileData?.fieldPolicies ?? {}
   const effectiveDisplayName = profileData?.displayName ?? user?.displayName ?? ''
   const effectiveAvatarUrl = profileData?.avatarUrl ?? user?.avatarUrl ?? null
   const effectiveEmail = profileData?.email ?? user?.email ?? ''
 
+  const effectiveProfile = {
+    displayName: effectiveDisplayName,
+    avatarUrl: effectiveAvatarUrl,
+    email: effectiveEmail,
+  }
+
+  const hasEditableFields = Object.values(fieldPolicies).some((p) => p.editable)
+
   function handleEdit() {
-    setDisplayName(effectiveDisplayName)
-    setErrorMessage('')
+    const values: Record<string, string> = {}
+    for (const field of Object.keys(fieldPolicies)) {
+      values[field] = getFieldValue(field, effectiveProfile)
+    }
+    setFormValues(values)
+    setErrors({})
     setIsEditing(true)
   }
 
   function handleCancel() {
     setIsEditing(false)
-    setErrorMessage('')
+    setErrors({})
   }
 
-  /** Client-side validation before submitting. */
-  function validate(value: string): string | null {
-    const trimmed = value.trim()
-    if (trimmed.length < 2 || trimmed.length > 32) {
-      return t('profile.validation.length')
-    }
-    if (!DISPLAY_NAME_PATTERN.test(trimmed)) {
-      return t('profile.validation.pattern')
-    }
-    return null
+  function handleFieldChange(field: string, value: string) {
+    setFormValues((prev) => ({ ...prev, [field]: value }))
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setErrorMessage('')
+    setErrors({})
 
-    const trimmed = displayName.trim()
-    const validationError = validate(trimmed)
-    if (validationError) {
-      setErrorMessage(validationError)
+    // Collect changed fields only
+    const changes: Record<string, string> = {}
+    for (const [field, policy] of Object.entries(fieldPolicies)) {
+      if (!policy.editable) continue
+      const newVal = (formValues[field] ?? '').trim()
+      const oldVal = getFieldValue(field, effectiveProfile)
+      if (newVal !== oldVal) {
+        changes[field] = newVal
+      }
+    }
+
+    if (Object.keys(changes).length === 0) {
+      toast.success(t('profile.noChanges'))
+      return
+    }
+
+    // Validate
+    const newErrors: Record<string, string> = {}
+    for (const field of Object.keys(changes)) {
+      const validator = FIELD_VALIDATORS[field]
+      if (validator) {
+        const err = validator(changes[field], t)
+        if (err) newErrors[field] = err
+      }
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       return
     }
 
     setIsSubmitting(true)
     try {
-      const result = await profileApi.updateProfile({ displayName: trimmed })
+      const result = await profileApi.updateProfile(changes)
 
       if (result.status === 'PENDING_REVIEW') {
-        queryClient.setQueryData(['profile'], (current: {
-          displayName: string
-          avatarUrl: string | null
-          email: string | null
-          pendingChanges: {
-            status: string
-            changes: Record<string, string>
-            reviewComment: string | null
-            createdAt: string
-          } | null
-        } | undefined) => {
-          if (!current) {
-            return current
-          }
+        queryClient.setQueryData(['profile'], (current: typeof profileData) => {
+          if (!current) return current
           return {
             ...current,
-            displayName: trimmed,
             pendingChanges: {
               status: 'PENDING',
-              changes: { displayName: trimmed },
+              changes,
               reviewComment: null,
               createdAt: new Date().toISOString(),
             },
@@ -99,9 +142,12 @@ export function ProfileSettingsPage() {
         })
         await queryClient.invalidateQueries({ queryKey: ['profile'] })
         toast.success(t('profile.pendingReviewTitle'), t('profile.pendingReviewDescription'))
+      } else if (result.status === 'PARTIALLY_APPLIED') {
+        await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
+        await queryClient.invalidateQueries({ queryKey: ['profile'] })
+        toast.success(t('profile.partiallyAppliedTitle'), t('profile.partiallyAppliedDescription'))
       } else {
         toast.success(t('profile.successTitle'), t('profile.successDescription'))
-        // Refresh auth cache so the header and other components pick up the new name
         await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
         await queryClient.invalidateQueries({ queryKey: ['profile'] })
       }
@@ -109,26 +155,39 @@ export function ProfileSettingsPage() {
       setIsEditing(false)
     } catch (error) {
       if (error instanceof ApiError) {
-        setErrorMessage(
-          truncateErrorMessage(error.message) ?? t('profile.defaultError'),
-        )
+        setErrors({ _form: truncateErrorMessage(error.message) ?? t('profile.defaultError') })
       } else {
-        setErrorMessage(t('profile.defaultError'))
+        setErrors({ _form: t('profile.defaultError') })
       }
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  // Check if any changed field requires review
+  const hasReviewFields = isEditing && Object.entries(fieldPolicies).some(([field, policy]) => {
+    if (!policy.editable || !policy.requiresReview) return false
+    const newVal = (formValues[field] ?? '').trim()
+    const oldVal = getFieldValue(field, effectiveProfile)
+    return newVal !== oldVal
+  })
+
   return (
     <div className="mx-auto max-w-2xl">
       <Card className="glass-strong">
-        <CardHeader>
-          <CardTitle>{t('profile.title')}</CardTitle>
-          <CardDescription>{t('profile.subtitle')}</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>{t('profile.title')}</CardTitle>
+            <CardDescription>{t('profile.subtitle')}</CardDescription>
+          </div>
+          {!isEditing && hasEditableFields ? (
+            <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
+              {t('profile.edit')}
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar (read-only for now) */}
+          {/* Avatar (read-only) */}
           {effectiveAvatarUrl ? (
             <div className="flex items-center gap-4">
               <img
@@ -139,33 +198,46 @@ export function ProfileSettingsPage() {
             </div>
           ) : null}
 
-          {/* Display name field */}
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="display-name">
-                {t('profile.displayName')}
-              </label>
+            {/* Dynamic fields */}
+            {Object.entries(fieldPolicies).map(([field, policy]) => {
+              const label = t(`profile.${field}`)
+              const currentValue = getFieldValue(field, effectiveProfile)
 
-              {isEditing ? (
-                <Input
-                  id="display-name"
-                  type="text"
-                  maxLength={32}
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  autoFocus
-                />
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm">{effectiveDisplayName}</span>
-                  <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
-                    {t('profile.edit')}
-                  </Button>
+              return (
+                <div key={field} className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor={`field-${field}`}>
+                    {label}
+                  </label>
+
+                  {isEditing && policy.editable ? (
+                    <Input
+                      id={`field-${field}`}
+                      type="text"
+                      maxLength={field === 'displayName' ? 32 : undefined}
+                      value={formValues[field] ?? ''}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                      autoFocus={field === 'displayName'}
+                    />
+                  ) : (
+                    <p className={`text-sm ${policy.editable ? '' : 'text-muted-foreground'}`}>
+                      {currentValue || '-'}
+                    </p>
+                  )}
+
+                  {errors[field] ? (
+                    <p className="text-sm text-red-600">{errors[field]}</p>
+                  ) : null}
                 </div>
-              )}
-            </div>
+              )
+            })}
 
-            {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+            {errors._form ? <p className="text-sm text-red-600">{errors._form}</p> : null}
+
+            {/* Review hint */}
+            {hasReviewFields ? (
+              <p className="text-sm text-muted-foreground">{t('profile.reviewHint')}</p>
+            ) : null}
 
             {isEditing ? (
               <div className="flex gap-2">
@@ -193,12 +265,6 @@ export function ProfileSettingsPage() {
               ) : null}
             </div>
           ) : null}
-
-          {/* Email (read-only) */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('profile.email')}</label>
-            <p className="text-sm text-muted-foreground">{effectiveEmail || '-'}</p>
-          </div>
         </CardContent>
       </Card>
     </div>
