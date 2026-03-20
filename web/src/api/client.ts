@@ -34,6 +34,7 @@ import type {
   NotificationItem,
   NotificationPreferenceItem,
   NotificationUnreadCount,
+  SkillDeleteResult,
   AdminLabelInput,
   LabelDefinition,
   LabelItem,
@@ -466,9 +467,9 @@ export const skillLifecycleApi = {
     })
   },
 
-  async deleteSkill(namespace: string, slug: string): Promise<void> {
+  async deleteSkill(namespace: string, slug: string): Promise<SkillDeleteResult> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`, {
+    return fetchJson<SkillDeleteResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`, {
       method: 'DELETE',
       headers: await ensureCsrfHeaders(),
     })

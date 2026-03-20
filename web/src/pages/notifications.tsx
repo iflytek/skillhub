@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NotificationItem } from '@/api/types'
+import { resolveNotificationDisplay } from '@/features/notification/notification-content'
 import { getNotificationItems, getNotificationTotal } from '@/features/notification/notification-page'
 import { resolveNotificationTarget } from '@/features/notification/notification-target'
 import { useNotificationList, useMarkAllRead, useMarkRead } from '@/features/notification/use-notifications'
@@ -133,6 +134,10 @@ export function NotificationsPage() {
                 onClick={() => handleItemClick(item)}
                 className="flex w-full items-start gap-3 px-5 py-4 text-left hover:bg-muted/40 transition-colors"
               >
+                {(() => {
+                  const display = resolveNotificationDisplay(item, i18n.language)
+                  return (
+                    <>
                 <span
                   className={`mt-2 h-2 w-2 flex-shrink-0 rounded-full ${
                     item.status === 'UNREAD' ? 'bg-red-500' : 'bg-transparent'
@@ -140,13 +145,19 @@ export function NotificationsPage() {
                 />
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm ${item.status === 'UNREAD' ? 'font-semibold' : ''} truncate`}>
-                    {item.title}
+                    {display.title}
                   </p>
+                  {display.description ? (
+                    <p className="mt-0.5 text-xs text-muted-foreground truncate">{display.description}</p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {t('notification.timeAgo', { time: formatRelativeTime(item.createdAt, i18n.language) })}
                   </p>
                 </div>
                 <CategoryBadge category={item.category} />
+                    </>
+                  )
+                })()}
               </button>
             ))}
           </Card>

@@ -145,6 +145,7 @@ export function useSkillDetail(namespace: string, slug: string) {
     queryKey: ['skills', namespace, slug],
     queryFn: () => getSkillDetail(namespace, slug),
     enabled: !!namespace && !!slug,
+    refetchOnMount: 'always',
   })
 }
 

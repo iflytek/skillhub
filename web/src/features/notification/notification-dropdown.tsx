@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import type { NotificationItem } from '@/api/types'
 import { getNotificationItems } from './notification-page'
+import { resolveNotificationDisplay } from './notification-content'
 import { useNotifications, useMarkAllRead, useMarkRead } from './use-notifications'
 import { resolveNotificationTarget } from './notification-target'
 
@@ -80,6 +81,9 @@ export function NotificationDropdown({ onClose }: Props) {
         ) : (
           notifications.map((item) => (
             <li key={item.id}>
+              {(() => {
+                const display = resolveNotificationDisplay(item, i18n.language)
+                return (
               <Link
                 to={resolveNotificationTarget(item)}
                 onClick={() => handleItemClick(item)}
@@ -89,13 +93,20 @@ export function NotificationDropdown({ onClose }: Props) {
                 <span className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ${item.status === 'UNREAD' ? 'bg-red-500' : 'bg-transparent'}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate" style={{ color: 'hsl(var(--foreground))' }}>
-                    {item.title}
+                    {display.title}
                   </p>
+                  {display.description ? (
+                    <p className="mt-0.5 truncate text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                      {display.description}
+                    </p>
+                  ) : null}
                   <p className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
                     {t('notification.timeAgo', { time: formatRelativeTime(item.createdAt, i18n.language) })}
                   </p>
                 </div>
               </Link>
+                )
+              })()}
             </li>
           ))
         )}
