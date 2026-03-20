@@ -31,6 +31,8 @@ import type {
   CreateNamespaceRequest,
   NamespaceMember,
   NamespaceCandidateUser,
+  LabelDefinition,
+  LabelItem,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -498,6 +500,37 @@ export const skillLifecycleApi = {
 
 function normalizeNamespaceSlug(namespace: string): string {
   return namespace.startsWith('@') ? namespace.slice(1) : namespace
+}
+
+export const labelApi = {
+  async listVisible(): Promise<LabelItem[]> {
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/labels`)
+  },
+
+  async listSkillLabels(namespace: string, slug: string): Promise<LabelItem[]> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels`)
+  },
+
+  async attachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<LabelItem> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    return fetchJson<LabelItem>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async detachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<void> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listAdminDefinitions(): Promise<LabelDefinition[]> {
+    return fetchJson<LabelDefinition[]>('/api/v1/admin/labels')
+  },
 }
 
 export const namespaceApi = {

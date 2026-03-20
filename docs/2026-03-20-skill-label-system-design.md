@@ -23,6 +23,13 @@
 - 用户自定义标签
 - 用户自定义标签审核流程
 
+### 1.2 关键决策
+
+- `label_*` 是全新模型，与现有 `skill_tag` 彻底隔离；`skill_tag` 继续只承担“版本分发别名”的职责，不复用表、Service、Controller、DTO、API 路径
+- `skill_search_document.keywords` 是搜索文档的共享聚合字段，不是 label 专属字段；一期在搜索文档重建时，将“现有业务 keywords 来源”和“label 翻译文本”作为两个独立来源重新组合写入
+- label 搜索集成只允许“基于权威源全量重建单个 skill 的搜索文档”，不允许读取现有 `skill_search_document.keywords` 后做增量 append
+- promotion 在当前系统中会创建新的 target skill，而不是把 source skill 移动到新空间；因此 label 生命周期必须按“source skill / target skill 两条独立 skill 记录”建模
+
 ## 2. Data Model
 
 注意：新表统一使用 `TIMESTAMPTZ` 作为时间戳类型标准（现有旧表使用 `TIMESTAMP`，后续统一迁移）。
@@ -62,6 +69,7 @@ CREATE TABLE label_translation (
 
 - 支持动态语言：管理员可为任意语言添加翻译，不限于系统当前支持的语言列表
 - 前端展示 fallback 顺序：当前语言 → en → slug
+- 后端返回 `displayName` 时，“当前语言”以请求 locale 为准；实现上使用 Spring locale 解析结果（等价于基于 `Accept-Language` / request locale），再 fallback 到 `en` 和 `slug`
 
 ### 2.3 skill_label（skill 与 label 关联表）
 
@@ -82,6 +90,18 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 - 级联删除：删除 label_definition 时自动清理关联
 - `(label_id)` 索引用于分类筛选时按 label 查找关联 skill 的性能优化
 - 单个 skill 最多关联 10 个 label（应用层校验）
+
+### 2.5 与现有 `skill_tag` 的关系
+
+现有 `skill_tag` 已用于版本分发通道，例如 `latest`、`beta` 等 tag 指向某个发布版本。它具备以下特征：
+- 语义是“版本别名”，不是 skill 分类
+- `version_id` 必填，tag 必须解析到某个 skill version
+- API 和前端心智都已围绕“安装/下载某个版本别名”展开
+
+因此：
+- 新 label 系统不得复用 `skill_tag` 表结构
+- 新 label 系统不得复用 `/tags` 相关 API 路径
+- 代码实现中必须使用独立的命名：`LabelDefinition` / `SkillLabel` / `LabelTranslation`
 
 ### 2.4 兼容性设计：用户自定义标签
 
@@ -112,11 +132,26 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 - 标签定义和翻译的管理是全局操作，仅超级管理员
 - 赋予 label 到 skill 的权限取决于 label 的 type
 - 查看权限跟随 skill 本身的可见性规则，不额外控制
+- 实现上必须抽出统一的 `LabelPermissionChecker`；`SUPER_ADMIN` 始终可绕过 namespace membership 直接执行 label 管理操作，避免 controller / service 各自复制权限逻辑
 
 ### 3.1 跨空间权限边界
 
 - 命名空间管理员只能管理其所管理空间内 skill 的 label
-- 如果 skill 通过 promotion 从团队空间提升到全局空间，原空间管理员不再有权管理该 skill 的 label，权限跟随 skill 当前所在空间
+
+### 3.2 Promotion 后的 label 生命周期
+
+当前 promotion 的事实模型是“审批后在目标全局空间创建一个新的 target skill”，而不是把 source skill 迁移到全局空间。
+
+一期采用以下规则：
+- promotion 不自动复制 source skill 的任何 label 到 target skill
+- source skill 和 target skill 各自维护独立的 `skill_label`
+- source 空间管理员对 source skill 的 label 权限不变
+- target skill 的 label 由 target skill 当前权限模型控制；source 空间管理员不会因 source skill 的管理权限而自动获得 target skill 的 label 管理权
+
+这样做的原因：
+- 避免在一期引入“promotion 时 label 复制/回写/同步”的额外复杂度
+- 与当前 promotion “创建新 skill 副本”的领域模型一致
+- 后续如需复制策略，可在 promotion approval 流程中显式扩展，而不破坏现有表结构
 
 ## 4. Search Integration
 
@@ -132,9 +167,20 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 
 ### 4.2 Keywords 字段写入
 
-在构建 `SkillSearchDocument` 时，将 skill 关联的所有 label 的所有语言翻译文本追加到 `keywords` 字段。
+在构建 `SkillSearchDocument` 时，将 skill 关联的所有 label 的所有语言翻译文本写入 `keywords` 字段。
 
-**重要：** keywords 字段可能已有其他业务写入的内容，label 翻译文本作为独立部分追加拼接，不得覆盖原有内容。实现上在搜索文档构建逻辑中分段拼接，各部分职责清晰。
+**重要：** `skill_search_document.keywords` 不是 label 专属字段，而是搜索文档的共享聚合字段。当前系统中，该字段已经承载来自 skill metadata/frontmatter 的 keywords/tag 信息。label 翻译文本只是新增来源之一，不能覆盖或破坏现有来源。
+
+实现要求：
+- 搜索文档重建时，从权威源重新计算完整的 `keywords`
+- 现有业务 keywords 来源与 label 翻译文本作为两个独立来源进行组合
+- 不允许读取旧的 `skill_search_document.keywords` 后做增量 append
+- label 删除、翻译修改、skill 移除 label 后，旧 label 文本必须通过重建被彻底清理，不得残留
+
+建议实现上的组合顺序：
+1. 保留现有搜索重建逻辑产出的原有 keywords 内容
+2. 追加该 skill 关联 label 的全部翻译文本
+3. 最终统一写回新的 `SkillSearchDocument.keywords`
 
 示例：
 ```
@@ -152,25 +198,34 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 #### 异步批量重建方案
 
 - 使用 Spring `@Async` 执行异步任务
-- 在 `skillhub-app` 层的 application service 中实现 `rebuildByLabelId(Long labelId)` 方法（不放在 `skillhub-search` 模块的 `SearchRebuildService` 中，避免搜索模块对 `skill_label` 表的直接依赖，保持模块边界清晰）
-- 实现逻辑：查询 `skill_label` 获取关联的 skill_id 列表，分批调用 `SearchRebuildService.rebuildBySkill(Long)`
+- 在 `skillhub-app` 层的 application service 中实现 label 相关的搜索同步入口（不放在 `skillhub-search` 模块的 `SearchRebuildService` 中，避免搜索模块对 `skill_label` 表的直接依赖，保持模块边界清晰）
+- 对 `label_translation` 修改、`label_definition` 删除等“影响多个 skill”的变更，在事务内先收集受影响的 `skill_id` 列表，再在 `AFTER_COMMIT` 阶段触发异步任务
+- `label_definition` 删除场景严禁在删除后再通过 `skill_label` 反查，因为 `skill_label` 已被级联删除；必须在删除前快照受影响的 `skill_id`
+- 异步任务分批调用 `SearchRebuildService.rebuildBySkill(Long)`
 - 批量大小：每批 50 个 skill，批次间无需间隔（数据库写入压力可控，系统推荐标签数量有限）
-- 事务策略：每个 skill 的重建是独立事务（与 `rebuildBySkill` 现有行为一致），保证单个 skill 重建失败不影响其他 skill
-- 错误处理：单个 skill 重建失败记录错误日志，不重试（下次 label 变更或手动 rebuildAll 时会修复）
+- 失败隔离策略：批量重建循环中必须对每个 skill 单独 `try/catch` 并记录日志，保证单个 skill 失败不影响后续 skill
+- 错误处理：单个 skill 重建失败记录错误日志，不自动重试（下次 label 变更或手动 rebuildAll 时会修复）
+- 如单次受影响 skill 数过多，应允许后台人工触发搜索全量重建作为兜底手段
+- 对“热门 label 导致大量 skill 批量重建”的场景，一期不单独引入任务表；优先依赖现有异步线程池执行，小规模批量直接处理，超大批量由后台人工触发 `rebuildAll` 兜底
 
 ### 4.4 分类筛选
 
 搜索页分类板块的筛选不走全文搜索，而是通过 `skill_label` JOIN `label_definition` 精确过滤 `label_id`，再与搜索结果取交集。避免全文搜索的模糊性问题。
 
-搜索 API 增加可选 query parameter，支持多值以预留未来组合筛选能力（一期前端只做单选）：
+当前搜索入口为：
 ```
-GET /api/v1/skills/search?q=xxx&label=code-generation
-GET /api/v1/skills/search?q=xxx&label=code-generation&label=official  (未来)
+GET /api/web/skills?q=xxx
+```
+
+一期在现有入口上增加可选 query parameter `label`，支持多值以预留未来组合筛选能力（一期前端只做单选）：
+```
+GET /api/web/skills?q=xxx&label=code-generation
+GET /api/web/skills?q=xxx&label=code-generation&label=official  (未来)
 ```
 
 #### SearchQuery 改动
 
-`SearchQuery` record 新增 `labelSlugs` 字段，放在末尾以减少对现有调用方的影响：
+`SearchQuery` 需要新增 `labelSlugs` 字段：
 ```java
 public record SearchQuery(
     String keyword,
@@ -179,9 +234,14 @@ public record SearchQuery(
     String sortBy,
     int page,
     int size,
-    List<String> labelSlugs   // 新增，可为空列表，放末尾减少 breaking change
+    List<String> labelSlugs
 ) {}
 ```
+
+注意：
+- 这不是“零成本追加字段”；当前 controller、application service、query service、测试代码都需要同步修改
+- 实现时应显式梳理以下变更点：HTTP 参数解析、`SkillSearchAppService` 参数透传、`PostgresFullTextQueryService` SQL 条件、相关单元测试/控制器测试
+- 若后续搜索过滤条件继续增加，应考虑把 `SearchQuery` 从位置参数 record 演进为更可扩展的请求对象
 
 `PostgresFullTextQueryService` 的 SQL 拼接逻辑中，当 `labelSlugs` 非空时追加：
 ```sql
@@ -287,9 +347,15 @@ PUT /api/v1/admin/labels/sort-order
 
 ### 5.2 Skill Label 管理 API
 
+路由约定：
+- 为与现有 skill read 接口风格保持一致，skill 详情读取类 label API 采用双路由暴露：`/api/v1/...` 与 `/api/web/...`
+- 管理后台 label definition API 继续只暴露在 `/api/v1/admin/...`
+- 搜索页所需的公开 labels 列表 API 一期同时暴露 `/api/v1/labels` 与 `/api/web/labels`，前端默认使用 `/api/web/labels`
+
 #### 获取 skill 的所有 label
 ```
 GET /api/v1/skills/{namespace}/{slug}/labels
+GET /api/web/skills/{namespace}/{slug}/labels
 ```
 Response `data`:
 ```json
@@ -308,15 +374,21 @@ Response `data`:
 ```
 `displayName` 根据请求语言返回，fallback 顺序：当前语言 → en → slug。
 
+DTO 约定：
+- 一期统一返回 `slug`、`type`、`displayName`
+- 如后续需要区分视觉样式，可在前端基于 `type` 判断
+
 #### 赋予 label
 ```
 PUT /api/v1/skills/{namespace}/{slug}/labels/{labelSlug}
+PUT /api/web/skills/{namespace}/{slug}/labels/{labelSlug}
 ```
 权限校验：RECOMMENDED → owner / 命名空间管理员 / 超级管理员；PRIVILEGED → 仅超级管理员。
 
 #### 移除 label
 ```
 DELETE /api/v1/skills/{namespace}/{slug}/labels/{labelSlug}
+DELETE /api/web/skills/{namespace}/{slug}/labels/{labelSlug}
 ```
 权限校验同赋予。
 
@@ -325,8 +397,9 @@ DELETE /api/v1/skills/{namespace}/{slug}/labels/{labelSlug}
 #### 获取可用标签列表（搜索页分类板块）
 ```
 GET /api/v1/labels
+GET /api/web/labels
 ```
-返回 `visible_in_filter=true` 的标签，按 `sort_order` 排序。Response `data`:
+返回 `visible_in_filter=true` 且 `type='RECOMMENDED'` 的标签，按 `sort_order` 排序。`PRIVILEGED` 一期不出现在搜索页分类筛选中，避免运营/特权标签与功能分类混淆。Response `data`:
 ```json
 [
   {
@@ -360,8 +433,33 @@ ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 
 - 编辑交互：弹出面板，从系统推荐标签列表中勾选/取消勾选
 - 特权标签区域仅超级管理员可见和可操作
 
+补充说明：
+- 这不是仅靠新增独立 label API 就能完成的能力，skill detail DTO / OpenAPI / 前端类型 / 详情页查询链路都需要增加 labels 字段
+- 建议 skill 详情首屏直接返回 labels，避免详情页再额外发起一次 label 查询导致展示和权限状态碎片化
+- 一期仅要求 `SkillDetailResponse` 增加 `labels: List<SkillLabelDto>`；`SkillSummaryResponse` 暂不增加 labels，保持搜索结果与列表卡片改动最小
+- `SkillLabelDto` 字段固定为 `slug`、`type`、`displayName`
+
 ### 7.3 管理后台
 
 - 标签管理页面：列表展示所有标签定义，支持拖拽排序
 - 创建/编辑标签：表单包含 slug（创建时填写，不可修改）、type 选择、visible_in_filter 开关，以及动态翻译条目（可添加任意语言的翻译）
 - 删除标签需二次确认，提示会影响已关联的 skill
+
+## 8. Testing
+
+一期至少补充以下测试：
+- `PostgresSearchRebuildService`：验证原有 keywords 来源与 label translations 的组合结果
+- `PostgresSearchRebuildService`：验证 label 删除/翻译修改后，旧 label 词不会残留
+- `PostgresFullTextQueryService`：验证 `labelSlugs` 过滤 SQL 生效，且 count 查询同步生效
+- `SkillSearchController` / `SkillSearchAppService`：验证 `label` 参数透传
+- promotion 相关测试：验证 source skill 与 target skill 的 labels 独立，不发生隐式复制
+
+## 9. Audit
+
+以下动作需记录到 `audit_log`，供后台追踪：
+- `LABEL_CREATE`
+- `LABEL_UPDATE`
+- `LABEL_DELETE`
+- `LABEL_SORT_ORDER_UPDATE`
+- `SKILL_LABEL_ATTACH`
+- `SKILL_LABEL_DETACH`

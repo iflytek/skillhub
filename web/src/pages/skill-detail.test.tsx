@@ -2,6 +2,9 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
+const hasRoleMock = vi.fn((role: string) => role === 'USER')
+const useSkillDetailMock = vi.fn()
+const useSkillLabelsMock = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -29,7 +32,7 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('@/features/auth/use-auth', () => ({
   useAuth: () => ({
     user: { userId: 'owner-1', platformRoles: ['USER'] },
-    hasRole: (role: string) => role === 'USER',
+    hasRole: hasRoleMock,
   }),
 }))
 
@@ -86,10 +89,16 @@ vi.mock('@/features/social/star-button', () => ({
   StarButton: () => <div>star</div>,
 }))
 
-const useSkillDetailMock = vi.fn()
-
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useSkillDetail: () => useSkillDetailMock(),
+  useSkillLabels: () => useSkillLabelsMock(),
+  useVisibleLabels: () => ({
+    data: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+    isLoading: false,
+  }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useSkillVersions: () => ({
     data: [
       {
@@ -149,10 +158,14 @@ function createSkill(overrides: Record<string, unknown> = {}) {
 describe('SkillDetailPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    hasRoleMock.mockImplementation((role: string) => role === 'USER')
     useSkillDetailMock.mockReturnValue({
       data: createSkill(),
       isLoading: false,
       error: null,
+    })
+    useSkillLabelsMock.mockReturnValue({
+      data: undefined,
     })
   })
 
@@ -172,5 +185,36 @@ describe('SkillDetailPage', () => {
     const html = renderToStaticMarkup(<SkillDetailPage />)
 
     expect(html).not.toContain('skillDetail.deleteSkill')
+  })
+
+  it('shows the label management panel for a user who can manage the skill lifecycle', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        labels: [{ slug: 'official', type: 'RECOMMENDED', displayName: 'Official' }],
+      }),
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.labelsSectionTitle')
+    expect(html).toContain('skillDetail.removeLabel')
+    expect(html).toContain('skillDetail.addLabel')
+  })
+
+  it('hides the label management panel when the viewer lacks label permissions', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        ownerId: 'someone-else',
+        canManageLifecycle: false,
+      }),
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).not.toContain('skillDetail.labelsSectionTitle')
   })
 })

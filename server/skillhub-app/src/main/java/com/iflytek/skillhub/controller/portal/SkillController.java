@@ -18,6 +18,7 @@ import com.iflytek.skillhub.dto.SkillVersionDetailResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import com.iflytek.skillhub.service.LabelAppService;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,16 +45,19 @@ public class SkillController extends BaseApiController {
 
     private final SkillQueryService skillQueryService;
     private final SkillDownloadService skillDownloadService;
+    private final LabelAppService labelAppService;
     private final SkillHubMetrics metrics;
 
     public SkillController(
             SkillQueryService skillQueryService,
             SkillDownloadService skillDownloadService,
+            LabelAppService labelAppService,
             SkillHubMetrics metrics,
             ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.skillQueryService = skillQueryService;
         this.skillDownloadService = skillDownloadService;
+        this.labelAppService = labelAppService;
         this.metrics = metrics;
     }
 
@@ -86,6 +90,7 @@ public class SkillController extends BaseApiController {
                 detail.ratingCount(),
                 detail.hidden(),
                 namespace,
+                labelAppService.listSkillLabelsBySkillId(detail.id()),
                 detail.canManageLifecycle(),
                 detail.canSubmitPromotion(),
                 detail.canInteract(),
