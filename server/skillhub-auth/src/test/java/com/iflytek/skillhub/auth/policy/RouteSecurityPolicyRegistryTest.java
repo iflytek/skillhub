@@ -22,6 +22,16 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizeApiToken_requiresDeleteScopeForHardDeleteEndpoint() {
+        var denied = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:publish"));
+        var allowed = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:delete"));
+
+        assertFalse(denied.allowed());
+        assertEquals("skill:delete", denied.requiredScope());
+        assertTrue(allowed.allowed());
+    }
+
+    @Test
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));

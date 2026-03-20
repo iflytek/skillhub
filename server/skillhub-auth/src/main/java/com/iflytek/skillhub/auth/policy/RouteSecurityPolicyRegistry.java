@@ -94,6 +94,7 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.allow(null, "/swagger-ui/**"),
             ApiTokenPolicy.require(null, "/api/v1/tokens", "token:manage"),
             ApiTokenPolicy.require(null, "/api/v1/tokens/**", "token:manage"),
+            ApiTokenPolicy.require(HttpMethod.DELETE, "/api/v1/skills/*/*", "skill:delete"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/publish", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/publish", "skill:publish"),

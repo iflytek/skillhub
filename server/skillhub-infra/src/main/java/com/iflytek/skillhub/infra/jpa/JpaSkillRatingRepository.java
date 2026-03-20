@@ -18,4 +18,6 @@ public interface JpaSkillRatingRepository extends JpaRepository<SkillRating, Lon
     double averageScoreBySkillId(Long skillId);
 
     int countBySkillId(Long skillId);
+
+    void deleteBySkillId(Long skillId);
 }

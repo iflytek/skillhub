@@ -11,4 +11,5 @@ public interface SkillTagRepository {
     List<SkillTag> findBySkillId(Long skillId);
     SkillTag save(SkillTag tag);
     void delete(SkillTag tag);
+    void deleteBySkillId(Long skillId);
 }
