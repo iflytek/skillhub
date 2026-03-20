@@ -1080,7 +1080,13 @@
     "approveFailed": "Approval failed",
     "rejectSuccess": "Review rejected",
     "rejectFailed": "Rejection failed",
-    "notFound": "Review task not found"
+    "notFound": "Review task not found",
+    "skillDetailTitle": "Skill Detail",
+    "skillDetailDescription": "The sections below are locked to the pending version attached to this review task: {{skill}}",
+    "skillDetailError": "Failed to load the skill detail for this review.",
+    "activeReviewVersion": "Review Version",
+    "downloadSkillZip": "Download Skill ZIP",
+    "noDocumentation": "This review version does not include a readable documentation file."
   },
   "token": {
     "title": "API Tokens",

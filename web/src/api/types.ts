@@ -265,6 +265,16 @@ export interface ReviewTask {
   reviewedAt?: string
 }
 
+export interface ReviewSkillDetail {
+  skill: SkillDetail
+  versions: SkillVersion[]
+  files: SkillFile[]
+  documentationPath?: string
+  documentationContent?: string
+  downloadUrl: string
+  activeVersion: string
+}
+
 export interface PromotionTask {
   id: number
   sourceSkillId: number

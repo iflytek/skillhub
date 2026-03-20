@@ -127,6 +127,17 @@ public class SkillQueryService {
             String downloadUrl
     ) {}
 
+    public record ReviewSkillSnapshotDTO(
+            Skill skill,
+            String ownerDisplayName,
+            SkillVersion activeVersion,
+            SkillVersion publishedVersion,
+            List<SkillVersion> versions,
+            List<SkillFile> files,
+            String documentationPath,
+            String documentationContent
+    ) {}
+
     public SkillDetailDTO getSkillDetail(
             String namespaceSlug,
             String skillSlug,
@@ -347,6 +358,52 @@ public class SkillQueryService {
         return version.isDownloadReady();
     }
 
+    public ReviewSkillSnapshotDTO getReviewSkillSnapshot(Long skillVersionId) {
+        SkillVersion activeVersion = skillVersionRepository.findById(skillVersionId)
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", skillVersionId));
+        Skill skill = skillRepository.findById(activeVersion.getSkillId())
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", activeVersion.getSkillId()));
+        String ownerDisplayName = userAccountRepository.findById(skill.getOwnerId())
+                .map(UserAccount::getDisplayName)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse(null);
+
+        List<SkillVersion> versions = skillVersionRepository.findBySkillId(skill.getId()).stream()
+                .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED
+                        || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
+                        || version.getStatus() == SkillVersionStatus.DRAFT
+                        || version.getStatus() == SkillVersionStatus.REJECTED
+                        || version.getStatus() == SkillVersionStatus.YANKED)
+                .sorted(Comparator
+                        .comparingInt((SkillVersion version) -> lifecycleListPriority(version.getStatus()))
+                        .thenComparing(SkillVersion::getPublishedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(SkillVersion::getCreatedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(SkillVersion::getId, Comparator.reverseOrder()))
+                .toList();
+        List<SkillFile> files = availableFiles(activeVersion.getId());
+        String documentationPath = resolveDocumentationPath(files);
+        String documentationContent = documentationPath == null
+                ? null
+                : readTextContent(findFile(activeVersion, documentationPath));
+        SkillVersion publishedVersion = versions.stream()
+                .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED)
+                .findFirst()
+                .orElse(null);
+
+        return new ReviewSkillSnapshotDTO(
+                skill,
+                ownerDisplayName,
+                activeVersion,
+                publishedVersion,
+                versions,
+                files,
+                documentationPath,
+                documentationContent
+        );
+    }
+
     /**
      * Resolves a version selector such as an exact version, tag, or implicit
      * latest reference into a concrete download target.
@@ -432,6 +489,28 @@ public class SkillQueryService {
         } catch (UncheckedIOException e) {
             throw new DomainBadRequestException("error.skill.file.notFound", file.getFilePath());
         }
+    }
+
+    private String readTextContent(SkillFile file) {
+        try (InputStream inputStream = readFileContent(file)) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Failed to read skill file content", e);
+        }
+    }
+
+    private String resolveDocumentationPath(List<SkillFile> files) {
+        if (files.isEmpty()) {
+            return null;
+        }
+        List<String> filePaths = files.stream().map(SkillFile::getFilePath).toList();
+        if (filePaths.contains("README.md")) {
+            return "README.md";
+        }
+        if (filePaths.contains("SKILL.md")) {
+            return "SKILL.md";
+        }
+        return null;
     }
 
     private SkillVersion resolveVersionEntity(Skill skill, String version, String tag, String hash) {

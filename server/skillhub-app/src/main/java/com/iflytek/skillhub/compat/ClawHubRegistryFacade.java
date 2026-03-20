@@ -9,9 +9,7 @@ import com.iflytek.skillhub.compat.dto.ClawHubRegistrySkillResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubRegistrySkillVersion;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
@@ -35,22 +33,19 @@ public class ClawHubRegistryFacade {
     private final CanonicalSlugMapper canonicalSlugMapper;
     private final SkillSearchAppService skillSearchAppService;
     private final SkillQueryService skillQueryService;
-    private final SkillRepository skillRepository;
-    private final SkillVersionRepository skillVersionRepository;
+    private final CompatSkillLookupService compatSkillLookupService;
     private final UserAccountRepository userAccountRepository;
 
     public ClawHubRegistryFacade(
             CanonicalSlugMapper canonicalSlugMapper,
             SkillSearchAppService skillSearchAppService,
             SkillQueryService skillQueryService,
-            SkillRepository skillRepository,
-            SkillVersionRepository skillVersionRepository,
+            CompatSkillLookupService compatSkillLookupService,
             UserAccountRepository userAccountRepository) {
         this.canonicalSlugMapper = canonicalSlugMapper;
         this.skillSearchAppService = skillSearchAppService;
         this.skillQueryService = skillQueryService;
-        this.skillRepository = skillRepository;
-        this.skillVersionRepository = skillVersionRepository;
+        this.compatSkillLookupService = compatSkillLookupService;
         this.userAccountRepository = userAccountRepository;
     }
 
@@ -85,8 +80,12 @@ public class ClawHubRegistryFacade {
                 userId,
                 normalizeRoles(userNsRoles));
 
-        Skill skill = skillRepository.findById(detail.id())
-                .orElseThrow(() -> new IllegalStateException("Skill unexpectedly missing: " + canonicalSlug));
+        CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.resolveVisible(
+                coordinate.namespace(),
+                coordinate.slug(),
+                userId
+        );
+        Skill skill = context.skill();
 
         ClawHubRegistrySkill payload = new ClawHubRegistrySkill(
                 canonicalSlugMapper.toCanonical(coordinate.namespace(), detail.slug()),
@@ -152,7 +151,7 @@ public class ClawHubRegistryFacade {
             return null;
         }
 
-        Optional<SkillVersion> latestVersion = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), projection.version());
+        Optional<SkillVersion> latestVersion = compatSkillLookupService.findVersion(skill.getId(), projection.version());
         if (latestVersion.isEmpty()) {
             return new ClawHubRegistrySkillVersion(projection.version(), 0L, "", null);
         }

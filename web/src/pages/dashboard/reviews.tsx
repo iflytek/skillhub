@@ -36,6 +36,7 @@ export function ReviewsPage() {
     APPROVED: 0,
     REJECTED: 0,
   })
+  const [activeStatus, setActiveStatus] = useState<ReviewStatus>('PENDING')
 
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
@@ -44,9 +45,9 @@ export function ReviewsPage() {
   // Determine default top-level tab
   const defaultType = isSkillAdmin ? 'skill' : 'profile'
 
-  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE)
-  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE)
-  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE)
+  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, activeStatus === 'PENDING')
+  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, activeStatus === 'APPROVED')
+  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, activeStatus === 'REJECTED')
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
@@ -168,7 +169,7 @@ export function ReviewsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Tabs defaultValue="PENDING">
+          <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as ReviewStatus)}>
             <TabsList className="gap-4 rounded-xl border-b-0 bg-muted/70 p-1 shadow-none">
               <TabsTrigger
                 value="PENDING"

@@ -86,9 +86,11 @@
 | GET | `/api/v1/namespaces/{slug}` | 命名空间详情 |
 
 Public API 的可见性规则：
-- `PUBLIC` 技能：匿名和已登录用户均可访问
+- `PUBLIC` 技能：若存在已发布版本，则已登录用户可访问；匿名访问仍受下载/resolve 端点的 namespace 类型限制
 - `NAMESPACE_ONLY` 技能：仅该命名空间成员可访问（需登录）
 - `PRIVATE` 技能：owner 本人 + 该 namespace 的 ADMIN 以上可访问（需登录）
+- 若 `latest_version_id = null`，即使 `visibility=PUBLIC`，skill 也不会对外公开，只有 owner 可访问
+- `hidden=true` 时，普通访客不可访问；仅 owner 或该 namespace 的 `ADMIN` / `OWNER` 可访问
 
 `GET /api/v1/skills/{namespace}/{slug}/versions/{version}` 的 `data` 字段除版本基础信息外，还必须包含：
 
@@ -206,9 +208,8 @@ Public API 的可见性规则：
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/submit-review` | 将 `DRAFT` 版本再次提交审核（当前主要用于撤回后重提） |
 | POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | 撤回提审（PENDING_REVIEW → DRAFT，同时删除关联的 PENDING review_task） |
-| GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/draft` | 查看草稿详情（owner 或 namespace ADMIN 以上） |
+| POST | `/api/v1/reviews` | 提交指定 `skillVersionId` 进入审核队列 |
 
 ### 标签管理
 
@@ -225,12 +226,13 @@ Public API 的可见性规则：
 | POST | `/api/v1/skills/{namespace}/{slug}/archive` | 归档技能（namespace ADMIN 或 owner） |
 | POST | `/api/v1/skills/{namespace}/{slug}/unarchive` | 恢复归档（namespace ADMIN 或 owner） |
 | DELETE | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | 删除 DRAFT/REJECTED 版本 |
+| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease` | 从已发布版本重新发出一个新版本（namespace ADMIN 或 owner） |
 
 当前代码中的 skill 生命周期读模型不再依赖 `latestVersionStatus` / `viewingVersionStatus` 一类拼装字段，而统一使用以下 projection：
 
 - `headlineVersion`：当前页面应展示的主版本
 - `publishedVersion`：当前最新可分发的已发布版本
-- `ownerPreviewVersion`：owner / namespace 管理者可见的待审核预览版本
+- `ownerPreviewVersion`：owner / namespace 管理者可见的 `PENDING_REVIEW` 预览版本
 - `resolutionMode`：`PUBLISHED` / `OWNER_PREVIEW` / `NONE`
 
 其中：
@@ -239,6 +241,7 @@ Public API 的可见性规则：
 - owner 详情页在没有可展示发布版本时，才允许 `headlineVersion` 落到 `ownerPreviewVersion`
 - 推广到全局一律使用 `publishedVersion.id`
 - `hidden` 是独立治理覆盖层，不属于生命周期状态机
+- 常规版本详情接口只放行 `PUBLISHED`，以及 owner 对自己 `PENDING_REVIEW` 版本的预览；`DRAFT / REJECTED / YANKED` 不通过该接口暴露
 
 发布成功响应中的 `data` 至少包含以下字段：
 
@@ -298,21 +301,17 @@ Public API 的可见性规则：
 
 Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 
-### 技能治理（需 SKILL_ADMIN / SUPER_ADMIN）
+### 平台治理接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/admin/reviews` | 全局空间待审核列表 |
-| GET | `/api/v1/admin/reviews/{id}` | 全局空间审核详情 |
-| POST | `/api/v1/admin/reviews/{id}/approve` | 通过全局空间审核 |
-| POST | `/api/v1/admin/reviews/{id}/reject` | 拒绝全局空间审核 |
-| GET | `/api/v1/admin/promotions` | 待审核提升申请列表 |
-| GET | `/api/v1/admin/promotions/{id}` | 提升申请详情 |
-| POST | `/api/v1/admin/promotions/{id}/approve` | 通过提升申请 |
-| POST | `/api/v1/admin/promotions/{id}/reject` | 拒绝提升申请 |
-| POST | `/api/v1/admin/skills/{id}/hide` | 隐藏技能 |
-| POST | `/api/v1/admin/skills/{id}/unhide` | 恢复技能 |
-| POST | `/api/v1/admin/skills/{id}/yank/{versionId}` | 撤回已发布版本 |
+| GET | `/api/v1/promotions` | 待审核提升申请列表（需 `SKILL_ADMIN` / `SUPER_ADMIN`；路由不在 `/admin/*` 下） |
+| GET | `/api/v1/promotions/{id}` | 提升申请详情（提交人本人或 `SKILL_ADMIN` / `SUPER_ADMIN` 可读） |
+| POST | `/api/v1/promotions/{id}/approve` | 通过提升申请（需 `SKILL_ADMIN` / `SUPER_ADMIN`） |
+| POST | `/api/v1/promotions/{id}/reject` | 拒绝提升申请（需 `SKILL_ADMIN` / `SUPER_ADMIN`） |
+| POST | `/api/v1/admin/skills/{id}/hide` | 隐藏技能（仅 `SUPER_ADMIN`） |
+| POST | `/api/v1/admin/skills/{id}/unhide` | 恢复技能（仅 `SUPER_ADMIN`） |
+| POST | `/api/v1/admin/skills/versions/{versionId}/yank` | 撤回已发布版本（`SKILL_ADMIN` / `SUPER_ADMIN`） |
 
 ### 用户治理（需 USER_ADMIN / SUPER_ADMIN）
 
@@ -341,10 +340,10 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 | POST | `/api/v1/namespaces/{slug}/members` | 添加成员 |
 | PUT | `/api/v1/namespaces/{slug}/members/{userId}/role` | 修改成员角色 |
 | DELETE | `/api/v1/namespaces/{slug}/members/{userId}` | 移除成员 |
-| GET | `/api/v1/namespaces/{slug}/reviews` | 该空间待审核列表 |
-| POST | `/api/v1/namespaces/{slug}/reviews/{id}/approve` | 空间管理员审核通过 |
-| POST | `/api/v1/namespaces/{slug}/reviews/{id}/reject` | 空间管理员审核拒绝 |
-| POST | `/api/v1/namespaces/{slug}/skills/{skillId}/promote` | 申请提升到全局 |
+| GET | `/api/v1/reviews?namespaceId={id}` | 该空间待审核列表 |
+| POST | `/api/v1/reviews/{id}/approve` | 空间管理员审核通过 |
+| POST | `/api/v1/reviews/{id}/reject` | 空间管理员审核拒绝 |
+| POST | `/api/v1/promotions` | 申请提升到全局 |
 
 ## 7.8 `latest` 语义说明
 

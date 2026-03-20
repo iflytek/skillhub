@@ -134,8 +134,9 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 推荐：
 
+- 默认快速启动：`SKILLHUB_VERSION=latest`
 - 团队内部试用：`SKILLHUB_VERSION=edge`
-- 对外演示或文档引用：固定为某个 `vX.Y.Z`
+- 对外演示或严格可复现环境：固定为某个 `vX.Y.Z`
 
 ## 6 GitHub Actions 发布流程
 
@@ -143,8 +144,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 触发条件：
 
-- push 到 `main`
-- push 语义化版本 tag，例如 `v1.2.0`
+- `release.published`
 - 手动 `workflow_dispatch`
 
 流程：

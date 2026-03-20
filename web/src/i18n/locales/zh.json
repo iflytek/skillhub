@@ -1080,7 +1080,13 @@
     "approveFailed": "审核失败",
     "rejectSuccess": "审核已拒绝",
     "rejectFailed": "拒绝失败",
-    "notFound": "审核任务不存在"
+    "notFound": "审核任务不存在",
+    "skillDetailTitle": "技能详情",
+    "skillDetailDescription": "以下内容固定展示当前审核任务对应的待审核版本：{{skill}}",
+    "skillDetailError": "技能详情加载失败，请稍后重试。",
+    "activeReviewVersion": "当前审核版本",
+    "downloadSkillZip": "下载技能 ZIP",
+    "noDocumentation": "当前待审核版本未提供可读的说明文档。"
   },
   "token": {
     "title": "API Tokens",

@@ -15,11 +15,18 @@ import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
+import com.iflytek.skillhub.dto.SkillDetailResponse;
+import com.iflytek.skillhub.dto.SkillFileResponse;
+import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
+import com.iflytek.skillhub.dto.SkillVersionResponse;
+import com.iflytek.skillhub.service.ReviewSkillDetailAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -87,6 +94,9 @@ class ReviewPortalControllerTest {
 
     @MockBean
     private AuditLogService auditLogService;
+
+    @MockBean
+    private ReviewSkillDetailAppService reviewSkillDetailAppService;
 
     @Test
     void submitReview_passesNamespaceRolesToService() throws Exception {
@@ -157,6 +167,79 @@ class ReviewPortalControllerTest {
         mockMvc.perform(get("/api/v1/reviews/1").with(auth("user-9")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void getReviewSkillDetail_returnsReviewBoundPayload() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        given(reviewSkillDetailAppService.getReviewSkillDetail(1L, "admin", Map.of()))
+                .willReturn(new ReviewSkillDetailResponse(
+                        new SkillDetailResponse(
+                                30L,
+                                "skill-a",
+                                "Skill A",
+                                "Owner",
+                                "Summary",
+                                "PUBLIC",
+                                "ACTIVE",
+                                8L,
+                                2,
+                                null,
+                                0,
+                                false,
+                                "team-a",
+                                false,
+                                false,
+                                false,
+                                false,
+                                new SkillLifecycleVersionResponse(100L, "1.2.0", "PENDING_REVIEW"),
+                                new SkillLifecycleVersionResponse(99L, "1.1.0", "PUBLISHED"),
+                                new SkillLifecycleVersionResponse(100L, "1.2.0", "PENDING_REVIEW"),
+                                "REVIEW_TASK"
+                        ),
+                        List.of(new SkillVersionResponse(100L, "1.2.0", "PENDING_REVIEW", null, 1, 10L, null, true)),
+                        List.of(new SkillFileResponse(1L, "README.md", 123L, "text/markdown", "sha")),
+                        "README.md",
+                        "# demo",
+                        "/api/v1/reviews/1/download",
+                        "1.2.0"
+                ));
+
+        mockMvc.perform(get("/api/v1/reviews/1/skill-detail").with(auth("admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.activeVersion").value("1.2.0"))
+                .andExpect(jsonPath("$.data.downloadUrl").value("/api/v1/reviews/1/download"))
+                .andExpect(jsonPath("$.data.files[0].filePath").value("README.md"));
+    }
+
+    @Test
+    void getReviewSkillDetail_forbidsUnauthorizedUser() throws Exception {
+        stubNamespaceRoles("user-9", List.of());
+        given(reviewSkillDetailAppService.getReviewSkillDetail(1L, "user-9", Map.of()))
+                .willThrow(new com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException("review.no_permission"));
+
+        mockMvc.perform(get("/api/v1/reviews/1/skill-detail").with(auth("user-9")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void downloadReviewVersion_streamsZipForAuthorizedReviewer() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        given(reviewSkillDetailAppService.downloadReviewPackage(1L, "admin", Map.of()))
+                .willReturn(new SkillDownloadService.DownloadResult(
+                        () -> new java.io.ByteArrayInputStream("zip".getBytes()),
+                        "skill-a-1.2.0.zip",
+                        3L,
+                        "application/zip",
+                        null,
+                        true
+                ));
+
+        mockMvc.perform(get("/api/v1/reviews/1/download").with(auth("admin")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Disposition", org.hamcrest.Matchers.containsString("skill-a-1.2.0.zip")));
     }
 
     private void stubReviewResponse(ReviewTask task) {

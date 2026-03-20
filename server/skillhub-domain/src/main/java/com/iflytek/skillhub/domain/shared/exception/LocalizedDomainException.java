@@ -3,7 +3,7 @@ package com.iflytek.skillhub.domain.shared.exception;
 /**
  * Base class for domain-layer exceptions that carry a localized message code and arguments.
  */
-public abstract class LocalizedDomainException extends RuntimeException {
+public abstract class LocalizedDomainException extends RuntimeException implements LocalizedMessage {
 
     private final String messageCode;
     private final Object[] messageArgs;
@@ -21,4 +21,6 @@ public abstract class LocalizedDomainException extends RuntimeException {
     public Object[] messageArgs() {
         return messageArgs.clone();
     }
+
+    public abstract int statusCode();
 }

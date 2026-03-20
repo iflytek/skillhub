@@ -2,7 +2,8 @@ import * as React from 'react'
 import { cn } from '@/shared/lib/utils'
 
 interface TabsProps {
-  defaultValue: string
+  defaultValue?: string
+  value?: string
   children: React.ReactNode
   className?: string
   onValueChange?: (value: string) => void
@@ -15,13 +16,17 @@ interface TabsContextValue {
 
 const TabsContext = React.createContext<TabsContextValue | undefined>(undefined)
 
-export function Tabs({ defaultValue, children, className, onValueChange }: TabsProps) {
-  const [value, setValue] = React.useState(defaultValue)
+export function Tabs({ defaultValue, value: controlledValue, children, className, onValueChange }: TabsProps) {
+  const [internalValue, setInternalValue] = React.useState(defaultValue ?? '')
+  const isControlled = controlledValue !== undefined
+  const value = isControlled ? controlledValue : internalValue
 
   const handleValueChange = React.useCallback((nextValue: string) => {
-    setValue(nextValue)
+    if (!isControlled) {
+      setInternalValue(nextValue)
+    }
     onValueChange?.(nextValue)
-  }, [onValueChange])
+  }, [isControlled, onValueChange])
 
   return (
     <TabsContext.Provider value={{ value, setValue: handleValueChange }}>

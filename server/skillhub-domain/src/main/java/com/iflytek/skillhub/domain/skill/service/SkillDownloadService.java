@@ -154,9 +154,26 @@ public class SkillDownloadService {
         return downloadVersion(skill, version);
     }
 
+    /**
+     * Downloads a review-bound package without enforcing public-version
+     * eligibility and without recording public download metrics.
+     */
+    public DownloadResult downloadReviewVersion(Skill skill, SkillVersion version) {
+        return buildDownloadResult(skill, version);
+    }
+
     private DownloadResult downloadVersion(Skill skill, SkillVersion version) {
         assertPublishedAccessible(skill);
         assertPublishedVersion(version);
+        DownloadResult result = buildDownloadResult(skill, version);
+
+        skillRepository.incrementDownloadCount(skill.getId());
+        skillVersionStatsRepository.incrementDownloadCount(version.getId(), skill.getId());
+        eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
+        return result;
+    }
+
+    private DownloadResult buildDownloadResult(Skill skill, SkillVersion version) {
 
         String storageKey = String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId());
 
@@ -182,10 +199,6 @@ public class SkillDownloadService {
             );
             result = buildBundleFromFiles(skill, version);
         }
-
-        skillRepository.incrementDownloadCount(skill.getId());
-        skillVersionStatsRepository.incrementDownloadCount(version.getId(), skill.getId());
-        eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
         return result;
     }
 
