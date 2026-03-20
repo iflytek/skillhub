@@ -4,7 +4,14 @@ import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
-import { Select } from '@/shared/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  normalizeSelectValue,
+} from '@/shared/ui/select'
 import {
   Table,
   TableBody,
@@ -31,6 +38,7 @@ import type { AdminUser } from '@/features/admin/use-admin-users'
  */
 export function AdminUsersPage() {
   const { t, i18n } = useTranslation()
+  const allStatusFilterValue = '__all_statuses__'
   const roleOptions = [
     { value: 'USER', label: t('adminUsers.roleUser') },
     { value: 'SKILL_ADMIN', label: t('adminUsers.roleReviewer') },
@@ -154,11 +162,19 @@ export function AdminUsersPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="admin-user-status">{t('adminUsers.filterLabel')}</Label>
-            <Select id="admin-user-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="">{t('adminUsers.filterAll')}</option>
-              <option value="ACTIVE">{t('adminUsers.filterActive')}</option>
-              <option value="PENDING">{t('adminUsers.filterPending')}</option>
-              <option value="DISABLED">{t('adminUsers.filterDisabled')}</option>
+            <Select
+              value={normalizeSelectValue(statusFilter) ?? allStatusFilterValue}
+              onValueChange={(value) => setStatusFilter(value === allStatusFilterValue ? '' : value)}
+            >
+              <SelectTrigger id="admin-user-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={allStatusFilterValue}>{t('adminUsers.filterAll')}</SelectItem>
+                <SelectItem value="ACTIVE">{t('adminUsers.filterActive')}</SelectItem>
+                <SelectItem value="PENDING">{t('adminUsers.filterPending')}</SelectItem>
+                <SelectItem value="DISABLED">{t('adminUsers.filterDisabled')}</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -288,12 +304,17 @@ export function AdminUsersPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="role">{t('adminUsers.roleLabel')}</Label>
-              <Select id="role" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                {roleOptions.map((roleOption) => (
-                  <option key={roleOption.value} value={roleOption.value}>
-                    {roleOption.label}
-                  </option>
-                ))}
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((roleOption) => (
+                    <SelectItem key={roleOption.value} value={roleOption.value}>
+                      {roleOption.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>

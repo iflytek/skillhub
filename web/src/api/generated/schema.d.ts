@@ -100,6 +100,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/skills/{namespace}/{slug}/labels/{labelSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["attachLabel"];
+        post?: never;
+        delete: operations["detachLabel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/labels/{labelSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["attachLabel_1"];
+        post?: never;
+        delete: operations["detachLabel_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -205,6 +237,38 @@ export interface paths {
         };
         get?: never;
         put: operations["updateUserRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/labels/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateLabel"];
+        post?: never;
+        delete: operations["deleteLabel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/labels/sort-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateSortOrder"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1236,6 +1300,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLabels_2"];
+        put?: never;
+        post: operations["createLabel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/account/merge/verify": {
         parameters: {
             query?: never;
@@ -1628,6 +1708,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["resolveVersion_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLabels_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2044,6 +2156,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listMyNamespaces_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVisibleLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVisibleLabels_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2523,6 +2667,20 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        ApiResponseSkillLabelDto: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillLabelDto"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SkillLabelDto: {
+            slug?: string;
+            type?: string;
+            displayName?: string;
+        };
         UpdateMemberRoleRequest: {
             /** @enum {string} */
             role: "OWNER" | "ADMIN" | "MEMBER";
@@ -2620,6 +2778,58 @@ export interface components {
         };
         AdminUserRoleUpdateRequest: {
             role: string;
+        };
+        AdminLabelUpdateRequest: {
+            /** @enum {string} */
+            type: "RECOMMENDED" | "PRIVILEGED";
+            visibleInFilter?: boolean;
+            /** Format: int32 */
+            sortOrder?: number;
+            translations: components["schemas"]["LabelTranslationItemRequest"][];
+        };
+        LabelTranslationItemRequest: {
+            locale: string;
+            displayName: string;
+        };
+        ApiResponseLabelDefinitionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LabelDefinitionResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        LabelDefinitionResponse: {
+            slug?: string;
+            type?: string;
+            visibleInFilter?: boolean;
+            /** Format: int32 */
+            sortOrder?: number;
+            translations?: components["schemas"]["LabelTranslationResponse"][];
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        LabelTranslationResponse: {
+            locale?: string;
+            displayName?: string;
+        };
+        LabelSortOrderItemRequest: {
+            slug: string;
+            /** Format: int32 */
+            sortOrder?: number;
+        };
+        LabelSortOrderUpdateRequest: {
+            items: components["schemas"]["LabelSortOrderItemRequest"][];
+        };
+        ApiResponseListLabelDefinitionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LabelDefinitionResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         ApiResponseSkillLifecycleMutationResponse: {
             /** Format: int32 */
@@ -2952,6 +3162,15 @@ export interface components {
             id?: number;
             status?: string;
         };
+        AdminLabelCreateRequest: {
+            slug: string;
+            /** @enum {string} */
+            type: "RECOMMENDED" | "PRIVILEGED";
+            visibleInFilter?: boolean;
+            /** Format: int32 */
+            sortOrder?: number;
+            translations: components["schemas"]["LabelTranslationItemRequest"][];
+        };
         MergeVerifyRequest: {
             /** Format: int64 */
             mergeRequestId: number;
@@ -3177,6 +3396,15 @@ export interface components {
             matched?: boolean;
             downloadUrl?: string;
         };
+        ApiResponseListSkillLabelDto: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillLabelDto"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
         ApiResponseSkillDetailResponse: {
             /** Format: int32 */
             code?: number;
@@ -3205,6 +3433,7 @@ export interface components {
             ratingCount?: number;
             hidden?: boolean;
             namespace?: string;
+            labels?: components["schemas"]["SkillLabelDto"][];
             canManageLifecycle?: boolean;
             canSubmitPromotion?: boolean;
             canInteract?: boolean;
@@ -4130,6 +4359,102 @@ export interface operations {
             };
         };
     };
+    attachLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                labelSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLabelDto"];
+                };
+            };
+        };
+    };
+    detachLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                labelSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
+    attachLabel_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                labelSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLabelDto"];
+                };
+            };
+        };
+    };
+    detachLabel_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                labelSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
     updateMemberRole: {
         parameters: {
             query?: never;
@@ -4354,6 +4679,78 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
+                };
+            };
+        };
+    };
+    updateLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminLabelUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLabelDefinitionResponse"];
+                };
+            };
+        };
+    };
+    deleteLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
+    updateSortOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelSortOrderUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListLabelDefinitionResponse"];
                 };
             };
         };
@@ -6189,6 +6586,50 @@ export interface operations {
             };
         };
     };
+    listLabels_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListLabelDefinitionResponse"];
+                };
+            };
+        };
+    };
+    createLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminLabelCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLabelDefinitionResponse"];
+                };
+            };
+        };
+    };
     verify: {
         parameters: {
             query?: never;
@@ -6310,6 +6751,7 @@ export interface operations {
             query?: {
                 q?: string;
                 namespace?: string;
+                label?: string[];
                 sort?: string;
                 page?: number;
                 size?: number;
@@ -6871,6 +7313,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseResolveVersionResponse"];
+                };
+            };
+        };
+    };
+    listLabels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
+                };
+            };
+        };
+    };
+    listLabels_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
                 };
             };
         };
@@ -7509,6 +7997,46 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListMyNamespaceResponse"];
+                };
+            };
+        };
+    };
+    listVisibleLabels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
+                };
+            };
+        };
+    };
+    listVisibleLabels_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
                 };
             };
         };

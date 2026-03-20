@@ -19,7 +19,13 @@ import { centeredToastOptions, toast } from '@/shared/lib/toast'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Label } from '@/shared/ui/label'
-import { Select } from '@/shared/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
 import type { ApiToken } from '@/api/types'
 import { resolveTokenExpiresAt, toLocalDateTimeInputValue, type TokenExpirationMode } from './token-expiration'
@@ -276,18 +282,22 @@ export function TokenList() {
             <div className="space-y-2">
               <Label htmlFor="token-expiration-mode">{t('createToken.expirationLabel')}</Label>
               <Select
-                id="token-expiration-mode"
                 value={expirationDialog.mode}
-                onChange={(event) => setExpirationDialog((current) => ({
+                onValueChange={(value) => setExpirationDialog((current) => ({
                   ...current,
-                  mode: event.target.value as TokenExpirationMode,
+                  mode: value as TokenExpirationMode,
                 }))}
               >
-                <option value="never">{t('createToken.expirationNever')}</option>
-                <option value="7d">{t('createToken.expiration7d')}</option>
-                <option value="30d">{t('createToken.expiration30d')}</option>
-                <option value="90d">{t('createToken.expiration90d')}</option>
-                <option value="custom">{t('createToken.expirationCustom')}</option>
+                <SelectTrigger id="token-expiration-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="never">{t('createToken.expirationNever')}</SelectItem>
+                  <SelectItem value="7d">{t('createToken.expiration7d')}</SelectItem>
+                  <SelectItem value="30d">{t('createToken.expiration30d')}</SelectItem>
+                  <SelectItem value="90d">{t('createToken.expiration90d')}</SelectItem>
+                  <SelectItem value="custom">{t('createToken.expirationCustom')}</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             {expirationDialog.mode === 'custom' ? (

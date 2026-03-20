@@ -65,12 +65,24 @@ public class SkillSearchAppService {
             int size,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return search(keyword, namespaceSlug, sortBy, page, size, List.of(), userId, userNsRoles);
+    }
+
+    public SearchResponse search(
+            String keyword,
+            String namespaceSlug,
+            String sortBy,
+            int page,
+            int size,
+            List<String> labelSlugs,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
 
         Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles);
 
         SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
 
-        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, scope);
+        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, labelSlugs, scope);
     }
 
     private Long resolveNamespaceId(String namespaceSlug, String userId, Map<Long, NamespaceRole> userNsRoles) {
@@ -104,6 +116,7 @@ public class SkillSearchAppService {
             String sortBy,
             int page,
             int size,
+            List<String> labelSlugs,
             SearchVisibilityScope scope) {
         SearchResult result = searchQueryService.search(new SearchQuery(
                 keyword,
@@ -111,10 +124,22 @@ public class SkillSearchAppService {
                 scope,
                 sortBy,
                 page,
-                size
+                size,
+                normalizeLabelSlugs(labelSlugs)
         ));
         List<SkillSummaryResponse> pageItems = mapVisibleSkillSummaries(result.skillIds());
         return new SearchResponse(pageItems, result.total(), page, size);
+    }
+
+    private List<String> normalizeLabelSlugs(List<String> labelSlugs) {
+        if (labelSlugs == null || labelSlugs.isEmpty()) {
+            return List.of();
+        }
+        return labelSlugs.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(value -> value.trim().toLowerCase(java.util.Locale.ROOT))
+                .distinct()
+                .toList();
     }
 
     private List<SkillSummaryResponse> mapVisibleSkillSummaries(List<Long> skillIds) {
