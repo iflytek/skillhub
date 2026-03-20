@@ -1,8 +1,7 @@
 package com.iflytek.skillhub.listener;
 
-import com.iflytek.skillhub.domain.social.SkillRatingRepository;
 import com.iflytek.skillhub.domain.social.event.SkillRatedEvent;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.iflytek.skillhub.projection.SkillEngagementProjectionService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -13,21 +12,15 @@ import org.springframework.transaction.event.TransactionalEventListener;
  */
 @Component
 public class SkillRatingEventListener {
-    private final JdbcTemplate jdbcTemplate;
-    private final SkillRatingRepository ratingRepository;
+    private final SkillEngagementProjectionService skillEngagementProjectionService;
 
-    public SkillRatingEventListener(JdbcTemplate jdbcTemplate, SkillRatingRepository ratingRepository) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.ratingRepository = ratingRepository;
+    public SkillRatingEventListener(SkillEngagementProjectionService skillEngagementProjectionService) {
+        this.skillEngagementProjectionService = skillEngagementProjectionService;
     }
 
     @Async
     @TransactionalEventListener
     public void onRated(SkillRatedEvent event) {
-        double avg = ratingRepository.averageScoreBySkillId(event.skillId());
-        int count = ratingRepository.countBySkillId(event.skillId());
-        jdbcTemplate.update(
-            "UPDATE skill SET rating_avg = ?, rating_count = ? WHERE id = ?",
-            avg, count, event.skillId());
+        skillEngagementProjectionService.refreshRatingStats(event.skillId());
     }
 }

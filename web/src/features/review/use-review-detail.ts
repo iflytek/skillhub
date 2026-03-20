@@ -1,12 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reviewApi } from '@/api/client'
-import type { ReviewTask } from '@/api/types'
+import type { ReviewSkillDetail, ReviewTask } from '@/api/types'
 
 /**
  * Fetches one review task for governance detail views.
  */
 async function getReviewDetail(taskId: number): Promise<ReviewTask> {
   return reviewApi.get(taskId)
+}
+
+async function getReviewSkillDetail(taskId: number): Promise<ReviewSkillDetail> {
+  return reviewApi.getSkillDetail(taskId)
 }
 
 /**
@@ -31,6 +35,14 @@ export function useReviewDetail(taskId: number) {
   return useQuery({
     queryKey: ['reviews', taskId],
     queryFn: () => getReviewDetail(taskId),
+    enabled: !!taskId,
+  })
+}
+
+export function useReviewSkillDetail(taskId: number) {
+  return useQuery({
+    queryKey: ['reviews', taskId, 'skill-detail'],
+    queryFn: () => getReviewSkillDetail(taskId),
     enabled: !!taskId,
   })
 }

@@ -54,6 +54,26 @@ class ApiTokenScopeServiceTest {
     }
 
     @Test
+    void authorizeShouldRequireDeleteScopeForHardDeleteEndpoint() {
+        ApiTokenScopeService.AuthorizationDecision denied = scopeService.authorize(
+                "DELETE",
+                "/api/v1/skills/team-a/demo-skill",
+                Set.of("skill:publish")
+        );
+
+        assertFalse(denied.allowed());
+        assertEquals("skill:delete", denied.requiredScope());
+
+        ApiTokenScopeService.AuthorizationDecision allowed = scopeService.authorize(
+                "DELETE",
+                "/api/v1/skills/team-a/demo-skill",
+                Set.of("skill:delete")
+        );
+
+        assertTrue(allowed.allowed());
+    }
+
+    @Test
     void authorizeShouldRequireTokenManageScopeForTokenEndpoints() {
         ApiTokenScopeService.AuthorizationDecision decision = scopeService.authorize(
             "GET",

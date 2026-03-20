@@ -1,0 +1,30 @@
+name: DeepWiki Documentation Crawler
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: deepwiki-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    name: Crawl DeepWiki Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create package-lock.json for action cache
+        run: echo '{}' > package-lock.json
+
+      - name: DeepWiki Documentation Crawler
+        uses: erayack/deepwiki-action@v1
+        with:
+          repository: ${{ github.repository }}
+          max_concurrency: '3'

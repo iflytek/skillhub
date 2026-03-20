@@ -33,12 +33,16 @@ public class MeController extends BaseApiController {
     public ApiResponse<PageResponse<SkillSummaryResponse>> listMySkills(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String filter,
             @AuthenticationPrincipal PlatformPrincipal principal) {
         if (principal == null) {
             throw new UnauthorizedException("error.auth.required");
         }
 
-        return ok("response.success.read", mySkillAppService.listMySkills(principal.userId(), page, size));
+        return ok(
+                "response.success.read",
+                mySkillAppService.listMySkills(principal.userId(), page, size, filter, principal.platformRoles())
+        );
     }
 
     @GetMapping("/stars")

@@ -108,7 +108,7 @@ export function LandingQuickStartSection() {
 
           <div className="px-4 pb-4 pt-8 md:px-8 md:pb-6 md:pt-9">
             <p
-              className="mx-auto mb-6 max-w-xl text-center text-xl font-medium leading-relaxed md:text-[1.75rem]"
+              className="mx-auto mb-6 max-w-xl text-center text-base font-medium leading-relaxed md:text-lg"
               style={{ color: 'hsl(var(--foreground))' }}
             >
               {currentTab.description}

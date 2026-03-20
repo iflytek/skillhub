@@ -1,9 +1,6 @@
 package com.iflytek.skillhub.compat;
 
 import com.iflytek.skillhub.compat.dto.ClawHubRegistrySearchResponse;
-import com.iflytek.skillhub.domain.namespace.NamespaceRole;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
@@ -27,16 +24,14 @@ class ClawHubRegistryFacadeTest {
         CanonicalSlugMapper canonicalSlugMapper = new CanonicalSlugMapper();
         SkillSearchAppService skillSearchAppService = mock(SkillSearchAppService.class);
         SkillQueryService skillQueryService = mock(SkillQueryService.class);
-        SkillRepository skillRepository = mock(SkillRepository.class);
-        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        CompatSkillLookupService compatSkillLookupService = mock(CompatSkillLookupService.class);
         UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
 
         ClawHubRegistryFacade facade = new ClawHubRegistryFacade(
                 canonicalSlugMapper,
                 skillSearchAppService,
                 skillQueryService,
-                skillRepository,
-                skillVersionRepository,
+                compatSkillLookupService,
                 userAccountRepository
         );
 

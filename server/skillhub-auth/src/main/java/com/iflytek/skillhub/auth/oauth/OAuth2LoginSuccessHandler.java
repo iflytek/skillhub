@@ -5,7 +5,6 @@ import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
@@ -21,9 +20,12 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
     private final PlatformSessionService platformSessionService;
+    private final OAuthLoginFlowService oauthLoginFlowService;
 
-    public OAuth2LoginSuccessHandler(PlatformSessionService platformSessionService) {
+    public OAuth2LoginSuccessHandler(PlatformSessionService platformSessionService,
+                                     OAuthLoginFlowService oauthLoginFlowService) {
         this.platformSessionService = platformSessionService;
+        this.oauthLoginFlowService = oauthLoginFlowService;
         setDefaultTargetUrl(OAuthLoginRedirectSupport.DEFAULT_TARGET_URL);
     }
 
@@ -36,21 +38,12 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
                 platformSessionService.attachToAuthenticatedSession(principal, authentication, request, true);
             }
         }
-        String returnTo = consumeReturnTo(request.getSession(false));
+        String returnTo = oauthLoginFlowService.consumeReturnTo(request.getSession(false));
         if (returnTo != null) {
             getRedirectStrategy().sendRedirect(request, response, returnTo);
             clearAuthenticationAttributes(request);
             return;
         }
         super.onAuthenticationSuccess(request, response, authentication);
-    }
-
-    private String consumeReturnTo(HttpSession session) {
-        if (session == null) {
-            return null;
-        }
-        Object value = session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
-        session.removeAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
-        return value instanceof String str ? OAuthLoginRedirectSupport.sanitizeReturnTo(str) : null;
     }
 }

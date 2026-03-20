@@ -1,27 +1,42 @@
 package com.iflytek.skillhub.filter;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(OutputCaptureExtension.class)
 class RequestLoggingFilterTest {
 
+    private final Logger logger = (Logger) LoggerFactory.getLogger(RequestLoggingFilter.class);
+    private ListAppender<ILoggingEvent> appender;
+
+    @AfterEach
+    void tearDown() {
+        if (appender != null) {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
+
     @Test
-    void doFilterInternal_truncatesLongRequestBodyAndOmitsResponseBody(CapturedOutput output)
+    void doFilterInternal_truncatesLongRequestBodyAndOmitsResponseBody()
             throws ServletException, IOException {
         RequestLoggingFilter filter = new RequestLoggingFilter();
         String longBody = "x".repeat(5_000);
+        attachAppender();
 
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/test");
         request.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -39,19 +54,19 @@ class RequestLoggingFilterTest {
 
         filter.doFilter(request, response, filterChain);
 
-        // Request body should be truncated at 200 chars
-        assertThat(output).contains("Body: " + "x".repeat(200) + "...[truncated]");
-        assertThat(output).doesNotContain("Body: " + longBody);
-        // Response body should not be logged at all
-        assertThat(output).doesNotContain("Response Body:");
-        // Original response should still be intact
+        List<String> loggedMessages = loggedMessages();
+        assertThat(loggedMessages).anySatisfy(message ->
+                assertThat(message).contains("Body: " + "x".repeat(200) + "...[truncated]"));
+        assertThat(loggedMessages).noneMatch(message -> message.contains("Body: " + longBody));
+        assertThat(loggedMessages).noneMatch(message -> message.contains("Response Body:"));
         assertThat(response.getContentAsString()).isEqualTo(longBody);
     }
 
     @Test
-    void doFilterInternal_skipsActuatorEndpoints(CapturedOutput output)
+    void doFilterInternal_skipsActuatorEndpoints()
             throws ServletException, IOException {
         RequestLoggingFilter filter = new RequestLoggingFilter();
+        attachAppender();
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -60,13 +75,14 @@ class RequestLoggingFilterTest {
 
         filter.doFilter(request, response, filterChain);
 
-        assertThat(output).doesNotContain("/actuator/health");
+        assertThat(loggedMessages()).noneMatch(message -> message.contains("/actuator/health"));
     }
 
     @Test
-    void doFilterInternal_logsCoreSummaryFields(CapturedOutput output)
+    void doFilterInternal_logsCoreSummaryFields()
             throws ServletException, IOException {
         RequestLoggingFilter filter = new RequestLoggingFilter();
+        attachAppender();
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/skills");
         request.setRemoteAddr("127.0.0.1");
@@ -76,11 +92,25 @@ class RequestLoggingFilterTest {
 
         filter.doFilter(request, response, filterChain);
 
-        assertThat(output).contains("GET /api/v1/skills");
-        assertThat(output).contains("200");
-        assertThat(output).contains("127.0.0.1");
-        assertThat(output).contains("ms");
-        // Should not contain full headers dump
-        assertThat(output).doesNotContain("Headers: {");
+        assertThat(loggedMessages()).anySatisfy(message -> {
+            assertThat(message).contains("GET /api/v1/skills");
+            assertThat(message).contains("200");
+            assertThat(message).contains("127.0.0.1");
+            assertThat(message).contains("ms");
+        });
+        assertThat(loggedMessages()).noneMatch(message -> message.contains("Headers: {"));
+    }
+
+    private void attachAppender() {
+        logger.setLevel(Level.INFO);
+        appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+    }
+
+    private List<String> loggedMessages() {
+        return appender.list.stream()
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
     }
 }

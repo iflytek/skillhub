@@ -8,7 +8,13 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
-import { Select } from '@/shared/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import {
   useMyNamespaces,
   useNamespaceDetail,
@@ -192,17 +198,21 @@ export function NamespaceMembersPage() {
                           {canManageMembers && !isOwner ? (
                             <div className="flex items-center gap-2">
                               <Select
-                                className="w-36"
                                 value={roleValue}
-                                onChange={(event) => {
+                                onValueChange={(value) => {
                                   setDraftRoles((current) => ({
                                     ...current,
-                                    [member.userId]: event.target.value,
+                                    [member.userId]: value,
                                   }))
                                 }}
                               >
-                                <option value="MEMBER">{t('members.roleMember')}</option>
-                                <option value="ADMIN">{t('members.roleAdmin')}</option>
+                                <SelectTrigger className="w-36">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="MEMBER">{t('members.roleMember')}</SelectItem>
+                                  <SelectItem value="ADMIN">{t('members.roleAdmin')}</SelectItem>
+                                </SelectContent>
                               </Select>
                               <Button
                                 type="button"

@@ -8,7 +8,7 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import com.iflytek.skillhub.service.AuditRequestContext;
-import com.iflytek.skillhub.service.SkillLifecycleAppService;
+import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
@@ -28,12 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillLifecycleController extends BaseApiController {
 
-    private final SkillLifecycleAppService skillLifecycleAppService;
+    private final GovernanceWorkflowAppService governanceWorkflowAppService;
 
-    public SkillLifecycleController(SkillLifecycleAppService skillLifecycleAppService,
+    public SkillLifecycleController(GovernanceWorkflowAppService governanceWorkflowAppService,
                                     ApiResponseFactory responseFactory) {
         super(responseFactory);
-        this.skillLifecycleAppService = skillLifecycleAppService;
+        this.governanceWorkflowAppService = governanceWorkflowAppService;
     }
 
     @PostMapping("/{namespace}/{slug}/archive")
@@ -44,7 +44,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                     @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                     HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                skillLifecycleAppService.archiveSkill(
+                governanceWorkflowAppService.archiveSkill(
                         namespace,
                         slug,
                         request,
@@ -60,7 +60,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                       HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                skillLifecycleAppService.unarchiveSkill(
+                governanceWorkflowAppService.unarchiveSkill(
                         namespace,
                         slug,
                         userId,
@@ -76,7 +76,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                      @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                      HttpServletRequest httpRequest) {
         return ok("response.success.deleted",
-                skillLifecycleAppService.deleteVersion(
+                governanceWorkflowAppService.deleteVersion(
                         namespace,
                         slug,
                         version,
@@ -92,7 +92,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                      @RequestAttribute("userId") String userId,
                                                                      HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                skillLifecycleAppService.withdrawReview(
+                governanceWorkflowAppService.withdrawReviewVersion(
                         namespace,
                         slug,
                         version,
@@ -109,7 +109,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                         @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
                                                                         HttpServletRequest httpRequest) {
         return ok("response.success.updated",
-                skillLifecycleAppService.rereleaseVersion(
+                governanceWorkflowAppService.rereleaseVersion(
                         namespace,
                         slug,
                         version,

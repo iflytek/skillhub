@@ -9,9 +9,10 @@ import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
 import { Pagination } from '@/shared/components/pagination'
-import { useMyStars, useSearchSkills } from '@/shared/hooks/use-skill-queries'
+import { useMyStars, useSearchSkills, useVisibleLabels } from '@/shared/hooks/use-skill-queries'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
+import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 
 const PAGE_SIZE = 12
 
@@ -52,6 +53,7 @@ export function SearchPage() {
   const { isAuthenticated } = useAuth()
 
   const q = normalizeSearchQuery(searchParams.q || '')
+  const selectedLabel = searchParams.label || ''
   const sort = searchParams.sort || 'newest'
   const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
@@ -63,11 +65,13 @@ export function SearchPage() {
 
   const { data, isLoading, isFetching } = useSearchSkills({
     q,
+    label: selectedLabel || undefined,
     sort,
     page,
     size: PAGE_SIZE,
     starredOnly,
   })
+  const { data: labels } = useVisibleLabels()
   const {
     data: starredSkills,
     isLoading: isLoadingStarred,
@@ -84,34 +88,39 @@ export function SearchPage() {
 
     if (!normalizedQuery) {
       startTransition(() => {
-        navigate({ to: '/search', search: { q: '', sort, page: 0, starredOnly }, replace: page === 0 })
+        navigate({ to: '/search', search: { q: '', label: selectedLabel, sort, page: 0, starredOnly }, replace: page === 0 })
       })
       return
     }
 
     const timeoutId = window.setTimeout(() => {
       startTransition(() => {
-        navigate({ to: '/search', search: { q: normalizedQuery, sort, page: 0, starredOnly }, replace: true })
+        navigate({ to: '/search', search: { q: normalizedQuery, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
       })
     }, 250)
 
     return () => window.clearTimeout(timeoutId)
-  }, [navigate, page, q, queryInput, sort, starredOnly])
+  }, [navigate, page, q, queryInput, selectedLabel, sort, starredOnly])
 
   const handleSearch = (query: string) => {
     const normalizedQuery = normalizeSearchQuery(query)
     setQueryInput(query)
     startTransition(() => {
-      navigate({ to: '/search', search: { q: normalizedQuery, sort, page: 0, starredOnly }, replace: true })
+      navigate({ to: '/search', search: { q: normalizedQuery, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
     })
   }
 
   const handleSortChange = (newSort: string) => {
-    navigate({ to: '/search', search: { q, sort: newSort, page: 0, starredOnly } })
+    navigate({ to: '/search', search: { q, label: selectedLabel, sort: newSort, page: 0, starredOnly } })
   }
 
   const handlePageChange = (newPage: number) => {
-    navigate({ to: '/search', search: { q, sort, page: newPage, starredOnly } })
+    navigate({ to: '/search', search: { q, label: selectedLabel, sort, page: newPage, starredOnly } })
+  }
+
+  const handleLabelToggle = (label: string) => {
+    const nextLabel = selectedLabel === label ? '' : label
+    navigate({ to: '/search', search: { q, label: nextLabel, sort, page: 0, starredOnly } })
   }
 
   const handleStarredToggle = () => {
@@ -125,7 +134,7 @@ export function SearchPage() {
       return
     }
 
-    navigate({ to: '/search', search: { q, sort, page: 0, starredOnly: !starredOnly } })
+    navigate({ to: '/search', search: { q, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly } })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
@@ -149,7 +158,7 @@ export function SearchPage() {
   const resultCount = starredOnly ? filteredStarredSkills.length : (data?.total ?? 0)
 
   return (
-    <div className="space-y-8 animate-fade-up">
+    <div className={APP_SHELL_PAGE_CLASS_NAME}>
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
         <SearchBar
@@ -213,6 +222,16 @@ export function SearchPage() {
           >
             {t('search.filterStarred')}
           </Button>
+          {!starredOnly && labels?.map((label) => (
+            <Button
+              key={label.slug}
+              variant={selectedLabel === label.slug ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleLabelToggle(label.slug)}
+            >
+              {label.displayName}
+            </Button>
+          ))}
         </div>
       </div>
 

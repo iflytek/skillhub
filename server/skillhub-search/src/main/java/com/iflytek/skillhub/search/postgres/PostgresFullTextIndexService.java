@@ -16,6 +16,11 @@ import java.util.Optional;
  */
 @Service
 public class PostgresFullTextIndexService implements SearchIndexService {
+    private static final int NAMESPACE_SLUG_MAX_LENGTH = 64;
+    private static final int OWNER_ID_MAX_LENGTH = 128;
+    private static final int TITLE_MAX_LENGTH = 512;
+    private static final int VISIBILITY_MAX_LENGTH = 32;
+    private static final int STATUS_MAX_LENGTH = 32;
 
     private final SkillSearchDocumentJpaRepository repository;
     private final SearchEmbeddingService searchEmbeddingService;
@@ -29,34 +34,35 @@ public class PostgresFullTextIndexService implements SearchIndexService {
     @Override
     @Transactional
     public void index(SkillSearchDocument document) {
+        SkillSearchDocument normalizedDocument = normalize(document);
         Optional<SkillSearchDocumentEntity> existing = repository.findBySkillId(document.skillId());
 
         if (existing.isPresent()) {
             SkillSearchDocumentEntity entity = existing.get();
-            entity.setNamespaceId(document.namespaceId());
-            entity.setNamespaceSlug(document.namespaceSlug());
-            entity.setOwnerId(document.ownerId());
-            entity.setTitle(document.title());
-            entity.setSummary(document.summary());
-            entity.setKeywords(document.keywords());
-            entity.setSearchText(document.searchText());
-            entity.setSemanticVector(buildSemanticVector(document));
-            entity.setVisibility(document.visibility());
-            entity.setStatus(document.status());
+            entity.setNamespaceId(normalizedDocument.namespaceId());
+            entity.setNamespaceSlug(normalizedDocument.namespaceSlug());
+            entity.setOwnerId(normalizedDocument.ownerId());
+            entity.setTitle(normalizedDocument.title());
+            entity.setSummary(normalizedDocument.summary());
+            entity.setKeywords(normalizedDocument.keywords());
+            entity.setSearchText(normalizedDocument.searchText());
+            entity.setSemanticVector(buildSemanticVector(normalizedDocument));
+            entity.setVisibility(normalizedDocument.visibility());
+            entity.setStatus(normalizedDocument.status());
             repository.save(entity);
         } else {
             SkillSearchDocumentEntity entity = new SkillSearchDocumentEntity(
-                    document.skillId(),
-                    document.namespaceId(),
-                    document.namespaceSlug(),
-                    document.ownerId(),
-                    document.title(),
-                    document.summary(),
-                    document.keywords(),
-                    document.searchText(),
-                    buildSemanticVector(document),
-                    document.visibility(),
-                    document.status()
+                    normalizedDocument.skillId(),
+                    normalizedDocument.namespaceId(),
+                    normalizedDocument.namespaceSlug(),
+                    normalizedDocument.ownerId(),
+                    normalizedDocument.title(),
+                    normalizedDocument.summary(),
+                    normalizedDocument.keywords(),
+                    normalizedDocument.searchText(),
+                    buildSemanticVector(normalizedDocument),
+                    normalizedDocument.visibility(),
+                    normalizedDocument.status()
             );
             repository.save(entity);
         }
@@ -79,7 +85,6 @@ public class PostgresFullTextIndexService implements SearchIndexService {
     private String buildSemanticVector(SkillSearchDocument document) {
         return searchEmbeddingService.embed(String.join("\n",
                 safe(document.title()),
-                safe(document.title()),
                 safe(document.summary()),
                 safe(document.keywords()),
                 safe(document.searchText())));
@@ -87,5 +92,28 @@ public class PostgresFullTextIndexService implements SearchIndexService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private SkillSearchDocument normalize(SkillSearchDocument document) {
+        return new SkillSearchDocument(
+                document.skillId(),
+                document.namespaceId(),
+                truncate(document.namespaceSlug(), NAMESPACE_SLUG_MAX_LENGTH),
+                truncate(document.ownerId(), OWNER_ID_MAX_LENGTH),
+                truncate(document.title(), TITLE_MAX_LENGTH),
+                document.summary(),
+                document.keywords(),
+                document.searchText(),
+                document.semanticVector(),
+                truncate(document.visibility(), VISIBILITY_MAX_LENGTH),
+                truncate(document.status(), STATUS_MAX_LENGTH)
+        );
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }

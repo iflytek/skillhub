@@ -6,12 +6,14 @@ import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
+import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
   getOverviewCollapseMaxHeight,
   OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT,
   shouldCollapseOverview,
 } from '@/features/skill/overview-collapse'
 import { resolveSkillActionErrorTitle } from '@/features/skill/skill-action-error'
+import { isDeleteSlugConfirmationValid, resolveDeletedSkillReturnTo } from '@/features/skill/skill-delete-flow'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
@@ -40,6 +42,7 @@ import {
   useSkillFiles,
   useSkillReadme,
   useArchiveSkill,
+  useDeleteSkill,
   useDeleteSkillVersion,
   useRereleaseSkillVersion,
   useSubmitPromotion,
@@ -97,6 +100,9 @@ export function SkillDetailPage() {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [unarchiveConfirmOpen, setUnarchiveConfirmOpen] = useState(false)
   const [promotionConfirmOpen, setPromotionConfirmOpen] = useState(false)
+  const [deleteSkillConfirmOpen, setDeleteSkillConfirmOpen] = useState(false)
+  const [deleteSkillInputOpen, setDeleteSkillInputOpen] = useState(false)
+  const [deleteSkillInput, setDeleteSkillInput] = useState('')
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
@@ -137,6 +143,8 @@ export function SkillDetailPage() {
   const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
+  const canHardDeleteSkill = Boolean(skill && user && (skill.ownerId === user.userId || hasRole('SUPER_ADMIN')))
+  const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
@@ -221,6 +229,7 @@ export function SkillDetailPage() {
   })
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
+  const deleteSkillMutation = useDeleteSkill()
   const deleteVersionMutation = useDeleteSkillVersion()
   const withdrawReviewMutation = useWithdrawSkillReview()
   const rereleaseVersionMutation = useRereleaseSkillVersion()
@@ -384,6 +393,30 @@ export function SkillDetailPage() {
       setUnarchiveConfirmOpen(false)
     } catch (error) {
       toast.error(t('skillDetail.unarchiveErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
+  const handleOpenDeleteSkillInput = async () => {
+    setDeleteSkillConfirmOpen(false)
+    setDeleteSkillInput('')
+    setDeleteSkillInputOpen(true)
+  }
+
+  const handleDeleteSkill = async () => {
+    if (!skill || !isDeleteSlugConfirmationValid(skill.slug, deleteSkillInput)) {
+      return
+    }
+    try {
+      await deleteSkillMutation.mutateAsync({ namespace, slug })
+      toast.success(
+        t('skillDetail.deleteSkillSuccessTitle'),
+        t('skillDetail.deleteSkillSuccessDescription', { skill: skill.displayName }),
+      )
+      setDeleteSkillInputOpen(false)
+      navigate({ to: resolveDeletedSkillReturnTo(search.returnTo) })
+    } catch (error) {
+      toast.error(t('skillDetail.deleteSkillErrorTitle'), error instanceof Error ? error.message : '')
       throw error
     }
   }
@@ -578,6 +611,23 @@ export function SkillDetailPage() {
           )}
           {skill.summary && (
             <p className="text-lg text-muted-foreground leading-relaxed">{skill.summary}</p>
+          )}
+          {(skill.labels?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {skill.labels!.map((label) => (
+                <span
+                  key={label.slug}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium',
+                    label.type === 'PRIVILEGED'
+                      ? 'border-amber-500/40 bg-amber-100 text-amber-900'
+                      : 'border-slate-300 bg-slate-100 text-slate-800',
+                  )}
+                >
+                  {label.displayName}
+                </span>
+              ))}
+            </div>
           )}
           {isPendingPreview && (
             <Card className="border-amber-500/30 bg-amber-500/5 p-4 text-sm text-muted-foreground">
@@ -876,6 +926,14 @@ export function SkillDetailPage() {
           {t('skillDetail.download')}
         </Button>
 
+        <SkillLabelPanel
+          namespace={namespace}
+          slug={slug}
+          initialLabels={skill.labels ?? []}
+          canManage={canManageLabels}
+          isSuperAdmin={hasRole('SUPER_ADMIN')}
+        />
+
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">
             <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</div>
@@ -919,6 +977,15 @@ export function SkillDetailPage() {
             ) : (
               <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
                 {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
+              </Button>
+            )}
+            {canHardDeleteSkill && (
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteSkillConfirmOpen(true)}
+                disabled={deleteSkillMutation.isPending}
+              >
+                {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkill')}
               </Button>
             )}
           </Card>
@@ -1021,6 +1088,55 @@ export function SkillDetailPage() {
         confirmText={t('skillDetail.unarchiveSkill')}
         onConfirm={handleUnarchive}
       />
+
+      <ConfirmDialog
+        open={deleteSkillConfirmOpen}
+        onOpenChange={setDeleteSkillConfirmOpen}
+        title={t('skillDetail.deleteSkillConfirmTitle')}
+        description={t('skillDetail.deleteSkillConfirmDescription', { skill: skill.displayName })}
+        confirmText={t('skillDetail.deleteSkillContinue')}
+        variant="destructive"
+        onConfirm={handleOpenDeleteSkillInput}
+      />
+
+      <Dialog
+        open={deleteSkillInputOpen}
+        onOpenChange={(open) => {
+          setDeleteSkillInputOpen(open)
+          if (!open) {
+            setDeleteSkillInput('')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('skillDetail.deleteSkillInputTitle')}</DialogTitle>
+            <DialogDescription>{t('skillDetail.deleteSkillInputDescription', { slug: skill.slug })}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-muted-foreground">
+              {t('skillDetail.deleteSkillWarning')}
+            </div>
+            <Input
+              value={deleteSkillInput}
+              onChange={(event) => setDeleteSkillInput(event.target.value)}
+              placeholder={t('skillDetail.deleteSkillInputPlaceholder')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteSkillInputOpen(false)}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteSkill}
+              disabled={!isDeleteSlugConfirmationValid(skill.slug, deleteSkillInput) || deleteSkillMutation.isPending}
+            >
+              {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkillFinal')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteVersionTarget}

@@ -4,6 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.label.LabelDefinition;
+import com.iflytek.skillhub.domain.label.LabelDefinitionRepository;
+import com.iflytek.skillhub.domain.label.LabelTranslation;
+import com.iflytek.skillhub.domain.label.LabelTranslationRepository;
+import com.iflytek.skillhub.domain.label.SkillLabelRepository;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
@@ -11,18 +16,21 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchRebuildService;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 /**
  * Reconstructs PostgreSQL search documents from canonical skill and namespace records.
@@ -36,18 +44,49 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
     private final SkillVersionRepository skillVersionRepository;
+    private final LabelDefinitionRepository labelDefinitionRepository;
+    private final LabelTranslationRepository labelTranslationRepository;
+    private final SkillLabelRepository skillLabelRepository;
     private final SearchIndexService searchIndexService;
+    private final SearchTextTokenizer searchTextTokenizer;
     private final ObjectMapper objectMapper;
 
     public PostgresSearchRebuildService(
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             SkillVersionRepository skillVersionRepository,
-            SearchIndexService searchIndexService) {
+            SearchIndexService searchIndexService,
+            SearchTextTokenizer searchTextTokenizer) {
+        this(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                null,
+                null,
+                null,
+                searchIndexService,
+                searchTextTokenizer
+        );
+    }
+
+    @Autowired
+    public PostgresSearchRebuildService(
+            SkillRepository skillRepository,
+            NamespaceRepository namespaceRepository,
+            SkillVersionRepository skillVersionRepository,
+            LabelDefinitionRepository labelDefinitionRepository,
+            LabelTranslationRepository labelTranslationRepository,
+            SkillLabelRepository skillLabelRepository,
+            SearchIndexService searchIndexService,
+            SearchTextTokenizer searchTextTokenizer) {
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
+        this.labelDefinitionRepository = labelDefinitionRepository;
+        this.labelTranslationRepository = labelTranslationRepository;
+        this.skillLabelRepository = skillLabelRepository;
         this.searchIndexService = searchIndexService;
+        this.searchTextTokenizer = searchTextTokenizer;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -82,7 +121,6 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
 
     private SearchIndexPayload buildSearchPayload(Skill skill) {
         List<String> searchParts = new ArrayList<>();
-        addPart(searchParts, skill.getDisplayName());
         addPart(searchParts, skill.getSlug());
         addPart(searchParts, skill.getSummary());
 
@@ -92,10 +130,11 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 .map(metadata -> metadata.get("frontmatter"))
                 .map(this::asMap)
                 .ifPresent(frontmatter -> appendFrontmatter(frontmatter, keywords, searchParts));
+        appendLabelKeywords(skill.getId(), keywords);
 
         return new SearchIndexPayload(
-                String.join(", ", keywords),
-                String.join(" ", searchParts).trim()
+                searchTextTokenizer.enrichForIndex(String.join(" ", keywords)),
+                searchTextTokenizer.enrichForIndex(String.join(" ", searchParts).trim())
         );
     }
 
@@ -121,9 +160,13 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(Object value) {
         if (value instanceof Map<?, ?> map) {
-            return map.entrySet().stream()
-                    .filter(entry -> entry.getKey() != null)
-                    .collect(Collectors.toMap(entry -> String.valueOf(entry.getKey()), Map.Entry::getValue));
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    normalized.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+            }
+            return normalized;
         }
         return Map.of();
     }
@@ -135,8 +178,9 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
             if (value == null) {
                 continue;
             }
+            String normalizedFieldName = fieldName.toLowerCase(Locale.ROOT);
 
-            if (KEYWORD_FIELD_NAMES.contains(fieldName.toLowerCase())) {
+            if (KEYWORD_FIELD_NAMES.contains(normalizedFieldName)) {
                 flattenToStrings(value).forEach(keyword -> {
                     String normalized = keyword.trim();
                     if (!normalized.isBlank()) {
@@ -145,7 +189,8 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 });
             }
 
-            if (!RESERVED_FRONTMATTER_FIELDS.contains(fieldName.toLowerCase())) {
+            if (!RESERVED_FRONTMATTER_FIELDS.contains(normalizedFieldName)
+                    && !KEYWORD_FIELD_NAMES.contains(normalizedFieldName)) {
                 addPart(searchParts, fieldName);
                 flattenToStrings(value).forEach(text -> addPart(searchParts, text));
             }
@@ -153,6 +198,9 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     }
 
     private List<String> flattenToStrings(Object value) {
+        if (value == null) {
+            return List.of();
+        }
         if (value instanceof String text) {
             return List.of(text);
         }
@@ -165,7 +213,9 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 if (entry.getKey() != null) {
                     values.add(String.valueOf(entry.getKey()));
                 }
-                values.addAll(flattenToStrings(entry.getValue()));
+                if (entry.getValue() != null) {
+                    values.addAll(flattenToStrings(entry.getValue()));
+                }
             }
             return values;
         }
@@ -185,6 +235,36 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
         String normalized = value.trim();
         if (!normalized.isBlank()) {
             parts.add(normalized);
+        }
+    }
+
+    private void appendLabelKeywords(Long skillId, Set<String> keywords) {
+        if (skillLabelRepository == null || labelDefinitionRepository == null || labelTranslationRepository == null) {
+            return;
+        }
+        List<Long> labelIds = skillLabelRepository.findBySkillId(skillId).stream()
+                .map(skillLabel -> skillLabel.getLabelId())
+                .distinct()
+                .toList();
+        if (labelIds.isEmpty()) {
+            return;
+        }
+        Map<Long, LabelDefinition> definitionsById = labelDefinitionRepository.findByIdIn(labelIds).stream()
+                .collect(java.util.stream.Collectors.toMap(LabelDefinition::getId, definition -> definition));
+        for (LabelTranslation translation : labelTranslationRepository.findByLabelIdIn(labelIds)) {
+            if (definitionsById.containsKey(translation.getLabelId())) {
+                addKeyword(keywords, translation.getDisplayName());
+            }
+        }
+    }
+
+    private void addKeyword(Set<String> keywords, String value) {
+        if (value == null) {
+            return;
+        }
+        String normalized = value.trim();
+        if (!normalized.isBlank()) {
+            keywords.add(normalized);
         }
     }
 

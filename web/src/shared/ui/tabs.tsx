@@ -2,7 +2,8 @@ import * as React from 'react'
 import { cn } from '@/shared/lib/utils'
 
 interface TabsProps {
-  defaultValue: string
+  defaultValue?: string
+  value?: string
   children: React.ReactNode
   className?: string
   onValueChange?: (value: string) => void
@@ -15,13 +16,17 @@ interface TabsContextValue {
 
 const TabsContext = React.createContext<TabsContextValue | undefined>(undefined)
 
-export function Tabs({ defaultValue, children, className, onValueChange }: TabsProps) {
-  const [value, setValue] = React.useState(defaultValue)
+export function Tabs({ defaultValue, value: controlledValue, children, className, onValueChange }: TabsProps) {
+  const [internalValue, setInternalValue] = React.useState(defaultValue ?? '')
+  const isControlled = controlledValue !== undefined
+  const value = isControlled ? controlledValue : internalValue
 
   const handleValueChange = React.useCallback((nextValue: string) => {
-    setValue(nextValue)
+    if (!isControlled) {
+      setInternalValue(nextValue)
+    }
     onValueChange?.(nextValue)
-  }, [onValueChange])
+  }, [isControlled, onValueChange])
 
   return (
     <TabsContext.Provider value={{ value, setValue: handleValueChange }}>
@@ -65,14 +70,14 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
     <button
       type="button"
       onClick={() => context.setValue(value)}
+      data-state={isActive ? 'active' : 'inactive'}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap py-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex -mb-px items-center justify-center whitespace-nowrap py-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
         isActive
           ? 'border-b-2 border-primary text-primary'
           : 'text-muted-foreground hover:text-foreground/80',
         className
       )}
-      style={{ marginBottom: '-1px' }}
     >
       {children}
     </button>

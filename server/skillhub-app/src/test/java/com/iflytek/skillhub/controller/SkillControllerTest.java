@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.service.SkillLabelAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -43,6 +44,9 @@ class SkillControllerTest {
 
     @MockBean
     private SkillDownloadService skillDownloadService;
+
+    @MockBean
+    private SkillLabelAppService skillLabelAppService;
 
     @Test
     void getVersionDetailShouldReturnMetadataFields() throws Exception {
@@ -149,6 +153,7 @@ class SkillControllerTest {
                         1L,
                         "demo",
                         "Demo",
+                        "owner-1",
                         "Alice",
                         "Pending preview",
                         "PUBLIC",

@@ -35,4 +35,10 @@ public interface SkillVersionStatsJpaRepository extends JpaRepository<SkillVersi
             nativeQuery = true
     )
     void incrementDownloadCount(@Param("skillVersionId") Long skillVersionId, @Param("skillId") Long skillId);
+
+    @Override
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM SkillVersionStats s WHERE s.skillId = :skillId")
+    void deleteBySkillId(@Param("skillId") Long skillId);
 }

@@ -11,6 +11,7 @@ import type {
   MergeInitiateRequest,
   MergeInitiateResponse,
   MergeVerifyRequest,
+  ReviewSkillDetail,
   ReviewTask,
   PromotionTask,
   AuditLogItem,
@@ -20,6 +21,7 @@ import type {
   GovernanceInboxItem,
   GovernanceActivityItem,
   GovernanceNotification,
+  PagedResponse,
   ReportDisposition,
   AuthMethod,
   OAuthProvider,
@@ -29,6 +31,9 @@ import type {
   CreateNamespaceRequest,
   NamespaceMember,
   NamespaceCandidateUser,
+  AdminLabelInput,
+  LabelDefinition,
+  LabelItem,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -458,6 +463,14 @@ export const skillLifecycleApi = {
     })
   },
 
+  async deleteSkill(namespace: string, slug: string): Promise<void> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
   async deleteVersion(namespace: string, slug: string, version: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
     await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}`, {
@@ -488,6 +501,91 @@ export const skillLifecycleApi = {
 
 function normalizeNamespaceSlug(namespace: string): string {
   return namespace.startsWith('@') ? namespace.slice(1) : namespace
+}
+
+export const labelApi = {
+  async listVisible(): Promise<LabelItem[]> {
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/labels`)
+  },
+
+  async listSkillLabels(namespace: string, slug: string): Promise<LabelItem[]> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels`)
+  },
+
+  async attachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<LabelItem> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    return fetchJson<LabelItem>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async detachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<void> {
+    const cleanNamespace = normalizeNamespaceSlug(namespace)
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listAdminDefinitions(): Promise<LabelDefinition[]> {
+    return fetchJson<LabelDefinition[]>('/api/v1/admin/labels')
+  },
+
+  async createAdminDefinition(request: AdminLabelInput): Promise<LabelDefinition> {
+    return fetchJson<LabelDefinition>('/api/v1/admin/labels', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        slug: request.slug.trim(),
+        type: request.type,
+        visibleInFilter: request.visibleInFilter,
+        sortOrder: request.sortOrder,
+        translations: request.translations.map((translation) => ({
+          locale: translation.locale.trim(),
+          displayName: translation.displayName.trim(),
+        })),
+      }),
+    })
+  },
+
+  async updateAdminDefinition(slug: string, request: Omit<AdminLabelInput, 'slug'>): Promise<LabelDefinition> {
+    return fetchJson<LabelDefinition>(`/api/v1/admin/labels/${encodeURIComponent(slug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        type: request.type,
+        visibleInFilter: request.visibleInFilter,
+        sortOrder: request.sortOrder,
+        translations: request.translations.map((translation) => ({
+          locale: translation.locale.trim(),
+          displayName: translation.displayName.trim(),
+        })),
+      }),
+    })
+  },
+
+  async deleteAdminDefinition(slug: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/labels/${encodeURIComponent(slug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async updateAdminSortOrder(items: Array<{ slug: string; sortOrder: number }>): Promise<LabelDefinition[]> {
+    return fetchJson<LabelDefinition[]>('/api/v1/admin/labels/sort-order', {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ items }),
+    })
+  },
 }
 
 export const namespaceApi = {
@@ -687,6 +785,10 @@ export const reviewApi = {
     return fetchJson<ReviewTask>(`${WEB_API_PREFIX}/reviews/${id}`)
   },
 
+  async getSkillDetail(id: number): Promise<ReviewSkillDetail> {
+    return fetchJson<ReviewSkillDetail>(`${WEB_API_PREFIX}/reviews/${id}/skill-detail`)
+  },
+
   async approve(id: number, comment?: string): Promise<void> {
     await fetchJson<void>(`${WEB_API_PREFIX}/reviews/${id}/approve`, {
       method: 'POST',
@@ -807,7 +909,7 @@ export const governanceApi = {
     if (params.type) searchParams.set('type', params.type)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: GovernanceInboxItem[]; total: number; page: number; size: number }>(
+    return fetchJson<PagedResponse<GovernanceInboxItem>>(
       `${WEB_API_PREFIX}/governance/inbox?${searchParams.toString()}`,
     )
   },
@@ -816,13 +918,16 @@ export const governanceApi = {
     const searchParams = new URLSearchParams()
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
-    return fetchJson<{ items: GovernanceActivityItem[]; total: number; page: number; size: number }>(
+    return fetchJson<PagedResponse<GovernanceActivityItem>>(
       `${WEB_API_PREFIX}/governance/activity?${searchParams.toString()}`,
     )
   },
 
-  async getNotifications(): Promise<GovernanceNotification[]> {
-    return fetchJson<GovernanceNotification[]>(`${WEB_API_PREFIX}/governance/notifications`)
+  async getNotifications(params: { page?: number; size?: number }): Promise<PagedResponse<GovernanceNotification>> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<PagedResponse<GovernanceNotification>>(`${WEB_API_PREFIX}/governance/notifications?${searchParams.toString()}`)
   },
 
   async markNotificationRead(id: number): Promise<GovernanceNotification> {
@@ -841,10 +946,13 @@ export const governanceApi = {
 }
 
 export const meApi = {
-  async getSkills(params?: { page?: number; size?: number }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
+  async getSkills(params?: { page?: number; size?: number; filter?: string }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
     const searchParams = new URLSearchParams()
     searchParams.set('page', String(params?.page ?? 0))
     searchParams.set('size', String(params?.size ?? 10))
+    if (params?.filter) {
+      searchParams.set('filter', params.filter)
+    }
     return fetchJson<{ items: SkillSummary[]; total: number; page: number; size: number }>(`${WEB_API_PREFIX}/me/skills?${searchParams.toString()}`)
   },
 
@@ -874,8 +982,26 @@ export const meApi = {
 }
 
 export const profileApi = {
-  async updateProfile(request: { displayName: string }): Promise<{ status: string }> {
-    return fetchJson<{ status: string }>('/api/v1/user/profile', {
+  async getProfile(): Promise<{
+    displayName: string
+    avatarUrl: string | null
+    email: string | null
+    pendingChanges: {
+      status: string
+      changes: Record<string, string>
+      reviewComment: string | null
+      createdAt: string
+    } | null
+    fieldPolicies: Record<string, { editable: boolean; requiresReview: boolean }>
+  }> {
+    return fetchJson('/api/v1/user/profile')
+  },
+  async updateProfile(request: Record<string, string>): Promise<{
+    status: string
+    appliedFields?: Record<string, string>
+    pendingFields?: Record<string, string>
+  }> {
+    return fetchJson<{ status: string; appliedFields?: Record<string, string>; pendingFields?: Record<string, string> }>('/api/v1/user/profile', {
       method: 'PATCH',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
@@ -1007,6 +1133,53 @@ export const adminApi = {
       method: 'POST',
       headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ reason }),
+    })
+  },
+
+  async getProfileReviews(params: { status?: string; page?: number; size?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params.status) searchParams.set('status', params.status)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    const response = await fetchJson<{
+      items: Array<{
+        id: number
+        userId: string
+        username: string
+        currentDisplayName: string | null
+        requestedDisplayName: string | null
+        status: string
+        machineResult: string | null
+        reviewerId: string | null
+        reviewerName: string | null
+        reviewComment: string | null
+        createdAt: string
+        reviewedAt: string | null
+      }>
+      total: number
+      page: number
+      size: number
+    }>(`/api/v1/admin/profile-reviews?${searchParams}`)
+
+    return {
+      ...response,
+      totalElements: response.total,
+      totalPages: response.size > 0 ? Math.ceil(response.total / response.size) : 0,
+    }
+  },
+
+  async approveProfileReview(id: number): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/profile-reviews/${id}/approve`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async rejectProfileReview(id: number, comment: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/profile-reviews/${id}/reject`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ comment }),
     })
   },
 }

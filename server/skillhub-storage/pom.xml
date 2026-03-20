@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.iflytek.skillhub</groupId>
         <artifactId>skillhub-parent</artifactId>
-        <version>0.1.0-beta.7</version>
+        <version>0.1.0</version>
     </parent>
     <artifactId>skillhub-storage</artifactId>
 

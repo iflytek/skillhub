@@ -7,11 +7,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Configuration properties for profile moderation behavior.
  *
  * <p>Controls whether machine review and/or human review are enabled
- * when users update their profile. Both default to {@code false} (open-source mode).
+ * when users update their profile. Effective defaults come from Spring configuration;
+ * the current application default enables both checks unless overridden by environment.
  *
  * <p>Configuration combinations:
  * <pre>
- *   machine=false, human=false → changes apply immediately (open-source default)
+ *   machine=false, human=false → changes apply immediately
  *   machine=true,  human=false → machine review only, pass = immediate effect
  *   machine=false, human=true  → skip machine review, enter human review queue
  *   machine=true,  human=true  → machine review first, then human review queue
@@ -27,11 +28,6 @@ public record ProfileModerationProperties(
         boolean machineReview,
         boolean humanReview
 ) implements ProfileModerationConfig {
-
-    /** Default constructor — both switches off (open-source mode). */
-    public ProfileModerationProperties() {
-        this(false, false);
-    }
 
     /** Returns true if any form of moderation is active. */
     public boolean isAnyModerationEnabled() {

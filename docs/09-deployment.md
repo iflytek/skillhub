@@ -60,6 +60,7 @@
 - `BOOTSTRAP_ADMIN_ENABLED=true`
 - `BOOTSTRAP_ADMIN_USERNAME`
 - `BOOTSTRAP_ADMIN_PASSWORD`
+  - 从 `.env.release.example` 复制时，初始占位值是 `replace-this-admin-password`
 
 建议：
 
@@ -134,8 +135,9 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 推荐：
 
+- 默认快速启动：`SKILLHUB_VERSION=latest`
 - 团队内部试用：`SKILLHUB_VERSION=edge`
-- 对外演示或文档引用：固定为某个 `vX.Y.Z`
+- 对外演示或严格可复现环境：固定为某个 `vX.Y.Z`
 
 ## 6 GitHub Actions 发布流程
 
@@ -143,8 +145,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 触发条件：
 
-- push 到 `main`
-- push 语义化版本 tag，例如 `v1.2.0`
+- `release.published`
 - 手动 `workflow_dispatch`
 
 流程：
@@ -210,6 +211,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
    - 按云厂商 OSS / S3 兼容参数填写 `SKILLHUB_STORAGE_S3_*`
    - 设置非默认的 `POSTGRES_PASSWORD`
    - 如果要启用首登管理员，再额外设置 `BOOTSTRAP_ADMIN_ENABLED=true` 与非默认的 `BOOTSTRAP_ADMIN_PASSWORD`
+   - 不要直接保留模板里的 `replace-this-admin-password`
 3. 启动前校验
    - 运行 `make validate-release-config`
    - 确认没有 `replace-me`、`change-this-*`、`ChangeMe!2026` 之类的占位值

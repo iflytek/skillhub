@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import com.iflytek.skillhub.auth.identity.IdentityBindingService;
+import com.iflytek.skillhub.auth.policy.AccessPolicy;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,6 +10,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class OAuth2AuthorizationRequestResolverTest {
 
@@ -27,7 +30,15 @@ class OAuth2AuthorizationRequestResolverTest {
                 .scope("read:user")
                 .clientName("GitHub")
                 .build();
-        resolver = new SkillHubOAuth2AuthorizationRequestResolver(new InMemoryClientRegistrationRepository(github));
+        OAuthLoginFlowService oauthLoginFlowService = new OAuthLoginFlowService(
+                java.util.List.of(),
+                mock(AccessPolicy.class),
+                mock(IdentityBindingService.class)
+        );
+        resolver = new SkillHubOAuth2AuthorizationRequestResolver(
+                new InMemoryClientRegistrationRepository(github),
+                oauthLoginFlowService
+        );
     }
 
     @Test

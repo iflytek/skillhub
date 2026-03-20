@@ -70,8 +70,11 @@ Start the full local stack with one of the following commands:
 Official images:
 ```bash
 rm -rf /tmp/skillhub-runtime
-curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up
 ```
+
+The default command pulls the `latest` stable release images. Use
+`--version edge` if you want the newest build from `main`.
 
 Aliyun mirror shortcut:
 ```bash
@@ -96,18 +99,26 @@ Then open:
 - Web UI: `http://localhost:3000`
 - Backend API: `http://localhost:8080`
 
-Local profile seeds two mock-auth users automatically:
+By default, `make dev-all` starts the backend with the `local` profile.
+In that mode, local development keeps the mock-auth users below and also
+creates a password-based bootstrap admin account by default:
 
 - `local-user` for normal publishing and namespace operations
 - `local-admin` with `SUPER_ADMIN` for review and admin flows
 
 Use them with the `X-Mock-User-Id` header in local development.
 
-The backend can bootstrap a local-login super admin for first-time access
-when you explicitly set `BOOTSTRAP_ADMIN_ENABLED=true`:
+The local bootstrap admin is enabled by default in `application-local.yml`:
 
 - username: `BOOTSTRAP_ADMIN_USERNAME` (`admin` by default)
-- password: `BOOTSTRAP_ADMIN_PASSWORD` (`ChangeMe!2026` by default)
+- password: `BOOTSTRAP_ADMIN_PASSWORD`
+  In local app-level fallback it is `ChangeMe!2026`.
+- For local source startup, set the environment variable
+  `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
+- For container or release environments, configure the same value in
+  `.env.release` or the Compose environment.
+- The shipped release template still uses `replace-this-admin-password` and
+  must be changed before first login.
 
 Stop everything with:
 
@@ -322,8 +333,10 @@ SkillHub works as a skill registry backend for several agent platforms. Point an
 
 ```bash
 # Configure registry URL
-export CLAWHUB_REGISTRY_URL=https://skillhub.your-company.com
-export CLAWHUB_API_TOKEN=YOUR_API_TOKEN
+export CLAWHUB_REGISTRY=https://skillhub.your-company.com
+
+# Authenticate once if needed
+clawhub login --token YOUR_API_TOKEN
 
 # Search and install skills
 npx clawhub search email

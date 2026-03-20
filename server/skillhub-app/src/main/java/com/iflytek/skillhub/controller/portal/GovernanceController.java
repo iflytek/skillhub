@@ -84,11 +84,14 @@ public class GovernanceController extends BaseApiController {
     }
 
     @GetMapping("/notifications")
-    public ApiResponse<java.util.List<GovernanceNotificationResponse>> notifications(
-            @RequestAttribute("userId") String userId) {
+    public ApiResponse<PageResponse<GovernanceNotificationResponse>> notifications(
+            @RequestAttribute("userId") String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        org.springframework.data.domain.Page<UserNotification> notifications = governanceNotificationService.listNotifications(userId, page, size);
         return ok(
                 "response.success.read",
-                governanceNotificationService.listNotifications(userId).stream().map(this::toNotificationResponse).toList()
+                PageResponse.from(notifications.map(this::toNotificationResponse))
         );
     }
 

@@ -34,7 +34,7 @@ After successful startup, you can access through the following addresses:
 
 ## Development Users
 
-The local development environment comes with two test users:
+By default, the local development environment comes with two mock test users:
 
 | User | Role | Description |
 |------|------|-------------|
@@ -42,6 +42,16 @@ The local development environment comes with two test users:
 | `local-admin` | Super admin | Has all permissions including review and user management |
 
 Use the `X-Mock-User-Id` request header to simulate user login in local development.
+The local development environment also creates a password-based bootstrap
+admin by default:
+
+- username: `admin`
+- password: `ChangeMe!2026`
+
+For local source startup, override or disable it with `BOOTSTRAP_ADMIN_*`
+environment variables before starting the backend.
+For container or release environments, configure the same values in
+`.env.release` or the Compose environment.
 
 ## Common Commands
 

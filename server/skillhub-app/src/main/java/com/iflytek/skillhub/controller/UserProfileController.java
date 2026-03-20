@@ -11,8 +11,10 @@ import com.iflytek.skillhub.domain.user.UpdateProfileResult;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserProfileService;
+import com.iflytek.skillhub.domain.user.ProfileFieldPolicyConfig;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.FieldPolicyResponse;
 import com.iflytek.skillhub.dto.PendingChangesResponse;
 import com.iflytek.skillhub.dto.ProfileUpdateStatus;
 import com.iflytek.skillhub.dto.UpdateProfileRequest;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,17 +52,20 @@ public class UserProfileController extends BaseApiController {
     private final UserAccountRepository userAccountRepository;
     private final ProfileChangeRequestRepository changeRequestRepository;
     private final PlatformSessionService platformSessionService;
+    private final ProfileFieldPolicyConfig fieldPolicyConfig;
 
     public UserProfileController(ApiResponseFactory responseFactory,
                                   UserProfileService userProfileService,
                                   UserAccountRepository userAccountRepository,
                                   ProfileChangeRequestRepository changeRequestRepository,
-                                  PlatformSessionService platformSessionService) {
+                                  PlatformSessionService platformSessionService,
+                                  ProfileFieldPolicyConfig fieldPolicyConfig) {
         super(responseFactory);
         this.userProfileService = userProfileService;
         this.userAccountRepository = userAccountRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.platformSessionService = platformSessionService;
+        this.fieldPolicyConfig = fieldPolicyConfig;
     }
 
     /**
@@ -73,19 +79,32 @@ public class UserProfileController extends BaseApiController {
         UserAccount user = userAccountRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("error.auth.required"));
 
-        // Look up any PENDING change request for this user
+        // Look up the most recent PENDING or REJECTED change request
         PendingChangesResponse pendingChanges = changeRequestRepository
-                .findByUserIdAndStatus(principal.userId(), ProfileChangeStatus.PENDING)
-                .stream()
-                .findFirst()
+                .findFirstByUserIdAndStatusInOrderByCreatedAtDesc(
+                        principal.userId(),
+                        List.of(ProfileChangeStatus.PENDING, ProfileChangeStatus.REJECTED))
                 .map(this::toPendingChangesResponse)
                 .orElse(null);
 
+        String displayName = user.getDisplayName();
+        String avatarUrl = user.getAvatarUrl();
+        if (pendingChanges != null && ProfileChangeStatus.PENDING.name().equals(pendingChanges.status())) {
+            displayName = pendingChanges.changes().getOrDefault("displayName", displayName);
+            avatarUrl = pendingChanges.changes().getOrDefault("avatarUrl", avatarUrl);
+        }
+
+        // Build field policies for the frontend
+        Map<String, FieldPolicyResponse> fieldPolicies = new LinkedHashMap<>();
+        fieldPolicyConfig.fieldPolicies().forEach((field, policy) ->
+                fieldPolicies.put(field, new FieldPolicyResponse(policy.editable(), policy.requiresReview())));
+
         var response = new UserProfileResponse(
-                user.getDisplayName(),
-                user.getAvatarUrl(),
+                displayName,
+                avatarUrl,
                 user.getEmail(),
-                pendingChanges
+                pendingChanges,
+                fieldPolicies
         );
         return ok("response.success.read", response);
     }
@@ -143,6 +162,16 @@ public class UserProfileController extends BaseApiController {
                     ProfileUpdateStatus.PENDING_REVIEW,
                     "response.profile.pendingReview"
             );
+            case UpdateProfileResult.Mixed(var appliedFields, var pendingFields) -> {
+                // Refresh session with the immediately-applied fields
+                refreshSession(principal, authentication, appliedFields, httpRequest);
+                yield new UpdateProfileResponse(
+                        ProfileUpdateStatus.PARTIALLY_APPLIED,
+                        "response.profile.partiallyApplied",
+                        appliedFields,
+                        pendingFields
+                );
+            }
         };
 
         return ok("response.success.update", response);
@@ -180,6 +209,7 @@ public class UserProfileController extends BaseApiController {
             return new PendingChangesResponse(
                     request.getStatus().name(),
                     changes,
+                    request.getReviewComment(),
                     request.getCreatedAt()
             );
         } catch (Exception e) {

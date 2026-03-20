@@ -9,7 +9,8 @@ import { Label } from '@/shared/ui/label'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/lib/toast'
 import { resolveReviewActionErrorDescription } from '@/features/review/review-error'
-import { useReviewDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
+import { ReviewSkillDetailSection } from '@/features/review/review-skill-detail-section'
+import { useReviewDetail, useReviewSkillDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
 
 /**
  * Review task detail page for moderators. The route owns the approve/reject
@@ -23,6 +24,11 @@ export function ReviewDetailPage() {
   const taskId = Number(id)
 
   const { data: review, isLoading } = useReviewDetail(taskId)
+  const {
+    data: reviewSkillDetail,
+    isLoading: isLoadingReviewSkillDetail,
+    error: reviewSkillDetailError,
+  } = useReviewSkillDetail(taskId)
   const approveMutation = useApproveReview({
     onSuccess: () => {
       toast.success(t('review.approveSuccess'))
@@ -56,8 +62,6 @@ export function ReviewDetailPage() {
   }
 
   const handleReject = async () => {
-    // Rejections require explicit operator feedback so submitters can understand
-    // what must change before the package is resubmitted.
     if (!comment.trim()) {
       toast.error(t('review.rejectReasonRequired'))
       return
@@ -95,7 +99,7 @@ export function ReviewDetailPage() {
       </div>
 
       <Card className="p-8 space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.namespace')}</Label>
             <p className="font-semibold font-mono">{review.namespace}/{review.skillSlug}</p>
@@ -215,6 +219,12 @@ export function ReviewDetailPage() {
           )}
         </Card>
       )}
+
+      <ReviewSkillDetailSection
+        detail={reviewSkillDetail}
+        isLoading={isLoadingReviewSkillDetail}
+        hasError={Boolean(reviewSkillDetailError)}
+      />
 
       <ConfirmDialog
         open={approveDialog}

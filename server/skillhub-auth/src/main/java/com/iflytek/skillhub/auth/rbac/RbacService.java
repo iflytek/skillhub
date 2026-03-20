@@ -14,6 +14,12 @@ import java.util.stream.Collectors;
 /**
  * Resolves platform roles and permissions for a user from persisted RBAC
  * bindings.
+ *
+ * <p>This service intentionally keeps a small amount of direct JPA querying in
+ * the auth module. Permission expansion is module-local authorization
+ * infrastructure rather than an application read model, so it remains a
+ * documented exception instead of being pushed into app-layer query
+ * repositories.
  */
 @Service
 public class RbacService {

@@ -35,6 +35,10 @@ public class SkillVersion {
     @Column(name = "manifest_json", columnDefinition = "jsonb")
     private String manifestJson;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "requested_visibility", length = 20)
+    private SkillVisibility requestedVisibility;
+
     @Column(name = "file_count", nullable = false)
     private Integer fileCount = 0;
 
@@ -109,6 +113,10 @@ public class SkillVersion {
         return manifestJson;
     }
 
+    public SkillVisibility getRequestedVisibility() {
+        return requestedVisibility;
+    }
+
     public Integer getFileCount() {
         return fileCount;
     }
@@ -164,6 +172,10 @@ public class SkillVersion {
 
     public void setManifestJson(String manifestJson) {
         this.manifestJson = manifestJson;
+    }
+
+    public void setRequestedVisibility(SkillVisibility requestedVisibility) {
+        this.requestedVisibility = requestedVisibility;
     }
 
     public void setFileCount(Integer fileCount) {
