@@ -157,6 +157,7 @@ skillhub/
 - Don't skip API contract regeneration
 - Don't make breaking changes without explicit approval
 - Don't open public issues for security vulnerabilities
+- Don't ignore `.gitignore` rules or commit local/generated files such as `.env*`, `.dev/`, `node_modules/`, or `docs/superpowers/` unless the repo already tracks them on purpose
 
 ## Security
 - Report security issues privately via GitHub Security Advisories
