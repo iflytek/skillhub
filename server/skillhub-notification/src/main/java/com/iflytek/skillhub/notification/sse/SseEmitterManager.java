@@ -16,7 +16,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseEmitterManager {
 
     private static final Logger log = LoggerFactory.getLogger(SseEmitterManager.class);
-    private static final long SSE_TIMEOUT = 60_000L;
+    private static final long SSE_TIMEOUT = 10 * 60_000L;
+    private static final long HEARTBEAT_INTERVAL = 30_000L;
     private static final int MAX_EMITTERS_PER_USER = 5;
     private static final int MAX_TOTAL_EMITTERS = 1000;
 
@@ -76,7 +77,7 @@ public class SseEmitterManager {
         }
     }
 
-    @Scheduled(fixedRate = 30_000)
+    @Scheduled(fixedRate = HEARTBEAT_INTERVAL)
     public void heartbeat() {
         emitters.forEach((userId, userEmitters) -> {
             for (TrackedEmitter trackedEmitter : userEmitters) {
@@ -97,6 +98,14 @@ public class SseEmitterManager {
 
     int emittersForUser(String userId) {
         return emitters.getOrDefault(userId, new CopyOnWriteArrayList<>()).size();
+    }
+
+    static long defaultTimeoutMillis() {
+        return SSE_TIMEOUT;
+    }
+
+    static long heartbeatIntervalMillis() {
+        return HEARTBEAT_INTERVAL;
     }
 
     private void cleanup(String userId,

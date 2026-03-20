@@ -2,6 +2,7 @@ package com.iflytek.skillhub.notification.sse;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
@@ -36,6 +37,12 @@ class SseEmitterManagerTest {
         assertNotNull(emitter);
         assertEquals(1, manager.totalEmitters());
         assertEquals(1, manager.emittersForUser("user-1"));
+    }
+
+    @Test
+    void defaultTimeout_shouldOutliveManyHeartbeats() {
+        assertTrue(SseEmitterManager.defaultTimeoutMillis() >= 10 * 60_000L);
+        assertTrue(SseEmitterManager.defaultTimeoutMillis() > SseEmitterManager.heartbeatIntervalMillis() * 2);
     }
 
     @Test
