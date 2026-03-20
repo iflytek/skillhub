@@ -1,7 +1,5 @@
 package com.iflytek.skillhub.service;
 
-import com.iflytek.skillhub.domain.namespace.Namespace;
-import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.report.SkillReport;
@@ -12,20 +10,16 @@ import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.dto.AuditLogItemResponse;
 import com.iflytek.skillhub.dto.GovernanceActivityItemResponse;
 import com.iflytek.skillhub.dto.GovernanceInboxItemResponse;
 import com.iflytek.skillhub.dto.GovernanceSummaryResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -61,26 +55,20 @@ public class GovernanceWorkbenchAppService {
     private final ReviewTaskRepository reviewTaskRepository;
     private final PromotionRequestRepository promotionRequestRepository;
     private final SkillReportRepository skillReportRepository;
-    private final SkillRepository skillRepository;
-    private final SkillVersionRepository skillVersionRepository;
-    private final NamespaceRepository namespaceRepository;
+    private final GovernanceQueryRepository governanceQueryRepository;
     private final AdminAuditLogAppService adminAuditLogAppService;
     private final GovernanceNotificationService governanceNotificationService;
 
     public GovernanceWorkbenchAppService(ReviewTaskRepository reviewTaskRepository,
                                          PromotionRequestRepository promotionRequestRepository,
                                          SkillReportRepository skillReportRepository,
-                                         SkillRepository skillRepository,
-                                         SkillVersionRepository skillVersionRepository,
-                                         NamespaceRepository namespaceRepository,
+                                         GovernanceQueryRepository governanceQueryRepository,
                                          AdminAuditLogAppService adminAuditLogAppService,
                                          GovernanceNotificationService governanceNotificationService) {
         this.reviewTaskRepository = reviewTaskRepository;
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillReportRepository = skillReportRepository;
-        this.skillRepository = skillRepository;
-        this.skillVersionRepository = skillVersionRepository;
-        this.namespaceRepository = namespaceRepository;
+        this.governanceQueryRepository = governanceQueryRepository;
         this.adminAuditLogAppService = adminAuditLogAppService;
         this.governanceNotificationService = governanceNotificationService;
     }
@@ -121,9 +109,7 @@ public class GovernanceWorkbenchAppService {
         if (includeAll || "REVIEW".equalsIgnoreCase(type)) {
             Page<ReviewTask> reviews = visiblePendingReviews(namespaceRoles, platformRoles, fetchSize);
             total += reviews.getTotalElements();
-            reviews.getContent().stream()
-                    .map(this::toReviewInboxItem)
-                    .forEach(items::add);
+            items.addAll(governanceQueryRepository.getReviewInboxItems(reviews.getContent()));
         }
         if (hasPlatformGovernanceRole(platformRoles) && (includeAll || "PROMOTION".equalsIgnoreCase(type))) {
             Page<PromotionRequest> promotions = promotionRequestRepository.findByStatus(
@@ -131,9 +117,7 @@ public class GovernanceWorkbenchAppService {
                     PageRequest.of(0, fetchSize)
             );
             total += promotions.getTotalElements();
-            promotions.getContent().stream()
-                    .map(this::toPromotionInboxItem)
-                    .forEach(items::add);
+            items.addAll(governanceQueryRepository.getPromotionInboxItems(promotions.getContent()));
         }
         if (hasPlatformGovernanceRole(platformRoles) && (includeAll || "REPORT".equalsIgnoreCase(type))) {
             Page<SkillReport> reports = skillReportRepository.findByStatus(
@@ -141,9 +125,7 @@ public class GovernanceWorkbenchAppService {
                     PageRequest.of(0, fetchSize)
             );
             total += reports.getTotalElements();
-            reports.getContent().stream()
-                    .map(this::toReportInboxItem)
-                    .forEach(items::add);
+            items.addAll(governanceQueryRepository.getReportInboxItems(reports.getContent()));
         }
         items.sort(Comparator.comparing(
                 GovernanceInboxItemResponse::timestamp,
@@ -204,65 +186,6 @@ public class GovernanceWorkbenchAppService {
                 .toList();
         long total = pages.stream().mapToLong(Page::getTotalElements).sum();
         return new org.springframework.data.domain.PageImpl<>(tasks, PageRequest.of(0, size), total);
-    }
-
-    private GovernanceInboxItemResponse toReviewInboxItem(ReviewTask task) {
-        SkillVersion version = skillVersionRepository.findById(task.getSkillVersionId()).orElse(null);
-        Skill skill = version != null ? skillRepository.findById(version.getSkillId()).orElse(null) : null;
-        Namespace namespace = skill != null ? namespaceRepository.findById(skill.getNamespaceId()).orElse(null) : null;
-        String namespaceSlug = namespace != null ? namespace.getSlug() : null;
-        String skillSlug = skill != null ? skill.getSlug() : null;
-        String versionName = version != null ? version.getVersion() : null;
-        return new GovernanceInboxItemResponse(
-                "REVIEW",
-                task.getId(),
-                join(namespaceSlug, skillSlug, versionName),
-                "Pending review",
-                task.getSubmittedAt() != null ? task.getSubmittedAt().toString() : null,
-                namespaceSlug,
-                skillSlug
-        );
-    }
-
-    private GovernanceInboxItemResponse toPromotionInboxItem(PromotionRequest request) {
-        Skill skill = skillRepository.findById(request.getSourceSkillId()).orElse(null);
-        SkillVersion version = skillVersionRepository.findById(request.getSourceVersionId()).orElse(null);
-        Namespace sourceNamespace = skill != null ? namespaceRepository.findById(skill.getNamespaceId()).orElse(null) : null;
-        Namespace targetNamespace = namespaceRepository.findById(request.getTargetNamespaceId()).orElse(null);
-        String sourceSlug = sourceNamespace != null ? sourceNamespace.getSlug() : null;
-        String skillSlug = skill != null ? skill.getSlug() : null;
-        String targetSlug = targetNamespace != null ? targetNamespace.getSlug() : null;
-        String versionName = version != null ? version.getVersion() : null;
-        return new GovernanceInboxItemResponse(
-                "PROMOTION",
-                request.getId(),
-                join(sourceSlug, skillSlug, versionName),
-                targetSlug != null ? "Promote to @" + targetSlug : "Pending promotion",
-                request.getSubmittedAt() != null ? request.getSubmittedAt().toString() : null,
-                sourceSlug,
-                skillSlug
-        );
-    }
-
-    private GovernanceInboxItemResponse toReportInboxItem(SkillReport report) {
-        Skill skill = skillRepository.findById(report.getSkillId()).orElse(null);
-        Namespace namespace = namespaceRepository.findById(report.getNamespaceId()).orElse(null);
-        String namespaceSlug = namespace != null ? namespace.getSlug() : null;
-        String skillSlug = skill != null ? skill.getSlug() : null;
-        return new GovernanceInboxItemResponse(
-                "REPORT",
-                report.getId(),
-                join(namespaceSlug, skillSlug, null),
-                report.getReason(),
-                report.getCreatedAt() != null ? report.getCreatedAt().toString() : null,
-                namespaceSlug,
-                skillSlug
-        );
-    }
-
-    private String join(String namespaceSlug, String skillSlug, String version) {
-        String path = namespaceSlug != null && skillSlug != null ? namespaceSlug + "/" + skillSlug : "Unknown target";
-        return version != null ? path + "@" + version : path;
     }
 
     private boolean hasPlatformGovernanceRole(Set<String> platformRoles) {

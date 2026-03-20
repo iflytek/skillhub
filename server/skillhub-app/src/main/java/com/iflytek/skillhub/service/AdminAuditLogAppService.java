@@ -16,6 +16,12 @@ import java.util.List;
 /**
  * Read-only application service that queries audit logs with dynamic filtering
  * tailored to administration screens.
+ *
+ * <p>This class is a documented exception to the usual app-service plus query
+ * repository split. The audit-log screen is driven by a highly dynamic,
+ * filter-heavy SQL query over a denormalized append-only table, and keeping the
+ * SQL assembly local here is clearer than widening domain repository ports or
+ * introducing an extra wrapper around the same JDBC-heavy read path.
  */
 @Service
 public class AdminAuditLogAppService {

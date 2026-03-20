@@ -1,0 +1,33 @@
+name: DeepWiki Documentation Crawler
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '**.md'
+      - 'server/src/**'
+      - 'web/src/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deepwiki-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    name: Crawl DeepWiki Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: DeepWiki Documentation Crawler
+        uses: erayack/deepwiki-action@v1
+        with:
+          repository: ${{ github.repository }}
+          max_concurrency: '3'

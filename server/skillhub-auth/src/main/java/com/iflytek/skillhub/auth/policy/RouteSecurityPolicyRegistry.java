@@ -63,6 +63,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/skills/*/*/tags/*/download"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/skills/*/*/tags/*/files"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/skills/*/*/tags/*/file"),
+            RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/*/*", "SUPER_ADMIN"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/*/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/namespaces"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/namespaces/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/namespaces"),
@@ -94,6 +96,7 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.allow(null, "/swagger-ui/**"),
             ApiTokenPolicy.require(null, "/api/v1/tokens", "token:manage"),
             ApiTokenPolicy.require(null, "/api/v1/tokens/**", "token:manage"),
+            ApiTokenPolicy.require(HttpMethod.DELETE, "/api/v1/skills/*/*", "skill:delete"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/publish", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/publish", "skill:publish"),
@@ -131,15 +134,11 @@ public class RouteSecurityPolicyRegistry {
         if (path == null) {
             return false;
         }
-        return path.startsWith("/api/")
-                || path.equals("/api/v1/publish")
-                || path.startsWith("/api/v1/auth/device/");
+        return path.startsWith("/api/");
     }
 
     public boolean shouldProjectRequestContext(String path) {
-        return path != null && (path.startsWith("/api/v1/")
-                || path.startsWith("/api/web/")
-                || path.startsWith("/api/"));
+        return path != null && path.startsWith("/api/");
     }
 
     private boolean isApiPath(String path) {

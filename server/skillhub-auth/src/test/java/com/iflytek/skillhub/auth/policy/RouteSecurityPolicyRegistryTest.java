@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.springframework.http.HttpMethod;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +20,27 @@ class RouteSecurityPolicyRegistryTest {
         assertFalse(denied.allowed());
         assertEquals("skill:publish", denied.requiredScope());
         assertTrue(allowed.allowed());
+    }
+
+    @Test
+    void authorizeApiToken_requiresDeleteScopeForHardDeleteEndpoint() {
+        var denied = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:publish"));
+        var allowed = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:delete"));
+
+        assertFalse(denied.allowed());
+        assertEquals("skill:delete", denied.requiredScope());
+        assertTrue(allowed.allowed());
+    }
+
+    @Test
+    void authorizationPolicies_shouldDeclareSuperAdminDeleteRuleForHardDeleteEndpoint() {
+        boolean matched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.DELETE
+                        && "/api/v1/skills/*/*".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.ROLE_PROTECTED
+                        && Set.of(policy.roles()).contains("SUPER_ADMIN"));
+
+        assertTrue(matched);
     }
 
     @Test

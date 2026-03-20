@@ -15,4 +15,5 @@ import java.util.Optional;
 public interface SkillTagJpaRepository extends JpaRepository<SkillTag, Long>, SkillTagRepository {
     Optional<SkillTag> findBySkillIdAndTagName(Long skillId, String tagName);
     List<SkillTag> findBySkillId(Long skillId);
+    void deleteBySkillId(Long skillId);
 }

@@ -26,6 +26,12 @@ import java.util.Set;
  * <p>The query pipeline combines structured visibility filters, full-text
  * ranking, and an optional semantic re-ranking pass over a bounded candidate
  * set.
+ *
+ * <p>This class is a deliberate direct-persistence exception. Search ranking,
+ * FTS predicates, and candidate-window tuning are storage-engine-specific
+ * concerns, so keeping the native SQL close to the search adapter is clearer
+ * than forcing that logic through domain repository ports or generic
+ * controller-facing query repositories.
  */
 @Service
 public class PostgresFullTextQueryService implements SearchQueryService {

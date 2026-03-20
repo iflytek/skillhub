@@ -16,12 +16,17 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class OAuth2LoginHandlersTest {
 
     @Test
     void successHandler_redirectsToStoredReturnTo() throws Exception {
-        OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(new com.iflytek.skillhub.auth.session.PlatformSessionService());
+        OAuthLoginFlowService oauthLoginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
+                new com.iflytek.skillhub.auth.session.PlatformSessionService(),
+                oauthLoginFlowService
+        );
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         HttpSession session = request.getSession(true);
@@ -37,6 +42,14 @@ class OAuth2LoginHandlersTest {
                 List.of()
         );
 
+        org.mockito.Mockito.when(oauthLoginFlowService.consumeReturnTo(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> {
+                    HttpSession currentSession = invocation.getArgument(0);
+                    Object value = currentSession.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
+                    currentSession.removeAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
+                    return value;
+                });
+
         handler.onAuthenticationSuccess(request, response, authentication);
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/dashboard/publish");
@@ -48,11 +61,23 @@ class OAuth2LoginHandlersTest {
 
     @Test
     void failureHandler_redirectsBackToLoginWithReturnTo() throws Exception {
-        OAuth2LoginFailureHandler handler = new OAuth2LoginFailureHandler();
+        OAuthLoginFlowService oauthLoginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2LoginFailureHandler handler = new OAuth2LoginFailureHandler(oauthLoginFlowService);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         HttpSession session = request.getSession(true);
         session.setAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE, "/settings/accounts");
+        org.mockito.Mockito.when(oauthLoginFlowService.consumeReturnTo(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> {
+                    HttpSession currentSession = invocation.getArgument(0);
+                    Object value = currentSession.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
+                    currentSession.removeAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE);
+                    return value;
+                });
+        org.mockito.Mockito.when(oauthLoginFlowService.resolveFailureRedirect(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.eq("/settings/accounts")))
+                .thenReturn("/login?returnTo=%2Fsettings%2Faccounts");
 
         handler.onAuthenticationFailure(
                 request,
