@@ -4,9 +4,37 @@ import { buildInstallCommand, buildInstallTarget, getBaseUrl } from './install-c
 describe('install-command', () => {
   const originalWindow = globalThis.window
 
+  function setMockWindow(appBaseUrl?: string) {
+    const location = {
+      protocol: 'https:',
+      host: 'fallback.example.com',
+    } satisfies Pick<Location, 'protocol' | 'host'>
+
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      writable: true,
+      value: {
+        __SKILLHUB_RUNTIME_CONFIG__: {
+          appBaseUrl,
+        },
+        location,
+      } satisfies {
+        location: Pick<Location, 'protocol' | 'host'>
+      } & {
+        __SKILLHUB_RUNTIME_CONFIG__: {
+          appBaseUrl?: string
+        }
+      },
+    })
+  }
+
   afterEach(() => {
     if (originalWindow) {
-      globalThis.window = originalWindow
+      Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        writable: true,
+        value: originalWindow,
+      })
       return
     }
     Reflect.deleteProperty(globalThis, 'window')
@@ -27,27 +55,13 @@ describe('install-command', () => {
   })
 
   it('uses the runtime app base url when available', () => {
-    globalThis.window = {
-      __SKILLHUB_RUNTIME_CONFIG__: {
-        appBaseUrl: 'https://app.example.com',
-      },
-      location: {
-        protocol: 'https:',
-        host: 'fallback.example.com',
-      },
-    } as Window
+    setMockWindow('https://app.example.com')
 
     expect(getBaseUrl()).toBe('https://app.example.com')
   })
 
   it('falls back to the browser origin when the app base url is missing', () => {
-    globalThis.window = {
-      __SKILLHUB_RUNTIME_CONFIG__: {},
-      location: {
-        protocol: 'https:',
-        host: 'fallback.example.com',
-      },
-    } as Window
+    setMockWindow()
     expect(getBaseUrl()).toBe('https://fallback.example.com')
   })
 })
