@@ -150,11 +150,11 @@ export function useSearchSkills(params: SearchParams) {
   })
 }
 
-export function useSkillDetail(namespace: string, slug: string) {
+export function useSkillDetail(namespace: string, slug: string, enabled = true) {
   return useQuery({
     queryKey: ['skills', namespace, slug],
     queryFn: () => getSkillDetail(namespace, slug),
-    enabled: !!namespace && !!slug,
+    enabled: enabled && !!namespace && !!slug,
     refetchOnMount: 'always',
   })
 }
