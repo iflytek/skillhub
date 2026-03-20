@@ -54,6 +54,8 @@ function isFrontmatterFailureMessage(message?: string): boolean {
     || message.includes('技能包校验失败：Invalid SKILL.md frontmatter')
 }
 
+const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
+
 export function PublishPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -154,13 +156,16 @@ export function PublishPage() {
             <div className="h-11 animate-shimmer rounded-lg" />
           ) : (
             <Select
-              value={normalizeSelectValue(namespaceSlug)}
-              onValueChange={setNamespaceSlug}
+              value={normalizeSelectValue(namespaceSlug) ?? EMPTY_NAMESPACE_VALUE}
+              onValueChange={(value) => {
+                setNamespaceSlug(value === EMPTY_NAMESPACE_VALUE ? '' : value)
+              }}
             >
               <SelectTrigger id="namespace">
-                <SelectValue placeholder={t('publish.selectNamespace')} />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={EMPTY_NAMESPACE_VALUE}>{t('publish.selectNamespace')}</SelectItem>
                 {namespaces?.map((ns) => (
                   <SelectItem key={ns.id} value={ns.slug}>
                     {ns.displayName} (@{ns.slug})
