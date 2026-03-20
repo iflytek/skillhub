@@ -42,4 +42,16 @@ class LabelControllerTest {
                 .andExpect(jsonPath("$.data[0].slug").value("code-generation"))
                 .andExpect(jsonPath("$.data[0].displayName").value("Code Generation"));
     }
+
+    @Test
+    void listVisibleLabelsShouldAlsoBePublicOnV1Path() throws Exception {
+        when(publicLabelAppService.listVisibleFilters())
+                .thenReturn(List.of(new SkillLabelDto("code-generation", "RECOMMENDED", "Code Generation")));
+
+        mockMvc.perform(get("/api/v1/labels"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].slug").value("code-generation"))
+                .andExpect(jsonPath("$.data[0].displayName").value("Code Generation"));
+    }
 }
