@@ -4,7 +4,14 @@ import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
-import { Select } from '@/shared/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  normalizeSelectValue,
+} from '@/shared/ui/select'
 import {
   Table,
   TableBody,
@@ -42,6 +49,7 @@ const ACTION_OPTIONS = [
  */
 export function AuditLogPage() {
   const { t, i18n } = useTranslation()
+  const allActionFilterValue = '__all_actions__'
   const [actionFilter, setActionFilter] = useState<string>('')
   const [userIdFilter, setUserIdFilter] = useState('')
   const [requestIdFilter, setRequestIdFilter] = useState('')
@@ -105,15 +113,26 @@ export function AuditLogPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Select value={actionFilter} onChange={(e) => {
-            setActionFilter(e.target.value)
-            setPage(0)
-          }} className="w-[200px]">
-            {ACTION_OPTIONS.map((option) => (
-              <option key={option.value || 'all'} value={option.value}>
-                {t(option.labelKey)}
-              </option>
-            ))}
+          <Select
+            value={normalizeSelectValue(actionFilter) ?? allActionFilterValue}
+            onValueChange={(value) => {
+              setActionFilter(value === allActionFilterValue ? '' : value)
+              setPage(0)
+            }}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.value || allActionFilterValue}
+                  value={option.value || allActionFilterValue}
+                >
+                  {t(option.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           <Input
             placeholder={t('auditLog.userIdPlaceholder')}

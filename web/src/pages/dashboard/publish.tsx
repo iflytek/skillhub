@@ -3,7 +3,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { UploadZone } from '@/features/publish/upload-zone'
 import { Button } from '@/shared/ui/button'
-import { Select } from '@/shared/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  normalizeSelectValue,
+} from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { useMyNamespaces, usePublishSkill } from '@/shared/hooks/use-skill-queries'
@@ -147,30 +154,34 @@ export function PublishPage() {
             <div className="h-11 animate-shimmer rounded-lg" />
           ) : (
             <Select
-              id="namespace"
-              value={namespaceSlug}
-              onChange={(e) => setNamespaceSlug(e.target.value)}
+              value={normalizeSelectValue(namespaceSlug)}
+              onValueChange={setNamespaceSlug}
             >
-              <option value="">{t('publish.selectNamespace')}</option>
-              {namespaces?.map((ns) => (
-                <option key={ns.id} value={ns.slug}>
-                  {ns.displayName} (@{ns.slug})
-                </option>
-              ))}
+              <SelectTrigger id="namespace">
+                <SelectValue placeholder={t('publish.selectNamespace')} />
+              </SelectTrigger>
+              <SelectContent>
+                {namespaces?.map((ns) => (
+                  <SelectItem key={ns.id} value={ns.slug}>
+                    {ns.displayName} (@{ns.slug})
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           )}
         </div>
 
         <div className="space-y-3">
           <Label htmlFor="visibility" className="text-sm font-semibold font-heading">{t('publish.visibility')}</Label>
-          <Select
-            id="visibility"
-            value={visibility}
-            onChange={(e) => setVisibility(e.target.value)}
-          >
-            <option value="PUBLIC">{t('publish.visibilityOptions.public')}</option>
-            <option value="NAMESPACE_ONLY">{namespaceOnlyLabel}</option>
-            <option value="PRIVATE">{t('publish.visibilityOptions.private')}</option>
+          <Select value={visibility} onValueChange={setVisibility}>
+            <SelectTrigger id="visibility">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PUBLIC">{t('publish.visibilityOptions.public')}</SelectItem>
+              <SelectItem value="NAMESPACE_ONLY">{namespaceOnlyLabel}</SelectItem>
+              <SelectItem value="PRIVATE">{t('publish.visibilityOptions.private')}</SelectItem>
+            </SelectContent>
           </Select>
         </div>
 
