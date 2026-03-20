@@ -18,7 +18,7 @@ public record SkillDetailResponse(
         Integer ratingCount,
         boolean hidden,
         String namespace,
-        List<LabelResponse> labels,
+        List<SkillLabelDto> labels,
         boolean canManageLifecycle,
         boolean canSubmitPromotion,
         boolean canInteract,

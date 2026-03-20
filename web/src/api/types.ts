@@ -147,7 +147,7 @@ export interface SkillSummary {
   resolutionMode?: string
 }
 
-export type LabelItem = Omit<components['schemas']['LabelResponse'], 'slug' | 'type' | 'displayName'> & {
+export type LabelItem = Omit<components['schemas']['SkillLabelDto'], 'slug' | 'type' | 'displayName'> & {
   slug: string
   type: 'RECOMMENDED' | 'PRIVILEGED' | string
   displayName: string

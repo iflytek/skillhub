@@ -3408,12 +3408,6 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
-        LabelResponse: {
-            slug?: string;
-            /** @enum {string} */
-            type?: "RECOMMENDED" | "PRIVILEGED";
-            displayName?: string;
-        };
         SkillDetailResponse: {
             /** Format: int64 */
             id?: number;
@@ -3433,7 +3427,7 @@ export interface components {
             ratingCount?: number;
             hidden?: boolean;
             namespace?: string;
-            labels?: components["schemas"]["LabelResponse"][];
+            labels?: components["schemas"]["SkillLabelDto"][];
             canManageLifecycle?: boolean;
             canSubmitPromotion?: boolean;
             canInteract?: boolean;

@@ -69,6 +69,10 @@ public class SkillLabelAppService {
         return toDtos(skillLabelService.listSkillLabels(skill.getId()));
     }
 
+    public List<SkillLabelDto> listSkillLabelsBySkillId(Long skillId) {
+        return toDtos(skillLabelService.listSkillLabels(skillId));
+    }
+
     @Transactional
     public SkillLabelDto attachLabel(String namespaceSlug,
                                      String skillSlug,
