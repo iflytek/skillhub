@@ -13,32 +13,29 @@ export function buildInstallTarget(namespace: string, slug: string): string {
   return namespace === 'global' ? slug : `${namespace}--${slug}`
 }
 
-export function getRegistryUrl(): string {
+export function getBaseUrl(): string {
   if (typeof window === 'undefined') {
     return ''
   }
   const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
-  if (runtimeConfig?.registryUrl) {
-    return runtimeConfig.registryUrl
-  }
   if (runtimeConfig?.appBaseUrl) {
     return runtimeConfig.appBaseUrl
   }
   return `${window.location.protocol}//${window.location.host}`
 }
 
-export function buildInstallCommand(namespace: string, slug: string, registryUrl: string): string {
+export function buildInstallCommand(namespace: string, slug: string, baseUrl: string): string {
   const installTarget = buildInstallTarget(namespace, slug)
-  return `npx clawhub install ${installTarget} --registry ${registryUrl}`
+  return `npx clawhub install ${installTarget} --registry ${baseUrl}`
 }
 
 export function InstallCommand({ namespace, slug }: InstallCommandProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
-  const registryUrl = useMemo(() => getRegistryUrl(), [])
+  const baseUrl = useMemo(() => getBaseUrl(), [])
 
-  const command = useMemo(() => buildInstallCommand(namespace, slug, registryUrl), [namespace, registryUrl, slug])
+  const command = useMemo(() => buildInstallCommand(namespace, slug, baseUrl), [baseUrl, namespace, slug])
 
   const handleCopy = async () => {
     try {

@@ -51,7 +51,6 @@ export const WEB_API_PREFIX = '/api/web'
 type RuntimeConfig = {
   apiBaseUrl?: string
   appBaseUrl?: string
-  registryUrl?: string
   authDirectEnabled?: string
   authDirectProvider?: string
   authSessionBootstrapEnabled?: string
