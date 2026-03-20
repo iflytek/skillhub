@@ -59,7 +59,7 @@
 
 - `headlineVersion`：当前详情页/我的技能列表主展示版本
 - `publishedVersion`：当前最新可公开分发的已发布版本
-- `ownerPreviewVersion`：owner 或 namespace 管理者可见的待审核版本
+- `ownerPreviewVersion`：详情 projection 中仅暴露给 owner / namespace 管理者的 `PENDING_REVIEW` 版本
 - `resolutionMode`：`PUBLISHED` / `OWNER_PREVIEW` / `NONE`
 
 业务规则：
@@ -68,6 +68,51 @@
 - owner 进入详情页时，如果没有可用 `publishedVersion`，才允许 `headlineVersion = ownerPreviewVersion`
 - 推广到全局、安装命令、公开下载都只能绑定到 `publishedVersion`
 - `hidden` 是独立治理覆盖层，不属于 skill 生命周期状态机
+
+### 1.3 Skill 可见性与角色访问矩阵
+
+以下矩阵以当前后端实现为准，综合了 `VisibilityChecker`、`SkillQueryService`、`SkillDownloadService`、`ReviewPermissionChecker` 的实际行为。
+
+#### 1.3.1 Skill 容器读取
+
+| 角色 | PUBLIC | NAMESPACE_ONLY | PRIVATE | hidden 任意 visibility | 无 `publishedVersion`（`latest_version_id=null`） |
+|------|--------|----------------|---------|------------------------|-----------------------------------------------|
+| 匿名用户 | 可读 | 不可读 | 不可读 | 不可读 | 不可读 |
+| 登录非成员 | 可读 | 不可读 | 不可读 | 不可读 | 不可读 |
+| namespace MEMBER | 可读 | 可读 | 不可读 | 不可读 | 仅自己是 owner 时可读 |
+| skill owner | 可读 | 可读 | 可读 | 可读 | 可读 |
+| namespace ADMIN / OWNER | 可读 | 可读 | 可读 | 可读 | 不可读，除非本人也是 skill owner |
+| SKILL_ADMIN / SUPER_ADMIN（仅平台角色） | 与普通登录用户一致；普通读路径不会因为平台角色自动穿透 private / hidden / unpublished |
+
+补充：
+- `hidden=true` 时，可读权限会收敛为“skill owner 或 namespace `ADMIN` / `OWNER`”
+- `visibility=PUBLIC` 也不意味着未发布 skill 可见；当 `latest_version_id` 为空时，只有 owner 能读
+
+#### 1.3.2 Version 状态读取
+
+| 场景 / 角色 | DRAFT | PENDING_REVIEW | PUBLISHED | REJECTED | YANKED |
+|------------|-------|----------------|-----------|----------|--------|
+| 普通 skill 详情页主版本投影 | 不展示 | owner / namespace 管理者可作为 `ownerPreviewVersion` 展示 | 展示 | 不展示 | 不展示 |
+| 普通 `listVersions` 访客 | 不可见 | 不可见 | 可见 | 不可见 | 不可见 |
+| `listVersions` 的 owner / namespace ADMIN / OWNER | 可见 | 可见 | 可见 | 可见 | 可见 |
+| 常规 `getVersionDetail` | 不可读 | 仅 owner 可读 | 可读 | 不可读 | 不可读 |
+| 下载 / resolve / tag / 文件读取 | 不可用 | 不可用 | 可用 | 不可用 | 不可用 |
+| review 详情页 | 可见完整快照 | 可见完整快照 | 可见完整快照 | 可见完整快照 | 可见完整快照 |
+
+补充：
+- `YANKED` 版本仍出现在管理视角的版本列表中，但不可下载
+- `yank` 当前最新已发布版本时，会重算 `latest_version_id` 指向下一个最新的 `PUBLISHED` 版本；若没有，则置空
+
+#### 1.3.3 审核 / 推广 / 治理动作
+
+| 角色 | 发布新版本 | 提交审核 | 审核团队空间 | 审核全局空间 | 提交推广 | 审核推广 | hide / unhide | yank 已发布版本 |
+|------|------------|----------|--------------|--------------|----------|----------|---------------|----------------|
+| 匿名用户 | 不可 | 不可 | 不可 | 不可 | 不可 | 不可 | 不可 | 不可 |
+| namespace MEMBER | 可发布到所属 namespace；新版本进入 `PENDING_REVIEW` | 自己作为 owner 时可；不能代别人提审 | 不可 | 不可 | 自己作为 owner 时可 | 不可 | 不可 | 不可 |
+| skill owner | 可 | 可 | 不可 | 不可 | 可 | 不可 | 不可 | 不可 |
+| namespace ADMIN / OWNER | 可 | 可为本空间 skill 提交审核 | 可 | 不可 | 可 | 不可 | 不可 | 不可 |
+| SKILL_ADMIN | 可提交并可代提审；但普通发布仍非直发 | 可 | 可 | 可 | 可 | 可，但不能审自己的 promotion | 不可 | 可 |
+| SUPER_ADMIN | 可跨 namespace 发布且直接 `PUBLISHED`，跳过 membership 检查和 review task | 可 | 可 | 可 | 可 | 可；review 场景下还能审自己的提交 | 可 | 可 |
 
 ### 对象存储写入策略
 

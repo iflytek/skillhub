@@ -4,9 +4,8 @@ import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
-import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
-import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
-import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
+import com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException;
+import com.iflytek.skillhub.domain.shared.exception.LocalizedMessage;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.security.SensitiveLogSanitizer;
 import com.iflytek.skillhub.storage.StorageAccessException;
@@ -45,39 +44,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(LocalizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleLocalizedError(LocalizedException ex, HttpServletRequest request) {
-        HttpStatus status = ex.status();
-        logHandledException(status, ex.messageCode(), request);
-        return ResponseEntity.status(status).body(
-            apiResponseFactory.error(status.value(), ex.messageCode(), ex.messageArgs()));
+        return renderLocalizedError(ex, ex.status(), request);
     }
 
     @ExceptionHandler(AuthFlowException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthFlowException(AuthFlowException ex, HttpServletRequest request) {
-        HttpStatus status = ex.getStatus();
-        logHandledException(status, ex.getMessageCode(), request);
-        return ResponseEntity.status(status).body(
-            apiResponseFactory.error(status.value(), ex.getMessageCode(), ex.getMessageArgs()));
+        return renderLocalizedError(ex, ex.getStatus(), request);
     }
 
-    @ExceptionHandler(DomainBadRequestException.class)
-    public ResponseEntity<ApiResponse<Void>> handleDomainBadRequest(DomainBadRequestException ex, HttpServletRequest request) {
-        logHandledException(HttpStatus.BAD_REQUEST, ex.messageCode(), request);
-        return ResponseEntity.badRequest().body(
-                apiResponseFactory.error(400, ex.messageCode(), ex.messageArgs()));
-    }
-
-    @ExceptionHandler(DomainForbiddenException.class)
-    public ResponseEntity<ApiResponse<Void>> handleDomainForbidden(DomainForbiddenException ex, HttpServletRequest request) {
-        logHandledException(HttpStatus.FORBIDDEN, ex.messageCode(), request);
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                apiResponseFactory.error(403, ex.messageCode(), ex.messageArgs()));
-    }
-
-    @ExceptionHandler(DomainNotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleDomainNotFound(DomainNotFoundException ex, HttpServletRequest request) {
-        logHandledException(HttpStatus.NOT_FOUND, ex.messageCode(), request);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                apiResponseFactory.error(404, ex.messageCode(), ex.messageArgs()));
+    @ExceptionHandler(LocalizedDomainException.class)
+    public ResponseEntity<ApiResponse<Void>> handleLocalizedDomainException(LocalizedDomainException ex, HttpServletRequest request) {
+        return renderLocalizedError(ex, HttpStatus.valueOf(ex.statusCode()), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -158,6 +135,14 @@ public class GlobalExceptionHandler {
                 resolveUserId(request),
                 messageCode
         );
+    }
+
+    private ResponseEntity<ApiResponse<Void>> renderLocalizedError(LocalizedMessage error,
+                                                                   HttpStatus status,
+                                                                   HttpServletRequest request) {
+        logHandledException(status, error.messageCode(), request);
+        return ResponseEntity.status(status).body(
+                apiResponseFactory.error(status.value(), error.messageCode(), error.messageArgs()));
     }
 
     private String resolveUserId(HttpServletRequest request) {
