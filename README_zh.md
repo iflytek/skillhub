@@ -67,12 +67,22 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 ### 默认账户
 
-本地开发环境提供两个模拟用户：
+默认执行 `make dev-all` 时，后端以 `local` profile 启动。
+在这个模式下，本地开发会保留下面两个模拟用户，同时默认创建一个可账号密码登录的 bootstrap 管理员：
 
 - `local-user` — 普通用户，用于发布和命名空间操作
 - `local-admin` — 超级管理员，用于审核和管理流程
 
 在本地开发中使用 `X-Mock-User-Id` 请求头切换用户。
+本地 bootstrap 管理员默认已在 `application-local.yml` 中开启，本地登录账号来自以下配置：
+
+- 用户名：`BOOTSTRAP_ADMIN_USERNAME`，默认是 `admin`
+- 密码：`BOOTSTRAP_ADMIN_PASSWORD`
+  - 本地应用默认回退值是 `ChangeMe!2026`
+- 本地源码启动如需关闭自动创建，请在启动后端前设置环境变量
+  `BOOTSTRAP_ADMIN_ENABLED=false`
+- 容器或发布环境则在 `.env.release` 或 Compose 环境变量中配置该值
+- 发布模板 `.env.release.example` 里的占位值仍然是 `replace-this-admin-password`
 
 ### 停止服务
 
