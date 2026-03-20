@@ -26,6 +26,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Create package-lock.json for action cache
+        run: echo '{}' > package-lock.json
+
       - name: DeepWiki Documentation Crawler
         uses: erayack/deepwiki-action@v1
         with:
