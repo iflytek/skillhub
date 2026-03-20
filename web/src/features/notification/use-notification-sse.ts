@@ -11,13 +11,13 @@ const SSE_URL = `${WEB_API_PREFIX}/notifications/sse`
  * On receiving a "notification" event, invalidates the unread count and list queries.
  * On reconnect (open event after initial connect), refetches unread count to sync badge.
  */
-export function useNotificationSse(enabled: boolean) {
+export function useNotificationSse(userId?: string | null) {
   const queryClient = useQueryClient()
   const esRef = useRef<ReturnType<typeof createNotificationSseConnection> | null>(null)
   const connectedRef = useRef(false)
 
   useEffect(() => {
-    if (!enabled) return
+    if (!userId) return
 
     const es = createNotificationSseConnection(SSE_URL)
     esRef.current = es
@@ -25,14 +25,14 @@ export function useNotificationSse(enabled: boolean) {
     es.addEventListener('open', () => {
       if (connectedRef.current) {
         // Reconnect — refetch unread count to sync any missed events
-        void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount() })
+        void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(userId) })
       }
       connectedRef.current = true
     })
 
     es.addEventListener('notification', () => {
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount() })
-      void queryClient.invalidateQueries({ queryKey: ['notifications', 'list'] })
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(userId) })
+      void queryClient.invalidateQueries({ queryKey: ['notifications', userId, 'list'] })
     })
 
     return () => {
@@ -40,5 +40,5 @@ export function useNotificationSse(enabled: boolean) {
       esRef.current = null
       connectedRef.current = false
     }
-  }, [enabled, queryClient])
+  }, [userId, queryClient])
 }

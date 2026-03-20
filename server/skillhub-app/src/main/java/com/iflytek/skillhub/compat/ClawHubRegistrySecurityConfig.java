@@ -18,7 +18,13 @@ public class ClawHubRegistrySecurityConfig {
     @Order(0)
     public SecurityFilterChain clawHubRegistryFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/v1/search", "/api/v1/download", "/api/v1/skills/*")
+                .securityMatcher(
+                        "/api/v1/search",
+                        "/api/v1/download",
+                        "/api/v1/skills/*",
+                        "/api/v1/labels",
+                        "/api/web/labels"
+                )
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .requestCache(cache -> cache.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

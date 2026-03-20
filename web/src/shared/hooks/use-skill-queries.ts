@@ -3,6 +3,7 @@ import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, Skill
 import { fetchJson, fetchText, getCsrfHeaders, labelApi, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
+import { shouldFallbackVisibleLabelsError } from './label-query'
 import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
 /**
@@ -23,7 +24,16 @@ async function getSkillDetail(namespace: string, slug: string): Promise<SkillDet
 }
 
 async function getVisibleLabels(): Promise<LabelItem[]> {
-  return labelApi.listVisible()
+  try {
+    return await labelApi.listVisible()
+  } catch (error) {
+    // Public label filters should never break page rendering. Fall back to an empty list when
+    // the backend denies or fails this optional metadata endpoint.
+    if (shouldFallbackVisibleLabelsError(error)) {
+      return []
+    }
+    throw error
+  }
 }
 
 async function getSkillLabels(namespace: string, slug: string): Promise<LabelItem[]> {

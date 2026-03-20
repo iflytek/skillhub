@@ -1,42 +1,54 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { notificationApi } from '@/api/client'
 import type { NotificationItem, PagedResponse } from '@/api/types'
+import { getNotificationQueryKeyScope } from './notification-session'
 
 export const NOTIFICATION_QUERY_KEYS = {
-  list: (page?: number, size?: number) => ['notifications', 'list', page, size] as const,
-  unreadCount: () => ['notifications', 'unread-count'] as const,
+  list: (userId?: string | null, page?: number, size?: number) => [...getNotificationQueryKeyScope(userId), 'list', page, size] as const,
+  unreadCount: (userId?: string | null) => [...getNotificationQueryKeyScope(userId), 'unread-count'] as const,
+  listByCategory: (userId?: string | null, page?: number, size?: number, category?: string) =>
+    [...getNotificationQueryKeyScope(userId), 'list', page, size, category] as const,
 }
 
 /**
  * Fetches paginated notification list.
  */
-export function useNotifications(page = 0, size = 5) {
+export function useNotifications(userId?: string | null, page = 0, size = 5) {
   return useQuery({
-    queryKey: NOTIFICATION_QUERY_KEYS.list(page, size),
+    queryKey: NOTIFICATION_QUERY_KEYS.list(userId, page, size),
     queryFn: () => notificationApi.list({ page, size }) as Promise<PagedResponse<NotificationItem>>,
-    staleTime: 30_000,
+    enabled: !!userId,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 }
 
 /**
  * Fetches the current unread notification count for the badge.
  */
-export function useUnreadCount() {
+export function useUnreadCount(userId?: string | null) {
   return useQuery({
-    queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(),
+    queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(userId),
     queryFn: () => notificationApi.getUnreadCount(),
-    staleTime: 30_000,
+    enabled: !!userId,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 }
 
 /**
  * Fetches paginated notification list with optional category filter.
  */
-export function useNotificationList(page = 0, size = 20, category?: string) {
+export function useNotificationList(userId?: string | null, page = 0, size = 20, category?: string) {
   return useQuery({
-    queryKey: ['notifications', 'list', page, size, category],
+    queryKey: NOTIFICATION_QUERY_KEYS.listByCategory(userId, page, size, category),
     queryFn: () => notificationApi.list({ page, size, category }) as Promise<PagedResponse<NotificationItem>>,
-    staleTime: 30_000,
+    enabled: !!userId,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 }
 

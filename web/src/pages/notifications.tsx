@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NotificationItem } from '@/api/types'
+import { useAuth } from '@/features/auth/use-auth'
 import { resolveNotificationDisplay } from '@/features/notification/notification-content'
 import { getNotificationItems, getNotificationTotal } from '@/features/notification/notification-page'
 import { resolveNotificationTarget } from '@/features/notification/notification-target'
@@ -57,12 +58,13 @@ function CategoryBadge({ category }: { category: NotificationItem['category'] })
 
 export function NotificationsPage() {
   const { t, i18n } = useTranslation()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [page, setPage] = useState(0)
   const [activeCategory, setActiveCategory] = useState<Category>('ALL')
 
   const categoryParam = activeCategory === 'ALL' ? undefined : activeCategory
-  const { data, isLoading } = useNotificationList(page, PAGE_SIZE, categoryParam)
+  const { data, isLoading } = useNotificationList(user?.userId, page, PAGE_SIZE, categoryParam)
   const markAllRead = useMarkAllRead()
   const markRead = useMarkRead()
 

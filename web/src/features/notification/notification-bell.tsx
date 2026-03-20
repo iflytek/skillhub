@@ -5,6 +5,10 @@ import { useUnreadCount } from './use-notifications'
 import { useNotificationSse } from './use-notification-sse'
 import { NotificationDropdown } from './notification-dropdown'
 
+export function resolveNotificationUserId(user?: { userId?: string } | null) {
+  return user?.userId
+}
+
 /**
  * Bell icon with unread badge. Toggles the notification dropdown on click.
  * SSE connection is established here at the authenticated user level.
@@ -15,10 +19,11 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const { data: unreadData } = useUnreadCount()
+  const notificationUserId = resolveNotificationUserId(user)
+  const { data: unreadData } = useUnreadCount(notificationUserId)
   const unreadCount = unreadData?.count ?? 0
 
-  useNotificationSse(!!user)
+  useNotificationSse(notificationUserId)
 
   // Close dropdown when clicking outside
   useEffect(() => {

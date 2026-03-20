@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ApiError, authApi } from '@/api/client'
+import { clearSessionScopedQueries } from '@/features/notification/notification-session'
 import { truncateErrorMessage } from '@/shared/lib/error-display'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
@@ -52,6 +53,7 @@ export function SecuritySettingsPage() {
       } catch (error) {
         console.error('Logout after password change failed:', error)
       } finally {
+        clearSessionScopedQueries(queryClient)
         queryClient.setQueryData(['auth', 'me'], null)
       }
       await navigate({ to: '/login', search: { returnTo: '' } })

@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import type { NotificationItem } from '@/api/types'
 import { getNotificationItems } from './notification-page'
 import { resolveNotificationDisplay } from './notification-content'
+import { useAuth } from '@/features/auth/use-auth'
 import { useNotifications, useMarkAllRead, useMarkRead } from './use-notifications'
 import { resolveNotificationTarget } from './notification-target'
 
@@ -30,7 +31,8 @@ function formatRelativeTime(dateStr: string, lang: string): string {
  */
 export function NotificationDropdown({ onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const { data, isLoading } = useNotifications(0, 5)
+  const { user } = useAuth()
+  const { data, isLoading } = useNotifications(user?.userId, 0, 5)
   const markAllRead = useMarkAllRead()
   const markRead = useMarkRead()
 
