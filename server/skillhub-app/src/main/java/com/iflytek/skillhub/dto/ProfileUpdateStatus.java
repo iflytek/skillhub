@@ -7,5 +7,7 @@ public enum ProfileUpdateStatus {
     /** Changes were applied immediately to user_account. */
     APPLIED,
     /** Changes are queued for human review (not yet applied). */
-    PENDING_REVIEW
+    PENDING_REVIEW,
+    /** Some fields applied immediately, others queued for review. */
+    PARTIALLY_APPLIED
 }

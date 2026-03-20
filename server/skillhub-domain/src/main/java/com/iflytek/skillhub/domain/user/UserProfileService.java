@@ -27,17 +27,20 @@ public class UserProfileService {
     private final ProfileChangeRequestRepository changeRequestRepository;
     private final ProfileModerationService moderationService;
     private final ProfileModerationConfig moderationConfig;
+    private final ProfileFieldPolicyConfig fieldPolicyConfig;
     private final AuditLogService auditLogService;
 
     public UserProfileService(UserAccountRepository userAccountRepository,
                                ProfileChangeRequestRepository changeRequestRepository,
                                ProfileModerationService moderationService,
                                ProfileModerationConfig moderationConfig,
+                               ProfileFieldPolicyConfig fieldPolicyConfig,
                                AuditLogService auditLogService) {
         this.userAccountRepository = userAccountRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.moderationService = moderationService;
         this.moderationConfig = moderationConfig;
+        this.fieldPolicyConfig = fieldPolicyConfig;
         this.auditLogService = auditLogService;
     }
 
@@ -80,25 +83,47 @@ public class UserProfileService {
             }
         }
 
-        // 3. Human review (if enabled)
-        if (moderationConfig.humanReview()) {
-            cancelPendingRequests(userId);  // Replace any existing PENDING request
-            saveChangeRequest(userId, changes, oldValues, ProfileChangeStatus.PENDING,
-                              moderationConfig.machineReview() ? "PASS" : "SKIPPED", null);
-            return UpdateProfileResult.pendingReview();
+        // 3. Split changes by field policy: immediate vs review-required
+        Map<String, ProfileFieldPolicyConfig.FieldPolicy> policies = fieldPolicyConfig.fieldPolicies();
+        Map<String, String> immediateChanges = new LinkedHashMap<>();
+        Map<String, String> reviewChanges = new LinkedHashMap<>();
+
+        for (Map.Entry<String, String> entry : changes.entrySet()) {
+            ProfileFieldPolicyConfig.FieldPolicy policy = policies.get(entry.getKey());
+            if (policy != null && policy.requiresReview() && moderationConfig.humanReview()) {
+                reviewChanges.put(entry.getKey(), entry.getValue());
+            } else {
+                immediateChanges.put(entry.getKey(), entry.getValue());
+            }
         }
 
-        // 4. No moderation — apply changes immediately
-        applyChanges(user, changes);
-        saveChangeRequest(userId, changes, oldValues, ProfileChangeStatus.APPROVED,
-                          moderationConfig.machineReview() ? "PASS" : "SKIPPED", null);
+        String machineTag = moderationConfig.machineReview() ? "PASS" : "SKIPPED";
 
-        // 5. Audit log
-        auditLogService.record(userId, "PROFILE_UPDATE", "USER", null,
-                               requestId, clientIp, userAgent,
-                               toJson(Map.of("changes", changes, "oldValues", oldValues)));
+        // 4. Apply immediate changes
+        if (!immediateChanges.isEmpty()) {
+            applyChanges(user, immediateChanges);
+            saveChangeRequest(userId, immediateChanges, oldValues, ProfileChangeStatus.APPROVED,
+                              machineTag, null);
+            auditLogService.record(userId, "PROFILE_UPDATE", "USER", null,
+                                   requestId, clientIp, userAgent,
+                                   toJson(Map.of("changes", immediateChanges, "oldValues", oldValues)));
+        }
 
-        return UpdateProfileResult.applied();
+        // 5. Queue review changes
+        if (!reviewChanges.isEmpty()) {
+            cancelPendingRequests(userId);
+            saveChangeRequest(userId, reviewChanges, oldValues, ProfileChangeStatus.PENDING,
+                              machineTag, null);
+        }
+
+        // 6. Return appropriate result
+        if (!immediateChanges.isEmpty() && !reviewChanges.isEmpty()) {
+            return UpdateProfileResult.mixed(immediateChanges, reviewChanges);
+        } else if (!reviewChanges.isEmpty()) {
+            return UpdateProfileResult.pendingReview();
+        } else {
+            return UpdateProfileResult.applied();
+        }
     }
 
     /**

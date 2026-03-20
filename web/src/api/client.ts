@@ -992,11 +992,16 @@ export const profileApi = {
       reviewComment: string | null
       createdAt: string
     } | null
+    fieldPolicies: Record<string, { editable: boolean; requiresReview: boolean }>
   }> {
     return fetchJson('/api/v1/user/profile')
   },
-  async updateProfile(request: { displayName: string }): Promise<{ status: string }> {
-    return fetchJson<{ status: string }>('/api/v1/user/profile', {
+  async updateProfile(request: Record<string, string>): Promise<{
+    status: string
+    appliedFields?: Record<string, string>
+    pendingFields?: Record<string, string>
+  }> {
+    return fetchJson<{ status: string; appliedFields?: Record<string, string>; pendingFields?: Record<string, string> }>('/api/v1/user/profile', {
       method: 'PATCH',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',

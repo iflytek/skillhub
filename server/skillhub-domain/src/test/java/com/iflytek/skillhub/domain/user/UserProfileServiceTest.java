@@ -36,6 +36,9 @@ class UserProfileServiceTest {
     private ProfileModerationConfig moderationConfig;
 
     @Mock
+    private ProfileFieldPolicyConfig fieldPolicyConfig;
+
+    @Mock
     private AuditLogService auditLogService;
 
     @InjectMocks
@@ -51,6 +54,11 @@ class UserProfileServiceTest {
         return Map.of("displayName", newName);
     }
 
+    private void stubFieldPolicies(boolean requiresReview) {
+        when(fieldPolicyConfig.fieldPolicies()).thenReturn(Map.of(
+                "displayName", new ProfileFieldPolicyConfig.FieldPolicy(true, requiresReview)));
+    }
+
     // ===== AC-P-001: Successful update with no moderation =====
 
     @Test
@@ -58,7 +66,7 @@ class UserProfileServiceTest {
         var user = testUser();
         when(userAccountRepository.findById("user-1")).thenReturn(Optional.of(user));
         when(moderationConfig.machineReview()).thenReturn(false);
-        when(moderationConfig.humanReview()).thenReturn(false);
+        stubFieldPolicies(false);
 
         var result = userProfileService.updateProfile(
                 "user-1", displayNameChange("NewName"), "req-1", "127.0.0.1", "TestAgent");
@@ -87,7 +95,7 @@ class UserProfileServiceTest {
         var user = testUser();
         when(userAccountRepository.findById("user-1")).thenReturn(Optional.of(user));
         when(moderationConfig.machineReview()).thenReturn(false);
-        when(moderationConfig.humanReview()).thenReturn(false);
+        stubFieldPolicies(false);
 
         var result = userProfileService.updateProfile(
                 "user-1", displayNameChange("OldName"), "req-1", "127.0.0.1", "TestAgent");
@@ -104,6 +112,7 @@ class UserProfileServiceTest {
         when(userAccountRepository.findById("user-1")).thenReturn(Optional.of(user));
         when(moderationConfig.machineReview()).thenReturn(false);
         when(moderationConfig.humanReview()).thenReturn(true);
+        stubFieldPolicies(true);
         when(changeRequestRepository.findByUserIdAndStatus("user-1", ProfileChangeStatus.PENDING))
                 .thenReturn(List.of());
 
@@ -138,6 +147,7 @@ class UserProfileServiceTest {
         when(userAccountRepository.findById("user-1")).thenReturn(Optional.of(user));
         when(moderationConfig.machineReview()).thenReturn(false);
         when(moderationConfig.humanReview()).thenReturn(true);
+        stubFieldPolicies(true);
         when(changeRequestRepository.findByUserIdAndStatus("user-1", ProfileChangeStatus.PENDING))
                 .thenReturn(List.of(oldRequest));
 
@@ -161,6 +171,7 @@ class UserProfileServiceTest {
         when(moderationConfig.humanReview()).thenReturn(true);
         when(moderationService.moderate("user-1", displayNameChange("NewName")))
                 .thenReturn(ModerationResult.approved());
+        stubFieldPolicies(true);
         when(changeRequestRepository.findByUserIdAndStatus("user-1", ProfileChangeStatus.PENDING))
                 .thenReturn(List.of());
 

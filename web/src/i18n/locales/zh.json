@@ -647,7 +647,11 @@
     },
     "pendingReview": "你的昵称变更为「{{name}}」正在审核中。",
     "rejected": "你的昵称变更被拒绝。",
-    "rejectedReason": "原因：{{reason}}"
+    "rejectedReason": "原因：{{reason}}",
+    "reviewHint": "部分修改需要管理员审核后生效。",
+    "partiallyAppliedTitle": "部分已生效",
+    "partiallyAppliedDescription": "部分修改已立即生效，其余修改正在等待管理员审核。",
+    "noChanges": "没有需要保存的修改。"
   },
   "security": {
     "title": "安全设置",

@@ -15,7 +15,13 @@ import {
 } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
-import { Select } from '@/shared/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 
 interface AddNamespaceMemberDialogProps {
   slug: string
@@ -212,16 +218,17 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
 
           <div className="space-y-2">
             <Label htmlFor="member-role">{t('members.roleLabel')}</Label>
-            <Select
-              id="member-role"
-              value={role}
-              onChange={(event) => setRole(event.target.value as NamespaceRole)}
-            >
-              {ROLE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {t(option === 'ADMIN' ? 'members.roleAdmin' : 'members.roleMember')}
-                </option>
-              ))}
+            <Select value={role} onValueChange={(value) => setRole(value as NamespaceRole)}>
+              <SelectTrigger id="member-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {t(option === 'ADMIN' ? 'members.roleAdmin' : 'members.roleMember')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         </div>

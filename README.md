@@ -70,7 +70,7 @@ Start the full local stack with one of the following commands:
 Official images:
 ```bash
 rm -rf /tmp/skillhub-runtime
-curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up
 ```
 
 The default command pulls the `latest` stable release images. Use

@@ -100,6 +100,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
     "/api/web/skills/{namespace}/{slug}/labels/{labelSlug}": {
         parameters: {
             query?: never;
@@ -132,6 +133,8 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+=======
+>>>>>>> origin/main
     "/api/v1/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -244,7 +247,11 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
     "/api/v1/admin/labels/{slug}": {
+=======
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
+>>>>>>> origin/main
         parameters: {
             query?: never;
             header?: never;
@@ -252,6 +259,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+<<<<<<< HEAD
         put: operations["updateLabel"];
         post?: never;
         delete: operations["deleteLabel"];
@@ -270,12 +278,17 @@ export interface paths {
         get?: never;
         put: operations["updateSortOrder"];
         post?: never;
+=======
+        put?: never;
+        post: operations["withdrawReview"];
+>>>>>>> origin/main
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
     "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
         parameters: {
             query?: never;
@@ -292,6 +305,8 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+=======
+>>>>>>> origin/main
     "/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
         parameters: {
             query?: never;
@@ -1300,6 +1315,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
     "/api/v1/admin/labels": {
         parameters: {
             query?: never;
@@ -1316,6 +1332,8 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+=======
+>>>>>>> origin/main
     "/api/v1/account/merge/verify": {
         parameters: {
             query?: never;
@@ -1708,6 +1726,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["resolveVersion_1"];
+<<<<<<< HEAD
         put?: never;
         post?: never;
         delete?: never;
@@ -1740,6 +1759,8 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listLabels_1"];
+=======
+>>>>>>> origin/main
         put?: never;
         post?: never;
         delete?: never;
@@ -2164,6 +2185,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
     "/api/web/labels": {
         parameters: {
             query?: never;
@@ -2196,6 +2218,8 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+=======
+>>>>>>> origin/main
     "/api/web/governance/summary": {
         parameters: {
             query?: never;
@@ -2667,6 +2691,7 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+<<<<<<< HEAD
         ApiResponseSkillLabelDto: {
             /** Format: int32 */
             code?: number;
@@ -2681,6 +2706,8 @@ export interface components {
             type?: string;
             displayName?: string;
         };
+=======
+>>>>>>> origin/main
         UpdateMemberRoleRequest: {
             /** @enum {string} */
             role: "OWNER" | "ADMIN" | "MEMBER";
@@ -2779,6 +2806,7 @@ export interface components {
         AdminUserRoleUpdateRequest: {
             role: string;
         };
+<<<<<<< HEAD
         AdminLabelUpdateRequest: {
             /** @enum {string} */
             type: "RECOMMENDED" | "PRIVILEGED";
@@ -2796,10 +2824,18 @@ export interface components {
             code?: number;
             msg?: string;
             data?: components["schemas"]["LabelDefinitionResponse"];
+=======
+        ApiResponseSkillLifecycleMutationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillLifecycleMutationResponse"];
+>>>>>>> origin/main
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
+<<<<<<< HEAD
         LabelDefinitionResponse: {
             slug?: string;
             type?: string;
@@ -2840,6 +2876,8 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
+=======
+>>>>>>> origin/main
         SkillLifecycleMutationResponse: {
             /** Format: int64 */
             skillId?: number;
@@ -3161,6 +3199,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             status?: string;
+<<<<<<< HEAD
         };
         AdminLabelCreateRequest: {
             slug: string;
@@ -3170,6 +3209,8 @@ export interface components {
             /** Format: int32 */
             sortOrder?: number;
             translations: components["schemas"]["LabelTranslationItemRequest"][];
+=======
+>>>>>>> origin/main
         };
         MergeVerifyRequest: {
             /** Format: int64 */
@@ -3213,8 +3254,19 @@ export interface components {
         };
         UpdateProfileResponse: {
             /** @enum {string} */
+<<<<<<< HEAD
             status?: "APPLIED" | "PENDING_REVIEW";
             message?: string;
+=======
+            status?: "APPLIED" | "PENDING_REVIEW" | "PARTIALLY_APPLIED";
+            message?: string;
+            appliedFields?: {
+                [key: string]: string;
+            };
+            pendingFields?: {
+                [key: string]: string;
+            };
+>>>>>>> origin/main
         };
         ApiResponseSearchResponse: {
             /** Format: int32 */
@@ -3390,6 +3442,7 @@ export interface components {
             matched?: boolean;
             downloadUrl?: string;
         };
+<<<<<<< HEAD
         ApiResponseListSkillLabelDto: {
             /** Format: int32 */
             code?: number;
@@ -3399,6 +3452,8 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
+=======
+>>>>>>> origin/main
         ApiResponseSkillDetailResponse: {
             /** Format: int32 */
             code?: number;
@@ -3427,7 +3482,10 @@ export interface components {
             ratingCount?: number;
             hidden?: boolean;
             namespace?: string;
+<<<<<<< HEAD
             labels?: components["schemas"]["SkillLabelDto"][];
+=======
+>>>>>>> origin/main
             canManageLifecycle?: boolean;
             canSubmitPromotion?: boolean;
             canInteract?: boolean;
@@ -3711,6 +3769,13 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
+<<<<<<< HEAD
+=======
+        FieldPolicyResponse: {
+            editable?: boolean;
+            requiresReview?: boolean;
+        };
+>>>>>>> origin/main
         PendingChangesResponse: {
             status?: string;
             changes?: {
@@ -3725,6 +3790,12 @@ export interface components {
             avatarUrl?: string;
             email?: string;
             pendingChanges?: components["schemas"]["PendingChangesResponse"];
+<<<<<<< HEAD
+=======
+            fieldPolicies?: {
+                [key: string]: components["schemas"]["FieldPolicyResponse"];
+            };
+>>>>>>> origin/main
         };
         ApiResponsePageResponseTokenSummaryResponse: {
             /** Format: int32 */
@@ -4346,6 +4417,7 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
     attachLabel: {
         parameters: {
             query?: never;
@@ -4442,6 +4514,8 @@ export interface operations {
             };
         };
     };
+=======
+>>>>>>> origin/main
     updateMemberRole: {
         parameters: {
             query?: never;
@@ -4670,11 +4744,16 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
     updateLabel: {
+=======
+    withdrawReview: {
+>>>>>>> origin/main
         parameters: {
             query?: never;
             header?: never;
             path: {
+<<<<<<< HEAD
                 slug: string;
             };
             cookie?: never;
@@ -4702,6 +4781,11 @@ export interface operations {
             header?: never;
             path: {
                 slug: string;
+=======
+                namespace: string;
+                slug: string;
+                version: string;
+>>>>>>> origin/main
             };
             cookie?: never;
         };
@@ -4713,21 +4797,61 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+<<<<<<< HEAD
                     "*/*": components["schemas"]["ApiResponseMessageResponse"];
+=======
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+>>>>>>> origin/main
                 };
             };
         };
     };
+<<<<<<< HEAD
     updateSortOrder: {
+=======
+    withdrawReview_1: {
+>>>>>>> origin/main
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
+                };
+            };
+        };
+    };
+    rereleaseVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
+<<<<<<< HEAD
                 "application/json": components["schemas"]["LabelSortOrderUpdateRequest"];
+=======
+                "application/json": components["schemas"]["SkillVersionRereleaseRequest"];
+>>>>>>> origin/main
             };
         };
         responses: {
@@ -4737,6 +4861,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+<<<<<<< HEAD
                     "*/*": components["schemas"]["ApiResponseListLabelDefinitionResponse"];
                 };
             };
@@ -4813,6 +4938,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+=======
+>>>>>>> origin/main
                     "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
                 };
             };
@@ -6573,6 +6700,7 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
     listLabels_2: {
         parameters: {
             query?: never;
@@ -6617,6 +6745,8 @@ export interface operations {
             };
         };
     };
+=======
+>>>>>>> origin/main
     verify: {
         parameters: {
             query?: never;
@@ -7304,6 +7434,7 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
     listLabels: {
         parameters: {
             query?: never;
@@ -7350,6 +7481,8 @@ export interface operations {
             };
         };
     };
+=======
+>>>>>>> origin/main
     downloadLatest: {
         parameters: {
             query?: never;
@@ -7988,6 +8121,7 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
     listVisibleLabels: {
         parameters: {
             query?: never;
@@ -8028,6 +8162,8 @@ export interface operations {
             };
         };
     };
+=======
+>>>>>>> origin/main
     summary: {
         parameters: {
             query?: never;

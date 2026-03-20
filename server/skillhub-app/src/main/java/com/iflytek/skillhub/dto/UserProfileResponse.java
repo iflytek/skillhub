@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.dto;
 
+import java.util.Map;
+
 /**
  * Response DTO for GET /api/v1/user/profile.
  *
@@ -10,10 +12,12 @@ package com.iflytek.skillhub.dto;
  * @param avatarUrl      current self-view avatar URL
  * @param email          user email (read-only, not editable via profile)
  * @param pendingChanges pending change request details, or null if none
+ * @param fieldPolicies  per-field edit policies (editable, requiresReview)
  */
 public record UserProfileResponse(
         String displayName,
         String avatarUrl,
         String email,
-        PendingChangesResponse pendingChanges
+        PendingChangesResponse pendingChanges,
+        Map<String, FieldPolicyResponse> fieldPolicies
 ) {}
