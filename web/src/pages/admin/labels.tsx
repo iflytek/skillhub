@@ -64,7 +64,7 @@ export function normalizeLabelFormState(form: LabelFormState): LabelFormState {
     sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
     translations: form.translations
       .map((translation) => ({
-        locale: translation.locale.trim().replaceAll('_', '-').toLowerCase(),
+        locale: translation.locale.trim().replace(/_/g, '-').toLowerCase(),
         displayName: translation.displayName.trim(),
       }))
       .filter((translation) => translation.locale && translation.displayName),
