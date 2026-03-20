@@ -1,7 +1,19 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ReviewSkillDetail } from '@/api/types'
 import { ReviewSkillDetailSection } from './review-skill-detail-section'
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, values?: Record<string, string>) =>
+        values?.skill ? `${key}:${values.skill}` : key,
+      i18n: { language: 'en' },
+    }),
+  }
+})
 
 function createDetail(): ReviewSkillDetail {
   return {
@@ -55,7 +67,7 @@ describe('ReviewSkillDetailSection', () => {
     const html = renderToStaticMarkup(<ReviewSkillDetailSection detail={createDetail()} />)
 
     expect(html).toContain('1.2.0')
-    expect(html).toContain('展开全文')
+    expect(html).toContain('skillDetail.expandOverview')
   })
 
   it('renders the detail content inside a collapsed disclosure card by default', () => {
@@ -82,6 +94,6 @@ describe('ReviewSkillDetailSection', () => {
   it('renders inline error state without requiring detail data', () => {
     const html = renderToStaticMarkup(<ReviewSkillDetailSection hasError />)
 
-    expect(html).toContain('技能详情加载失败，请稍后重试。')
+    expect(html).toContain('review.skillDetailError')
   })
 })
