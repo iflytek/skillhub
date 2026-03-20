@@ -682,6 +682,7 @@
     "governance": "治理操作",
     "processing": "处理中...",
     "archiveSkill": "归档技能",
+    "unarchiveSkill": "恢复技能",
     "withdrawReview": "撤销审核",
     "hideSkill": "隐藏技能",
     "unhideSkill": "恢复技能",

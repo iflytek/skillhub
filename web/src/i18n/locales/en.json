@@ -682,6 +682,7 @@
     "governance": "Governance",
     "processing": "Processing...",
     "archiveSkill": "Archive Skill",
+    "unarchiveSkill": "Restore Skill",
     "withdrawReview": "Withdraw Review",
     "hideSkill": "Hide Skill",
     "unhideSkill": "Unhide Skill",
