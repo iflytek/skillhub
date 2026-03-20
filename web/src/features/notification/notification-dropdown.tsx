@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import type { NotificationItem } from '@/api/types'
+import { getNotificationItems } from './notification-page'
 import { useNotifications, useMarkAllRead, useMarkRead } from './use-notifications'
 import { resolveNotificationTarget } from './notification-target'
 
@@ -32,7 +33,7 @@ export function NotificationDropdown({ onClose }: Props) {
   const markAllRead = useMarkAllRead()
   const markRead = useMarkRead()
 
-  const notifications = data?.content ?? []
+  const notifications = getNotificationItems(data)
 
   function handleItemClick(item: NotificationItem) {
     if (item.status === 'UNREAD') {

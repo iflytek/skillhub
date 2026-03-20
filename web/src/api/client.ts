@@ -1100,7 +1100,7 @@ export const notificationApi = {
     if (params.page !== undefined) searchParams.set('page', String(params.page))
     if (params.size !== undefined) searchParams.set('size', String(params.size))
     if (params.category) searchParams.set('category', params.category)
-    return fetchJson<{ content: NotificationItem[]; totalElements: number; page: number; size: number }>(
+    return fetchJson<{ items: NotificationItem[]; total: number; page: number; size: number }>(
       `${WEB_API_PREFIX}/notifications?${searchParams.toString()}`,
     )
   },

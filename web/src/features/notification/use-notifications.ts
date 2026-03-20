@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { notificationApi } from '@/api/client'
+import type { NotificationItem, PagedResponse } from '@/api/types'
 
 export const NOTIFICATION_QUERY_KEYS = {
   list: (page?: number, size?: number) => ['notifications', 'list', page, size] as const,
@@ -12,7 +13,7 @@ export const NOTIFICATION_QUERY_KEYS = {
 export function useNotifications(page = 0, size = 5) {
   return useQuery({
     queryKey: NOTIFICATION_QUERY_KEYS.list(page, size),
-    queryFn: () => notificationApi.list({ page, size }),
+    queryFn: () => notificationApi.list({ page, size }) as Promise<PagedResponse<NotificationItem>>,
     staleTime: 30_000,
   })
 }
@@ -34,7 +35,7 @@ export function useUnreadCount() {
 export function useNotificationList(page = 0, size = 20, category?: string) {
   return useQuery({
     queryKey: ['notifications', 'list', page, size, category],
-    queryFn: () => notificationApi.list({ page, size, category }),
+    queryFn: () => notificationApi.list({ page, size, category }) as Promise<PagedResponse<NotificationItem>>,
     staleTime: 30_000,
   })
 }

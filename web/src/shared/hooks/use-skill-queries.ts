@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
 import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
@@ -353,10 +354,7 @@ export function useDeleteSkill() {
     mutationFn: ({ namespace, slug }: { namespace: string; slug: string }) =>
       skillLifecycleApi.deleteSkill(namespace, slug),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
-      queryClient.invalidateQueries({ queryKey: ['skills'] })
+      clearDeletedSkillQueries(queryClient, variables.namespace, variables.slug)
     },
   })
 }

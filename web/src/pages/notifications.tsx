@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NotificationItem } from '@/api/types'
+import { getNotificationItems, getNotificationTotal } from '@/features/notification/notification-page'
 import { resolveNotificationTarget } from '@/features/notification/notification-target'
 import { useNotificationList, useMarkAllRead, useMarkRead } from '@/features/notification/use-notifications'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
@@ -64,8 +65,8 @@ export function NotificationsPage() {
   const markAllRead = useMarkAllRead()
   const markRead = useMarkRead()
 
-  const notifications = data?.content ?? []
-  const totalPages = data ? Math.max(Math.ceil(data.totalElements / PAGE_SIZE), 1) : 1
+  const notifications = getNotificationItems(data)
+  const totalPages = Math.max(Math.ceil(getNotificationTotal(data) / PAGE_SIZE), 1)
 
   function handleCategoryChange(cat: Category) {
     setActiveCategory(cat)
@@ -150,7 +151,7 @@ export function NotificationsPage() {
             ))}
           </Card>
 
-          {data && data.totalElements > PAGE_SIZE ? (
+          {getNotificationTotal(data) > PAGE_SIZE ? (
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           ) : null}
         </>
