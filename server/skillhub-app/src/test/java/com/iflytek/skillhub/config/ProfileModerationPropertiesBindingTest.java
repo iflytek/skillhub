@@ -19,14 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProfileModerationPropertiesBindingTest {
 
     @Test
-    void defaultConfig_disablesMachineAndHumanReview() throws IOException {
+    void defaultConfig_enablesMachineAndHumanReview() throws IOException {
         ProfileModerationProperties properties = bindProperties(
                 List.of("application.yml"),
                 Map.of()
         );
 
-        assertFalse(properties.machineReview());
-        assertFalse(properties.humanReview());
+        assertTrue(properties.machineReview());
+        assertTrue(properties.humanReview());
     }
 
     @Test
