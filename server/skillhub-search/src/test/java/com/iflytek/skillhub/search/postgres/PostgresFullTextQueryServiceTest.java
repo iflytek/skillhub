@@ -290,7 +290,7 @@ class PostgresFullTextQueryServiceTest {
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst()).contains("JOIN label_definition ld ON ld.id = sl.label_id");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE ld.slug IN :labelSlugs");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE LOWER(ld.slug) IN :labelSlugs");
         verify(nativeQuery).setParameter("labelSlugs", List.of("code-generation", "official"));
         verify(countQuery).setParameter("labelSlugs", List.of("code-generation", "official"));
     }
@@ -576,6 +576,6 @@ class PostgresFullTextQueryServiceTest {
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().getFirst()).contains("JOIN label_definition ld ON ld.id = sl.label_id");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE ld.slug IN :labelSlugs");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE LOWER(ld.slug) IN :labelSlugs");
     }
 }

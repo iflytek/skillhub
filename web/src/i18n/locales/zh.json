@@ -571,6 +571,7 @@
     "removeTranslation": "移除",
     "validationSlugTitle": "缺少 slug",
     "validationSlugDescription": "保存前请先填写稳定的 slug。",
+    "validationSlugPatternDescription": "slug 只能包含小写字母、数字和单个连字符，且必须以字母或数字开头和结尾。",
     "validationTranslationsTitle": "缺少翻译",
     "validationTranslationsDescription": "至少需要一组完整的 locale 和显示名称。",
     "validationDuplicateLocaleDescription": "同一个 locale 只能出现一次。",

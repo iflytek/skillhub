@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface LabelDefinitionJpaRepository extends JpaRepository<LabelDefinition, Long>, LabelDefinitionRepository {
     Optional<LabelDefinition> findBySlug(String slug);
+    Optional<LabelDefinition> findBySlugIgnoreCase(String slug);
     List<LabelDefinition> findAllByOrderBySortOrderAscIdAsc();
     List<LabelDefinition> findAllByOrderBySortOrderAscSlugAsc();
     List<LabelDefinition> findByVisibleInFilterTrueOrderBySortOrderAscIdAsc();
