@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
-import { fetchJson, fetchText, getCsrfHeaders, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult, Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole, LabelItem, LabelDefinition } from '@/api/types'
+import { fetchJson, fetchText, getCsrfHeaders, labelApi, meApi, namespaceApi, promotionApi, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
 import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
@@ -19,6 +19,26 @@ async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSu
 async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   return fetchJson<SkillDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`)
+}
+
+async function getVisibleLabels(): Promise<LabelItem[]> {
+  return labelApi.listVisible()
+}
+
+async function getSkillLabels(namespace: string, slug: string): Promise<LabelItem[]> {
+  return labelApi.listSkillLabels(namespace, slug)
+}
+
+async function getAdminLabelDefinitions(): Promise<LabelDefinition[]> {
+  return labelApi.listAdminDefinitions()
+}
+
+async function attachSkillLabel(params: { namespace: string; slug: string; labelSlug: string }): Promise<LabelItem> {
+  return labelApi.attachSkillLabel(params.namespace, params.slug, params.labelSlug)
+}
+
+async function detachSkillLabel(params: { namespace: string; slug: string; labelSlug: string }): Promise<void> {
+  return labelApi.detachSkillLabel(params.namespace, params.slug, params.labelSlug)
 }
 
 async function getSkillVersions(namespace: string, slug: string): Promise<SkillVersion[]> {
@@ -124,6 +144,30 @@ export function useSkillDetail(namespace: string, slug: string) {
     queryKey: ['skills', namespace, slug],
     queryFn: () => getSkillDetail(namespace, slug),
     enabled: !!namespace && !!slug,
+  })
+}
+
+export function useVisibleLabels(enabled = true) {
+  return useQuery({
+    queryKey: ['labels', 'visible'],
+    queryFn: getVisibleLabels,
+    enabled,
+  })
+}
+
+export function useSkillLabels(namespace: string, slug: string, enabled = true) {
+  return useQuery({
+    queryKey: ['labels', 'skill', namespace, slug],
+    queryFn: () => getSkillLabels(namespace, slug),
+    enabled: enabled && !!namespace && !!slug,
+  })
+}
+
+export function useAdminLabelDefinitions(enabled = true) {
+  return useQuery({
+    queryKey: ['labels', 'admin'],
+    queryFn: getAdminLabelDefinitions,
+    enabled,
   })
 }
 
@@ -312,6 +356,34 @@ export function useArchiveSkill() {
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
       queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+function invalidateSkillLabelQueries(queryClient: ReturnType<typeof useQueryClient>, namespace: string, slug: string) {
+  queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })
+  queryClient.invalidateQueries({ queryKey: ['labels', 'skill', namespace, slug] })
+  queryClient.invalidateQueries({ queryKey: ['skills'] })
+}
+
+export function useAttachSkillLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: attachSkillLabel,
+    onSuccess: (_data, variables) => {
+      invalidateSkillLabelQueries(queryClient, variables.namespace, variables.slug)
+    },
+  })
+}
+
+export function useDetachSkillLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: detachSkillLabel,
+    onSuccess: (_data, variables) => {
+      invalidateSkillLabelQueries(queryClient, variables.namespace, variables.slug)
     },
   })
 }

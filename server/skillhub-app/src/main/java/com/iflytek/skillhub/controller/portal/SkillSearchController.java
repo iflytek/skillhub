@@ -32,6 +32,7 @@ public class SkillSearchController extends BaseApiController {
     public ApiResponse<SkillSearchAppService.SearchResponse> search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String namespace,
+            @RequestParam(name = "label", required = false) java.util.List<String> labels,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -44,6 +45,7 @@ public class SkillSearchController extends BaseApiController {
                 sort,
                 page,
                 size,
+                labels,
                 userId,
                 userNsRoles
         );

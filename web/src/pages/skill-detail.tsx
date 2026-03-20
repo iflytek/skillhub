@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { InstallCommand } from '@/features/skill/install-command'
+import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
   getOverviewCollapseMaxHeight,
   OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT,
@@ -143,6 +144,7 @@ export function SkillDetailPage() {
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
   const canHardDeleteSkill = Boolean(skill && user && (skill.ownerId === user.userId || hasRole('SUPER_ADMIN')))
+  const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
 
   useEffect(() => {
@@ -610,6 +612,23 @@ export function SkillDetailPage() {
           {skill.summary && (
             <p className="text-lg text-muted-foreground leading-relaxed">{skill.summary}</p>
           )}
+          {(skill.labels?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {skill.labels!.map((label) => (
+                <span
+                  key={label.slug}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium',
+                    label.type === 'PRIVILEGED'
+                      ? 'border-amber-500/40 bg-amber-100 text-amber-900'
+                      : 'border-slate-300 bg-slate-100 text-slate-800',
+                  )}
+                >
+                  {label.displayName}
+                </span>
+              ))}
+            </div>
+          )}
           {isPendingPreview && (
             <Card className="border-amber-500/30 bg-amber-500/5 p-4 text-sm text-muted-foreground">
               <div className="font-medium text-foreground">{t('skillDetail.pendingPreviewTitle')}</div>
@@ -906,6 +925,14 @@ export function SkillDetailPage() {
           </svg>
           {t('skillDetail.download')}
         </Button>
+
+        <SkillLabelPanel
+          namespace={namespace}
+          slug={slug}
+          initialLabels={skill.labels ?? []}
+          canManage={canManageLabels}
+          isSuperAdmin={hasRole('SUPER_ADMIN')}
+        />
 
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">
