@@ -396,14 +396,14 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 
 | 操作 | 所需权限 | 判定逻辑 |
 |------|---------|---------|
-| 提交发布审核 | `skill:publish` | 用户是该 namespace 的 MEMBER 以上，且 namespace 非 FROZEN |
+| 发布技能包 | `skill:publish` | 普通用户要求是目标 namespace 成员；`SUPER_ADMIN` 可绕过成员校验并直发 |
+| 提交已有版本进入审核 | `review:submit` | owner 本人，或 namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` |
 | 管理技能（归档/版本管理） | `skill:manage` | namespace ADMIN 以上，或 owner 本人 |
 | 提升到全局 | `skill:promote` | namespace ADMIN 以上，或 owner 本人 |
-| 审核团队空间技能 | `review:approve` | 该 namespace 的 ADMIN 或 OWNER |
-| 审核全局空间技能 | `review:approve` | 持有 SKILL_ADMIN / SUPER_ADMIN |
+| 审核技能发布 | `review:approve` | namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN`；提交人本人仅 `SUPER_ADMIN` 可审核自己的 review task |
 | 审核提升申请 | `promotion:approve` | 持有 SKILL_ADMIN / SUPER_ADMIN |
-| 隐藏/恢复技能 | `skill:manage` | 持有 SKILL_ADMIN / SUPER_ADMIN |
-| 撤回已发布版本（YANK） | `skill:manage` | 持有 SKILL_ADMIN / SUPER_ADMIN |
+| 隐藏/恢复技能 | `skill:manage` | 仅 `SUPER_ADMIN` |
+| 撤回已发布版本（YANK） | `skill:manage` | `SKILL_ADMIN` / `SUPER_ADMIN` |
 | 管理用户角色 | `user:manage` | 持有 USER_ADMIN / SUPER_ADMIN |
 | 审批用户准入 | `user:approve` | 持有 USER_ADMIN / SUPER_ADMIN |
 | 查看审计日志 | `audit:read` | 持有 AUDITOR / SUPER_ADMIN |
@@ -417,14 +417,13 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 
 | API 路径 | 适用范围 | 权限要求 |
 |----------|---------|---------|
-| `POST /api/v1/admin/reviews/{id}/approve` | 全局空间审核 | SKILL_ADMIN / SUPER_ADMIN |
-| `POST /api/v1/admin/promotions/{id}/approve` | 提升到全局审核 | SKILL_ADMIN / SUPER_ADMIN |
-| `POST /api/v1/namespaces/{slug}/reviews/{id}/approve` | 团队空间内发布审核 | 该空间 ADMIN / OWNER |
+| `POST /api/v1/reviews/{id}/approve` | 技能发布审核 | namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` |
+| `POST /api/v1/promotions/{id}/approve` | 提升到全局审核 | `SKILL_ADMIN` / `SUPER_ADMIN` |
 | `GET /api/v1/admin/audit-logs` | 审计日志查询 | AUDITOR / SUPER_ADMIN |
 | `PUT /api/v1/admin/users/{id}/roles` | 用户角色管理 | USER_ADMIN / SUPER_ADMIN |
 | `POST /api/v1/admin/users/{id}/approve` | 用户准入审批 | USER_ADMIN / SUPER_ADMIN |
 
-SUPER_ADMIN 和持有对应角色的用户均可通过 Admin API 操作；团队空间审核限定通过 Namespace API 完成，平台管理员不越权进入团队空间审核流程。
+当前实现中，审核与提升都走统一 portal API；是否允许操作由服务层根据 namespace role 与 platform role 联合判定，而不是靠分叉路由表达。
 
 ## 7. Session 设计
 
@@ -587,11 +586,11 @@ window.location.href = '/oauth2/authorization/github'
 
 | 接口 | 匿名 | 已登录 | 判定逻辑 |
 |------|------|--------|---------|
-| `GET /api/v1/skills`（搜索） | PUBLIC 技能 | PUBLIC + NAMESPACE_ONLY（成员空间）+ PRIVATE（owner/admin） | `SearchVisibilityScope` 投影 |
-| `GET /api/v1/skills/{ns}/{slug}` | PUBLIC 技能 | 同上 | visibility + namespace 成员关系 |
-| `GET /api/v1/skills/{ns}/{slug}/versions` | PUBLIC 技能 | 同上 | 同上 |
-| `GET /api/v1/skills/{ns}/{slug}/download` | PUBLIC 技能 | 同上 | 同上 |
-| `GET /api/v1/skills/{ns}/{slug}/resolve` | PUBLIC 技能 | 同上 | 同上 |
+| `GET /api/v1/skills`（搜索） | 仅 `PUBLIC`，且仅搜索 `ACTIVE`、非 hidden、已索引 skill | `PUBLIC + NAMESPACE_ONLY（成员空间）+ PRIVATE（owner/admin）` | `SearchVisibilityScope` + 搜索索引状态 |
+| `GET /api/v1/skills/{ns}/{slug}` | 仅已发布且可见的 `PUBLIC` skill | 同左，另加 owner 可读未发布 skill、namespace `ADMIN` / `OWNER` 可读 hidden | `visibility + latest_version_id + hidden + namespace 成员关系` |
+| `GET /api/v1/skills/{ns}/{slug}/versions` | 仅 `PUBLISHED` 版本 | owner / namespace `ADMIN` / `OWNER` 可见全部五种状态 | 同上 + version status 过滤 |
+| `GET /api/v1/skills/{ns}/{slug}/download` | 仅全局 namespace 下的 `PUBLIC` skill 支持匿名下载 | 已登录后按 visibility 判定；下载目标版本必须是 `PUBLISHED` | visibility + namespace type + version status |
+| `GET /api/v1/skills/{ns}/{slug}/resolve` | 仅全局 namespace 下的 `PUBLIC` skill 可匿名 | 同上 | visibility + namespace type + version status |
 | `GET /api/v1/namespaces` | 全部 | 全部 | 无限制 |
 
 ### 10.2 Authenticated API
@@ -600,27 +599,27 @@ window.location.href = '/oauth2/authorization/github'
 |------|---------|---------|
 | `POST /api/v1/skills/{ns}/{slug}/star` | 已登录 | Session/Token |
 | `POST /api/v1/skills/{ns}/{slug}/rating` | 已登录 | Session/Token |
-| `POST .../versions/{ver}/submit-review` | namespace MEMBER 以上 | `namespace_member.role` |
+| `POST /api/v1/reviews` | owner 本人，或 namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` | `skill.owner_id` / `namespace_member.role` / platform roles |
 | `POST .../versions/{ver}/withdraw-review` | 提交人本人 | `review_task.submitted_by` |
 | `PUT /api/v1/skills/{ns}/{slug}/tags/{tag}` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
 | `POST /api/v1/skills/{ns}/{slug}/archive` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
-| `DELETE .../versions/{ver}` | namespace ADMIN 以上 或 owner（仅 DRAFT/REJECTED） | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+| `POST .../versions/{ver}/rerelease` | namespace ADMIN 以上 或 owner；源版本必须 `PUBLISHED` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+| `DELETE .../versions/{ver}` | namespace ADMIN 以上 或 owner（仅 `DRAFT` / `REJECTED`） | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
 
 ### 10.3 CLI API
 
 | 接口 | 所需凭证 | 额外判定 |
 |------|---------|---------|
 | `GET /api/v1/whoami` | 任意有效 Bearer Token | 无 |
-| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 用户是目标 namespace 的 MEMBER 以上 |
+| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 普通用户要求目标 namespace 成员；`SUPER_ADMIN` 可绕过 |
 
 ### 10.4 Admin API
 
 | 接口 | 所需平台角色 | 判定来源 |
 |------|------------|---------|
-| `POST /api/v1/admin/reviews/{id}/approve` | SKILL_ADMIN / SUPER_ADMIN | `user_role_binding` → `role_permission` |
-| `POST /api/v1/admin/reviews/{id}/reject` | SKILL_ADMIN / SUPER_ADMIN | 同上 |
-| `POST /api/v1/admin/promotions/{id}/approve` | SKILL_ADMIN / SUPER_ADMIN | 同上 |
-| `POST /api/v1/admin/promotions/{id}/reject` | SKILL_ADMIN / SUPER_ADMIN | 同上 |
+| `POST /api/v1/admin/skills/{id}/hide` | SUPER_ADMIN | `user_role_binding` → `role_permission` |
+| `POST /api/v1/admin/skills/{id}/unhide` | SUPER_ADMIN | 同上 |
+| `POST /api/v1/admin/skills/versions/{versionId}/yank` | SKILL_ADMIN / SUPER_ADMIN | 同上 |
 | `PUT /api/v1/admin/users/{id}/roles` | USER_ADMIN / SUPER_ADMIN | 同上，且 USER_ADMIN 不可分配 SUPER_ADMIN |
 | `POST /api/v1/admin/users/{id}/approve` | USER_ADMIN / SUPER_ADMIN | 同上 |
 | `POST /api/v1/admin/users/{id}/ban` | USER_ADMIN / SUPER_ADMIN | 同上 |
@@ -630,11 +629,9 @@ window.location.href = '/oauth2/authorization/github'
 
 | 接口 | 所需 namespace 角色 | 判定来源 |
 |------|-------------------|---------|
-| `POST /api/v1/namespaces/{slug}/reviews/{id}/approve` | 该空间 ADMIN / OWNER | `namespace_member.role` |
-| `POST /api/v1/namespaces/{slug}/reviews/{id}/reject` | 该空间 ADMIN / OWNER | `namespace_member.role` |
 | `POST /api/v1/namespaces/{slug}/members` | 该空间 ADMIN 以上 | `namespace_member.role` |
 | `DELETE /api/v1/namespaces/{slug}/members/{userId}` | 该空间 ADMIN 以上 | `namespace_member.role` |
-| `POST .../skills/{skillId}/promote` | 该空间 ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
+| `POST /api/v1/promotions` | 该空间 ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
 
 ### 10.6 Compatibility API（Bearer Token 认证）
 
@@ -642,6 +639,6 @@ window.location.href = '/oauth2/authorization/github'
 |------|---------|---------|
 | `GET /api/v1/whoami` | 任意有效 Bearer Token | 无 |
 | `GET /api/v1/search` | 可选（匿名限 PUBLIC） | `SearchVisibilityScope` |
-| `GET /api/v1/resolve` | 可选（匿名限 PUBLIC） | visibility |
-| `GET /api/v1/download/{slug}/{version}` | 可选（匿名限 PUBLIC） | visibility |
-| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 用户是目标 namespace 的 MEMBER 以上（namespace 由 canonical slug 解析） |
+| `GET /api/v1/resolve` | 可选（匿名仅限全局 namespace 下的 PUBLIC） | visibility + namespace type + version status |
+| `GET /api/v1/download/{slug}/{version}` | 可选（匿名仅限全局 namespace 下的 PUBLIC） | visibility + namespace type + version status |
+| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 普通用户要求目标 namespace 成员；`SUPER_ADMIN` 可绕过（namespace 由 canonical slug 解析） |

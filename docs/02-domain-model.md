@@ -77,6 +77,12 @@
 
 - 唯一约束：`(namespace_id, slug)`
 - `status` 表示 skill 容器生命周期，不再承载“隐藏”语义。隐藏是独立的治理覆盖层，由 `hidden` / `hidden_at` / `hidden_by` 表达
+- 当前代码下的实际可见性判定以 `VisibilityChecker` 为准，规则如下：
+  - 若 `hidden=true`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读
+  - 若 `latest_version_id is null`：仅 skill owner 可读；即使 `visibility=PUBLIC` 也不会对外公开
+  - `PUBLIC`：任意人可读 skill 容器与已发布版本
+  - `NAMESPACE_ONLY`：该 namespace 任意成员可读（`MEMBER` / `ADMIN` / `OWNER`）
+  - `PRIVATE`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读，普通 `MEMBER` 不可读
 - `owner_id` 语义为"主要维护人"，可转让。权限主轴是 namespace role，不是 owner：
   - namespace ADMIN 对空间内所有 skill 有完整管理权（归档、版本管理、提升到全局），不受 owner 限制
   - owner 作为 MEMBER 时可管理自己创建的 skill（提交审核、编辑草稿）
@@ -113,6 +119,12 @@
   - 已发布撤回：`PUBLISHED → YANKED`
 - 唯一约束：`(skill_id, version)` 防止重复发布
 - `YANKED` 状态：已发布后撤回
+- 当前代码下的实际读权限补充：
+  - 普通详情 / 下载 / resolve / tag / 文件读取，只接受 `PUBLISHED`
+  - owner 可通过常规版本详情预览自己的 `PENDING_REVIEW` 版本
+  - owner / namespace `ADMIN` / `OWNER` 在版本列表中可看到全部五种状态：`PUBLISHED / PENDING_REVIEW / DRAFT / REJECTED / YANKED`
+  - 但常规版本详情接口并不会放行 `DRAFT / REJECTED / YANKED`
+  - 审核详情页走独立 review 读路径，可查看待审版本及完整版本快照
 
 版本号不可变性规则：
 

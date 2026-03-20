@@ -8,4 +8,9 @@ public class DomainBadRequestException extends LocalizedDomainException {
     public DomainBadRequestException(String messageCode, Object... messageArgs) {
         super(messageCode, messageArgs);
     }
+
+    @Override
+    public int statusCode() {
+        return 400;
+    }
 }

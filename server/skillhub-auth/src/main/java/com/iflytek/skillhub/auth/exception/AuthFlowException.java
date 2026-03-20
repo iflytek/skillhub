@@ -1,12 +1,13 @@
 package com.iflytek.skillhub.auth.exception;
 
+import com.iflytek.skillhub.domain.shared.exception.LocalizedMessage;
 import org.springframework.http.HttpStatus;
 
 /**
  * Auth-layer exception that carries both an HTTP status and a localized message code for API
  * rendering.
  */
-public class AuthFlowException extends RuntimeException {
+public class AuthFlowException extends RuntimeException implements LocalizedMessage {
 
     private final HttpStatus status;
     private final String messageCode;
@@ -21,6 +22,16 @@ public class AuthFlowException extends RuntimeException {
 
     public HttpStatus getStatus() {
         return status;
+    }
+
+    @Override
+    public String messageCode() {
+        return messageCode;
+    }
+
+    @Override
+    public Object[] messageArgs() {
+        return messageArgs;
     }
 
     public String getMessageCode() {
