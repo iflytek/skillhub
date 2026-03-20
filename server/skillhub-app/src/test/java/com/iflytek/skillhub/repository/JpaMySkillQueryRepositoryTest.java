@@ -109,4 +109,27 @@ class JpaMySkillQueryRepositoryTest {
         assertThat(responses.get(0).ownerPreviewVersion()).isNull();
         assertThat(responses.get(0).headlineVersion().status()).isEqualTo("PUBLISHED");
     }
+
+    @Test
+    void getSkillSummaries_disablesPromotionWhenNamespaceContextIsMissing() {
+        Skill skill = new Skill(101L, "orphan-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Orphan Skill");
+        ReflectionTestUtils.setField(skill, "id", 4L);
+
+        SkillVersion publishedVersion = new SkillVersion(4L, "1.0.0", "user-1");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(publishedVersion, "id", 44L);
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", Instant.parse("2026-03-15T10:30:00Z"));
+
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of());
+        given(skillVersionRepository.findBySkillIdAndStatus(4L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(4L)).willReturn(List.of(publishedVersion));
+
+        var responses = repository.getSkillSummaries(List.of(skill), "user-1");
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).namespace()).isNull();
+        assertThat(responses.get(0).publishedVersion()).isNotNull();
+        assertThat(responses.get(0).canSubmitPromotion()).isFalse();
+    }
 }

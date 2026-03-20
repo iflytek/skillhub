@@ -145,6 +145,44 @@ class JpaGovernanceQueryRepositoryTest {
         assertThat(responses.get(0).subtitle()).isEqualTo("Spam");
     }
 
+    @Test
+    void getReviewInboxItems_toleratesMissingVersionContext() {
+        ReviewTask task = new ReviewTask(101L, 11L, "submitter");
+        setField(task, "id", 4L);
+        setField(task, "submittedAt", Instant.parse("2026-03-20T04:00:00Z"));
+
+        given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of());
+
+        var responses = repository.getReviewInboxItems(List.of(task));
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).type()).isEqualTo("REVIEW");
+        assertThat(responses.get(0).title()).isEqualTo("Unknown target");
+        assertThat(responses.get(0).namespace()).isNull();
+        assertThat(responses.get(0).skillSlug()).isNull();
+        assertThat(responses.get(0).subtitle()).isEqualTo("Pending review");
+    }
+
+    @Test
+    void getPromotionInboxItems_toleratesMissingSourceAndTargetContext() {
+        PromotionRequest request = new PromotionRequest(201L, 101L, 12L, "submitter");
+        setField(request, "id", 5L);
+        setField(request, "submittedAt", Instant.parse("2026-03-20T05:00:00Z"));
+
+        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of());
+        given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of());
+        given(namespaceRepository.findByIdIn(List.of(12L))).willReturn(List.of());
+
+        var responses = repository.getPromotionInboxItems(List.of(request));
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).type()).isEqualTo("PROMOTION");
+        assertThat(responses.get(0).title()).isEqualTo("Unknown target");
+        assertThat(responses.get(0).namespace()).isNull();
+        assertThat(responses.get(0).skillSlug()).isNull();
+        assertThat(responses.get(0).subtitle()).isEqualTo("Pending promotion");
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

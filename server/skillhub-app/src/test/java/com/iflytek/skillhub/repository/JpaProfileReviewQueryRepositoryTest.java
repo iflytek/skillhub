@@ -81,4 +81,28 @@ class JpaProfileReviewQueryRepositoryTest {
         assertThat(response.get(0).currentDisplayName()).isNull();
         assertThat(response.get(0).requestedDisplayName()).isEqualTo("NewName");
     }
+
+    @Test
+    void getProfileReviewSummaries_toleratesInvalidSnapshotJson() {
+        ProfileChangeRequest request = new ProfileChangeRequest(
+                "user-2",
+                "{invalid",
+                "{also-invalid",
+                ProfileChangeStatus.PENDING,
+                "PASS",
+                null
+        );
+        ReflectionTestUtils.setField(request, "id", 3L);
+        ReflectionTestUtils.setField(request, "createdAt", Instant.parse("2026-03-19T08:00:00Z"));
+
+        UserAccount submitter = new UserAccount("user-2", "Current Name", "user2@example.com", null);
+        given(userAccountRepository.findByIdIn(List.of("user-2"))).willReturn(List.of(submitter));
+
+        var response = repository.getProfileReviewSummaries(List.of(request));
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).username()).isEqualTo("Current Name");
+        assertThat(response.get(0).currentDisplayName()).isEqualTo("Current Name");
+        assertThat(response.get(0).requestedDisplayName()).isNull();
+    }
 }

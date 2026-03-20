@@ -47,4 +47,21 @@ class OAuthLoginFlowServiceTest {
 
         assertThat(redirect).isEqualTo("/access-denied");
     }
+
+    @Test
+    void consumeReturnTo_clearsUnsafeSessionValue() {
+        OAuthLoginFlowService service = new OAuthLoginFlowService(
+                List.of(),
+                mock(AccessPolicy.class),
+                mock(IdentityBindingService.class)
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        HttpSession session = request.getSession(true);
+        session.setAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE, "https://evil.example");
+
+        String returnTo = service.consumeReturnTo(session);
+
+        assertThat(returnTo).isNull();
+        assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
+    }
 }
