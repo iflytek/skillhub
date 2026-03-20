@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   SELECT_CONTENT_CLASS_NAME,
   SELECT_ITEM_CLASS_NAME,
+  SELECT_SCROLL_BUTTON_CLASS_NAME,
   SELECT_TRIGGER_CLASS_NAME,
   normalizeSelectValue,
 } from './select'
@@ -29,6 +30,11 @@ describe('shared select contract', () => {
     expect(SELECT_CONTENT_CLASS_NAME).toContain('shadow-md')
     expect(SELECT_ITEM_CLASS_NAME).toContain('pl-8')
     expect(SELECT_ITEM_CLASS_NAME).toContain('rounded-md')
+  })
+
+  it('uses pointer cursors for expanded select interactions', () => {
+    expect(SELECT_ITEM_CLASS_NAME).toContain('cursor-pointer')
+    expect(SELECT_SCROLL_BUTTON_CLASS_NAME).toContain('cursor-pointer')
   })
 
   it('maps empty and nullish form state to an undefined Radix value', () => {

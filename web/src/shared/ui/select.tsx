@@ -21,8 +21,12 @@ export const SELECT_CONTENT_CLASS_NAME = cn(
 )
 
 export const SELECT_ITEM_CLASS_NAME = cn(
-  'relative flex w-full cursor-default select-none items-center rounded-md py-2 pl-8 pr-8 text-sm outline-none',
+  'relative flex w-full cursor-pointer select-none items-center rounded-md py-2 pl-8 pr-8 text-sm outline-none',
   'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
+)
+
+export const SELECT_SCROLL_BUTTON_CLASS_NAME = cn(
+  'flex cursor-pointer items-center justify-center py-1 text-muted-foreground'
 )
 
 export function normalizeSelectValue(value?: string | null) {
@@ -57,10 +61,7 @@ const SelectScrollUpButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
-    className={cn(
-      'flex cursor-default items-center justify-center py-1 text-muted-foreground',
-      className
-    )}
+    className={cn(SELECT_SCROLL_BUTTON_CLASS_NAME, className)}
     {...props}
   >
     <ChevronUp className="h-4 w-4" />
@@ -75,10 +76,7 @@ const SelectScrollDownButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
-    className={cn(
-      'flex cursor-default items-center justify-center py-1 text-muted-foreground',
-      className
-    )}
+    className={cn(SELECT_SCROLL_BUTTON_CLASS_NAME, className)}
     {...props}
   >
     <ChevronDown className="h-4 w-4" />
