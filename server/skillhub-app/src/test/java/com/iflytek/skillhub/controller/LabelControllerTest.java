@@ -34,13 +34,19 @@ class LabelControllerTest {
     @Test
     void listVisibleLabelsShouldUseUnifiedEnvelope() throws Exception {
         when(publicLabelAppService.listVisibleFilters())
-                .thenReturn(List.of(new SkillLabelDto("code-generation", "RECOMMENDED", "Code Generation")));
+                .thenReturn(List.of(
+                        new SkillLabelDto("code-generation", "RECOMMENDED", "Code Generation"),
+                        new SkillLabelDto("verified", "PRIVILEGED", "Verified")
+                ));
 
         mockMvc.perform(get("/api/web/labels"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].slug").value("code-generation"))
-                .andExpect(jsonPath("$.data[0].displayName").value("Code Generation"));
+                .andExpect(jsonPath("$.data[0].displayName").value("Code Generation"))
+                .andExpect(jsonPath("$.data[1].slug").value("verified"))
+                .andExpect(jsonPath("$.data[1].type").value("PRIVILEGED"))
+                .andExpect(jsonPath("$.data[1].displayName").value("Verified"));
     }
 
     @Test
