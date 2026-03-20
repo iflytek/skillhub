@@ -25,6 +25,8 @@
 
 ## 2. Data Model
 
+注意：新表统一使用 `TIMESTAMPTZ` 作为时间戳类型标准（现有旧表使用 `TIMESTAMP`，后续统一迁移）。
+
 ### 2.1 label_definition（标签定义表）
 
 ```sql
@@ -150,9 +152,11 @@ CREATE INDEX idx_skill_label_label_id ON skill_label(label_id);
 #### 异步批量重建方案
 
 - 使用 Spring `@Async` 执行异步任务
-- `SearchRebuildService` 新增 `rebuildByLabelId(Long labelId)` 方法：查询 `skill_label` 获取关联的 skill_id 列表，分批调用 `rebuildBySkill(Long)`
+- 在 `skillhub-app` 层的 application service 中实现 `rebuildByLabelId(Long labelId)` 方法（不放在 `skillhub-search` 模块的 `SearchRebuildService` 中，避免搜索模块对 `skill_label` 表的直接依赖，保持模块边界清晰）
+- 实现逻辑：查询 `skill_label` 获取关联的 skill_id 列表，分批调用 `SearchRebuildService.rebuildBySkill(Long)`
 - 批量大小：每批 50 个 skill，批次间无需间隔（数据库写入压力可控，系统推荐标签数量有限）
-- 错误处理：单个 skill 重建失败不影响其他 skill，记录错误日志，不重试（下次 label 变更或手动 rebuildAll 时会修复）
+- 事务策略：每个 skill 的重建是独立事务（与 `rebuildBySkill` 现有行为一致），保证单个 skill 重建失败不影响其他 skill
+- 错误处理：单个 skill 重建失败记录错误日志，不重试（下次 label 变更或手动 rebuildAll 时会修复）
 
 ### 4.4 分类筛选
 
@@ -166,16 +170,16 @@ GET /api/v1/skills/search?q=xxx&label=code-generation&label=official  (未来)
 
 #### SearchQuery 改动
 
-`SearchQuery` record 新增 `labelSlugs` 字段：
+`SearchQuery` record 新增 `labelSlugs` 字段，放在末尾以减少对现有调用方的影响：
 ```java
 public record SearchQuery(
     String keyword,
     Long namespaceId,
     SearchVisibilityScope visibilityScope,
-    List<String> labelSlugs,   // 新增，可为空列表
     String sortBy,
     int page,
-    int size
+    int size,
+    List<String> labelSlugs   // 新增，可为空列表，放末尾减少 breaking change
 ) {}
 ```
 
@@ -189,6 +193,8 @@ AND d.skill_id IN (
 ```
 
 count 查询同步追加相同条件。语义重排在 label 过滤后的候选集上执行，无需额外处理。
+
+当前多 label 筛选采用 OR 语义（匹配任一 label 即命中）。未来如需 AND 语义（同时具有所有 label），可通过 `GROUP BY skill_id HAVING COUNT(*) = :labelCount` 扩展，API 层增加 `labelMode=any|all` 参数区分。
 
 ### 4.5 tsvector 权重
 
@@ -336,7 +342,7 @@ GET /api/v1/labels
 
 ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 筛选。ClawHub 协议中没有 label 概念，无需兼容。
 
-## 6. Frontend Design
+## 7. Frontend Design
 
 ### 6.1 搜索页
 
