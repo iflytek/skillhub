@@ -37,6 +37,19 @@ describe('attachNotificationSseListeners', () => {
     })
   })
 
+  it('does not mutate the unread badge when the connection opens or reconnects', () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['notifications', 'user-a', 'unread-count'], { count: 4 })
+    const connection = createFakeConnection()
+
+    attachNotificationSseListeners(connection, queryClient, 'user-a')
+
+    connection.emit('open')
+    connection.emit('open')
+
+    expect(queryClient.getQueryData(['notifications', 'user-a', 'unread-count'])).toEqual({ count: 4 })
+  })
+
   it('increments unread count and invalidates notification list on new notification events', () => {
     const queryClient = new QueryClient()
     queryClient.setQueryData(['notifications', 'user-a', 'unread-count'], { count: 1 })
@@ -50,5 +63,15 @@ describe('attachNotificationSseListeners', () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['notifications', 'user-a', 'list'],
     })
+  })
+
+  it('starts the unread badge from one when no cache exists yet', () => {
+    const queryClient = new QueryClient()
+    const connection = createFakeConnection()
+
+    attachNotificationSseListeners(connection, queryClient, 'user-a')
+    connection.emit('notification')
+
+    expect(queryClient.getQueryData(['notifications', 'user-a', 'unread-count'])).toEqual({ count: 1 })
   })
 })
