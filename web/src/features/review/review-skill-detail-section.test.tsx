@@ -55,7 +55,7 @@ describe('ReviewSkillDetailSection', () => {
     const html = renderToStaticMarkup(<ReviewSkillDetailSection detail={createDetail()} />)
 
     expect(html).toContain('1.2.0')
-    expect(html).toContain('Expand full overview')
+    expect(html).toContain('展开全文')
   })
 
   it('renders the detail content inside a collapsed disclosure card by default', () => {
@@ -82,6 +82,6 @@ describe('ReviewSkillDetailSection', () => {
   it('renders inline error state without requiring detail data', () => {
     const html = renderToStaticMarkup(<ReviewSkillDetailSection hasError />)
 
-    expect(html).toContain('Failed to load the skill detail for this review.')
+    expect(html).toContain('技能详情加载失败，请稍后重试。')
   })
 })
