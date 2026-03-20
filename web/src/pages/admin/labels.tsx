@@ -5,7 +5,7 @@ import { toast } from '@/shared/lib/toast'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
-import { Select } from '@/shared/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import {
   Table,
   TableBody,
@@ -345,23 +345,31 @@ export function AdminLabelsPage() {
             <div className="space-y-2">
               <Label htmlFor="label-type">{t('adminLabels.formType')}</Label>
               <Select
-                id="label-type"
                 value={form.type}
-                onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as LabelFormState['type'] }))}
+                onValueChange={(value) => setForm((current) => ({ ...current, type: value as LabelFormState['type'] }))}
               >
-                <option value="RECOMMENDED">{t('adminLabels.typeRecommended')}</option>
-                <option value="PRIVILEGED">{t('adminLabels.typePrivileged')}</option>
+                <SelectTrigger id="label-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RECOMMENDED">{t('adminLabels.typeRecommended')}</SelectItem>
+                  <SelectItem value="PRIVILEGED">{t('adminLabels.typePrivileged')}</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="label-visibility">{t('adminLabels.formVisibility')}</Label>
               <Select
-                id="label-visibility"
                 value={form.visibleInFilter ? 'visible' : 'hidden'}
-                onChange={(event) => setForm((current) => ({ ...current, visibleInFilter: event.target.value === 'visible' }))}
+                onValueChange={(value) => setForm((current) => ({ ...current, visibleInFilter: value === 'visible' }))}
               >
-                <option value="visible">{t('adminLabels.visibilityVisible')}</option>
-                <option value="hidden">{t('adminLabels.visibilityHidden')}</option>
+                <SelectTrigger id="label-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="visible">{t('adminLabels.visibilityVisible')}</SelectItem>
+                  <SelectItem value="hidden">{t('adminLabels.visibilityHidden')}</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
