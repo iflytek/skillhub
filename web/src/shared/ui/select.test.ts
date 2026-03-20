@@ -25,6 +25,12 @@ describe('shared select contract', () => {
     expect(SELECT_ITEM_CLASS_NAME).toContain('data-[disabled]:opacity-50')
   })
 
+  it('keeps the dropdown and selected items visually discoverable', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('shadow-md')
+    expect(SELECT_ITEM_CLASS_NAME).toContain('pl-8')
+    expect(SELECT_ITEM_CLASS_NAME).toContain('rounded-md')
+  })
+
   it('maps empty and nullish form state to an undefined Radix value', () => {
     expect(normalizeSelectValue('')).toBeUndefined()
     expect(normalizeSelectValue(null)).toBeUndefined()
