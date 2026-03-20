@@ -344,7 +344,7 @@ ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 
 
 ## 7. Frontend Design
 
-### 6.1 搜索页
+### 7.1 搜索页
 
 - 搜索框下方增加分类板块，水平排列 label 列表（数据来自 `GET /api/v1/labels`）
 - 每个 label 显示当前语言的 display_name，fallback 顺序：当前语言 → en → slug
@@ -352,7 +352,7 @@ ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 
 - Label 之间单选互斥：点击另一个 label 切换选中，不支持组合筛选
 - 选中状态通过 URL query parameter 同步，支持分享链接
 
-### 6.2 Skill 详情页
+### 7.2 Skill 详情页
 
 - 在 skill 信息区域以 chip/badge 形式展示该 skill 的所有 label
 - 特权标签使用不同的视觉样式区分（不同颜色或图标）
@@ -360,7 +360,7 @@ ClawHub CLI 兼容层的搜索接口 `GET /api/v1/search` 一期不支持 label 
 - 编辑交互：弹出面板，从系统推荐标签列表中勾选/取消勾选
 - 特权标签区域仅超级管理员可见和可操作
 
-### 6.3 管理后台
+### 7.3 管理后台
 
 - 标签管理页面：列表展示所有标签定义，支持拖拽排序
 - 创建/编辑标签：表单包含 slug（创建时填写，不可修改）、type 选择、visible_in_filter 开关，以及动态翻译条目（可添加任意语言的翻译）
