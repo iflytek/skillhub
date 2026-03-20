@@ -7,7 +7,7 @@ PROFILE="${SPRING_PROFILES_ACTIVE:-local}"
 
 cd "$SERVER_DIR"
 
-./mvnw -pl skillhub-app -am package -DskipTests >/dev/null
+./mvnw -pl skillhub-app -am clean package -DskipTests >/dev/null
 
 APP_JAR="$(find skillhub-app/target -maxdepth 1 -type f -name 'skillhub-app-*.jar' ! -name '*.original' | head -n 1)"
 if [[ -z "$APP_JAR" ]]; then

@@ -67,6 +67,7 @@ __pycache__/
 
 # Superpowers (AI planning artifacts)
 docs/superpowers/
+.superpowers/
 docs/review/
 docs/requirements/
 

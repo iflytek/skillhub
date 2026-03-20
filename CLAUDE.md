@@ -90,7 +90,6 @@ Examples:
 - `docs(deploy): clarify runtime image usage`
 
 **IMPORTANT**: Never add `Co-Authored-By` trailers to commit messages unless explicitly requested by the user.
-**IMPORTANT**: Git commit authors must be a real user or team identity and must not contain model or tool CLI names such as `Claude Code`, `Codex`, or `Gemini`.
 
 ### Code Style
 - **Backend**: Follow standard Java conventions, Spring Boot best practices
@@ -158,7 +157,6 @@ skillhub/
 - Don't skip API contract regeneration
 - Don't make breaking changes without explicit approval
 - Don't open public issues for security vulnerabilities
-- Don't ignore `.gitignore` rules or commit local/generated files such as `.env*`, `.dev/`, `node_modules/`, or `docs/superpowers/` unless the repo already tracks them on purpose
 
 ## Security
 - Report security issues privately via GitHub Security Advisories

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
+import { clearSessionScopedQueries } from '@/features/notification/notification-session'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { cn } from '@/shared/lib/utils'
 
@@ -75,6 +76,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
       console.error('Logout failed:', error)
     } finally {
       // Always clear cache and redirect, even if API call fails
+      clearSessionScopedQueries(queryClient)
       queryClient.setQueryData(['auth', 'me'], null)
       window.location.href = '/'
     }
@@ -189,6 +191,9 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             <div className="-mx-1 my-1 h-px bg-muted" />
             <Link to="/settings/profile" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.profile')}
+            </Link>
+            <Link to="/settings/notifications" className={menuItemClassName} onClick={closeMenu}>
+              {t('user.menu.notifications')}
             </Link>
             {isLocalAccount ? (
               <Link to="/settings/security" className={menuItemClassName} onClick={closeMenu}>

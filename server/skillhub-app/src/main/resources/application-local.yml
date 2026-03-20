@@ -27,6 +27,10 @@ skillhub:
   auth:
     mock:
       enabled: true
+  notification:
+    cleanup:
+      read-retention-days: 30
+      unread-retention-days: 90
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
