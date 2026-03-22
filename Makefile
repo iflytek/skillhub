@@ -7,12 +7,14 @@ DEV_SERVER_LOG := $(DEV_DIR)/server.log
 DEV_WEB_LOG := $(DEV_DIR)/web.log
 DEV_WEB_URL := http://localhost:3000
 DEV_API_URL := http://localhost:8080
+DEV_SCANNER_URL := http://localhost:8000
 STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server:staging
 DEV_PROCESS := bash scripts/dev-process.sh
 DEV_SERVER_PREPARE := true
 DEV_SERVER_CMD := ./scripts/run-dev-app.sh
+DEV_SERVER_SCANNER_ENV := SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_URL=$(DEV_SCANNER_URL) SKILLHUB_SECURITY_SCANNER_MODE=upload
 BACKEND_TEST_JAVA_OPTIONS ?= -XX:+EnableDynamicAgentLoading
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=
@@ -26,24 +28,21 @@ help: ## 显示帮助
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-dev: ## 启动本地开发环境（仅依赖服务）
+dev: ## 启动本地开发环境（依赖服务，含 skill-scanner）
 	$(DEV_COMPOSE) up -d --wait --remove-orphans
 	@echo "Services ready."
 	@echo "Start backend with: make dev-server"
 	@echo "Start frontend with: make dev-web"
 
-dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
+dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端）
 	@mkdir -p $(DEV_DIR)
 	@$(MAKE) dev
-	@if [ ! -d web/node_modules ]; then \
-		echo "Installing frontend dependencies..."; \
-		$(MAKE) web-install; \
-	fi
+	@$(MAKE) web-deps
 	@if $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
 		echo "Backend already running with PID $$(cat $(DEV_SERVER_PID))"; \
 	else \
 		echo "Starting backend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)' >/dev/null; \
+		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec env $(DEV_SERVER_SCANNER_ENV) $(DEV_SERVER_CMD)' >/dev/null; \
 	fi
 	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
 		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
@@ -69,11 +68,25 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 			echo "Backend did not become ready on attempt $$attempt. Restarting..."; \
 			$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID); \
 			sleep 2; \
-			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)' >/dev/null; \
+			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec env $(DEV_SERVER_SCANNER_ENV) $(DEV_SERVER_CMD)' >/dev/null; \
 		fi; \
 	done; \
 	if [ "$$backend_ready" -ne 1 ]; then \
 		echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Waiting for scanner on $(DEV_SCANNER_URL) ..."
+	@scanner_ready=0; \
+	for i in $$(seq 1 30); do \
+		if curl -sf $(DEV_SCANNER_URL)/health >/dev/null; then \
+			echo "Scanner ready."; \
+			scanner_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$scanner_ready" -ne 1 ]; then \
+		echo "Scanner failed to become ready. Check docker compose logs."; \
 		exit 1; \
 	fi
 	@echo "Waiting for frontend on $(DEV_WEB_URL) ..."
@@ -93,6 +106,7 @@ dev-all: ## 一键启动本地开发环境（依赖 + 后端 + 前端）
 	@echo "Local environment is ready:"
 	@echo "  Web UI:  $(DEV_WEB_URL)"
 	@echo "  Backend: $(DEV_API_URL)"
+	@echo "  Scanner: $(DEV_SCANNER_URL)"
 	@echo "Mock auth users:"
 	@echo "  local-user  -> X-Mock-User-Id: local-user"
 	@echo "  local-admin -> X-Mock-User-Id: local-admin"
@@ -106,7 +120,7 @@ dev-server: ## 启动后端开发服务器
 dev-server-restart: ## 重启后端开发服务器
 	@mkdir -p $(DEV_DIR)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
-	@$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)' >/dev/null
+	@$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec env $(DEV_SERVER_SCANNER_ENV) $(DEV_SERVER_CMD)' >/dev/null
 	@echo "Waiting for backend on $(DEV_API_URL) ..."
 	@for i in $$(seq 1 30); do \
 		if curl -sf $(DEV_API_URL)/actuator/health >/dev/null; then \
@@ -121,10 +135,10 @@ dev-server-restart: ## 重启后端开发服务器
 namespace-smoke: ## 运行命名空间工作流 smoke test
 	./scripts/namespace-smoke-test.sh $(DEV_API_URL)
 
-dev-down: ## 停止本地开发环境
+dev-down: ## 停止本地开发环境（含 skill-scanner）
 	$(DEV_COMPOSE) down --remove-orphans
 
-dev-all-down: ## 停止本地开发环境（依赖 + 后端 + 前端）
+dev-all-down: ## 停止本地开发环境（依赖 + scanner + 后端 + 前端）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_WEB_PID)
 	@$(MAKE) dev-down
@@ -195,14 +209,21 @@ web-install: ## 安装前端依赖
 	cd web && pnpm install
 
 web-deps: ## 确保前端依赖可用（本地开发优先复用现有 node_modules）
-	@if [ -d web/node_modules ]; then \
-		echo "Using existing frontend dependencies."; \
-	else \
+	@if [ ! -d web/node_modules ]; then \
+		echo "Installing frontend dependencies (node_modules missing)..."; \
 		$(MAKE) web-install-ci; \
+	elif [ ! -f web/node_modules/.modules.yaml ]; then \
+		echo "Installing frontend dependencies (.modules.yaml missing)..."; \
+		$(MAKE) web-install-ci; \
+	elif [ web/pnpm-lock.yaml -nt web/node_modules/.modules.yaml ]; then \
+		echo "Installing frontend dependencies (lockfile changed)..."; \
+		$(MAKE) web-install-ci; \
+	else \
+		echo "Using existing frontend dependencies."; \
 	fi
 
 web-install-ci: ## 以 CI 方式安装前端依赖
-	cd web && pnpm run install:ci
+	cd web && CI=true pnpm install --frozen-lockfile
 
 dev-web: ## 启动前端开发服务器
 	cd web && pnpm run dev
