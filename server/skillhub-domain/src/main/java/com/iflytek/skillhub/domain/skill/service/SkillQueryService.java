@@ -475,7 +475,7 @@ public class SkillQueryService {
      */
     public InputStream getFileContentByVersionId(Long versionId, String filePath) {
         SkillVersion version = skillVersionRepository.findById(versionId)
-                .orElseThrow(() -> new DomainNotFoundException("error.skill.version.notFound", versionId));
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionId));
         SkillFile file = findFile(version, filePath);
         return readFileContent(file);
     }
