@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import { buildFileTree, type FileTreeNode } from './file-tree-builder'
+import { buildFileTree } from './file-tree-builder'
 import type { SkillFile } from '@/api/types'
+
+// Helper to create a minimal SkillFile for testing
+function makeFile(filePath: string, fileSize: number): SkillFile {
+  return { id: 0, filePath, fileSize, contentType: 'application/octet-stream', sha256: '' }
+}
 
 describe('buildFileTree', () => {
   it('should convert flat file list to tree structure', () => {
     const files: SkillFile[] = [
-      { filePath: 'README.md', fileSize: 1024 },
-      { filePath: 'src/index.ts', fileSize: 2048 },
-      { filePath: 'src/utils/helper.ts', fileSize: 512 },
+      makeFile('README.md', 1024),
+      makeFile('src/index.ts', 2048),
+      makeFile('src/utils/helper.ts', 512),
     ]
 
     const tree = buildFileTree(files)
@@ -22,7 +27,7 @@ describe('buildFileTree', () => {
 
   it('should handle root-level files', () => {
     const files: SkillFile[] = [
-      { filePath: 'package.json', fileSize: 256 },
+      makeFile('package.json', 256),
     ]
 
     const tree = buildFileTree(files)
@@ -34,7 +39,7 @@ describe('buildFileTree', () => {
 
   it('should handle deeply nested directories', () => {
     const files: SkillFile[] = [
-      { filePath: 'a/b/c/d/file.txt', fileSize: 100 },
+      makeFile('a/b/c/d/file.txt', 100),
     ]
 
     const tree = buildFileTree(files)

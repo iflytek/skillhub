@@ -26,6 +26,7 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useQuery: () => ({ data: null, isLoading: false, error: null }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
 
@@ -116,6 +117,7 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useSkillVersionDetail: () => ({ data: undefined }),
   useSkillFiles: () => ({ data: [] }),
   useSkillReadme: () => ({ data: '# Demo', error: null }),
+  useSkillFile: () => ({ data: null, isLoading: false, error: null }),
   useArchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),

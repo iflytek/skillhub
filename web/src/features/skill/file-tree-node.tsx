@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, FileCode, File } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
 import type { FileTreeNode } from './file-tree-builder'
 import { getFileIcon } from './file-type-utils'
 

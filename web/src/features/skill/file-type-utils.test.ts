@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getFileIcon, isPreviewable, getFileTypeLabel, canPreviewFile } from './file-type-utils'
+import { isPreviewable, getFileTypeLabel, canPreviewFile } from './file-type-utils'
 
 describe('file-type-utils', () => {
   describe('isPreviewable', () => {
