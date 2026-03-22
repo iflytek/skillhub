@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, Folder, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
@@ -839,11 +839,20 @@ export function SkillDetailPage() {
 
       {/* Sidebar */}
       <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
-        {/* File Tree Sidebar */}
+        {/* File Tree Sidebar — mirrors SecurityAuditSummary card pattern */}
         {files && files.length > 0 && (
-          <Card className="p-0 overflow-hidden max-h-[600px] flex flex-col">
-            <div className="overflow-y-auto flex-1">
-              <FileTree files={files} onFileClick={handleFileClick} />
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Folder className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">
+                {t('fileTree.title')}
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto">
+                {files.length}
+              </span>
+            </div>
+            <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+              <FileTree files={files} onFileClick={handleFileClick} bare />
             </div>
           </Card>
         )}

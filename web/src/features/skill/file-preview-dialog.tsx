@@ -1,4 +1,4 @@
-import { Copy, Download } from 'lucide-react'
+import { Copy, Download, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
@@ -49,21 +49,22 @@ export function FilePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 flex flex-col">
-        {/* Header: file name, type badge, and action buttons */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-muted/30 flex-shrink-0">
+      {/* Hide the default close button via [&>button]:hidden, we render our own in the header */}
+      <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 flex flex-col [&>button]:hidden">
+        {/* Header: file name, type badge, and action buttons (including close) */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 bg-muted/30 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <span className="font-mono text-sm text-foreground truncate">{node.name}</span>
+            <span className="font-mono text-sm font-medium text-foreground truncate">{node.name}</span>
             <span className="px-2 py-0.5 text-xs rounded border border-border/60 bg-background/60 text-muted-foreground flex-shrink-0">
               {fileTypeLabel}
             </span>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {content && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="h-8 w-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-accent transition-all"
                 onClick={handleCopy}
                 title={t('filePreview.copy')}
               >
@@ -73,11 +74,20 @@ export function FilePreviewDialog({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="h-8 w-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-accent transition-all"
               onClick={onDownload}
               title={t('filePreview.download')}
             >
               <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-accent transition-all"
+              onClick={() => onOpenChange(false)}
+              title={t('filePreview.close')}
+            >
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -114,7 +124,7 @@ export function FilePreviewDialog({
         </div>
 
         {/* Footer: shows the full file path */}
-        <div className="px-4 py-2 border-t border-border/40 bg-muted/20 flex-shrink-0">
+        <div className="px-5 py-2 border-t border-border/40 bg-muted/20 flex-shrink-0">
           <span className="text-xs text-muted-foreground font-mono">{node.path}</span>
         </div>
       </DialogContent>
