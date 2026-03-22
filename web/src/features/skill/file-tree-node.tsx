@@ -52,7 +52,7 @@ export function FileTreeNodeComponent({ node, onFileClick, defaultExpanded = fal
           <span className="font-mono text-sm text-foreground truncate">{node.name}</span>
         </div>
         {node.file && (
-          <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+          <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
             {formatFileSize(node.file.fileSize)}
           </span>
         )}
