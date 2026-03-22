@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillFileRepository;
@@ -49,6 +50,7 @@ public class SkillHardDeleteService {
     private final SkillVersionStatsRepository skillVersionStatsRepository;
     private final ObjectStorageService objectStorageService;
     private final SkillStorageDeletionCompensationService compensationService;
+    private final SecurityScanService securityScanService;
     private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
@@ -64,6 +66,7 @@ public class SkillHardDeleteService {
                                   SkillVersionStatsRepository skillVersionStatsRepository,
                                   ObjectStorageService objectStorageService,
                                   SkillStorageDeletionCompensationService compensationService,
+                                  SecurityScanService securityScanService,
                                   AuditLogService auditLogService,
                                   ObjectMapper objectMapper) {
         this.skillRepository = skillRepository;
@@ -78,6 +81,7 @@ public class SkillHardDeleteService {
         this.skillVersionStatsRepository = skillVersionStatsRepository;
         this.objectStorageService = objectStorageService;
         this.compensationService = compensationService;
+        this.securityScanService = securityScanService;
         this.auditLogService = auditLogService;
         this.objectMapper = objectMapper;
     }
@@ -113,6 +117,7 @@ public class SkillHardDeleteService {
         skillVersionStatsRepository.deleteBySkillId(skill.getId());
 
         for (Long versionId : versionIds) {
+            securityScanService.softDeleteByVersionId(versionId);
             skillFileRepository.deleteByVersionId(versionId);
         }
         skillVersionRepository.deleteBySkillId(skill.getId());

@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
+import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, RefreshCw, ShieldCheck, Terminal, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
+import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
+import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { InstallCommand } from '@/features/skill/install-command'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
@@ -19,6 +21,7 @@ import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi, ApiError, buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
+import { SecurityAuditSummary } from '@/features/security-audit/security-audit-summary'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
@@ -41,6 +44,7 @@ import {
   useSkillVersionDetail,
   useSkillFiles,
   useSkillReadme,
+  useSkillFile,
   useArchiveSkill,
   useDeleteSkill,
   useDeleteSkillVersion,
@@ -112,6 +116,10 @@ export function SkillDetailPage() {
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false)
   const [isOverviewCollapsible, setIsOverviewCollapsible] = useState(false)
   const [overviewMaxHeight, setOverviewMaxHeight] = useState(OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT)
+  // File preview state
+  const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
@@ -127,6 +135,14 @@ export function SkillDetailPage() {
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
   const documentationPath = resolveDocumentationFilePath(files)
   const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath)
+  // File preview: fetch content when a file node is selected
+  const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
+    namespace,
+    slug,
+    selectedVersion,
+    previewNode?.path || null,
+    previewDialogOpen && !!previewNode
+  )
   const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
   const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
@@ -239,6 +255,28 @@ export function SkillDetailPage() {
   const triggerBrowserDownload = (url: string) => {
     const link = document.createElement('a')
     link.href = url
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
+  // File tree click handler: opens preview dialog for the selected file
+  const handleFileClick = (node: FileTreeNode) => {
+    setPreviewNode(node)
+    setPreviewDialogOpen(true)
+  }
+
+  // Download a single file from the skill version
+  const handleDownloadFile = () => {
+    if (!previewNode || !selectedVersion) return
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    const url = buildApiUrl(
+      `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersion}/file?path=${encodeURIComponent(previewNode.path)}`
+    )
+    // Set download attribute to the original filename so the browser saves it correctly
+    const link = document.createElement('a')
+    link.href = url
+    link.download = previewNode.name
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -712,7 +750,7 @@ export function SkillDetailPage() {
 
           <TabsContent value="files" className="mt-6">
             {files && files.length > 0 ? (
-              <FileTree files={files} />
+              <FileTree files={files} onFileClick={handleFileClick} />
             ) : (
               <Card className="p-8 text-muted-foreground text-center">
                 {t('skillDetail.noFiles')}
@@ -807,6 +845,37 @@ export function SkillDetailPage() {
 
       {/* Sidebar */}
       <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
+        {/* File Tree Sidebar — collapsible, mirrors SecurityAuditSummary card pattern */}
+        {files && files.length > 0 && (
+          <Card className="p-5 space-y-3">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 text-left"
+              aria-expanded={fileBrowserOpen}
+              onClick={() => setFileBrowserOpen((v) => !v)}
+            >
+              <Folder className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">
+                {t('fileTree.title')}
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto mr-2">
+                {files.length}
+              </span>
+              <span className={cn(
+                'text-muted-foreground transition-transform duration-200',
+                fileBrowserOpen && 'rotate-180'
+              )}>
+                <ChevronDown className="h-4 w-4" />
+              </span>
+            </button>
+            {fileBrowserOpen && (
+              <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+                <FileTree files={files} onFileClick={handleFileClick} bare />
+              </div>
+            )}
+          </Card>
+        )}
+
         <Card className="p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
@@ -862,7 +931,10 @@ export function SkillDetailPage() {
 
         {publishedVersion && canInteract && (
           <Card className="p-5 space-y-4">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</div>
+            <div className="flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</span>
+            </div>
             {skill.status === 'ARCHIVED' && (
               <p className="text-sm text-muted-foreground">{t('skillDetail.archivedInstallHint')}</p>
             )}
@@ -877,7 +949,10 @@ export function SkillDetailPage() {
         {hasPublishedPendingReview && ownerPreviewVersion && (
           <Card className="border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
             <div className="space-y-1">
-              <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</span>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {t('skillDetail.pendingReviewSectionDescription', {
                   pendingVersion: ownerPreviewVersion.version,
@@ -926,6 +1001,10 @@ export function SkillDetailPage() {
           {t('skillDetail.download')}
         </Button>
 
+        {skill.canManageLifecycle && selectedVersionEntry && (
+          <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} />
+        )}
+
         <SkillLabelPanel
           namespace={namespace}
           slug={slug}
@@ -936,7 +1015,10 @@ export function SkillDetailPage() {
 
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</div>
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {skill.status === 'ARCHIVED'
                 ? t('skillDetail.archivedPublishHint')
@@ -970,30 +1052,35 @@ export function SkillDetailPage() {
                 </div>
               </div>
             </div>
-            {skill.status === 'ARCHIVED' ? (
-              <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
-                {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
-                {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
-              </Button>
-            )}
-            {canHardDeleteSkill && (
-              <Button
-                variant="destructive"
-                onClick={() => setDeleteSkillConfirmOpen(true)}
-                disabled={deleteSkillMutation.isPending}
-              >
-                {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkill')}
-              </Button>
-            )}
+            <div className="flex flex-col gap-3 pt-3 border-t border-border/40">
+              {skill.status === 'ARCHIVED' ? (
+                <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
+                  {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
+                  {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
+                </Button>
+              )}
+              {canHardDeleteSkill && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteSkillConfirmOpen(true)}
+                  disabled={deleteSkillMutation.isPending}
+                >
+                  {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkill')}
+                </Button>
+              )}
+            </div>
           </Card>
         )}
 
         {skill.canSubmitPromotion && publishedVersion && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</div>
+            <div className="flex items-center gap-2">
+              <ArrowUpCircle className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {t('skillDetail.promotionSectionDescription', { version: publishedVersion.version })}
             </p>
@@ -1005,7 +1092,10 @@ export function SkillDetailPage() {
 
         {governanceVisible && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</span>
+            </div>
             <div className="flex flex-col gap-3">
               {canHideSkill ? (
                 !skill.hidden ? (
@@ -1290,6 +1380,17 @@ export function SkillDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* File preview dialog */}
+      <FilePreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        node={previewNode}
+        content={previewContent || null}
+        isLoading={isLoadingPreview}
+        error={previewError}
+        onDownload={handleDownloadFile}
+      />
     </div>
   )
 }

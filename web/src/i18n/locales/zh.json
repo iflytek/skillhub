@@ -1009,7 +1009,18 @@
     "immutableHint": "系统内置命名空间，不允许任何治理或成员修改操作。"
   },
   "fileTree": {
-    "title": "文件列表 ({{count}})"
+    "title": "文件浏览"
+  },
+  "filePreview": {
+    "loadError": "加载文件失败",
+    "tooLarge": "文件过大，暂不支持预览",
+    "binaryFile": "二进制文件不支持预览",
+    "unsupported": "当前文件类型暂不支持预览",
+    "downloadFile": "下载文件",
+    "downloadHint": "下载 {{name}}",
+    "copy": "复制内容",
+    "copySuccess": "已复制到剪贴板",
+    "close": "关闭"
   },
   "loginButton": {
     "loading": "加载中...",
@@ -1227,6 +1238,29 @@
   "routeGuard": {
     "forbiddenTitle": "没有权限访问该页面",
     "forbiddenDescription": "当前账号权限已变更，正在返回上一页"
+  },
+  "securityAudit": {
+    "title": "安全审核",
+    "dialogDescription": "当前版本的安全扫描详细结果。",
+    "findings": "发现项",
+    "findingsCount": "{{count}} 项发现",
+    "totalFindings": "共 {{count}} 项发现",
+    "scanDuration": "{{seconds}}s",
+    "remediation": "修复建议",
+    "viewDetails": "查看详情",
+    "verdict": {
+      "SAFE": "安全",
+      "SUSPICIOUS": "可疑",
+      "DANGEROUS": "危险",
+      "BLOCKED": "已拦截"
+    },
+    "severity": {
+      "CRITICAL": "严重",
+      "HIGH": "高危",
+      "MEDIUM": "中危",
+      "LOW": "低危",
+      "INFO": "信息"
+    }
   },
   "error": {
     "auth": {

@@ -27,6 +27,9 @@ skillhub:
   auth:
     mock:
       enabled: true
+  security:
+    scanner:
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}

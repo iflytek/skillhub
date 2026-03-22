@@ -1009,7 +1009,18 @@
     "immutableHint": "This is a built-in system namespace and does not allow governance or membership changes."
   },
   "fileTree": {
-    "title": "Files ({{count}})"
+    "title": "Files"
+  },
+  "filePreview": {
+    "loadError": "Failed to load file",
+    "tooLarge": "File is too large to preview",
+    "binaryFile": "Binary files cannot be previewed",
+    "unsupported": "This file type is not supported for preview",
+    "downloadFile": "Download File",
+    "downloadHint": "Download {{name}}",
+    "copy": "Copy content",
+    "copySuccess": "Copied to clipboard",
+    "close": "Close"
   },
   "loginButton": {
     "loading": "Loading...",
@@ -1227,6 +1238,29 @@
   "routeGuard": {
     "forbiddenTitle": "You do not have permission to view this page",
     "forbiddenDescription": "Your account permissions changed. Returning to the previous page."
+  },
+  "securityAudit": {
+    "title": "Security Audit",
+    "dialogDescription": "Detailed security scan results for this version.",
+    "findings": "Findings",
+    "findingsCount": "{{count}} findings",
+    "totalFindings": "{{count}} findings total",
+    "scanDuration": "{{seconds}}s",
+    "remediation": "Remediation",
+    "viewDetails": "View Details",
+    "verdict": {
+      "SAFE": "Safe",
+      "SUSPICIOUS": "Suspicious",
+      "DANGEROUS": "Dangerous",
+      "BLOCKED": "Blocked"
+    },
+    "severity": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low",
+      "INFO": "Info"
+    }
   },
   "error": {
     "auth": {

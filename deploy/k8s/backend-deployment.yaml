@@ -54,6 +54,21 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: storage-base-path
+            - name: SKILLHUB_SECURITY_SCANNER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-enabled
+            - name: SKILLHUB_SECURITY_SCANNER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-url
+            - name: SKILLHUB_SECURITY_SCANNER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-mode
             - name: SESSION_COOKIE_SECURE
               value: "true"
             - name: OAUTH2_GITHUB_CLIENT_ID

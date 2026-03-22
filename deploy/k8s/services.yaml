@@ -15,6 +15,20 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: skillhub-scanner
+  labels:
+    app.kubernetes.io/name: skillhub-scanner
+spec:
+  selector:
+    app.kubernetes.io/name: skillhub-scanner
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: skillhub-web
   labels:
     app.kubernetes.io/name: skillhub-web

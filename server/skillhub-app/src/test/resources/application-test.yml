@@ -40,6 +40,9 @@ skillhub:
     enforce-active-user-check: false
   access-policy:
     mode: OPEN
+  security:
+    scanner:
+      enabled: false
 
 logging:
   level:

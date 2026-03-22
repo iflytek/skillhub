@@ -232,7 +232,28 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 | 日志 | 容器 stdout / stderr |
 | 指标 | Spring Boot Actuator，后续可接 Prometheus |
 
-## 10 数据迁移
+## 10 安全扫描服务
+
+如果要启用 `skill-scanner` 后端链路，当前仓库建议按下面的方式部署：
+
+- 本地共享目录场景可以使用 `local` 模式
+- Kubernetes 或分离部署场景应使用 `upload` 模式
+
+当前 `deploy/k8s` 已按分离部署建模，因此推荐：
+
+- `SKILLHUB_SECURITY_SCANNER_ENABLED=true`
+- `SKILLHUB_SECURITY_SCANNER_URL=http://skillhub-scanner:8000`
+- `SKILLHUB_SECURITY_SCANNER_MODE=upload`
+
+相关文件：
+
+- `deploy/k8s/scanner-deployment.yaml`
+- `deploy/k8s/services.yaml`
+- `deploy/k8s/backend-deployment.yaml`
+- `scripts/verify-scanner.sh`
+- `docs/security-scanning.md`
+
+## 11 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

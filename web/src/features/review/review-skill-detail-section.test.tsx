@@ -15,6 +15,11 @@ vi.mock('react-i18next', async () => {
   }
 })
 
+// Mock the review file hook to avoid QueryClient dependency in static rendering
+vi.mock('./use-review-file', () => ({
+  useReviewFile: () => ({ data: null, isLoading: false, error: null }),
+}))
+
 function createDetail(): ReviewSkillDetail {
   return {
     skill: {

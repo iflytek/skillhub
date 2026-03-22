@@ -152,6 +152,32 @@ public class ReviewController extends BaseApiController {
         );
     }
 
+    /**
+     * Reads a single file's content from the review-bound skill version.
+     * Supports both text preview and single-file download use cases.
+     * Path traversal is blocked by validating that path contains no ".." or absolute segments.
+     */
+    @GetMapping("/{id}/file")
+    public ResponseEntity<InputStreamResource> getReviewFile(
+            @PathVariable Long id,
+            @RequestParam("path") String path,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+
+        // Validate path to prevent directory traversal
+        if (path == null || path.isBlank() || path.contains("..") || path.startsWith("/")) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        java.io.InputStream content = governanceWorkflowAppService.getReviewFileContent(
+                id, path, userId, userNsRoles
+        );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(new InputStreamResource(content));
+    }
+
     @GetMapping("/{id}/download")
     public ResponseEntity<InputStreamResource> downloadReviewVersion(@PathVariable Long id,
                                                                      HttpServletRequest request,

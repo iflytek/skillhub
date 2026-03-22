@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.namespace.SlugValidator;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -74,6 +75,7 @@ public class SkillPublishService {
     private final PrePublishValidator prePublishValidator;
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
+    private final SecurityScanService securityScanService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
@@ -89,6 +91,7 @@ public class SkillPublishService {
             PrePublishValidator prePublishValidator,
             ObjectMapper objectMapper,
             ReviewTaskRepository reviewTaskRepository,
+            SecurityScanService securityScanService,
             ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.namespaceRepository = namespaceRepository;
@@ -102,6 +105,7 @@ public class SkillPublishService {
         this.prePublishValidator = prePublishValidator;
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
+        this.securityScanService = securityScanService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
@@ -344,8 +348,12 @@ public class SkillPublishService {
         skillVersionRepository.save(version);
 
         if (!autoPublish) {
-            ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
-            reviewTaskRepository.save(reviewTask);
+            if (securityScanService.isEnabled()) {
+                securityScanService.triggerScan(version.getId(), entries, publisherId);
+            } else {
+                ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
+                reviewTaskRepository.save(reviewTask);
+            }
         }
 
         // 12. Update skill metadata and move the published pointer for auto-publish flows
