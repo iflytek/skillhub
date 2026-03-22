@@ -47,6 +47,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
     const url = buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(previewNode.path)}`)
     const link = document.createElement('a')
     link.href = url
+    link.download = previewNode.name
     document.body.appendChild(link)
     link.click()
     link.remove()

@@ -270,11 +270,16 @@ export function SkillDetailPage() {
   const handleDownloadFile = () => {
     if (!previewNode || !selectedVersion) return
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    triggerBrowserDownload(
-      buildApiUrl(
-        `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersion}/file?path=${encodeURIComponent(previewNode.path)}`
-      ),
+    const url = buildApiUrl(
+      `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersion}/file?path=${encodeURIComponent(previewNode.path)}`
     )
+    // Set download attribute to the original filename so the browser saves it correctly
+    const link = document.createElement('a')
+    link.href = url
+    link.download = previewNode.name
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   }
 
   const handleDownload = async () => {
