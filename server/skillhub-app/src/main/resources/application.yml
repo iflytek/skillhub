@@ -134,7 +134,7 @@ skillhub:
       read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:300000}
       retry-max-attempts: ${SKILLHUB_SECURITY_SCANNER_RETRY_MAX:3}
       analyzers:
-        behavioral: ${SKILLHUB_SCANNER_USE_BEHAVIORAL:false}
+        behavioral: ${SKILLHUB_SCANNER_USE_BEHAVIORAL:true}
         llm: ${SKILLHUB_SCANNER_USE_LLM:false}
         llm-provider: ${SKILLHUB_SCANNER_LLM_PROVIDER:anthropic}
         llm-consensus-runs: ${SKILLHUB_SCANNER_LLM_CONSENSUS_RUNS:1}
