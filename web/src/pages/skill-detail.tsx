@@ -119,6 +119,7 @@ export function SkillDetailPage() {
   // File preview state
   const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
@@ -839,21 +840,33 @@ export function SkillDetailPage() {
 
       {/* Sidebar */}
       <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
-        {/* File Tree Sidebar — mirrors SecurityAuditSummary card pattern */}
+        {/* File Tree Sidebar — collapsible, mirrors SecurityAuditSummary card pattern */}
         {files && files.length > 0 && (
           <Card className="p-5 space-y-3">
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 text-left"
+              aria-expanded={fileBrowserOpen}
+              onClick={() => setFileBrowserOpen((v) => !v)}
+            >
               <Folder className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-semibold font-heading text-foreground">
                 {t('fileTree.title')}
               </span>
-              <span className="text-xs text-muted-foreground ml-auto">
+              <span className="text-xs text-muted-foreground ml-auto mr-2">
                 {files.length}
               </span>
-            </div>
-            <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
-              <FileTree files={files} onFileClick={handleFileClick} bare />
-            </div>
+              <span className="text-muted-foreground">
+                {fileBrowserOpen
+                  ? <ChevronUp className="h-4 w-4" />
+                  : <ChevronDown className="h-4 w-4" />}
+              </span>
+            </button>
+            {fileBrowserOpen && (
+              <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+                <FileTree files={files} onFileClick={handleFileClick} bare />
+              </div>
+            )}
           </Card>
         )}
 

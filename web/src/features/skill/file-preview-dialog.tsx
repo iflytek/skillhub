@@ -49,8 +49,8 @@ export function FilePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Hide the default close button via [&>button]:hidden, we render our own in the header */}
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 flex flex-col [&>button]:hidden">
+      {/* Hide the default close button; override base width to fill most of the viewport */}
+      <DialogContent className="w-[min(calc(100vw-2rem),72rem)] max-h-[90vh] p-0 gap-0 flex flex-col [&>button]:hidden">
         {/* Header: file name, type badge, and action buttons (including close) */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 bg-muted/30 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -64,7 +64,7 @@ export function FilePreviewDialog({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-accent transition-all"
+                className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
                 onClick={handleCopy}
                 title={t('filePreview.copy')}
               >
@@ -74,7 +74,7 @@ export function FilePreviewDialog({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-accent transition-all"
+              className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
               onClick={onDownload}
               title={t('filePreview.download')}
             >
@@ -83,7 +83,7 @@ export function FilePreviewDialog({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-accent transition-all"
+              className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 hover:rotate-90 active:scale-95"
               onClick={() => onOpenChange(false)}
               title={t('filePreview.close')}
             >
