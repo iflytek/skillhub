@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.security.ScanTask;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
+import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityScanRequest;
 import com.iflytek.skillhub.domain.security.SecurityScanResponse;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
@@ -53,7 +54,7 @@ class ScanTaskConsumerTest {
         );
         Path tempDir = Files.createTempDirectory("scan-task-consumer-success");
         Files.writeString(tempDir.resolve("README.md"), "# demo");
-        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-1", 42L, tempDir.toString());
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-1", 42L, tempDir.toString(), ScannerType.SKILL_SCANNER);
 
         consumer.invokeProcessBusiness(payload);
         consumer.invokeMarkCompleted(payload);
@@ -65,6 +66,7 @@ class ScanTaskConsumerTest {
                 Map.of()
         ));
         assertThat(securityScanService.lastVersionId).isEqualTo(42L);
+        assertThat(securityScanService.lastScannerType).isEqualTo(ScannerType.SKILL_SCANNER);
         assertThat(securityScanService.lastResponse).isEqualTo(securityScanner.response);
         assertThat(Files.exists(tempDir)).isFalse();
     }
@@ -90,7 +92,7 @@ class ScanTaskConsumerTest {
                 new InMemoryScanTaskProducer()
         );
         Path tempFile = Files.createTempFile("scan-task-consumer-failure", ".zip");
-        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-2", 42L, tempFile.toString());
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-2", 42L, tempFile.toString(), ScannerType.SKILL_SCANNER);
 
         consumer.invokeMarkFailed(payload, "scan failed");
 
@@ -113,7 +115,7 @@ class ScanTaskConsumerTest {
                 new InMemoryReviewTaskRepository(),
                 producer
         );
-        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-3", 77L, "/tmp/retry");
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-3", 77L, "/tmp/retry", ScannerType.SKILL_SCANNER);
 
         consumer.invokeRetryMessage(payload, 2);
 
@@ -193,6 +195,7 @@ class ScanTaskConsumerTest {
 
     private static final class StubSecurityScanService extends SecurityScanService {
         private Long lastVersionId;
+        private ScannerType lastScannerType;
         private SecurityScanResponse lastResponse;
 
         private StubSecurityScanService() {
@@ -202,8 +205,9 @@ class ScanTaskConsumerTest {
         }
 
         @Override
-        public void processScanResult(Long versionId, SecurityScanResponse response) {
+        public void processScanResult(Long versionId, ScannerType scannerType, SecurityScanResponse response) {
             this.lastVersionId = versionId;
+            this.lastScannerType = scannerType;
             this.lastResponse = response;
         }
     }

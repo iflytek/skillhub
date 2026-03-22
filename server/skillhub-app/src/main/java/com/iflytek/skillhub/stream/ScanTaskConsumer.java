@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.ScanTask;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
+import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityScanRequest;
 import com.iflytek.skillhub.domain.security.SecurityScanResponse;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
@@ -64,10 +65,13 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
             return null;
         }
         try {
+            String scannerTypeValue = data.getOrDefault("scannerType", ScannerType.SKILL_SCANNER.getValue());
+            ScannerType scannerType = ScannerType.fromValue(scannerTypeValue);
             return new ScanTaskPayload(
                     data.get("taskId"),
                     Long.valueOf(versionId),
-                    data.get("skillPath")
+                    data.get("skillPath"),
+                    scannerType
             );
         } catch (NumberFormatException e) {
             return null;
@@ -76,7 +80,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
     @Override
     protected String payloadIdentifier(ScanTaskPayload payload) {
-        return "taskId=" + payload.taskId + ", versionId=" + payload.versionId;
+        return "taskId=" + payload.taskId + ", versionId=" + payload.versionId + ", scanner=" + payload.scannerType;
     }
 
     @Override
@@ -92,7 +96,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                 Map.of()
         );
         SecurityScanResponse response = securityScanner.scan(request);
-        securityScanService.processScanResult(payload.versionId, response);
+        securityScanService.processScanResult(payload.versionId, payload.scannerType, response);
     }
 
     @Override
@@ -153,7 +157,8 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     protected record ScanTaskPayload(
             String taskId,
             Long versionId,
-            String skillPath
+            String skillPath,
+            ScannerType scannerType
     ) {
     }
 }

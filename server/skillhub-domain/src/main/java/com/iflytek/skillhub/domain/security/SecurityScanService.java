@@ -70,23 +70,25 @@ public class SecurityScanService {
                 .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
 
         String packagePath = resolvePackagePath(versionId, entries).toString();
-        auditRepository.save(new SecurityAudit(versionId, "skill-scanner"));
+        // Always create a new audit record — supports multiple rounds per version
+        auditRepository.save(new SecurityAudit(versionId, ScannerType.SKILL_SCANNER));
         scanTaskProducer.publishScanTask(new ScanTask(
                 UUID.randomUUID().toString(),
                 versionId,
                 packagePath,
                 publisherId,
                 System.currentTimeMillis(),
-                Map.of()
+                Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
         ));
         version.setStatus(SkillVersionStatus.SCANNING);
         skillVersionRepository.save(version);
     }
 
     @Transactional
-    public void processScanResult(Long versionId, SecurityScanResponse response) {
-        SecurityAudit audit = auditRepository.findBySkillVersionId(versionId)
-                .orElseThrow(() -> new IllegalStateException("SecurityAudit not found for versionId: " + versionId));
+    public void processScanResult(Long versionId, ScannerType scannerType, SecurityScanResponse response) {
+        SecurityAudit audit = auditRepository.findLatestActiveByVersionIdAndScannerType(versionId, scannerType)
+                .orElseThrow(() -> new IllegalStateException(
+                        "SecurityAudit not found for versionId=" + versionId + ", scannerType=" + scannerType));
         SkillVersion version = skillVersionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
 
@@ -165,5 +167,21 @@ public class SecurityScanService {
             log.warn("Failed to serialize findings for security audit", e);
             return "[]";
         }
+    }
+
+    /**
+     * Soft delete all audit records for a given skill version.
+     * Called before physically deleting a skill version to preserve audit history.
+     */
+    @Transactional
+    public void softDeleteByVersionId(Long versionId) {
+        List<SecurityAudit> audits = auditRepository.findAllActiveBySkillVersionId(versionId);
+        if (audits.isEmpty()) {
+            log.debug("No active security audits to soft-delete for versionId={}", versionId);
+            return;
+        }
+        audits.forEach(SecurityAudit::markAsDeleted);
+        auditRepository.saveAll(audits);
+        log.info("Soft deleted {} security audit(s) for versionId={}", audits.size(), versionId);
     }
 }

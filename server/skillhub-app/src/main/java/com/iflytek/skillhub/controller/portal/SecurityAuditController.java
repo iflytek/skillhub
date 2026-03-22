@@ -3,16 +3,17 @@ package com.iflytek.skillhub.controller.portal;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityAudit;
 import com.iflytek.skillhub.domain.security.SecurityAuditRepository;
 import com.iflytek.skillhub.domain.security.SecurityFinding;
-import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.SecurityAuditResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
@@ -34,15 +35,33 @@ public class SecurityAuditController extends BaseApiController {
     }
 
     @GetMapping
-    public ApiResponse<SecurityAuditResponse> getSecurityAudit(@PathVariable Long skillId,
-                                                               @PathVariable Long versionId) {
-        SecurityAudit audit = securityAuditRepository.findBySkillVersionId(versionId)
-                .orElseThrow(() -> new DomainNotFoundException("security_audit.not_found", versionId));
+    public ApiResponse<List<SecurityAuditResponse>> getSecurityAudits(
+            @PathVariable Long skillId,
+            @PathVariable Long versionId,
+            @RequestParam(required = false) String scannerType) {
 
-        SecurityAuditResponse response = new SecurityAuditResponse(
+        List<SecurityAudit> audits;
+        if (scannerType != null && !scannerType.isBlank()) {
+            ScannerType type = ScannerType.fromValue(scannerType);
+            audits = securityAuditRepository
+                    .findLatestActiveByVersionIdAndScannerType(versionId, type)
+                    .map(List::of)
+                    .orElse(List.of());
+        } else {
+            audits = securityAuditRepository.findLatestActiveByVersionId(versionId);
+        }
+
+        List<SecurityAuditResponse> responses = audits.stream()
+                .map(this::toResponse)
+                .toList();
+        return ok("security_audit.found", responses);
+    }
+
+    private SecurityAuditResponse toResponse(SecurityAudit audit) {
+        return new SecurityAuditResponse(
                 audit.getId(),
                 audit.getScanId(),
-                audit.getScannerType(),
+                audit.getScannerType().getValue(),
                 audit.getVerdict(),
                 audit.getIsSafe(),
                 audit.getMaxSeverity(),
@@ -52,7 +71,6 @@ public class SecurityAuditController extends BaseApiController {
                 audit.getScannedAt(),
                 audit.getCreatedAt()
         );
-        return ok("security_audit.found", response);
     }
 
     private List<SecurityFinding> deserializeFindings(String findingsJson) {

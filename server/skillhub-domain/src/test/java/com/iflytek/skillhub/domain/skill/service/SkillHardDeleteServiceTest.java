@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillFileRepository;
@@ -62,6 +63,8 @@ class SkillHardDeleteServiceTest {
     @Mock
     private SkillStorageDeletionCompensationService compensationService;
     @Mock
+    private SecurityScanService securityScanService;
+    @Mock
     private AuditLogService auditLogService;
 
     private SkillHardDeleteService service;
@@ -88,6 +91,7 @@ class SkillHardDeleteServiceTest {
                 skillVersionStatsRepository,
                 objectStorageService,
                 compensationService,
+                securityScanService,
                 auditLogService,
                 new ObjectMapper()
         );
@@ -130,6 +134,8 @@ class SkillHardDeleteServiceTest {
                         && keys.size() == 4));
         verify(skillFileRepository).deleteByVersionId(21L);
         verify(skillFileRepository).deleteByVersionId(22L);
+        verify(securityScanService).softDeleteByVersionId(21L);
+        verify(securityScanService).softDeleteByVersionId(22L);
         verify(skillVersionRepository).deleteBySkillId(7L);
         verify(skillRepository).delete(skill);
         verify(auditLogService).record(

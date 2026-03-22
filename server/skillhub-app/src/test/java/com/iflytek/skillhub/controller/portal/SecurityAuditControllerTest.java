@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityAudit;
 import com.iflytek.skillhub.domain.security.SecurityAuditRepository;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
@@ -44,7 +45,7 @@ class SecurityAuditControllerTest {
 
     @Test
     void getSecurityAudit_returnsAuditPayload() throws Exception {
-        SecurityAudit audit = new SecurityAudit(42L, "skill-scanner");
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
         setField(audit, "id", 7L);
         audit.setScanId("scan-123");
         audit.setVerdict(SecurityVerdict.DANGEROUS);

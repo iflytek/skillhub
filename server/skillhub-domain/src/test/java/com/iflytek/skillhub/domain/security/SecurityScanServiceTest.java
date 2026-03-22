@@ -53,10 +53,10 @@ class SecurityScanServiceTest {
 
     @Test
     void securityAudit_startsWithSuspiciousUnsafeDefaults() {
-        SecurityAudit audit = new SecurityAudit(42L, "skill-scanner");
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
 
         assertThat(audit.getSkillVersionId()).isEqualTo(42L);
-        assertThat(audit.getScannerType()).isEqualTo("skill-scanner");
+        assertThat(audit.getScannerType()).isEqualTo(ScannerType.SKILL_SCANNER);
         assertThat(audit.getVerdict()).isEqualTo(SecurityVerdict.SUSPICIOUS);
         assertThat(audit.getIsSafe()).isFalse();
         assertThat(audit.getFindingsCount()).isZero();
@@ -87,7 +87,7 @@ class SecurityScanServiceTest {
         SecurityAudit audit = auditCaptor.getValue();
         ScanTask task = taskCaptor.getValue();
         assertThat(audit.getSkillVersionId()).isEqualTo(42L);
-        assertThat(audit.getScannerType()).isEqualTo("skill-scanner");
+        assertThat(audit.getScannerType()).isEqualTo(ScannerType.SKILL_SCANNER);
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
         assertThat(task.versionId()).isEqualTo(42L);
         assertThat(task.publisherId()).isEqualTo("publisher-1");
@@ -96,10 +96,11 @@ class SecurityScanServiceTest {
 
     @Test
     void processScanResult_updatesAuditAndMovesVersionToPendingReview() {
-        SecurityAudit audit = new SecurityAudit(42L, "skill-scanner");
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
 
-        given(auditRepository.findBySkillVersionId(42L)).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
         given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
 
         SecurityScanResponse response = new SecurityScanResponse(
@@ -120,7 +121,7 @@ class SecurityScanServiceTest {
                 1.25
         );
 
-        service.processScanResult(42L, response);
+        service.processScanResult(42L, ScannerType.SKILL_SCANNER, response);
 
         assertThat(audit.getScanId()).isEqualTo("scan-123");
         assertThat(audit.getVerdict()).isEqualTo(SecurityVerdict.DANGEROUS);

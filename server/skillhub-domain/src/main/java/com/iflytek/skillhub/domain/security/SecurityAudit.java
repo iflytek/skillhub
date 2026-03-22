@@ -28,8 +28,9 @@ public class SecurityAudit {
     @Column(name = "scan_id", length = 100)
     private String scanId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "scanner_type", nullable = false, length = 50)
-    private String scannerType;
+    private ScannerType scannerType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -57,10 +58,13 @@ public class SecurityAudit {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     protected SecurityAudit() {
     }
 
-    public SecurityAudit(Long skillVersionId, String scannerType) {
+    public SecurityAudit(Long skillVersionId, ScannerType scannerType) {
         this.skillVersionId = skillVersionId;
         this.scannerType = scannerType;
         this.verdict = SecurityVerdict.SUSPICIOUS;
@@ -86,7 +90,7 @@ public class SecurityAudit {
         return scanId;
     }
 
-    public String getScannerType() {
+    public ScannerType getScannerType() {
         return scannerType;
     }
 
@@ -152,5 +156,33 @@ public class SecurityAudit {
 
     public void setScannedAt(LocalDateTime scannedAt) {
         this.scannedAt = scannedAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    /**
+     * Soft delete this audit record.
+     * Sets the deleted_at timestamp to mark the record as logically deleted.
+     */
+    public void markAsDeleted() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Restore a soft-deleted audit record.
+     * Clears the deleted_at timestamp to mark the record as active again.
+     */
+    public void restore() {
+        this.deletedAt = null;
+    }
+
+    /**
+     * Check if this audit record is soft-deleted.
+     * @return true if deleted_at is not null, false otherwise
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 }
