@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { ChevronDown, Folder } from 'lucide-react'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
@@ -8,9 +9,15 @@ import { Textarea } from '@/shared/ui/textarea'
 import { Label } from '@/shared/ui/label'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/lib/toast'
+import { cn } from '@/shared/lib/utils'
 import { resolveReviewActionErrorDescription } from '@/features/review/review-error'
 import { ReviewSkillDetailSection } from '@/features/review/review-skill-detail-section'
 import { SecurityAuditSection } from '@/features/security-audit/security-audit-section'
+import { FileTree } from '@/features/skill/file-tree'
+import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
+import type { FileTreeNode } from '@/features/skill/file-tree-builder'
+import { useReviewFile } from '@/features/review/use-review-file'
+import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { useReviewDetail, useReviewSkillDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
 
 /**
@@ -53,6 +60,32 @@ export function ReviewDetailPage() {
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [approveDialog, setApproveDialog] = useState(false)
   const [rejectDialog, setRejectDialog] = useState(false)
+  // File browser sidebar state
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
+  const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+
+  // File content for preview — uses the review-bound version via review file API
+  const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useReviewFile(
+    taskId,
+    previewNode?.path || null,
+    previewDialogOpen && !!previewNode
+  )
+
+  const handleFileClick = (node: FileTreeNode) => {
+    setPreviewNode(node)
+    setPreviewDialogOpen(true)
+  }
+
+  const handleDownloadFile = () => {
+    if (!previewNode) return
+    const url = buildApiUrl(`${WEB_API_PREFIX}/reviews/${taskId}/file?path=${encodeURIComponent(previewNode.path)}`)
+    const link = document.createElement('a')
+    link.href = url
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
 
   const formatDate = (dateString: string) => {
     return formatLocalDateTime(dateString, i18n.language)
@@ -87,9 +120,13 @@ export function ReviewDetailPage() {
     )
   }
 
+  const reviewFiles = reviewSkillDetail?.files
+
   return (
-    <div className="space-y-8 max-w-3xl animate-fade-up">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
+      {/* Main Content */}
+      <div className="flex-1 min-w-0 space-y-8">
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold font-heading mb-2">{t('review.detail')}</h1>
           <p className="text-muted-foreground">{t('review.id')}: {review.id}</p>
@@ -255,6 +292,59 @@ export function ReviewDetailPage() {
         confirmText={t('review.rejectConfirm')}
         variant="destructive"
         onConfirm={handleReject}
+      />
+      </div>
+
+      {/* Sidebar — file browser for the review-bound active version */}
+      <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
+        {reviewFiles && reviewFiles.length > 0 && (
+          <Card className="p-5 space-y-3">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 text-left"
+              aria-expanded={fileBrowserOpen}
+              onClick={() => setFileBrowserOpen((v) => !v)}
+            >
+              <Folder className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">
+                {t('fileTree.title')}
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto mr-2">
+                {reviewFiles.length}
+              </span>
+              <span className={cn(
+                'text-muted-foreground transition-transform duration-200',
+                fileBrowserOpen && 'rotate-180'
+              )}>
+                <ChevronDown className="h-4 w-4" />
+              </span>
+            </button>
+            {fileBrowserOpen && (
+              <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+                <FileTree files={reviewFiles} onFileClick={handleFileClick} bare />
+              </div>
+            )}
+          </Card>
+        )}
+        {reviewSkillDetail?.activeVersion && (
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t('review.activeReviewVersion')}</span>
+              <span className="font-mono font-semibold text-foreground">v{reviewSkillDetail.activeVersion}</span>
+            </div>
+          </Card>
+        )}
+      </aside>
+
+      {/* File preview dialog */}
+      <FilePreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        node={previewNode}
+        content={previewContent || null}
+        isLoading={isLoadingPreview}
+        error={previewError}
+        onDownload={handleDownloadFile}
       />
     </div>
   )

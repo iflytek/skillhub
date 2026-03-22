@@ -1016,7 +1016,10 @@
     "tooLarge": "文件过大，暂不支持预览",
     "binaryFile": "二进制文件不支持预览",
     "unsupported": "当前文件类型暂不支持预览",
-    "downloadFile": "下载文件"
+    "downloadFile": "下载文件",
+    "downloadHint": "下载 {{path}}",
+    "copy": "复制内容",
+    "close": "关闭"
   },
   "loginButton": {
     "loading": "加载中...",

@@ -1016,7 +1016,10 @@
     "tooLarge": "File is too large to preview",
     "binaryFile": "Binary files cannot be previewed",
     "unsupported": "This file type is not supported for preview",
-    "downloadFile": "Download File"
+    "downloadFile": "Download File",
+    "downloadHint": "Download {{path}}",
+    "copy": "Copy content",
+    "close": "Close"
   },
   "loginButton": {
     "loading": "Loading...",

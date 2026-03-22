@@ -856,10 +856,11 @@ export function SkillDetailPage() {
               <span className="text-xs text-muted-foreground ml-auto mr-2">
                 {files.length}
               </span>
-              <span className="text-muted-foreground">
-                {fileBrowserOpen
-                  ? <ChevronUp className="h-4 w-4" />
-                  : <ChevronDown className="h-4 w-4" />}
+              <span className={cn(
+                'text-muted-foreground transition-transform duration-200',
+                fileBrowserOpen && 'rotate-180'
+              )}>
+                <ChevronDown className="h-4 w-4" />
               </span>
             </button>
             {fileBrowserOpen && (

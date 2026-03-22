@@ -68,7 +68,7 @@ export function FilePreviewDialog({
                 onClick={handleCopy}
                 title={t('filePreview.copy')}
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-4 w-4 transition-transform duration-200 active:scale-125" />
               </Button>
             )}
             <Button
@@ -76,9 +76,9 @@ export function FilePreviewDialog({
               size="icon"
               className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
               onClick={onDownload}
-              title={t('filePreview.download')}
+              title={t('filePreview.downloadHint', { path: node.path })}
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4 transition-transform duration-200 hover:translate-y-0.5" />
             </Button>
             <Button
               variant="ghost"
@@ -112,7 +112,7 @@ export function FilePreviewDialog({
                     ? t('filePreview.binaryFile')
                     : t('filePreview.unsupported')}
               </p>
-              <Button onClick={onDownload}>{t('filePreview.downloadFile')}</Button>
+              <Button onClick={onDownload}>{t('filePreview.downloadHint', { path: node.path })}</Button>
             </div>
           ) : content && isMarkdown ? (
             <MarkdownRenderer content={content} />
