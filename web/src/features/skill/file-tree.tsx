@@ -1,45 +1,46 @@
 import { useTranslation } from 'react-i18next'
 import type { SkillFile } from '@/api/types'
+import { buildFileTree } from './file-tree-builder'
+import { FileTreeNodeComponent } from './file-tree-node'
+import type { FileTreeNode } from './file-tree-builder'
 
 interface FileTreeProps {
   files: SkillFile[]
-  onFileClick?: (file: SkillFile) => void
+  onFileClick?: (node: FileTreeNode) => void
 }
 
 /**
- * Formats file sizes for the package browser without pulling in a heavier
- * generic formatting dependency.
- */
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-/**
- * Presents the flat file list returned by the backend package endpoint.
- * The UI keeps a simple list rather than reconstructing a nested tree because
- * package inspection is currently optimized for quick file selection.
+ * Displays a hierarchical file tree with expandable directories.
+ * Converts flat file list into tree structure and renders with proper nesting.
  */
 export function FileTree({ files, onFileClick }: FileTreeProps) {
   const { t } = useTranslation()
+  const tree = buildFileTree(files)
+
+  const handleFileClick = (node: FileTreeNode) => {
+    if (node.type === 'file' && onFileClick) {
+      onFileClick(node)
+    }
+  }
+
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="bg-muted px-4 py-2 text-sm font-medium">
-        {t('fileTree.title', { count: files.length })}
+    <div className="border border-border rounded-lg overflow-hidden bg-card">
+      <div className="bg-muted/80 px-4 py-2.5 flex items-center justify-between border-b border-border/40">
+        <div className="text-sm font-medium text-foreground flex items-center gap-2">
+          {t('fileTree.title')}
+        </div>
+        <span className="text-xs text-muted-foreground bg-background/60 px-2 py-0.5 rounded-full">
+          {files.length}
+        </span>
       </div>
-      <div className="divide-y">
-        {files.map((file) => (
-          <div
-            key={file.id}
-            className="px-4 py-2 hover:bg-muted/50 cursor-pointer flex items-center justify-between"
-            onClick={() => onFileClick?.(file)}
-          >
-            <span className="text-sm font-mono">{file.filePath}</span>
-            <span className="text-xs text-muted-foreground">
-              {formatFileSize(file.fileSize)}
-            </span>
-          </div>
+      <div className="divide-y divide-border/20">
+        {tree.map((node) => (
+          <FileTreeNodeComponent
+            key={node.id}
+            node={node}
+            onFileClick={handleFileClick}
+            defaultExpanded={node.depth === 0 && node.type === 'directory'}
+          />
         ))}
       </div>
     </div>
