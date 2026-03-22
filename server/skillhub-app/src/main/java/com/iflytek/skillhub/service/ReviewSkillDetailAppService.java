@@ -20,6 +20,7 @@ import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,6 +118,22 @@ public class ReviewSkillDetailAppService {
         SkillQueryService.ReviewSkillSnapshotDTO snapshot =
                 skillQueryService.getReviewSkillSnapshot(context.task().getSkillVersionId());
         return skillDownloadService.downloadReviewVersion(snapshot.skill(), snapshot.activeVersion());
+    }
+
+    /**
+     * Reads a single file's content from the review's bound skill version.
+     * Reuses the existing review authorization context to ensure only
+     * authorized reviewers can access the file.
+     */
+    public InputStream getReviewFileContent(Long reviewId,
+                                            String filePath,
+                                            String userId,
+                                            Map<Long, NamespaceRole> userNsRoles) {
+        ReviewAccessContext context = loadAuthorizedContext(reviewId, userId, userNsRoles);
+        return skillQueryService.getFileContentByVersionId(
+                context.task().getSkillVersionId(),
+                filePath
+        );
     }
 
     private ReviewAccessContext loadAuthorizedContext(Long reviewId,

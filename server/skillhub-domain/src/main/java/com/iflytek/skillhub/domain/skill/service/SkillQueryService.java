@@ -468,6 +468,18 @@ public class SkillQueryService {
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", version));
     }
 
+    /**
+     * Reads a single file from a skill version by its version ID.
+     * Used by the review file reading endpoint where the caller has already
+     * performed authorization checks.
+     */
+    public InputStream getFileContentByVersionId(Long versionId, String filePath) {
+        SkillVersion version = skillVersionRepository.findById(versionId)
+                .orElseThrow(() -> new DomainNotFoundException("error.skill.version.notFound", versionId));
+        SkillFile file = findFile(version, filePath);
+        return readFileContent(file);
+    }
+
     private SkillFile findFile(SkillVersion skillVersion, String filePath) {
         return availableFiles(skillVersion.getId()).stream()
                 .filter(f -> f.getFilePath().equals(filePath))
