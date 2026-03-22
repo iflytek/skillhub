@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
+import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
+import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { InstallCommand } from '@/features/skill/install-command'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
@@ -42,6 +44,7 @@ import {
   useSkillVersionDetail,
   useSkillFiles,
   useSkillReadme,
+  useSkillFile,
   useArchiveSkill,
   useDeleteSkill,
   useDeleteSkillVersion,
@@ -113,6 +116,9 @@ export function SkillDetailPage() {
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false)
   const [isOverviewCollapsible, setIsOverviewCollapsible] = useState(false)
   const [overviewMaxHeight, setOverviewMaxHeight] = useState(OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT)
+  // File preview state
+  const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
@@ -128,6 +134,14 @@ export function SkillDetailPage() {
   const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
   const documentationPath = resolveDocumentationFilePath(files)
   const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath)
+  // File preview: fetch content when a file node is selected
+  const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
+    namespace,
+    slug,
+    selectedVersion,
+    previewNode?.path || null,
+    previewDialogOpen && !!previewNode
+  )
   const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
   const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
   const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
@@ -243,6 +257,23 @@ export function SkillDetailPage() {
     document.body.appendChild(link)
     link.click()
     link.remove()
+  }
+
+  // File tree click handler: opens preview dialog for the selected file
+  const handleFileClick = (node: FileTreeNode) => {
+    setPreviewNode(node)
+    setPreviewDialogOpen(true)
+  }
+
+  // Download a single file from the skill version
+  const handleDownloadFile = () => {
+    if (!previewNode || !selectedVersion) return
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    triggerBrowserDownload(
+      buildApiUrl(
+        `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersion}/file?path=${encodeURIComponent(previewNode.path)}`
+      ),
+    )
   }
 
   const handleDownload = async () => {
@@ -713,7 +744,7 @@ export function SkillDetailPage() {
 
           <TabsContent value="files" className="mt-6">
             {files && files.length > 0 ? (
-              <FileTree files={files} />
+              <FileTree files={files} onFileClick={handleFileClick} />
             ) : (
               <Card className="p-8 text-muted-foreground text-center">
                 {t('skillDetail.noFiles')}
@@ -1297,6 +1328,17 @@ export function SkillDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* File preview dialog */}
+      <FilePreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        node={previewNode}
+        content={previewContent || null}
+        isLoading={isLoadingPreview}
+        error={previewError}
+        onDownload={handleDownloadFile}
+      />
     </div>
   )
 }
