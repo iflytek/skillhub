@@ -1017,8 +1017,9 @@
     "binaryFile": "二进制文件不支持预览",
     "unsupported": "当前文件类型暂不支持预览",
     "downloadFile": "下载文件",
-    "downloadHint": "下载 {{path}}",
+    "downloadHint": "下载 {{name}}",
     "copy": "复制内容",
+    "copySuccess": "已复制到剪贴板",
     "close": "关闭"
   },
   "loginButton": {

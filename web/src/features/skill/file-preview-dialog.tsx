@@ -1,8 +1,10 @@
-import { Copy, Download, X } from 'lucide-react'
+import { useState } from 'react'
+import { Copy, Check, Download, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { MarkdownRenderer } from './markdown-renderer'
+import { toast } from '@/shared/lib/toast'
 import { getFileTypeLabel, canPreviewFile } from './file-type-utils'
 import type { FileTreeNode } from './file-tree-builder'
 
@@ -31,6 +33,8 @@ export function FilePreviewDialog({
   onDownload,
 }: FilePreviewDialogProps) {
   const { t } = useTranslation()
+  // Tracks the copy animation state: idle → spinning → done
+  const [copyState, setCopyState] = useState<'idle' | 'spinning' | 'done'>('idle')
 
   if (!node) return null
 
@@ -39,12 +43,19 @@ export function FilePreviewDialog({
   const isMarkdown = ['md', 'mdx', 'markdown'].includes(fileTypeLabel)
 
   /**
-   * Copies file content to clipboard.
+   * Copies file content to clipboard with animation feedback.
    */
   const handleCopy = async () => {
-    if (content) {
-      await navigator.clipboard.writeText(content)
-    }
+    if (!content || copyState !== 'idle') return
+    setCopyState('spinning')
+    await navigator.clipboard.writeText(content)
+    // Show checkmark after the spin completes
+    setTimeout(() => {
+      setCopyState('done')
+      toast.success(t('filePreview.copySuccess'))
+      // Reset back to idle after a short delay
+      setTimeout(() => setCopyState('idle'), 1500)
+    }, 300)
   }
 
   return (
@@ -64,11 +75,14 @@ export function FilePreviewDialog({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
+                className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 active:scale-95"
                 onClick={handleCopy}
                 title={t('filePreview.copy')}
+                disabled={copyState !== 'idle'}
               >
-                <Copy className="h-4 w-4 transition-transform duration-200 active:scale-125" />
+                {copyState === 'done'
+                  ? <Check className="h-4 w-4 text-emerald-500" />
+                  : <Copy className={`h-4 w-4 transition-transform duration-300 ${copyState === 'spinning' ? 'animate-spin' : 'hover:rotate-180'}`} />}
               </Button>
             )}
             <Button
@@ -76,7 +90,7 @@ export function FilePreviewDialog({
               size="icon"
               className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
               onClick={onDownload}
-              title={t('filePreview.downloadHint', { path: node.path })}
+              title={t('filePreview.downloadHint', { name: node.name })}
             >
               <Download className="h-4 w-4 transition-transform duration-200 hover:translate-y-0.5" />
             </Button>
@@ -112,7 +126,7 @@ export function FilePreviewDialog({
                     ? t('filePreview.binaryFile')
                     : t('filePreview.unsupported')}
               </p>
-              <Button onClick={onDownload}>{t('filePreview.downloadHint', { path: node.path })}</Button>
+              <Button onClick={onDownload}>{t('filePreview.downloadHint', { name: node.name })}</Button>
             </div>
           ) : content && isMarkdown ? (
             <MarkdownRenderer content={content} />

@@ -1017,8 +1017,9 @@
     "binaryFile": "Binary files cannot be previewed",
     "unsupported": "This file type is not supported for preview",
     "downloadFile": "Download File",
-    "downloadHint": "Download {{path}}",
+    "downloadHint": "Download {{name}}",
     "copy": "Copy content",
+    "copySuccess": "Copied to clipboard",
     "close": "Close"
   },
   "loginButton": {
