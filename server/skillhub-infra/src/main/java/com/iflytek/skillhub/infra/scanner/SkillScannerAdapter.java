@@ -55,7 +55,21 @@ public class SkillScannerAdapter implements SecurityScanner {
     }
 
     private SecurityScanResponse mapToResponse(SkillScannerApiResponse apiResponse) {
-        return new SecurityScanResponse(
+        log.info("Scanner API raw response: scanId={}, skillName={}, isSafe={}, maxSeverity={}, findingsCount={}, duration={}s",
+                apiResponse.scanId(), apiResponse.skillName(), apiResponse.isSafe(),
+                apiResponse.maxSeverity(), apiResponse.findingsCount(), apiResponse.scanDurationSeconds());
+
+        if (apiResponse.findings() != null) {
+            for (SkillScannerApiResponse.Finding f : apiResponse.findings()) {
+                log.info("Scanner API finding: id={}, ruleId={}, severity={}, category={}, title={}, " +
+                                "description={}, filePath={}, lineNumber={}, snippet={}, remediation={}, analyzer={}, metadata={}",
+                        f.id(), f.ruleId(), f.severity(), f.category(), f.title(),
+                        f.description(), f.filePath(), f.lineNumber(), f.snippet(),
+                        f.remediation(), f.analyzer(), f.metadata());
+            }
+        }
+
+        SecurityScanResponse response = new SecurityScanResponse(
                 apiResponse.scanId(),
                 mapVerdict(apiResponse.isSafe(), apiResponse.maxSeverity()),
                 apiResponse.findingsCount() != null ? apiResponse.findingsCount() : 0,
@@ -63,6 +77,17 @@ public class SkillScannerAdapter implements SecurityScanner {
                 mapFindings(apiResponse.findings()),
                 apiResponse.scanDurationSeconds() != null ? apiResponse.scanDurationSeconds() : 0.0
         );
+
+        log.info("Mapped response: scanId={}, verdict={}, findingsCount={}, maxSeverity={}",
+                response.scanId(), response.verdict(), response.findingsCount(), response.maxSeverity());
+        for (SecurityFinding f : response.findings()) {
+            log.info("Mapped finding: ruleId={}, severity={}, category={}, title={}, message={}, " +
+                            "filePath={}, lineNumber={}, codeSnippet={}, remediation={}, analyzer={}, metadata={}",
+                    f.ruleId(), f.severity(), f.category(), f.title(), f.message(),
+                    f.filePath(), f.lineNumber(), f.codeSnippet(), f.remediation(), f.analyzer(), f.metadata());
+        }
+
+        return response;
     }
 
     private SecurityVerdict mapVerdict(Boolean isSafe, String maxSeverity) {
