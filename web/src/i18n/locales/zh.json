@@ -1009,7 +1009,14 @@
     "immutableHint": "系统内置命名空间，不允许任何治理或成员修改操作。"
   },
   "fileTree": {
-    "title": "文件列表 ({{count}})"
+    "title": "文件浏览"
+  },
+  "filePreview": {
+    "loadError": "加载文件失败",
+    "tooLarge": "文件过大，暂不支持预览",
+    "binaryFile": "二进制文件不支持预览",
+    "unsupported": "当前文件类型暂不支持预览",
+    "downloadFile": "下载文件"
   },
   "loginButton": {
     "loading": "加载中...",
