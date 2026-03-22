@@ -123,6 +123,33 @@ skillhub:
         requires-review: false
   device-auth:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
+  security:
+    scanner:
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
+      base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}
+      health-path: /health
+      scan-path: /scan-upload
+      mode: ${SKILLHUB_SECURITY_SCANNER_MODE:local}
+      connect-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT:5000}
+      read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:300000}
+      retry-max-attempts: ${SKILLHUB_SECURITY_SCANNER_RETRY_MAX:3}
+      analyzers:
+        behavioral: ${SKILLHUB_SCANNER_USE_BEHAVIORAL:false}
+        llm: ${SKILLHUB_SCANNER_USE_LLM:false}
+        llm-provider: ${SKILLHUB_SCANNER_LLM_PROVIDER:anthropic}
+        llm-consensus-runs: ${SKILLHUB_SCANNER_LLM_CONSENSUS_RUNS:1}
+        meta: ${SKILLHUB_SCANNER_USE_META:false}
+        ai-defense: ${SKILLHUB_SCANNER_USE_AI_DEFENSE:false}
+        ai-defense-api-key: ${SKILLHUB_SCANNER_AI_DEFENSE_API_KEY:}
+        virus-total: ${SKILLHUB_SCANNER_USE_VIRUSTOTAL:false}
+        trigger: ${SKILLHUB_SCANNER_USE_TRIGGER:false}
+      policy:
+        preset: ${SKILLHUB_SCANNER_POLICY_PRESET:balanced}
+        custom-policy-path: ${SKILLHUB_SCANNER_CUSTOM_POLICY_PATH:}
+        fail-on-severity: ${SKILLHUB_SCANNER_FAIL_ON_SEVERITY:high}
+    stream:
+      key: ${SKILLHUB_SCAN_STREAM_KEY:skillhub:scan:requests}
+      group: ${SKILLHUB_SCAN_STREAM_GROUP:skillhub-scanners}
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
