@@ -135,3 +135,65 @@ export function getFileIcon(fileName: string): string {
 
   return 'FileText'
 }
+
+/**
+ * Maps file extension to highlight.js language identifier for syntax highlighting.
+ * Returns null if the language is not supported or unknown.
+ *
+ * @param fileName - The name of the file
+ * @returns The highlight.js language identifier, or null if unsupported
+ */
+export function getLanguageForHighlight(fileName: string): string | null {
+  const ext = getFileExtension(fileName)
+
+  // Language mapping for highlight.js
+  const languageMap: Record<string, string> = {
+    // Programming languages
+    py: 'python',
+    js: 'javascript',
+    jsx: 'javascript',
+    ts: 'typescript',
+    tsx: 'typescript',
+    java: 'java',
+    go: 'go',
+    rs: 'rust',
+    c: 'c',
+    cpp: 'cpp',
+    cc: 'cpp',
+    cxx: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
+    rb: 'ruby',
+    php: 'php',
+
+    // Shell scripts
+    sh: 'bash',
+    bash: 'bash',
+    zsh: 'bash',
+    fish: 'bash',
+
+    // Configuration files
+    json: 'json',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'toml',
+    xml: 'xml',
+    ini: 'ini',
+
+    // Web files
+    html: 'html',
+    htm: 'html',
+    css: 'css',
+    scss: 'scss',
+    sass: 'sass',
+    less: 'less',
+
+    // Other
+    sql: 'sql',
+    md: 'markdown',
+    mdx: 'markdown',
+    txt: 'plaintext',
+  }
+
+  return languageMap[ext] || null
+}

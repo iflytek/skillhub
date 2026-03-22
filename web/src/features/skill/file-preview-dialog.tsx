@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { MarkdownRenderer } from './markdown-renderer'
+import { CodeRenderer } from './code-renderer'
 import { toast } from '@/shared/lib/toast'
-import { getFileTypeLabel, canPreviewFile } from './file-type-utils'
+import { getFileTypeLabel, canPreviewFile, getLanguageForHighlight } from './file-type-utils'
 import type { FileTreeNode } from './file-tree-builder'
 
 interface FilePreviewDialogProps {
@@ -41,6 +42,12 @@ export function FilePreviewDialog({
   const fileTypeLabel = getFileTypeLabel(node.name)
   const previewCheck = canPreviewFile(node.name, node.file?.fileSize || 0)
   const isMarkdown = ['md', 'mdx', 'markdown'].includes(fileTypeLabel)
+  const fileSize = node.file?.fileSize || 0
+  const language = getLanguageForHighlight(node.name)
+
+  // Syntax highlighting threshold: 500KB
+  const SYNTAX_HIGHLIGHT_THRESHOLD = 500 * 1024
+  const shouldHighlight = language && fileSize <= SYNTAX_HIGHLIGHT_THRESHOLD
 
   /**
    * Copies file content to clipboard with animation feedback.
@@ -130,6 +137,8 @@ export function FilePreviewDialog({
             </div>
           ) : content && isMarkdown ? (
             <MarkdownRenderer content={content} />
+          ) : content && shouldHighlight ? (
+            <CodeRenderer code={content} language={language} />
           ) : content ? (
             <pre className="text-sm font-mono whitespace-pre-wrap break-words">
               <code>{content}</code>
