@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { toast } from '@/shared/lib/toast'
 import { resolveReviewActionErrorDescription } from '@/features/review/review-error'
 import { ReviewSkillDetailSection } from '@/features/review/review-skill-detail-section'
+import { SecurityAuditSection } from '@/features/security-audit/security-audit-section'
 import { useReviewDetail, useReviewSkillDetail, useApproveReview, useRejectReview } from '@/features/review/use-review-detail'
 
 /**
@@ -219,6 +220,16 @@ export function ReviewDetailPage() {
           )}
         </Card>
       )}
+
+      {(() => {
+        const skillId = reviewSkillDetail?.skill?.id
+        const versionId =
+          reviewSkillDetail?.versions?.find((v) => v.version === review.version)?.id ??
+          review.skillVersionId
+        return skillId && versionId ? (
+          <SecurityAuditSection skillId={skillId} versionId={versionId} />
+        ) : null
+      })()}
 
       <ReviewSkillDetailSection
         detail={reviewSkillDetail}

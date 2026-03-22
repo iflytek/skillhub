@@ -6,6 +6,9 @@ data:
   redis-host: redis
   redis-port: "6379"
   storage-base-path: /var/lib/skillhub/storage
+  skill-scanner-enabled: "true"
+  skill-scanner-url: http://skillhub-scanner:8000
+  skill-scanner-mode: upload
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

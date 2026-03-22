@@ -1228,6 +1228,29 @@
     "forbiddenTitle": "没有权限访问该页面",
     "forbiddenDescription": "当前账号权限已变更，正在返回上一页"
   },
+  "securityAudit": {
+    "title": "安全审核",
+    "dialogDescription": "当前版本的安全扫描详细结果。",
+    "findings": "发现项",
+    "findingsCount": "{{count}} 项发现",
+    "totalFindings": "共 {{count}} 项发现",
+    "scanDuration": "{{seconds}}s",
+    "remediation": "修复建议",
+    "viewDetails": "查看详情",
+    "verdict": {
+      "SAFE": "安全",
+      "SUSPICIOUS": "可疑",
+      "DANGEROUS": "危险",
+      "BLOCKED": "已拦截"
+    },
+    "severity": {
+      "CRITICAL": "严重",
+      "HIGH": "高危",
+      "MEDIUM": "中危",
+      "LOW": "低危",
+      "INFO": "信息"
+    }
+  },
   "error": {
     "auth": {
       "local": {
