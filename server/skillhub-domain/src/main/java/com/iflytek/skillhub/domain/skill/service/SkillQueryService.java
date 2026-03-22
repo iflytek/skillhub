@@ -231,7 +231,7 @@ public class SkillQueryService {
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
         assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
 
         return new SkillVersionDetailDTO(
                 skillVersion.getId(),
@@ -257,7 +257,7 @@ public class SkillQueryService {
         assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
 
         return availableFiles(skillVersion.getId());
     }
@@ -291,7 +291,7 @@ public class SkillQueryService {
         assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
-        assertPreviewAccessible(skill, skillVersion, version, currentUserId);
+        assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
 
         SkillFile file = findFile(skillVersion, filePath);
 
@@ -683,11 +683,18 @@ public class SkillQueryService {
         }
     }
 
-    private void assertPreviewAccessible(Skill skill, SkillVersion version, String versionStr, String currentUserId) {
+    /**
+     * Checks whether the caller may preview a specific version's files and metadata.
+     * Published versions are visible to everyone; all other statuses are restricted
+     * to the skill owner or namespace admins so they can inspect rejected, draft,
+     * or in-progress versions.
+     */
+    private void assertPreviewAccessible(Skill skill, SkillVersion version, String versionStr,
+                                          String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
         if (version.getStatus() == SkillVersionStatus.PUBLISHED) {
             return;
         }
-        if (version.getStatus() == SkillVersionStatus.PENDING_REVIEW && isOwner(skill, currentUserId)) {
+        if (canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
             return;
         }
         throw new DomainBadRequestException("error.skill.version.notPublished", versionStr);
