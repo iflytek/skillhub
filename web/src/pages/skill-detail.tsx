@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronUp, Folder, User } from 'lucide-react'
+import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, RefreshCw, ShieldCheck, Terminal, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
@@ -931,7 +931,10 @@ export function SkillDetailPage() {
 
         {publishedVersion && canInteract && (
           <Card className="p-5 space-y-4">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</div>
+            <div className="flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</span>
+            </div>
             {skill.status === 'ARCHIVED' && (
               <p className="text-sm text-muted-foreground">{t('skillDetail.archivedInstallHint')}</p>
             )}
@@ -946,7 +949,10 @@ export function SkillDetailPage() {
         {hasPublishedPendingReview && ownerPreviewVersion && (
           <Card className="border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
             <div className="space-y-1">
-              <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</span>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {t('skillDetail.pendingReviewSectionDescription', {
                   pendingVersion: ownerPreviewVersion.version,
@@ -1009,7 +1015,10 @@ export function SkillDetailPage() {
 
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</div>
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {skill.status === 'ARCHIVED'
                 ? t('skillDetail.archivedPublishHint')
@@ -1068,7 +1077,10 @@ export function SkillDetailPage() {
 
         {skill.canSubmitPromotion && publishedVersion && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</div>
+            <div className="flex items-center gap-2">
+              <ArrowUpCircle className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {t('skillDetail.promotionSectionDescription', { version: publishedVersion.version })}
             </p>
@@ -1080,7 +1092,10 @@ export function SkillDetailPage() {
 
         {governanceVisible && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</span>
+            </div>
             <div className="flex flex-col gap-3">
               {canHideSkill ? (
                 !skill.hidden ? (

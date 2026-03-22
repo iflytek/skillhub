@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Tag } from 'lucide-react'
 import type { LabelDefinition, LabelItem, LabelTranslation } from '@/api/types'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
@@ -121,7 +122,10 @@ export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isS
   return (
     <Card className="p-5 space-y-4">
       <div className="space-y-1">
-        <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.labelsSectionTitle')}</div>
+        <div className="flex items-center gap-2">
+          <Tag className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.labelsSectionTitle')}</span>
+        </div>
         <p className="text-sm text-muted-foreground">
           {isSuperAdmin ? t('skillDetail.labelsSectionDescriptionSuperAdmin') : t('skillDetail.labelsSectionDescription')}
         </p>
