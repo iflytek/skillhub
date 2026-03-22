@@ -235,6 +235,7 @@ export function ReviewDetailPage() {
         detail={reviewSkillDetail}
         isLoading={isLoadingReviewSkillDetail}
         hasError={Boolean(reviewSkillDetailError)}
+        reviewId={taskId}
       />
 
       <ConfirmDialog

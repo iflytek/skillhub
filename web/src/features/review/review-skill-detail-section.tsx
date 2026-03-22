@@ -1,24 +1,56 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { buildApiUrl } from '@/api/client'
+import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import type { ReviewSkillDetail } from '@/api/types'
 import { FileTree } from '@/features/skill/file-tree'
+import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
+import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { Button, buttonVariants } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { getReviewDownloadHref, getReviewSkillDocumentation, isActiveReviewVersion } from './review-skill-detail'
+import { useReviewFile } from './use-review-file'
 
 interface ReviewSkillDetailSectionProps {
   detail?: ReviewSkillDetail
   isLoading?: boolean
   hasError?: boolean
+  /** Review task ID, required for file preview API calls */
+  reviewId?: number
 }
 
-export function ReviewSkillDetailSection({ detail, isLoading, hasError }: ReviewSkillDetailSectionProps) {
+export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId }: ReviewSkillDetailSectionProps) {
   const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(false)
+  // File preview state
+  const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+
+  // Fetch file content when preview dialog is opened
+  const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useReviewFile(
+    reviewId,
+    previewNode?.path || null,
+    previewDialogOpen && !!previewNode
+  )
+
+  // File tree click handler: opens preview dialog for the selected file
+  const handleFileClick = (node: FileTreeNode) => {
+    setPreviewNode(node)
+    setPreviewDialogOpen(true)
+  }
+
+  // Download a single file from the review-bound version
+  const handleDownloadFile = () => {
+    if (!previewNode || !reviewId) return
+    const url = buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(previewNode.path)}`)
+    const link = document.createElement('a')
+    link.href = url
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
 
   if (isLoading) {
     return (
@@ -105,7 +137,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError }: Review
 
             <TabsContent value="files">
               {detail.files.length > 0 ? (
-                <FileTree files={detail.files} />
+                <FileTree files={detail.files} onFileClick={handleFileClick} />
               ) : (
                 <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
                   {t('skillDetail.noFiles')}
@@ -150,6 +182,17 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError }: Review
               )}
             </TabsContent>
           </Tabs>
+
+          {/* File preview dialog */}
+          <FilePreviewDialog
+            open={previewDialogOpen}
+            onOpenChange={setPreviewDialogOpen}
+            node={previewNode}
+            content={previewContent || null}
+            isLoading={isLoadingPreview}
+            error={previewError}
+            onDownload={handleDownloadFile}
+          />
 
           <div className="flex justify-start">
             <Button
