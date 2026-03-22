@@ -8,4 +8,5 @@ public interface LabelTranslationRepository {
     <S extends LabelTranslation> List<S> saveAll(Iterable<S> translations);
     void deleteAll(Iterable<? extends LabelTranslation> translations);
     void deleteByLabelId(Long labelId);
+    void flush();
 }

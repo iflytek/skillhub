@@ -49,6 +49,15 @@ Two mock users are available in local mode (no password needed):
 | `local-user`  | Regular user | `X-Mock-User-Id: local-user`   |
 | `local-admin` | Super admin  | `X-Mock-User-Id: local-admin`  |
 
+Local development also creates a password-based bootstrap admin by default.
+Use `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` to log in through
+the normal local account form. The default local fallback credentials are
+`admin` / `ChangeMe!2026`.
+To disable it for local source startup, set the environment variable
+`BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
+For container or release environments, set the same value in `.env.release`
+or the Compose environment.
+
 ### Useful commands
 
 | Command                          | Description                      |

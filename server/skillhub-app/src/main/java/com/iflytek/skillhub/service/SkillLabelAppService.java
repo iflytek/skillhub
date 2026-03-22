@@ -117,12 +117,15 @@ public class SkillLabelAppService {
         if (skillLabels.isEmpty()) {
             return List.of();
         }
-        Map<Long, LabelDefinition> definitionsById = labelDefinitionService.listAll().stream()
-                .filter(definition -> skillLabels.stream().anyMatch(skillLabel -> skillLabel.getLabelId().equals(definition.getId())))
+        List<Long> labelIds = skillLabels.stream()
+                .map(SkillLabel::getLabelId)
+                .distinct()
+                .toList();
+        Map<Long, LabelDefinition> definitionsById = labelDefinitionService.listByIds(labelIds).stream()
                 .collect(Collectors.toMap(LabelDefinition::getId, Function.identity()));
-        Map<Long, List<LabelTranslation>> translationsByLabelId = definitionsById.keySet().stream()
-                .collect(Collectors.toMap(Function.identity(), labelDefinitionService::listTranslations));
+        Map<Long, List<LabelTranslation>> translationsByLabelId = labelDefinitionService.listTranslationsByLabelIds(labelIds);
         return skillLabels.stream()
+                .filter(skillLabel -> definitionsById.containsKey(skillLabel.getLabelId()))
                 .map(skillLabel -> {
                     LabelDefinition definition = definitionsById.get(skillLabel.getLabelId());
                     return new SkillLabelDto(
