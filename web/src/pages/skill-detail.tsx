@@ -19,6 +19,7 @@ import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi, ApiError, buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
+import { SecurityAuditSummary } from '@/features/security-audit/security-audit-summary'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
@@ -926,6 +927,10 @@ export function SkillDetailPage() {
           {t('skillDetail.download')}
         </Button>
 
+        {skill.canManageLifecycle && selectedVersionEntry && (
+          <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} />
+        )}
+
         <SkillLabelPanel
           namespace={namespace}
           slug={slug}
@@ -970,24 +975,26 @@ export function SkillDetailPage() {
                 </div>
               </div>
             </div>
-            {skill.status === 'ARCHIVED' ? (
-              <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
-                {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
-                {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
-              </Button>
-            )}
-            {canHardDeleteSkill && (
-              <Button
-                variant="destructive"
-                onClick={() => setDeleteSkillConfirmOpen(true)}
-                disabled={deleteSkillMutation.isPending}
-              >
-                {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkill')}
-              </Button>
-            )}
+            <div className="flex flex-col gap-3 pt-3 border-t border-border/40">
+              {skill.status === 'ARCHIVED' ? (
+                <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
+                  {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
+                  {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
+                </Button>
+              )}
+              {canHardDeleteSkill && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteSkillConfirmOpen(true)}
+                  disabled={deleteSkillMutation.isPending}
+                >
+                  {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkill')}
+                </Button>
+              )}
+            </div>
           </Card>
         )}
 
