@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class SkillScannerAdapter implements SecurityScanner {
 
@@ -89,10 +90,13 @@ public class SkillScannerAdapter implements SecurityScanner {
                         finding.severity(),
                         finding.category(),
                         finding.title(),
-                        finding.message(),
-                        finding.location() != null ? finding.location().file() : null,
-                        finding.location() != null ? finding.location().line() : null,
-                        finding.codeSnippet()
+                        finding.description(),
+                        finding.filePath(),
+                        finding.lineNumber(),
+                        finding.snippet(),
+                        finding.remediation(),
+                        finding.analyzer(),
+                        finding.metadata() != null ? finding.metadata() : Map.of()
                 ))
                 .toList();
     }

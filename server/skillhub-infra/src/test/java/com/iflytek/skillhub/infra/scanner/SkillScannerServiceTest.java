@@ -16,11 +16,13 @@ class SkillScannerServiceTest {
         FakeHttpClient httpClient = new FakeHttpClient();
         SkillScannerApiResponse apiResponse = new SkillScannerApiResponse(
                 "scan-1",
+                "test-skill",
                 false,
                 "HIGH",
                 2,
                 null,
-                1.5
+                1.5,
+                "2026-03-22T07:00:00"
         );
         httpClient.postResponse = apiResponse;
         SkillScannerService service = new SkillScannerService(
@@ -47,11 +49,13 @@ class SkillScannerServiceTest {
         FakeHttpClient httpClient = new FakeHttpClient();
         SkillScannerApiResponse apiResponse = new SkillScannerApiResponse(
                 "scan-2",
+                "test-skill",
                 true,
                 "LOW",
                 0,
                 null,
-                0.5
+                0.5,
+                "2026-03-22T07:00:00"
         );
         httpClient.multipartResponse = apiResponse;
         SkillScannerService service = new SkillScannerService(
