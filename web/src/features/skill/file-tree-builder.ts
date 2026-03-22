@@ -22,8 +22,21 @@ export interface FileTreeNode {
 }
 
 /**
+ * Sorts tree nodes: directories first (alphabetically), then files (alphabetically).
+ */
+function sortTreeNodes(nodes: FileTreeNode[]): FileTreeNode[] {
+  return nodes.sort((a, b) => {
+    // Directories come before files
+    if (a.type === 'directory' && b.type === 'file') return -1
+    if (a.type === 'file' && b.type === 'directory') return 1
+    // Within same type, sort alphabetically
+    return a.name.localeCompare(b.name)
+  })
+}
+
+/**
  * Builds a hierarchical tree structure from a flat list of files.
- * Files and directories are sorted alphabetically by path.
+ * Directories are sorted first, then files, both alphabetically.
  *
  * @param files - Flat array of SkillFile objects
  * @returns Array of root-level FileTreeNode objects
@@ -77,5 +90,16 @@ export function buildFileTree(files: SkillFile[]): FileTreeNode[] {
     }
   }
 
+  // Sort each level: directories first, then files
+  function sortRecursive(nodes: FileTreeNode[]) {
+    sortTreeNodes(nodes)
+    for (const node of nodes) {
+      if (node.children) {
+        sortRecursive(node.children)
+      }
+    }
+  }
+
+  sortRecursive(root)
   return root
 }

@@ -841,11 +841,8 @@ export function SkillDetailPage() {
       <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
         {/* File Tree Sidebar */}
         {files && files.length > 0 && (
-          <Card className="p-0 overflow-hidden">
-            <div className="px-4 py-3 border-b border-border/40 bg-muted/30">
-              <div className="text-sm font-semibold font-heading text-foreground">{t('fileTree.fileBrowser')}</div>
-            </div>
-            <div className="max-h-[500px] overflow-y-auto">
+          <Card className="p-0 overflow-hidden max-h-[600px] flex flex-col">
+            <div className="overflow-y-auto flex-1">
               <FileTree files={files} onFileClick={handleFileClick} />
             </div>
           </Card>

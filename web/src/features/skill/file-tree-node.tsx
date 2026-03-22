@@ -87,7 +87,7 @@ export function FileTreeNodeComponent({ node, onFileClick, defaultExpanded = fal
               key={child.id}
               node={child}
               onFileClick={onFileClick}
-              defaultExpanded={child.depth === 1}
+              defaultExpanded={false}
             />
           ))}
         </div>
