@@ -1,0 +1,145 @@
+# ============================================================================
+# SKILL-VETTER RED FLAGS — 追加规则
+# 来源: clawhub.ai/spclaudehome/skill-vetter
+# 用法: 将本文件内容追加到官方 signatures.yaml 末尾
+# ============================================================================
+
+# RED FLAG #1: curl/wget to unknown URLs
+- id: VETTER_CURL_WGET_EXTERNAL
+  category: data_exfiltration
+  severity: HIGH
+  patterns:
+    - "\\bcurl\\s+(-[sSfkLo]+\\s+)*https?://[^\\s]+"
+    - "\\bwget\\s+(-[qO-]+\\s+)*https?://[^\\s]+"
+    - "\\bcurl\\s+.*--data\\b"
+    - "\\bcurl\\s+.*-d\\s+"
+    - "\\bwget\\s+.*--post-data\\b"
+  exclude_patterns:
+    - "api\\.github\\.com"
+    - "raw\\.githubusercontent\\.com"
+    - "pypi\\.org"
+    - "npmjs\\.com"
+    - "localhost"
+    - "127\\.0\\.0\\.1"
+    - "^\\s*#"
+  file_types: [bash, python]
+  description: "curl/wget to external URL — may exfiltrate data or fetch malicious payloads"
+  remediation: "Review target URL. Remove if not essential to skill functionality"
+
+# RED FLAG #3: Requests credentials/tokens/API keys from user
+- id: VETTER_CREDENTIAL_REQUEST
+  category: hardcoded_secrets
+  severity: HIGH
+  patterns:
+    - "(?i)input\\s*\\(.*(?:password|token|key|secret|credential)"
+    - "(?i)prompt.*(?:enter|provide|give).*(?:api.?key|token|password|secret)"
+    - "(?i)getpass\\.getpass"
+  file_types: [python]
+  description: "Skill requests credentials from user input"
+  remediation: "Skills should not prompt for credentials. Use environment variables if auth is needed"
+
+# RED FLAG #5: Accesses agent memory/identity files
+- id: VETTER_AGENT_MEMORY_ACCESS
+  category: data_exfiltration
+  severity: CRITICAL
+  patterns:
+    - "MEMORY\\.md"
+    - "USER\\.md"
+    - "SOUL\\.md"
+    - "IDENTITY\\.md"
+    - "\\.claude/memory"
+    - "\\.claude/settings"
+    - "claude_desktop_config\\.json"
+  exclude_patterns:
+    - "^\\s*#"
+    - "README"
+    - "CHANGELOG"
+  file_types: [python, bash, markdown]
+  description: "Skill accesses agent memory or identity files — potential data theft"
+  remediation: "Skills must not read agent memory, identity, or configuration files"
+
+# RED FLAG #8: Modifies system files outside workspace
+- id: VETTER_SYSTEM_FILE_WRITE
+  category: unauthorized_tool_use
+  severity: CRITICAL
+  patterns:
+    - "open\\s*\\(\\s*['\"]\\s*/etc/"
+    - "open\\s*\\(\\s*['\"]\\s*/usr/"
+    - "open\\s*\\(\\s*['\"]\\s*/var/"
+    - "open\\s*\\(\\s*['\"]\\s*/opt/"
+    - "open\\s*\\(\\s*f?['\"]\\s*~/"
+    - "\\bwrite\\b.*[\\/](?:etc|usr|var|opt)[\\/]"
+    - "pathlib\\.Path\\s*\\(\\s*['\"]\\s*/(?:etc|usr|var)"
+  exclude_patterns:
+    - "/tmp/"
+    - "read"
+    - "'r'"
+    - "\"r\""
+  file_types: [python]
+  description: "Skill writes to system directories outside workspace"
+  remediation: "Skills should only write to workspace or /tmp directories"
+
+# RED FLAG #9: Installs packages silently
+- id: VETTER_SILENT_INSTALL
+  category: unauthorized_tool_use
+  severity: HIGH
+  patterns:
+    - "pip\\s+install\\s+(?!-r\\s)"
+    - "pip3\\s+install\\s+(?!-r\\s)"
+    - "npm\\s+install\\s+"
+    - "pnpm\\s+add\\s+"
+    - "yarn\\s+add\\s+"
+    - "gem\\s+install\\s+"
+    - "cargo\\s+install\\s+"
+  exclude_patterns:
+    - "requirements\\.txt"
+    - "package\\.json"
+    - "^\\s*#"
+    - "README"
+  file_types: [python, bash]
+  description: "Skill installs packages at runtime without declaring them"
+  remediation: "Declare dependencies in requirements.txt or package.json. Do not install at runtime"
+
+# RED FLAG #10: Network calls to IP addresses instead of domains
+- id: VETTER_IP_ADDRESS_CALL
+  category: data_exfiltration
+  severity: HIGH
+  patterns:
+    - "https?://\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
+    - "socket\\.connect\\s*\\(\\s*\\(\\s*['\"]\\d{1,3}\\.\\d{1,3}\\."
+    - "\\bconnect\\s*\\(\\s*['\"]\\d{1,3}\\.\\d{1,3}\\."
+  exclude_patterns:
+    - "127\\.0\\.0\\.1"
+    - "0\\.0\\.0\\.0"
+    - "192\\.168\\."
+    - "10\\."
+    - "172\\.(?:1[6-9]|2[0-9]|3[0-1])\\."
+    - "localhost"
+    - "^\\s*#"
+  file_types: [python, bash]
+  description: "Network call to IP address instead of domain — may bypass DNS logging"
+  remediation: "Use domain names instead of IP addresses for traceability"
+
+# RED FLAG #13: Accesses browser cookies/sessions
+- id: VETTER_BROWSER_DATA_ACCESS
+  category: data_exfiltration
+  severity: CRITICAL
+  patterns:
+    - "(?i)Chrome.*(?:Default|Profile)"
+    - "(?i)Firefox.*profiles"
+    - "(?i)session_?storage"
+    - "(?i)local_?storage"
+    - "\\.mozilla/firefox"
+    - "Google/Chrome"
+    - "BraveSoftware"
+    - "Chromium"
+    - "Library/Application Support/Google/Chrome"
+  exclude_patterns:
+    - "(?i)set.cookie"
+    - "(?i)cookie.?policy"
+    - "^\\s*#"
+    - "README"
+    - "CHANGELOG"
+  file_types: [python, bash]
+  description: "Skill accesses browser cookies or session data"
+  remediation: "Skills must not access browser storage, cookies, or session data"
