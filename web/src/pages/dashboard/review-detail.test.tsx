@@ -20,6 +20,11 @@ vi.mock('react-i18next', async () => {
   }
 })
 
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: undefined, isLoading: false, error: null }),
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}))
+
 vi.mock('@/shared/lib/date-time', () => ({
   formatLocalDateTime: (value: string) => value,
 }))
