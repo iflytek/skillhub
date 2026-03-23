@@ -1228,6 +1228,29 @@
     "forbiddenTitle": "You do not have permission to view this page",
     "forbiddenDescription": "Your account permissions changed. Returning to the previous page."
   },
+  "securityAudit": {
+    "title": "Security Audit",
+    "dialogDescription": "Detailed security scan results for this version.",
+    "findings": "Findings",
+    "findingsCount": "{{count}} findings",
+    "totalFindings": "{{count}} findings total",
+    "scanDuration": "{{seconds}}s",
+    "remediation": "Remediation",
+    "viewDetails": "View Details",
+    "verdict": {
+      "SAFE": "Safe",
+      "SUSPICIOUS": "Suspicious",
+      "DANGEROUS": "Dangerous",
+      "BLOCKED": "Blocked"
+    },
+    "severity": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low",
+      "INFO": "Info"
+    }
+  },
   "error": {
     "auth": {
       "local": {

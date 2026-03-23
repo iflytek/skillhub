@@ -1,0 +1,188 @@
+package com.iflytek.skillhub.domain.security;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
+import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+@Service
+public class SecurityScanService {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityScanService.class);
+    private static final String TEMP_DIR = "/tmp/skillhub-scans";
+
+    private final SecurityAuditRepository auditRepository;
+    private final SkillVersionRepository skillVersionRepository;
+    private final ScanTaskProducer scanTaskProducer;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
+    private final String scanMode;
+    private final boolean enabled;
+
+    public SecurityScanService(SecurityAuditRepository auditRepository,
+                               SkillVersionRepository skillVersionRepository,
+                               ScanTaskProducer scanTaskProducer,
+                               ApplicationEventPublisher eventPublisher,
+                               ObjectMapper objectMapper,
+                               @Value("${skillhub.security.scanner.mode:local}") String scanMode,
+                               @Value("${skillhub.security.scanner.enabled:false}") boolean enabled) {
+        this.auditRepository = auditRepository;
+        this.skillVersionRepository = skillVersionRepository;
+        this.scanTaskProducer = scanTaskProducer;
+        this.eventPublisher = eventPublisher;
+        this.objectMapper = objectMapper;
+        this.scanMode = scanMode;
+        this.enabled = enabled;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    @Transactional
+    public void triggerScan(Long versionId, List<PackageEntry> entries, String publisherId) {
+        if (!enabled) {
+            log.debug("Security scanner disabled, skipping trigger for versionId={}", versionId);
+            return;
+        }
+
+        SkillVersion version = skillVersionRepository.findById(versionId)
+                .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
+
+        String packagePath = resolvePackagePath(versionId, entries).toString();
+        // Always create a new audit record — supports multiple rounds per version
+        auditRepository.save(new SecurityAudit(versionId, ScannerType.SKILL_SCANNER));
+        scanTaskProducer.publishScanTask(new ScanTask(
+                UUID.randomUUID().toString(),
+                versionId,
+                packagePath,
+                publisherId,
+                System.currentTimeMillis(),
+                Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
+        ));
+        version.setStatus(SkillVersionStatus.SCANNING);
+        skillVersionRepository.save(version);
+    }
+
+    @Transactional
+    public void processScanResult(Long versionId, ScannerType scannerType, SecurityScanResponse response) {
+        SecurityAudit audit = auditRepository.findLatestActiveByVersionIdAndScannerType(versionId, scannerType)
+                .orElseThrow(() -> new IllegalStateException(
+                        "SecurityAudit not found for versionId=" + versionId + ", scannerType=" + scannerType));
+        SkillVersion version = skillVersionRepository.findById(versionId)
+                .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
+
+        audit.setScanId(response.scanId());
+        audit.setVerdict(response.verdict());
+        audit.setIsSafe(response.verdict() == SecurityVerdict.SAFE);
+        audit.setMaxSeverity(response.maxSeverity());
+        audit.setFindingsCount(response.findingsCount());
+        audit.setFindings(serializeFindings(response.findings()));
+        audit.setScanDurationSeconds(response.scanDurationSeconds());
+        audit.setScannedAt(Instant.now(Clock.systemUTC()));
+        auditRepository.save(audit);
+
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        skillVersionRepository.save(version);
+
+        eventPublisher.publishEvent(new ScanCompletedEvent(
+                versionId,
+                response.verdict(),
+                response.findingsCount()
+        ));
+    }
+
+    private Path resolvePackagePath(Long versionId, List<PackageEntry> entries) {
+        if ("upload".equalsIgnoreCase(scanMode)) {
+            return saveTempZip(versionId, entries);
+        }
+        return saveTempDirectory(versionId, entries);
+    }
+
+    private Path saveTempDirectory(Long versionId, List<PackageEntry> entries) {
+        try {
+            Path skillDir = Paths.get(TEMP_DIR, String.valueOf(versionId));
+            Files.createDirectories(skillDir);
+            for (PackageEntry entry : entries) {
+                Path filePath = skillDir.resolve(entry.path());
+                Path parent = filePath.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
+                }
+                Files.write(filePath, entry.content());
+            }
+            return skillDir;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to save temp directory for versionId: " + versionId, e);
+        }
+    }
+
+    private Path saveTempZip(Long versionId, List<PackageEntry> entries) {
+        try {
+            Path dir = Paths.get(TEMP_DIR);
+            Files.createDirectories(dir);
+            Path zipPath = dir.resolve(versionId + ".zip");
+
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                 ZipOutputStream zos = new ZipOutputStream(baos)) {
+                for (PackageEntry entry : entries) {
+                    zos.putNextEntry(new ZipEntry(entry.path()));
+                    zos.write(entry.content());
+                    zos.closeEntry();
+                }
+                zos.finish();
+                Files.write(zipPath, baos.toByteArray());
+            }
+
+            return zipPath;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to save temp ZIP for versionId: " + versionId, e);
+        }
+    }
+
+    private String serializeFindings(List<SecurityFinding> findings) {
+        try {
+            return objectMapper.writeValueAsString(findings);
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize findings for security audit", e);
+            return "[]";
+        }
+    }
+
+    /**
+     * Soft delete all audit records for a given skill version.
+     * Called before physically deleting a skill version to preserve audit history.
+     */
+    @Transactional
+    public void softDeleteByVersionId(Long versionId) {
+        List<SecurityAudit> audits = auditRepository.findAllActiveBySkillVersionId(versionId);
+        if (audits.isEmpty()) {
+            log.debug("No active security audits to soft-delete for versionId={}", versionId);
+            return;
+        }
+        audits.forEach(SecurityAudit::markAsDeleted);
+        auditRepository.saveAll(audits);
+        log.info("Soft deleted {} security audit(s) for versionId={}", audits.size(), versionId);
+    }
+}
