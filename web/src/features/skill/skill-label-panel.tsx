@@ -10,7 +10,7 @@ import {
   useDetachSkillLabel,
   useSkillLabels,
   useVisibleLabels,
-} from '@/shared/hooks/use-skill-queries'
+} from '@/shared/hooks/use-label-queries'
 
 type SkillLabelPanelProps = {
   namespace: string

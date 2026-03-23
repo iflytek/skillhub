@@ -21,7 +21,7 @@ import {
   useNamespaceMembers,
   useRemoveNamespaceMember,
   useUpdateNamespaceMemberRole,
-} from '@/shared/hooks/use-skill-queries'
+} from '@/shared/hooks/use-namespace-queries'
 import { toast } from '@/shared/lib/toast'
 
 type PendingRemoval = {

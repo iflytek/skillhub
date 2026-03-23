@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { labelApi } from '@/api/client'
 import type { AdminLabelInput } from '@/api/types'
-import { useAdminLabelDefinitions } from '@/shared/hooks/use-skill-queries'
+import { useAdminLabelDefinitions } from '@/shared/hooks/use-label-queries'
 
 export { useAdminLabelDefinitions }
 

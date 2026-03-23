@@ -4,7 +4,8 @@ import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
-import { useNamespaceDetail, useSearchSkills } from '@/shared/hooks/use-skill-queries'
+import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
+import { useNamespaceDetail } from '@/shared/hooks/use-namespace-queries'
 
 /**
  * Public namespace page showing namespace metadata and the skills currently discoverable inside it.
