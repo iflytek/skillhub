@@ -112,6 +112,16 @@ vi.mock('@/features/review/use-review-detail', () => ({
   }),
 }))
 
+// Mock hooks used directly by the review-detail page for file browser sidebar
+vi.mock('@/features/review/use-review-file', () => ({
+  useReviewFile: () => ({ data: null, isLoading: false, error: null }),
+}))
+
+vi.mock('@/api/client', () => ({
+  buildApiUrl: (path: string) => path,
+  WEB_API_PREFIX: '/api/web',
+}))
+
 import { ReviewDetailPage } from './review-detail'
 
 describe('ReviewDetailPage', () => {
@@ -181,7 +191,7 @@ describe('ReviewDetailPage', () => {
   it('keeps the page in a single-column flow and leaves the skill detail behind a collapsed section', () => {
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
-    expect(html).toContain('max-w-3xl animate-fade-up')
+    expect(html).toContain('max-w-6xl mx-auto flex')
     expect(html).toContain('aria-expanded="false"')
   })
 

@@ -90,6 +90,25 @@ export function useSkillReadme(namespace: string, slug: string, version?: string
   })
 }
 
+/**
+ * Fetches a single file's content from a skill version.
+ * Reuses the same backend endpoint as README loading but for arbitrary paths.
+ */
+export function useSkillFile(
+  namespace: string,
+  slug: string,
+  version: string | undefined,
+  filePath: string | null,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', version, 'file', filePath],
+    queryFn: () => getSkillDocumentation(namespace, slug, version!, filePath!),
+    enabled: enabled && !!namespace && !!slug && !!version && !!filePath,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
+}
+
 export function useSkillVersionDetail(namespace: string, slug: string, version?: string) {
   return useQuery({
     queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
@@ -158,17 +177,10 @@ export function useDeleteSkillVersion() {
 }
 
 export function useDeleteSkill() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: ({ namespace, slug }: { namespace: string; slug: string }) =>
       skillLifecycleApi.deleteSkill(namespace, slug),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
-      queryClient.invalidateQueries({ queryKey: ['skills'] })
-    },
+    // Cache cleanup is handled by the caller to avoid refetching while the component is still mounted.
   })
 }
 

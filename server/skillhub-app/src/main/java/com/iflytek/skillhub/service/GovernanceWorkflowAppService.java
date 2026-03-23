@@ -11,6 +11,7 @@ import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
+import java.io.InputStream;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -113,6 +114,22 @@ public class GovernanceWorkflowAppService {
                                                                      Map<Long, NamespaceRole> userNsRoles) {
         return reviewSkillDetailAppService.downloadReviewPackage(
                 reviewTaskId,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of()
+        );
+    }
+
+    /**
+     * Reads a single file from the review-bound skill version.
+     * Delegates to ReviewSkillDetailAppService for authorization and file access.
+     */
+    public InputStream getReviewFileContent(Long reviewTaskId,
+                                            String filePath,
+                                            String userId,
+                                            Map<Long, NamespaceRole> userNsRoles) {
+        return reviewSkillDetailAppService.getReviewFileContent(
+                reviewTaskId,
+                filePath,
                 userId,
                 userNsRoles != null ? userNsRoles : Map.of()
         );

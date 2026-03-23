@@ -23,6 +23,10 @@ export function hasPendingOwnerPreview(skill: SkillLifecycleCarrier): boolean {
   return skill.ownerPreviewVersion?.status === 'PENDING_REVIEW'
 }
 
+/**
+ * Returns true when the detail page is showing an owner-only preview version
+ * (any non-published status: PENDING_REVIEW, REJECTED, DRAFT, etc.)
+ */
 export function isOwnerPreviewResolution(skill: SkillLifecycleCarrier): boolean {
-  return skill.resolutionMode === 'OWNER_PREVIEW' && skill.headlineVersion?.status === 'PENDING_REVIEW'
+  return skill.resolutionMode === 'OWNER_PREVIEW' && skill.headlineVersion?.status !== 'PUBLISHED'
 }

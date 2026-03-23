@@ -134,8 +134,8 @@ class SkillHardDeleteServiceTest {
                         && keys.size() == 4));
         verify(skillFileRepository).deleteByVersionId(21L);
         verify(skillFileRepository).deleteByVersionId(22L);
-        verify(securityScanService).softDeleteByVersionId(21L);
-        verify(securityScanService).softDeleteByVersionId(22L);
+        verify(securityScanService).hardDeleteByVersionId(21L);
+        verify(securityScanService).hardDeleteByVersionId(22L);
         verify(skillVersionRepository).deleteBySkillId(7L);
         verify(skillRepository).delete(skill);
         verify(auditLogService).record(

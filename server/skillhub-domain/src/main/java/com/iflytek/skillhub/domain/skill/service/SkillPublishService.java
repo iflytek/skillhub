@@ -388,6 +388,7 @@ public class SkillPublishService {
         }
         objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
         skillFileRepository.deleteByVersionId(version.getId());
+        securityScanService.softDeleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
 
         if (version.getId().equals(skill.getLatestVersionId())) {
