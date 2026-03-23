@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CreateNamespaceRequest } from '@/api/types'
-import { useCreateNamespace } from '@/shared/hooks/use-skill-queries'
+import { useCreateNamespace } from '@/shared/hooks/use-namespace-queries'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import {

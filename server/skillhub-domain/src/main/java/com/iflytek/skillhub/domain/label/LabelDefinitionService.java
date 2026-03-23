@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LabelDefinitionService {
 
-    private static final int MAX_LABEL_DEFINITIONS = 100;
+    private final int maxLabelDefinitions;
 
     private final LabelDefinitionRepository labelDefinitionRepository;
     private final LabelTranslationRepository labelTranslationRepository;
@@ -22,10 +23,12 @@ public class LabelDefinitionService {
 
     public LabelDefinitionService(LabelDefinitionRepository labelDefinitionRepository,
                                   LabelTranslationRepository labelTranslationRepository,
-                                  LabelPermissionChecker labelPermissionChecker) {
+                                  LabelPermissionChecker labelPermissionChecker,
+                                  @Value("${skillhub.label.max-definitions:100}") int maxLabelDefinitions) {
         this.labelDefinitionRepository = labelDefinitionRepository;
         this.labelTranslationRepository = labelTranslationRepository;
         this.labelPermissionChecker = labelPermissionChecker;
+        this.maxLabelDefinitions = maxLabelDefinitions;
     }
 
     public List<LabelDefinition> listAll() {
@@ -60,8 +63,8 @@ public class LabelDefinitionService {
         requireDefinitionAdmin(platformRoles);
         String normalizedSlug = LabelSlugValidator.normalize(slug);
         List<LabelTranslation> normalizedTranslations = normalizeTranslations(translations);
-        if (labelDefinitionRepository.count() >= MAX_LABEL_DEFINITIONS) {
-            throw new DomainBadRequestException("label.definition.too_many", MAX_LABEL_DEFINITIONS);
+        if (labelDefinitionRepository.count() >= maxLabelDefinitions) {
+            throw new DomainBadRequestException("label.definition.too_many", maxLabelDefinitions);
         }
         if (labelDefinitionRepository.findBySlugIgnoreCase(normalizedSlug).isPresent()) {
             throw new DomainBadRequestException("label.slug.duplicate", normalizedSlug);

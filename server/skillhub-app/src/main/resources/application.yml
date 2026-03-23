@@ -92,6 +92,9 @@ skillhub:
       connection-acquisition-timeout: ${SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT:PT2S}
       api-call-attempt-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT:PT10S}
       api-call-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT:PT30S}
+  label:
+    max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
+    max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
   search:
     engine: postgres
     rebuild-on-startup: false

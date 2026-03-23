@@ -3,4 +3,4 @@
  *
  * The implementation currently lives in the shared query layer.
  */
-export { useNamespaceMembers } from '@/shared/hooks/use-skill-queries'
+export { useNamespaceMembers } from '@/shared/hooks/use-namespace-queries'

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NamespaceRole } from '@/api/types'
-import { useAddNamespaceMember, useNamespaceMemberCandidates } from '@/shared/hooks/use-skill-queries'
+import { useAddNamespaceMember, useNamespaceMemberCandidates } from '@/shared/hooks/use-namespace-queries'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import {

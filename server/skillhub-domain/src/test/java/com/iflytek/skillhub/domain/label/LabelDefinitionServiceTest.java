@@ -22,7 +22,8 @@ class LabelDefinitionServiceTest {
     private final LabelDefinitionService service = new LabelDefinitionService(
             labelDefinitionRepository,
             labelTranslationRepository,
-            labelPermissionChecker
+            labelPermissionChecker,
+            100
     );
 
     @Test
