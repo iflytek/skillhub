@@ -9,7 +9,7 @@ import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { CreateNamespaceDialog } from '@/features/namespace/create-namespace-dialog'
-import { useArchiveNamespace, useFreezeNamespace, useMyNamespaces, useRestoreNamespace, useUnfreezeNamespace } from '@/shared/hooks/use-skill-queries'
+import { useArchiveNamespace, useFreezeNamespace, useMyNamespaces, useRestoreNamespace, useUnfreezeNamespace } from '@/shared/hooks/use-namespace-queries'
 import { toast } from '@/shared/lib/toast'
 
 type PendingNamespaceAction =

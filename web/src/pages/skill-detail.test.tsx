@@ -92,14 +92,6 @@ vi.mock('@/features/social/star-button', () => ({
 
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useSkillDetail: () => useSkillDetailMock(),
-  useSkillLabels: () => useSkillLabelsMock(),
-  useVisibleLabels: () => ({
-    data: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
-    isLoading: false,
-  }),
-  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
-  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
-  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useSkillVersions: () => ({
     data: [
       {
@@ -121,9 +113,23 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useDeleteSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRereleaseSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSubmitPromotion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUnarchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useWithdrawSkillReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSkillLabels: () => useSkillLabelsMock(),
+  useVisibleLabels: () => ({
+    data: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+    isLoading: false,
+  }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/shared/hooks/use-user-queries', () => ({
+  useSubmitPromotion: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 import { SkillDetailPage } from './skill-detail'

@@ -197,7 +197,7 @@ export function ReportsPage() {
  * Resolves the action label used by the confirmation dialog from the selected
  * moderation disposition.
  */
-function resolveConfirmText(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
+function resolveConfirmText(disposition: ReportDisposition | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHide')
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchive')
   return t('reports.resolve')
@@ -206,7 +206,7 @@ function resolveConfirmText(disposition: ReportDisposition | undefined, t: (key:
 /**
  * Chooses the confirmation body copy for the pending moderation action.
  */
-function resolveConfirmDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string, skillLabel: string) {
+function resolveConfirmDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: Record<string, unknown>) => string, skillLabel: string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideConfirmDescription', { skill: skillLabel })
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveConfirmDescription', { skill: skillLabel })
   return t('reports.resolveConfirmDescription', { skill: skillLabel })
@@ -215,7 +215,7 @@ function resolveConfirmDescription(disposition: ReportDisposition | undefined, t
 /**
  * Chooses the toast title shown after a successful resolution flow.
  */
-function resolveSuccessTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
+function resolveSuccessTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideSuccessTitle')
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveSuccessTitle')
   return t('reports.resolveSuccessTitle')
@@ -224,7 +224,7 @@ function resolveSuccessTitle(disposition: ReportDisposition | undefined, t: (key
 /**
  * Chooses the toast body shown after a successful resolution flow.
  */
-function resolveSuccessDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string, skillLabel: string) {
+function resolveSuccessDescription(disposition: ReportDisposition | undefined, t: (key: string, options?: Record<string, unknown>) => string, skillLabel: string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideSuccessDescription', { skill: skillLabel })
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveSuccessDescription', { skill: skillLabel })
   return t('reports.resolveSuccessDescription', { skill: skillLabel })
@@ -233,7 +233,7 @@ function resolveSuccessDescription(disposition: ReportDisposition | undefined, t
 /**
  * Chooses the toast title shown when the resolution flow fails.
  */
-function resolveErrorTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: any) => string) {
+function resolveErrorTitle(disposition: ReportDisposition | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (disposition === 'RESOLVE_AND_HIDE') return t('reports.resolveAndHideErrorTitle')
   if (disposition === 'RESOLVE_AND_ARCHIVE') return t('reports.resolveAndArchiveErrorTitle')
   return t('reports.resolveErrorTitle')

@@ -25,7 +25,7 @@ function createLazyRouteComponent<TModule extends Record<string, unknown>>(
   // consistently across public and dashboard pages.
   const LazyComponent = lazy(async () => {
     const module = await importer()
-    return { default: module[exportName] as ComponentType<any> }
+    return { default: module[exportName] as ComponentType<Record<string, unknown>> }
   })
 
   return function LazyRouteComponent(props: Record<string, unknown>) {

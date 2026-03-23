@@ -46,10 +46,10 @@ import {
   useDeleteSkill,
   useDeleteSkillVersion,
   useRereleaseSkillVersion,
-  useSubmitPromotion,
   useUnarchiveSkill,
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
+import { useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 
 /**
  * Detail page for one skill and its version history.

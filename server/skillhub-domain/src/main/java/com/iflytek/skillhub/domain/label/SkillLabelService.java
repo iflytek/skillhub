@@ -8,13 +8,14 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SkillLabelService {
 
-    private static final int MAX_LABELS_PER_SKILL = 10;
+    private final int maxLabelsPerSkill;
 
     private final SkillRepository skillRepository;
     private final LabelDefinitionRepository labelDefinitionRepository;
@@ -24,11 +25,13 @@ public class SkillLabelService {
     public SkillLabelService(SkillRepository skillRepository,
                              LabelDefinitionRepository labelDefinitionRepository,
                              SkillLabelRepository skillLabelRepository,
-                             LabelPermissionChecker labelPermissionChecker) {
+                             LabelPermissionChecker labelPermissionChecker,
+                             @Value("${skillhub.label.max-per-skill:10}") int maxLabelsPerSkill) {
         this.skillRepository = skillRepository;
         this.labelDefinitionRepository = labelDefinitionRepository;
         this.skillLabelRepository = skillLabelRepository;
         this.labelPermissionChecker = labelPermissionChecker;
+        this.maxLabelsPerSkill = maxLabelsPerSkill;
     }
 
     public List<SkillLabel> listSkillLabels(Long skillId) {
@@ -50,8 +53,8 @@ public class SkillLabelService {
         requireSkillLabelPermission(skill, labelDefinition, operatorId, userNamespaceRoles, platformRoles);
 
         List<SkillLabel> existingLabels = skillLabelRepository.findBySkillId(skillId);
-        if (existingLabels.size() >= MAX_LABELS_PER_SKILL) {
-            throw new DomainBadRequestException("label.skill.too_many", skillId, MAX_LABELS_PER_SKILL);
+        if (existingLabels.size() >= maxLabelsPerSkill) {
+            throw new DomainBadRequestException("label.skill.too_many", skillId, maxLabelsPerSkill);
         }
         return skillLabelRepository.findBySkillIdAndLabelId(skillId, labelDefinition.getId())
                 .orElseGet(() -> skillLabelRepository.save(new SkillLabel(skillId, labelDefinition.getId(), operatorId)));

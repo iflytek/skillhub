@@ -40,7 +40,7 @@ vi.mock('@/features/review/review-error', () => ({
   resolveReviewActionErrorDescription: () => 'error',
 }))
 
-const useReviewDetailMock = vi.fn<() => any>(() => ({
+const useReviewDetailMock = vi.fn<() => unknown>(() => ({
   data: {
     id: 13,
     namespace: 'global',
@@ -58,7 +58,7 @@ const useReviewDetailMock = vi.fn<() => any>(() => ({
   isLoading: false,
 }))
 
-const useReviewSkillDetailMock = vi.fn<() => any>(() => ({
+const useReviewSkillDetailMock = vi.fn<() => unknown>(() => ({
   data: {
     skill: {
       id: 1,
