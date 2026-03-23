@@ -263,7 +263,8 @@ staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：
 	@echo "=== [4/5] Starting staging services ==="
 	$(STAGING_COMPOSE) up -d --wait server web
 	@echo "=== [5/5] Running smoke tests ==="
-	@if bash scripts/smoke-test.sh $(STAGING_API_URL); then \
+	@if BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD='Admin@staging2026' \
+		bash scripts/smoke-test.sh $(STAGING_API_URL); then \
 		echo ""; \
 		echo "Staging passed. Environment is running:"; \
 		echo "  Web UI:  $(STAGING_WEB_URL)"; \

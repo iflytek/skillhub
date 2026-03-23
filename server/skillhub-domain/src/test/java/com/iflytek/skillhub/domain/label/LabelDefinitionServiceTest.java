@@ -27,6 +27,18 @@ class LabelDefinitionServiceTest {
     );
 
     @Test
+    void constructorShouldRejectNonPositiveDefinitionLimit() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new LabelDefinitionService(
+                labelDefinitionRepository,
+                labelTranslationRepository,
+                labelPermissionChecker,
+                0
+        ));
+
+        assertEquals("skillhub.label.max-definitions must be greater than 0", ex.getMessage());
+    }
+
+    @Test
     void createShouldRejectDuplicateLocalesIgnoringCase() {
         when(labelPermissionChecker.canManageDefinitions(Set.of("SUPER_ADMIN"))).thenReturn(true);
         when(labelDefinitionRepository.count()).thenReturn(0L);
