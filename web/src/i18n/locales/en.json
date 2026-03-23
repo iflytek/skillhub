@@ -311,6 +311,8 @@
     "statusPublished": "Published",
     "statusRejected": "Rejected",
     "statusHidden": "Hidden",
+    "statusScanning": "Scanning",
+    "statusScanFailed": "Scan Failed",
     "archiveConfirmTitle": "Archive skill",
     "archiveConfirmDescription": "After archiving, regular users will no longer be able to view or download \"{{skill}}\". Continue?",
     "unarchiveConfirmTitle": "Restore skill",
@@ -432,6 +434,9 @@
     "colSubmitTime": "Submitted At",
     "colReviewer": "Reviewed By",
     "colReviewTime": "Reviewed At",
+    "sortLabel": "Time Order",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
     "pageSummary": "Total {{total}} records, page {{page}}",
     "prevPage": "Previous",
     "nextPage": "Next"
@@ -462,6 +467,9 @@
     "reviewer": "Reviewer",
     "comment": "Comment",
     "totalItems": "{{total}} profile review records in total",
+    "sortLabel": "Time Order",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
     "pageSummary": "Total {{total}} records, page {{page}}",
     "prevPage": "Previous",
     "nextPage": "Next",
@@ -757,6 +765,13 @@
     "statusActive": "Active",
     "statusArchived": "Archived",
     "statusHidden": "Hidden",
+    "versionStatusDraft": "Draft",
+    "versionStatusScanning": "Scanning",
+    "versionStatusScanFailed": "Scan Failed",
+    "versionStatusPendingReview": "Pending Review",
+    "versionStatusPublished": "Published",
+    "versionStatusRejected": "Rejected",
+    "versionStatusYanked": "Yanked",
     "pendingPreviewBadge": "Pending Preview",
     "rejectedBadge": "Review Rejected",
     "pendingPreviewTitle": "You are previewing a pending version",
@@ -996,6 +1011,12 @@
     "tabPending": "Pending",
     "tabApproved": "Approved",
     "tabRejected": "Rejected",
+    "sortLabel": "Time Order",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
+    "pageSummary": "Total {{total}} records, page {{page}}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
     "globalReadOnly": "This is a built-in system namespace. Review history is visible, but no new review actions are allowed.",
     "frozenReadOnly": "This namespace is frozen. You can still view review history, but cannot continue processing review tasks.",
     "archivedReadOnly": "This namespace is archived. You can still view review history, but cannot continue processing review tasks until it is restored."
@@ -1009,7 +1030,18 @@
     "immutableHint": "This is a built-in system namespace and does not allow governance or membership changes."
   },
   "fileTree": {
-    "title": "Files ({{count}})"
+    "title": "Files"
+  },
+  "filePreview": {
+    "loadError": "Failed to load file",
+    "tooLarge": "File is too large to preview",
+    "binaryFile": "Binary files cannot be previewed",
+    "unsupported": "This file type is not supported for preview",
+    "downloadFile": "Download File",
+    "downloadHint": "Download {{name}}",
+    "copy": "Copy content",
+    "copySuccess": "Copied to clipboard",
+    "close": "Close"
   },
   "loginButton": {
     "loading": "Loading...",

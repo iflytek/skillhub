@@ -3,6 +3,7 @@ package com.iflytek.skillhub.domain.skill.service;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.event.SkillStatusChangedEvent;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
@@ -36,6 +37,7 @@ public class SkillGovernanceService {
     private final ObjectStorageService objectStorageService;
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
+    private final SecurityScanService securityScanService;
     private final Clock clock;
 
     public SkillGovernanceService(SkillRepository skillRepository,
@@ -44,6 +46,7 @@ public class SkillGovernanceService {
                                   ObjectStorageService objectStorageService,
                                   AuditLogService auditLogService,
                                   ApplicationEventPublisher eventPublisher,
+                                  SecurityScanService securityScanService,
                                   Clock clock) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -51,6 +54,7 @@ public class SkillGovernanceService {
         this.objectStorageService = objectStorageService;
         this.auditLogService = auditLogService;
         this.eventPublisher = eventPublisher;
+        this.securityScanService = securityScanService;
         this.clock = clock;
     }
 
@@ -145,7 +149,9 @@ public class SkillGovernanceService {
                               String clientIp,
                               String userAgent) {
         assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
-        if (version.getStatus() != SkillVersionStatus.DRAFT && version.getStatus() != SkillVersionStatus.REJECTED) {
+        if (version.getStatus() != SkillVersionStatus.DRAFT
+                && version.getStatus() != SkillVersionStatus.REJECTED
+                && version.getStatus() != SkillVersionStatus.SCAN_FAILED) {
             throw new DomainBadRequestException("error.skill.version.delete.unsupported", version.getVersion());
         }
 
@@ -160,6 +166,7 @@ public class SkillGovernanceService {
         }
         objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
         skillFileRepository.deleteByVersionId(version.getId());
+        securityScanService.softDeleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
         if (version.getId().equals(skill.getLatestVersionId())) {
             skill.setLatestVersionId(findLatestPublishedVersionId(skill.getId()));

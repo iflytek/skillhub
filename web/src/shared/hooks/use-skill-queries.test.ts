@@ -5,7 +5,7 @@ import {
   getSkillDetailQueryKey,
   getSkillLabelsQueryKey,
   getVisibleLabelsQueryKey,
-} from './use-skill-queries'
+} from './query-keys'
 
 describe('localized label query keys', () => {
   const originalLanguage = i18n.language

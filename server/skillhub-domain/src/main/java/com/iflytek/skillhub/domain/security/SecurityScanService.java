@@ -206,4 +206,13 @@ public class SecurityScanService {
         auditRepository.saveAll(audits);
         log.info("Soft deleted {} security audit(s) for versionId={}", audits.size(), versionId);
     }
+
+    /**
+     * Physically delete all audit records for a given skill version.
+     * Called during hard delete when the entire skill is being permanently removed.
+     */
+    @Transactional
+    public void hardDeleteByVersionId(Long versionId) {
+        auditRepository.deleteBySkillVersionId(versionId);
+    }
 }

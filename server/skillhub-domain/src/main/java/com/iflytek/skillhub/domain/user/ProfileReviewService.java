@@ -6,7 +6,9 @@ import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +42,18 @@ public class ProfileReviewService {
 
     /** List change requests by status with pagination. */
     @Transactional(readOnly = true)
-    public Page<ProfileChangeRequest> listByStatus(ProfileChangeStatus status, Pageable pageable) {
-        return changeRequestRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+    public Page<ProfileChangeRequest> listByStatus(ProfileChangeStatus status, Pageable pageable, String sortDirection) {
+        String primaryField = status == ProfileChangeStatus.PENDING ? "createdAt" : "reviewedAt";
+        Sort.Direction direction = Sort.Direction.fromOptionalString(sortDirection).orElse(Sort.Direction.DESC);
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(
+                        new Sort.Order(direction, primaryField),
+                        new Sort.Order(direction, "id")
+                )
+        );
+        return changeRequestRepository.findByStatus(status, sortedPageable);
     }
 
     /**

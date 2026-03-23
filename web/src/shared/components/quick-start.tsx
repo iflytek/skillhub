@@ -6,7 +6,7 @@ function getAppBaseUrl(): string {
   if (typeof window === 'undefined') {
     return 'https://skill.xfyun.cn'
   }
-  const runtimeConfig = (window as any).__SKILLHUB_RUNTIME_CONFIG__
+  const runtimeConfig = (window as unknown as Record<string, unknown>).__SKILLHUB_RUNTIME_CONFIG__ as { appBaseUrl?: string } | undefined
   if (runtimeConfig?.appBaseUrl) {
     return runtimeConfig.appBaseUrl
   }

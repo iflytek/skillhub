@@ -89,4 +89,41 @@ describe('NotificationsPage', () => {
     expect(html).toContain('Read notification')
     expect(html).toContain('Unread notification')
   })
+
+  it('shows pagination when the backend total exceeds one page', () => {
+    useNotificationListMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            category: 'REVIEW',
+            eventType: 'REVIEW_APPROVED',
+            title: 'Read notification',
+            status: 'READ',
+            createdAt: '2026-03-23T00:00:00Z',
+          },
+        ],
+        total: 21,
+        page: 0,
+        size: 20,
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NotificationsPage />)
+
+    expect(html).toContain('pagination.prev')
+    expect(html).toContain('pagination.next')
+  })
+
+  it('shows empty state when there are no notifications', () => {
+    useNotificationListMock.mockReturnValue({
+      data: { items: [], total: 0, page: 0, size: 20 },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NotificationsPage />)
+
+    expect(html).toContain('notification.empty')
+  })
 })

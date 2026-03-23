@@ -92,6 +92,9 @@ skillhub:
       connection-acquisition-timeout: ${SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT:PT2S}
       api-call-attempt-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT:PT10S}
       api-call-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT:PT30S}
+  label:
+    max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
+    max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
   search:
     engine: postgres
     rebuild-on-startup: false
@@ -109,7 +112,7 @@ skillhub:
     max-file-count: 100
     max-single-file-size: 10485760 # 10MB
     max-package-size: 104857600 # 100MB
-    allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.html,.css,.csv,.pdf,.toml,.xml,.ini,.cfg,.env,.js,.ts,.py,.sh,.rb,.go,.rs,.java,.kt,.lua,.sql,.r,.bat,.ps1,.zsh,.bash,.png,.jpg,.jpeg,.svg,.gif,.webp,.ico
+    allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.html,.css,.csv,.pdf,.toml,.xml,.ini,.cfg,.env,.js,.ts,.py,.pyc,.sh,.rb,.go,.rs,.java,.kt,.lua,.sql,.r,.bat,.ps1,.zsh,.bash,.png,.jpg,.jpeg,.svg,.gif,.webp,.ico
   profile:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true} # Enable machine review (e.g. sensitive word detection)

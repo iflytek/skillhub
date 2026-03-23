@@ -115,11 +115,18 @@ public class SkillLifecycleProjectionService {
                 .orElse(null);
     }
 
+    /**
+     * Returns the newest non-published version the owner can preview.
+     * Includes PENDING_REVIEW, REJECTED, DRAFT, SCANNING, SCAN_FAILED — any status
+     * that isn't already covered by the published projection and isn't yanked.
+     */
     private SkillVersion resolveOwnerPendingPreview(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
         if (!canManage(skill, currentUserId, userNsRoles)) {
             return null;
         }
-        return skillVersionRepository.findBySkillIdAndStatus(skill.getId(), SkillVersionStatus.PENDING_REVIEW).stream()
+        return skillVersionRepository.findBySkillId(skill.getId()).stream()
+                .filter(v -> v.getStatus() != SkillVersionStatus.PUBLISHED
+                        && v.getStatus() != SkillVersionStatus.YANKED)
                 .max(versionComparator())
                 .orElse(null);
     }

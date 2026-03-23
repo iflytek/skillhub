@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SkillCard } from '@/features/skill/skill-card'
 import { Pagination } from '@/shared/components/pagination'
-import { useMyStarsPage } from '@/shared/hooks/use-skill-queries'
+import { useMyStarsPage } from '@/shared/hooks/use-user-queries'
 import { Card } from '@/shared/ui/card'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 

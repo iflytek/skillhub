@@ -49,6 +49,12 @@ describe('AdminLabelsPage', () => {
     expect(html).toContain('adminLabels.empty')
   })
 
+  it('shows the create button', () => {
+    const html = renderToStaticMarkup(<AdminLabelsPage />)
+
+    expect(html).toContain('adminLabels.createAction')
+  })
+
   it('renders existing label definitions in the table', () => {
     useAdminLabelDefinitionsMock.mockReturnValue({
       data: [
@@ -68,6 +74,37 @@ describe('AdminLabelsPage', () => {
 
     expect(html).toContain('official')
     expect(html).toContain('Official')
+    expect(html).toContain('adminLabels.editAction')
+    expect(html).toContain('adminLabels.deleteAction')
+  })
+
+  it('renders edit and delete actions for each label definition', () => {
+    useAdminLabelDefinitionsMock.mockReturnValue({
+      data: [
+        {
+          slug: 'official',
+          type: 'RECOMMENDED',
+          visibleInFilter: true,
+          sortOrder: 0,
+          translations: [{ locale: 'en', displayName: 'Official' }],
+          createdAt: '2026-03-20T00:00:00Z',
+        },
+        {
+          slug: 'verified',
+          type: 'PRIVILEGED',
+          visibleInFilter: false,
+          sortOrder: 1,
+          translations: [{ locale: 'en', displayName: 'Verified' }],
+          createdAt: '2026-03-21T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<AdminLabelsPage />)
+
+    expect(html).toContain('official')
+    expect(html).toContain('verified')
     expect(html).toContain('adminLabels.editAction')
     expect(html).toContain('adminLabels.deleteAction')
   })
@@ -113,6 +150,55 @@ describe('AdminLabelsPage', () => {
     })).toEqual({
       titleKey: 'adminLabels.validationTranslationsTitle',
       descriptionKey: 'adminLabels.validationDuplicateLocaleDescription',
+    })
+  })
+
+  it('rejects empty slug in validation', () => {
+    expect(validateLabelFormState({
+      slug: '',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: 0,
+      translations: [{ locale: 'en', displayName: 'Test' }],
+    })).toEqual({
+      titleKey: 'adminLabels.validationSlugTitle',
+      descriptionKey: 'adminLabels.validationSlugDescription',
+    })
+  })
+
+  it('rejects empty translations in validation', () => {
+    expect(validateLabelFormState({
+      slug: 'valid-slug',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: 0,
+      translations: [],
+    })).toEqual({
+      titleKey: 'adminLabels.validationTranslationsTitle',
+      descriptionKey: 'adminLabels.validationTranslationsDescription',
+    })
+  })
+
+  it('accepts valid form state in validation', () => {
+    expect(validateLabelFormState({
+      slug: 'valid-slug',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: 0,
+      translations: [{ locale: 'en', displayName: 'Valid Label' }],
+    })).toBeNull()
+  })
+
+  it('rejects slug with consecutive hyphens', () => {
+    expect(validateLabelFormState({
+      slug: 'bad--slug',
+      type: 'RECOMMENDED',
+      visibleInFilter: true,
+      sortOrder: 0,
+      translations: [{ locale: 'en', displayName: 'Bad' }],
+    })).toEqual({
+      titleKey: 'adminLabels.validationSlugTitle',
+      descriptionKey: 'adminLabels.validationSlugPatternDescription',
     })
   })
 })

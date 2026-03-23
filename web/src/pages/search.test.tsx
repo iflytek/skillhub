@@ -80,12 +80,18 @@ const useSearchSkillsMock = vi.fn()
 
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useSearchSkills: () => useSearchSkillsMock(),
+}))
+
+vi.mock('@/shared/hooks/use-label-queries', () => ({
   useVisibleLabels: () => ({
     data: [
       { slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' },
       { slug: 'official', type: 'RECOMMENDED', displayName: 'Official' },
     ],
   }),
+}))
+
+vi.mock('@/shared/hooks/use-user-queries', () => ({
   useMyStars: () => ({
     data: [],
     isLoading: false,
