@@ -31,7 +31,7 @@ public class SkillLabelService {
         this.labelDefinitionRepository = labelDefinitionRepository;
         this.skillLabelRepository = skillLabelRepository;
         this.labelPermissionChecker = labelPermissionChecker;
-        this.maxLabelsPerSkill = maxLabelsPerSkill;
+        this.maxLabelsPerSkill = requirePositive(maxLabelsPerSkill, "skillhub.label.max-per-skill");
     }
 
     public List<SkillLabel> listSkillLabels(Long skillId) {
@@ -94,5 +94,12 @@ public class SkillLabelService {
         if (!labelPermissionChecker.canManageSkillLabel(skill, labelDefinition, operatorId, userNamespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("label.skill.no_permission");
         }
+    }
+
+    private int requirePositive(int value, String propertyName) {
+        if (value <= 0) {
+            throw new IllegalArgumentException(propertyName + " must be greater than 0");
+        }
+        return value;
     }
 }
