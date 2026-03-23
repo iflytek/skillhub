@@ -64,4 +64,7 @@ public interface SecurityAuditJpaRepository extends JpaRepository<SecurityAudit,
     default List<SecurityAudit> saveAll(List<SecurityAudit> audits) {
         return saveAllAndFlush(audits);
     }
+
+    @Override
+    void deleteBySkillVersionId(Long skillVersionId);
 }

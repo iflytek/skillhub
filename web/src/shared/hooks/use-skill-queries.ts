@@ -459,17 +459,10 @@ export function useDeleteSkillVersion() {
 }
 
 export function useDeleteSkill() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: ({ namespace, slug }: { namespace: string; slug: string }) =>
       skillLifecycleApi.deleteSkill(namespace, slug),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
-      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
-      queryClient.invalidateQueries({ queryKey: ['skills'] })
-    },
+    // Cache cleanup is handled by the caller to avoid refetching while the component is still mounted.
   })
 }
 

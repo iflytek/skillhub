@@ -120,37 +120,42 @@ export function SkillDetailPage() {
   const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
+  const [skillDeleted, setSkillDeleted] = useState(false)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
 
-  const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(namespace, slug)
-  const { data: versions } = useSkillVersions(namespace, slug)
+  // After deletion, pass empty values to disable all skill queries while the page navigates away
+  const qns = skillDeleted ? '' : namespace
+  const qslug = skillDeleted ? '' : slug
+
+  const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(qns, qslug)
+  const { data: versions } = useSkillVersions(qns, qslug)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
-  const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
+  const { data: files } = useSkillFiles(qns, qslug, selectedVersion)
   const documentationPath = resolveDocumentationFilePath(files)
-  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath)
+  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath)
   // File preview: fetch content when a file node is selected
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
-    namespace,
-    slug,
+    qns,
+    qslug,
     selectedVersion,
     previewNode?.path || null,
     previewDialogOpen && !!previewNode
   )
-  const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
-  const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
-  const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
-  const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined)
+  const { data: diffSourceDetail } = useSkillVersionDetail(qns, qslug, diffSourceVersion ?? undefined)
+  const { data: diffCompareDetail } = useSkillVersionDetail(qns, qslug, diffCompareVersion ?? undefined)
+  const { data: diffSourceFiles } = useSkillFiles(qns, qslug, diffSourceVersion ?? undefined)
+  const { data: diffCompareFiles } = useSkillFiles(qns, qslug, diffCompareVersion ?? undefined)
   const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
   const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
-  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined, diffSourceDocumentationPath)
-  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
+  const { data: diffSourceReadme } = useSkillReadme(qns, qslug, diffSourceVersion ?? undefined, diffSourceDocumentationPath)
+  const { data: diffCompareReadme } = useSkillReadme(qns, qslug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
@@ -447,12 +452,15 @@ export function SkillDetailPage() {
     }
     try {
       await deleteSkillMutation.mutateAsync({ namespace, slug })
+      setSkillDeleted(true)
       toast.success(
         t('skillDetail.deleteSkillSuccessTitle'),
         t('skillDetail.deleteSkillSuccessDescription', { skill: skill.displayName }),
       )
       setDeleteSkillInputOpen(false)
       navigate({ to: resolveDeletedSkillReturnTo(search.returnTo) })
+      queryClient.removeQueries({ queryKey: ['skills', namespace, slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
     } catch (error) {
       toast.error(t('skillDetail.deleteSkillErrorTitle'), error instanceof Error ? error.message : '')
       throw error

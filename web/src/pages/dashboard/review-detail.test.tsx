@@ -191,7 +191,7 @@ describe('ReviewDetailPage', () => {
   it('keeps the page in a single-column flow and leaves the skill detail behind a collapsed section', () => {
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
-    expect(html).toContain('max-w-3xl animate-fade-up')
+    expect(html).toContain('max-w-6xl mx-auto flex')
     expect(html).toContain('aria-expanded="false"')
   })
 
