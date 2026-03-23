@@ -20,7 +20,9 @@ import java.util.Set;
 import org.slf4j.MDC;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -112,10 +114,12 @@ public class ReviewPortalAppService {
                                                         Long namespaceId,
                                                         int page,
                                                         int size,
+                                                        String sortDirection,
                                                         String userId,
                                                         Map<Long, NamespaceRole> userNsRoles) {
         ReviewTaskStatus reviewStatus = ReviewTaskStatus.valueOf(status.toUpperCase());
         Map<Long, NamespaceRole> namespaceRoles = normalizeRoles(userNsRoles);
+        Pageable pageable = buildReviewPageable(reviewStatus, page, size, sortDirection);
 
         Page<ReviewTask> tasks;
         if (namespaceId != null) {
@@ -130,9 +134,9 @@ public class ReviewPortalAppService {
                     platformRoles(userId))) {
                 throw new DomainForbiddenException("review.no_permission");
             }
-            tasks = reviewTaskRepository.findByNamespaceIdAndStatus(namespaceId, reviewStatus, PageRequest.of(page, size));
+            tasks = reviewTaskRepository.findByNamespaceIdAndStatus(namespaceId, reviewStatus, pageable);
         } else {
-            tasks = reviewTaskRepository.findByStatus(reviewStatus, PageRequest.of(page, size));
+            tasks = reviewTaskRepository.findByStatus(reviewStatus, pageable);
         }
 
         List<ReviewTask> visibleItems = tasks.getContent().stream()
@@ -170,6 +174,19 @@ public class ReviewPortalAppService {
                 tasks.getPageable(),
                 tasks.getTotalElements()
         ));
+    }
+
+    private Pageable buildReviewPageable(ReviewTaskStatus reviewStatus, int page, int size, String sortDirection) {
+        Sort.Direction direction = Sort.Direction.fromOptionalString(sortDirection).orElse(Sort.Direction.DESC);
+        String primaryField = reviewStatus == ReviewTaskStatus.PENDING ? "submittedAt" : "reviewedAt";
+        return PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        new Sort.Order(direction, primaryField),
+                        new Sort.Order(direction, "id")
+                )
+        );
     }
 
     public PageResponse<ReviewTaskResponse> listMySubmissions(int page, int size, String userId) {

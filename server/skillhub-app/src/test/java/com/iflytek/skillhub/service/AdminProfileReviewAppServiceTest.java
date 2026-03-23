@@ -57,12 +57,12 @@ class AdminProfileReviewAppServiceTest {
         UserAccount submitter = new UserAccount("user-1", "NewestName", "user@example.com", null);
         UserAccount reviewer = new UserAccount("admin-1", "Admin Reviewer", "admin@example.com", null);
 
-        given(profileReviewService.listByStatus(ProfileChangeStatus.APPROVED, PageRequest.of(0, 20)))
+        given(profileReviewService.listByStatus(ProfileChangeStatus.APPROVED, PageRequest.of(0, 20), "DESC"))
                 .willReturn(new PageImpl<>(List.of(request), PageRequest.of(0, 20), 1));
         given(userAccountRepository.findByIdIn(List.of("user-1", "admin-1")))
                 .willReturn(List.of(submitter, reviewer));
 
-        var response = service.list("APPROVED", 0, 20);
+        var response = service.list("APPROVED", 0, 20, "DESC");
 
         assertThat(response.items()).hasSize(1);
         assertThat(response.items().get(0).currentDisplayName()).isEqualTo("OldName");

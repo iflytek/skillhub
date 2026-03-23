@@ -6,6 +6,13 @@ import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,6 +38,7 @@ import {
 import { EmptyState } from '@/shared/components/empty-state'
 
 type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+type TimeSortDirection = 'ASC' | 'DESC'
 
 type ReviewItem = {
   id: number
@@ -61,10 +69,11 @@ export function ProfileReviewTable() {
     REJECTED: 0,
   })
   const [activeStatus, setActiveStatus] = useState<ReviewStatus>('PENDING')
+  const [sortDirection, setSortDirection] = useState<TimeSortDirection>('DESC')
 
-  const pendingQuery = useProfileReviewList('PENDING', pages.PENDING, PAGE_SIZE, activeStatus === 'PENDING')
-  const approvedQuery = useProfileReviewList('APPROVED', pages.APPROVED, PAGE_SIZE, activeStatus === 'APPROVED')
-  const rejectedQuery = useProfileReviewList('REJECTED', pages.REJECTED, PAGE_SIZE, activeStatus === 'REJECTED')
+  const pendingQuery = useProfileReviewList('PENDING', pages.PENDING, PAGE_SIZE, sortDirection, activeStatus === 'PENDING')
+  const approvedQuery = useProfileReviewList('APPROVED', pages.APPROVED, PAGE_SIZE, sortDirection, activeStatus === 'APPROVED')
+  const rejectedQuery = useProfileReviewList('REJECTED', pages.REJECTED, PAGE_SIZE, sortDirection, activeStatus === 'REJECTED')
 
   const approveMutation = useApproveProfileReview()
   const rejectMutation = useRejectProfileReview()
@@ -114,6 +123,15 @@ export function ProfileReviewTable() {
       ...current,
       [status]: nextPage,
     }))
+  }
+
+  function handleSortChange(value: string) {
+    setSortDirection(value as TimeSortDirection)
+    setPages({
+      PENDING: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+    })
   }
 
   function renderMachineResult(result: string | null) {
@@ -316,9 +334,23 @@ export function ProfileReviewTable() {
                 <CardTitle>{t('profileReview.queueTitle')}</CardTitle>
                 <CardDescription>{t('profileReview.queueSubtitle')}</CardDescription>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {t('profileReview.totalItems', { total: pendingCount + approvedCount + rejectedCount })}
-              </p>
+              <div className="w-full max-w-52">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('profileReview.sortLabel')}
+                </p>
+                <Select value={sortDirection} onValueChange={handleSortChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DESC">{t('profileReview.sortNewest')}</SelectItem>
+                    <SelectItem value="ASC">{t('profileReview.sortOldest')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t('profileReview.totalItems', { total: pendingCount + approvedCount + rejectedCount })}
+                </p>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
