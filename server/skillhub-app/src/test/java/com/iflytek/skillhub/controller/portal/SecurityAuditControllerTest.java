@@ -18,9 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.lang.reflect.Field;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.BDDMockito.given;
@@ -56,28 +55,30 @@ class SecurityAuditControllerTest {
                 [{"ruleId":"STATIC-001","severity":"HIGH","category":"code-execution","title":"Dynamic execution","message":"avoid eval","filePath":"src/main.py","lineNumber":12,"codeSnippet":"eval(user_input)"}]
                 """.trim());
         audit.setScanDurationSeconds(1.25);
-        audit.setScannedAt(LocalDateTime.of(2026, 3, 20, 16, 0, 0));
+        audit.setScannedAt(Instant.parse("2026-03-20T08:00:00Z"));
 
-        given(securityAuditRepository.findBySkillVersionId(42L)).willReturn(Optional.of(audit));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
 
         mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("reviewer-1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.id").value(7L))
-                .andExpect(jsonPath("$.data.scanId").value("scan-123"))
-                .andExpect(jsonPath("$.data.scannerType").value("skill-scanner"))
-                .andExpect(jsonPath("$.data.verdict").value("DANGEROUS"))
-                .andExpect(jsonPath("$.data.findingsCount").value(1))
-                .andExpect(jsonPath("$.data.findings[0].ruleId").value("STATIC-001"));
+                .andExpect(jsonPath("$.data[0].id").value(7L))
+                .andExpect(jsonPath("$.data[0].scanId").value("scan-123"))
+                .andExpect(jsonPath("$.data[0].scannerType").value("skill-scanner"))
+                .andExpect(jsonPath("$.data[0].verdict").value("DANGEROUS"))
+                .andExpect(jsonPath("$.data[0].findingsCount").value(1))
+                .andExpect(jsonPath("$.data[0].findings[0].ruleId").value("STATIC-001"));
     }
 
     @Test
-    void getSecurityAudit_returnsNotFoundWhenAuditMissing() throws Exception {
-        given(securityAuditRepository.findBySkillVersionId(42L)).willReturn(Optional.empty());
+    void getSecurityAudit_returnsEmptyListWhenAuditMissing() throws Exception {
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("reviewer-1")))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(404));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test

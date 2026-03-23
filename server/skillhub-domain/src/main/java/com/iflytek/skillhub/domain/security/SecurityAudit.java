@@ -12,7 +12,8 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Entity
 @Table(name = "security_audit")
@@ -53,13 +54,13 @@ public class SecurityAudit {
     private Double scanDurationSeconds;
 
     @Column(name = "scanned_at")
-    private LocalDateTime scannedAt;
+    private Instant scannedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
+    private Instant deletedAt;
 
     protected SecurityAudit() {
     }
@@ -75,7 +76,7 @@ public class SecurityAudit {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now(Clock.systemUTC());
     }
 
     public Long getId() {
@@ -118,11 +119,11 @@ public class SecurityAudit {
         return scanDurationSeconds;
     }
 
-    public LocalDateTime getScannedAt() {
+    public Instant getScannedAt() {
         return scannedAt;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
@@ -154,11 +155,11 @@ public class SecurityAudit {
         this.scanDurationSeconds = scanDurationSeconds;
     }
 
-    public void setScannedAt(LocalDateTime scannedAt) {
+    public void setScannedAt(Instant scannedAt) {
         this.scannedAt = scannedAt;
     }
 
-    public LocalDateTime getDeletedAt() {
+    public Instant getDeletedAt() {
         return deletedAt;
     }
 
@@ -167,7 +168,7 @@ public class SecurityAudit {
      * Sets the deleted_at timestamp to mark the record as logically deleted.
      */
     public void markAsDeleted() {
-        this.deletedAt = LocalDateTime.now();
+        this.deletedAt = Instant.now(Clock.systemUTC());
     }
 
     /**

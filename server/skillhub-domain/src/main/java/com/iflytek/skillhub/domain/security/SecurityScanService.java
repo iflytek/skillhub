@@ -18,7 +18,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -99,7 +100,7 @@ public class SecurityScanService {
         audit.setFindingsCount(response.findingsCount());
         audit.setFindings(serializeFindings(response.findings()));
         audit.setScanDurationSeconds(response.scanDurationSeconds());
-        audit.setScannedAt(LocalDateTime.now());
+        audit.setScannedAt(Instant.now(Clock.systemUTC()));
         auditRepository.save(audit);
 
         version.setStatus(SkillVersionStatus.PENDING_REVIEW);
