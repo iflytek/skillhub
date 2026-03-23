@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronUp, User } from 'lucide-react'
+import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, RefreshCw, ShieldCheck, Terminal, User } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
+import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
+import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { InstallCommand } from '@/features/skill/install-command'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
@@ -43,14 +45,15 @@ import {
   useSkillVersionDetail,
   useSkillFiles,
   useSkillReadme,
+  useSkillFile,
   useArchiveSkill,
   useDeleteSkill,
   useDeleteSkillVersion,
   useRereleaseSkillVersion,
-  useSubmitPromotion,
   useUnarchiveSkill,
   useWithdrawSkillReview,
 } from '@/shared/hooks/use-skill-queries'
+import { useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 
 /**
  * Detail page for one skill and its version history.
@@ -115,31 +118,43 @@ export function SkillDetailPage() {
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false)
   const [isOverviewCollapsible, setIsOverviewCollapsible] = useState(false)
   const [overviewMaxHeight, setOverviewMaxHeight] = useState(OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT)
+  // File preview state
+  const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
   const detailQueriesEnabled = isSkillDetailQueriesEnabled(skillDeleted)
-
-  const { data: skill, isLoading: isLoadingSkill, isFetching: isFetchingSkill, error: skillError } = useSkillDetail(namespace, slug, detailQueriesEnabled)
+  const qns = detailQueriesEnabled ? namespace : ''
+  const qslug = detailQueriesEnabled ? slug : ''
+  const { data: skill, isLoading: isLoadingSkill, isFetching: isFetchingSkill, error: skillError } = useSkillDetail(qns, qslug, detailQueriesEnabled)
   const skillReady = detailQueriesEnabled && Boolean(skill) && !isLoadingSkill && !isFetchingSkill && !skillError
-  const { data: versions } = useSkillVersions(namespace, slug, skillReady)
+  const { data: versions } = useSkillVersions(qns, qslug, skillReady)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
-  const { data: files } = useSkillFiles(namespace, slug, selectedVersion, skillReady)
+  const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
-  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath, skillReady)
-  const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined, skillReady)
-  const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined, skillReady)
-  const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined, skillReady)
-  const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined, skillReady)
+  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady)
+  const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
+    qns,
+    qslug,
+    selectedVersion,
+    previewNode?.path || null,
+    previewDialogOpen && !!previewNode && skillReady
+  )
+  const { data: diffSourceDetail } = useSkillVersionDetail(qns, qslug, diffSourceVersion ?? undefined, skillReady)
+  const { data: diffCompareDetail } = useSkillVersionDetail(qns, qslug, diffCompareVersion ?? undefined, skillReady)
+  const { data: diffSourceFiles } = useSkillFiles(qns, qslug, diffSourceVersion ?? undefined, skillReady)
+  const { data: diffCompareFiles } = useSkillFiles(qns, qslug, diffCompareVersion ?? undefined, skillReady)
   const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
   const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
-  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined, diffSourceDocumentationPath, skillReady)
-  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath, skillReady)
+  const { data: diffSourceReadme } = useSkillReadme(qns, qslug, diffSourceVersion ?? undefined, diffSourceDocumentationPath, skillReady)
+  const { data: diffCompareReadme } = useSkillReadme(qns, qslug, diffCompareVersion ?? undefined, diffCompareDocumentationPath, skillReady)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
@@ -249,6 +264,28 @@ export function SkillDetailPage() {
     link.remove()
   }
 
+  // File tree click handler: opens preview dialog for the selected file
+  const handleFileClick = (node: FileTreeNode) => {
+    setPreviewNode(node)
+    setPreviewDialogOpen(true)
+  }
+
+  // Download a single file from the skill version
+  const handleDownloadFile = () => {
+    if (!previewNode || !selectedVersion) return
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    const url = buildApiUrl(
+      `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersion}/file?path=${encodeURIComponent(previewNode.path)}`
+    )
+    // Set download attribute to the original filename so the browser saves it correctly
+    const link = document.createElement('a')
+    link.href = url
+    link.download = previewNode.name
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
   const handleDownload = async () => {
     if (!user) {
       requireLogin()
@@ -333,7 +370,20 @@ export function SkillDetailPage() {
     return status ?? ''
   }
 
-  const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED'
+  const resolveVersionStatusLabel = (status?: string) => {
+    const map: Record<string, string> = {
+      DRAFT: t('skillDetail.versionStatusDraft'),
+      SCANNING: t('skillDetail.versionStatusScanning'),
+      SCAN_FAILED: t('skillDetail.versionStatusScanFailed'),
+      PENDING_REVIEW: t('skillDetail.versionStatusPendingReview'),
+      PUBLISHED: t('skillDetail.versionStatusPublished'),
+      REJECTED: t('skillDetail.versionStatusRejected'),
+      YANKED: t('skillDetail.versionStatusYanked'),
+    }
+    return status ? (map[status] ?? status) : ''
+  }
+
+  const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED' || status === 'SCAN_FAILED'
   const isLastVersion = versions?.length === 1
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
@@ -431,6 +481,8 @@ export function SkillDetailPage() {
       )
       setDeleteSkillInputOpen(false)
       navigate({ to: resolveDeletedSkillReturnTo(search.returnTo) })
+      queryClient.removeQueries({ queryKey: ['skills', namespace, slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
     } catch (error) {
       toast.error(t('skillDetail.deleteSkillErrorTitle'), error instanceof Error ? error.message : '')
       throw error
@@ -741,7 +793,7 @@ export function SkillDetailPage() {
 
           <TabsContent value="files" className="mt-6">
             {files && files.length > 0 ? (
-              <FileTree files={files} />
+              <FileTree files={files} onFileClick={handleFileClick} />
             ) : (
               <Card className="p-8 text-muted-foreground text-center">
                 {t('skillDetail.noFiles')}
@@ -762,7 +814,7 @@ export function SkillDetailPage() {
                           </span>
                           {version.status && (
                             <span className="rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-xs text-muted-foreground">
-                              {version.status}
+                              {resolveVersionStatusLabel(version.status)}
                             </span>
                           )}
                           {headlineVersion?.version === version.version && (
@@ -836,6 +888,37 @@ export function SkillDetailPage() {
 
       {/* Sidebar */}
       <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
+        {/* File Tree Sidebar — collapsible, mirrors SecurityAuditSummary card pattern */}
+        {files && files.length > 0 && (
+          <Card className="p-5 space-y-3">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 text-left"
+              aria-expanded={fileBrowserOpen}
+              onClick={() => setFileBrowserOpen((v) => !v)}
+            >
+              <Folder className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">
+                {t('fileTree.title')}
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto mr-2">
+                {files.length}
+              </span>
+              <span className={cn(
+                'text-muted-foreground transition-transform duration-200',
+                fileBrowserOpen && 'rotate-180'
+              )}>
+                <ChevronDown className="h-4 w-4" />
+              </span>
+            </button>
+            {fileBrowserOpen && (
+              <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+                <FileTree files={files} onFileClick={handleFileClick} bare />
+              </div>
+            )}
+          </Card>
+        )}
+
         <Card className="p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
@@ -895,7 +978,10 @@ export function SkillDetailPage() {
 
         {publishedVersion && canInteract && (
           <Card className="p-5 space-y-4">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</div>
+            <div className="flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.install')}</span>
+            </div>
             {skill.status === 'ARCHIVED' && (
               <p className="text-sm text-muted-foreground">{t('skillDetail.archivedInstallHint')}</p>
             )}
@@ -910,7 +996,10 @@ export function SkillDetailPage() {
         {hasPublishedPendingReview && ownerPreviewVersion && (
           <Card className="border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
             <div className="space-y-1">
-              <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.pendingReviewSectionTitle')}</span>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {t('skillDetail.pendingReviewSectionDescription', {
                   pendingVersion: ownerPreviewVersion.version,
@@ -973,7 +1062,10 @@ export function SkillDetailPage() {
 
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</div>
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.lifecycle')}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {skill.status === 'ARCHIVED'
                 ? t('skillDetail.archivedPublishHint')
@@ -1012,11 +1104,11 @@ export function SkillDetailPage() {
                 <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
                   {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
                 </Button>
-              ) : (
+              ) : publishedVersion ? (
                 <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
                   {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
                 </Button>
-              )}
+              ) : null}
               {canHardDeleteSkill && (
                 <Button
                   variant="destructive"
@@ -1032,7 +1124,10 @@ export function SkillDetailPage() {
 
         {skill.canSubmitPromotion && publishedVersion && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</div>
+            <div className="flex items-center gap-2">
+              <ArrowUpCircle className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.promotionSectionTitle')}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {t('skillDetail.promotionSectionDescription', { version: publishedVersion.version })}
             </p>
@@ -1044,7 +1139,10 @@ export function SkillDetailPage() {
 
         {governanceVisible && (
           <Card className="p-5 space-y-3">
-            <div className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.governance')}</span>
+            </div>
             <div className="flex flex-col gap-3">
               {canHideSkill ? (
                 !skill.hidden ? (
@@ -1329,6 +1427,17 @@ export function SkillDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* File preview dialog */}
+      <FilePreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        node={previewNode}
+        content={previewContent || null}
+        isLoading={isLoadingPreview}
+        error={previewError}
+        onDownload={handleDownloadFile}
+      />
     </div>
   )
 }

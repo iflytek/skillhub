@@ -311,6 +311,8 @@
     "statusPublished": "已发布",
     "statusRejected": "已拒绝",
     "statusHidden": "已隐藏",
+    "statusScanning": "安全扫描中",
+    "statusScanFailed": "扫描失败",
     "archiveConfirmTitle": "确认归档技能",
     "archiveConfirmDescription": "归档后普通用户将无法看到或下载“{{skill}}”，确定继续吗？",
     "unarchiveConfirmTitle": "确认恢复技能",
@@ -432,6 +434,9 @@
     "colSubmitTime": "提交时间",
     "colReviewer": "审核者",
     "colReviewTime": "审核时间",
+    "sortLabel": "时间排序",
+    "sortNewest": "最新优先",
+    "sortOldest": "最早优先",
     "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
     "prevPage": "上一页",
     "nextPage": "下一页"
@@ -462,6 +467,9 @@
     "reviewer": "审核人",
     "comment": "备注",
     "totalItems": "当前共 {{total}} 条资料审核记录",
+    "sortLabel": "时间排序",
+    "sortNewest": "最新优先",
+    "sortOldest": "最早优先",
     "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
     "prevPage": "上一页",
     "nextPage": "下一页",
@@ -757,6 +765,13 @@
     "statusActive": "正常",
     "statusArchived": "已归档",
     "statusHidden": "已隐藏",
+    "versionStatusDraft": "草稿",
+    "versionStatusScanning": "安全扫描中",
+    "versionStatusScanFailed": "扫描失败",
+    "versionStatusPendingReview": "审核中",
+    "versionStatusPublished": "已发布",
+    "versionStatusRejected": "已拒绝",
+    "versionStatusYanked": "已撤回",
     "pendingPreviewBadge": "待审核预览",
     "rejectedBadge": "审核未通过",
     "pendingPreviewTitle": "当前正在预览待审核版本",
@@ -996,6 +1011,12 @@
     "tabPending": "待审核",
     "tabApproved": "已通过",
     "tabRejected": "已拒绝",
+    "sortLabel": "时间排序",
+    "sortNewest": "最新优先",
+    "sortOldest": "最早优先",
+    "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
     "globalReadOnly": "这是系统内置命名空间，仅可查看审核记录，不允许执行新的审核动作。",
     "frozenReadOnly": "命名空间已冻结。你仍可查看审核记录，但当前不能继续处理审核任务。",
     "archivedReadOnly": "命名空间已归档。你仍可查看审核记录，但在恢复前不能继续处理审核任务。"
@@ -1009,7 +1030,18 @@
     "immutableHint": "系统内置命名空间，不允许任何治理或成员修改操作。"
   },
   "fileTree": {
-    "title": "文件列表 ({{count}})"
+    "title": "文件浏览"
+  },
+  "filePreview": {
+    "loadError": "加载文件失败",
+    "tooLarge": "文件过大，暂不支持预览",
+    "binaryFile": "二进制文件不支持预览",
+    "unsupported": "当前文件类型暂不支持预览",
+    "downloadFile": "下载文件",
+    "downloadHint": "下载 {{name}}",
+    "copy": "复制内容",
+    "copySuccess": "已复制到剪贴板",
+    "close": "关闭"
   },
   "loginButton": {
     "loading": "加载中...",

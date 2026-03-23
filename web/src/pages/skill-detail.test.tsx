@@ -26,7 +26,7 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: undefined, isLoading: false, error: null }),
+  useQuery: () => ({ data: null, isLoading: false, error: null }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
@@ -105,13 +105,28 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useSkillVersionDetail: () => ({ data: undefined }),
   useSkillFiles: () => ({ data: [] }),
   useSkillReadme: () => ({ data: '# Demo', error: null }),
+  useSkillFile: () => ({ data: null, isLoading: false, error: null }),
   useArchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRereleaseSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSubmitPromotion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUnarchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useWithdrawSkillReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSkillLabels: () => useSkillLabelsMock(),
+  useVisibleLabels: () => ({
+    data: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+    isLoading: false,
+  }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/shared/hooks/use-user-queries', () => ({
+  useSubmitPromotion: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 import { SkillDetailPage } from './skill-detail'

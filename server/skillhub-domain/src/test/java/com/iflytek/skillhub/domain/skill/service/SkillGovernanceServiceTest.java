@@ -11,6 +11,7 @@ import static org.mockito.BDDMockito.given;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.event.SkillStatusChangedEvent;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
@@ -51,6 +52,8 @@ class SkillGovernanceServiceTest {
     private AuditLogService auditLogService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private SecurityScanService securityScanService;
 
     private SkillGovernanceService service;
 
@@ -63,6 +66,7 @@ class SkillGovernanceServiceTest {
                 objectStorageService,
                 auditLogService,
                 eventPublisher,
+                securityScanService,
                 CLOCK
         );
     }
@@ -205,6 +209,7 @@ class SkillGovernanceServiceTest {
                         && keys.contains("skills/demo/icon")));
         verify(objectStorageService).deleteObject("packages/1/2/bundle.zip");
         verify(skillFileRepository).deleteByVersionId(2L);
+        verify(securityScanService).softDeleteByVersionId(2L);
         verify(skillVersionRepository).delete(version);
         verify(auditLogService).record("owner", "DELETE_SKILL_VERSION", "SKILL_VERSION", 2L, null, "127.0.0.1", "JUnit", "{\"version\":\"1.0.0\"}");
     }

@@ -227,3 +227,21 @@
 
 ## 非本期需求记录
 - 文件浏览版本切换需要单独设计权限边界、交互入口和不影响现有功能的约束，本期仅记录，不实现。
+
+## 关联文档
+
+### 需求文档
+- [API 接口契约](../requirements/2026-03-20-skill-file-browser-sidebar/05-api-contract.md) - 定义前后端接口规范
+- [验收用例](../requirements/2026-03-20-skill-file-browser-sidebar/04-acceptance-cases.md) - 功能验收测试用例
+
+### 执行计划
+- [实施计划](../superpowers/plans/2026-03-22-skill-file-browser-sidebar.md) - 详细的开发任务分解与执行步骤
+
+### 技术参考
+- 现有组件：
+  - `web/src/features/skill/file-tree.tsx` - 当前平铺文件列表实现
+  - `web/src/features/skill/markdown-renderer.tsx` - Markdown 渲染器
+  - `web/src/shared/ui/dialog.tsx` - 弹窗组件
+- 现有 API：
+  - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file?path=...` - 技能文件读取接口
+  - `GET /api/v1/reviews/{id}` - 审核详情接口（需扩展）

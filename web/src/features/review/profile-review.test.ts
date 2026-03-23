@@ -69,4 +69,43 @@ describe('adminApi profile review methods', () => {
     expect(response.totalElements).toBe(7)
     expect(response.totalPages).toBe(1)
   })
+
+  it('passes sortDirection through profile and skill review list requests', async () => {
+    const createResponse = () => new Response(JSON.stringify({
+      code: 0,
+      msg: 'response.success',
+      data: {
+        items: [],
+        total: 0,
+        page: 0,
+        size: 20,
+      },
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(createResponse()))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('document', { cookie: '' })
+
+    const { adminApi, reviewApi } = await import('@/api/client')
+
+    await adminApi.getProfileReviews({ status: 'APPROVED', page: 1, size: 10, sortDirection: 'ASC' })
+    await reviewApi.list({ status: 'REJECTED', namespaceId: 9, page: 2, size: 5, sortDirection: 'ASC' })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/admin/profile-reviews?status=APPROVED&page=1&size=10&sortDirection=ASC',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/web/reviews?status=REJECTED&namespaceId=9&page=2&size=5&sortDirection=ASC',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      }),
+    )
+  })
 })

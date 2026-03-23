@@ -338,6 +338,7 @@ class SkillQueryServiceTest {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";
         String version = "1.0.0";
+        String callerId = "user-999";
         Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
 
         Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
@@ -345,17 +346,18 @@ class SkillQueryServiceTest {
         Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PUBLIC);
         setId(skill, 1L);
         skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(1L);
         SkillVersion skillVersion = new SkillVersion(1L, version, "user-100");
         setId(skillVersion, 1L);
         skillVersion.setStatus(SkillVersionStatus.DRAFT);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
+        when(visibilityChecker.canAccess(skill, callerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
 
         assertThrows(DomainBadRequestException.class, () ->
-                service.listFiles(namespaceSlug, skillSlug, version, "user-100", userNsRoles));
+                service.listFiles(namespaceSlug, skillSlug, version, callerId, userNsRoles));
     }
 
     @Test
@@ -798,12 +800,7 @@ class SkillQueryServiceTest {
         Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
         skill.setStatus(SkillStatus.ACTIVE);
-        skill.setLatestVersionId(11L);
-
-        SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
-        setId(published, 11L);
-        published.setStatus(SkillVersionStatus.PUBLISHED);
-        published.setPublishedAt(java.time.Instant.parse("2026-03-01T10:00:00Z"));
+        skill.setLatestVersionId(12L);
 
         SkillVersion pending = new SkillVersion(1L, "1.1.0", ownerId);
         setId(pending, 12L);
@@ -812,9 +809,10 @@ class SkillQueryServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(12L)).thenReturn(Optional.of(pending));
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
                 .thenReturn(List.of());
-        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PENDING_REVIEW))
+        when(skillVersionRepository.findBySkillId(1L))
                 .thenReturn(List.of(pending));
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);

@@ -2340,6 +2340,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/skills/{skillId}/versions/{versionId}/security-audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSecurityAudits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/skills/{canonicalSlug}": {
         parameters: {
             query?: never;
@@ -3779,6 +3795,50 @@ export interface components {
             /** Format: int64 */
             updatedAt?: number;
             latestVersion?: components["schemas"]["LatestVersion"];
+        };
+        ApiResponseListSecurityAuditResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SecurityAuditResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SecurityAuditResponse: {
+            /** Format: int64 */
+            id?: number;
+            scanId?: string;
+            scannerType?: string;
+            /** @enum {string} */
+            verdict?: "SAFE" | "SUSPICIOUS" | "DANGEROUS" | "BLOCKED";
+            isSafe?: boolean;
+            maxSeverity?: string;
+            /** Format: int32 */
+            findingsCount?: number;
+            findings?: components["schemas"]["SecurityFinding"][];
+            /** Format: double */
+            scanDurationSeconds?: number;
+            /** Format: date-time */
+            scannedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        SecurityFinding: {
+            ruleId?: string;
+            severity?: string;
+            category?: string;
+            title?: string;
+            message?: string;
+            filePath?: string;
+            /** Format: int32 */
+            lineNumber?: number;
+            codeSnippet?: string;
+            remediation?: string;
+            analyzer?: string;
+            metadata?: {
+                [key: string]: Record<string, never>;
+            };
         };
         ClawHubSkillResponse: {
             skill?: components["schemas"]["SkillInfo"];
@@ -5230,6 +5290,7 @@ export interface operations {
                 namespaceId?: number;
                 page?: number;
                 size?: number;
+                sortDirection?: string;
             };
             header?: never;
             path?: never;
@@ -5279,6 +5340,7 @@ export interface operations {
                 namespaceId?: number;
                 page?: number;
                 size?: number;
+                sortDirection?: string;
             };
             header?: never;
             path?: never;
@@ -8241,6 +8303,31 @@ export interface operations {
             };
         };
     };
+    getSecurityAudits: {
+        parameters: {
+            query?: {
+                scannerType?: string;
+            };
+            header?: never;
+            path: {
+                skillId: number;
+                versionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSecurityAuditResponse"];
+                };
+            };
+        };
+    };
     getSkill: {
         parameters: {
             query?: never;
@@ -8539,6 +8626,7 @@ export interface operations {
                 status?: string;
                 page?: number;
                 size?: number;
+                sortDirection?: string;
             };
             header?: never;
             path?: never;

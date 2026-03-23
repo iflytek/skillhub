@@ -118,7 +118,7 @@ public class SkillHardDeleteService {
         skillVersionStatsRepository.deleteBySkillId(skill.getId());
 
         for (Long versionId : versionIds) {
-            securityScanService.softDeleteByVersionId(versionId);
+            securityScanService.hardDeleteByVersionId(versionId);
             skillFileRepository.deleteByVersionId(versionId);
         }
         skillVersionRepository.deleteBySkillId(skill.getId());

@@ -126,37 +126,6 @@ function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
   return typeof value === 'object' && value !== null && 'code' in value && 'msg' in value && 'data' in value
 }
 
-function hasDataProperty<T>(value: unknown): value is { data: T } {
-  return typeof value === 'object' && value !== null && 'data' in value
-}
-
-async function unwrap<T>(promise: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
-  // The backend returns a standard response envelope; normalize both success and error payloads
-  // here so feature hooks can work with plain values and one ApiError shape.
-  const { data, error, response } = await promise
-  const envelope = isApiEnvelope<T>(data) ? data : isApiEnvelope<T>(error) ? error : null
-
-  if (!response.ok) {
-    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
-  }
-  if (error) {
-    throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
-  }
-  if (data === undefined) {
-    throw new ApiError(`HTTP ${response.status}`, response.status)
-  }
-  if (isApiEnvelope<T>(data)) {
-    if (data.code !== 0) {
-      throw new ApiError(data.msg || `HTTP ${response.status}`, response.status, data.msg, data.msg)
-    }
-    return data.data
-  }
-  if (hasDataProperty<T>(data)) {
-    return data.data
-  }
-  return data
-}
-
 export function getCsrfHeaders(headers?: HeadersInit): HeadersInit {
   return withCsrf(headers)
 }
@@ -300,9 +269,7 @@ function ensureTrailingSlash(value: string): string {
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const user = await unwrap<User>(client.GET('/api/v1/auth/me', {
-      headers: withRequestHeaders(),
-    } as never) as never)
+    const user = await fetchJson<User>('/api/v1/auth/me')
     return {
       ...user,
       userId: user.userId ?? '',
@@ -321,10 +288,8 @@ export const authApi = {
   getMe: getCurrentUser,
 
   async getProviders(returnTo?: string): Promise<OAuthProvider[]> {
-    const providers = await unwrap<OAuthProvider[]>(client.GET('/api/v1/auth/providers', {
-      ...(returnTo ? { query: { returnTo } } : {}),
-      headers: withRequestHeaders(),
-    } as never) as never)
+    const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
+    const providers = await fetchJson<OAuthProvider[]>(`/api/v1/auth/providers${params}`)
     return providers
       .filter((provider) => provider.id && provider.name && provider.authorizationUrl)
       .map((provider) => ({
@@ -594,16 +559,17 @@ export const labelApi = {
 
 export const namespaceApi = {
   async create(request: CreateNamespaceRequest): Promise<Namespace> {
-    const namespace = await unwrap<Namespace>(client.POST('/api/v1/namespaces', {
+    const namespace = await fetchJson<Namespace>('/api/v1/namespaces', {
+      method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
       }),
-      body: {
+      body: JSON.stringify({
         slug: normalizeNamespaceSlug(request.slug),
         displayName: request.displayName.trim(),
         description: request.description?.trim() || undefined,
-      },
-    } as never) as never)
+      }),
+    })
     return namespace
   },
 
@@ -697,15 +663,11 @@ export const namespaceApi = {
 
 export const tokenApi = {
   async getTokens(params?: { page?: number, size?: number }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
-    const page = await unwrap<{ items: ApiToken[], total: number, page: number, size: number }>(client.GET('/api/v1/tokens', {
-      params: {
-        query: {
-          page: params?.page ?? 0,
-          size: params?.size ?? 10,
-        },
-      },
-      headers: withRequestHeaders(),
-    } as never) as never)
+    const queryPage = params?.page ?? 0
+    const querySize = params?.size ?? 10
+    const page = await fetchJson<{ items: ApiToken[], total: number, page: number, size: number }>(
+      `/api/v1/tokens?page=${queryPage}&size=${querySize}`,
+    )
     return {
       ...page,
       items: page.items
@@ -721,12 +683,13 @@ export const tokenApi = {
   },
 
   async createToken(request: CreateTokenRequest): Promise<CreateTokenResponse> {
-    const token = await unwrap<CreateTokenResponse>(client.POST('/api/v1/tokens', {
+    const token = await fetchJson<CreateTokenResponse>('/api/v1/tokens', {
+      method: 'POST',
       headers: withCsrf({
         'Content-Type': 'application/json',
       }),
-      body: request,
-    }) as never)
+      body: JSON.stringify(request),
+    })
     if (!token.token || token.id === undefined || !token.name || !token.tokenPrefix || !token.createdAt) {
       throw new Error('Invalid token creation response')
     }
@@ -772,7 +735,7 @@ export const tokenApi = {
 }
 
 export const reviewApi = {
-  async list(params: { status: string; namespaceId?: number; page?: number; size?: number }) {
+  async list(params: { status: string; namespaceId?: number; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status)
     if (params.namespaceId !== undefined) {
@@ -780,6 +743,7 @@ export const reviewApi = {
     }
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
+    searchParams.set('sortDirection', params.sortDirection ?? 'DESC')
     return fetchJson<{ items: ReviewTask[]; total: number; page: number; size: number }>(
       `${WEB_API_PREFIX}/reviews?${searchParams.toString()}`,
     )
@@ -1140,11 +1104,12 @@ export const adminApi = {
     })
   },
 
-  async getProfileReviews(params: { status?: string; page?: number; size?: number }) {
+  async getProfileReviews(params: { status?: string; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const searchParams = new URLSearchParams()
     if (params.status) searchParams.set('status', params.status)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
+    searchParams.set('sortDirection', params.sortDirection ?? 'DESC')
     const response = await fetchJson<{
       items: Array<{
         id: number

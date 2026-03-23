@@ -85,4 +85,9 @@ class NotificationPreferenceServiceTest {
                 )
         ));
     }
+
+    @Test
+    void updatePreferences_shouldRejectNullPayload() {
+        assertThrows(DomainBadRequestException.class, () -> service.updatePreferences("user-1", null));
+    }
 }

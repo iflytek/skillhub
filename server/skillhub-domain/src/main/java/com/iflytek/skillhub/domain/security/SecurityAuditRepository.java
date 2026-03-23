@@ -28,4 +28,9 @@ public interface SecurityAuditRepository {
      * Find all active audits for a version (all records, all types).
      */
     List<SecurityAudit> findAllActiveBySkillVersionId(Long skillVersionId);
+
+    /**
+     * Physically delete all audit records for a version (used during hard delete).
+     */
+    void deleteBySkillVersionId(Long skillVersionId);
 }

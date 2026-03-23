@@ -30,6 +30,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -212,6 +215,32 @@ class ReviewPortalControllerTest {
         mockMvc.perform(get("/api/v1/reviews/1/skill-detail").with(auth("user-9")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void listReviews_appliesRequestedTimeSortDirection() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        PageRequest pageable = PageRequest.of(
+                1,
+                5,
+                Sort.by(
+                        new Sort.Order(Sort.Direction.ASC, "reviewedAt"),
+                        new Sort.Order(Sort.Direction.ASC, "id")
+                )
+        );
+        given(reviewTaskRepository.findByStatus(ReviewTaskStatus.APPROVED, pageable))
+                .willReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        mockMvc.perform(get("/api/v1/reviews")
+                        .param("status", "APPROVED")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .param("sortDirection", "ASC")
+                        .with(auth("admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        verify(reviewTaskRepository).findByStatus(ReviewTaskStatus.APPROVED, pageable);
     }
 
     @Test

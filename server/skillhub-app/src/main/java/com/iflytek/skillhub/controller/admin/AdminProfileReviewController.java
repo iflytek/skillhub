@@ -43,8 +43,9 @@ public class AdminProfileReviewController extends BaseApiController {
     public ApiResponse<PageResponse<ProfileReviewSummaryResponse>> list(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ok("response.success", appService.list(status, page, size));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+        return ok("response.success", appService.list(status, page, size, sortDirection));
     }
 
     /** Approve a PENDING profile change request — applies changes to user account. */

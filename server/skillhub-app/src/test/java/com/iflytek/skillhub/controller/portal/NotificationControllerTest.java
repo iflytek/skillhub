@@ -99,6 +99,50 @@ class NotificationControllerTest {
         verify(notificationService).deleteRead(10L, "user-1");
     }
 
+    @Test
+    void list_shouldExposePromotionInboxRouteForPromotionSubmittedNotifications() {
+        Notification notification = notification(
+                13L,
+                NotificationCategory.PROMOTION,
+                "PROMOTION_SUBMITTED",
+                "{\"namespace\":\"demo\",\"slug\":\"skill-a\"}",
+                "PROMOTION",
+                33L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.eq(NotificationCategory.PROMOTION), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", "PROMOTION", 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("PROMOTION");
+            assertThat(item.targetId()).isEqualTo(33L);
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/promotions");
+        });
+    }
+
+    @Test
+    void list_shouldExposeReportInboxRouteForReportSubmittedNotifications() {
+        Notification notification = notification(
+                14L,
+                NotificationCategory.REPORT,
+                "REPORT_SUBMITTED",
+                "{\"namespace\":\"demo\",\"slug\":\"skill-a\"}",
+                "REPORT",
+                44L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.eq(NotificationCategory.REPORT), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", "REPORT", 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("REPORT");
+            assertThat(item.targetId()).isEqualTo(44L);
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/reports");
+        });
+    }
+
     private Notification notification(Long id,
                                       NotificationCategory category,
                                       String eventType,

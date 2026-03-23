@@ -40,7 +40,7 @@ vi.mock('@/features/review/review-error', () => ({
   resolveReviewActionErrorDescription: () => 'error',
 }))
 
-const useReviewDetailMock = vi.fn<() => any>(() => ({
+const useReviewDetailMock = vi.fn<() => unknown>(() => ({
   data: {
     id: 13,
     namespace: 'global',
@@ -58,7 +58,7 @@ const useReviewDetailMock = vi.fn<() => any>(() => ({
   isLoading: false,
 }))
 
-const useReviewSkillDetailMock = vi.fn<() => any>(() => ({
+const useReviewSkillDetailMock = vi.fn<() => unknown>(() => ({
   data: {
     skill: {
       id: 1,
@@ -110,6 +110,16 @@ vi.mock('@/features/review/use-review-detail', () => ({
     mutate: vi.fn(),
     isPending: false,
   }),
+}))
+
+// Mock hooks used directly by the review-detail page for file browser sidebar
+vi.mock('@/features/review/use-review-file', () => ({
+  useReviewFile: () => ({ data: null, isLoading: false, error: null }),
+}))
+
+vi.mock('@/api/client', () => ({
+  buildApiUrl: (path: string) => path,
+  WEB_API_PREFIX: '/api/web',
 }))
 
 import { ReviewDetailPage } from './review-detail'
@@ -181,7 +191,7 @@ describe('ReviewDetailPage', () => {
   it('keeps the page in a single-column flow and leaves the skill detail behind a collapsed section', () => {
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
-    expect(html).toContain('max-w-3xl animate-fade-up')
+    expect(html).toContain('max-w-6xl mx-auto flex')
     expect(html).toContain('aria-expanded="false"')
   })
 
