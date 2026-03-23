@@ -1,7 +1,9 @@
 package com.iflytek.skillhub.infra.scanner;
 
 import com.iflytek.skillhub.infra.http.HttpClient;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.util.MultiValueMap;
 
 import java.nio.file.Path;
@@ -10,6 +12,25 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SkillScannerServiceTest {
+
+    @Test
+    @DisplayName("constructor rejects scanner base URLs with unsafe components")
+    void constructor_rejectsUnsafeBaseUrl() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "file:///tmp/scanner", "/scan-upload", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "http://user:secret@scanner.test", "/scan-upload", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "http://scanner.test?x=1", "/scan-upload", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "http://scanner.test#frag", "/scan-upload", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     void scanDirectory_postsToLocalScanEndpoint() {
@@ -76,6 +97,33 @@ class SkillScannerServiceTest {
     }
 
     @Test
+    void scanUpload_sendsAidefenseApiKeyViaHeaderInsteadOfQueryString() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        httpClient.multipartResponse = new SkillScannerApiResponse(
+                "scan-3",
+                "test-skill",
+                true,
+                "LOW",
+                0,
+                null,
+                0.5,
+                "2026-03-22T07:00:00"
+        );
+        SkillScannerService service = new SkillScannerService(
+                httpClient,
+                "http://scanner.test",
+                "/scan-upload",
+                "/health"
+        );
+        ScanOptions options = new ScanOptions(false, true, "openai", true, true, "secret-key", false, false);
+
+        service.scanUpload(Path.of("/tmp/demo.zip"), options);
+
+        assertThat(httpClient.lastMultipartUri).doesNotContain("aidefense_api_key");
+        assertThat(httpClient.lastMultipartHeaders.getFirst("X-AIDefense-Api-Key")).isEqualTo("secret-key");
+    }
+
+    @Test
     void isHealthy_checksConfiguredHealthEndpoint() {
         FakeHttpClient httpClient = new FakeHttpClient();
         httpClient.healthy = true;
@@ -99,6 +147,7 @@ class SkillScannerServiceTest {
         private Object lastPostBody;
         private String lastMultipartUri;
         private MultiValueMap<String, Object> lastMultipartParts;
+        private HttpHeaders lastMultipartHeaders;
         private String lastHealthUri;
         private boolean healthy;
 
@@ -118,8 +167,18 @@ class SkillScannerServiceTest {
         @Override
         @SuppressWarnings("unchecked")
         public <T> T postMultipart(String uri, MultiValueMap<String, Object> parts, Class<T> responseType) {
+            return postMultipart(uri, parts, new HttpHeaders(), responseType);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T postMultipart(String uri,
+                                   MultiValueMap<String, Object> parts,
+                                   HttpHeaders headers,
+                                   Class<T> responseType) {
             this.lastMultipartUri = uri;
             this.lastMultipartParts = parts;
+             this.lastMultipartHeaders = headers;
             return (T) multipartResponse;
         }
 

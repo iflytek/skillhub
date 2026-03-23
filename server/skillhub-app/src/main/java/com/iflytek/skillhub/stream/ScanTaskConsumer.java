@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.Map;
 
 public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.ScanTaskPayload> {
+    private static final Path SCAN_TEMP_DIR = Paths.get("/tmp/skillhub-scans").toAbsolutePath().normalize();
 
     private final SecurityScanner securityScanner;
     private final SecurityScanService securityScanService;
@@ -136,7 +137,11 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
     private void cleanupTempPath(String skillPath) {
         try {
-            Path path = Paths.get(skillPath);
+            Path path = Paths.get(skillPath).toAbsolutePath().normalize();
+            if (!path.startsWith(SCAN_TEMP_DIR)) {
+                log.warn("Skipping cleanup for path outside scan temp directory: {}", skillPath);
+                return;
+            }
             if (Files.isDirectory(path)) {
                 try (var walk = Files.walk(path)) {
                     walk.sorted(Comparator.reverseOrder()).forEach(p -> {

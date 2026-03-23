@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.domain.report;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.event.ReportResolvedEvent;
+import com.iflytek.skillhub.domain.event.ReportSubmittedEvent;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
@@ -10,6 +12,7 @@ import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,7 @@ public class SkillReportService {
     private final AuditLogService auditLogService;
     private final SkillGovernanceService skillGovernanceService;
     private final GovernanceNotificationService governanceNotificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public SkillReportService(SkillRepository skillRepository,
@@ -32,12 +36,14 @@ public class SkillReportService {
                               AuditLogService auditLogService,
                               SkillGovernanceService skillGovernanceService,
                               GovernanceNotificationService governanceNotificationService,
+                              ApplicationEventPublisher eventPublisher,
                               Clock clock) {
         this.skillRepository = skillRepository;
         this.skillReportRepository = skillReportRepository;
         this.auditLogService = auditLogService;
         this.skillGovernanceService = skillGovernanceService;
         this.governanceNotificationService = governanceNotificationService;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -73,6 +79,8 @@ public class SkillReportService {
         ));
         auditLogService.record(reporterId, "REPORT_SKILL", "SKILL", skillId, null, clientIp, userAgent,
                 "{\"reportId\":" + saved.getId() + "}");
+        eventPublisher.publishEvent(new ReportSubmittedEvent(
+                saved.getId(), saved.getSkillId(), saved.getReporterId()));
         return saved;
     }
 
@@ -104,6 +112,8 @@ public class SkillReportService {
         report.setHandledAt(currentTime());
         SkillReport saved = skillReportRepository.save(report);
         auditLogService.record(actorUserId, "RESOLVE_SKILL_REPORT", "SKILL_REPORT", reportId, null, clientIp, userAgent, null);
+        eventPublisher.publishEvent(new ReportResolvedEvent(
+                saved.getId(), saved.getSkillId(), actorUserId, saved.getReporterId(), "resolved"));
         governanceNotificationService.notifyUser(
                 report.getReporterId(),
                 "REPORT",
@@ -128,6 +138,8 @@ public class SkillReportService {
         report.setHandledAt(currentTime());
         SkillReport saved = skillReportRepository.save(report);
         auditLogService.record(actorUserId, "DISMISS_SKILL_REPORT", "SKILL_REPORT", reportId, null, clientIp, userAgent, null);
+        eventPublisher.publishEvent(new ReportResolvedEvent(
+                saved.getId(), saved.getSkillId(), actorUserId, saved.getReporterId(), "dismissed"));
         governanceNotificationService.notifyUser(
                 report.getReporterId(),
                 "REPORT",

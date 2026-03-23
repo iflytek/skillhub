@@ -18,6 +18,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import org.mockito.InOrder;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -49,8 +51,10 @@ class SkillDeleteAppServiceTest {
 
         assertThat(result.deleted()).isTrue();
         assertThat(result.skillId()).isEqualTo(11L);
+        InOrder inOrder = inOrder(searchIndexService, skillHardDeleteService);
+        inOrder.verify(searchIndexService).remove(11L);
+        inOrder.verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
         verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
-        verify(searchIndexService).remove(11L);
     }
 
     @Test
@@ -80,8 +84,10 @@ class SkillDeleteAppServiceTest {
         );
 
         assertThat(result.deleted()).isTrue();
+        InOrder inOrder = inOrder(searchIndexService, skillHardDeleteService);
+        inOrder.verify(searchIndexService).remove(11L);
+        inOrder.verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "owner-1", "127.0.0.1", "JUnit");
         verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "owner-1", "127.0.0.1", "JUnit");
-        verify(searchIndexService).remove(11L);
     }
 
     @Test
@@ -98,6 +104,9 @@ class SkillDeleteAppServiceTest {
         );
 
         assertThat(result.deleted()).isTrue();
+        InOrder inOrder = inOrder(searchIndexService, skillHardDeleteService);
+        inOrder.verify(searchIndexService).remove(11L);
+        inOrder.verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
         verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
     }
 

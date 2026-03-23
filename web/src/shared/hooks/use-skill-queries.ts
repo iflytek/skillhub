@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
 import { getSkillDetailQueryKey } from './query-keys'
 import { buildSkillSearchUrl } from './skill-query-helpers'
 
@@ -58,42 +59,39 @@ export function useSearchSkills(params: SearchParams) {
   })
 }
 
-export function useSkillDetail(namespace: string, slug: string) {
+export function useSkillDetail(namespace: string, slug: string, enabled = true) {
   return useQuery({
     queryKey: getSkillDetailQueryKey(namespace, slug),
     queryFn: () => getSkillDetail(namespace, slug),
-    enabled: !!namespace && !!slug,
+    enabled: enabled && !!namespace && !!slug,
+    refetchOnMount: 'always',
   })
 }
 
-export function useSkillVersions(namespace: string, slug: string) {
+export function useSkillVersions(namespace: string, slug: string, enabled = true) {
   return useQuery({
     queryKey: ['skills', namespace, slug, 'versions'],
     queryFn: () => getSkillVersions(namespace, slug),
-    enabled: !!namespace && !!slug,
+    enabled: enabled && !!namespace && !!slug,
   })
 }
 
-export function useSkillFiles(namespace: string, slug: string, version?: string) {
+export function useSkillFiles(namespace: string, slug: string, version?: string, enabled = true) {
   return useQuery({
     queryKey: ['skills', namespace, slug, 'versions', version, 'files'],
     queryFn: () => getSkillFiles(namespace, slug, version!),
-    enabled: !!namespace && !!slug && !!version,
+    enabled: enabled && !!namespace && !!slug && !!version,
   })
 }
 
-export function useSkillReadme(namespace: string, slug: string, version?: string, path?: string | null) {
+export function useSkillReadme(namespace: string, slug: string, version?: string, path?: string | null, enabled = true) {
   return useQuery({
     queryKey: ['skills', namespace, slug, 'versions', version, 'readme', path],
     queryFn: () => getSkillDocumentation(namespace, slug, version!, path!),
-    enabled: !!namespace && !!slug && !!version && !!path,
+    enabled: enabled && !!namespace && !!slug && !!version && !!path,
   })
 }
 
-/**
- * Fetches a single file's content from a skill version.
- * Reuses the same backend endpoint as README loading but for arbitrary paths.
- */
 export function useSkillFile(
   namespace: string,
   slug: string,
@@ -109,11 +107,11 @@ export function useSkillFile(
   })
 }
 
-export function useSkillVersionDetail(namespace: string, slug: string, version?: string) {
+export function useSkillVersionDetail(namespace: string, slug: string, version?: string, enabled = true) {
   return useQuery({
     queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
     queryFn: () => getSkillVersionDetail(namespace, slug, version!),
-    enabled: !!namespace && !!slug && !!version,
+    enabled: enabled && !!namespace && !!slug && !!version,
   })
 }
 
@@ -177,10 +175,14 @@ export function useDeleteSkillVersion() {
 }
 
 export function useDeleteSkill() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: ({ namespace, slug }: { namespace: string; slug: string }) =>
       skillLifecycleApi.deleteSkill(namespace, slug),
-    // Cache cleanup is handled by the caller to avoid refetching while the component is still mounted.
+    onSuccess: (data, variables) => {
+      clearDeletedSkillQueries(queryClient, variables.namespace, variables.slug, data.skillId)
+    },
   })
 }
 

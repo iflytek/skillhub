@@ -282,6 +282,13 @@ export interface PublishResult {
   totalSize: number
 }
 
+export interface SkillDeleteResult {
+  skillId?: number
+  namespace?: string
+  slug?: string
+  deleted?: boolean
+}
+
 export interface ReviewTask {
   id: number
   skillVersionId: number
@@ -404,4 +411,31 @@ export interface AuditLogItem {
   resourceId?: string
   timestamp: string
   ipAddress?: string
+}
+
+// Notification types
+export interface NotificationItem {
+  id: number
+  category: 'PUBLISH' | 'REVIEW' | 'PROMOTION' | 'REPORT'
+  eventType: string
+  title: string
+  bodyJson?: string
+  entityType?: string
+  entityId?: number
+  targetType?: string
+  targetId?: number
+  targetRoute?: string
+  status: 'UNREAD' | 'READ'
+  createdAt: string
+  readAt?: string
+}
+
+export interface NotificationPreferenceItem {
+  category: string
+  channel: string
+  enabled: boolean
+}
+
+export interface NotificationUnreadCount {
+  count: number
 }

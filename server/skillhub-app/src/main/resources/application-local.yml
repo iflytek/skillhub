@@ -27,6 +27,10 @@ skillhub:
   auth:
     mock:
       enabled: true
+  notification:
+    cleanup:
+      read-retention-days: 30
+      unread-retention-days: 90
   security:
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}

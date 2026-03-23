@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.security.SecurityVerdict;
 import com.iflytek.skillhub.infra.http.HttpClient;
 import com.iflytek.skillhub.infra.http.HttpClientException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -106,7 +107,7 @@ class SkillScannerAdapterTest {
         private RuntimeException directoryException;
 
         private StubSkillScannerService() {
-            super(new NoOpHttpClient(), "", "", "");
+            super(new NoOpHttpClient(), "http://scanner.test", "/scan-upload", "/health");
         }
 
         @Override
@@ -138,6 +139,14 @@ class SkillScannerAdapterTest {
 
         @Override
         public <T> T postMultipart(String uri, org.springframework.util.MultiValueMap<String, Object> parts,
+                                   Class<T> responseType) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> T postMultipart(String uri,
+                                   org.springframework.util.MultiValueMap<String, Object> parts,
+                                   HttpHeaders headers,
                                    Class<T> responseType) {
             throw new UnsupportedOperationException();
         }

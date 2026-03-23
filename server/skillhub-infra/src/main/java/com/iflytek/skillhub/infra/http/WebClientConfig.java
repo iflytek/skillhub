@@ -18,6 +18,7 @@ public class WebClientConfig {
                 .build();
 
         reactor.netty.http.client.HttpClient reactorClient = reactor.netty.http.client.HttpClient.create()
+                .followRedirect(false)
                 .responseTimeout(Duration.ofMinutes(5));
 
         return WebClient.builder()

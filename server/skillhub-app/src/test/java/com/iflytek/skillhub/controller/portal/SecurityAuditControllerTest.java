@@ -1,11 +1,18 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityAudit;
 import com.iflytek.skillhub.domain.security.SecurityAuditRepository;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
 import com.iflytek.skillhub.domain.security.SecurityVerdict;
+import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillStatus;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -20,6 +27,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.BDDMockito.given;
@@ -40,6 +48,12 @@ class SecurityAuditControllerTest {
     private SecurityAuditRepository securityAuditRepository;
 
     @MockBean
+    private SkillRepository skillRepository;
+
+    @MockBean
+    private SkillVersionRepository skillVersionRepository;
+
+    @MockBean
     private ScanTaskProducer scanTaskProducer;
 
     @Test
@@ -56,10 +70,14 @@ class SecurityAuditControllerTest {
                 """.trim());
         audit.setScanDurationSeconds(1.25);
         audit.setScannedAt(Instant.parse("2026-03-20T08:00:00Z"));
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
 
         given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
 
-        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("reviewer-1")))
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1"))
+                        .requestAttr("userNsRoles", Map.of(5L, NamespaceRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].id").value(7L))
@@ -72,9 +90,13 @@ class SecurityAuditControllerTest {
 
     @Test
     void getSecurityAudit_returnsEmptyListWhenAuditMissing() throws Exception {
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
         given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("reviewer-1")))
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1"))
+                        .requestAttr("userNsRoles", Map.of(5L, NamespaceRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").isArray())
@@ -86,6 +108,25 @@ class SecurityAuditControllerTest {
         mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void getSecurityAudit_rejectsVersionSkillMismatch() throws Exception {
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 9L)));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("reviewer-1")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    void getSecurityAudit_forbidsUnauthorizedViewer() throws Exception {
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "owner-1")));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("viewer-1")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     private RequestPostProcessor auth(String userId) {
@@ -103,6 +144,19 @@ class SecurityAuditControllerTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
         return authentication(authenticationToken);
+    }
+
+    private SkillVersion skillVersion(Long versionId, Long skillId) {
+        SkillVersion version = new SkillVersion(skillId, "1.0.0", "owner-1");
+        setField(version, "id", versionId);
+        return version;
+    }
+
+    private Skill skill(Long skillId, String ownerId) {
+        Skill skill = new Skill(5L, "caldav-calendar", ownerId, SkillVisibility.PRIVATE);
+        setField(skill, "id", skillId);
+        setField(skill, "status", SkillStatus.ACTIVE);
+        return skill;
     }
 
     private void setField(Object target, String fieldName, Object value) {
