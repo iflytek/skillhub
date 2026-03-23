@@ -6,7 +6,7 @@ import {
   DEFAULT_MAIN_CLASS_NAME,
   getAppMainContentLayout,
   resolveAppMainContentPathname,
-} from '../../src/app/layout-main-content'
+} from './layout-main-content'
 
 describe('getAppMainContentLayout', () => {
   it('keeps the landing page full width without the app-shell padding wrapper', () => {
