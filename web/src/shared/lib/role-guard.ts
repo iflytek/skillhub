@@ -9,3 +9,16 @@ export function canAccessRoute(userRoles: readonly string[] | undefined, require
 export function shouldNavigateBackOnForbidden(historyLength: number) {
   return historyLength > 1
 }
+
+export function shouldRedirectToLogin(isLoading: boolean, user: object | null | undefined) {
+  return !isLoading && !user
+}
+
+export function buildLoginRedirect(pathname: string, search = '', hash = '') {
+  return {
+    to: '/login' as const,
+    search: {
+      returnTo: `${pathname}${search}${hash}`,
+    },
+  }
+}

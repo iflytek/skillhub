@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.ReviewSubmittedEvent;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -352,7 +353,14 @@ public class SkillPublishService {
                 securityScanService.triggerScan(version.getId(), entries, publisherId);
             } else {
                 ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
-                reviewTaskRepository.save(reviewTask);
+                ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
+                eventPublisher.publishEvent(new ReviewSubmittedEvent(
+                        savedReviewTask.getId(),
+                        skill.getId(),
+                        version.getId(),
+                        savedReviewTask.getSubmittedBy(),
+                        savedReviewTask.getNamespaceId()
+                ));
             }
         }
 

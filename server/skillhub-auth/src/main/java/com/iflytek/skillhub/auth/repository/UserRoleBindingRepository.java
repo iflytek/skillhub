@@ -14,5 +14,7 @@ import java.util.List;
 public interface UserRoleBindingRepository extends JpaRepository<UserRoleBinding, Long> {
     List<UserRoleBinding> findByUserId(String userId);
     List<UserRoleBinding> findByUserIdIn(Collection<String> userIds);
+    List<UserRoleBinding> findByRole_Code(String roleCode);
+    List<UserRoleBinding> findByRole_CodeIn(Collection<String> roleCodes);
     long deleteByUserId(String userId);
 }

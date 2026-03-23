@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
+import { NotificationBell } from '@/features/notification/notification-bell'
 import { getAppHeaderClassName } from './layout-header-style'
 import { getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
 
@@ -98,6 +99,7 @@ export function Layout() {
 
         <div className="flex items-center gap-6 text-[15px] font-normal" style={{ color: 'hsl(var(--text-secondary))' }}>
           <LanguageSwitcher />
+          {user && <NotificationBell />}
           {isLoading ? null : user ? (
             <UserMenu user={user} />
           ) : (

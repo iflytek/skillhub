@@ -2,6 +2,8 @@ import { common, createLowlight } from 'lowlight'
 
 // Create lowlight instance with common languages
 const lowlight = createLowlight(common)
+type HighlightedTree = ReturnType<(typeof lowlight)['highlight']>
+type HighlightedNode = HighlightedTree | HighlightedTree['children'][number]
 
 interface CodeRendererProps {
   code: string
@@ -51,19 +53,20 @@ export function CodeRenderer({ code, language, className }: CodeRendererProps) {
 /**
  * Converts lowlight AST tree to HTML string
  */
-function treeToHtml(node: any): string {
+function treeToHtml(node: HighlightedNode): string {
   if (node.type === 'text') {
     return escapeHtml(node.value)
   }
 
   if (node.type === 'element') {
-    const className = node.properties?.className?.join(' ') || ''
-    const children = node.children?.map(treeToHtml).join('') || ''
+    const classNames = node.properties?.className
+    const className = Array.isArray(classNames) ? classNames.join(' ') : ''
+    const children = node.children.map(treeToHtml).join('')
     return `<span class="${className}">${children}</span>`
   }
 
   if (node.type === 'root') {
-    return node.children?.map(treeToHtml).join('') || ''
+    return node.children.map(treeToHtml).join('')
   }
 
   return ''

@@ -5,6 +5,9 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.event.ReviewApprovedEvent;
+import com.iflytek.skillhub.domain.event.ReviewRejectedEvent;
+import com.iflytek.skillhub.domain.event.ReviewSubmittedEvent;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
@@ -103,7 +106,11 @@ public class ReviewService {
 
         ReviewTask task = new ReviewTask(skillVersionId, skill.getNamespaceId(), userId);
         try {
-            return reviewTaskRepository.save(task);
+            ReviewTask saved = reviewTaskRepository.save(task);
+            eventPublisher.publishEvent(new ReviewSubmittedEvent(
+                    saved.getId(), skillVersion.getSkillId(), skillVersion.getId(),
+                    saved.getSubmittedBy(), saved.getNamespaceId()));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             throw new DomainBadRequestException("review.submit.duplicate", skillVersionId);
         }
@@ -139,7 +146,11 @@ public class ReviewService {
 
         ReviewTask task = new ReviewTask(skillVersionId, skill.getNamespaceId(), userId);
         try {
-            return reviewTaskRepository.save(task);
+            ReviewTask saved = reviewTaskRepository.save(task);
+            eventPublisher.publishEvent(new ReviewSubmittedEvent(
+                    saved.getId(), skillVersion.getSkillId(), skillVersion.getId(),
+                    saved.getSubmittedBy(), saved.getNamespaceId()));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             throw new DomainBadRequestException("review.submit.duplicate", skillVersionId);
         }
@@ -211,6 +222,9 @@ public class ReviewService {
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 skill.getId(), skillVersion.getId(), reviewerId));
+        eventPublisher.publishEvent(new ReviewApprovedEvent(
+                task.getId(), skill.getId(), skillVersion.getId(),
+                reviewerId, task.getSubmittedBy()));
         governanceNotificationService.notifyUser(
                 task.getSubmittedBy(),
                 "REVIEW",
@@ -256,8 +270,13 @@ public class ReviewService {
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
+        Skill skill = skillRepository.findById(skillVersion.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", skillVersion.getSkillId()));
         skillVersion.setStatus(SkillVersionStatus.REJECTED);
         skillVersionRepository.save(skillVersion);
+        eventPublisher.publishEvent(new ReviewRejectedEvent(
+                task.getId(), skill.getId(), skillVersion.getId(),
+                reviewerId, task.getSubmittedBy(), comment));
         governanceNotificationService.notifyUser(
                 task.getSubmittedBy(),
                 "REVIEW",

@@ -29,6 +29,7 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
     private final String streamKey;
     private final String groupName;
     private final String consumerName;
+    private StringRedisTemplate redisTemplate;
 
     private StreamMessageListenerContainer<String, MapRecord<String, String, String>> container;
 
@@ -46,6 +47,7 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
         if (connectionFactory == null) {
             return;
         }
+        this.redisTemplate = createRedisTemplate();
         initializeStreamAndGroup();
         startConsumer();
     }
@@ -59,7 +61,7 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
 
     private void initializeStreamAndGroup() {
         try {
-            StringRedisTemplate template = new StringRedisTemplate(connectionFactory);
+            StringRedisTemplate template = redisTemplate();
             if (Boolean.FALSE.equals(template.hasKey(streamKey))) {
                 template.opsForStream().add(streamKey, Map.of("_init", "true"));
             }
@@ -82,7 +84,7 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
                         .build();
 
         container = StreamMessageListenerContainer.create(connectionFactory, options);
-        Subscription ignored = container.receiveAutoAck(
+        Subscription ignored = container.receive(
                 Consumer.from(groupName, consumerName),
                 StreamOffset.create(streamKey, ReadOffset.lastConsumed()),
                 this
@@ -94,6 +96,7 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
     public void onMessage(MapRecord<String, String, String> message) {
         T payload = parsePayload(message.getId().getValue(), message.getValue());
         if (payload == null) {
+            acknowledge(message);
             return;
         }
 
@@ -102,8 +105,10 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
             markProcessing(payload);
             processBusiness(payload);
             markCompleted(payload);
+            acknowledge(message);
         } catch (Exception e) {
             handleFailure(payload, retryCount, e);
+            acknowledge(message);
         }
     }
 
@@ -130,6 +135,21 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
             return null;
         }
         return error.length() > 500 ? error.substring(0, 500) : error;
+    }
+
+    protected StringRedisTemplate createRedisTemplate() {
+        return new StringRedisTemplate(connectionFactory);
+    }
+
+    protected void acknowledge(MapRecord<String, String, String> message) {
+        redisTemplate().opsForStream().acknowledge(streamKey, groupName, message.getId());
+    }
+
+    private StringRedisTemplate redisTemplate() {
+        if (redisTemplate == null) {
+            redisTemplate = createRedisTemplate();
+        }
+        return redisTemplate;
     }
 
     protected abstract String taskDisplayName();

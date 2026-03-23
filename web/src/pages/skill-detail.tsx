@@ -15,7 +15,8 @@ import {
   shouldCollapseOverview,
 } from '@/features/skill/overview-collapse'
 import { resolveSkillActionErrorTitle } from '@/features/skill/skill-action-error'
-import { isDeleteSlugConfirmationValid, resolveDeletedSkillReturnTo } from '@/features/skill/skill-delete-flow'
+import { clearDeletedSkillQueries, isDeleteSlugConfirmationValid, resolveDeletedSkillReturnTo } from '@/features/skill/skill-delete-flow'
+import { isSkillDetailQueriesEnabled } from './skill-detail-query'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
@@ -107,6 +108,7 @@ export function SkillDetailPage() {
   const [deleteSkillConfirmOpen, setDeleteSkillConfirmOpen] = useState(false)
   const [deleteSkillInputOpen, setDeleteSkillInputOpen] = useState(false)
   const [deleteSkillInput, setDeleteSkillInput] = useState('')
+  const [skillDeleted, setSkillDeleted] = useState(false)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
@@ -120,42 +122,39 @@ export function SkillDetailPage() {
   const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
-  const [skillDeleted, setSkillDeleted] = useState(false)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
-
-  // After deletion, pass empty values to disable all skill queries while the page navigates away
-  const qns = skillDeleted ? '' : namespace
-  const qslug = skillDeleted ? '' : slug
-
-  const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(qns, qslug)
-  const { data: versions } = useSkillVersions(qns, qslug)
+  const detailQueriesEnabled = isSkillDetailQueriesEnabled(skillDeleted)
+  const qns = detailQueriesEnabled ? namespace : ''
+  const qslug = detailQueriesEnabled ? slug : ''
+  const { data: skill, isLoading: isLoadingSkill, isFetching: isFetchingSkill, error: skillError } = useSkillDetail(qns, qslug, detailQueriesEnabled)
+  const skillReady = detailQueriesEnabled && Boolean(skill) && !isLoadingSkill && !isFetchingSkill && !skillError
+  const { data: versions } = useSkillVersions(qns, qslug, skillReady)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
-  const { data: files } = useSkillFiles(qns, qslug, selectedVersion)
+  const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
-  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath)
-  // File preview: fetch content when a file node is selected
+  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady)
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
     qns,
     qslug,
     selectedVersion,
     previewNode?.path || null,
-    previewDialogOpen && !!previewNode
+    previewDialogOpen && !!previewNode && skillReady
   )
-  const { data: diffSourceDetail } = useSkillVersionDetail(qns, qslug, diffSourceVersion ?? undefined)
-  const { data: diffCompareDetail } = useSkillVersionDetail(qns, qslug, diffCompareVersion ?? undefined)
-  const { data: diffSourceFiles } = useSkillFiles(qns, qslug, diffSourceVersion ?? undefined)
-  const { data: diffCompareFiles } = useSkillFiles(qns, qslug, diffCompareVersion ?? undefined)
+  const { data: diffSourceDetail } = useSkillVersionDetail(qns, qslug, diffSourceVersion ?? undefined, skillReady)
+  const { data: diffCompareDetail } = useSkillVersionDetail(qns, qslug, diffCompareVersion ?? undefined, skillReady)
+  const { data: diffSourceFiles } = useSkillFiles(qns, qslug, diffSourceVersion ?? undefined, skillReady)
+  const { data: diffCompareFiles } = useSkillFiles(qns, qslug, diffCompareVersion ?? undefined, skillReady)
   const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
   const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
-  const { data: diffSourceReadme } = useSkillReadme(qns, qslug, diffSourceVersion ?? undefined, diffSourceDocumentationPath)
-  const { data: diffCompareReadme } = useSkillReadme(qns, qslug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
+  const { data: diffSourceReadme } = useSkillReadme(qns, qslug, diffSourceVersion ?? undefined, diffSourceDocumentationPath, skillReady)
+  const { data: diffCompareReadme } = useSkillReadme(qns, qslug, diffCompareVersion ?? undefined, diffCompareDocumentationPath, skillReady)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
@@ -388,6 +387,16 @@ export function SkillDetailPage() {
   const isLastVersion = versions?.length === 1
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
+  const isNotFoundError = skillError instanceof ApiError
+    ? skillError.status === 400 || skillError.status === 404 || skillError.serverMessageKey === 'skill.not_found'
+    : false
+
+  useEffect(() => {
+    if (!isNotFoundError) {
+      return
+    }
+    clearDeletedSkillQueries(queryClient, namespace, slug, skill?.id)
+  }, [isNotFoundError, namespace, queryClient, skill?.id, slug])
 
   const metadataDiffEntries = (() => {
     const source = parseMetadataJson(diffSourceDetail?.parsedMetadataJson)
@@ -608,6 +617,15 @@ export function SkillDetailPage() {
       )
     }
 
+    if (isNotFoundError) {
+      return (
+        <div className="text-center py-20 animate-fade-up">
+          <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.notFound')}</h2>
+          <p className="text-muted-foreground">{t('skillDetail.notFoundDesc')}</p>
+        </div>
+      )
+    }
+
     return (
       <div className="text-center py-20 animate-fade-up">
         <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.accessDenied')}</h2>
@@ -623,6 +641,10 @@ export function SkillDetailPage() {
         <p className="text-muted-foreground">{t('skillDetail.notFoundDesc')}</p>
       </div>
     )
+  }
+
+  if (skillDeleted) {
+    return null
   }
 
   return (
@@ -933,8 +955,12 @@ export function SkillDetailPage() {
           <div className="space-y-3">
             {canInteract ? (
               <>
-                <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
-                <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+                {!isFetchingSkill ? (
+                  <>
+                    <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
+                    <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+                  </>
+                ) : null}
                 {canReport ? (
                   <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
                     {hasReported ? t('skillDetail.reportedSkill') : reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}

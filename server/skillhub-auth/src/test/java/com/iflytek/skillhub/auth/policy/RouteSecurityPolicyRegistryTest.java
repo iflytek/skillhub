@@ -44,6 +44,21 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_shouldKeepPublicLabelsEndpointsAnonymous() {
+        boolean matchedV1 = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/labels".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+        boolean matchedWeb = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/web/labels".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+
+        assertTrue(matchedV1);
+        assertTrue(matchedWeb);
+    }
+
+    @Test
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));
