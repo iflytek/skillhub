@@ -4,6 +4,7 @@ import { FileCheck2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import {
   Table,
@@ -20,6 +21,7 @@ import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { ProfileReviewTable } from './profile-review-table'
 
 type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+type TimeSortDirection = 'ASC' | 'DESC'
 const PAGE_SIZE = 20
 
 /**
@@ -37,6 +39,7 @@ export function ReviewsPage() {
     REJECTED: 0,
   })
   const [activeStatus, setActiveStatus] = useState<ReviewStatus>('PENDING')
+  const [sortDirection, setSortDirection] = useState<TimeSortDirection>('DESC')
 
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
@@ -45,9 +48,9 @@ export function ReviewsPage() {
   // Determine default top-level tab
   const defaultType = isSkillAdmin ? 'skill' : 'profile'
 
-  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, activeStatus === 'PENDING')
-  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, activeStatus === 'APPROVED')
-  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, activeStatus === 'REJECTED')
+  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, activeStatus === 'PENDING')
+  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, activeStatus === 'APPROVED')
+  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, sortDirection, activeStatus === 'REJECTED')
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
@@ -57,6 +60,15 @@ export function ReviewsPage() {
 
   function changePage(status: ReviewStatus, nextPage: number) {
     setPages((current) => ({ ...current, [status]: nextPage }))
+  }
+
+  function handleSortChange(value: string) {
+    setSortDirection(value as TimeSortDirection)
+    setPages({
+      PENDING: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+    })
   }
 
   function renderPagination(status: ReviewStatus, totalElements: number, totalPages: number) {
@@ -165,6 +177,20 @@ export function ReviewsPage() {
               </div>
               <CardTitle>{t('reviews.typeSkill')}</CardTitle>
               <CardDescription>{t('reviews.subtitle')}</CardDescription>
+            </div>
+            <div className="w-full max-w-48">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {t('reviews.sortLabel')}
+              </p>
+              <Select value={sortDirection} onValueChange={handleSortChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DESC">{t('reviews.sortNewest')}</SelectItem>
+                  <SelectItem value="ASC">{t('reviews.sortOldest')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>

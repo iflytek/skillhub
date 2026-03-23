@@ -23,8 +23,8 @@ public interface ProfileChangeRequestRepository {
      */
     List<ProfileChangeRequest> findByUserIdAndStatus(String userId, ProfileChangeStatus status);
 
-    /** Paginated query filtered by status, ordered by created_at DESC. */
-    Page<ProfileChangeRequest> findByStatusOrderByCreatedAtDesc(ProfileChangeStatus status, Pageable pageable);
+    /** Paginated query filtered by status, with sort coming from the provided pageable. */
+    Page<ProfileChangeRequest> findByStatus(ProfileChangeStatus status, Pageable pageable);
 
     /** Find the most recent request for a user with any of the given statuses. */
     Optional<ProfileChangeRequest> findFirstByUserIdAndStatusInOrderByCreatedAtDesc(

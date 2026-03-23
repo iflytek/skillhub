@@ -24,7 +24,7 @@ public interface ProfileChangeRequestJpaRepository
     List<ProfileChangeRequest> findByUserIdAndStatus(String userId, ProfileChangeStatus status);
 
     @Override
-    Page<ProfileChangeRequest> findByStatusOrderByCreatedAtDesc(ProfileChangeStatus status, Pageable pageable);
+    Page<ProfileChangeRequest> findByStatus(ProfileChangeStatus status, Pageable pageable);
 
     @Override
     Optional<ProfileChangeRequest> findFirstByUserIdAndStatusInOrderByCreatedAtDesc(

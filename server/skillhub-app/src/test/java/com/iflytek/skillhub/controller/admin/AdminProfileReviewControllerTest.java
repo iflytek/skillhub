@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.admin;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -104,7 +105,7 @@ class AdminProfileReviewControllerTest {
 
     @Test
     void listPendingReviews_asUserAdmin_returnsPage() throws Exception {
-        given(appService.list(eq("PENDING"), eq(0), eq(20)))
+        given(appService.list(eq("PENDING"), eq(0), eq(20), eq("DESC")))
                 .willReturn(new PageResponse<>(List.of(sampleSummary()), 1, 0, 20));
 
         mockMvc.perform(get("/api/v1/admin/profile-reviews")
@@ -176,7 +177,7 @@ class AdminProfileReviewControllerTest {
 
     @Test
     void listReviews_filterByStatus() throws Exception {
-        given(appService.list(eq("APPROVED"), eq(0), eq(20)))
+        given(appService.list(eq("APPROVED"), eq(0), eq(20), eq("DESC")))
                 .willReturn(new PageResponse<>(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/v1/admin/profile-reviews")
@@ -191,7 +192,7 @@ class AdminProfileReviewControllerTest {
 
     @Test
     void listReviews_pagination() throws Exception {
-        given(appService.list(isNull(), eq(2), eq(5)))
+        given(appService.list(isNull(), eq(2), eq(5), eq("DESC")))
                 .willReturn(new PageResponse<>(List.of(), 0, 2, 5));
 
         mockMvc.perform(get("/api/v1/admin/profile-reviews")
@@ -201,6 +202,21 @@ class AdminProfileReviewControllerTest {
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.page").value(2));
+    }
+
+    @Test
+    void listReviews_forwardsSortDirection() throws Exception {
+        given(appService.list(eq("PENDING"), eq(0), eq(20), eq("ASC")))
+                .willReturn(new PageResponse<>(List.of(), 0, 0, 20));
+
+        mockMvc.perform(get("/api/v1/admin/profile-reviews")
+                        .param("status", "PENDING")
+                        .param("sortDirection", "ASC")
+                        .with(authentication(userAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        verify(appService).list("PENDING", 0, 20, "ASC");
     }
 
     // ===== Error: approve already approved returns 400 =====
