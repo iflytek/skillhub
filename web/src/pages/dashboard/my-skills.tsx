@@ -76,6 +76,12 @@ export function MySkillsPage() {
     if (status === 'REJECTED') {
       return t('mySkills.statusRejected')
     }
+    if (status === 'SCANNING') {
+      return t('mySkills.statusScanning')
+    }
+    if (status === 'SCAN_FAILED') {
+      return t('mySkills.statusScanFailed')
+    }
     return status
   }
 
@@ -93,6 +99,12 @@ export function MySkillsPage() {
       return 'status-pill status-pill--published'
     }
     if (status === 'REJECTED') {
+      return 'status-pill status-pill--rejected'
+    }
+    if (status === 'SCANNING') {
+      return 'status-pill status-pill--review'
+    }
+    if (status === 'SCAN_FAILED') {
       return 'status-pill status-pill--rejected'
     }
     return 'status-pill'
@@ -334,7 +346,7 @@ export function MySkillsPage() {
                           >
                             {t('mySkills.unarchive')}
                           </Button>
-                        ) : (
+                        ) : publishedVersion ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -349,7 +361,7 @@ export function MySkillsPage() {
                           >
                             {t('mySkills.archive')}
                           </Button>
-                        )}
+                        ) : null}
                         <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>

@@ -371,7 +371,20 @@ export function SkillDetailPage() {
     return status ?? ''
   }
 
-  const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED'
+  const resolveVersionStatusLabel = (status?: string) => {
+    const map: Record<string, string> = {
+      DRAFT: t('skillDetail.versionStatusDraft'),
+      SCANNING: t('skillDetail.versionStatusScanning'),
+      SCAN_FAILED: t('skillDetail.versionStatusScanFailed'),
+      PENDING_REVIEW: t('skillDetail.versionStatusPendingReview'),
+      PUBLISHED: t('skillDetail.versionStatusPublished'),
+      REJECTED: t('skillDetail.versionStatusRejected'),
+      YANKED: t('skillDetail.versionStatusYanked'),
+    }
+    return status ? (map[status] ?? status) : ''
+  }
+
+  const canDeleteVersion = (status?: string) => status === 'DRAFT' || status === 'REJECTED' || status === 'SCAN_FAILED'
   const isLastVersion = versions?.length === 1
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
@@ -779,7 +792,7 @@ export function SkillDetailPage() {
                           </span>
                           {version.status && (
                             <span className="rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-xs text-muted-foreground">
-                              {version.status}
+                              {resolveVersionStatusLabel(version.status)}
                             </span>
                           )}
                           {headlineVersion?.version === version.version && (
@@ -1065,11 +1078,11 @@ export function SkillDetailPage() {
                 <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
                   {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
                 </Button>
-              ) : (
+              ) : publishedVersion ? (
                 <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
                   {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
                 </Button>
-              )}
+              ) : null}
               {canHardDeleteSkill && (
                 <Button
                   variant="destructive"

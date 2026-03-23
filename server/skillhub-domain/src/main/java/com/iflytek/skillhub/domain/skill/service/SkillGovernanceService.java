@@ -149,7 +149,9 @@ public class SkillGovernanceService {
                               String clientIp,
                               String userAgent) {
         assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
-        if (version.getStatus() != SkillVersionStatus.DRAFT && version.getStatus() != SkillVersionStatus.REJECTED) {
+        if (version.getStatus() != SkillVersionStatus.DRAFT
+                && version.getStatus() != SkillVersionStatus.REJECTED
+                && version.getStatus() != SkillVersionStatus.SCAN_FAILED) {
             throw new DomainBadRequestException("error.skill.version.delete.unsupported", version.getVersion());
         }
 

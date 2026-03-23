@@ -328,7 +328,9 @@ public class SkillQueryService {
                             || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
                             || version.getStatus() == SkillVersionStatus.DRAFT
                             || version.getStatus() == SkillVersionStatus.REJECTED
-                            || version.getStatus() == SkillVersionStatus.YANKED)
+                            || version.getStatus() == SkillVersionStatus.YANKED
+                            || version.getStatus() == SkillVersionStatus.SCANNING
+                            || version.getStatus() == SkillVersionStatus.SCAN_FAILED)
                     .sorted(Comparator
                             .comparingInt((SkillVersion version) -> lifecycleListPriority(version.getStatus()))
                             .thenComparing(SkillVersion::getPublishedAt,
@@ -375,7 +377,9 @@ public class SkillQueryService {
                         || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
                         || version.getStatus() == SkillVersionStatus.DRAFT
                         || version.getStatus() == SkillVersionStatus.REJECTED
-                        || version.getStatus() == SkillVersionStatus.YANKED)
+                        || version.getStatus() == SkillVersionStatus.YANKED
+                        || version.getStatus() == SkillVersionStatus.SCANNING
+                        || version.getStatus() == SkillVersionStatus.SCAN_FAILED)
                 .sorted(Comparator
                         .comparingInt((SkillVersion version) -> lifecycleListPriority(version.getStatus()))
                         .thenComparing(SkillVersion::getPublishedAt,
@@ -662,19 +666,25 @@ public class SkillQueryService {
         if (status == SkillVersionStatus.PUBLISHED) {
             return 0;
         }
-        if (status == SkillVersionStatus.REJECTED) {
+        if (status == SkillVersionStatus.SCANNING) {
             return 1;
         }
-        if (status == SkillVersionStatus.PENDING_REVIEW) {
+        if (status == SkillVersionStatus.SCAN_FAILED) {
+            return 1;
+        }
+        if (status == SkillVersionStatus.REJECTED) {
             return 2;
         }
-        if (status == SkillVersionStatus.DRAFT) {
+        if (status == SkillVersionStatus.PENDING_REVIEW) {
             return 3;
         }
-        if (status == SkillVersionStatus.YANKED) {
+        if (status == SkillVersionStatus.DRAFT) {
             return 4;
         }
-        return 2;
+        if (status == SkillVersionStatus.YANKED) {
+            return 5;
+        }
+        return 3;
     }
 
     private void assertPublishedVersion(SkillVersion version, String versionStr) {
