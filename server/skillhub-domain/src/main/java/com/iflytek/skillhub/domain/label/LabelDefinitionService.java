@@ -28,7 +28,7 @@ public class LabelDefinitionService {
         this.labelDefinitionRepository = labelDefinitionRepository;
         this.labelTranslationRepository = labelTranslationRepository;
         this.labelPermissionChecker = labelPermissionChecker;
-        this.maxLabelDefinitions = maxLabelDefinitions;
+        this.maxLabelDefinitions = requirePositive(maxLabelDefinitions, "skillhub.label.max-definitions");
     }
 
     public List<LabelDefinition> listAll() {
@@ -204,6 +204,13 @@ public class LabelDefinitionService {
             return new DomainBadRequestException("label.translation.locale.conflict");
         }
         return new DomainBadRequestException("label.slug.duplicate", slug);
+    }
+
+    private int requirePositive(int value, String propertyName) {
+        if (value <= 0) {
+            throw new IllegalArgumentException(propertyName + " must be greater than 0");
+        }
+        return value;
     }
 
     public record LabelSortOrderUpdate(Long labelId, int sortOrder) {
