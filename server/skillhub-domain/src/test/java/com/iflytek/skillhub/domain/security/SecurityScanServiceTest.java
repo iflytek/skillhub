@@ -14,9 +14,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -92,6 +94,51 @@ class SecurityScanServiceTest {
         assertThat(task.versionId()).isEqualTo(42L);
         assertThat(task.publisherId()).isEqualTo("publisher-1");
         assertThat(task.skillPath()).contains("42");
+    }
+
+    @Test
+    void triggerScan_rejectsDirectoryTraversalEntries() throws Exception {
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        PackageEntry entry = new PackageEntry(
+                "../escape.txt",
+                "boom".getBytes(),
+                4L,
+                "text/plain"
+        );
+
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        assertThatThrownBy(() -> service.triggerScan(42L, List.of(entry), "publisher-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Unsafe scan path");
+    }
+
+    @Test
+    void triggerScan_rejectsZipSlipEntriesWhenUploadModeEnabled() throws Exception {
+        service = new SecurityScanService(
+                auditRepository,
+                skillVersionRepository,
+                scanTaskProducer,
+                eventPublisher,
+                new ObjectMapper(),
+                "upload",
+                true
+        );
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        PackageEntry entry = new PackageEntry(
+                "../../escape.txt",
+                "boom".getBytes(),
+                4L,
+                "text/plain"
+        );
+
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        assertThatThrownBy(() -> service.triggerScan(42L, List.of(entry), "publisher-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Unsafe scan path");
     }
 
     @Test

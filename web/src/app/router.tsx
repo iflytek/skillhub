@@ -3,6 +3,7 @@ import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
 import { RoleGuard } from '@/shared/components/role-guard'
+import { createRequireAuth } from '@/shared/lib/auth-route'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
 /**
@@ -106,6 +107,7 @@ const PromotionsPage = createRoleProtectedRouteComponent(
   ['SKILL_ADMIN', 'SUPER_ADMIN'],
 )
 const MyStarsPage = createLazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage')
+const NotificationsPage = createLazyRouteComponent(() => import('@/pages/notifications'), 'NotificationsPage')
 const TokensPage = createLazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage')
 const CliAuthPage = createLazyRouteComponent(() => import('@/pages/cli-auth'), 'CliAuthPage')
 const SecuritySettingsPage = createLazyRouteComponent(
@@ -115,6 +117,10 @@ const SecuritySettingsPage = createLazyRouteComponent(
 const ProfileSettingsPage = createLazyRouteComponent(
   () => import('@/pages/settings/profile'),
   'ProfileSettingsPage',
+)
+const NotificationSettingsPage = createLazyRouteComponent(
+  () => import('@/pages/settings/notification-settings'),
+  'NotificationSettingsPage',
 )
 const AdminUsersPage = createRoleProtectedRouteComponent(
   () => import('@/pages/admin/users'),
@@ -145,21 +151,7 @@ const rootRoute = createRootRoute({
   notFoundComponent: DefaultNotFound,
 })
 
-function buildReturnTo(location: { pathname: string; searchStr?: string; hash?: string }) {
-  return `${location.pathname}${location.searchStr ?? ''}${location.hash ?? ''}`
-}
-
-async function requireAuth({ location }: { location: { pathname: string; searchStr?: string; hash?: string } }) {
-  // Resolve the current session before entering protected areas and preserve the full return URL.
-  const user = await getCurrentUser()
-  if (!user) {
-    throw redirect({
-      to: '/login',
-      search: { returnTo: buildReturnTo(location) },
-    })
-  }
-  return { user }
-}
+const requireAuth = createRequireAuth(getCurrentUser)
 
 const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -222,12 +214,14 @@ const termsRoute = createRoute({
 const namespaceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace',
+  beforeLoad: requireAuth,
   component: NamespacePage,
 })
 
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace/$slug',
+  beforeLoad: requireAuth,
   validateSearch: (search: Record<string, unknown>): { returnTo?: string } => ({
     returnTo: typeof search.returnTo === 'string' && search.returnTo.startsWith('/') ? search.returnTo : undefined,
   }),
@@ -318,6 +312,13 @@ const dashboardStarsRoute = createRoute({
   component: MyStarsPage,
 })
 
+const dashboardNotificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/notifications',
+  beforeLoad: requireAuth,
+  component: NotificationsPage,
+})
+
 const dashboardTokensRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/tokens',
@@ -352,6 +353,13 @@ const settingsProfileRoute = createRoute({
   path: 'settings/profile',
   beforeLoad: requireAuth,
   component: ProfileSettingsPage,
+})
+
+const settingsNotificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'settings/notifications',
+  beforeLoad: requireAuth,
+  component: NotificationSettingsPage,
 })
 
 const settingsAccountsRoute = createRoute({
@@ -406,10 +414,12 @@ const routeTree = rootRoute.addChildren([
   dashboardReviewDetailRoute,
   dashboardPromotionsRoute,
   dashboardStarsRoute,
+  dashboardNotificationsRoute,
   dashboardTokensRoute,
   cliAuthRoute,
   settingsSecurityRoute,
   settingsProfileRoute,
+  settingsNotificationsRoute,
   settingsAccountsRoute,
   adminUsersRoute,
   adminAuditLogRoute,

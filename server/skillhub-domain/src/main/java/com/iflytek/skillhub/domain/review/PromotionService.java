@@ -1,5 +1,8 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.iflytek.skillhub.domain.event.PromotionApprovedEvent;
+import com.iflytek.skillhub.domain.event.PromotionRejectedEvent;
+import com.iflytek.skillhub.domain.event.PromotionSubmittedEvent;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
@@ -110,7 +113,11 @@ public class PromotionService {
                 });
 
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
-        return promotionRequestRepository.save(request);
+        PromotionRequest saved = promotionRequestRepository.save(request);
+        eventPublisher.publishEvent(new PromotionSubmittedEvent(
+                saved.getId(), saved.getSourceSkillId(), saved.getSourceVersionId(),
+                saved.getSubmittedBy()));
+        return saved;
     }
 
     @Transactional
@@ -156,7 +163,11 @@ public class PromotionService {
                 });
 
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
-        return promotionRequestRepository.save(request);
+        PromotionRequest saved = promotionRequestRepository.save(request);
+        eventPublisher.publishEvent(new PromotionSubmittedEvent(
+                saved.getId(), saved.getSourceSkillId(), saved.getSourceVersionId(),
+                saved.getSubmittedBy()));
+        return saved;
     }
 
     /**
@@ -234,6 +245,9 @@ public class PromotionService {
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
                 newSkill.getId(), newVersion.getId(), reviewerId));
+        eventPublisher.publishEvent(new PromotionApprovedEvent(
+                approvedRequest.getId(), approvedRequest.getSourceSkillId(),
+                reviewerId, approvedRequest.getSubmittedBy()));
         governanceNotificationService.notifyUser(
                 approvedRequest.getSubmittedBy(),
                 "PROMOTION",
@@ -268,6 +282,9 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
+        eventPublisher.publishEvent(new PromotionRejectedEvent(
+                request.getId(), request.getSourceSkillId(),
+                reviewerId, request.getSubmittedBy(), comment));
         governanceNotificationService.notifyUser(
                 request.getSubmittedBy(),
                 "PROMOTION",

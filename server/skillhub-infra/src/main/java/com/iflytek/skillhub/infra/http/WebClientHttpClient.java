@@ -2,6 +2,7 @@ package com.iflytek.skillhub.infra.http;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -56,10 +57,19 @@ public class WebClientHttpClient implements HttpClient {
 
     @Override
     public <T> T postMultipart(String uri, MultiValueMap<String, Object> parts, Class<T> responseType) {
+        return postMultipart(uri, parts, new HttpHeaders(), responseType);
+    }
+
+    @Override
+    public <T> T postMultipart(String uri,
+                               MultiValueMap<String, Object> parts,
+                               HttpHeaders headers,
+                               Class<T> responseType) {
         log.debug("POST multipart {}", uri);
         try {
             return webClient.post()
                     .uri(uri)
+                    .headers(httpHeaders -> httpHeaders.addAll(headers))
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(parts))
                     .retrieve()

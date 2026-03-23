@@ -1081,6 +1081,7 @@
       "auditLog": "审计日志",
       "security": "安全设置",
       "profile": "个人设置",
+      "notifications": "通知设置",
       "accounts": "账号合并",
       "logout": "退出登录"
     }
@@ -1269,6 +1270,32 @@
         "providerUnsupported": "当前 SSO 会话引导方式不受支持",
         "notAuthenticated": "未检测到可用的外部登录会话"
       }
+    }
+  },
+  "notification": {
+    "title": "通知",
+    "empty": "暂无通知",
+    "markAllRead": "全部标记已读",
+    "deleteRead": "删除已读通知",
+    "viewAll": "查看全部通知",
+    "unread": "未读",
+    "all": "全部",
+    "publish": "发布",
+    "review": "审核",
+    "promotion": "提升",
+    "report": "举报",
+    "timeAgo": "{{time}}前",
+    "preferences": {
+      "title": "通知设置",
+      "description": "管理您的通知偏好",
+      "publish": "发布通知",
+      "publishDesc": "技能发布成功时通知",
+      "review": "审核通知",
+      "reviewDesc": "审核提交、通过或拒绝时通知",
+      "promotion": "提升通知",
+      "promotionDesc": "提升申请提交、通过或拒绝时通知",
+      "report": "举报通知",
+      "reportDesc": "举报提交或处理完成时通知"
     }
   }
 }

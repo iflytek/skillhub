@@ -1081,6 +1081,7 @@
       "auditLog": "Audit Log",
       "security": "Security Settings",
       "profile": "Profile Settings",
+      "notifications": "Notification Settings",
       "accounts": "Account Merge",
       "logout": "Logout"
     }
@@ -1269,6 +1270,32 @@
         "providerUnsupported": "This SSO bootstrap method is not supported",
         "notAuthenticated": "No authenticated external session was found"
       }
+    }
+  },
+  "notification": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAllRead": "Mark all as read",
+    "deleteRead": "Delete read notification",
+    "viewAll": "View all notifications",
+    "unread": "Unread",
+    "all": "All",
+    "publish": "Publish",
+    "review": "Review",
+    "promotion": "Promotion",
+    "report": "Report",
+    "timeAgo": "{{time}} ago",
+    "preferences": {
+      "title": "Notification Settings",
+      "description": "Manage your notification preferences",
+      "publish": "Publish Notifications",
+      "publishDesc": "Notify when skill is published",
+      "review": "Review Notifications",
+      "reviewDesc": "Notify on review submission, approval, or rejection",
+      "promotion": "Promotion Notifications",
+      "promotionDesc": "Notify on promotion request, approval, or rejection",
+      "report": "Report Notifications",
+      "reportDesc": "Notify on report submission or resolution"
     }
   }
 }

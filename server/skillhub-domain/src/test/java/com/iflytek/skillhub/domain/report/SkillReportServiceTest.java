@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class SkillReportServiceTest {
@@ -44,6 +45,9 @@ class SkillReportServiceTest {
     @Mock
     private GovernanceNotificationService governanceNotificationService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private SkillReportService service;
 
     @BeforeEach
@@ -54,6 +58,7 @@ class SkillReportServiceTest {
                 auditLogService,
                 skillGovernanceService,
                 governanceNotificationService,
+                eventPublisher,
                 CLOCK
         );
     }

@@ -17,6 +17,7 @@ public interface SkillRepository {
     Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
     List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status);
     Skill save(Skill skill);
+    void flush();
     void delete(Skill skill);
     List<Skill> findByOwnerId(String ownerId);
     Page<Skill> findByOwnerId(String ownerId, Pageable pageable);

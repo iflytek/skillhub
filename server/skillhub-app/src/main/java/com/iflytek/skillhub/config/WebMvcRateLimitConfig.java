@@ -1,7 +1,9 @@
 package com.iflytek.skillhub.config;
 
+import com.iflytek.skillhub.notification.sse.SseEmitterManager;
 import com.iflytek.skillhub.ratelimit.RateLimitInterceptor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -21,5 +23,12 @@ public class WebMvcRateLimitConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/api/**");
+    }
+
+    @Override
+    public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
+        // Keep MVC async timeouts above the SSE emitter timeout so EventSource
+        // connections are not forcibly torn down every few seconds.
+        configurer.setDefaultTimeout(SseEmitterManager.defaultTimeoutMillis());
     }
 }

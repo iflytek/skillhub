@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.ReviewSubmittedEvent;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
@@ -96,6 +97,7 @@ class SkillPublishServiceTest {
         lenient().when(securityScanService.isEnabled()).thenReturn(false);
         lenient().when(skillVersionRepository.findBySkillIdAndStatus(anyLong(), eq(SkillVersionStatus.PENDING_REVIEW)))
                 .thenReturn(List.of());
+        lenient().when(reviewTaskRepository.save(any(ReviewTask.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -151,7 +153,13 @@ class SkillPublishServiceTest {
         verify(skillFileRepository).saveAll(anyList());
         verify(objectStorageService, atLeastOnce()).putObject(anyString(), any(), anyLong(), anyString());
         verify(reviewTaskRepository).save(any(ReviewTask.class));
-        verify(eventPublisher, never()).publishEvent(any());
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        ReviewSubmittedEvent submittedEvent = (ReviewSubmittedEvent) eventCaptor.getValue();
+        assertEquals(1L, submittedEvent.skillId());
+        assertEquals(10L, submittedEvent.versionId());
+        assertEquals(publisherId, submittedEvent.submitterId());
+        assertEquals(1L, submittedEvent.namespaceId());
     }
 
     @Test

@@ -63,6 +63,11 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     }
 
     @Override
+    public void flush() {
+        jpaDelegate.flush();
+    }
+
+    @Override
     public void delete(Skill skill) {
         jpaDelegate.delete(skill);
     }

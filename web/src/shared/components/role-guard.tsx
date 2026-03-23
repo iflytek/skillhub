@@ -2,7 +2,12 @@ import { type ReactNode, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import { canAccessRoute, shouldNavigateBackOnForbidden } from '@/shared/lib/role-guard'
+import {
+  buildLoginRedirect,
+  canAccessRoute,
+  shouldNavigateBackOnForbidden,
+  shouldRedirectToLogin,
+} from '@/shared/lib/role-guard'
 import { toast } from '@/shared/lib/toast'
 
 interface RoleGuardProps {
@@ -20,6 +25,18 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const hasHandledForbiddenRef = useRef(false)
 
   const isAllowed = canAccessRoute(user?.platformRoles, allowedRoles)
+  const shouldSendToLogin = shouldRedirectToLogin(isLoading, user)
+
+  useEffect(() => {
+    if (!shouldSendToLogin) {
+      return
+    }
+
+    void navigate({
+      ...buildLoginRedirect(window.location.pathname, window.location.search, window.location.hash),
+      replace: true,
+    })
+  }, [navigate, shouldSendToLogin])
 
   useEffect(() => {
     // Only handle the forbidden path once per mount so toasts and redirects do not repeat while the

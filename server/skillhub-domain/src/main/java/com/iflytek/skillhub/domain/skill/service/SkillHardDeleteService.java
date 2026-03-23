@@ -105,6 +105,7 @@ public class SkillHardDeleteService {
         skill.setLatestVersionId(null);
         skill.setUpdatedBy(actorUserId);
         skillRepository.save(skill);
+        skillRepository.flush();
 
         if (!versionIds.isEmpty()) {
             reviewTaskRepository.deleteBySkillVersionIdIn(versionIds);

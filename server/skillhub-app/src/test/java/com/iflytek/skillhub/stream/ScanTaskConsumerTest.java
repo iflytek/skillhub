@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ScanTaskConsumerTest {
+    private static final Path SCAN_TEMP_DIR = Path.of("/tmp/skillhub-scans");
 
     @Test
     void processBusiness_andMarkCompleted_updatesAuditAndCleansTempDirectory() throws Exception {
@@ -52,7 +53,8 @@ class ScanTaskConsumerTest {
                 new InMemoryReviewTaskRepository(),
                 new InMemoryScanTaskProducer()
         );
-        Path tempDir = Files.createTempDirectory("scan-task-consumer-success");
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempDir = Files.createTempDirectory(SCAN_TEMP_DIR, "scan-task-consumer-success");
         Files.writeString(tempDir.resolve("README.md"), "# demo");
         ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-1", 42L, tempDir.toString(), ScannerType.SKILL_SCANNER);
 
@@ -91,7 +93,8 @@ class ScanTaskConsumerTest {
                 reviewTaskRepository,
                 new InMemoryScanTaskProducer()
         );
-        Path tempFile = Files.createTempFile("scan-task-consumer-failure", ".zip");
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempFile = Files.createTempFile(SCAN_TEMP_DIR, "scan-task-consumer-failure", ".zip");
         ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-2", 42L, tempFile.toString(), ScannerType.SKILL_SCANNER);
 
         consumer.invokeMarkFailed(payload, "scan failed");
@@ -319,6 +322,11 @@ class ScanTaskConsumerTest {
 
         @Override
         public Skill save(Skill skill) {
+            throw unsupported();
+        }
+
+        @Override
+        public void flush() {
             throw unsupported();
         }
 

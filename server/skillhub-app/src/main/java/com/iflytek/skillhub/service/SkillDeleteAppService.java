@@ -69,6 +69,7 @@ public class SkillDeleteAppService {
         if (enforcePortalOwnership && !canDeleteFromPortal(skill, principal)) {
             throw new DomainForbiddenException("error.forbidden");
         }
+        searchIndexService.remove(skill.getId());
         skillHardDeleteService.hardDeleteSkill(
                 skill,
                 namespace,
@@ -76,7 +77,6 @@ public class SkillDeleteAppService {
                 auditRequestContext != null ? auditRequestContext.clientIp() : null,
                 auditRequestContext != null ? auditRequestContext.userAgent() : null
         );
-        searchIndexService.remove(skill.getId());
         return new DeleteResult(skill.getId(), namespace, slug, true);
     }
 

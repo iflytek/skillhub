@@ -13,7 +13,8 @@ import {
   shouldCollapseOverview,
 } from '@/features/skill/overview-collapse'
 import { resolveSkillActionErrorTitle } from '@/features/skill/skill-action-error'
-import { isDeleteSlugConfirmationValid, resolveDeletedSkillReturnTo } from '@/features/skill/skill-delete-flow'
+import { clearDeletedSkillQueries, isDeleteSlugConfirmationValid, resolveDeletedSkillReturnTo } from '@/features/skill/skill-delete-flow'
+import { isSkillDetailQueriesEnabled } from './skill-detail-query'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { useAuth } from '@/features/auth/use-auth'
@@ -104,6 +105,7 @@ export function SkillDetailPage() {
   const [deleteSkillConfirmOpen, setDeleteSkillConfirmOpen] = useState(false)
   const [deleteSkillInputOpen, setDeleteSkillInputOpen] = useState(false)
   const [deleteSkillInput, setDeleteSkillInput] = useState('')
+  const [skillDeleted, setSkillDeleted] = useState(false)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
@@ -117,25 +119,27 @@ export function SkillDetailPage() {
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
+  const detailQueriesEnabled = isSkillDetailQueriesEnabled(skillDeleted)
 
-  const { data: skill, isLoading: isLoadingSkill, error: skillError } = useSkillDetail(namespace, slug)
-  const { data: versions } = useSkillVersions(namespace, slug)
+  const { data: skill, isLoading: isLoadingSkill, isFetching: isFetchingSkill, error: skillError } = useSkillDetail(namespace, slug, detailQueriesEnabled)
+  const skillReady = detailQueriesEnabled && Boolean(skill) && !isLoadingSkill && !isFetchingSkill && !skillError
+  const { data: versions } = useSkillVersions(namespace, slug, skillReady)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
-  const { data: files } = useSkillFiles(namespace, slug, selectedVersion)
+  const { data: files } = useSkillFiles(namespace, slug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
-  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath)
-  const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined)
-  const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined)
-  const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined)
-  const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined)
+  const { data: readme, error: readmeError } = useSkillReadme(namespace, slug, selectedVersion, documentationPath, skillReady)
+  const { data: diffSourceDetail } = useSkillVersionDetail(namespace, slug, diffSourceVersion ?? undefined, skillReady)
+  const { data: diffCompareDetail } = useSkillVersionDetail(namespace, slug, diffCompareVersion ?? undefined, skillReady)
+  const { data: diffSourceFiles } = useSkillFiles(namespace, slug, diffSourceVersion ?? undefined, skillReady)
+  const { data: diffCompareFiles } = useSkillFiles(namespace, slug, diffCompareVersion ?? undefined, skillReady)
   const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
   const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
-  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined, diffSourceDocumentationPath)
-  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath)
+  const { data: diffSourceReadme } = useSkillReadme(namespace, slug, diffSourceVersion ?? undefined, diffSourceDocumentationPath, skillReady)
+  const { data: diffCompareReadme } = useSkillReadme(namespace, slug, diffCompareVersion ?? undefined, diffCompareDocumentationPath, skillReady)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
@@ -333,6 +337,16 @@ export function SkillDetailPage() {
   const isLastVersion = versions?.length === 1
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
+  const isNotFoundError = skillError instanceof ApiError
+    ? skillError.status === 400 || skillError.status === 404 || skillError.serverMessageKey === 'skill.not_found'
+    : false
+
+  useEffect(() => {
+    if (!isNotFoundError) {
+      return
+    }
+    clearDeletedSkillQueries(queryClient, namespace, slug, skill?.id)
+  }, [isNotFoundError, namespace, queryClient, skill?.id, slug])
 
   const metadataDiffEntries = (() => {
     const source = parseMetadataJson(diffSourceDetail?.parsedMetadataJson)
@@ -410,6 +424,7 @@ export function SkillDetailPage() {
     }
     try {
       await deleteSkillMutation.mutateAsync({ namespace, slug })
+      setSkillDeleted(true)
       toast.success(
         t('skillDetail.deleteSkillSuccessTitle'),
         t('skillDetail.deleteSkillSuccessDescription', { skill: skill.displayName }),
@@ -550,6 +565,15 @@ export function SkillDetailPage() {
       )
     }
 
+    if (isNotFoundError) {
+      return (
+        <div className="text-center py-20 animate-fade-up">
+          <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.notFound')}</h2>
+          <p className="text-muted-foreground">{t('skillDetail.notFoundDesc')}</p>
+        </div>
+      )
+    }
+
     return (
       <div className="text-center py-20 animate-fade-up">
         <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.accessDenied')}</h2>
@@ -565,6 +589,10 @@ export function SkillDetailPage() {
         <p className="text-muted-foreground">{t('skillDetail.notFoundDesc')}</p>
       </div>
     )
+  }
+
+  if (skillDeleted) {
+    return null
   }
 
   return (
@@ -844,8 +872,12 @@ export function SkillDetailPage() {
           <div className="space-y-3">
             {canInteract ? (
               <>
-                <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
-                <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+                {!isFetchingSkill ? (
+                  <>
+                    <StarButton skillId={skill.id} starCount={skill.starCount} onRequireLogin={requireLogin} />
+                    <RatingInput skillId={skill.id} onRequireLogin={requireLogin} />
+                  </>
+                ) : null}
                 {canReport ? (
                   <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
                     {hasReported ? t('skillDetail.reportedSkill') : reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}

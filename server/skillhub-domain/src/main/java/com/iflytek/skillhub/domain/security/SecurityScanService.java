@@ -31,6 +31,7 @@ public class SecurityScanService {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityScanService.class);
     private static final String TEMP_DIR = "/tmp/skillhub-scans";
+    private static final Path TEMP_BASE_DIR = Paths.get(TEMP_DIR).toAbsolutePath().normalize();
 
     private final SecurityAuditRepository auditRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -122,10 +123,10 @@ public class SecurityScanService {
 
     private Path saveTempDirectory(Long versionId, List<PackageEntry> entries) {
         try {
-            Path skillDir = Paths.get(TEMP_DIR, String.valueOf(versionId));
+            Path skillDir = TEMP_BASE_DIR.resolve(String.valueOf(versionId)).normalize();
             Files.createDirectories(skillDir);
             for (PackageEntry entry : entries) {
-                Path filePath = skillDir.resolve(entry.path());
+                Path filePath = resolveSafeChild(skillDir, entry.path());
                 Path parent = filePath.getParent();
                 if (parent != null) {
                     Files.createDirectories(parent);
@@ -140,14 +141,14 @@ public class SecurityScanService {
 
     private Path saveTempZip(Long versionId, List<PackageEntry> entries) {
         try {
-            Path dir = Paths.get(TEMP_DIR);
+            Path dir = TEMP_BASE_DIR;
             Files.createDirectories(dir);
             Path zipPath = dir.resolve(versionId + ".zip");
 
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                  ZipOutputStream zos = new ZipOutputStream(baos)) {
                 for (PackageEntry entry : entries) {
-                    zos.putNextEntry(new ZipEntry(entry.path()));
+                    zos.putNextEntry(new ZipEntry(safeZipEntryName(entry.path())));
                     zos.write(entry.content());
                     zos.closeEntry();
                 }
@@ -168,6 +169,26 @@ public class SecurityScanService {
             log.warn("Failed to serialize findings for security audit", e);
             return "[]";
         }
+    }
+
+    private Path resolveSafeChild(Path baseDir, String entryPath) {
+        Path resolved = baseDir.resolve(entryPath).normalize();
+        if (!resolved.startsWith(baseDir)) {
+            throw new IllegalStateException("Unsafe scan path: " + entryPath);
+        }
+        return resolved;
+    }
+
+    private String safeZipEntryName(String entryPath) {
+        Path normalized = Paths.get(entryPath).normalize();
+        if (normalized.isAbsolute() || normalized.startsWith("..")) {
+            throw new IllegalStateException("Unsafe scan path: " + entryPath);
+        }
+        String safePath = normalized.toString().replace('\\', '/');
+        if (safePath.isBlank() || safePath.startsWith("../")) {
+            throw new IllegalStateException("Unsafe scan path: " + entryPath);
+        }
+        return safePath;
     }
 
     /**
