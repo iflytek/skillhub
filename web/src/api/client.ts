@@ -731,7 +731,7 @@ export const tokenApi = {
 }
 
 export const reviewApi = {
-  async list(params: { status: string; namespaceId?: number; page?: number; size?: number }) {
+  async list(params: { status: string; namespaceId?: number; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status)
     if (params.namespaceId !== undefined) {
@@ -739,6 +739,7 @@ export const reviewApi = {
     }
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
+    searchParams.set('sortDirection', params.sortDirection ?? 'DESC')
     return fetchJson<{ items: ReviewTask[]; total: number; page: number; size: number }>(
       `${WEB_API_PREFIX}/reviews?${searchParams.toString()}`,
     )
@@ -1099,11 +1100,12 @@ export const adminApi = {
     })
   },
 
-  async getProfileReviews(params: { status?: string; page?: number; size?: number }) {
+  async getProfileReviews(params: { status?: string; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const searchParams = new URLSearchParams()
     if (params.status) searchParams.set('status', params.status)
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
+    searchParams.set('sortDirection', params.sortDirection ?? 'DESC')
     const response = await fetchJson<{
       items: Array<{
         id: number

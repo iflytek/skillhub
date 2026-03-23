@@ -1,7 +1,6 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
-import com.iflytek.skillhub.domain.user.ProfileChangeRequest;
 import com.iflytek.skillhub.domain.user.ProfileChangeStatus;
 import com.iflytek.skillhub.domain.user.ProfileReviewService;
 import com.iflytek.skillhub.dto.PageResponse;
@@ -31,9 +30,13 @@ public class AdminProfileReviewAppService {
 
     /** List profile change requests by status with user info resolution. */
     @Transactional(readOnly = true)
-    public PageResponse<ProfileReviewSummaryResponse> list(String status, int page, int size) {
+    public PageResponse<ProfileReviewSummaryResponse> list(String status, int page, int size, String sortDirection) {
         var resolvedStatus = parseStatus(status);
-        var requestPage = profileReviewService.listByStatus(resolvedStatus, PageRequest.of(page, size));
+        var requestPage = profileReviewService.listByStatus(
+                resolvedStatus,
+                PageRequest.of(page, size),
+                sortDirection
+        );
         var items = profileReviewQueryRepository.getProfileReviewSummaries(requestPage.getContent());
 
         return new PageResponse<>(items, requestPage.getTotalElements(),

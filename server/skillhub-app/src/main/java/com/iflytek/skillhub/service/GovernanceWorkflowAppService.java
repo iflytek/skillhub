@@ -74,9 +74,10 @@ public class GovernanceWorkflowAppService {
                                                         Long namespaceId,
                                                         int page,
                                                         int size,
+                                                        String sortDirection,
                                                         String userId,
                                                         Map<Long, NamespaceRole> userNsRoles) {
-        return reviewPortalAppService.listReviews(status, namespaceId, page, size, userId, userNsRoles);
+        return reviewPortalAppService.listReviews(status, namespaceId, page, size, sortDirection, userId, userNsRoles);
     }
 
     public PageResponse<ReviewTaskResponse> listPendingReviews(Long namespaceId,
