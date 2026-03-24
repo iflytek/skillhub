@@ -1,173 +1,125 @@
-# SkillHub - Claude Code Instructions
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-SkillHub is an enterprise-grade, self-hosted agent skill registry that enables teams to publish, discover, and manage reusable skill packages within their organization. It's built for on-premise deployment with full data sovereignty.
+SkillHub is an enterprise-grade, self-hosted agent skill registry for publishing, discovering, and managing reusable skill packages. Built with Java 21 / Spring Boot 3.2.3 backend and React 19 / TypeScript / Vite frontend.
 
-## Tech Stack
+## Development Commands
 
-### Backend
-- **Language**: Java 21
-- **Framework**: Spring Boot 3.2.3
-- **Architecture**: Multi-module Maven project with clean architecture
-- **Modules**:
-  - `skillhub-app`: Main application entry point
-  - `skillhub-domain`: Core business logic
-  - `skillhub-auth`: Authentication and authorization
-  - `skillhub-search`: Search functionality
-  - `skillhub-storage`: Storage abstraction layer
-  - `skillhub-infra`: Infrastructure concerns
-- **Database**: PostgreSQL 16 with Flyway migrations
-- **Cache**: Redis 7
-- **Storage**: S3/MinIO for skill packages
-
-### Frontend
-- **Language**: TypeScript
-- **Framework**: React 19
-- **Build Tool**: Vite
-- **Routing**: TanStack Router
-- **Data Fetching**: TanStack Query
-- **Styling**: Tailwind CSS + Radix UI
-- **API Client**: OpenAPI TypeScript (type-safe)
-- **i18n**: i18next
-
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Monitoring**: Prometheus + Grafana
-- **Deployment**: Kubernetes manifests available
-- **CI/CD**: GitHub Actions
-
-## Development Workflow
-
-### Starting the Development Environment
+All commands run from the project root via `Makefile`:
 
 ```bash
-# Start full local stack (backend + frontend + dependencies)
-make dev-all
+make dev-all              # Start full local stack (Postgres, Redis, MinIO, scanner, backend, frontend)
+make dev-all-down         # Stop everything
+make dev-all-reset        # Reset (clean volumes) and restart
+make dev-status           # Check service status
 
-# Stop everything
-make dev-all-down
+make test                 # Run all backend + frontend tests
+make test-backend         # Backend tests only
+make test-backend-app     # skillhub-app + dependencies tests
+make test-frontend        # Frontend tests only (Vitest)
 
-# Reset and start from clean slate
-make dev-all-reset
+make build                # Build backend + frontend
+make build-backend-app    # Build skillhub-app + dependencies
+
+make typecheck-web        # TypeScript type checking
+make lint-web             # ESLint
+make generate-api         # Regenerate OpenAPI types after backend API changes
+make staging              # Build + staging environment + smoke tests
+make pr                   # Push branch + create PR (requires gh CLI)
+```
+
+**Important**: Never run `./mvnw -pl skillhub-app clean test` directly — use `make test-backend-app` (which adds `-am`) to avoid stale artifact issues.
+
+### Running a Single Backend Test
+
+```bash
+cd server && JDK_JAVA_OPTIONS="-XX:+EnableDynamicAgentLoading" ./mvnw -pl skillhub-app -am test -Dtest=YourTestClassName
+```
+
+### Running a Single Frontend Test
+
+```bash
+cd web && pnpm exec vitest run src/path/to/your-test.test.ts
 ```
 
 ### Local Access
+
 - Web UI: http://localhost:3000
 - Backend API: http://localhost:8080
+- Mock users: `X-Mock-User-Id: local-user` (normal) / `X-Mock-User-Id: local-admin` (super admin)
 
-### Mock Users (Local Development)
-- `local-user`: Normal user for publishing and namespace operations
-- `local-admin`: Super admin for review and admin flows
-- Use `X-Mock-User-Id` header in local development
+## Architecture
 
-### Common Commands
+### Backend Module Structure (Dependency Inversion)
 
-```bash
-make help                    # Show all available commands
-make test                    # Run backend tests
-make typecheck-web          # TypeScript type checking
-make build-web              # Build frontend
-make generate-api           # Regenerate OpenAPI types
-./scripts/check-openapi-generated.sh  # Verify API contract sync
-./scripts/smoke-test.sh http://localhost:8080  # Run smoke tests
 ```
+server/
+├── skillhub-app           # Boot entry, Controllers, global config, query repositories
+├── skillhub-domain        # Core entities, domain services, Repository interfaces (innermost, no deps)
+├── skillhub-auth          # OAuth2, RBAC, API tokens, session management (depends on domain)
+├── skillhub-search        # Search SPI + PostgreSQL full-text impl (depends on domain)
+├── skillhub-storage       # Object storage abstraction: LocalFile / S3 (independent SPI)
+├── skillhub-infra         # JPA implementations of domain Repository interfaces (depends on domain)
+└── skillhub-notification  # Notification system
+```
+
+**Key rule**: `domain` is the innermost layer — it defines interfaces only. `infra` implements them via Spring Data JPA. Never add `domain → infra` dependencies.
+
+**App layer convention**: Controllers handle transport only. App Services orchestrate cross-domain workflows. Complex read-model joins go into query repositories under `skillhub-app/repository`.
+
+### Frontend Structure
+
+```
+web/src/
+├── api/generated/     # Auto-generated OpenAPI types (schema.d.ts) — do not edit manually
+├── shared/ui/         # Shared UI components
+└── ...                # Feature-based organization
+```
+
+- Package manager: pnpm
+- Routing: TanStack Router
+- Data fetching: TanStack Query
+- Styling: Tailwind CSS + Radix UI
+- i18n: i18next
+- Database: PostgreSQL 16 with Flyway migrations
+- Cache/Session: Redis 7
 
 ## Code Conventions
 
 ### Commit Messages
-Use conventional commit format:
-- `feat(scope): description` - New features
-- `fix(scope): description` - Bug fixes
-- `docs(scope): description` - Documentation changes
-- `refactor(scope): description` - Code refactoring
-- `test(scope): description` - Test changes
-- `chore(scope): description` - Build/tooling changes
 
-Examples:
-- `feat(auth): add local account login`
-- `fix(ops): align smoke test with csrf flow`
-- `docs(deploy): clarify runtime image usage`
-
-**IMPORTANT**: Never add `Co-Authored-By` trailers to commit messages unless explicitly requested by the user.
+Conventional commit format: `type(scope): description`
+- Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+- Example: `feat(auth): add local account login`
+- **Never** add `Co-Authored-By` trailers unless explicitly requested
+- Git commit authors must not contain model/tool CLI names (Claude Code, Codex, Gemini)
 
 ### Code Style
-- **Backend**: Follow standard Java conventions, Spring Boot best practices
-- **Frontend**: Follow TypeScript/React best practices, use functional components
-- Keep changes focused - avoid mixing refactors with behavior changes
-- Follow existing module boundaries
-- Prefer backward-compatible changes unless explicitly allowed
 
-### Testing
-- Add or update tests when behavior changes
-- Backend tests must pass before merging
-- Frontend typecheck/build must pass when frontend files changed
+- **Backend**: Java 4-space indent, `PascalCase` classes, packages under `com.iflytek.skillhub.*`
+- **Frontend**: TypeScript 2-space indent, no semicolons, PascalCase components, kebab-case filenames for features/tests (e.g., `skill-delete-flow.test.ts`)
+- **Tests**: Backend `*Test.java` under `src/test/java`; Frontend `*.test.ts(x)` colocated or under `web/test/`
 
 ### API Contract Management
-- When backend API contracts change, regenerate the OpenAPI types:
-  ```bash
-  make generate-api
-  ```
-- Commit the updated `web/src/api/generated/schema.d.ts`
-- Run `./scripts/check-openapi-generated.sh` for strict drift checking
 
-## File Structure
-
-```
-skillhub/
-├── server/                 # Backend (Java/Spring Boot)
-│   ├── skillhub-app/      # Main application
-│   ├── skillhub-domain/   # Core business logic
-│   ├── skillhub-auth/     # Authentication
-│   ├── skillhub-search/   # Search functionality
-│   ├── skillhub-storage/  # Storage layer
-│   └── skillhub-infra/    # Infrastructure
-├── web/                   # Frontend (React/TypeScript)
-│   ├── src/
-│   │   ├── api/generated/ # Auto-generated API types
-│   │   └── ...
-│   └── ...
-├── docs/                  # Documentation
-├── scripts/               # Utility scripts
-├── deploy/                # Deployment configs
-├── monitoring/            # Prometheus + Grafana
-├── Makefile              # Common tasks
-└── docker-compose.yml    # Local development stack
-```
-
-## Important Guidelines
-
-### Before Making Changes
-1. Read relevant design docs in `docs/`
-2. Open an issue for non-trivial changes before large PRs
-3. Check existing patterns and conventions
-4. Understand the module boundaries
+When backend API contracts change:
+1. Run `make generate-api` to regenerate `web/src/api/generated/schema.d.ts`
+2. Commit the updated file
+3. Optionally run `./scripts/check-openapi-generated.sh` for strict drift checking
 
 ### Pull Request Checklist
-- Branch is rebased/merged cleanly from target branch
-- Relevant backend tests pass
+
+- Backend tests pass
 - Frontend typecheck/build passes (if frontend changed)
 - API types regenerated (if backend API changed)
-- Smoke coverage updated (if operator workflows changed)
 - PR description explains motivation, scope, and impact
-
-### What to Avoid
 - Don't mix refactoring with behavior changes
-- Don't break module boundaries
-- Don't skip API contract regeneration
-- Don't make breaking changes without explicit approval
-- Don't open public issues for security vulnerabilities
 
 ## Security
+
 - Report security issues privately via GitHub Security Advisories
-- Never commit secrets or credentials
-- Use environment variables for configuration
-- Follow OWASP best practices
-
-## Documentation
-- Full documentation: https://zread.ai/iflytek/skillhub
-- Contributing guide: CONTRIBUTING.md
-- Code of conduct: CODE_OF_CONDUCT.md
-
-## License
-Apache License 2.0
+- Never commit secrets; respect `.gitignore` (`.env*`, `.dev/`, `node_modules/`)
+- Start from `.env.release.example` for deployable config
