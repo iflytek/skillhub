@@ -1268,13 +1268,14 @@
     "findingsCount": "{{count}} 项发现",
     "totalFindings": "共 {{count}} 项发现",
     "scanDuration": "{{seconds}}s",
+    "statusScanning": "扫描中",
     "remediation": "修复建议",
     "viewDetails": "查看详情",
     "verdict": {
       "SAFE": "安全",
       "SUSPICIOUS": "可疑",
       "DANGEROUS": "危险",
-      "BLOCKED": "已拦截"
+      "BLOCKED": "高风险"
     },
     "severity": {
       "CRITICAL": "严重",
