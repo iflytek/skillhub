@@ -2,25 +2,26 @@ package com.iflytek.skillhub.stream;
 
 import com.iflytek.skillhub.domain.security.ScanTask;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
+import org.redisson.api.RStream;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.StreamMessageId;
+import org.redisson.api.stream.StreamAddArgs;
+import org.redisson.client.codec.StringCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.connection.stream.RecordId;
-import org.springframework.data.redis.connection.stream.StreamRecords;
-import org.springframework.data.redis.connection.stream.StringRecord;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class RedisScanTaskProducer implements ScanTaskProducer {
+public class RedissonScanTaskProducer implements ScanTaskProducer {
 
-    private static final Logger log = LoggerFactory.getLogger(RedisScanTaskProducer.class);
+    private static final Logger log = LoggerFactory.getLogger(RedissonScanTaskProducer.class);
 
-    private final StringRedisTemplate redisTemplate;
+    private final RedissonClient redissonClient;
     private final String streamKey;
 
-    public RedisScanTaskProducer(StringRedisTemplate redisTemplate, String streamKey) {
-        this.redisTemplate = redisTemplate;
+    public RedissonScanTaskProducer(RedissonClient redissonClient, String streamKey) {
+        this.redissonClient = redissonClient;
         this.streamKey = streamKey;
     }
 
@@ -36,9 +37,9 @@ public class RedisScanTaskProducer implements ScanTaskProducer {
             fields.putAll(task.metadata());
         }
 
-        StringRecord record = StreamRecords.string(fields).withStreamKey(streamKey);
-        RecordId recordId = redisTemplate.opsForStream().add(record);
+        RStream<String, String> stream = redissonClient.getStream(streamKey, StringCodec.INSTANCE);
+        StreamMessageId messageId = stream.add(StreamAddArgs.entries(fields));
         log.info("Published scan task: taskId={}, versionId={}, recordId={}",
-                task.taskId(), task.versionId(), recordId);
+                task.taskId(), task.versionId(), messageId);
     }
 }

@@ -47,6 +47,12 @@ describe('VerdictBadge', () => {
     expect(html).toContain('text-red-700')
   })
 
+  it('renders the scanning label for pending scan display state', () => {
+    const html = renderToStaticMarkup(<VerdictBadge displayState="SCANNING" />)
+
+    expect(html).toContain('securityAudit.statusScanning')
+  })
+
   it('renders as a span with rounded-full pill styling', () => {
     const html = renderToStaticMarkup(<VerdictBadge verdict="SAFE" />)
 

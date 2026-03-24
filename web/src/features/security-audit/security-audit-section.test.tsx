@@ -98,6 +98,16 @@ describe('SecurityAuditSection', () => {
     expect(html).toContain('securityAudit.verdict.SUSPICIOUS')
   })
 
+  it('renders scanning status when the audit has not completed yet', () => {
+    mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
+    mockIsLoading = false
+
+    const html = renderToStaticMarkup(<SecurityAuditSection skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.statusScanning')
+    expect(html).not.toContain('securityAudit.verdict.SUSPICIOUS')
+  })
+
   it('renders the findings count', () => {
     mockAudits = [createAudit({ findingsCount: 3 })]
     mockIsLoading = false

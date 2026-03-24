@@ -5,6 +5,7 @@ import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/shared/ui/dialog'
 import { useSecurityAudits } from './use-security-audit'
+import { getSecurityAuditDisplayState } from './display-state'
 import { VerdictBadge } from './verdict-badge'
 import { SecurityAuditSection } from './security-audit-section'
 
@@ -40,7 +41,7 @@ export function SecurityAuditSummary({ skillId, versionId }: SecurityAuditSummar
               className="flex items-center justify-between rounded-xl border border-border/60 bg-secondary/20 p-3"
             >
               <span className="text-xs font-mono text-muted-foreground">{audit.scannerType}</span>
-              <VerdictBadge verdict={audit.verdict} />
+              <VerdictBadge displayState={getSecurityAuditDisplayState(audit)} />
             </div>
           ))}
         </div>
