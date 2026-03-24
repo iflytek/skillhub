@@ -34,6 +34,11 @@ skillhub:
   security:
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
+    stream:
+      reclaim-enabled: ${SKILLHUB_SCAN_STREAM_RECLAIM_ENABLED:true}
+      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT2M}
+      reclaim-batch-size: ${SKILLHUB_SCAN_STREAM_RECLAIM_BATCH_SIZE:20}
+      reclaim-interval: ${SKILLHUB_SCAN_STREAM_RECLAIM_INTERVAL:PT30S}
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
