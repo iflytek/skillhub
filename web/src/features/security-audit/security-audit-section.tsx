@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Shield } from 'lucide-react'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { useSecurityAudits } from './use-security-audit'
+import { getSecurityAuditDisplayState } from './display-state'
 import { VerdictBadge } from './verdict-badge'
 import { FindingItem } from './finding-item'
 import type { FindingSeverity, SecurityAuditRecord } from './types'
@@ -72,7 +73,7 @@ function ScannerCard({ audit }: { audit: SecurityAuditRecord }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold font-mono">{audit.scannerType}</span>
-          <VerdictBadge verdict={audit.verdict} />
+          <VerdictBadge displayState={getSecurityAuditDisplayState(audit)} />
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span>

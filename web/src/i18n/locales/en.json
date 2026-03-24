@@ -1268,13 +1268,14 @@
     "findingsCount": "{{count}} findings",
     "totalFindings": "{{count}} findings total",
     "scanDuration": "{{seconds}}s",
+    "statusScanning": "Scanning",
     "remediation": "Remediation",
     "viewDetails": "View Details",
     "verdict": {
       "SAFE": "Safe",
       "SUSPICIOUS": "Suspicious",
       "DANGEROUS": "Dangerous",
-      "BLOCKED": "Blocked"
+      "BLOCKED": "High Risk"
     },
     "severity": {
       "CRITICAL": "Critical",

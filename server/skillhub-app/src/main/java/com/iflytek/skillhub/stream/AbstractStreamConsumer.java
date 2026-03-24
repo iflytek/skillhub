@@ -2,113 +2,214 @@ package com.iflytek.skillhub.stream;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.redisson.api.AutoClaimResult;
+import org.redisson.api.RStream;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.StreamMessageId;
+import org.redisson.api.stream.StreamCreateGroupArgs;
+import org.redisson.api.stream.StreamReadGroupArgs;
+import org.redisson.client.codec.StringCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.stream.Consumer;
-import org.springframework.data.redis.connection.stream.MapRecord;
-import org.springframework.data.redis.connection.stream.ReadOffset;
-import org.springframework.data.redis.connection.stream.StreamOffset;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.stream.StreamListener;
-import org.springframework.data.redis.stream.StreamMessageListenerContainer;
-import org.springframework.data.redis.stream.Subscription;
 
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class AbstractStreamConsumer<T> implements StreamListener<String, MapRecord<String, String, String>> {
+public abstract class AbstractStreamConsumer<T> {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     private static final String FIELD_RETRY_COUNT = "retryCount";
     private static final int MAX_RETRY_COUNT = 3;
+    private static final int READ_BATCH_SIZE = 10;
+    private static final Duration POLL_TIMEOUT = Duration.ofSeconds(2);
 
-    private final RedisConnectionFactory connectionFactory;
+    private final RedissonClient redissonClient;
     private final String streamKey;
     private final String groupName;
     private final String consumerName;
-    private StringRedisTemplate redisTemplate;
+    private final boolean reclaimEnabled;
+    private final Duration reclaimMinIdle;
+    private final int reclaimBatchSize;
+    private final Duration reclaimInterval;
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
-    private StreamMessageListenerContainer<String, MapRecord<String, String, String>> container;
+    private RStream<String, String> stream;
+    private ExecutorService consumerExecutor;
+    private ScheduledExecutorService reclaimExecutor;
 
-    protected AbstractStreamConsumer(RedisConnectionFactory connectionFactory,
+    protected AbstractStreamConsumer(RedissonClient redissonClient,
                                      String streamKey,
                                      String groupName) {
-        this.connectionFactory = connectionFactory;
+        this(redissonClient, streamKey, groupName, true, Duration.ofMinutes(2), 20, Duration.ofSeconds(30));
+    }
+
+    protected AbstractStreamConsumer(RedissonClient redissonClient,
+                                     String streamKey,
+                                     String groupName,
+                                     boolean reclaimEnabled,
+                                     Duration reclaimMinIdle,
+                                     int reclaimBatchSize,
+                                     Duration reclaimInterval) {
+        this.redissonClient = redissonClient;
         this.streamKey = streamKey;
         this.groupName = groupName;
+        this.reclaimEnabled = reclaimEnabled;
+        this.reclaimMinIdle = reclaimMinIdle;
+        this.reclaimBatchSize = reclaimBatchSize;
+        this.reclaimInterval = reclaimInterval;
         this.consumerName = consumerPrefix() + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     @PostConstruct
     public void init() {
-        if (connectionFactory == null) {
+        if (redissonClient == null) {
             return;
         }
-        this.redisTemplate = createRedisTemplate();
+        this.stream = createStream();
         initializeStreamAndGroup();
         startConsumer();
+        startPendingReclaimer();
     }
 
     @PreDestroy
     public void shutdown() {
-        if (container != null) {
-            container.stop();
+        running.set(false);
+        if (consumerExecutor != null) {
+            consumerExecutor.shutdownNow();
+        }
+        if (reclaimExecutor != null) {
+            reclaimExecutor.shutdownNow();
         }
     }
 
     private void initializeStreamAndGroup() {
         try {
-            StringRedisTemplate template = redisTemplate();
-            if (Boolean.FALSE.equals(template.hasKey(streamKey))) {
-                template.opsForStream().add(streamKey, Map.of("_init", "true"));
-            }
-            try {
-                template.opsForStream().createGroup(streamKey, ReadOffset.from("0"), groupName);
-            } catch (Exception e) {
-                if (e.getMessage() == null || !e.getMessage().contains("BUSYGROUP")) {
-                    log.warn("Failed to create consumer group: stream={}, group={}", streamKey, groupName, e);
-                }
-            }
+            stream().createGroup(StreamCreateGroupArgs.name(groupName).makeStream());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize Redis Stream consumer", e);
+            if (!isConsumerGroupAlreadyExists(e)) {
+                log.warn("Failed to create consumer group: stream={}, group={}", streamKey, groupName, e);
+            }
         }
+    }
+
+    static boolean isConsumerGroupAlreadyExists(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current.getMessage() != null && current.getMessage().contains("BUSYGROUP")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private void startConsumer() {
-        StreamMessageListenerContainer.StreamMessageListenerContainerOptions<String, MapRecord<String, String, String>> options =
-                StreamMessageListenerContainer.StreamMessageListenerContainerOptions.builder()
-                        .pollTimeout(Duration.ofSeconds(2))
-                        .build();
-
-        container = StreamMessageListenerContainer.create(connectionFactory, options);
-        Subscription ignored = container.receive(
-                Consumer.from(groupName, consumerName),
-                StreamOffset.create(streamKey, ReadOffset.lastConsumed()),
-                this
-        );
-        container.start();
+        running.set(true);
+        consumerExecutor = Executors.newSingleThreadExecutor(threadFactory(consumerPrefix() + "-consumer"));
+        consumerExecutor.submit(this::consumeLoop);
     }
 
-    @Override
-    public void onMessage(MapRecord<String, String, String> message) {
-        T payload = parsePayload(message.getId().getValue(), message.getValue());
+    private void startPendingReclaimer() {
+        if (!reclaimEnabled) {
+            return;
+        }
+        reclaimExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory(consumerPrefix() + "-reclaimer"));
+        long intervalMillis = Math.max(1L, reclaimInterval.toMillis());
+        reclaimExecutor.scheduleWithFixedDelay(this::safeReclaimPendingMessages,
+                intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private void consumeLoop() {
+        while (running.get()) {
+            try {
+                consumeAvailableMessages();
+            } catch (Exception e) {
+                if (Thread.currentThread().isInterrupted()) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                log.error("Failed while consuming stream messages: stream={}, group={}, consumer={}",
+                        streamKey, groupName, consumerName, e);
+            }
+        }
+    }
+
+    private void safeReclaimPendingMessages() {
+        try {
+            reclaimPendingMessages();
+        } catch (Exception e) {
+            log.error("Failed while reclaiming pending stream messages: stream={}, group={}, consumer={}",
+                    streamKey, groupName, consumerName, e);
+        }
+    }
+
+    void consumeAvailableMessages() {
+        Map<StreamMessageId, Map<String, String>> messages = stream().readGroup(
+                groupName,
+                consumerName,
+                StreamReadGroupArgs.neverDelivered()
+                        .count(READ_BATCH_SIZE)
+                        .timeout(POLL_TIMEOUT)
+        );
+        processMessages(messages);
+    }
+
+    void reclaimPendingMessages() {
+        if (!reclaimEnabled) {
+            return;
+        }
+        StreamMessageId startId = StreamMessageId.MIN;
+        while (true) {
+            AutoClaimResult<String, String> result = stream().autoClaim(
+                    groupName,
+                    consumerName,
+                    reclaimMinIdle.toMillis(),
+                    TimeUnit.MILLISECONDS,
+                    startId,
+                    reclaimBatchSize
+            );
+            if (result == null || result.getMessages() == null || result.getMessages().isEmpty()) {
+                return;
+            }
+            processMessages(result.getMessages());
+            if (result.getMessages().size() < reclaimBatchSize || result.getNextId() == null) {
+                return;
+            }
+            startId = result.getNextId();
+        }
+    }
+
+    private void processMessages(Map<StreamMessageId, Map<String, String>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        messages.forEach(this::handleMessage);
+    }
+
+    void handleMessage(StreamMessageId messageId, Map<String, String> data) {
+        T payload = parsePayload(messageId.toString(), data);
         if (payload == null) {
-            acknowledge(message);
+            acknowledge(messageId);
             return;
         }
 
-        int retryCount = parseRetryCount(message.getValue());
+        int retryCount = parseRetryCount(data);
         try {
             markProcessing(payload);
             processBusiness(payload);
             markCompleted(payload);
-            acknowledge(message);
+            acknowledge(messageId);
         } catch (Exception e) {
             handleFailure(payload, retryCount, e);
-            acknowledge(message);
+            acknowledge(messageId);
         }
     }
 
@@ -137,19 +238,31 @@ public abstract class AbstractStreamConsumer<T> implements StreamListener<String
         return error.length() > 500 ? error.substring(0, 500) : error;
     }
 
-    protected StringRedisTemplate createRedisTemplate() {
-        return new StringRedisTemplate(connectionFactory);
+    protected RStream<String, String> createStream() {
+        return redissonClient.getStream(streamKey, StringCodec.INSTANCE);
     }
 
-    protected void acknowledge(MapRecord<String, String, String> message) {
-        redisTemplate().opsForStream().acknowledge(streamKey, groupName, message.getId());
+    protected void acknowledge(StreamMessageId messageId) {
+        stream().ack(groupName, messageId);
     }
 
-    private StringRedisTemplate redisTemplate() {
-        if (redisTemplate == null) {
-            redisTemplate = createRedisTemplate();
+    protected final RStream<String, String> stream() {
+        if (stream == null) {
+            stream = createStream();
         }
-        return redisTemplate;
+        return stream;
+    }
+
+    protected final String consumerName() {
+        return consumerName;
+    }
+
+    private ThreadFactory threadFactory(String namePrefix) {
+        return runnable -> {
+            Thread thread = new Thread(runnable, namePrefix + "-" + consumerName);
+            thread.setDaemon(true);
+            return thread;
+        };
     }
 
     protected abstract String taskDisplayName();

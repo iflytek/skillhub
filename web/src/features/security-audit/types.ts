@@ -1,4 +1,5 @@
 export type SecurityVerdict = 'SAFE' | 'SUSPICIOUS' | 'DANGEROUS' | 'BLOCKED'
+export type SecurityAuditDisplayState = SecurityVerdict | 'SCANNING'
 export type FindingSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO'
 
 export interface SecurityFinding {

@@ -12,12 +12,13 @@ import com.iflytek.skillhub.domain.security.SecurityScanner;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.redisson.api.RedissonClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.Map;
 
@@ -31,7 +32,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     private final ReviewTaskRepository reviewTaskRepository;
     private final ScanTaskProducer scanTaskProducer;
 
-    public ScanTaskConsumer(RedisConnectionFactory connectionFactory,
+    public ScanTaskConsumer(RedissonClient redissonClient,
                             String streamKey,
                             String groupName,
                             SecurityScanner securityScanner,
@@ -40,7 +41,29 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                             SkillRepository skillRepository,
                             ReviewTaskRepository reviewTaskRepository,
                             ScanTaskProducer scanTaskProducer) {
-        super(connectionFactory, streamKey, groupName);
+        super(redissonClient, streamKey, groupName);
+        this.securityScanner = securityScanner;
+        this.securityScanService = securityScanService;
+        this.skillVersionRepository = skillVersionRepository;
+        this.skillRepository = skillRepository;
+        this.reviewTaskRepository = reviewTaskRepository;
+        this.scanTaskProducer = scanTaskProducer;
+    }
+
+    public ScanTaskConsumer(RedissonClient redissonClient,
+                            String streamKey,
+                            String groupName,
+                            SecurityScanner securityScanner,
+                            SecurityScanService securityScanService,
+                            SkillVersionRepository skillVersionRepository,
+                            SkillRepository skillRepository,
+                            ReviewTaskRepository reviewTaskRepository,
+                            ScanTaskProducer scanTaskProducer,
+                            boolean reclaimEnabled,
+                            Duration reclaimMinIdle,
+                            int reclaimBatchSize,
+                            Duration reclaimInterval) {
+        super(redissonClient, streamKey, groupName, reclaimEnabled, reclaimMinIdle, reclaimBatchSize, reclaimInterval);
         this.securityScanner = securityScanner;
         this.securityScanService = securityScanService;
         this.skillVersionRepository = skillVersionRepository;

@@ -97,6 +97,15 @@ describe('SecurityAuditSummary', () => {
     expect(html).toContain('securityAudit.verdict.BLOCKED')
   })
 
+  it('renders scanning status when the audit has not completed yet', () => {
+    mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.statusScanning')
+    expect(html).not.toContain('securityAudit.verdict.SUSPICIOUS')
+  })
+
   it('renders the total findings count across all audits', () => {
     mockAudits = [
       createAudit({ id: 1, findingsCount: 3 }),
