@@ -6,14 +6,14 @@ import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.security.SecurityScanner;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
-import com.iflytek.skillhub.stream.RedisScanTaskProducer;
+import com.iflytek.skillhub.stream.RedissonScanTaskProducer;
 import com.iflytek.skillhub.stream.ScanTaskConsumer;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import java.time.Duration;
 
 @Configuration
 @ConditionalOnProperty(prefix = "skillhub.security.scanner", name = "enabled", havingValue = "true")
@@ -25,13 +25,25 @@ public class RedisStreamConfig {
     @Value("${skillhub.security.stream.group:skillhub-scanners}")
     private String groupName;
 
+    @Value("${skillhub.security.stream.reclaim-enabled:true}")
+    private boolean reclaimEnabled;
+
+    @Value("${skillhub.security.stream.reclaim-min-idle:PT2M}")
+    private Duration reclaimMinIdle;
+
+    @Value("${skillhub.security.stream.reclaim-batch-size:20}")
+    private int reclaimBatchSize;
+
+    @Value("${skillhub.security.stream.reclaim-interval:PT30S}")
+    private Duration reclaimInterval;
+
     @Bean
-    public RedisScanTaskProducer redisScanTaskProducer(StringRedisTemplate redisTemplate) {
-        return new RedisScanTaskProducer(redisTemplate, streamKey);
+    public RedissonScanTaskProducer redisScanTaskProducer(RedissonClient redissonClient) {
+        return new RedissonScanTaskProducer(redissonClient, streamKey);
     }
 
     @Bean
-    public ScanTaskConsumer scanTaskConsumer(RedisConnectionFactory connectionFactory,
+    public ScanTaskConsumer scanTaskConsumer(RedissonClient redissonClient,
                                              SecurityScanner securityScanner,
                                              SecurityScanService securityScanService,
                                              SkillVersionRepository skillVersionRepository,
@@ -39,7 +51,7 @@ public class RedisStreamConfig {
                                              ReviewTaskRepository reviewTaskRepository,
                                              ScanTaskProducer scanTaskProducer) {
         return new ScanTaskConsumer(
-                connectionFactory,
+                redissonClient,
                 streamKey,
                 groupName,
                 securityScanner,
@@ -47,7 +59,11 @@ public class RedisStreamConfig {
                 skillVersionRepository,
                 skillRepository,
                 reviewTaskRepository,
-                scanTaskProducer
+                scanTaskProducer,
+                reclaimEnabled,
+                reclaimMinIdle,
+                reclaimBatchSize,
+                reclaimInterval
         );
     }
 }

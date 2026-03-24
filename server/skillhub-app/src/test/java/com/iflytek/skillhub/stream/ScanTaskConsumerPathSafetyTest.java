@@ -12,14 +12,14 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.redisson.api.RedissonClient;
 
 class ScanTaskConsumerPathSafetyTest {
 
     @Test
     void cleanupTempPath_ignoresPathsOutsideScanTempDirectory() throws Exception {
         ScanTaskConsumer consumer = new ScanTaskConsumer(
-                org.mockito.Mockito.mock(RedisConnectionFactory.class),
+                org.mockito.Mockito.mock(RedissonClient.class),
                 "scan-stream",
                 "scan-group",
                 org.mockito.Mockito.mock(SecurityScanner.class),
