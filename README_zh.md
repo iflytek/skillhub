@@ -294,9 +294,9 @@ npx clawhub publish ./my-skill
 
 📖 **[完整 OpenClaw 集成指南 →](./docs/openclaw-integration.md)**
 
-### [AstronClaw](https://github.com/iflytek/astronclaw-tutorial)
+### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
-[AstronClaw](https://github.com/iflytek/astronclaw-tutorial) 是基于 OpenClaw 核心能力打造的云端 AI 助手，提供全天候在线服务，随时随地通过企业微信、钉钉、飞书等渠道提供服务。它内置了丰富的技能系统，您可以将其连接到自托管的 SkillHub 注册中心，支持技能市场一键安装、仓库搜索、对话自动安装，甚至管理和分发组织内部的自定义私有技能。
+[AstronClaw](https://agent.xfyun.cn/astron-claw) 是基于 OpenClaw 核心能力打造的云端 AI 助手，提供全天候在线服务，随时随地通过企业微信、钉钉、飞书等渠道提供服务。它内置了丰富的技能系统，您可以将其连接到自托管的 SkillHub 注册中心，支持技能市场一键安装、仓库搜索、对话自动安装，甚至管理和分发组织内部的自定义私有技能。
 
 ### [Loomy](https://github.com/iflytek/astronclaw-tutorial)
 
