@@ -274,6 +274,10 @@ class ScanTaskConsumerTest {
         }
 
         @Override
+        public void flush() {
+        }
+
+        @Override
         public void deleteBySkillId(Long skillId) {
             throw unsupported();
         }

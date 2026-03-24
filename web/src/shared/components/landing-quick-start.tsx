@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bot, Check, Copy, UserRound } from 'lucide-react'
+import { copyToClipboard } from '@/shared/lib/clipboard'
 
 type LandingQuickStartTabId = 'agent' | 'human'
 
@@ -17,7 +18,7 @@ function CompactCopyButton({ text }: { text: string }) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text)
+      await copyToClipboard(text)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch (err) {

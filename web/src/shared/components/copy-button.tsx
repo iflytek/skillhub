@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
+import { copyToClipboard } from '@/shared/lib/clipboard'
 
 interface CopyButtonProps {
   text: string
@@ -13,7 +14,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text)
+      await copyToClipboard(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
