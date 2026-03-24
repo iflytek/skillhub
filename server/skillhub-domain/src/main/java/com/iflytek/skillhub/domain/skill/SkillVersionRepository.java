@@ -16,5 +16,6 @@ public interface SkillVersionRepository {
     List<SkillVersion> findBySkillIdAndStatus(Long skillId, SkillVersionStatus status);
     SkillVersion save(SkillVersion version);
     void delete(SkillVersion version);
+    void flush();
     void deleteBySkillId(Long skillId);
 }

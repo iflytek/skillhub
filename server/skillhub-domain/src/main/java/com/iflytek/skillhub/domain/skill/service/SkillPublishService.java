@@ -398,6 +398,7 @@ public class SkillPublishService {
         skillFileRepository.deleteByVersionId(version.getId());
         securityScanService.softDeleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
+        skillVersionRepository.flush();
 
         if (version.getId().equals(skill.getLatestVersionId())) {
             skill.setLatestVersionId(null);
