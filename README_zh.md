@@ -294,13 +294,17 @@ npx clawhub publish ./my-skill
 
 📖 **[完整 OpenClaw 集成指南 →](./docs/openclaw-integration.md)**
 
-### [AstronClaw](https://agent.xfyun.cn/astron-claw)
+### [AstronClaw](https://github.com/iflytek/astronclaw-tutorial)
 
-[AstronClaw](https://agent.xfyun.cn/astron-claw) 是科大讯飞星火平台提供的技能市场。您可以将其连接到自托管的 SkillHub 注册中心，在组织内管理和分发私有技能，或在星火平台上浏览公开共享的技能。
+[AstronClaw](https://github.com/iflytek/astronclaw-tutorial) 是基于 OpenClaw 核心能力打造的云端 AI 助手，提供全天候在线服务，随时随地通过企业微信、钉钉、飞书等渠道提供服务。它内置了丰富的技能系统，您可以将其连接到自托管的 SkillHub 注册中心，支持技能市场一键安装、仓库搜索、对话自动安装，甚至管理和分发组织内部的自定义私有技能。
+
+### [Loomy](https://github.com/iflytek/astronclaw-tutorial)
+
+[Loomy](https://github.com/iflytek/astronclaw-tutorial) 是聚焦真实办公场景的桌面端 AI 工作搭子。它深入打通本地文件和系统工具，为个人及小团队构建高效的自动化工作流。通过将 Loomy 连接到您的 SkillHub 注册中心，您可以轻松发现并安装组织内部的专属技能，从而增强本地桌面端的自动化与协同办公能力。
 
 ### [astron-agent](https://github.com/iflytek/astron-agent)
 
-[astron-agent](https://github.com/iflytek/astron-agent) 是科大讯飞星火智能体框架。存储在 SkillHub 中的技能可以被 astron-agent 直接引用和加载，实现从开发到生产的受治理、版本化的技能生命周期。
+[astron-agent](https://github.com/iflytek/astron-agent) 是科大讯飞星火智能体框架。存储在 SkillHub 中的技能可以被 astron-agent 引用和加载，实现从开发到生产的受治理、版本化的技能生命周期。
 
 ---
 

@@ -349,13 +349,17 @@ npx clawhub publish ./my-skill
 
 📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
 
-### [AstronClaw](https://agent.xfyun.cn/astron-claw)
+### [AstronClaw](https://github.com/iflytek/astronclaw-tutorial)
 
-[AstronClaw](https://agent.xfyun.cn/astron-claw) is the skill marketplace provided by iFlytek's Astron platform. You can connect it to a self-hosted SkillHub registry to manage and distribute private skills within your organization, or browse publicly shared skills on the Astron platform.
+[AstronClaw](https://github.com/iflytek/astronclaw-tutorial) is a cloud AI assistant built on OpenClaw's core capabilities, providing 24/7 online service through enterprise platforms like WeChat Work, DingTalk, and Feishu. It features a built-in skill system with over 130 official skills. You can connect it to a self-hosted SkillHub registry to enable one-click skill installation, search repository, dialogue-based automatic installation, and even custom skills management within your organization.
+
+### [Loomy](https://github.com/iflytek/astronclaw-tutorial)
+
+[Loomy](https://github.com/iflytek/astronclaw-tutorial) is a desktop AI work partner focusing on real office scenarios. It integrates deeply with local files and system tools to build efficient automated workflows for individuals and small teams. By connecting Loomy to your SkillHub registry, you can easily discover and install organization-specific skills to enhance your local desktop automation and productivity.
 
 ### [astron-agent](https://github.com/iflytek/astron-agent)
 
-[astron-agent](https://github.com/iflytek/astron-agent) is the iFlytek Astron agent framework. Skills stored in SkillHub can be referenced and loaded directly by astron-agent, enabling a governed, versioned skill lifecycle from development to production.
+[astron-agent](https://github.com/iflytek/astron-agent) is the iFlytek Astron agent framework. Skills stored in SkillHub can be referenced and loaded by astron-agent, enabling a governed, versioned skill lifecycle from development to production.
 
 ---
 
