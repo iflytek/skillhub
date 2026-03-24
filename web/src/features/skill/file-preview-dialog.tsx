@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { MarkdownRenderer } from './markdown-renderer'
 import { CodeRenderer } from './code-renderer'
 import { toast } from '@/shared/lib/toast'
+import { copyToClipboard } from '@/shared/lib/clipboard'
 import { getFileTypeLabel, canPreviewFile, getLanguageForHighlight } from './file-type-utils'
 import type { FileTreeNode } from './file-tree-builder'
 
@@ -55,7 +56,13 @@ export function FilePreviewDialog({
   const handleCopy = async () => {
     if (!content || copyState !== 'idle') return
     setCopyState('spinning')
-    await navigator.clipboard.writeText(content)
+    try {
+      await copyToClipboard(content)
+    } catch {
+      toast.error(t('filePreview.copyError', { defaultValue: t('filePreview.loadError') }))
+      setCopyState('idle')
+      return
+    }
     // Show checkmark after the spin completes
     setTimeout(() => {
       setCopyState('done')

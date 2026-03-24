@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { copyToClipboard } from '@/shared/lib/clipboard'
 
 interface InstallCommandProps {
   namespace: string
@@ -39,7 +40,7 @@ export function InstallCommand({ namespace, slug }: InstallCommandProps) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(command)
+      await copyToClipboard(command)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch (err) {

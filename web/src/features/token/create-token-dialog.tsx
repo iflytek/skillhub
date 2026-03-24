@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { tokenApi } from '@/api/client'
+import { copyToClipboard } from '@/shared/lib/clipboard'
 import {
   Dialog,
   DialogContent,
@@ -106,7 +107,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
     if (!createdToken) return
 
     try {
-      await navigator.clipboard.writeText(createdToken.token)
+      await copyToClipboard(createdToken.token)
       toast.success(t('createToken.copySuccess'), undefined, centeredToastOptions())
     } catch (error) {
       console.error('Failed to copy token:', error)
