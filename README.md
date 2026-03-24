@@ -349,7 +349,7 @@ npx clawhub publish ./my-skill
 
 📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
 
-### [AstronClaw](https://github.com/iflytek/astronclaw-tutorial)
+### [AstronClaw]([https://github.com/iflytek/astronclaw-tutorial](https://agent.xfyun.cn/astron-claw))
 
 [AstronClaw](https://github.com/iflytek/astronclaw-tutorial) is a cloud AI assistant built on OpenClaw's core capabilities, providing 24/7 online service through enterprise platforms like WeChat Work, DingTalk, and Feishu. It features a built-in skill system with over 130 official skills. You can connect it to a self-hosted SkillHub registry to enable one-click skill installation, search repository, dialogue-based automatic installation, and even custom skills management within your organization.
 
