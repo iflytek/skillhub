@@ -26,5 +26,6 @@ public record SkillDetailResponse(
         SkillLifecycleVersionResponse headlineVersion,
         SkillLifecycleVersionResponse publishedVersion,
         SkillLifecycleVersionResponse ownerPreviewVersion,
+        String ownerPreviewReviewComment,
         String resolutionMode
 ) {}

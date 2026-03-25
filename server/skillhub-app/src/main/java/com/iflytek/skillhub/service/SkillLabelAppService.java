@@ -15,6 +15,7 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.dto.MessageResponse;
 import com.iflytek.skillhub.dto.SkillLabelDto;
 import java.util.List;
@@ -40,6 +41,7 @@ public class SkillLabelAppService {
     private final RbacService rbacService;
     private final AuditLogService auditLogService;
     private final LabelSearchSyncService labelSearchSyncService;
+    private final SkillSlugResolutionService skillSlugResolutionService;
 
     public SkillLabelAppService(NamespaceRepository namespaceRepository,
                                 SkillRepository skillRepository,
@@ -49,7 +51,8 @@ public class SkillLabelAppService {
                                 LabelLocalizationService labelLocalizationService,
                                 RbacService rbacService,
                                 AuditLogService auditLogService,
-                                LabelSearchSyncService labelSearchSyncService) {
+                                LabelSearchSyncService labelSearchSyncService,
+                                SkillSlugResolutionService skillSlugResolutionService) {
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.visibilityChecker = visibilityChecker;
@@ -59,6 +62,7 @@ public class SkillLabelAppService {
         this.rbacService = rbacService;
         this.auditLogService = auditLogService;
         this.labelSearchSyncService = labelSearchSyncService;
+        this.skillSlugResolutionService = skillSlugResolutionService;
     }
 
     public List<SkillLabelDto> listSkillLabels(String namespaceSlug,
@@ -79,8 +83,8 @@ public class SkillLabelAppService {
                                      String labelSlug,
                                      String userId,
                                      Map<Long, NamespaceRole> userNsRoles,
-                                     AuditRequestContext auditContext) {
-        Skill skill = resolveSkill(namespaceSlug, skillSlug);
+        AuditRequestContext auditContext) {
+        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId);
         SkillLabel attached = skillLabelService.attachLabel(
                 skill.getId(),
                 labelSlug,
@@ -100,7 +104,7 @@ public class SkillLabelAppService {
                                        String userId,
                                        Map<Long, NamespaceRole> userNsRoles,
                                        AuditRequestContext auditContext) {
-        Skill skill = resolveSkill(namespaceSlug, skillSlug);
+        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId);
         skillLabelService.detachLabel(
                 skill.getId(),
                 labelSlug,
@@ -140,12 +144,15 @@ public class SkillLabelAppService {
                 .toList();
     }
 
-    private Skill resolveSkill(String namespaceSlug, String skillSlug) {
+    private Skill resolveSkill(String namespaceSlug, String skillSlug, String userId) {
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
-        return skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug).stream()
-                .findFirst()
-                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillSlug));
+        return skillSlugResolutionService.resolve(
+                namespace.getId(),
+                skillSlug,
+                userId,
+                SkillSlugResolutionService.Preference.CURRENT_USER
+        );
     }
 
     private Skill resolveSkillForRead(String namespaceSlug,
@@ -153,7 +160,7 @@ public class SkillLabelAppService {
                                       String userId,
                                       Map<Long, NamespaceRole> userNsRoles,
                                       Set<String> platformRoles) {
-        Skill skill = resolveSkill(namespaceSlug, skillSlug);
+        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId);
         if (platformRoles.contains("SUPER_ADMIN")) {
             return skill;
         }

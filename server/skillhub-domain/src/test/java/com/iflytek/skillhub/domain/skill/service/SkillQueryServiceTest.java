@@ -5,6 +5,8 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTask;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -53,6 +55,8 @@ class SkillQueryServiceTest {
     @Mock
     private PromotionRequestRepository promotionRequestRepository;
     @Mock
+    private ReviewTaskRepository reviewTaskRepository;
+    @Mock
     private UserAccountRepository userAccountRepository;
 
     private SkillQueryService service;
@@ -72,6 +76,7 @@ class SkillQueryServiceTest {
                 objectStorageService,
                 visibilityChecker,
                 promotionRequestRepository,
+                reviewTaskRepository,
                 skillSlugResolutionService,
                 skillLifecycleProjectionService,
                 userAccountRepository
@@ -858,6 +863,44 @@ class SkillQueryServiceTest {
         assertEquals("PUBLISHED", result.headlineVersion().status());
         assertEquals("PUBLISHED", result.resolutionMode());
         assertTrue(result.canInteract());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldIncludeRejectedOwnerPreviewComment() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String ownerId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(12L);
+
+        SkillVersion rejected = new SkillVersion(1L, "1.1.0", ownerId);
+        setId(rejected, 12L);
+        rejected.setStatus(SkillVersionStatus.REJECTED);
+
+        ReviewTask reviewTask = new ReviewTask(12L, 1L, ownerId);
+        reviewTask.setStatus(ReviewTaskStatus.REJECTED);
+        reviewTask.setReviewComment("metadata missing");
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
+        when(skillVersionRepository.findById(12L)).thenReturn(Optional.of(rejected));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of());
+        when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(rejected));
+        when(reviewTaskRepository.findBySkillVersionIdAndStatus(12L, ReviewTaskStatus.REJECTED))
+                .thenReturn(Optional.of(reviewTask));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
+
+        assertNotNull(result.ownerPreviewVersion());
+        assertEquals("REJECTED", result.ownerPreviewVersion().status());
+        assertEquals("metadata missing", result.ownerPreviewReviewComment());
     }
 
     @Test

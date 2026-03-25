@@ -9,6 +9,9 @@ import com.iflytek.skillhub.search.SearchIndexService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Optional;
+
 /**
  * Orchestrates the API-facing hard-delete flow for whole skills.
  */
@@ -33,28 +36,35 @@ public class SkillDeleteAppService {
     @Transactional
     public DeleteResult deleteSkill(String namespace,
                                     String slug,
+                                    String targetOwnerId,
                                     String actorUserId,
                                     AuditRequestContext auditRequestContext) {
-        return deleteSkillForActor(namespace, slug, actorUserId, auditRequestContext);
+        return deleteSkillForActor(namespace, slug, targetOwnerId, actorUserId, auditRequestContext);
     }
 
     @Transactional
     public DeleteResult deleteSkillFromPortal(String namespace,
                                               String slug,
+                                              String targetOwnerId,
                                               PlatformPrincipal principal,
                                               AuditRequestContext auditRequestContext) {
         String normalizedNamespace = normalizeNamespace(namespace);
-        return skillRepository.findByNamespaceSlugAndSlug(normalizedNamespace, slug)
+        List<Skill> candidates = skillRepository.findByNamespaceSlugAndSlug(normalizedNamespace, slug);
+        Optional<Skill> target = resolveSkill(candidates, targetOwnerId);
+        return target
                 .map(skill -> deleteExistingSkill(skill, normalizedNamespace, slug, principal.userId(), auditRequestContext, true, principal))
                 .orElseGet(() -> new DeleteResult(null, normalizedNamespace, slug, false));
     }
 
     private DeleteResult deleteSkillForActor(String namespace,
                                              String slug,
+                                             String targetOwnerId,
                                              String actorUserId,
                                              AuditRequestContext auditRequestContext) {
         String normalizedNamespace = normalizeNamespace(namespace);
-        return skillRepository.findByNamespaceSlugAndSlug(normalizedNamespace, slug)
+        List<Skill> candidates = skillRepository.findByNamespaceSlugAndSlug(normalizedNamespace, slug);
+        Optional<Skill> target = resolveSkill(candidates, targetOwnerId);
+        return target
                 .map(skill -> deleteExistingSkill(skill, normalizedNamespace, slug, actorUserId, auditRequestContext, false, null))
                 .orElseGet(() -> new DeleteResult(null, normalizedNamespace, slug, false));
     }
@@ -85,6 +95,29 @@ public class SkillDeleteAppService {
             return null;
         }
         return namespace.startsWith("@") ? namespace.substring(1) : namespace;
+    }
+
+    /**
+     * Resolves a single skill from candidates sharing the same namespace+slug.
+     * If targetOwnerId is provided, matches exactly by owner.
+     * When multiple candidates exist and no ownerId is specified, returns empty
+     * to force callers to provide an explicit owner for accurate targeting.
+     */
+    private Optional<Skill> resolveSkill(List<Skill> candidates, String targetOwnerId) {
+        if (candidates.isEmpty()) {
+            return Optional.empty();
+        }
+        if (candidates.size() == 1) {
+            return Optional.of(candidates.get(0));
+        }
+        // Explicit owner specified — match exactly
+        if (targetOwnerId != null && !targetOwnerId.isBlank()) {
+            return candidates.stream()
+                    .filter(s -> targetOwnerId.equals(s.getOwnerId()))
+                    .findFirst();
+        }
+        // Multiple candidates without explicit owner — require ownerId
+        return Optional.empty();
     }
 
     private boolean canDeleteFromPortal(Skill skill, PlatformPrincipal principal) {

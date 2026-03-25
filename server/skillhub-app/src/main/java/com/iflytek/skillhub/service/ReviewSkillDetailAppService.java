@@ -79,6 +79,7 @@ public class ReviewSkillDetailAppService {
                 toLifecycleVersion(snapshot.activeVersion()),
                 snapshot.publishedVersion() != null ? toLifecycleVersion(snapshot.publishedVersion()) : null,
                 toLifecycleVersion(snapshot.activeVersion()),
+                null,
                 "REVIEW_TASK"
         );
 

@@ -48,6 +48,7 @@ class SkillDeleteControllerTest {
         given(skillDeleteAppService.deleteSkill(
                 org.mockito.ArgumentMatchers.eq("global"),
                 org.mockito.ArgumentMatchers.eq("demo-skill"),
+                org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.eq("super-1"),
                 org.mockito.ArgumentMatchers.any()))
                 .willReturn(new SkillDeleteAppService.DeleteResult(11L, "global", "demo-skill", true));

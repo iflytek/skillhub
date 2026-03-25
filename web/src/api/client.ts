@@ -432,9 +432,10 @@ export const skillLifecycleApi = {
     })
   },
 
-  async deleteSkill(namespace: string, slug: string): Promise<SkillDeleteResult> {
+  async deleteSkill(namespace: string, slug: string, ownerId?: string): Promise<SkillDeleteResult> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    return fetchJson<SkillDeleteResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`, {
+    const params = ownerId ? `?ownerId=${encodeURIComponent(ownerId)}` : ''
+    return fetchJson<SkillDeleteResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}${params}`, {
       method: 'DELETE',
       headers: await ensureCsrfHeaders(),
     })

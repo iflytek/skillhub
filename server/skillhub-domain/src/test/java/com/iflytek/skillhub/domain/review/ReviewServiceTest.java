@@ -85,6 +85,12 @@ class ReviewServiceTest {
         return sv;
     }
 
+    private SkillVersion createSkillVersionWithStatus(SkillVersionStatus status) {
+        SkillVersion sv = createDraftSkillVersion();
+        sv.setStatus(status);
+        return sv;
+    }
+
     private ReviewTask createPendingReviewTask() {
         ReviewTask task = new ReviewTask(SKILL_VERSION_ID, NAMESPACE_ID, USER_ID);
         setField(task, "id", REVIEW_TASK_ID);
@@ -354,21 +360,66 @@ class ReviewServiceTest {
         }
 
         @Test
-        void shouldRejectApproveWhenSkillVersionWasWithdrawnBackToDraft() {
+        void shouldAllowApproveWhenSkillVersionWasWithdrawnBackToDraft() {
             ReviewTask task = createPendingReviewTask();
             Namespace ns = createTeamNamespace();
-            SkillVersion sv = createPendingReviewSkillVersion();
-            sv.setStatus(SkillVersionStatus.DRAFT);
+            SkillVersion sv = createSkillVersionWithStatus(SkillVersionStatus.DRAFT);
+            Skill skill = createSkill();
 
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
+        }
+
+        @Test
+        void shouldRejectApproveWhenScanStillInProgress() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createSkillVersionWithStatus(SkillVersionStatus.SCANNING);
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
 
             assertThrows(DomainBadRequestException.class,
                     () -> reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
                             Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of()));
+            verify(reviewTaskRepository, never()).updateStatusWithVersion(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldAllowApproveWhenScanFailed() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createSkillVersionWithStatus(SkillVersionStatus.SCAN_FAILED);
+            Skill skill = createSkill();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
         }
 
         @Test
@@ -426,9 +477,11 @@ class ReviewServiceTest {
         void shouldThrowOnConcurrentModification() {
             ReviewTask task = createPendingReviewTask();
             Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(0);
 
             assertThrows(ConcurrentModificationException.class,

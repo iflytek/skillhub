@@ -1,10 +1,8 @@
 package com.iflytek.skillhub.config;
 
-import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.security.SecurityScanner;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.stream.RedissonScanTaskProducer;
 import com.iflytek.skillhub.stream.ScanTaskConsumer;
@@ -47,8 +45,6 @@ public class RedisStreamConfig {
                                              SecurityScanner securityScanner,
                                              SecurityScanService securityScanService,
                                              SkillVersionRepository skillVersionRepository,
-                                             SkillRepository skillRepository,
-                                             ReviewTaskRepository reviewTaskRepository,
                                              ScanTaskProducer scanTaskProducer) {
         return new ScanTaskConsumer(
                 redissonClient,
@@ -57,8 +53,6 @@ public class RedisStreamConfig {
                 securityScanner,
                 securityScanService,
                 skillVersionRepository,
-                skillRepository,
-                reviewTaskRepository,
                 scanTaskProducer,
                 reclaimEnabled,
                 reclaimMinIdle,

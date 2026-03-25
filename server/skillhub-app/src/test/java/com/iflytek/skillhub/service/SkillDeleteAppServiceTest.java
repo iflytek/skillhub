@@ -13,7 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,10 +44,10 @@ class SkillDeleteAppServiceTest {
     void deleteSkill_deletesExistingSkillAndSearchDocument() {
         Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
         setField(skill, "id", 11L);
-        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(Optional.of(skill));
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(List.of(skill));
 
         SkillDeleteAppService.DeleteResult result =
-                service.deleteSkill("global", "demo-skill", "super-1", new AuditRequestContext("127.0.0.1", "JUnit"));
+                service.deleteSkill("global", "demo-skill", null, "super-1", new AuditRequestContext("127.0.0.1", "JUnit"));
 
         assertThat(result.deleted()).isTrue();
         assertThat(result.skillId()).isEqualTo(11L);
@@ -59,10 +59,10 @@ class SkillDeleteAppServiceTest {
 
     @Test
     void deleteSkill_isIdempotentWhenSkillDoesNotExist() {
-        given(skillRepository.findByNamespaceSlugAndSlug("global", "missing-skill")).willReturn(Optional.empty());
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "missing-skill")).willReturn(List.of());
 
         SkillDeleteAppService.DeleteResult result =
-                service.deleteSkill("global", "missing-skill", "super-1", new AuditRequestContext("127.0.0.1", "JUnit"));
+                service.deleteSkill("global", "missing-skill", null, "super-1", new AuditRequestContext("127.0.0.1", "JUnit"));
 
         assertThat(result.deleted()).isFalse();
         assertThat(result.skillId()).isNull();
@@ -74,11 +74,12 @@ class SkillDeleteAppServiceTest {
     void deleteSkillFromPortal_allowsOwner() {
         Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
         setField(skill, "id", 11L);
-        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(Optional.of(skill));
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(List.of(skill));
 
         SkillDeleteAppService.DeleteResult result = service.deleteSkillFromPortal(
                 "global",
                 "demo-skill",
+                null,
                 new PlatformPrincipal("owner-1", "Owner", "owner@example.com", "", "session", java.util.Set.of("USER")),
                 new AuditRequestContext("127.0.0.1", "JUnit")
         );
@@ -94,11 +95,12 @@ class SkillDeleteAppServiceTest {
     void deleteSkillFromPortal_allowsSuperAdmin() {
         Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
         setField(skill, "id", 11L);
-        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(Optional.of(skill));
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(List.of(skill));
 
         SkillDeleteAppService.DeleteResult result = service.deleteSkillFromPortal(
                 "global",
                 "demo-skill",
+                null,
                 new PlatformPrincipal("super-1", "Super", "super@example.com", "", "session", java.util.Set.of("SUPER_ADMIN")),
                 new AuditRequestContext("127.0.0.1", "JUnit")
         );
@@ -114,11 +116,12 @@ class SkillDeleteAppServiceTest {
     void deleteSkillFromPortal_rejectsNonOwnerWithoutSuperAdmin() {
         Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
         setField(skill, "id", 11L);
-        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(Optional.of(skill));
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(List.of(skill));
 
         assertThatThrownBy(() -> service.deleteSkillFromPortal(
                 "global",
                 "demo-skill",
+                null,
                 new PlatformPrincipal("user-2", "User", "user@example.com", "", "session", java.util.Set.of("USER")),
                 new AuditRequestContext("127.0.0.1", "JUnit")
         )).isInstanceOf(DomainForbiddenException.class);
@@ -126,11 +129,12 @@ class SkillDeleteAppServiceTest {
 
     @Test
     void deleteSkillFromPortal_isIdempotentWhenSkillDoesNotExist() {
-        given(skillRepository.findByNamespaceSlugAndSlug("global", "missing-skill")).willReturn(Optional.empty());
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "missing-skill")).willReturn(List.of());
 
         SkillDeleteAppService.DeleteResult result = service.deleteSkillFromPortal(
                 "global",
                 "missing-skill",
+                null,
                 new PlatformPrincipal("owner-1", "Owner", "owner@example.com", "", "session", java.util.Set.of("USER")),
                 new AuditRequestContext("127.0.0.1", "JUnit")
         );

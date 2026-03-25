@@ -251,4 +251,76 @@ describe('SkillDetailPage', () => {
     expect(html).not.toContain('__STAR_WIDGET__')
     expect(html).not.toContain('__RATING_WIDGET__')
   })
+
+  it('renders rejected owner preview without pending-review copy', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canInteract: false,
+        headlineVersion: { id: 11, version: '1.1.0', status: 'REJECTED' },
+        publishedVersion: undefined,
+        ownerPreviewVersion: { id: 11, version: '1.1.0', status: 'REJECTED' },
+        resolutionMode: 'OWNER_PREVIEW',
+        ownerPreviewReviewComment: 'manifest validation failed',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 11,
+          version: '1.1.0',
+          status: 'REJECTED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: null,
+          downloadAvailable: false,
+        },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.rejectedBadge')
+    expect(html).toContain('skillDetail.rejectedFeedbackTitle')
+    expect(html).toContain('manifest validation failed')
+    expect(html).not.toContain('skillDetail.pendingPreviewBadge')
+    expect(html).not.toContain('skillDetail.pendingPreviewTitle')
+  })
+
+  it('renders pending review status in the header for scan-failed owner preview versions', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canInteract: false,
+        headlineVersion: { id: 12, version: '1.2.0', status: 'SCAN_FAILED' },
+        publishedVersion: undefined,
+        ownerPreviewVersion: { id: 12, version: '1.2.0', status: 'SCAN_FAILED' },
+        resolutionMode: 'OWNER_PREVIEW',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 12,
+          version: '1.2.0',
+          status: 'SCAN_FAILED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: null,
+          downloadAvailable: false,
+        },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.versionStatusPendingReview')
+    expect(html).not.toContain('skillDetail.versionStatusScanFailed')
+  })
 })
