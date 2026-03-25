@@ -11,12 +11,9 @@ import com.iflytek.skillhub.domain.security.SecurityScanResponse;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.security.SecurityScanner;
 import com.iflytek.skillhub.domain.security.SecurityVerdict;
-import com.iflytek.skillhub.domain.skill.Skill;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
-import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -49,8 +46,6 @@ class ScanTaskConsumerTest {
                 securityScanner,
                 securityScanService,
                 new InMemorySkillVersionRepository(),
-                new InMemorySkillRepository(),
-                new InMemoryReviewTaskRepository(),
                 new InMemoryScanTaskProducer()
         );
         Files.createDirectories(SCAN_TEMP_DIR);
@@ -74,23 +69,17 @@ class ScanTaskConsumerTest {
     }
 
     @Test
-    void markFailed_setsScanFailedCreatesReviewTaskAndCleansTempFile() throws Exception {
+    void markFailed_setsScanFailedWithoutChangingReviewTaskAndCleansTempFile() throws Exception {
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
         setField(version, "id", 42L);
         version.setStatus(SkillVersionStatus.SCANNING);
 
-        Skill skill = new Skill(20L, "demo-skill", "publisher-1", SkillVisibility.PUBLIC);
-        setField(skill, "id", 8L);
-
         InMemorySkillVersionRepository skillVersionRepository = new InMemorySkillVersionRepository(version);
-        InMemorySkillRepository skillRepository = new InMemorySkillRepository(skill);
         InMemoryReviewTaskRepository reviewTaskRepository = new InMemoryReviewTaskRepository();
         TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
                 new StubSecurityScanner(),
                 new StubSecurityScanService(),
                 skillVersionRepository,
-                skillRepository,
-                reviewTaskRepository,
                 new InMemoryScanTaskProducer()
         );
         Files.createDirectories(SCAN_TEMP_DIR);
@@ -100,10 +89,8 @@ class ScanTaskConsumerTest {
         consumer.invokeMarkFailed(payload, "scan failed");
 
         assertThat(skillVersionRepository.savedVersion.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
-        assertThat(reviewTaskRepository.savedTask).isNotNull();
-        assertThat(reviewTaskRepository.savedTask.getSkillVersionId()).isEqualTo(42L);
-        assertThat(reviewTaskRepository.savedTask.getNamespaceId()).isEqualTo(20L);
-        assertThat(reviewTaskRepository.savedTask.getStatus()).isEqualTo(ReviewTaskStatus.PENDING);
+        assertThat(reviewTaskRepository.savedTask).isNull();
+        assertThat(reviewTaskRepository.deletedTask).isNull();
         assertThat(Files.exists(tempFile)).isFalse();
     }
 
@@ -114,8 +101,6 @@ class ScanTaskConsumerTest {
                 new StubSecurityScanner(),
                 new StubSecurityScanService(),
                 new InMemorySkillVersionRepository(),
-                new InMemorySkillRepository(),
-                new InMemoryReviewTaskRepository(),
                 producer
         );
         ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-3", 77L, "/tmp/retry", ScannerType.SKILL_SCANNER);
@@ -142,8 +127,6 @@ class ScanTaskConsumerTest {
         private TestableScanTaskConsumer(SecurityScanner securityScanner,
                                          SecurityScanService securityScanService,
                                          SkillVersionRepository skillVersionRepository,
-                                         SkillRepository skillRepository,
-                                         ReviewTaskRepository reviewTaskRepository,
                                          ScanTaskProducer scanTaskProducer) {
             super(
                     null,
@@ -152,8 +135,6 @@ class ScanTaskConsumerTest {
                     securityScanner,
                     securityScanService,
                     skillVersionRepository,
-                    skillRepository,
-                    reviewTaskRepository,
                     scanTaskProducer
             );
         }
@@ -203,7 +184,6 @@ class ScanTaskConsumerTest {
 
         private StubSecurityScanService() {
             super(null, null, task -> {
-            }, event -> {
             }, new com.fasterxml.jackson.databind.ObjectMapper(), "local", true);
         }
 
@@ -283,91 +263,9 @@ class ScanTaskConsumerTest {
         }
     }
 
-    private static final class InMemorySkillRepository implements SkillRepository {
-        private final Skill skill;
-
-        private InMemorySkillRepository() {
-            this.skill = null;
-        }
-
-        private InMemorySkillRepository(Skill skill) {
-            this.skill = skill;
-        }
-
-        @Override
-        public Optional<Skill> findById(Long id) {
-            return skill != null && id.equals(skill.getId()) ? Optional.of(skill) : Optional.empty();
-        }
-
-        @Override
-        public List<Skill> findByIdIn(List<Long> ids) {
-            throw unsupported();
-        }
-
-        @Override
-        public List<Skill> findAll() {
-            throw unsupported();
-        }
-
-        @Override
-        public List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug) {
-            throw unsupported();
-        }
-
-        @Override
-        public Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId) {
-            throw unsupported();
-        }
-
-        @Override
-        public List<Skill> findByNamespaceIdAndStatus(Long namespaceId, com.iflytek.skillhub.domain.skill.SkillStatus status) {
-            throw unsupported();
-        }
-
-        @Override
-        public Skill save(Skill skill) {
-            throw unsupported();
-        }
-
-        @Override
-        public void flush() {
-            throw unsupported();
-        }
-
-        @Override
-        public void delete(Skill skill) {
-            throw unsupported();
-        }
-
-        @Override
-        public List<Skill> findByOwnerId(String ownerId) {
-            throw unsupported();
-        }
-
-        @Override
-        public org.springframework.data.domain.Page<Skill> findByOwnerId(String ownerId,
-                                                                         org.springframework.data.domain.Pageable pageable) {
-            throw unsupported();
-        }
-
-        @Override
-        public void incrementDownloadCount(Long skillId) {
-            throw unsupported();
-        }
-
-        @Override
-        public List<Skill> findBySlug(String slug) {
-            throw unsupported();
-        }
-
-        @Override
-        public List<Skill> findByNamespaceSlugAndSlug(String namespaceSlug, String slug) {
-            throw unsupported();
-        }
-    }
-
     private static final class InMemoryReviewTaskRepository implements ReviewTaskRepository {
         private ReviewTask savedTask;
+        private ReviewTask deletedTask;
 
         @Override
         public ReviewTask save(ReviewTask reviewTask) {
@@ -412,7 +310,7 @@ class ScanTaskConsumerTest {
 
         @Override
         public void delete(ReviewTask reviewTask) {
-            throw unsupported();
+            this.deletedTask = reviewTask;
         }
 
         @Override

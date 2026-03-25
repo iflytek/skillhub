@@ -205,4 +205,52 @@ describe('ReviewDetailPage', () => {
 
     expect(html).toContain('review.notFound')
   })
+
+  it('disables approval and shows a scanning hint while the active review version is scanning', () => {
+    useReviewSkillDetailMock.mockReturnValue({
+      data: {
+        skill: {
+          id: 1,
+          slug: 'demo-skill',
+          displayName: 'Demo Skill',
+          visibility: 'PUBLIC',
+          status: 'ACTIVE',
+          downloadCount: 3,
+          starCount: 1,
+          ratingCount: 0,
+          hidden: false,
+          namespace: 'global',
+          canManageLifecycle: false,
+          canSubmitPromotion: false,
+          canInteract: false,
+          canReport: false,
+          resolutionMode: 'REVIEW_TASK',
+        },
+        versions: [
+          {
+            id: 10,
+            version: '1.2.0',
+            status: 'SCANNING',
+            changelog: 'Pending update',
+            fileCount: 2,
+            totalSize: 120,
+            publishedAt: '2026-03-19T00:00:00Z',
+            downloadAvailable: true,
+          },
+        ],
+        files: [],
+        documentationPath: 'README.md',
+        documentationContent: '# Demo Skill',
+        downloadUrl: '/api/v1/reviews/13/download',
+        activeVersion: '1.2.0',
+      },
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.approveDisabledScanning')
+    expect(html).toContain('disabled=""')
+  })
 })

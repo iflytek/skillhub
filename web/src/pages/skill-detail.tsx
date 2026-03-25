@@ -28,7 +28,7 @@ import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
-import { getHeadlineVersion, getOwnerPreviewVersion, getPublishedVersion, isOwnerPreviewResolution } from '@/shared/lib/skill-lifecycle'
+import { getHeadlineVersion, getOwnerPreviewVersion, getPublishedVersion } from '@/shared/lib/skill-lifecycle'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -157,8 +157,12 @@ export function SkillDetailPage() {
   const { data: diffCompareReadme } = useSkillReadme(qns, qslug, diffCompareVersion ?? undefined, diffCompareDocumentationPath, skillReady)
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
-  const isPendingPreview = skill ? isOwnerPreviewResolution(skill) : false
+  const isPendingPreview = skill?.resolutionMode === 'OWNER_PREVIEW' && headlineVersion?.status === 'PENDING_REVIEW'
+  const isRejectedPreview = skill?.resolutionMode === 'OWNER_PREVIEW' && headlineVersion?.status === 'REJECTED'
+  const isReviewFlowPending = skill?.resolutionMode === 'OWNER_PREVIEW'
+    && ['PENDING_REVIEW', 'SCANNING', 'SCAN_FAILED'].includes(headlineVersion?.status ?? '')
   const hasPendingOwnerPreview = ownerPreviewVersion?.status === 'PENDING_REVIEW'
+  const hasRejectedOwnerPreview = ownerPreviewVersion?.status === 'REJECTED'
   const hasRejectedVersion = versions?.some((v) => v.status === 'REJECTED') ?? false
   const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
@@ -668,12 +672,12 @@ export function SkillDetailPage() {
                 {resolveSkillStatusLabel(skill.status)}
               </span>
             )}
-            {isPendingPreview && (
+            {isReviewFlowPending && (
               <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
-                {t('skillDetail.pendingPreviewBadge')}
+                {t('skillDetail.versionStatusPendingReview')}
               </span>
             )}
-            {!isPendingPreview && hasRejectedVersion && skill.canManageLifecycle && (
+            {!isPendingPreview && (isRejectedPreview || hasRejectedOwnerPreview || hasRejectedVersion) && skill.canManageLifecycle && (
               <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
                 {t('skillDetail.rejectedBadge')}
               </span>
@@ -714,6 +718,20 @@ export function SkillDetailPage() {
             <Card className="border-amber-500/30 bg-amber-500/5 p-4 text-sm text-muted-foreground">
               <div className="font-medium text-foreground">{t('skillDetail.pendingPreviewTitle')}</div>
               <p className="mt-1">{t('skillDetail.pendingPreviewDescription')}</p>
+            </Card>
+          )}
+          {hasRejectedOwnerPreview && (
+            <Card className="border-red-500/30 bg-red-500/5 p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-foreground">{t('skillDetail.rejectedFeedbackTitle')}</div>
+              <p className="mt-1">{t('skillDetail.rejectedPreviewDescription')}</p>
+              <div className="mt-3 rounded-xl border border-red-500/20 bg-background/80 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('skillDetail.rejectedFeedbackLabel')}
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
+                  {skill.ownerPreviewReviewComment || t('skillDetail.rejectedFeedbackFallback')}
+                </p>
+              </div>
             </Card>
           )}
         </div>
@@ -968,7 +986,11 @@ export function SkillDetailPage() {
                 ) : null}
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">{t('skillDetail.pendingPreviewInteractionHint')}</p>
+              <p className="text-sm text-muted-foreground">
+                {isRejectedPreview
+                  ? t('skillDetail.rejectedPreviewInteractionHint')
+                  : t('skillDetail.pendingPreviewInteractionHint')}
+              </p>
             )}
             {!user && canInteract && (
               <p className="text-xs text-muted-foreground">{t('skillDetail.loginToRate')}</p>
@@ -1049,7 +1071,7 @@ export function SkillDetailPage() {
         </Button>
 
         {skill.canManageLifecycle && selectedVersionEntry && (
-          <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} />
+          <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} versionStatus={selectedVersionEntry.status} />
         )}
 
         <SkillLabelPanel

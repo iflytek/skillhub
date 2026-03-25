@@ -180,16 +180,16 @@ public class ReviewService {
             throw new DomainForbiddenException("review.no_permission");
         }
 
+        SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
+                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
+        if (skillVersion.getStatus() == SkillVersionStatus.SCANNING) {
+            throw new DomainBadRequestException("review.approve.scan_in_progress", reviewTaskId);
+        }
+
         int updated = reviewTaskRepository.updateStatusWithVersion(
                 reviewTaskId, ReviewTaskStatus.APPROVED, reviewerId, comment, task.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
-        }
-
-        SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
-                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", task.getSkillVersionId()));
-        if (skillVersion.getStatus() != SkillVersionStatus.PENDING_REVIEW) {
-            throw new DomainBadRequestException("review.not_pending", reviewTaskId);
         }
 
         Skill skill = skillRepository.findById(skillVersion.getSkillId())

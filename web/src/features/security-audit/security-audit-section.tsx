@@ -26,11 +26,12 @@ function sortFindings(findings: SecurityAuditRecord['findings']) {
 interface SecurityAuditSectionProps {
   skillId: number
   versionId: number
+  versionStatus?: string
   /** When true, omits the outer Card wrapper (e.g. when rendered inside a Dialog). */
   bare?: boolean
 }
 
-export function SecurityAuditSection({ skillId, versionId, bare }: SecurityAuditSectionProps) {
+export function SecurityAuditSection({ skillId, versionId, versionStatus, bare }: SecurityAuditSectionProps) {
   const { t } = useTranslation()
   const { data: audits, isLoading } = useSecurityAudits(skillId, versionId)
 
@@ -50,7 +51,7 @@ export function SecurityAuditSection({ skillId, versionId, bare }: SecurityAudit
 
       <div className="space-y-4">
         {audits.map((audit) => (
-          <ScannerCard key={audit.id} audit={audit} />
+          <ScannerCard key={audit.id} audit={audit} versionStatus={versionStatus} />
         ))}
       </div>
     </>
@@ -63,7 +64,7 @@ export function SecurityAuditSection({ skillId, versionId, bare }: SecurityAudit
   return <Card className="p-8 space-y-6">{content}</Card>
 }
 
-function ScannerCard({ audit }: { audit: SecurityAuditRecord }) {
+function ScannerCard({ audit, versionStatus }: { audit: SecurityAuditRecord; versionStatus?: string }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const sortedFindings = sortFindings(audit.findings)
@@ -73,7 +74,7 @@ function ScannerCard({ audit }: { audit: SecurityAuditRecord }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold font-mono">{audit.scannerType}</span>
-          <VerdictBadge displayState={getSecurityAuditDisplayState(audit)} />
+          <VerdictBadge displayState={getSecurityAuditDisplayState(audit, versionStatus)} />
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span>
