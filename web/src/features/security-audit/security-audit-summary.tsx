@@ -12,9 +12,10 @@ import { SecurityAuditSection } from './security-audit-section'
 interface SecurityAuditSummaryProps {
   skillId: number
   versionId: number
+  versionStatus?: string
 }
 
-export function SecurityAuditSummary({ skillId, versionId }: SecurityAuditSummaryProps) {
+export function SecurityAuditSummary({ skillId, versionId, versionStatus }: SecurityAuditSummaryProps) {
   const { t } = useTranslation()
   const { data: audits } = useSecurityAudits(skillId, versionId)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -41,7 +42,7 @@ export function SecurityAuditSummary({ skillId, versionId }: SecurityAuditSummar
               className="flex items-center justify-between rounded-xl border border-border/60 bg-secondary/20 p-3"
             >
               <span className="text-xs font-mono text-muted-foreground">{audit.scannerType}</span>
-              <VerdictBadge displayState={getSecurityAuditDisplayState(audit)} />
+              <VerdictBadge displayState={getSecurityAuditDisplayState(audit, versionStatus)} />
             </div>
           ))}
         </div>
@@ -60,7 +61,7 @@ export function SecurityAuditSummary({ skillId, versionId }: SecurityAuditSummar
             <DialogDescription>{t('securityAudit.dialogDescription')}</DialogDescription>
           </DialogHeader>
           <div className="-mx-8 -mb-8 overflow-y-auto overscroll-contain px-8 pb-8">
-            <SecurityAuditSection skillId={skillId} versionId={versionId} bare />
+            <SecurityAuditSection skillId={skillId} versionId={versionId} versionStatus={versionStatus} bare />
           </div>
         </DialogContent>
       </Dialog>

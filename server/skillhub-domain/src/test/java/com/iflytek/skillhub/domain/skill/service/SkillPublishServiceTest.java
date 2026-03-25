@@ -858,7 +858,7 @@ class SkillPublishServiceTest {
     }
 
     @Test
-    void testPublishFromEntries_WhenScannerEnabled_ShouldTriggerScanInsteadOfCreatingReviewTask() throws Exception {
+    void testPublishFromEntries_WhenScannerEnabled_ShouldCreateReviewTaskAndTriggerScan() throws Exception {
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";
         String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
@@ -901,8 +901,8 @@ class SkillPublishServiceTest {
         );
 
         assertNotNull(result);
+        verify(reviewTaskRepository).save(any(ReviewTask.class));
         verify(securityScanService).triggerScan(eq(10L), anyList(), eq(publisherId));
-        verify(reviewTaskRepository, never()).save(any(ReviewTask.class));
     }
 
     private void setId(Object entity, Long id) throws Exception {

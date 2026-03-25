@@ -51,6 +51,7 @@ class SkillLifecycleDeleteControllerTest {
                 eq("global"),
                 eq("demo-skill"),
                 any(),
+                any(),
                 any()))
                 .willReturn(new SkillDeleteAppService.DeleteResult(1L, "global", "demo-skill", true));
 

@@ -53,6 +53,12 @@ describe('VerdictBadge', () => {
     expect(html).toContain('securityAudit.statusScanning')
   })
 
+  it('renders the scan failed label for failed scan display state', () => {
+    const html = renderToStaticMarkup(<VerdictBadge displayState="SCAN_FAILED" />)
+
+    expect(html).toContain('securityAudit.statusScanFailed')
+  })
+
   it('renders as a span with rounded-full pill styling', () => {
     const html = renderToStaticMarkup(<VerdictBadge verdict="SAFE" />)
 

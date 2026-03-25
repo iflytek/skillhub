@@ -23,5 +23,5 @@ public interface SkillRepository {
     Page<Skill> findByOwnerId(String ownerId, Pageable pageable);
     void incrementDownloadCount(Long skillId);
     List<Skill> findBySlug(String slug);
-    Optional<Skill> findByNamespaceSlugAndSlug(String namespaceSlug, String slug);
+    List<Skill> findByNamespaceSlugAndSlug(String namespaceSlug, String slug);
 }

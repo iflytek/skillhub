@@ -206,6 +206,7 @@ export interface SkillDetail {
   headlineVersion?: SkillLifecycleVersion
   publishedVersion?: SkillLifecycleVersion
   ownerPreviewVersion?: SkillLifecycleVersion
+  ownerPreviewReviewComment?: string
   resolutionMode?: string
 }
 

@@ -98,6 +98,7 @@ public class SkillController extends BaseApiController {
                 toLifecycleVersion(detail.headlineVersion()),
                 toLifecycleVersion(detail.publishedVersion()),
                 toLifecycleVersion(detail.ownerPreviewVersion()),
+                detail.ownerPreviewReviewComment(),
                 detail.resolutionMode()
         );
 

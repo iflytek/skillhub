@@ -1,7 +1,14 @@
 import type { SecurityAuditDisplayState, SecurityAuditRecord } from './types'
 
 export function getSecurityAuditDisplayState(
-  audit: Pick<SecurityAuditRecord, 'scannedAt' | 'verdict'>
+  audit: Pick<SecurityAuditRecord, 'scannedAt' | 'verdict'>,
+  versionStatus?: string
 ): SecurityAuditDisplayState {
-  return audit.scannedAt ? audit.verdict : 'SCANNING'
+  if (audit.scannedAt) {
+    return audit.verdict
+  }
+  if (versionStatus === 'SCAN_FAILED') {
+    return 'SCAN_FAILED'
+  }
+  return 'SCANNING'
 }

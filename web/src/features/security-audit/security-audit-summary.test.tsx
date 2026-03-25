@@ -100,10 +100,19 @@ describe('SecurityAuditSummary', () => {
   it('renders scanning status when the audit has not completed yet', () => {
     mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
 
-    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCANNING" />)
 
     expect(html).toContain('securityAudit.statusScanning')
     expect(html).not.toContain('securityAudit.verdict.SUSPICIOUS')
+  })
+
+  it('renders scan failed status when version scan failed before audit completion', () => {
+    mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" />)
+
+    expect(html).toContain('securityAudit.statusScanFailed')
+    expect(html).not.toContain('securityAudit.statusScanning')
   })
 
   it('renders the total findings count across all audits', () => {

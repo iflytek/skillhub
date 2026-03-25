@@ -1,7 +1,5 @@
 package com.iflytek.skillhub.stream;
 
-import com.iflytek.skillhub.domain.review.ReviewTask;
-import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.ScanTask;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
 import com.iflytek.skillhub.domain.security.ScannerType;
@@ -9,7 +7,6 @@ import com.iflytek.skillhub.domain.security.SecurityScanRequest;
 import com.iflytek.skillhub.domain.security.SecurityScanResponse;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.security.SecurityScanner;
-import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import org.redisson.api.RedissonClient;
@@ -28,8 +25,6 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     private final SecurityScanner securityScanner;
     private final SecurityScanService securityScanService;
     private final SkillVersionRepository skillVersionRepository;
-    private final SkillRepository skillRepository;
-    private final ReviewTaskRepository reviewTaskRepository;
     private final ScanTaskProducer scanTaskProducer;
 
     public ScanTaskConsumer(RedissonClient redissonClient,
@@ -38,15 +33,11 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                             SecurityScanner securityScanner,
                             SecurityScanService securityScanService,
                             SkillVersionRepository skillVersionRepository,
-                            SkillRepository skillRepository,
-                            ReviewTaskRepository reviewTaskRepository,
                             ScanTaskProducer scanTaskProducer) {
         super(redissonClient, streamKey, groupName);
         this.securityScanner = securityScanner;
         this.securityScanService = securityScanService;
         this.skillVersionRepository = skillVersionRepository;
-        this.skillRepository = skillRepository;
-        this.reviewTaskRepository = reviewTaskRepository;
         this.scanTaskProducer = scanTaskProducer;
     }
 
@@ -56,8 +47,6 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                             SecurityScanner securityScanner,
                             SecurityScanService securityScanService,
                             SkillVersionRepository skillVersionRepository,
-                            SkillRepository skillRepository,
-                            ReviewTaskRepository reviewTaskRepository,
                             ScanTaskProducer scanTaskProducer,
                             boolean reclaimEnabled,
                             Duration reclaimMinIdle,
@@ -67,8 +56,6 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         this.securityScanner = securityScanner;
         this.securityScanService = securityScanService;
         this.skillVersionRepository = skillVersionRepository;
-        this.skillRepository = skillRepository;
-        this.reviewTaskRepository = reviewTaskRepository;
         this.scanTaskProducer = scanTaskProducer;
     }
 
@@ -136,10 +123,6 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                     .ifPresent(version -> {
                         version.setStatus(SkillVersionStatus.SCAN_FAILED);
                         skillVersionRepository.save(version);
-                        skillRepository.findById(version.getSkillId())
-                                .ifPresent(skill -> reviewTaskRepository.save(
-                                        new ReviewTask(payload.versionId, skill.getNamespaceId(), version.getCreatedBy())
-                                ));
                     });
         } finally {
             cleanupTempPath(payload.skillPath);

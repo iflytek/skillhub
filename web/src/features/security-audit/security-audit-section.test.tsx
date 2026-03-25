@@ -102,10 +102,20 @@ describe('SecurityAuditSection', () => {
     mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
     mockIsLoading = false
 
-    const html = renderToStaticMarkup(<SecurityAuditSection skillId={1} versionId={10} />)
+    const html = renderToStaticMarkup(<SecurityAuditSection skillId={1} versionId={10} versionStatus="SCANNING" />)
 
     expect(html).toContain('securityAudit.statusScanning')
     expect(html).not.toContain('securityAudit.verdict.SUSPICIOUS')
+  })
+
+  it('renders scan failed status when version scan failed before audit completion', () => {
+    mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
+    mockIsLoading = false
+
+    const html = renderToStaticMarkup(<SecurityAuditSection skillId={1} versionId={10} versionStatus="SCAN_FAILED" />)
+
+    expect(html).toContain('securityAudit.statusScanFailed')
+    expect(html).not.toContain('securityAudit.statusScanning')
   })
 
   it('renders the findings count', () => {

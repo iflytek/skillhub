@@ -349,18 +349,17 @@ public class SkillPublishService {
         skillVersionRepository.save(version);
 
         if (!autoPublish) {
+            ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
+            ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
+            eventPublisher.publishEvent(new ReviewSubmittedEvent(
+                    savedReviewTask.getId(),
+                    skill.getId(),
+                    version.getId(),
+                    savedReviewTask.getSubmittedBy(),
+                    savedReviewTask.getNamespaceId()
+            ));
             if (securityScanService.isEnabled()) {
                 securityScanService.triggerScan(version.getId(), entries, publisherId);
-            } else {
-                ReviewTask reviewTask = new ReviewTask(version.getId(), namespace.getId(), publisherId);
-                ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
-                eventPublisher.publishEvent(new ReviewSubmittedEvent(
-                        savedReviewTask.getId(),
-                        skill.getId(),
-                        version.getId(),
-                        savedReviewTask.getSubmittedBy(),
-                        savedReviewTask.getNamespaceId()
-                ));
             }
         }
 

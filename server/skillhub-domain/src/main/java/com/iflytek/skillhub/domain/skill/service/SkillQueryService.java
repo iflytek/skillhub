@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -49,6 +50,7 @@ public class SkillQueryService {
     private final ObjectStorageService objectStorageService;
     private final VisibilityChecker visibilityChecker;
     private final PromotionRequestRepository promotionRequestRepository;
+    private final ReviewTaskRepository reviewTaskRepository;
     private final SkillSlugResolutionService skillSlugResolutionService;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
     private final UserAccountRepository userAccountRepository;
@@ -62,6 +64,7 @@ public class SkillQueryService {
             ObjectStorageService objectStorageService,
             VisibilityChecker visibilityChecker,
             PromotionRequestRepository promotionRequestRepository,
+            ReviewTaskRepository reviewTaskRepository,
             SkillSlugResolutionService skillSlugResolutionService,
             SkillLifecycleProjectionService skillLifecycleProjectionService,
             UserAccountRepository userAccountRepository) {
@@ -73,6 +76,7 @@ public class SkillQueryService {
         this.objectStorageService = objectStorageService;
         this.visibilityChecker = visibilityChecker;
         this.promotionRequestRepository = promotionRequestRepository;
+        this.reviewTaskRepository = reviewTaskRepository;
         this.skillSlugResolutionService = skillSlugResolutionService;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
         this.userAccountRepository = userAccountRepository;
@@ -102,6 +106,7 @@ public class SkillQueryService {
             SkillLifecycleProjectionService.VersionProjection headlineVersion,
             SkillLifecycleProjectionService.VersionProjection publishedVersion,
             SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion,
+            String ownerPreviewReviewComment,
             String resolutionMode
     ) {}
 
@@ -158,6 +163,7 @@ public class SkillQueryService {
         SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
         SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
         SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
+        String ownerPreviewReviewComment = resolveOwnerPreviewReviewComment(ownerPreviewVersion);
         String ownerDisplayName = userAccountRepository.findById(skill.getOwnerId())
                 .map(UserAccount::getDisplayName)
                 .filter(name -> name != null && !name.isBlank())
@@ -187,6 +193,7 @@ public class SkillQueryService {
                 headlineVersion,
                 publishedVersion,
                 ownerPreviewVersion,
+                ownerPreviewReviewComment,
                 projection.resolutionMode().name()
         );
     }
@@ -660,6 +667,16 @@ public class SkillQueryService {
 
     private boolean isNamespaceMember(Long namespaceId, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
         return currentUserId != null && userNsRoles.containsKey(namespaceId);
+    }
+
+    private String resolveOwnerPreviewReviewComment(SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion) {
+        if (ownerPreviewVersion == null || !"REJECTED".equals(ownerPreviewVersion.status())) {
+            return null;
+        }
+        return reviewTaskRepository.findBySkillVersionIdAndStatus(ownerPreviewVersion.id(), ReviewTaskStatus.REJECTED)
+                .map(com.iflytek.skillhub.domain.review.ReviewTask::getReviewComment)
+                .filter(comment -> comment != null && !comment.isBlank())
+                .orElse(null);
     }
 
     private int lifecycleListPriority(SkillVersionStatus status) {

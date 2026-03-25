@@ -122,6 +122,10 @@ export function ReviewDetailPage() {
   }
 
   const reviewFiles = reviewSkillDetail?.files
+  const activeReviewVersion = reviewSkillDetail?.versions?.find(
+    (version) => version.version === reviewSkillDetail.activeVersion
+  )
+  const isApprovalBlockedByScanning = activeReviewVersion?.status === 'SCANNING'
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
@@ -214,8 +218,13 @@ export function ReviewDetailPage() {
 
           <div className="flex gap-3">
             <Button
-              onClick={() => setApproveDialog(true)}
-              disabled={approveMutation.isPending || rejectMutation.isPending}
+              onClick={() => {
+                if (isApprovalBlockedByScanning) {
+                  return
+                }
+                setApproveDialog(true)
+              }}
+              disabled={approveMutation.isPending || rejectMutation.isPending || isApprovalBlockedByScanning}
             >
               {t('review.approve')}
             </Button>
@@ -253,6 +262,10 @@ export function ReviewDetailPage() {
             )}
           </div>
 
+          {isApprovalBlockedByScanning && (
+            <p className="text-sm text-muted-foreground">{t('review.approveDisabledScanning')}</p>
+          )}
+
           {showRejectForm && !comment.trim() && (
             <p className="text-sm text-destructive">{t('review.rejectReasonRequired')}</p>
           )}
@@ -265,7 +278,7 @@ export function ReviewDetailPage() {
           reviewSkillDetail?.versions?.find((v) => v.version === review.version)?.id ??
           review.skillVersionId
         return skillId && versionId ? (
-          <SecurityAuditSection skillId={skillId} versionId={versionId} />
+          <SecurityAuditSection skillId={skillId} versionId={versionId} versionStatus={activeReviewVersion?.status} />
         ) : null
       })()}
 
