@@ -19,21 +19,30 @@ interface PRMeta {
   assignees: components["schemas"]["simple-user"][];
 }
 
-const PR_DATA = await $`gh api graphql -f query='{
-  repository(owner: "${repositoryOwner}", name: "${repositoryName}") {
-    issue(number: ${issueNumber}) {
-      closedByPullRequestsReferences(first: 10) {
-        nodes {
-          url
-          merged
-          mergeCommit {
-            oid
+const graphqlQuery = `
+  query($owner: String!, $name: String!, $number: Int!) {
+    repository(owner: $owner, name: $name) {
+      issue(number: $number) {
+        closedByPullRequestsReferences(first: 10) {
+          nodes {
+            url
+            merged
+            mergeCommit {
+              oid
+            }
           }
         }
       }
     }
   }
-}' --jq '.data.repository.issue.closedByPullRequestsReferences.nodes[] | select(.merged == true) | {url: .url, mergeCommitSha: .mergeCommit.oid}' | head -n 1`;
+`;
+
+const PR_DATA = await $`gh api graphql \
+  -f query=${graphqlQuery} \
+  -f owner=${repositoryOwner} \
+  -f name=${repositoryName} \
+  -F number=${issueNumber} \
+  --jq '.data.repository.issue.closedByPullRequestsReferences.nodes[] | select(.merged == true) | {url: .url, mergeCommitSha: .mergeCommit.oid}' | head -n 1`;
 
 const prData = PR_DATA.text().trim();
 
