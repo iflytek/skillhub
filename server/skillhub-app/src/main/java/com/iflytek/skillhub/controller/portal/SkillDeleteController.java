@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -34,11 +35,13 @@ public class SkillDeleteController extends BaseApiController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ApiResponse<SkillDeleteResponse> deleteSkill(@PathVariable String namespace,
                                                         @PathVariable String slug,
+                                                        @RequestParam(required = false) String ownerId,
                                                         @AuthenticationPrincipal PlatformPrincipal principal,
                                                         HttpServletRequest request) {
         SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkill(
                 namespace,
                 slug,
+                ownerId,
                 principal.userId(),
                 AuditRequestContext.from(request)
         );
