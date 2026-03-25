@@ -178,8 +178,8 @@ export function useDeleteSkill() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ namespace, slug, ownerId }: { namespace: string; slug: string; ownerId?: string }) =>
-      skillLifecycleApi.deleteSkill(namespace, slug, ownerId),
+    mutationFn: ({ skillId }: { skillId: number; namespace: string; slug: string }) =>
+      skillLifecycleApi.deleteSkill(skillId),
     onSuccess: (data, variables) => {
       clearDeletedSkillQueries(queryClient, variables.namespace, variables.slug, data.skillId)
     },

@@ -477,7 +477,7 @@ export function SkillDetailPage() {
       return
     }
     try {
-      await deleteSkillMutation.mutateAsync({ namespace, slug, ownerId: skill.ownerId })
+      await deleteSkillMutation.mutateAsync({ skillId: skill.id, namespace, slug })
       setSkillDeleted(true)
       toast.success(
         t('skillDetail.deleteSkillSuccessTitle'),
