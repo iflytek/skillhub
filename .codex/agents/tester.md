@@ -1,0 +1,102 @@
+---
+name: tester
+description: Use when writing or running tests for SkillHub changes, including Vitest, Spring Boot tests, Playwright checks, and final quality gates.
+model: inherit
+---
+
+# SkillHub 测试规范
+
+## 前端单元测试（Vitest）
+
+### 规则
+
+- 文件名 kebab-case，与源文件**同目录**（`overview-collapse.test.ts` 和 `overview-collapse.ts` 同级）
+- 使用 `describe / it / expect` 结构
+- 覆盖：正常路径、边界值、错误场景
+
+### 示例
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { getOverviewCollapseMaxHeight, shouldCollapseOverview } from './overview-collapse'
+
+describe('overview collapse helpers', () => {
+  it('uses fixed max height on desktop', () => {
+    expect(getOverviewCollapseMaxHeight(1280, 900)).toBe(720)
+  })
+
+  it('uses viewport ratio on mobile', () => {
+    expect(getOverviewCollapseMaxHeight(375, 900)).toBe(Math.round(900 * 0.6))
+  })
+})
+```
+
+### 运行
+
+```bash
+cd web && pnpm exec vitest run src/features/skill/overview-collapse.test.ts
+make test-frontend
+```
+
+## 后端单元测试（Spring Boot）
+
+### Controller 层模式
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class MyControllerTest {
+    @Autowired MockMvc mockMvc;
+    @MockBean MyAppService myAppService;
+
+    @Test
+    void shouldReturnData() throws Exception {
+        when(myAppService.getData()).thenReturn(someData);
+        mockMvc.perform(get("/api/v1/resource")
+                .with(authentication(mockAuth())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data").exists());
+    }
+}
+```
+
+### 运行
+
+```bash
+make test-backend-app
+
+cd server && JDK_JAVA_OPTIONS="-XX:+EnableDynamicAgentLoading" \
+  ./mvnw -pl skillhub-app -am test -Dtest=MyControllerTest
+```
+
+## 截图 & 交互验证（Playwright MCP）
+
+**前提**：确认本地服务已启动（`make dev-all`），访问 http://localhost:3000 可用。
+
+### 工具
+
+- `browser_navigate`：导航到页面
+- `browser_take_screenshot`：截图，保存到 `web/test/screenshots/`
+- `browser_snapshot`：获取无障碍树快照（用于断言元素存在）
+- `browser_click` / `browser_fill_form`：交互操作
+
+### 截图保存路径
+
+`web/test/screenshots/<feature>-<scenario>-<YYYY-MM-DD>.png`
+
+## 质量门禁（完成测试任务后必须全部通过）
+
+| 检查 | 命令 | 通过条件 |
+|---|---|---|
+| TypeScript 类型检查 | `make typecheck-web` | 0 errors |
+| ESLint | `make lint-web` | 0 errors，0 warnings |
+| 前端单测 | `make test-frontend` | 所有 Vitest 测试通过 |
+| 后端单测 | `make test-backend-app` | 有后端变更时运行：`git diff --name-only HEAD -- server/` 有输出才执行 |
+
+## 禁止行为
+
+- 为让测试通过而 mock 掉真实业务逻辑（Controller 测试可以 mock AppService，但 AppService 本身的逻辑不能 mock 掉）
+- 跳过质量门禁直接声明完成
+- 截图测试时未确认本地服务已启动
