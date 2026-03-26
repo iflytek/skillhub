@@ -23,10 +23,14 @@ import com.iflytek.skillhub.domain.skill.validation.PrePublishValidator;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
 import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
@@ -58,6 +62,7 @@ public class SkillPublishService {
 
     private static final DateTimeFormatter AUTO_VERSION_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneOffset.UTC);
+    private static final Logger log = LoggerFactory.getLogger(SkillPublishService.class);
 
     public record PublishResult(
             Long skillId,
@@ -77,6 +82,7 @@ public class SkillPublishService {
     private final ObjectMapper objectMapper;
     private final ReviewTaskRepository reviewTaskRepository;
     private final SecurityScanService securityScanService;
+    private final SkillStorageDeletionCompensationService compensationService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
@@ -93,6 +99,7 @@ public class SkillPublishService {
             ObjectMapper objectMapper,
             ReviewTaskRepository reviewTaskRepository,
             SecurityScanService securityScanService,
+            SkillStorageDeletionCompensationService compensationService,
             ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.namespaceRepository = namespaceRepository;
@@ -107,6 +114,7 @@ public class SkillPublishService {
         this.objectMapper = objectMapper;
         this.reviewTaskRepository = reviewTaskRepository;
         this.securityScanService = securityScanService;
+        this.compensationService = compensationService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
@@ -262,7 +270,7 @@ public class SkillPublishService {
             if (matchedVersion.getStatus() == SkillVersionStatus.PUBLISHED) {
                 throw new DomainBadRequestException("error.skill.version.exists", metadata.version());
             }
-            deleteReplaceableVersionArtifacts(skill, matchedVersion);
+            deleteReplaceableVersionArtifacts(skill, matchedVersion, namespaceSlug);
         }
 
         // 8. Create SkillVersion
@@ -381,7 +389,7 @@ public class SkillPublishService {
         return new PublishResult(skill.getId(), skill.getSlug(), version);
     }
 
-    private void deleteReplaceableVersionArtifacts(Skill skill, SkillVersion version) {
+    private void deleteReplaceableVersionArtifacts(Skill skill, SkillVersion version, String namespaceSlug) {
         if (version.getStatus() == SkillVersionStatus.PUBLISHED) {
             throw new DomainBadRequestException("error.skill.version.exists", version.getVersion());
         }
@@ -390,10 +398,13 @@ public class SkillPublishService {
                 .ifPresent(reviewTaskRepository::delete);
 
         List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
-        if (!files.isEmpty()) {
-            objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());
-        }
-        objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
+        List<String> storageKeys = new ArrayList<>();
+        files.stream()
+                .map(SkillFile::getStorageKey)
+                .filter(key -> key != null && !key.isBlank())
+                .forEach(storageKeys::add);
+        storageKeys.add(buildBundleStorageKey(skill.getId(), version.getId()));
+        deleteStorageAfterCommit(skill, namespaceSlug, storageKeys);
         skillFileRepository.deleteByVersionId(version.getId());
         securityScanService.softDeleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
@@ -408,6 +419,42 @@ public class SkillPublishService {
         return namespaceRepository.findById(namespaceId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.notFound", namespaceId))
                 .getSlug();
+    }
+
+    private void deleteStorageAfterCommit(Skill skill, String namespaceSlug, List<String> storageKeys) {
+        if (storageKeys.isEmpty()) {
+            return;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteStorageWithCompensation(skill, namespaceSlug, storageKeys);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteStorageWithCompensation(skill, namespaceSlug, storageKeys);
+            }
+        });
+    }
+
+    private void deleteStorageWithCompensation(Skill skill, String namespaceSlug, List<String> storageKeys) {
+        try {
+            objectStorageService.deleteObjects(storageKeys);
+        } catch (RuntimeException ex) {
+            compensationService.recordFailure(
+                    skill.getId(),
+                    namespaceSlug,
+                    skill.getSlug(),
+                    storageKeys,
+                    ex.getMessage()
+            );
+            log.error("Failed to delete replaced version storage after commit [skillId={}, versionKeys={}]",
+                    skill.getId(), storageKeys, ex);
+        }
+    }
+
+    private String buildBundleStorageKey(Long skillId, Long versionId) {
+        return String.format("packages/%d/%d/bundle.zip", skillId, versionId);
     }
 
     private void assertNamespaceWritable(Namespace namespace) {

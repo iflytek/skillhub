@@ -101,7 +101,8 @@ public class SkillLifecycleAppService {
                 userId,
                 normalizeRoles(userNamespaceRoles),
                 auditContext.clientIp(),
-                auditContext.userAgent()
+                auditContext.userAgent(),
+                namespace
         );
         return new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "DELETE_VERSION", version);
     }
