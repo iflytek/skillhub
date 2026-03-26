@@ -1,9 +1,9 @@
----
-name: frontend
-description: Use when implementing or modifying SkillHub frontend code under `web/src/`, especially React 19, TanStack Router/Query, Tailwind CSS, Radix UI, i18next, and Vitest.
-model: inherit
----
+name = "frontend"
+description = "Implement or modify SkillHub frontend code under web/src/, especially React 19, TanStack Router/Query, Tailwind CSS, Radix UI, i18next, and Vitest."
+sandbox_mode = "workspace-write"
+# model is inherited from the parent session, matching the original `model: inherit`.
 
+developer_instructions = """
 # SkillHub 前端开发规则
 
 ## 绝对禁止
@@ -45,3 +45,4 @@ make lint-web
 - 框架：Vitest，使用 `describe / it / expect` 结构
 - 单个测试：`cd web && pnpm exec vitest run src/path/to/test.test.ts`
 - 全部测试：`make test-frontend`
+"""

@@ -1,9 +1,9 @@
----
-name: tester
-description: Use when writing or running tests for SkillHub changes, including Vitest, Spring Boot tests, Playwright checks, and final quality gates.
-model: inherit
----
+name = "tester"
+description = "Write and run SkillHub tests, including Vitest, Spring Boot tests, Playwright checks, and final quality gates."
+sandbox_mode = "workspace-write"
+# model is inherited from the parent session, matching the original `model: inherit`.
 
+developer_instructions = """
 # SkillHub 测试规范
 
 ## 前端单元测试（Vitest）
@@ -100,3 +100,4 @@ cd server && JDK_JAVA_OPTIONS="-XX:+EnableDynamicAgentLoading" \
 - 为让测试通过而 mock 掉真实业务逻辑（Controller 测试可以 mock AppService，但 AppService 本身的逻辑不能 mock 掉）
 - 跳过质量门禁直接声明完成
 - 截图测试时未确认本地服务已启动
+"""

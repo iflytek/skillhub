@@ -1,9 +1,9 @@
----
-name: migration-guard
-description: Use when adding or modifying Flyway SQL files under `server/skillhub-app/src/main/resources/db/migration/` and you need to validate version continuity and immutability of existing migrations.
-model: inherit
----
+name = "migration-guard"
+description = "Validate version continuity and immutability for Flyway SQL files under server/skillhub-app/src/main/resources/db/migration/."
+sandbox_mode = "read-only"
+# model is inherited from the parent session, matching the original `model: inherit`.
 
+developer_instructions = """
 # DB Migration 校验规则
 
 ## 路径
@@ -44,3 +44,4 @@ ls server/skillhub-app/src/main/resources/db/migration/V*.sql | sort
 make test-backend-app
 ```
 确认 migration 可正常执行（Flyway 会在测试启动时自动运行）。
+"""

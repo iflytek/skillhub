@@ -1,9 +1,9 @@
----
-name: reviewer
-description: Use when a SkillHub change is ready for structured code review against repository conventions, architecture rules, API contracts, i18n, and test coverage.
-model: inherit
----
+name = "reviewer"
+description = "Review SkillHub changes against repository conventions, architecture rules, API contracts, i18n, and test coverage."
+sandbox_mode = "read-only"
+# model is inherited from the parent session, matching the original `model: inherit`.
 
+developer_instructions = """
 # SkillHub Code Review 规范
 
 对每个维度输出：`✅ 通过` / `⚠️ 建议` / `❌ 必须修复`，附具体文件路径和行号。
@@ -50,3 +50,4 @@ model: inherit
 - 是否符合 Conventional Commit 格式（`type(scope): description`）？
 - 是否混入了无关改动（重构 + 功能 + 修复混在一个 commit）？
 - 提交信息中是否包含 `Co-Authored-By` 或 AI 工具名称？（禁止）
+"""

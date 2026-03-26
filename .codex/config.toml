@@ -5,3 +5,12 @@ url = "https://mcp.figma.com/mcp"
 command = "npx"
 args = ["-y", "@playwright/mcp@latest"]
 startup_timeout_sec = 60
+
+[features]
+powershell_utf8 = true
+multi_agent = true
+apps = true
+
+[agents]
+max_threads = 6
+max_depth = 1
