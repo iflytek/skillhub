@@ -1,5 +1,13 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { buildInstallCommand, buildInstallTarget, getBaseUrl } from './install-command'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { InstallCommand, buildInstallCommand, buildInstallTarget, getBaseUrl } from './install-command'
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
 
 describe('install-command', () => {
   const originalWindow = globalThis.window
@@ -63,5 +71,15 @@ describe('install-command', () => {
   it('falls back to the browser origin when the app base url is missing', () => {
     setMockWindow()
     expect(getBaseUrl()).toBe('https://fallback.example.com')
+  })
+
+  it('renders the install command in a more compact code block', () => {
+    setMockWindow('http://localhost:3000')
+
+    const html = renderToStaticMarkup(createElement(InstallCommand, { namespace: 'global', slug: 'meeting-minutes-generator' }))
+
+    expect(html).toContain('px-4 py-3')
+    expect(html).toContain('leading-relaxed')
+    expect(html).toContain('break-all')
   })
 })

@@ -940,7 +940,7 @@ export function SkillDetailPage() {
         <Card className="p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
-            <div className="font-semibold font-mono text-foreground">
+            <div className="max-w-[11rem] break-all text-right font-mono font-semibold leading-snug text-foreground">
               {headlineVersion ? `v${headlineVersion.version}` : '—'}
             </div>
           </div>
@@ -1034,7 +1034,7 @@ export function SkillDetailPage() {
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   {t('skillDetail.pendingReviewVersionLabel')}
                 </div>
-                <div className="mt-2 font-mono text-sm font-semibold text-foreground">
+                <div className="mt-2 break-all font-mono text-sm font-semibold leading-snug text-foreground">
                   v{ownerPreviewVersion.version}
                 </div>
               </div>
