@@ -92,4 +92,33 @@ class SkillDeleteControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(403));
     }
+
+    @Test
+    void deleteSkillById_allowsSuperAdminAndReturnsDeletedResponse() throws Exception {
+        given(skillDeleteAppService.deleteSkillById(
+                org.mockito.ArgumentMatchers.eq(11L),
+                org.mockito.ArgumentMatchers.eq("super-1"),
+                org.mockito.ArgumentMatchers.any()))
+                .willReturn(new SkillDeleteAppService.DeleteResult(11L, "global", "demo-skill", true));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "super-1", "Super", "super@example.com", "", "api_token", Set.of("SUPER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(
+                        new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"),
+                        new SimpleGrantedAuthority("SCOPE_skill:delete")
+                ));
+
+        mockMvc.perform(delete("/api/v1/skills/id/11")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.deleted").value(true))
+                .andExpect(jsonPath("$.data.skillId").value(11))
+                .andExpect(jsonPath("$.data.namespace").value("global"))
+                .andExpect(jsonPath("$.data.slug").value("demo-skill"));
+    }
 }

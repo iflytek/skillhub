@@ -27,6 +27,23 @@ public class SkillLifecycleDeleteController extends BaseApiController {
         this.skillDeleteAppService = skillDeleteAppService;
     }
 
+    @DeleteMapping("/id/{skillId}")
+    public ApiResponse<SkillDeleteResponse> deleteSkillById(@PathVariable Long skillId,
+                                                            @AuthenticationPrincipal PlatformPrincipal principal,
+                                                            HttpServletRequest httpRequest) {
+        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkillByIdFromPortal(
+                skillId,
+                principal,
+                AuditRequestContext.from(httpRequest)
+        );
+        return ok("response.success.deleted", new SkillDeleteResponse(
+                result.skillId(),
+                result.namespace(),
+                result.slug(),
+                result.deleted()
+        ));
+    }
+
     @DeleteMapping("/{namespace}/{slug}")
     public ApiResponse<SkillDeleteResponse> deleteSkill(@PathVariable String namespace,
                                                         @PathVariable String slug,

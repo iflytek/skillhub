@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.BDDMockito.given;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
@@ -29,6 +31,9 @@ import java.util.Optional;
 import java.util.Map;
 import java.time.ZoneOffset;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +59,8 @@ class SkillGovernanceServiceTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private SecurityScanService securityScanService;
+    @Mock
+    private SkillStorageDeletionCompensationService compensationService;
 
     private SkillGovernanceService service;
 
@@ -67,8 +74,16 @@ class SkillGovernanceServiceTest {
                 auditLogService,
                 eventPublisher,
                 securityScanService,
+                compensationService,
                 CLOCK
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
@@ -201,17 +216,86 @@ class SkillGovernanceServiceTest {
         SkillFile icon = new SkillFile(version.getId(), "icon.png", 20L, "image/png", "sha2", "skills/demo/icon");
         given(skillFileRepository.findByVersionId(version.getId())).willReturn(java.util.List.of(readme, icon));
 
-        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit");
+        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
 
         verify(objectStorageService).deleteObjects(argThat(keys ->
-                keys.size() == 2
+                keys.size() == 3
                         && keys.contains("skills/demo/readme")
-                        && keys.contains("skills/demo/icon")));
-        verify(objectStorageService).deleteObject("packages/1/2/bundle.zip");
+                        && keys.contains("skills/demo/icon")
+                        && keys.contains("packages/1/2/bundle.zip")));
         verify(skillFileRepository).deleteByVersionId(2L);
         verify(securityScanService).softDeleteByVersionId(2L);
         verify(skillVersionRepository).delete(version);
         verify(auditLogService).record("owner", "DELETE_SKILL_VERSION", "SKILL_VERSION", 2L, null, "127.0.0.1", "JUnit", "{\"version\":\"1.0.0\"}");
+    }
+
+    @Test
+    void deleteVersion_deletesStorageAfterCommitWhenSynchronizationIsActive() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 2L);
+        version.setStatus(SkillVersionStatus.DRAFT);
+        SkillVersion otherVersion = new SkillVersion(2L, "2.0.0", "owner");
+        setField(otherVersion, "id", 3L);
+        otherVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(version, otherVersion));
+        SkillFile readme = new SkillFile(version.getId(), "README.md", 10L, "text/markdown", "sha1", "skills/demo/readme");
+        SkillFile icon = new SkillFile(version.getId(), "icon.png", 20L, "image/png", "sha2", "skills/demo/icon");
+        given(skillFileRepository.findByVersionId(version.getId())).willReturn(java.util.List.of(readme, icon));
+
+        TransactionSynchronizationManager.initSynchronization();
+
+        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
+
+        verify(objectStorageService, never()).deleteObjects(argThat(keys -> !keys.isEmpty()));
+
+        for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+            synchronization.afterCommit();
+        }
+
+        verify(objectStorageService).deleteObjects(argThat(keys ->
+                keys.size() == 3
+                        && keys.contains("skills/demo/readme")
+                        && keys.contains("skills/demo/icon")
+                        && keys.contains("packages/1/2/bundle.zip")));
+    }
+
+    @Test
+    void deleteVersion_recordsCompensationWhenDeferredDeleteFails() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 2L);
+        version.setStatus(SkillVersionStatus.DRAFT);
+        SkillVersion otherVersion = new SkillVersion(2L, "2.0.0", "owner");
+        setField(otherVersion, "id", 3L);
+        otherVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(version, otherVersion));
+        SkillFile readme = new SkillFile(version.getId(), "README.md", 10L, "text/markdown", "sha1", "skills/demo/readme");
+        SkillFile icon = new SkillFile(version.getId(), "icon.png", 20L, "image/png", "sha2", "skills/demo/icon");
+        given(skillFileRepository.findByVersionId(version.getId())).willReturn(java.util.List.of(readme, icon));
+        doThrow(new RuntimeException("s3 down")).when(objectStorageService).deleteObjects(anyList());
+
+        TransactionSynchronizationManager.initSynchronization();
+
+        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
+
+        for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+            synchronization.afterCommit();
+        }
+
+        verify(compensationService).recordFailure(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq("test-ns"),
+                org.mockito.ArgumentMatchers.eq("demo"),
+                argThat(keys ->
+                        keys.size() == 3
+                                && keys.contains("skills/demo/readme")
+                                && keys.contains("skills/demo/icon")
+                                && keys.contains("packages/1/2/bundle.zip")),
+                org.mockito.ArgumentMatchers.contains("s3 down")
+        );
     }
 
     @Test
@@ -223,7 +307,7 @@ class SkillGovernanceServiceTest {
         version.setStatus(SkillVersionStatus.PUBLISHED);
 
         assertThrows(DomainBadRequestException.class,
-                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit"));
+                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns"));
 
         verify(skillVersionRepository, never()).delete(any());
         verify(objectStorageService, never()).deleteObject(any());
@@ -239,7 +323,7 @@ class SkillGovernanceServiceTest {
         given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(version));
 
         DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
-                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit"));
+                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns"));
         assertThat(ex.messageCode()).isEqualTo("error.skill.version.delete.lastVersion");
 
         verify(skillVersionRepository, never()).delete(any());
@@ -267,7 +351,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.save(skill)).willReturn(skill);
         given(skillFileRepository.findByVersionId(2L)).willReturn(java.util.List.of());
 
-        service.deleteVersion(skill, draftVersion, "owner", Map.of(), "127.0.0.1", "JUnit");
+        service.deleteVersion(skill, draftVersion, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
 
         assertThat(skill.getLatestVersionId()).isEqualTo(3L);
         verify(skillRepository).save(skill);

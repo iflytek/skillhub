@@ -18,11 +18,16 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Handles governance-oriented mutations on skills and versions, including
@@ -31,6 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SkillGovernanceService {
 
+    private static final Logger log = LoggerFactory.getLogger(SkillGovernanceService.class);
+
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillFileRepository skillFileRepository;
@@ -38,6 +45,7 @@ public class SkillGovernanceService {
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
     private final SecurityScanService securityScanService;
+    private final SkillStorageDeletionCompensationService compensationService;
     private final Clock clock;
 
     public SkillGovernanceService(SkillRepository skillRepository,
@@ -47,6 +55,7 @@ public class SkillGovernanceService {
                                   AuditLogService auditLogService,
                                   ApplicationEventPublisher eventPublisher,
                                   SecurityScanService securityScanService,
+                                  SkillStorageDeletionCompensationService compensationService,
                                   Clock clock) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -55,6 +64,7 @@ public class SkillGovernanceService {
         this.auditLogService = auditLogService;
         this.eventPublisher = eventPublisher;
         this.securityScanService = securityScanService;
+        this.compensationService = compensationService;
         this.clock = clock;
     }
 
@@ -147,7 +157,8 @@ public class SkillGovernanceService {
                               String actorUserId,
                               Map<Long, NamespaceRole> userNamespaceRoles,
                               String clientIp,
-                              String userAgent) {
+                              String userAgent,
+                              String namespaceSlug) {
         assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
         if (version.getStatus() != SkillVersionStatus.DRAFT
                 && version.getStatus() != SkillVersionStatus.REJECTED
@@ -161,10 +172,13 @@ public class SkillGovernanceService {
         }
 
         List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
-        if (!files.isEmpty()) {
-            objectStorageService.deleteObjects(files.stream().map(SkillFile::getStorageKey).toList());
-        }
-        objectStorageService.deleteObject(String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId()));
+        List<String> storageKeys = new ArrayList<>();
+        files.stream()
+                .map(SkillFile::getStorageKey)
+                .filter(key -> key != null && !key.isBlank())
+                .forEach(storageKeys::add);
+        storageKeys.add(buildBundleStorageKey(skill.getId(), version.getId()));
+        deleteStorageAfterCommit(skill, namespaceSlug, storageKeys);
         skillFileRepository.deleteByVersionId(version.getId());
         securityScanService.softDeleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
@@ -183,6 +197,42 @@ public class SkillGovernanceService {
                 userAgent,
                 "{\"version\":\"" + version.getVersion().replace("\"", "\\\"") + "\"}"
         );
+    }
+
+    private void deleteStorageAfterCommit(Skill skill, String namespaceSlug, List<String> storageKeys) {
+        if (storageKeys.isEmpty()) {
+            return;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteStorageWithCompensation(skill, namespaceSlug, storageKeys);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteStorageWithCompensation(skill, namespaceSlug, storageKeys);
+            }
+        });
+    }
+
+    private void deleteStorageWithCompensation(Skill skill, String namespaceSlug, List<String> storageKeys) {
+        try {
+            objectStorageService.deleteObjects(storageKeys);
+        } catch (RuntimeException ex) {
+            compensationService.recordFailure(
+                    skill.getId(),
+                    namespaceSlug,
+                    skill.getSlug(),
+                    storageKeys,
+                    ex.getMessage()
+            );
+            log.error("Failed to delete version storage after commit [skillId={}, versionKeys={}]",
+                    skill.getId(), storageKeys, ex);
+        }
+    }
+
+    private String buildBundleStorageKey(Long skillId, Long versionId) {
+        return String.format("packages/%d/%d/bundle.zip", skillId, versionId);
     }
 
     @Transactional

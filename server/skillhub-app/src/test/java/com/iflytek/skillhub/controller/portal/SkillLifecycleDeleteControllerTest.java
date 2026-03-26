@@ -65,6 +65,24 @@ class SkillLifecycleDeleteControllerTest {
                 .andExpect(jsonPath("$.data.slug").value("demo-skill"));
     }
 
+    @Test
+    void deleteSkillById_allowsPortalOwnerAndReturnsUnifiedEnvelope() throws Exception {
+        given(skillDeleteAppService.deleteSkillByIdFromPortal(
+                eq(1L),
+                any(),
+                any()))
+                .willReturn(new SkillDeleteAppService.DeleteResult(1L, "global", "demo-skill", true));
+
+        mockMvc.perform(delete("/api/web/skills/id/1")
+                        .with(authentication(portalAuth("usr_1", "USER")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.deleted").value(true))
+                .andExpect(jsonPath("$.data.slug").value("demo-skill"));
+    }
+
     private UsernamePasswordAuthenticationToken portalAuth(String userId, String... roles) {
         PlatformPrincipal principal = new PlatformPrincipal(
                 userId,
