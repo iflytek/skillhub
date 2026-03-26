@@ -14,18 +14,28 @@ import com.iflytek.skillhub.domain.security.SecurityVerdict;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
+import com.iflytek.skillhub.storage.ObjectStorageService;
+import com.iflytek.skillhub.storage.ObjectMetadata;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RStream;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.StreamMessageId;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class ScanTaskConsumerTest {
     private static final Path SCAN_TEMP_DIR = Path.of("/tmp/skillhub-scans");
@@ -46,12 +56,19 @@ class ScanTaskConsumerTest {
                 securityScanner,
                 securityScanService,
                 new InMemorySkillVersionRepository(),
-                new InMemoryScanTaskProducer()
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
         );
         Files.createDirectories(SCAN_TEMP_DIR);
         Path tempDir = Files.createTempDirectory(SCAN_TEMP_DIR, "scan-task-consumer-success");
         Files.writeString(tempDir.resolve("README.md"), "# demo");
-        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-1", 42L, tempDir.toString(), ScannerType.SKILL_SCANNER);
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1",
+                42L,
+                tempDir.toString(),
+                null,
+                ScannerType.SKILL_SCANNER
+        );
 
         consumer.invokeProcessBusiness(payload);
         consumer.invokeMarkCompleted(payload);
@@ -80,11 +97,18 @@ class ScanTaskConsumerTest {
                 new StubSecurityScanner(),
                 new StubSecurityScanService(),
                 skillVersionRepository,
-                new InMemoryScanTaskProducer()
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
         );
         Files.createDirectories(SCAN_TEMP_DIR);
         Path tempFile = Files.createTempFile(SCAN_TEMP_DIR, "scan-task-consumer-failure", ".zip");
-        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-2", 42L, tempFile.toString(), ScannerType.SKILL_SCANNER);
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-2",
+                42L,
+                tempFile.toString(),
+                null,
+                ScannerType.SKILL_SCANNER
+        );
 
         consumer.invokeMarkFailed(payload, "scan failed");
 
@@ -101,9 +125,16 @@ class ScanTaskConsumerTest {
                 new StubSecurityScanner(),
                 new StubSecurityScanService(),
                 new InMemorySkillVersionRepository(),
-                producer
+                producer,
+                new InMemoryObjectStorageService()
         );
-        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload("task-3", 77L, "/tmp/retry", ScannerType.SKILL_SCANNER);
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-3",
+                77L,
+                "/tmp/retry",
+                null,
+                ScannerType.SKILL_SCANNER
+        );
 
         consumer.invokeRetryMessage(payload, 2);
 
@@ -112,9 +143,126 @@ class ScanTaskConsumerTest {
                 77L,
                 "/tmp/retry",
                 null,
+                null,
                 producer.publishedTask.createdAtMillis(),
-                Map.of("retryCount", "2")
+                Map.of(
+                        "retryCount", "2",
+                        "scannerType", ScannerType.SKILL_SCANNER.getValue()
+                )
         ));
+    }
+
+    @Test
+    void processBusiness_withBundleKey_downloadsPackageFromObjectStorageAndCleansTempFile() throws Exception {
+        byte[] packageBytes = "zip-bytes".getBytes();
+        InMemoryObjectStorageService objectStorageService = new InMemoryObjectStorageService(Map.of(
+                "packages/8/42/bundle.zip", packageBytes
+        ));
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        securityScanner.response = new SecurityScanResponse(
+                "scan-4",
+                SecurityVerdict.SAFE,
+                0,
+                "LOW",
+                List.of(),
+                0.4
+        );
+        StubSecurityScanService securityScanService = new StubSecurityScanService();
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                securityScanService,
+                new InMemorySkillVersionRepository(),
+                new InMemoryScanTaskProducer(),
+                objectStorageService
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-4",
+                42L,
+                null,
+                "packages/8/42/bundle.zip",
+                ScannerType.SKILL_SCANNER
+        );
+
+        consumer.invokeProcessBusiness(payload);
+
+        Path downloadedPackage = Path.of(securityScanner.lastRequest.skillPackagePath());
+        assertThat(downloadedPackage).startsWith(SCAN_TEMP_DIR);
+        assertThat(Files.readAllBytes(downloadedPackage)).isEqualTo(packageBytes);
+        assertThat(objectStorageService.lastGetKey).isEqualTo("packages/8/42/bundle.zip");
+
+        consumer.invokeMarkCompleted(payload);
+
+        assertThat(Files.exists(downloadedPackage)).isFalse();
+    }
+
+    @Test
+    void handleMessage_retryableScannerFailureWithBundleKey_requeuesTaskAndCleansStagedTempFile() throws Exception {
+        long versionId = 42424242L;
+        byte[] packageBytes = "zip-bytes".getBytes();
+        InMemoryObjectStorageService objectStorageService = new InMemoryObjectStorageService(Map.of(
+                "packages/8/42424242/bundle.zip", packageBytes
+        ));
+        deleteScanTempFiles(versionId);
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        securityScanner.failure = new IllegalStateException("scanner unavailable");
+        InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
+        InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository();
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                repository,
+                producer,
+                objectStorageService
+        );
+
+        consumer.handleMessage(new StreamMessageId(9, 0), Map.of(
+                "taskId", "task-5",
+                "versionId", String.valueOf(versionId),
+                "bundleKey", "packages/8/42424242/bundle.zip",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(producer.publishedTask).isEqualTo(new ScanTask(
+                "task-5",
+                versionId,
+                null,
+                "packages/8/42424242/bundle.zip",
+                null,
+                producer.publishedTask.createdAtMillis(),
+                Map.of(
+                        "retryCount", "1",
+                        "scannerType", ScannerType.SKILL_SCANNER.getValue()
+                )
+        ));
+        assertThat(repository.savedVersion).isNull();
+        assertThat(listScanTempFiles(versionId)).isEmpty();
+    }
+
+    @Test
+    void handleMessage_retryableBundleDownloadFailure_requeuesTaskWithoutLeakingTempFile() throws Exception {
+        long versionId = 43434343L;
+        InMemoryObjectStorageService objectStorageService = new InMemoryObjectStorageService();
+        objectStorageService.getFailure = new IllegalStateException("missing bundle");
+        deleteScanTempFiles(versionId);
+        InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(),
+                new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(),
+                producer,
+                objectStorageService
+        );
+
+        consumer.handleMessage(new StreamMessageId(10, 0), Map.of(
+                "taskId", "task-6",
+                "versionId", String.valueOf(versionId),
+                "bundleKey", "packages/8/43434343/bundle.zip",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(producer.publishedTask.bundleKey()).isEqualTo("packages/8/43434343/bundle.zip");
+        assertThat(producer.publishedTask.metadata()).containsEntry("retryCount", "1");
+        assertThat(listScanTempFiles(versionId)).isEmpty();
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
@@ -123,20 +271,46 @@ class ScanTaskConsumerTest {
         field.set(target, value);
     }
 
+    private List<Path> listScanTempFiles(long versionId) throws IOException {
+        Files.createDirectories(SCAN_TEMP_DIR);
+        try (var stream = Files.list(SCAN_TEMP_DIR)) {
+            return stream
+                    .filter(path -> path.getFileName().toString().startsWith(versionId + "-"))
+                    .toList();
+        }
+    }
+
+    private void deleteScanTempFiles(long versionId) throws IOException {
+        for (Path path : listScanTempFiles(versionId)) {
+            Files.deleteIfExists(path);
+        }
+    }
+
     private static final class TestableScanTaskConsumer extends ScanTaskConsumer {
+        private final RStream<String, String> stream;
+
+        @SuppressWarnings("unchecked")
         private TestableScanTaskConsumer(SecurityScanner securityScanner,
                                          SecurityScanService securityScanService,
                                          SkillVersionRepository skillVersionRepository,
-                                         ScanTaskProducer scanTaskProducer) {
+                                         ScanTaskProducer scanTaskProducer,
+                                         ObjectStorageService objectStorageService) {
             super(
-                    null,
+                    mock(RedissonClient.class),
                     "skillhub:scan:requests",
                     "skillhub-scanners",
                     securityScanner,
                     securityScanService,
                     skillVersionRepository,
-                    scanTaskProducer
+                    scanTaskProducer,
+                    objectStorageService
             );
+            this.stream = mock(RStream.class);
+        }
+
+        @Override
+        protected RStream<String, String> createStream() {
+            return stream;
         }
 
         private void invokeProcessBusiness(ScanTaskPayload payload) {
@@ -159,10 +333,14 @@ class ScanTaskConsumerTest {
     private static final class StubSecurityScanner implements SecurityScanner {
         private SecurityScanRequest lastRequest;
         private SecurityScanResponse response;
+        private RuntimeException failure;
 
         @Override
         public SecurityScanResponse scan(SecurityScanRequest request) {
             this.lastRequest = request;
+            if (failure != null) {
+                throw failure;
+            }
             return response;
         }
 
@@ -326,6 +504,67 @@ class ScanTaskConsumerTest {
         @Override
         public void publishScanTask(ScanTask task) {
             this.publishedTask = task;
+        }
+    }
+
+    private static final class InMemoryObjectStorageService implements ObjectStorageService {
+        private final Map<String, byte[]> objects;
+        private String lastGetKey;
+        private RuntimeException getFailure;
+
+        private InMemoryObjectStorageService() {
+            this(Map.of());
+        }
+
+        private InMemoryObjectStorageService(Map<String, byte[]> objects) {
+            this.objects = new java.util.HashMap<>(objects);
+        }
+
+        @Override
+        public void putObject(String key, InputStream data, long size, String contentType) {
+            throw unsupported();
+        }
+
+        @Override
+        public InputStream getObject(String key) {
+            lastGetKey = key;
+            if (getFailure != null) {
+                throw getFailure;
+            }
+            byte[] content = objects.get(key);
+            if (content == null) {
+                throw new IllegalStateException("Missing object: " + key);
+            }
+            return new ByteArrayInputStream(content);
+        }
+
+        @Override
+        public void deleteObject(String key) {
+            throw unsupported();
+        }
+
+        @Override
+        public void deleteObjects(List<String> keys) {
+            throw unsupported();
+        }
+
+        @Override
+        public boolean exists(String key) {
+            return objects.containsKey(key);
+        }
+
+        @Override
+        public ObjectMetadata getMetadata(String key) {
+            byte[] content = objects.get(key);
+            if (content == null) {
+                throw new IllegalStateException("Missing object: " + key);
+            }
+            return new ObjectMetadata(content.length, "application/zip", Instant.now());
+        }
+
+        @Override
+        public String generatePresignedUrl(String key, Duration expiry, String downloadFilename) {
+            throw unsupported();
         }
     }
 

@@ -30,7 +30,12 @@ public class RedissonScanTaskProducer implements ScanTaskProducer {
         Map<String, String> fields = new HashMap<>();
         fields.put("taskId", task.taskId());
         fields.put("versionId", String.valueOf(task.versionId()));
-        fields.put("skillPath", task.skillPath());
+        if (task.skillPath() != null && !task.skillPath().isBlank()) {
+            fields.put("skillPath", task.skillPath());
+        }
+        if (task.bundleKey() != null && !task.bundleKey().isBlank()) {
+            fields.put("bundleKey", task.bundleKey());
+        }
         fields.put("publisherId", task.publisherId() != null ? task.publisherId() : "");
         fields.put("createdAtMillis", String.valueOf(task.createdAtMillis()));
         if (task.metadata() != null) {
@@ -39,7 +44,7 @@ public class RedissonScanTaskProducer implements ScanTaskProducer {
 
         RStream<String, String> stream = redissonClient.getStream(streamKey, StringCodec.INSTANCE);
         StreamMessageId messageId = stream.add(StreamAddArgs.entries(fields));
-        log.info("Published scan task: taskId={}, versionId={}, recordId={}",
-                task.taskId(), task.versionId(), messageId);
+        log.info("Published scan task: taskId={}, versionId={}, bundleKey={}, hasSkillPath={}, recordId={}",
+                task.taskId(), task.versionId(), task.bundleKey(), task.skillPath() != null && !task.skillPath().isBlank(), messageId);
     }
 }
