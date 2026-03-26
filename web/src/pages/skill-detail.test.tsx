@@ -323,4 +323,47 @@ describe('SkillDetailPage', () => {
     expect(html).toContain('skillDetail.versionStatusPendingReview')
     expect(html).not.toContain('skillDetail.versionStatusScanFailed')
   })
+
+  it('allows long pending review versions to wrap inside the review card', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        headlineVersion: { id: 13, version: '20260326.055640-build-with-very-long-suffix', status: 'PENDING_REVIEW' },
+        publishedVersion: { id: 10, version: '20260326.055538', status: 'PUBLISHED' },
+        ownerPreviewVersion: { id: 13, version: '20260326.055640-build-with-very-long-suffix', status: 'PENDING_REVIEW' },
+        resolutionMode: 'PUBLISHED',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 13,
+          version: '20260326.055640-build-with-very-long-suffix',
+          status: 'PENDING_REVIEW',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: null,
+          downloadAvailable: false,
+        },
+        {
+          id: 10,
+          version: '20260326.055538',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: '2026-03-20T00:00:00Z',
+          downloadAvailable: true,
+        },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('break-all')
+    expect(html).toContain('leading-snug')
+  })
 })

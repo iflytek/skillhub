@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,8 +21,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 @Service
 public class SecurityScanService {
@@ -67,13 +64,21 @@ public class SecurityScanService {
         SkillVersion version = skillVersionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
 
-        String packagePath = resolvePackagePath(versionId, entries).toString();
+        String packagePath = null;
+        String bundleKey = null;
+        if ("upload".equalsIgnoreCase(scanMode)) {
+            validateUploadEntries(entries);
+            bundleKey = buildBundleStorageKey(version.getSkillId(), versionId);
+        } else {
+            packagePath = saveTempDirectory(versionId, entries).toString();
+        }
         // Always create a new audit record — supports multiple rounds per version
         auditRepository.save(new SecurityAudit(versionId, ScannerType.SKILL_SCANNER));
         scanTaskProducer.publishScanTask(new ScanTask(
                 UUID.randomUUID().toString(),
                 versionId,
                 packagePath,
+                bundleKey,
                 publisherId,
                 System.currentTimeMillis(),
                 Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
@@ -104,13 +109,6 @@ public class SecurityScanService {
         skillVersionRepository.save(version);
     }
 
-    private Path resolvePackagePath(Long versionId, List<PackageEntry> entries) {
-        if ("upload".equalsIgnoreCase(scanMode)) {
-            return saveTempZip(versionId, entries);
-        }
-        return saveTempDirectory(versionId, entries);
-    }
-
     private Path saveTempDirectory(Long versionId, List<PackageEntry> entries) {
         try {
             Path skillDir = TEMP_BASE_DIR.resolve(String.valueOf(versionId)).normalize();
@@ -129,27 +127,14 @@ public class SecurityScanService {
         }
     }
 
-    private Path saveTempZip(Long versionId, List<PackageEntry> entries) {
-        try {
-            Path dir = TEMP_BASE_DIR;
-            Files.createDirectories(dir);
-            Path zipPath = dir.resolve(versionId + ".zip");
-
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                 ZipOutputStream zos = new ZipOutputStream(baos)) {
-                for (PackageEntry entry : entries) {
-                    zos.putNextEntry(new ZipEntry(safeZipEntryName(entry.path())));
-                    zos.write(entry.content());
-                    zos.closeEntry();
-                }
-                zos.finish();
-                Files.write(zipPath, baos.toByteArray());
-            }
-
-            return zipPath;
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to save temp ZIP for versionId: " + versionId, e);
+    private void validateUploadEntries(List<PackageEntry> entries) {
+        for (PackageEntry entry : entries) {
+            safeZipEntryName(entry.path());
         }
+    }
+
+    private String buildBundleStorageKey(Long skillId, Long versionId) {
+        return String.format("packages/%d/%d/bundle.zip", skillId, versionId);
     }
 
     private String serializeFindings(List<SecurityFinding> findings) {

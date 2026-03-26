@@ -89,6 +89,39 @@ class SecurityScanServiceTest {
         assertThat(task.versionId()).isEqualTo(42L);
         assertThat(task.publisherId()).isEqualTo("publisher-1");
         assertThat(task.skillPath()).contains("42");
+        assertThat(task.bundleKey()).isNull();
+    }
+
+    @Test
+    void triggerScan_uploadModePublishesBundleKeyWithoutLocalTempPath() throws Exception {
+        service = new SecurityScanService(
+                auditRepository,
+                skillVersionRepository,
+                scanTaskProducer,
+                new ObjectMapper(),
+                "upload",
+                true
+        );
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        PackageEntry entry = new PackageEntry(
+                "README.md",
+                "# demo".getBytes(),
+                6L,
+                "text/markdown"
+        );
+
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        service.triggerScan(42L, List.of(entry), "publisher-1");
+
+        ArgumentCaptor<ScanTask> taskCaptor = ArgumentCaptor.forClass(ScanTask.class);
+        verify(scanTaskProducer).publishScanTask(taskCaptor.capture());
+
+        ScanTask task = taskCaptor.getValue();
+        assertThat(task.versionId()).isEqualTo(42L);
+        assertThat(task.skillPath()).isNull();
+        assertThat(task.bundleKey()).isEqualTo("packages/8/42/bundle.zip");
     }
 
     @Test

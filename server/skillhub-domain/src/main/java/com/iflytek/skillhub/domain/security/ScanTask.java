@@ -6,6 +6,7 @@ public record ScanTask(
         String taskId,
         Long versionId,
         String skillPath,
+        String bundleKey,
         String publisherId,
         long createdAtMillis,
         Map<String, String> metadata

@@ -61,8 +61,8 @@ export function InstallCommand({ namespace, slug }: InstallCommandProps) {
       >
         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       </Button>
-      <pre className="p-4 pr-14 whitespace-pre-wrap break-words">
-        <code className="font-mono text-sm leading-6 text-foreground whitespace-pre-wrap break-words">
+      <pre className="px-4 py-3 pr-14 whitespace-pre-wrap break-all">
+        <code className="font-mono text-[13px] leading-relaxed text-foreground whitespace-pre-wrap break-all sm:text-sm">
           {command}
         </code>
       </pre>

@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.security.ScanTaskProducer;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.security.SecurityScanner;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.storage.ObjectStorageService;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +24,8 @@ class ScanTaskConsumerPathSafetyTest {
                 org.mockito.Mockito.mock(SecurityScanner.class),
                 org.mockito.Mockito.mock(SecurityScanService.class),
                 org.mockito.Mockito.mock(SkillVersionRepository.class),
-                org.mockito.Mockito.mock(ScanTaskProducer.class)
+                org.mockito.Mockito.mock(ScanTaskProducer.class),
+                org.mockito.Mockito.mock(ObjectStorageService.class)
         );
         Path outsideFile = Files.createTempFile("scan-cleanup-", ".txt");
         Files.writeString(outsideFile, "keep");
