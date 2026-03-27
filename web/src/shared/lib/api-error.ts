@@ -40,7 +40,7 @@ function isAccountDisabledError(error: ApiError): boolean {
     || accountDisabledMessages.includes(error.message)
     || normalizedServerMessage.includes('disabled')
     || normalizedMessage.includes('disabled')
-    || (error.serverMessage ?? '').includes('禁琨')
+    || (error.serverMessage ?? '').includes('禁用')
     || error.message.includes('禁用')
 }
 
