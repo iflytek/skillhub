@@ -13,18 +13,19 @@ description: Use when starting any development task in the SkillHub repository a
 
 | Agent | 定义文件 | 负责内容 | 触发时机 | 关键产出 |
 |---|---|---|---|---|
-| `migration-guard` | `.codex/agents/migration-guard.md` | Flyway migration 校验 | 新增/修改 `server/skillhub-app/src/main/resources/db/migration/V*.sql` | 版本号连续性结论、是否误改历史 migration |
-| `backend` | `.codex/agents/backend.md` | 后端 Java 实现（Spring Boot / 分层架构 / Flyway） | 修改 `server/**/*.java` 或新增后端能力 | 代码实现、分层合规、API 规范符合性 |
-| `api-drift` | `.codex/agents/api-drift.md` | OpenAPI 与前端类型漂移检查 | 修改 Controller（`server/**/controller/**/*.java`）后 | `make generate-api` 执行提示、`schema.d.ts` 是否需提交 |
-| `frontend` | `.codex/agents/frontend.md` | 前端 TypeScript/React 实现 | 修改 `web/src/**/*.ts(x)` 或新增前端功能 | 代码实现、i18n 合规、API 层调用合规 |
-| `tester` | `.codex/agents/tester.md` | 测试编写与质量门禁执行 | 功能实现完成后、准备宣称完成前 | Vitest/SpringBoot/Playwright 验证结果与失败定位 |
-| `reviewer` | `.codex/agents/reviewer.md` | 结构化代码审查与合并前验收 | 质量门禁全部通过后 | 带文件路径和行号的审查清单（✅/⚠️/❌） |
+| `migration-guard` | `.codex/agents/migration-guard.toml` | Flyway migration 校验 | 新增/修改 `server/skillhub-app/src/main/resources/db/migration/V*.sql` | 版本号连续性结论、是否误改历史 migration |
+| `backend` | `.codex/agents/backend.toml` | 后端 Java 实现（Spring Boot / 分层架构 / Flyway） | 修改 `server/**/*.java` 或新增后端能力 | 代码实现、分层合规、API 规范符合性 |
+| `api-drift` | `.codex/agents/api-drift.toml` | OpenAPI 与前端类型漂移检查 | 修改 Controller（`server/**/controller/**/*.java`）后 | `make generate-api` 执行提示、`schema.d.ts` 是否需提交 |
+| `frontend` | `.codex/agents/frontend.toml` | 前端 TypeScript/React 实现 | 修改 `web/src/**/*.ts(x)` 或新增前端功能 | 代码实现、i18n 合规、API 层调用合规 |
+| `tester` | `.codex/agents/tester.toml` | 测试编写与质量门禁执行（重点：Playwright MCP E2E） | 功能实现完成后、准备宣称完成前 | Vitest/SpringBoot/Playwright MCP 验证结果与失败定位 |
+| `reviewer` | `.codex/agents/reviewer.toml` | 结构化代码审查与合并前验收 | 质量门禁全部通过后 | 带文件路径和行号的审查清单（✅/⚠️/❌） |
 
 ## 调度原则
 
 - 按依赖顺序调度：`migration-guard → backend/api-drift → frontend → tester → reviewer`
 - `api-drift` 不是独立开发阶段，而是 **Controller 变更后的契约同步检查**
 - `tester` 失败后必须回流到对应开发 agent 修复，再次进入质量门禁
+- **涉及 UI 交互/路由/权限/跨页面流程时，tester 阶段必须执行 Playwright MCP E2E，不得只用单测替代**
 - `reviewer` 只在质量门禁通过后执行，不可前置
 
 ## 工作流
@@ -146,7 +147,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 ```
 有 diff → 将 `web/src/api/generated/schema.d.ts` 加入本次提交。
 
-## 阶段四 — 测试（tester agent）
+## 阶段四 — 测试（tester agent，E2E 优先）
 
 标记任务完成之前必须编写测试：
 
@@ -154,7 +155,14 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 |---|---|
 | 前端逻辑 | Vitest 单测，与源文件同目录，kebab-case 命名 |
 | 后端 Controller | `@SpringBootTest + @AutoConfigureMockMvc + @MockBean` |
-| UI 交互流程 | Playwright MCP 截图 → `web/test/screenshots/` |
+| UI 交互流程 | **Playwright MCP E2E（必做）**，并保留截图/日志证据 |
+
+### Playwright MCP E2E（重点）
+
+- 触发条件：改动涉及页面跳转、表单提交流程、鉴权/权限、关键用户路径（创建/编辑/删除/发布等）
+- 最低要求：覆盖至少 1 条成功路径 + 1 条失败/边界路径
+- 推荐执行流：`browser_navigate` → `browser_snapshot`（定位元素）→ `browser_click`/`browser_fill_form` → `browser_wait_for` → `browser_take_screenshot`
+- 证据沉淀：关键步骤截图保存到 `web/test/screenshots/`，并在结论中附失败定位信息
 
 ## 阶段五 — 质量门禁
 
@@ -166,6 +174,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 | ESLint | `make lint-web` | 0 errors，0 warnings |
 | 前端单测 | `make test-frontend` | 全部通过 |
 | 后端单测 | `make test-backend-app` | 全部通过（有后端变更时执行） |
+| E2E 关键路径回归 | Playwright MCP（`browser_*` 工具链） | 关键路径通过，且截图/日志可追溯 |
 
 ### 质量门禁失败处理流程
 
@@ -175,6 +184,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 2. **路由到对应 Agent 重新开发**：
    - 后端单测失败 / 后端类型错误 → 回到 **backend agent 规则**，重新实现
    - 前端单测失败 / TypeScript 错误 / ESLint 错误 → 回到 **frontend agent 规则**，重新实现
+   - Playwright MCP E2E 失败（UI 交互/路由问题）→ 回到 **frontend agent 规则**，必要时联动 **backend agent**
    - 测试本身有问题 → 回到 **tester agent**，修复测试代码
 3. **修复后重新执行质量门禁** — 循环直到全部通过
 
