@@ -33,7 +33,17 @@ public class SkillScannerConfig {
         log.info("Creating scanner-specific HttpClient with connectTimeout={}ms, readTimeout={}ms",
                 connectTimeoutMs, readTimeoutMs);
 
-        reactor.netty.http.client.HttpClient reactorClient = reactor.netty.http.client.HttpClient.create()
+        // Configure connection pool to avoid stale connections and improve reliability
+        reactor.netty.resources.ConnectionProvider connectionProvider =
+                reactor.netty.resources.ConnectionProvider.builder("scanner-pool")
+                .maxConnections(10)
+                .maxIdleTime(Duration.ofSeconds(20))
+                .maxLifeTime(Duration.ofSeconds(60))
+                .pendingAcquireTimeout(Duration.ofSeconds(45))
+                .evictInBackground(Duration.ofSeconds(30))
+                .build();
+
+        reactor.netty.http.client.HttpClient reactorClient = reactor.netty.http.client.HttpClient.create(connectionProvider)
                 .followRedirect(false)
                 .responseTimeout(Duration.ofMillis(readTimeoutMs))
                 .option(io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs);
@@ -47,7 +57,7 @@ public class SkillScannerConfig {
                 .exchangeStrategies(strategies)
                 .build();
 
-        log.info("Scanner HttpClient created successfully with responseTimeout={}ms", readTimeoutMs);
+        log.info("Scanner HttpClient created with connection pool (maxConn=10, maxIdleTime=20s, evictInterval=30s)");
         return new WebClientHttpClient(webClient);
     }
 
