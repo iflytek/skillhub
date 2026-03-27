@@ -567,7 +567,7 @@ class SkillPublishServiceTest {
         SkillPublishService.PublishResult result = service.publishFromEntries(
                 namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of());
 
-        assertEquals("20260318.120000", result.version().getVersion());
+        assertEquals("20260318.200000", result.version().getVersion());
     }
 
     @Test
