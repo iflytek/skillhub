@@ -56,8 +56,7 @@ services:
       SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE: ${SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE:-false}
       SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET: ${SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET:-false}
       SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY: ${SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY:-PT10M}
-      SKILLHUB_SECURITY_SCANNER_ENABLED: ${SKILLHUB_SECURITY_SCANNER_ENABLED:-true}
-      SKILLHUB_SECURITY_SCANNER_URL: ${SKILLHUB_SECURITY_SCANNER_URL:-http://scanner:8000}
+      SKILLHUB_SECURITY_SCANNER_ENABLED: ${SKILLHUB_SECURITY_SCANNER_ENABLED:-false}
       BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-false}
       BOOTSTRAP_ADMIN_USER_ID: ${BOOTSTRAP_ADMIN_USER_ID:-docker-admin}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
@@ -96,19 +95,6 @@ services:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
       interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 10s
-
-  scanner:
-    image: ${SKILLHUB_SCANNER_IMAGE:-ghcr.io/iflytek/skillhub-scanner}:${SKILLHUB_VERSION:-latest}
-    restart: unless-stopped
-    environment:
-      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
-      SKILL_SCANNER_LLM_BASE_URL: ${SKILL_SCANNER_LLM_BASE_URL:-}
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
-      interval: 10s
-      timeout: 3s
       retries: 12
       start_period: 10s
 
