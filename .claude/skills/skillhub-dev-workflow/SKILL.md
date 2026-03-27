@@ -25,7 +25,8 @@ description: Use when starting any development task in the SkillHub repository a
 - 按依赖顺序调度：`migration-guard → backend/api-drift → frontend → tester → reviewer`
 - `api-drift` 不是独立开发阶段，而是 **Controller 变更后的契约同步检查**
 - `tester` 失败后必须回流到对应开发 agent 修复，再次进入质量门禁
-- **涉及 UI 交互/路由/权限/跨页面流程时，tester 阶段必须执行 Playwright MCP E2E，不得只用单测替代**
+- **任何前端修改（`web/src/**/*.ts(x)`）都必须执行 Playwright MCP E2E，不得只用单测替代**
+- **E2E 测试必须包含关键步骤截图，保存到 `web/test/screenshots/` 并在报告中引用**
 - `reviewer` 只在质量门禁通过后执行，不可前置
 
 ## 工作流
@@ -68,8 +69,15 @@ digraph dev_workflow {
     "涉及前端 TS 变更？" -> "实现功能" [label="否"];
     "frontend agent 规则" -> "实现功能";
     "实现功能" -> "tester agent";
-    "tester agent" -> "质量门禁全部通过？";
+    "tester agent" -> "Validation 验证";
+    "Validation 验证" [shape=box];
+    "Validation 验证" -> "验证全部通过？";
+    "验证全部通过？" [shape=diamond];
+    "验证全部通过？" -> "质量门禁";
+    "质量门禁" [shape=box];
+    "质量门禁" -> "质量门禁全部通过？";
     "质量门禁全部通过？" -> "定位失败原因" [label="否"];
+    "验证全部通过？" -> "定位失败原因" [label="否"];
     "定位失败原因" -> "后端问题？";
     "后端问题？" -> "backend agent 规则" [label="是，重新开发"];
     "后端问题？" -> "前端问题？" [label="否"];
@@ -157,16 +165,67 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 |---|---|
 | 前端逻辑 | Vitest 单测,与源文件同目录,kebab-case 命名 |
 | 后端 Controller | `@SpringBootTest + @AutoConfigureMockMvc + @MockBean` |
-| UI 交互流程 | **Playwright MCP E2E(必做)**,并保留截图/日志证据 |
+| **任何前端修改** | **Playwright MCP E2E(强制)**,必须包含关键步骤截图 |
 
 ### Playwright MCP E2E(重点)
 
-- 触发条件:改动涉及页面跳转、表单提交流程、鉴权/权限、关键用户路径(创建/编辑/删除/发布等)
+- **触发条件:任何前端修改(`web/src/**/*.ts(x)`)都必须执行 E2E 测试**
 - 最低要求:覆盖至少 1 条成功路径 + 1 条失败/边界路径
 - 推荐执行流:`browser_navigate` → `browser_snapshot`(定位元素)→ `browser_click`/`browser_fill_form` → `browser_wait_for` → `browser_take_screenshot`
+- **截图要求(强制)**:
+  - 每个关键步骤必须截图(页面加载、表单填写前、提交后、错误状态等)
+  - 截图保存到 `web/test/screenshots/<feature-name>/step-<N>-<description>.png`
+  - 文件名必须包含步骤序号和描述,例如:`step-1-login-page.png`、`step-2-form-filled.png`
+  - 在测试报告中引用所有截图路径
 - 证据沉淀:关键步骤截图保存到 `web/test/screenshots/`,并在结论中附失败定位信息
 
-## 阶段五 — 质量门禁
+## 阶段五 — Validation（功能验证）
+
+测试通过后，进入质量门禁前，必须完成以下验证：
+
+### 5.1 功能完整性验证
+
+对照原始需求或 Issue，逐项检查：
+- [ ] 所有需求点已实现
+- [ ] 边界条件已处理（空值、极限值、异常输入）
+- [ ] 错误提示清晰且已国际化
+- [ ] 成功/失败路径都已验证
+
+### 5.2 UI/UX 验证（前端变更时必做）
+
+- [ ] 页面布局符合设计稿或现有风格
+- [ ] 响应式设计在不同屏幕尺寸下正常
+- [ ] 交互反馈及时（loading 状态、禁用状态、hover 效果）
+- [ ] 无明显的视觉错位、文字截断、颜色不一致
+- [ ] 可访问性基本要求（键盘导航、焦点管理、ARIA 标签）
+
+### 5.3 性能验证
+
+- [ ] 关键操作响应时间 < 2 秒（列表加载、表单提交、页面跳转）
+- [ ] 无明显的内存泄漏（长时间操作后检查）
+- [ ] 前端包体积无异常增长（`make build` 后检查 bundle size）
+- [ ] 后端 API 无 N+1 查询（检查日志中的 SQL 语句数量）
+
+### 5.4 安全验证
+
+- [ ] 无硬编码敏感信息（密钥、token、内部 URL）
+- [ ] 用户输入已验证和转义（防 XSS、SQL 注入）
+- [ ] 权限检查已到位（前端隐藏 + 后端强制校验）
+- [ ] 敏感操作有二次确认（删除、发布等）
+
+### 5.5 验证失败处理
+
+如果任何验证项未通过：
+1. **记录问题** — 明确描述问题、复现步骤、预期行为
+2. **路由到对应 Agent** — 根据问题类型回到 backend/frontend agent 修复
+3. **重新验证** — 修复后重新执行完整的 Validation 流程
+
+**禁止**：
+- 跳过验证项直接进入质量门禁
+- 在验证未全部通过时标记任务完成
+- 降低验证标准以"快速通过"
+
+## 阶段六 — 质量门禁
 
 全部通过后才能进入代码审查:
 
@@ -188,14 +247,14 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
    - 前端单测失败 / TypeScript 错误 / ESLint 错误 → 回到 **frontend agent 规则**,重新实现
    - Playwright MCP E2E 失败(UI 交互/路由问题)→ 回到 **frontend agent 规则**,必要时联动 **backend agent**
    - 测试本身有问题 → 回到 **tester agent**,修复测试代码
-3. **修复后重新执行质量门禁** — 循环直到全部通过
+3. **修复后重新执行 Validation + 质量门禁** — 循环直到全部通过
 
 **禁止**:
-- 跳过失败的检查项直接进入代码审查
-- 在质量门禁未全部通过时标记任务完成
+- 跳过 Validation 或质量门禁检查项直接进入代码审查
+- 在 Validation 或质量门禁未全部通过时标记任务完成
 - 修改测试代码以绕过真实的代码问题
 
-## 阶段六 — 代码审查(reviewer agent)
+## 阶段七 — 代码审查(reviewer agent)
 
 按 7 个维度执行 reviewer agent 检查清单:
 1. 分层合规(无 `domain → infra` 反向依赖)
@@ -206,7 +265,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 6. 测试覆盖(新功能有对应测试)
 7. 提交规范(Conventional Commits,作者不含 AI 工具名)
 
-## 阶段七 — 提交 Pull Request
+## 阶段八 — 提交 Pull Request
 
 代码审查通过后,使用 gh 创建 PR,PR 描述必须包含以下结构化内容:
 
