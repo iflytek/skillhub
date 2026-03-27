@@ -52,6 +52,11 @@ export function handleApiError(error: unknown): void {
 
   const { status } = error
 
+  if (status === 0) {
+    toast.error(i18n.t('apiError.networkError'))
+    return
+  }
+
   if (status === 401) {
     if (isAccountDisabledError(error)) {
       window.location.href = `/login?reason=${ACCOUNT_DISABLED_REASON}`
