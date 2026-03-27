@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityAudit;
@@ -46,6 +47,9 @@ class SecurityAuditControllerTest {
 
     @MockBean
     private SecurityAuditRepository securityAuditRepository;
+
+    @MockBean
+    private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
     private SkillRepository skillRepository;
