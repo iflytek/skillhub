@@ -213,7 +213,7 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new ApiError('error.request.timeout', 408)
     }
-    throw new ApiError('Network error', 0)
+    throw new ApiError('apiError.networkError', 0)
   } finally {
     cleanup()
   }
