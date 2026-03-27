@@ -72,7 +72,7 @@ export function Layout() {
 
       {/* Header */}
       <header className={getAppHeaderClassName(isHeaderElevated)} style={{ borderColor: 'hsl(var(--border))' }}>
-        <Link to="/" className="text-xl font-semibold tracking-tight text-brand-gradient">
+        <Link to="/" className="text-xl font-bold tracking-tight text-brand-gradient">
           SkillHub
         </Link>
 
