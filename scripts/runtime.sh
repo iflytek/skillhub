@@ -170,9 +170,7 @@ prepare_runtime_files() {
     if [ -z "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
       SKILLHUB_WEB_IMAGE_VALUE="$mirror_registry/skillhub-web"
     fi
-    if [ -z "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
-      SKILLHUB_SCANNER_IMAGE_VALUE="$mirror_registry/skillhub-scanner"
-    fi
+    # Scanner image mapping removed - scanner is optional and disabled by default
   fi
 
   if [ -n "$SKILLHUB_VERSION_VALUE" ]; then
