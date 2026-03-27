@@ -100,7 +100,6 @@ services:
       start_period: 10s
 
   scanner:
-    profiles: ["with-scanner"]
     image: ${SKILLHUB_SCANNER_IMAGE:-ghcr.io/iflytek/skillhub-scanner}:${SKILLHUB_VERSION:-latest}
     restart: unless-stopped
     environment:
