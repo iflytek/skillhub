@@ -110,17 +110,9 @@ Use them with the `X-Mock-User-Id` header in local development.
 
 The local bootstrap admin is enabled by default in `application-local.yml`:
 
-- username: `BOOTSTRAP_ADMIN_USERNAME` (`admin` by default)
-- password: `BOOTSTRAP_ADMIN_PASSWORD` (default `ChangeMe!2026`)
-- For local source startup, set the environment variable
-  `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
-- For container or release environments, configure the same value in
-  `.env.release` or the Compose environment.
-- The shipped release template (`.env.release.example`) defaults to
-  `BOOTSTRAP_ADMIN_ENABLED=true` with password `ChangeMe!2026`, so
-  zero-config quickstart via `runtime.sh` works out of the box.
-  **For production, change the password** — `validate-release-config.sh`
-  will reject the default value.
+- username: `admin`
+- password: `ChangeMe!2026`
+- To disable it, set `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
 
 Stop everything with:
 
@@ -213,19 +205,19 @@ The runtime stack uses its own Compose project name, so it does not
 collide with containers from `make dev-all`.
 
 The production Compose stack now defaults to the `docker` profile only.
-It does not enable local mock auth. The release template enables the bootstrap
-admin by default (`admin` / `ChangeMe!2026`) so that quickstart deployments
-work immediately:
+It does not enable local mock auth. The release template (`.env.release.example`)
+enables the bootstrap admin by default, so zero-config quickstart via
+`runtime.sh` works out of the box:
 
-- username: `BOOTSTRAP_ADMIN_USERNAME`
-- password: `BOOTSTRAP_ADMIN_PASSWORD`
+- username: `admin`
+- password: `ChangeMe!2026`
 
 Recommended production baseline:
 
 - set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
 - keep PostgreSQL / Redis bound to `127.0.0.1`
 - use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
-- change `BOOTSTRAP_ADMIN_PASSWORD` to a strong password (the default `ChangeMe!2026` is rejected by `validate-release-config.sh`)
+- change `BOOTSTRAP_ADMIN_PASSWORD` to a strong password (`validate-release-config.sh` rejects the default `ChangeMe!2026`)
 - rotate or disable the bootstrap admin after initial setup
 - run `make validate-release-config` before `docker compose up -d`
 

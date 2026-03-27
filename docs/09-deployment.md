@@ -52,7 +52,7 @@
 单机交付环境使用 `SPRING_PROFILES_ACTIVE=docker`，原因如下：
 
 - 生产环境不应开启 `X-Mock-User-Id` 这一类本地开发旁路能力
-- 容器环境仍然保留 `docker` profile 的运行时能力，但首个管理员账户初始化本身不再依赖该 profile，且默认关闭
+- 容器环境仍然保留 `docker` profile 的运行时能力，首个管理员账户初始化不依赖该 profile，通过环境变量控制
 - 数据库、Redis、OSS、站点公网地址全部改为环境变量优先
 
 如需启用首登管理员，来源于以下环境变量：

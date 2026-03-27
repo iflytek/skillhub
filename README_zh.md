@@ -74,16 +74,15 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 - `local-admin` — 超级管理员，用于审核和管理流程
 
 在本地开发中使用 `X-Mock-User-Id` 请求头切换用户。
-本地 bootstrap 管理员默认已在 `application-local.yml` 中开启，本地登录账号来自以下配置：
+本地 bootstrap 管理员默认已在 `application-local.yml` 中开启：
 
-- 用户名：`BOOTSTRAP_ADMIN_USERNAME`，默认是 `admin`
-- 密码：`BOOTSTRAP_ADMIN_PASSWORD`，默认是 `ChangeMe!2026`
-- 本地源码启动如需关闭自动创建，请在启动后端前设置环境变量
-  `BOOTSTRAP_ADMIN_ENABLED=false`
-- 容器或发布环境则在 `.env.release` 或 Compose 环境变量中配置该值
-- 发布模板 `.env.release.example` 默认开启管理员（`BOOTSTRAP_ADMIN_ENABLED=true`），
-  零配置部署即可直接登录。**生产环境请务必修改密码**——`validate-release-config.sh`
-  会拒绝默认密码
+- 用户名：`admin`
+- 密码：`ChangeMe!2026`
+- 如需关闭，请在启动后端前设置环境变量 `BOOTSTRAP_ADMIN_ENABLED=false`
+
+通过 `runtime.sh` 或 `compose.release.yml` 部署时，发布模板同样默认开启管理员，
+使用相同的默认账号密码（`admin` / `ChangeMe!2026`），零配置即可登录。
+**生产环境请务必修改密码**——`validate-release-config.sh` 会拒绝默认值
 
 ### 停止服务
 
