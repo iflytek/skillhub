@@ -22,36 +22,39 @@ cd skillhub
 make dev-all
 ```
 
-## Access Points
+## Default Account
 
-After successful startup, you can access through the following addresses:
+Both startup methods create a bootstrap admin account by default:
 
-| Service | Address | Description |
-|---------|---------|-------------|
-| Web UI | http://localhost:3000 | Frontend interface |
-| Backend API | http://localhost:8080 | Backend API |
-| MinIO Console | http://localhost:9001 | Object storage management |
+- username: `admin`
+- password: `ChangeMe!2026`
 
-## Development Users
+### `curl` One-click Deployment
 
-By default, the local development environment comes with two mock test users:
+| Service | Address |
+|---------|---------|
+| Web UI | http://localhost |
+| Backend API | http://localhost:8080 |
+
+Log in with the default credentials above. **Change the password for production.**
+
+### `make dev-all` Local Development
+
+| Service | Address |
+|---------|---------|
+| Web UI | http://localhost:3000 |
+| Backend API | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 |
+
+In addition to the bootstrap admin, local development includes two mock users (no password needed):
 
 | User | Role | Description |
 |------|------|-------------|
 | `local-user` | Regular user | Can publish skills, manage namespaces |
 | `local-admin` | Super admin | Has all permissions including review and user management |
 
-Use the `X-Mock-User-Id` request header to simulate user login in local development.
-The local development environment also creates a password-based bootstrap
-admin by default:
-
-- username: `admin`
-- password: `ChangeMe!2026`
-
-For local source startup, override or disable it with `BOOTSTRAP_ADMIN_*`
-environment variables before starting the backend.
-For container or release environments, configure the same values in
-`.env.release` or the Compose environment.
+Use the `X-Mock-User-Id` request header to switch mock users.
+To disable the bootstrap admin, set `BOOTSTRAP_ADMIN_ENABLED=false` before starting.
 
 ## Common Commands
 
