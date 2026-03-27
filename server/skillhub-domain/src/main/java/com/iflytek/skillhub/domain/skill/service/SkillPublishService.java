@@ -39,7 +39,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -61,7 +61,7 @@ import java.util.zip.ZipOutputStream;
 public class SkillPublishService {
 
     private static final DateTimeFormatter AUTO_VERSION_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneOffset.UTC);
+            DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneId.of("Asia/Shanghai"));
     private static final Logger log = LoggerFactory.getLogger(SkillPublishService.class);
 
     public record PublishResult(
