@@ -61,7 +61,7 @@ import java.util.zip.ZipOutputStream;
 public class SkillPublishService {
 
     private static final DateTimeFormatter AUTO_VERSION_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneId.of("Asia/Shanghai"));
+            DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneId.systemDefault());
     private static final Logger log = LoggerFactory.getLogger(SkillPublishService.class);
 
     public record PublishResult(

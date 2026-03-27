@@ -567,7 +567,10 @@ class SkillPublishServiceTest {
         SkillPublishService.PublishResult result = service.publishFromEntries(
                 namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of());
 
-        assertEquals("20260318.200000", result.version().getVersion());
+        // Version should be auto-generated in format yyyyMMdd.HHmmss using system timezone
+        String version = result.version().getVersion();
+        assertTrue(version.matches("\\d{8}\\.\\d{6}"), "Version should match format yyyyMMdd.HHmmss");
+        assertTrue(version.startsWith("20260318"), "Version should start with date 20260318");
     }
 
     @Test
