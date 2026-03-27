@@ -77,12 +77,13 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 本地 bootstrap 管理员默认已在 `application-local.yml` 中开启，本地登录账号来自以下配置：
 
 - 用户名：`BOOTSTRAP_ADMIN_USERNAME`，默认是 `admin`
-- 密码：`BOOTSTRAP_ADMIN_PASSWORD`
-  - 本地应用默认回退值是 `ChangeMe!2026`
+- 密码：`BOOTSTRAP_ADMIN_PASSWORD`，默认是 `ChangeMe!2026`
 - 本地源码启动如需关闭自动创建，请在启动后端前设置环境变量
   `BOOTSTRAP_ADMIN_ENABLED=false`
 - 容器或发布环境则在 `.env.release` 或 Compose 环境变量中配置该值
-- 发布模板 `.env.release.example` 里的占位值仍然是 `replace-this-admin-password`
+- 发布模板 `.env.release.example` 默认开启管理员（`BOOTSTRAP_ADMIN_ENABLED=true`），
+  零配置部署即可直接登录。**生产环境请务必修改密码**——`validate-release-config.sh`
+  会拒绝默认密码
 
 ### 停止服务
 
