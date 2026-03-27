@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog'
 import { Label } from '@/shared/ui/label'
-import { useAdminUsers, useApproveUser, useDisableUser, useEnableUser, useUpdateUserRole } from '@/features/admin/use-admin-users'
+import { useAdminUsers, useApproveUser, useDisableUser, useEnableUser, useUpdateUserRole, useTriggerPasswordReset } from '@/features/admin/use-admin-users'
 import type { AdminUser } from '@/features/admin/use-admin-users'
 
 /**
@@ -54,7 +54,8 @@ export function AdminUsersPage() {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false)
   const [newRole, setNewRole] = useState('')
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [actionType, setActionType] = useState<'ban' | 'unban'>('ban')
+  const [actionType, setActionType] = useState<'ban' | 'unban' | 'resetPassword'>('ban')
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const { data, isLoading } = useAdminUsers({
     search,
@@ -67,6 +68,7 @@ export function AdminUsersPage() {
   const approveUserMutation = useApproveUser()
   const disableUserMutation = useDisableUser()
   const enableUserMutation = useEnableUser()
+  const triggerPasswordResetMutation = useTriggerPasswordReset()
 
   const formatDate = (dateString: string) => {
     return formatLocalDateTime(dateString, i18n.language)
@@ -99,7 +101,7 @@ export function AdminUsersPage() {
     setRoleDialogOpen(true)
   }
 
-  const handleToggleStatus = (user: AdminUser, action: 'ban' | 'unban') => {
+  const handleToggleStatus = (user: AdminUser, action: 'ban' | 'unban' | 'resetPassword') => {
     setSelectedUser(user)
     setActionType(action)
     setConfirmDialogOpen(true)
@@ -121,8 +123,12 @@ export function AdminUsersPage() {
     try {
       if (actionType === 'ban') {
         await disableUserMutation.mutateAsync(selectedUser.userId)
-      } else {
+      } else if (actionType === 'unban') {
         await enableUserMutation.mutateAsync(selectedUser.userId)
+      } else if (actionType === 'resetPassword') {
+        await triggerPasswordResetMutation.mutateAsync(selectedUser.userId)
+        setSuccessMessage(t('adminUsers.passwordResetSuccess'))
+        setTimeout(() => setSuccessMessage(null), 5000)
       }
       setConfirmDialogOpen(false)
       setSelectedUser(null)
@@ -259,6 +265,13 @@ export function AdminUsersPage() {
                             {t('adminUsers.enable')}
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(user, 'resetPassword')}
+                        >
+                          {t('adminUsers.resetPassword')}
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -342,19 +355,32 @@ export function AdminUsersPage() {
           <DialogHeader>
             <DialogTitle>{t('adminUsers.confirmAction')}</DialogTitle>
             <DialogDescription>
-              {actionType === 'ban' ? t('adminUsers.confirmDisable', { username: selectedUser?.username }) : t('adminUsers.confirmEnable', { username: selectedUser?.username })}
+              {actionType === 'ban'
+                ? t('adminUsers.confirmDisable', { username: selectedUser?.username })
+                : actionType === 'unban'
+                  ? t('adminUsers.confirmEnable', { username: selectedUser?.username })
+                  : t('adminUsers.confirmResetPassword', { username: selectedUser?.username })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={confirmStatusChange} disabled={disableUserMutation.isPending || enableUserMutation.isPending}>
+            <Button
+              onClick={confirmStatusChange}
+              disabled={disableUserMutation.isPending || enableUserMutation.isPending || triggerPasswordResetMutation.isPending}
+            >
               {t('dialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {successMessage ? (
+        <div className="fixed bottom-4 right-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-400 shadow-lg">
+          {successMessage}
+        </div>
+      ) : null}
     </div>
   )
 }

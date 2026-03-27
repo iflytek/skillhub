@@ -157,6 +157,14 @@ export function LoginPage() {
                   {loginMutation.error ? (
                     <p className="text-sm text-red-600">{loginMutation.error.message}</p>
                   ) : null}
+                  <div className="flex items-center justify-end">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      {t('login.forgotPassword')}
+                    </Link>
+                  </div>
                   <Button className="w-full" disabled={loginMutation.isPending} type="submit">
                     {loginMutation.isPending ? t('login.submitting') : t('login.submit')}
                   </Button>

@@ -345,6 +345,26 @@ export const authApi = {
     })
   },
 
+  async requestPasswordReset(identifier: string): Promise<void> {
+    await fetchJson<void>('/api/v1/auth/local/password-reset/request', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ identifier }),
+    })
+  },
+
+  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+    await fetchJson<void>('/api/v1/auth/local/password-reset/confirm', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ token, newPassword }),
+    })
+  },
+
   async logout(): Promise<void> {
     const response = await fetch('/api/v1/auth/logout', {
       method: 'POST',
@@ -1049,6 +1069,13 @@ export const adminApi = {
 
   async enableUser(userId: string): Promise<void> {
     await fetchJson<void>(`/api/v1/admin/users/${userId}/enable`, {
+      method: 'POST',
+      headers: getCsrfHeaders(),
+    })
+  },
+
+  async triggerPasswordReset(userId: string): Promise<{ message: string }> {
+    return fetchJson<{ message: string }>(`/api/v1/admin/users/${userId}/password-reset`, {
       method: 'POST',
       headers: getCsrfHeaders(),
     })

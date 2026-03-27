@@ -65,6 +65,7 @@ vi.mock('@/features/admin/use-admin-users', () => ({
   useDisableUser: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useEnableUser: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateUserRole: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useTriggerPasswordReset: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 import { renderToStaticMarkup } from 'react-dom/server'

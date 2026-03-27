@@ -220,7 +220,38 @@
     "agreementPrefix": "登录即表示你同意我们的",
     "terms": "服务条款",
     "and": "和",
-    "privacy": "隐私政策"
+    "privacy": "隐私政策",
+    "forgotPassword": "忘记密码？"
+  },
+  "forgotPassword": {
+    "title": "忘记密码",
+    "subtitle": "输入你的用户名或邮箱以接收密码重置说明",
+    "identifierLabel": "用户名或邮箱",
+    "identifierPlaceholder": "输入你的用户名或邮箱",
+    "submitting": "发送中...",
+    "submit": "发送重置链接",
+    "successTitle": "请查收邮件",
+    "successMessage": "如果该用户名或邮箱对应的账号存在，你将很快收到密码重置说明。",
+    "rememberPassword": "想起密码了？",
+    "backToLogin": "返回登录"
+  },
+  "resetPassword": {
+    "title": "重置密码",
+    "subtitle": "输入你的新密码",
+    "newPassword": "新密码",
+    "newPasswordPlaceholder": "输入新密码",
+    "confirmPassword": "确认密码",
+    "confirmPasswordPlaceholder": "再次输入新密码",
+    "passwordRequired": "请输入密码",
+    "confirmPasswordRequired": "请确认密码",
+    "passwordMismatch": "两次输入的密码不一致",
+    "submitting": "重置中...",
+    "submit": "重置密码",
+    "successTitle": "密码重置成功",
+    "successMessage": "你的密码已重置。正在跳转到登录页...",
+    "invalidTitle": "无效的重置链接",
+    "invalidMessage": "此密码重置链接无效或已过期。",
+    "requestNew": "请求新的重置链接"
   },
   "register": {
     "title": "创建账号",
@@ -534,7 +565,10 @@
     "roleSuperAdmin": "超级管理员",
     "confirmAction": "确认操作",
     "confirmDisable": "确定要禁用用户 {{username}} 吗？",
-    "confirmEnable": "确定要启用用户 {{username}} 吗？"
+    "confirmEnable": "确定要启用用户 {{username}} 吗？",
+    "resetPassword": "重置密码",
+    "confirmResetPassword": "向用户 {{username}} 发送密码重置邮件？",
+    "passwordResetSuccess": "密码重置邮件已成功发送"
   },
   "adminLabels": {
     "title": "标签管理",

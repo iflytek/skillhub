@@ -220,7 +220,38 @@
     "agreementPrefix": "By logging in, you agree to our",
     "terms": "Terms of Service",
     "and": "and",
-    "privacy": "Privacy Policy"
+    "privacy": "Privacy Policy",
+    "forgotPassword": "Forgot password?"
+  },
+  "forgotPassword": {
+    "title": "Forgot Password",
+    "subtitle": "Enter your username or email to receive password reset instructions",
+    "identifierLabel": "Username or Email",
+    "identifierPlaceholder": "Enter your username or email",
+    "submitting": "Sending...",
+    "submit": "Send Reset Link",
+    "successTitle": "Check Your Email",
+    "successMessage": "If an account exists with that username or email, you will receive password reset instructions shortly.",
+    "rememberPassword": "Remember your password?",
+    "backToLogin": "Back to login"
+  },
+  "resetPassword": {
+    "title": "Reset Password",
+    "subtitle": "Enter your new password",
+    "newPassword": "New Password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Re-enter new password",
+    "passwordRequired": "Password is required",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordMismatch": "Passwords do not match",
+    "submitting": "Resetting...",
+    "submit": "Reset Password",
+    "successTitle": "Password Reset Successful",
+    "successMessage": "Your password has been reset. Redirecting to login...",
+    "invalidTitle": "Invalid Reset Link",
+    "invalidMessage": "This password reset link is invalid or has expired.",
+    "requestNew": "Request a new reset link"
   },
   "register": {
     "title": "Create Account",
@@ -534,7 +565,10 @@
     "roleSuperAdmin": "Super Admin",
     "confirmAction": "Confirm Action",
     "confirmDisable": "Are you sure you want to disable user {{username}}?",
-    "confirmEnable": "Are you sure you want to enable user {{username}}?"
+    "confirmEnable": "Are you sure you want to enable user {{username}}?",
+    "resetPassword": "Reset Password",
+    "confirmResetPassword": "Send password reset email to user {{username}}?",
+    "passwordResetSuccess": "Password reset email sent successfully"
   },
   "adminLabels": {
     "title": "Label Management",
