@@ -40,7 +40,7 @@ function isAccountDisabledError(error: ApiError): boolean {
     || accountDisabledMessages.includes(error.message)
     || normalizedServerMessage.includes('disabled')
     || normalizedMessage.includes('disabled')
-    || (error.serverMessage ?? '').includes('禁用')
+    || (error.serverMessage ?? '').includes('禁琨')
     || error.message.includes('禁用')
 }
 
@@ -51,6 +51,12 @@ export function handleApiError(error: unknown): void {
   }
 
   const { status } = error
+
+  // Network error (status 0) - fetch failed without receiving a response
+  if (status === 0) {
+    toast.error(i18n.t('apiError.networkError'))
+    return
+  }
 
   if (status === 401) {
     if (isAccountDisabledError(error)) {
