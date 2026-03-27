@@ -17,6 +17,7 @@ SKILLHUB_ALIYUN_NAMESPACE="${SKILLHUB_ALIYUN_NAMESPACE:-skill_hub}"
 SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
 SKILLHUB_SERVER_IMAGE_VALUE="${SKILLHUB_SERVER_IMAGE:-}"
 SKILLHUB_WEB_IMAGE_VALUE="${SKILLHUB_WEB_IMAGE:-}"
+SKILLHUB_SCANNER_IMAGE_VALUE="${SKILLHUB_SCANNER_IMAGE:-}"
 POSTGRES_IMAGE_VALUE="${POSTGRES_IMAGE:-}"
 REDIS_IMAGE_VALUE="${REDIS_IMAGE:-}"
 
@@ -60,6 +61,11 @@ while [ "$#" -gt 0 ]; do
       SKILLHUB_WEB_IMAGE_VALUE="$2"
       shift 2
       ;;
+    --scanner-image)
+      [ "$#" -ge 2 ] || { echo "Missing value for --scanner-image" >&2; exit 1; }
+      SKILLHUB_SCANNER_IMAGE_VALUE="$2"
+      shift 2
+      ;;
     --postgres-image)
       [ "$#" -ge 2 ] || { echo "Missing value for --postgres-image" >&2; exit 1; }
       POSTGRES_IMAGE_VALUE="$2"
@@ -82,6 +88,7 @@ Options:
   --ref <git-ref>       Download runtime files from a specific Git ref
   --server-image <img>  Override backend image repository
   --web-image <img>     Override frontend image repository
+  --scanner-image <i>   Override scanner image repository
   --postgres-image <i>  Override PostgreSQL image
   --redis-image <img>   Override Redis image
 EOF
@@ -163,6 +170,9 @@ prepare_runtime_files() {
     if [ -z "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
       SKILLHUB_WEB_IMAGE_VALUE="$mirror_registry/skillhub-web"
     fi
+    if [ -z "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
+      SKILLHUB_SCANNER_IMAGE_VALUE="$mirror_registry/skillhub-scanner"
+    fi
   fi
 
   if [ -n "$SKILLHUB_VERSION_VALUE" ]; then
@@ -183,6 +193,10 @@ prepare_runtime_files() {
 
   if [ -n "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
     set_env_value "SKILLHUB_WEB_IMAGE" "$SKILLHUB_WEB_IMAGE_VALUE"
+  fi
+
+  if [ -n "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
+    set_env_value "SKILLHUB_SCANNER_IMAGE" "$SKILLHUB_SCANNER_IMAGE_VALUE"
   fi
 }
 
