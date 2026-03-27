@@ -53,4 +53,14 @@ describe('handleApiError', () => {
 
     expect(errorSpy).toHaveBeenLastCalledWith('Server said no')
   })
+
+  it('shows network error message for status 0', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('apiError.networkError', 0))
+
+    expect(errorSpy).toHaveBeenCalled()
+    const lastCall = errorSpy.mock.calls[errorSpy.mock.calls.length - 1][0]
+    expect(lastCall).toMatch(/network|网络/)
+  })
 })
