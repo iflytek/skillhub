@@ -5,7 +5,6 @@ Thumbs.db
 # Editors / IDEs
 .idea/
 .vscode/
-.claude/
 *.iml
 *.swp
 *.swo
@@ -74,3 +73,6 @@ docs/prds/
 
 # oh-my-claudecode
 .omc
+
+#local
+*.local.json
