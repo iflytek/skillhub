@@ -53,6 +53,11 @@ coverage/
 *.tsbuildinfo
 package-lock.json
 
+# Playwright
+**/playwright-report/
+**/test-results/
+**/.playwright/
+
 # Temporary files
 .tmp/
 tmp/
