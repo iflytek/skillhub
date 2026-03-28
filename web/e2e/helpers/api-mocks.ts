@@ -31,6 +31,7 @@ type SearchResponse = {
 }
 
 type SearchHandler = (url: URL) => SearchResponse
+type SkillDetailHandler = () => SkillSummary
 
 const JSON_HEADERS = {
   'access-control-allow-origin': '*',
@@ -127,13 +128,26 @@ export async function mockCommonApis(
   page: Page,
   options: {
     authenticated?: boolean
-    searchHandler: SearchHandler
+    searchHandler?: SearchHandler
+    skillDetailHandler?: SkillDetailHandler
   },
 ) {
   await mockStaticApis(page, options)
 
-  await page.route('**/api/web/skills?**', async (route) => {
-    const url = new URL(route.request().url())
-    await fulfillJson(route, options.searchHandler(url))
-  })
+  if (options.searchHandler) {
+    await page.route('**/api/web/skills?**', async (route) => {
+      const url = new URL(route.request().url())
+      await fulfillJson(route, options.searchHandler!(url))
+    })
+  }
+
+  if (options.skillDetailHandler) {
+    await page.route('**/api/web/skills/**', async (route) => {
+      // Skip search endpoint
+      if (route.request().url().includes('?')) {
+        return route.continue()
+      }
+      await fulfillJson(route, options.skillDetailHandler!())
+    })
+  }
 }
