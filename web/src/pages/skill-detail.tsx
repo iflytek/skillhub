@@ -8,6 +8,7 @@ import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { InstallCommand } from '@/features/skill/install-command'
+import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
   getOverviewCollapseMaxHeight,
@@ -1011,6 +1012,11 @@ export function SkillDetailPage() {
               namespace={namespace}
               slug={slug}
               version={publishedVersion.version}
+            />
+            <ShareButton
+              namespace={namespace}
+              slug={slug}
+              description={skill.summary}
             />
           </Card>
         )}
