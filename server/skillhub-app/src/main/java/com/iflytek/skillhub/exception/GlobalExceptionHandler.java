@@ -21,7 +21,6 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 
 /**
  * Translates application, domain, auth, and infrastructure exceptions into the platform's JSON API
@@ -110,25 +109,6 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
                 apiResponseFactory.error(503, "error.storage.unavailable"));
-    }
-
-    @ExceptionHandler(AsyncRequestTimeoutException.class)
-    public ResponseEntity<Void> handleAsyncRequestTimeout(AsyncRequestTimeoutException ex, HttpServletRequest request) {
-        // SSE timeout is normal; client should reconnect. Return null to skip error response.
-        String path = request.getRequestURI();
-        if (path != null && path.contains("/sse")) {
-            logger.debug("SSE timeout [requestId={}, path={}]", MDC.get("requestId"), path);
-            return null;
-        }
-        // For other async requests, log the timeout
-        logger.warn(
-                "Async request timeout [requestId={}, method={}, path={}, userId={}]",
-                MDC.get("requestId"),
-                request.getMethod(),
-                sensitiveLogSanitizer.sanitizeRequestTarget(request),
-                resolveUserId(request)
-        );
-        return ResponseEntity.status(HttpStatus.REQUEST_TIMEOUT).build();
     }
 
     @ExceptionHandler(Exception.class)
