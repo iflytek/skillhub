@@ -8,7 +8,43 @@ test.describe('Skill Share Button', () => {
     // Grant clipboard permissions
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
-    await mockStaticApis(page, { authenticated: false })
+    await mockStaticApis(page, { authenticated: true })
+
+    // Mock skill sub-resource APIs (versions, files, etc.) to prevent server errors
+    await page.route('**/api/web/skills/*/versions', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0, msg: 'ok',
+          data: { items: [{ id: 10, version: '1.0.0', status: 'PUBLISHED', createdAt: '2026-03-20T00:00:00Z' }], total: 1, page: 0, size: 20 },
+          timestamp: '2026-03-28T00:00:00Z', requestId: 'playwright-e2e',
+        }),
+      })
+    })
+
+    await page.route('**/api/web/skills/*/versions/*/files', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 0, msg: 'ok', data: [], timestamp: '2026-03-28T00:00:00Z', requestId: 'playwright-e2e' }),
+      })
+    })
+
+    await page.route('**/api/web/skills/*/versions/*', async (route) => {
+      // Let the versions list route handle its own path
+      if (route.request().url().endsWith('/versions')) return route.continue()
+      if (route.request().url().includes('/files')) return route.continue()
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0, msg: 'ok',
+          data: { id: 10, version: '1.0.0', status: 'PUBLISHED', createdAt: '2026-03-20T00:00:00Z' },
+          timestamp: '2026-03-28T00:00:00Z', requestId: 'playwright-e2e',
+        }),
+      })
+    })
   })
 
   test('copies share text to clipboard when share button is clicked', async ({ page }) => {
@@ -78,7 +114,8 @@ test.describe('Skill Share Button', () => {
     await shareButton.click()
 
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText())
-    expect(clipboardText).toContain('A useful test skill')
+    // Description is truncated to fit within 30 char limit (displayName + " - " + desc)
+    expect(clipboardText).toContain('A useful test sk')
   })
 
   test('share button resets to normal state after 2 seconds', async ({ page }) => {

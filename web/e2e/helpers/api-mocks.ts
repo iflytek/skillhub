@@ -21,6 +21,11 @@ type SkillSummary = {
     version: string
     status: string
   }
+  publishedVersion?: {
+    id: number
+    version: string
+    status: string
+  }
 }
 
 type SearchResponse = {
@@ -73,6 +78,11 @@ export function skill(
     updatedAt: '2026-03-20T00:00:00Z',
     canSubmitPromotion: false,
     headlineVersion: {
+      id: id * 10,
+      version: '1.0.0',
+      status: 'PUBLISHED',
+    },
+    publishedVersion: {
       id: id * 10,
       version: '1.0.0',
       status: 'PUBLISHED',
