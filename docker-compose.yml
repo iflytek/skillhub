@@ -4,9 +4,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-1d4389c1d6fb42849053958dbe916c6c.YfkLCfIXhxJlrA8D}
-      SKILL_SCANNER_LLM_BASE_URL: ${SKILL_SCANNER_LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
-      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-glm-4.7}
+      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
+      SKILL_SCANNER_LLM_BASE_URL: ${SKILL_SCANNER_LLM_BASE_URL:-}
+      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
       interval: 10s
@@ -14,7 +14,7 @@ services:
       retries: 5
 
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
     ports:
       - "5432:5432"
     environment:
@@ -30,7 +30,7 @@ services:
       retries: 5
 
   redis:
-    image: ${REDIS_IMAGE:-redis:7.0-alpine}
+    image: ${REDIS_IMAGE:-redis:7-alpine}
     ports:
       - "6379:6379"
     healthcheck:
@@ -40,7 +40,7 @@ services:
       retries: 5
 
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    image: ${MINIO_IMAGE:-minio/minio:latest}
     ports:
       - "9000:9000"
       - "9001:9001"
