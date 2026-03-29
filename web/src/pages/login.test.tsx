@@ -69,11 +69,17 @@ describe('LoginPage', () => {
     expect(typeof LoginPage).toBe('function')
   })
 
-  it('renders the login title and form elements', () => {
+  it('renders login title and form elements', () => {
     const html = renderToStaticMarkup(<LoginPage />)
 
     expect(html).toContain('login.title')
     expect(html).toContain('login.subtitle')
     expect(html).toContain('login.submit')
+  })
+
+  it('renders remember me checkbox', () => {
+    const html = renderToStaticMarkup(<LoginPage />)
+
+    expect(html).toContain('login.rememberMe')
   })
 })
