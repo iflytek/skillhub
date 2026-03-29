@@ -21,6 +21,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 
 /**
  * Translates application, domain, auth, and infrastructure exceptions into the platform's JSON API
@@ -111,6 +112,25 @@ public class GlobalExceptionHandler {
                 apiResponseFactory.error(503, "error.storage.unavailable"));
     }
 
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public ResponseEntity<Void> handleAsyncRequestTimeout(AsyncRequestTimeoutException ex, HttpServletRequest request) {
+        // SSE timeout is normal; client should reconnect. Return null to skip error response.
+        String path = request.getRequestURI();
+        if (path != null && path.contains("/sse")) {
+            logger.debug("SSE timeout [requestId={}, path={}]", MDC.get("requestId"), path);
+            return null;
+        }
+        // For other async requests, log the timeout
+        logger.warn(
+                "Async request timeout [requestId={}, method={}, path={}, userId={}]",
+                MDC.get("requestId"),
+                request.getMethod(),
+                sensitiveLogSanitizer.sanitizeRequestTarget(request),
+                resolveUserId(request)
+        );
+        return ResponseEntity.status(HttpStatus.REQUEST_TIMEOUT).build();
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex, HttpServletRequest request) {
         logger.error(
@@ -122,7 +142,7 @@ public class GlobalExceptionHandler {
                 ex
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-            apiResponseFactory.error(500, "error.internal"));
+                apiResponseFactory.error(500, "error.internal"));
     }
 
     private void logHandledException(HttpStatus status, String messageCode, HttpServletRequest request) {
