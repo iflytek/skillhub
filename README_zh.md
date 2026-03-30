@@ -204,6 +204,23 @@ AUTH_SESSION_TIMEOUT=30m
 
 完整配置参考请查看 [`application.yml`](./server/skillhub-app/src/main/resources/application.yml)。
 
+### 上传白名单覆盖
+
+技能包上传校验默认使用
+[`SkillPackagePolicy.java`](./server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/validation/SkillPackagePolicy.java)
+中的扩展名白名单。`SkillPublishProperties` 默认也会把这份列表作为
+`skillhub.publish.allowed-file-extensions` 的值。
+
+如果需要在运行时整体替换默认白名单，可以设置：
+
+```bash
+SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=.md,.json,.xsd,.xsl,.dtd,.docx,.xlsx,.pptx
+```
+
+Spring Boot 会把这个环境变量绑定到
+`skillhub.publish.allowed-file-extensions`。一旦设置，该配置会替换默认白名单，
+而不是在默认列表后追加。
+
 ## 架构
 
 SkillHub 采用清晰的分层架构：
