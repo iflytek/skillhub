@@ -883,7 +883,12 @@
     "reportSuccessTitle": "Report submitted",
     "reportSuccessDescription": "Administrators will review this report soon.",
     "downloadErrorTitle": "Download failed",
-    "reportErrorTitle": "Report failed"
+    "reportErrorTitle": "Report failed",
+    "share": {
+      "button": "Share",
+      "copied": "Copied",
+      "defaultDescription": "A useful skill"
+    }
   },
   "reports": {
     "title": "Skill Reports",
