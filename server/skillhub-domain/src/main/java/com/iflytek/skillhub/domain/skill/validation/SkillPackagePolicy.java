@@ -28,7 +28,9 @@ public final class SkillPackagePolicy {
             ".js", ".ts", ".py", ".sh", ".rb", ".go", ".rs", ".java", ".kt",
             ".lua", ".sql", ".r", ".bat", ".ps1", ".zsh", ".bash",
             // Images
-            ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp", ".ico"
+            ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp", ".ico",
+            // Office documents
+            ".docx", ".xlsx", ".pptx"
     );
 
     private SkillPackagePolicy() {

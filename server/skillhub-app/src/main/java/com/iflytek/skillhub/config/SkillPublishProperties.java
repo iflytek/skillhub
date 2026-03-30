@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.config;
 
+import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -13,13 +14,7 @@ public class SkillPublishProperties {
     private int maxFileCount = 100;
     private long maxSingleFileSize = 10 * 1024 * 1024;  // 10MB
     private long maxPackageSize = 100 * 1024 * 1024;
-    private Set<String> allowedFileExtensions = new LinkedHashSet<>(Set.of(
-            ".md", ".txt", ".json", ".yaml", ".yml", ".html", ".css", ".csv", ".pdf",
-            ".toml", ".xml", ".ini", ".cfg", ".env",
-            ".js", ".ts", ".py", ".sh", ".rb", ".go", ".rs", ".java", ".kt",
-            ".lua", ".sql", ".r", ".bat", ".ps1", ".zsh", ".bash",
-            ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp", ".ico"
-    ));
+    private Set<String> allowedFileExtensions = new LinkedHashSet<>(SkillPackagePolicy.ALLOWED_EXTENSIONS);
 
     public int getMaxFileCount() {
         return maxFileCount;
