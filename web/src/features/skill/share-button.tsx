@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Share2, Check } from 'lucide-react'
-import { copyToClipboard } from '@/shared/lib/clipboard'
+import { useCopyToClipboard } from '@/shared/lib/clipboard'
 import { getBaseUrl } from './install-command'
 
 interface ShareButtonProps {
@@ -29,16 +28,13 @@ export function buildShareText(
 
 export function ShareButton({ namespace, slug, description }: ShareButtonProps) {
   const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
+  const [copied, copy] = useCopyToClipboard()
 
   const handleShare = async () => {
     try {
       const baseUrl = getBaseUrl()
       const shareText = buildShareText(namespace, slug, description, baseUrl, t)
-
-      await copyToClipboard(shareText)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
+      await copy(shareText)
     } catch (err) {
       console.error('Failed to copy share text:', err)
     }
