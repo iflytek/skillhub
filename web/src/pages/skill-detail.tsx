@@ -1013,11 +1013,6 @@ export function SkillDetailPage() {
               slug={slug}
               version={publishedVersion.version}
             />
-            <ShareButton
-              namespace={namespace}
-              slug={slug}
-              description={skill.summary}
-            />
           </Card>
         )}
 
@@ -1075,6 +1070,12 @@ export function SkillDetailPage() {
           </svg>
           {t('skillDetail.download')}
         </Button>
+
+        <ShareButton
+          namespace={namespace}
+          slug={slug}
+          description={skill.summary}
+        />
 
         {skill.canManageLifecycle && selectedVersionEntry && (
           <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} versionStatus={selectedVersionEntry.status} />

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Share2, Check } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
 import { copyToClipboard } from '@/shared/lib/clipboard'
 import { getBaseUrl } from './install-command'
 
@@ -12,7 +11,7 @@ interface ShareButtonProps {
 }
 
 /**
- * Build share text for a skill (max 30 characters as per requirement)
+ * Build share text for a skill with full description
  */
 export function buildShareText(
   namespace: string,
@@ -23,16 +22,9 @@ export function buildShareText(
 ): string {
   const skillUrl = `${baseUrl}/space/${namespace}/${slug}`
   const displayName = namespace === 'global' ? slug : `${namespace}/${slug}`
+  const fullDesc = description || t('skillDetail.share.defaultDescription')
 
-  // Truncate description to fit within 30 char limit
-  const maxDescLength = 30 - displayName.length - 3 // 3 for " - "
-  let shortDesc = description || t('skillDetail.share.defaultDescription')
-
-  if (shortDesc.length > maxDescLength) {
-    shortDesc = shortDesc.slice(0, maxDescLength - 1) + '…'
-  }
-
-  return `${displayName} - ${shortDesc}\n${skillUrl}`
+  return `${displayName}\n${fullDesc}\n${skillUrl}`
 }
 
 export function ShareButton({ namespace, slug, description }: ShareButtonProps) {
@@ -53,17 +45,17 @@ export function ShareButton({ namespace, slug, description }: ShareButtonProps) 
   }
 
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      size="sm"
       onClick={handleShare}
-      title={copied ? t('skillDetail.share.copied') : t('skillDetail.share.button')}
-      aria-label={copied ? t('skillDetail.share.copied') : t('skillDetail.share.button')}
-      className="gap-2"
+      className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/50 px-4 py-3 transition-colors hover:bg-muted/70 active:bg-muted/80"
     >
-      {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-      {copied ? t('skillDetail.share.copied') : t('skillDetail.share.button')}
-    </Button>
+      <div className="flex items-center justify-center gap-2">
+        {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+        <span className="text-[13px] leading-relaxed text-foreground sm:text-sm">
+          {copied ? t('skillDetail.share.copied') : t('skillDetail.share.button')}
+        </span>
+      </div>
+    </button>
   )
 }
