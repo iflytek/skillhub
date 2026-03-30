@@ -22,8 +22,8 @@ public final class SkillPackagePolicy {
     public static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             // Documentation
             ".md", ".txt", ".json", ".yaml", ".yml", ".html", ".css", ".csv", ".pdf",
-            // Configuration
-            ".toml", ".xml", ".ini", ".cfg", ".env",
+            // Configuration and schemas
+            ".toml", ".xml", ".xsd", ".xsl", ".dtd", ".ini", ".cfg", ".env",
             // Scripts and source code
             ".js", ".ts", ".py", ".sh", ".rb", ".go", ".rs", ".java", ".kt",
             ".lua", ".sql", ".r", ".bat", ".ps1", ".zsh", ".bash",
@@ -126,7 +126,8 @@ public final class SkillPackagePolicy {
                 || path.endsWith(".json") || path.endsWith(".yaml") || path.endsWith(".yml")
                 || path.endsWith(".js") || path.endsWith(".ts") || path.endsWith(".py") || path.endsWith(".sh")
                 || path.endsWith(".html") || path.endsWith(".css") || path.endsWith(".csv")
-                || path.endsWith(".toml") || path.endsWith(".xml") || path.endsWith(".ini")
+                || path.endsWith(".toml") || path.endsWith(".xml") || path.endsWith(".xsd")
+                || path.endsWith(".xsl") || path.endsWith(".dtd") || path.endsWith(".ini")
                 || path.endsWith(".cfg") || path.endsWith(".env")
                 || path.endsWith(".rb") || path.endsWith(".go") || path.endsWith(".rs")
                 || path.endsWith(".java") || path.endsWith(".kt") || path.endsWith(".lua")

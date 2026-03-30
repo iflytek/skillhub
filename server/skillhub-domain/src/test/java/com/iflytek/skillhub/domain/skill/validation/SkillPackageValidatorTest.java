@@ -286,6 +286,17 @@ class SkillPackageValidatorTest {
         assertTrue(result.passed());
     }
 
+    @Test
+    void acceptsXsdSchemaFile() {
+        byte[] xsdContent = "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\"></xs:schema>".getBytes();
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("schema.xsd", xsdContent, xsdContent.length, "application/xml")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertTrue(result.passed());
+    }
+
     private PackageEntry skillMdEntry() {
         String skillMdContent = """
             ---

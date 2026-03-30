@@ -14,8 +14,8 @@ const PREVIEWABLE_EXTENSIONS = new Set([
   'ts', 'tsx', 'js', 'jsx', 'json', 'yaml', 'yml',
   'py', 'java', 'go', 'rs', 'c', 'cpp', 'h', 'hpp',
   'sh', 'bash', 'zsh', 'fish',
-  // Config
-  'txt', 'xml', 'toml', 'ini', 'env',
+  // Config and schemas
+  'txt', 'xml', 'xsd', 'xsl', 'dtd', 'toml', 'ini', 'env',
   // Web
   'html', 'css', 'scss', 'sass', 'less',
   'vue', 'svelte',
@@ -178,6 +178,9 @@ export function getLanguageForHighlight(fileName: string): string | null {
     yml: 'yaml',
     toml: 'toml',
     xml: 'xml',
+    xsd: 'xml',
+    xsl: 'xml',
+    dtd: 'xml',
     ini: 'ini',
 
     // Web files
