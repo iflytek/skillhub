@@ -415,7 +415,7 @@ export const accountApi = {
 export const skillLifecycleApi = {
   async archiveSkill(namespace: string, slug: string, reason?: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/archive`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/archive`, {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
@@ -426,7 +426,7 @@ export const skillLifecycleApi = {
 
   async unarchiveSkill(namespace: string, slug: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/unarchive`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/unarchive`, {
       method: 'POST',
       headers: await ensureCsrfHeaders(),
     })
@@ -435,7 +435,7 @@ export const skillLifecycleApi = {
   async deleteSkill(namespace: string, slug: string, ownerId?: string): Promise<SkillDeleteResult> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
     const params = ownerId ? `?ownerId=${encodeURIComponent(ownerId)}` : ''
-    return fetchJson<SkillDeleteResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}${params}`, {
+    return fetchJson<SkillDeleteResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}${params}`, {
       method: 'DELETE',
       headers: await ensureCsrfHeaders(),
     })
@@ -443,7 +443,7 @@ export const skillLifecycleApi = {
 
   async deleteVersion(namespace: string, slug: string, version: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}`, {
       method: 'DELETE',
       headers: await ensureCsrfHeaders(),
     })
@@ -451,7 +451,7 @@ export const skillLifecycleApi = {
 
   async withdrawReview(namespace: string, slug: string, version: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}/withdraw-review`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/withdraw-review`, {
       method: 'POST',
       headers: await ensureCsrfHeaders(),
     })
@@ -459,7 +459,7 @@ export const skillLifecycleApi = {
 
   async rereleaseVersion(namespace: string, slug: string, version: string, targetVersion: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${encodeURIComponent(version)}/rerelease`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/rerelease`, {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
@@ -480,12 +480,12 @@ export const labelApi = {
 
   async listSkillLabels(namespace: string, slug: string): Promise<LabelItem[]> {
     const cleanNamespace = normalizeNamespaceSlug(namespace)
-    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels`)
+    return fetchJson<LabelItem[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/labels`)
   },
 
   async attachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<LabelItem> {
     const cleanNamespace = normalizeNamespaceSlug(namespace)
-    return fetchJson<LabelItem>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+    return fetchJson<LabelItem>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/labels/${encodeURIComponent(labelSlug)}`, {
       method: 'PUT',
       headers: await ensureCsrfHeaders(),
     })
@@ -493,7 +493,7 @@ export const labelApi = {
 
   async detachSkillLabel(namespace: string, slug: string, labelSlug: string): Promise<void> {
     const cleanNamespace = normalizeNamespaceSlug(namespace)
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/labels/${encodeURIComponent(labelSlug)}`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/labels/${encodeURIComponent(labelSlug)}`, {
       method: 'DELETE',
       headers: await ensureCsrfHeaders(),
     })
@@ -828,7 +828,7 @@ export const promotionApi = {
 export const reportApi = {
   async submitSkillReport(namespace: string, slug: string, request: { reason: string; details?: string }): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/reports`, {
+    await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/reports`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',

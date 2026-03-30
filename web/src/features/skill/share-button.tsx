@@ -19,7 +19,7 @@ export function buildShareText(
   baseUrl: string,
   t: (key: string) => string,
 ): string {
-  const skillUrl = `${baseUrl}/space/${namespace}/${slug}`
+  const skillUrl = `${baseUrl}/space/${namespace}/${encodeURIComponent(slug)}`
   const displayName = namespace === 'global' ? slug : `${namespace}/${slug}`
   const fullDesc = description || t('skillDetail.share.defaultDescription')
 
