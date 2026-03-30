@@ -217,8 +217,7 @@ prepare_runtime_files
 case "$COMMAND" in
   up)
     if [ "$DISABLE_SCANNER" = "true" ]; then
-      set_env_value "SKILLHUB_SECURITY_SCANNER_ENABLED" "false"
-      run_compose up -d --scale skill-scanner=0
+      SKILLHUB_SECURITY_SCANNER_ENABLED=false run_compose up -d --scale skill-scanner=0
     else
       run_compose up -d
     fi
