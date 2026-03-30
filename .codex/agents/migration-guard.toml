@@ -1,0 +1,47 @@
+name = "migration-guard"
+description = "Validate version continuity and immutability for Flyway SQL files under server/skillhub-app/src/main/resources/db/migration/."
+sandbox_mode = "read-only"
+# model is inherited from the parent session, matching the original `model: inherit`.
+
+developer_instructions = """
+# DB Migration 校验规则
+
+## 路径
+
+`server/skillhub-app/src/main/resources/db/migration/`
+
+## 当前最高版本
+
+以当前工作树中已有的 `V*.sql` 为准。迁移前先执行：
+
+```bash
+ls server/skillhub-app/src/main/resources/db/migration/V*.sql | sort
+```
+
+当前这份工作树里已经能看到 `V39__password_reset_token.sql`，所以下一个新文件应为 `V40__*.sql`。
+
+## 校验步骤
+
+### 1. 版本号连续性
+
+列出现有文件：
+```bash
+ls server/skillhub-app/src/main/resources/db/migration/V*.sql | sort
+```
+
+新文件版本号必须 = 当前最高版本 + 1。例如当前最高为 V39，新文件必须是 V40。
+
+### 2. 禁止修改已有文件
+
+若检测到对已存在 `V*.sql` 文件的修改，**立即阻断**：
+
+> ❌ 禁止修改已有 Flyway migration 文件。请新建 V{N+1}__描述.sql 文件来修正数据。
+
+### 3. 校验通过后
+
+提示运行：
+```bash
+make test-backend-app
+```
+确认 migration 可正常执行（Flyway 会在测试启动时自动运行）。
+"""

@@ -110,15 +110,9 @@ Use them with the `X-Mock-User-Id` header in local development.
 
 The local bootstrap admin is enabled by default in `application-local.yml`:
 
-- username: `BOOTSTRAP_ADMIN_USERNAME` (`admin` by default)
-- password: `BOOTSTRAP_ADMIN_PASSWORD`
-  In local app-level fallback it is `ChangeMe!2026`.
-- For local source startup, set the environment variable
-  `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
-- For container or release environments, configure the same value in
-  `.env.release` or the Compose environment.
-- The shipped release template still uses `replace-this-admin-password` and
-  must be changed before first login.
+- username: `admin`
+- password: `ChangeMe!2026`
+- To disable it, set `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
 
 Stop everything with:
 
@@ -211,19 +205,19 @@ The runtime stack uses its own Compose project name, so it does not
 collide with containers from `make dev-all`.
 
 The production Compose stack now defaults to the `docker` profile only.
-It does not enable local mock auth. Bootstrap admin is disabled by default;
-if you turn it on explicitly, the backend seeds a local admin account from
-environment variables for the first login:
+It does not enable local mock auth. The release template (`.env.release.example`)
+enables the bootstrap admin by default, so zero-config quickstart via
+`runtime.sh` works out of the box:
 
-- username: `BOOTSTRAP_ADMIN_USERNAME`
-- password: `BOOTSTRAP_ADMIN_PASSWORD`
+- username: `admin`
+- password: `ChangeMe!2026`
 
 Recommended production baseline:
 
 - set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
 - keep PostgreSQL / Redis bound to `127.0.0.1`
 - use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
-- keep `BOOTSTRAP_ADMIN_ENABLED=false` unless you intentionally need bootstrap login
+- change `BOOTSTRAP_ADMIN_PASSWORD` to a strong password (`validate-release-config.sh` rejects the default `ChangeMe!2026`)
 - rotate or disable the bootstrap admin after initial setup
 - run `make validate-release-config` before `docker compose up -d`
 

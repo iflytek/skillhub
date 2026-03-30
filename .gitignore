@@ -79,3 +79,6 @@ docs/prds/
 
 # oh-my-claudecode
 .omc
+
+#local
+*.local.json

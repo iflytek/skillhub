@@ -54,8 +54,7 @@ curl -i http://127.0.0.1:8080/actuator/health
 
 ## First Login Configuration
 
-1. Login with `BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD`
-   When copied from `.env.release.example`, the shipped placeholder is `replace-this-admin-password`, so change it before first login
+1. Login with `BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD` (default `admin` / `ChangeMe!2026`)
 2. Change admin password immediately
 3. Configure enterprise SSO (optional)
 4. Create team namespaces

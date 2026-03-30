@@ -22,34 +22,39 @@ cd skillhub
 make dev-all
 ```
 
-## 访问地址
+## 默认账号
 
-启动成功后，可以通过以下地址访问：
+两种启动方式都会默认创建一个 bootstrap 管理员账号：
 
-| 服务 | 地址 | 说明 |
-|------|------|------|
-| Web UI | http://localhost:3000 | 前端界面 |
-| Backend API | http://localhost:8080 | 后端 API |
-| MinIO Console | http://localhost:9001 | 对象存储管理 |
+- 用户名：`admin`
+- 密码：`ChangeMe!2026`
 
-## 开发用户
+### `curl` 一键部署
 
-默认本地开发环境预置了两个模拟测试用户：
+| 服务 | 地址 |
+|------|------|
+| Web UI | http://localhost |
+| Backend API | http://localhost:8080 |
+
+使用上述默认账号密码登录即可。**生产环境请务必修改密码。**
+
+### `make dev-all` 本地开发
+
+| 服务 | 地址 |
+|------|------|
+| Web UI | http://localhost:3000 |
+| Backend API | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 |
+
+除了上述 bootstrap 管理员，本地开发还预置两个模拟用户（无需密码）：
 
 | 用户 | 角色 | 说明 |
 |------|------|------|
 | `local-user` | 普通用户 | 可发布技能、管理命名空间 |
 | `local-admin` | 超级管理员 | 拥有所有权限，包括审核和用户管理 |
 
-使用 `X-Mock-User-Id` 请求头在本地开发中模拟用户登录。
-本地开发环境还会默认创建可密码登录的 bootstrap 管理员账号：
-
-- 用户名：`admin`
-- 密码：`ChangeMe!2026`
-
-本地源码启动如需覆盖或关闭，请在启动后端前设置 `BOOTSTRAP_ADMIN_*`
-环境变量。
-容器或发布环境则通过 `.env.release` 或 Compose 环境变量配置。
+使用 `X-Mock-User-Id` 请求头切换模拟用户。
+如需关闭 bootstrap 管理员，启动前设置 `BOOTSTRAP_ADMIN_ENABLED=false`。
 
 ## 常用命令
 
