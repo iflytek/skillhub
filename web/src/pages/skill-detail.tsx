@@ -8,6 +8,7 @@ import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { InstallCommand } from '@/features/skill/install-command'
+import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import {
   getOverviewCollapseMaxHeight,
@@ -1069,6 +1070,12 @@ export function SkillDetailPage() {
           </svg>
           {t('skillDetail.download')}
         </Button>
+
+        <ShareButton
+          namespace={namespace}
+          slug={slug}
+          description={skill.summary}
+        />
 
         {skill.canManageLifecycle && selectedVersionEntry && (
           <SecurityAuditSummary skillId={skill.id} versionId={selectedVersionEntry.id} versionStatus={selectedVersionEntry.status} />

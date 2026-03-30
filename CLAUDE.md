@@ -45,6 +45,19 @@ cd server && JDK_JAVA_OPTIONS="-XX:+EnableDynamicAgentLoading" ./mvnw -pl skillh
 cd web && pnpm exec vitest run src/path/to/your-test.test.ts
 ```
 
+### Running E2E Tests (Playwright)
+
+```bash
+cd web && pnpm test:e2e                    # Run all e2e tests
+cd web && pnpm exec playwright test e2e/share-button.spec.ts  # Run a single spec
+cd web && pnpm test:e2e:ui                 # Open Playwright UI mode
+```
+
+- E2E test files live in `web/e2e/*.spec.ts`, with shared helpers in `web/e2e/helpers/`
+- Playwright is configured with `screenshot: 'on'` — screenshots are saved for **both passing and failing** tests in `web/test-results/` (e.g., `test-finished-1.png` for passes, `test-failed-1.png` for failures)
+- After running tests, always check screenshots in `web/test-results/<test-name>/` to visually verify page state
+- The dev server (`pnpm preview --port 3000`) is auto-started by Playwright if not already running
+
 ### Local Access
 
 - Web UI: http://localhost:3000
