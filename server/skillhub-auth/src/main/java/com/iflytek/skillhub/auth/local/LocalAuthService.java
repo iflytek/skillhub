@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import jakarta.annotation.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,9 @@ public class LocalAuthService {
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+
+    @Resource
+    private LocalAuthFailedService localAuthFailedService;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -126,7 +131,7 @@ public class LocalAuthService {
         ensureNotLocked(credential);
 
         if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
-            handleFailedLogin(credential);
+            localAuthFailedService.handleFailedLogin(credential);
             throw invalidCredentials();
         }
 
@@ -194,14 +199,14 @@ public class LocalAuthService {
         }
     }
 
-    private void handleFailedLogin(LocalCredential credential) {
-        int failedAttempts = credential.getFailedAttempts() + 1;
-        credential.setFailedAttempts(failedAttempts);
-        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-            credential.setLockedUntil(currentTime().plus(LOCK_DURATION));
-        }
-        credentialRepository.save(credential);
-    }
+//    private void handleFailedLogin(LocalCredential credential) {
+//        int failedAttempts = credential.getFailedAttempts() + 1;
+//        credential.setFailedAttempts(failedAttempts);
+//        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+//            credential.setLockedUntil(currentTime().plus(LOCK_DURATION));
+//        }
+//        credentialRepository.saveAndFlush(credential);
+//    }
 
     private Instant currentTime() {
         return Instant.now(clock);
