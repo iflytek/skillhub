@@ -30,7 +30,7 @@ public final class SkillPackagePolicy {
             // Images
             ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp", ".ico",
             // Office documents
-            ".docx", ".xlsx", ".pptx"
+            ".doc", ".xls", ".ppt", ".docx", ".xlsx", ".pptx"
     );
 
     private SkillPackagePolicy() {
