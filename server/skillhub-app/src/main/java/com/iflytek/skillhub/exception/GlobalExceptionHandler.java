@@ -113,6 +113,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex, HttpServletRequest request) {
+        String path = request.getRequestURI();
+        if (path != null && path.contains(".well-known/appspecific/com.chrome.devtools")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                apiResponseFactory.error(404, "error.notFound"));
+        }
         logger.error(
                 "Unhandled API exception [requestId={}, method={}, path={}, userId={}]",
                 MDC.get("requestId"),
