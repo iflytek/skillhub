@@ -112,7 +112,8 @@ skillhub:
     max-file-count: 100
     max-single-file-size: 10485760 # 10MB
     max-package-size: 104857600 # 100MB
-    allowed-file-extensions: .md,.txt,.json,.yaml,.yml,.html,.css,.csv,.pdf,.toml,.xml,.ini,.cfg,.env,.js,.ts,.py,.pyc,.sh,.rb,.go,.rs,.java,.kt,.lua,.sql,.r,.bat,.ps1,.zsh,.bash,.png,.jpg,.jpeg,.svg,.gif,.webp,.ico
+    # allowed-file-extensions: uses SkillPackagePolicy.ALLOWED_EXTENSIONS by default
+    # Override via SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS env var if needed
   profile:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true} # Enable machine review (e.g. sensitive word detection)

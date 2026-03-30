@@ -286,6 +286,29 @@ class SkillPackageValidatorTest {
         assertTrue(result.passed());
     }
 
+    @Test
+    void acceptsDocxFile() {
+        // DOCX is a ZIP-based format; PK magic bytes (0x50, 0x4b, 0x03, 0x04)
+        byte[] docxContent = new byte[] {0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00};
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("document.docx", docxContent, docxContent.length, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertTrue(result.passed());
+    }
+
+    @Test
+    void acceptsXsdSchemaFile() {
+        byte[] xsdContent = "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\"></xs:schema>".getBytes();
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("schema.xsd", xsdContent, xsdContent.length, "application/xml")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertTrue(result.passed());
+    }
+
     private PackageEntry skillMdEntry() {
         String skillMdContent = """
             ---

@@ -224,6 +224,23 @@ Recommended production baseline:
 If the GHCR package remains private, run `docker login ghcr.io` before
 `docker compose up -d`.
 
+### Upload Allowlist Override
+
+Skill package upload validation uses the default extension allowlist from
+[`SkillPackagePolicy.java`](./server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/validation/SkillPackagePolicy.java).
+`SkillPublishProperties` uses that same list by default for
+`skillhub.publish.allowed-file-extensions`.
+
+If you need to replace the default allowlist at runtime, set:
+
+```bash
+SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=.md,.json,.xsd,.xsl,.dtd,.docx,.xlsx,.pptx
+```
+
+Spring Boot binds this environment variable to
+`skillhub.publish.allowed-file-extensions`. When set, it replaces the default
+allowlist instead of appending to it.
+
 ### Monitoring
 
 A Prometheus + Grafana monitoring stack lives under [`monitoring/`](./monitoring).
