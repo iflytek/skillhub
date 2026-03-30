@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Settings, Download, Upload } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { copyToClipboard } from '@/shared/lib/clipboard'
+import { useMemo } from 'react'
+import { useCopyToClipboard } from '@/shared/lib/clipboard'
 
 function getAppBaseUrl(): string {
   if (typeof window === 'undefined') {
@@ -16,13 +16,11 @@ function getAppBaseUrl(): string {
 
 function CopyButton({ text }: { text: string }) {
   const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
+  const [copied, copy] = useCopyToClipboard()
 
   const handleCopy = async () => {
     try {
-      await copyToClipboard(text)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
+      await copy(text)
     } catch (err) {
       console.error('Failed to copy:', err)
     }

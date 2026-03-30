@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { copyToClipboard } from '@/shared/lib/clipboard'
+import { useCopyToClipboard } from '@/shared/lib/clipboard'
 
 interface InstallCommandProps {
   namespace: string
@@ -32,7 +32,7 @@ export function buildInstallCommand(namespace: string, slug: string, baseUrl: st
 
 export function InstallCommand({ namespace, slug }: InstallCommandProps) {
   const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
+  const [copied, copy] = useCopyToClipboard()
 
   const baseUrl = useMemo(() => getBaseUrl(), [])
 
@@ -40,9 +40,7 @@ export function InstallCommand({ namespace, slug }: InstallCommandProps) {
 
   const handleCopy = async () => {
     try {
-      await copyToClipboard(command)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
+      await copy(command)
     } catch (err) {
       console.error('Failed to copy:', err)
     }

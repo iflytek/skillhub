@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import i18n from '@/i18n/config'
 
 const errorSpy = vi.fn()
 
@@ -9,8 +10,9 @@ vi.mock('./toast', () => ({
 }))
 
 describe('ApiError', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     errorSpy.mockReset()
+    await i18n.changeLanguage('zh')
   })
 
   it('keeps the provided server message key', async () => {
@@ -23,8 +25,9 @@ describe('ApiError', () => {
 })
 
 describe('handleApiError', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     errorSpy.mockReset()
+    await i18n.changeLanguage('zh')
     vi.stubGlobal('window', { location: { href: '' } })
   })
 
@@ -54,13 +57,19 @@ describe('handleApiError', () => {
     expect(errorSpy).toHaveBeenLastCalledWith('Server said no')
   })
 
-  it('shows network error message for status 0', async () => {
+  it('shows network error message when status is 0 (network disconnected)', async () => {
     const { ApiError, handleApiError } = await import('./api-error')
 
-    handleApiError(new ApiError('apiError.networkError', 0))
+    handleApiError(new ApiError('Network error', 0))
 
-    expect(errorSpy).toHaveBeenCalled()
-    const lastCall = errorSpy.mock.calls[errorSpy.mock.calls.length - 1][0]
-    expect(lastCall).toMatch(/network|网络/)
+    expect(errorSpy).toHaveBeenLastCalledWith('网络连接失败，请检查网络')
+  })
+
+  it('shows network error message when status is 0 with timeout', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('error.request.timeout', 0))
+
+    expect(errorSpy).toHaveBeenLastCalledWith('网络连接失败，请检查网络')
   })
 })

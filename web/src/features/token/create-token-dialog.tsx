@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { tokenApi } from '@/api/client'
-import { copyToClipboard } from '@/shared/lib/clipboard'
+import { useCopyToClipboard } from '@/shared/lib/clipboard'
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
   const [expirationMode, setExpirationMode] = useState<TokenExpirationMode>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
   const [expiresAtError, setExpiresAtError] = useState<string | null>(null)
+  const [, copy] = useCopyToClipboard()
   const queryClient = useQueryClient()
 
   const normalizedName = name.trim()
@@ -107,7 +108,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
     if (!createdToken) return
 
     try {
-      await copyToClipboard(createdToken.token)
+      await copy(createdToken.token)
       toast.success(t('createToken.copySuccess'), undefined, centeredToastOptions())
     } catch (error) {
       console.error('Failed to copy token:', error)

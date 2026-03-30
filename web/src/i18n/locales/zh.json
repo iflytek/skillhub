@@ -883,7 +883,12 @@
     "reportSuccessTitle": "举报已提交",
     "reportSuccessDescription": "管理员将尽快处理这条举报。",
     "downloadErrorTitle": "下载失败",
-    "reportErrorTitle": "举报失败"
+    "reportErrorTitle": "举报失败",
+    "share": {
+      "button": "分享",
+      "copied": "已复制",
+      "defaultDescription": "实用技能"
+    }
   },
   "reports": {
     "title": "技能举报",
