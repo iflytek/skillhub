@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import i18n from '@/i18n/config'
 
 const errorSpy = vi.fn()
 
@@ -9,8 +10,9 @@ vi.mock('./toast', () => ({
 }))
 
 describe('ApiError', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     errorSpy.mockReset()
+    await i18n.changeLanguage('zh')
   })
 
   it('keeps the provided server message key', async () => {
@@ -23,8 +25,9 @@ describe('ApiError', () => {
 })
 
 describe('handleApiError', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     errorSpy.mockReset()
+    await i18n.changeLanguage('zh')
     vi.stubGlobal('window', { location: { href: '' } })
   })
 
