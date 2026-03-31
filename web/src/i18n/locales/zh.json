@@ -204,6 +204,7 @@
     "passwordPlaceholder": "输入密码",
     "usernameRequired": "请输入用户名",
     "passwordRequired": "请输入密码",
+    "rememberMe": "记住账号密码",
     "showPassword": "显示密码",
     "hidePassword": "隐藏密码",
     "submitting": "登录中...",

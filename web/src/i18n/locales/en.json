@@ -204,6 +204,7 @@
     "passwordPlaceholder": "Enter password",
     "usernameRequired": "Username is required",
     "passwordRequired": "Password is required",
+    "rememberMe": "Remember me",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "submitting": "Logging in...",
