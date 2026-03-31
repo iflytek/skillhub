@@ -38,6 +38,47 @@ type SearchResponse = {
 type SearchHandler = (url: URL) => SearchResponse
 type SkillDetailHandler = () => SkillSummary
 
+type User = {
+  userId: string
+  displayName: string
+  platformRoles: string[]
+  email?: string
+  status?: string
+}
+
+type Namespace = {
+  slug: string
+  name: string
+  description?: string
+  memberCount?: number
+}
+
+type Review = {
+  id: number
+  skillId: number
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  submittedAt: string
+  reviewedAt?: string
+  comment?: string
+}
+
+type Token = {
+  id: number
+  name: string
+  token?: string
+  createdAt: string
+  expiresAt?: string
+}
+
+type Notification = {
+  id: number
+  type: string
+  title: string
+  content: string
+  read: boolean
+  createdAt: string
+}
+
 const JSON_HEADERS = {
   'access-control-allow-origin': '*',
   'content-type': 'application/json',
@@ -91,6 +132,82 @@ export function skill(
   }
 }
 
+export function user(
+  userId: string,
+  displayName: string,
+  role: string = 'USER',
+  overrides: Partial<User> = {},
+): User {
+  return {
+    userId,
+    displayName,
+    platformRoles: [role],
+    email: `${userId}@example.com`,
+    status: 'ACTIVE',
+    ...overrides,
+  }
+}
+
+export function namespace(
+  slug: string,
+  name: string,
+  overrides: Partial<Namespace> = {},
+): Namespace {
+  return {
+    slug,
+    name,
+    description: `${name} namespace`,
+    memberCount: 1,
+    ...overrides,
+  }
+}
+
+export function review(
+  id: number,
+  skillId: number,
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' = 'PENDING',
+  overrides: Partial<Review> = {},
+): Review {
+  return {
+    id,
+    skillId,
+    status,
+    submittedAt: '2026-03-20T00:00:00Z',
+    ...overrides,
+  }
+}
+
+export function token(
+  id: number,
+  name: string,
+  overrides: Partial<Token> = {},
+): Token {
+  return {
+    id,
+    name,
+    createdAt: '2026-03-20T00:00:00Z',
+    expiresAt: '2027-03-20T00:00:00Z',
+    ...overrides,
+  }
+}
+
+export function notification(
+  id: number,
+  type: string,
+  read: boolean = false,
+  overrides: Partial<Notification> = {},
+): Notification {
+  return {
+    id,
+    type,
+    title: `Notification ${id}`,
+    content: `Content for notification ${id}`,
+    read,
+    createdAt: '2026-03-20T00:00:00Z',
+    ...overrides,
+  }
+}
+
 export async function setEnglishLocale(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem('i18nextLng', 'en')
@@ -101,11 +218,13 @@ export async function mockStaticApis(
   page: Page,
   options: {
     authenticated?: boolean
-  },
+    userRole?: string
+  } = {},
 ) {
   const authenticated = options.authenticated ?? false
+  const userRole = options.userRole ?? 'USER'
 
-  await page.route('**/api/v1/auth/me', async (route) => {
+  await page.route('**/api/v1/auth/me**', async (route) => {
     if (!authenticated) {
       await fulfillJson(route, null, { status: 401, msg: 'Unauthorized' })
       return
@@ -114,7 +233,7 @@ export async function mockStaticApis(
     await fulfillJson(route, {
       userId: 'local-user',
       displayName: 'Local User',
-      platformRoles: [],
+      platformRoles: [userRole],
     })
   })
 
@@ -131,6 +250,14 @@ export async function mockStaticApis(
       { slug: 'official', type: 'RECOMMENDED', displayName: 'Official' },
       { slug: 'featured', type: 'RECOMMENDED', displayName: 'Featured' },
     ])
+  })
+
+  await page.route('**/api/web/notifications/unread-count**', async (route) => {
+    await fulfillJson(route, { count: 0 })
+  })
+
+  await page.route('**/api/web/notifications?**', async (route) => {
+    await fulfillJson(route, { items: [], total: 0, page: 0, size: 5 })
   })
 }
 
@@ -160,4 +287,75 @@ export async function mockCommonApis(
       await fulfillJson(route, options.skillDetailHandler!())
     })
   }
+}
+
+// Auth mocking
+export async function mockAuthLogin(page: Page, success: boolean = true) {
+  await page.route('**/api/v1/auth/login', async (route) => {
+    if (success) {
+      await fulfillJson(route, { userId: 'local-user', displayName: 'Local User' })
+    } else {
+      await fulfillJson(route, null, { status: 401, msg: 'Invalid credentials' })
+    }
+  })
+}
+
+export async function mockAuthLogout(page: Page) {
+  await page.route('**/api/v1/auth/logout', async (route) => {
+    await fulfillJson(route, {})
+  })
+}
+
+// Skill detail mocking
+export async function mockSkillVersions(page: Page, versions: any[]) {
+  await page.route('**/api/web/skills/*/versions', async (route) => {
+    await fulfillJson(route, versions)
+  })
+}
+
+export async function mockSkillFiles(page: Page, files: any[]) {
+  await page.route('**/api/web/skills/*/versions/*/files', async (route) => {
+    await fulfillJson(route, files)
+  })
+}
+
+// Social mocking
+export async function mockStarStatus(page: Page, starred: boolean) {
+  await page.route('**/api/web/skills/*/star', async (route) => {
+    if (route.request().method() === 'GET') {
+      await fulfillJson(route, { starred })
+    } else {
+      await route.continue()
+    }
+  })
+}
+
+export async function mockToggleStar(page: Page) {
+  await page.route('**/api/web/skills/*/star', async (route) => {
+    if (route.request().method() === 'POST' || route.request().method() === 'DELETE') {
+      await fulfillJson(route, {})
+    } else {
+      await route.continue()
+    }
+  })
+}
+
+export async function mockRating(page: Page, rating: number | null) {
+  await page.route('**/api/web/skills/*/rating', async (route) => {
+    if (route.request().method() === 'GET') {
+      await fulfillJson(route, { rating })
+    } else {
+      await route.continue()
+    }
+  })
+}
+
+export async function mockSubmitRating(page: Page) {
+  await page.route('**/api/web/skills/*/rating', async (route) => {
+    if (route.request().method() === 'POST') {
+      await fulfillJson(route, {})
+    } else {
+      await route.continue()
+    }
+  })
 }
