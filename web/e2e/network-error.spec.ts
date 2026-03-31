@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { mockStaticApis, setEnglishLocale, skill } from './helpers/api-mocks'
+import { skill } from './helpers/api-fixtures'
+import { setEnglishLocale } from './helpers/auth-fixtures'
+import { mockSearchPage } from './helpers/route-mocks'
 
 function buildSearchResponse(url: URL) {
   const q = url.searchParams.get('q') ?? ''
@@ -26,30 +28,20 @@ function buildSearchResponse(url: URL) {
 test.describe('Network Error Handling', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
-    await mockStaticApis(page, { authenticated: false })
   })
 
   test('shows an empty state when a search request fails', async ({ page }) => {
     let failSearchRequests = false
 
-    await page.route('**/api/web/skills?**', async (route) => {
-      if (failSearchRequests) {
-        await route.abort('internetdisconnected')
-        return
-      }
+    await mockSearchPage(page, {
+      authenticated: false,
+      searchHandler: async (url) => {
+        if (failSearchRequests) {
+          throw new Error('internetdisconnected')
+        }
 
-      const url = new URL(route.request().url())
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          code: 0,
-          msg: 'ok',
-          data: buildSearchResponse(url),
-          timestamp: '2026-03-27T00:00:00Z',
-          requestId: 'playwright-e2e',
-        }),
-      })
+        return buildSearchResponse(url)
+      },
     })
 
     await page.goto('/search?q=&sort=relevance&page=0&starredOnly=false')
@@ -66,8 +58,11 @@ test.describe('Network Error Handling', () => {
   })
 
   test('renders the page shell even when the initial request fails', async ({ page }) => {
-    await page.route('**/api/web/skills?**', async (route) => {
-      await route.abort('internetdisconnected')
+    await mockSearchPage(page, {
+      authenticated: false,
+      searchHandler: async () => {
+        throw new Error('internetdisconnected')
+      },
     })
 
     await page.goto('/search?q=&sort=relevance&page=0&starredOnly=false')
@@ -79,24 +74,15 @@ test.describe('Network Error Handling', () => {
   test('recovers when a later search request succeeds again', async ({ page }) => {
     let failSearchRequests = false
 
-    await page.route('**/api/web/skills?**', async (route) => {
-      if (failSearchRequests) {
-        await route.abort('internetdisconnected')
-        return
-      }
+    await mockSearchPage(page, {
+      authenticated: false,
+      searchHandler: async (url) => {
+        if (failSearchRequests) {
+          throw new Error('internetdisconnected')
+        }
 
-      const url = new URL(route.request().url())
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          code: 0,
-          msg: 'ok',
-          data: buildSearchResponse(url),
-          timestamp: '2026-03-27T00:00:00Z',
-          requestId: 'playwright-e2e',
-        }),
-      })
+        return buildSearchResponse(url)
+      },
     })
 
     await page.goto('/search?q=&sort=relevance&page=0&starredOnly=false')

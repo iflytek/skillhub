@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { mockCommonApis, setEnglishLocale, skill } from './helpers/api-mocks'
+import { skill } from './helpers/api-fixtures'
+import { setEnglishLocale } from './helpers/auth-fixtures'
+import { mockSearchPage } from './helpers/route-mocks'
 
 function buildSearchResponse(url: URL) {
   const q = url.searchParams.get('q') ?? ''
@@ -53,14 +55,13 @@ function buildSearchResponse(url: URL) {
 }
 
 test.describe('Search Page Flows', () => {
-  test.beforeEach(async ({ page }) => {
+  test('updates URL state and results when searching, sorting, and filtering', async ({ page }) => {
     await setEnglishLocale(page)
-    await mockCommonApis(page, {
+    await mockSearchPage(page, {
+      authenticated: false,
       searchHandler: buildSearchResponse,
     })
-  })
 
-  test('updates URL state and results when searching, sorting, and filtering', async ({ page }) => {
     await page.goto('/search?q=&sort=relevance&page=0&starredOnly=false')
 
     await expect(page.getByRole('heading', { name: /^Alpha Search$/ })).toBeVisible()
@@ -88,6 +89,12 @@ test.describe('Search Page Flows', () => {
   })
 
   test('keeps the active label when paginating', async ({ page }) => {
+    await setEnglishLocale(page)
+    await mockSearchPage(page, {
+      authenticated: false,
+      searchHandler: buildSearchResponse,
+    })
+
     await page.goto('/search?q=agent&label=official&sort=downloads&page=0&starredOnly=false')
 
     await expect(page.getByRole('heading', { name: /^Official Agent$/ })).toBeVisible()
@@ -100,6 +107,12 @@ test.describe('Search Page Flows', () => {
   })
 
   test('redirects unauthenticated users to login when enabling starred-only', async ({ page }) => {
+    await setEnglishLocale(page)
+    await mockSearchPage(page, {
+      authenticated: false,
+      searchHandler: buildSearchResponse,
+    })
+
     await page.goto('/search?q=agent&sort=downloads&page=0&starredOnly=false')
 
     await page.getByRole('button', { name: 'Starred only' }).click()
