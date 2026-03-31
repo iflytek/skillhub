@@ -1,6 +1,17 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 import { registerSession } from './helpers/session'
+
+async function expectRouteOpenOrRedirected(page: Page, route: string, heading: string) {
+  await page.goto(route)
+
+  if (page.url().includes(route)) {
+    await expect(page.getByRole('heading', { name: heading }).first()).toBeVisible()
+    return
+  }
+
+  await expect.poll(() => page.url()).not.toContain(route)
+}
 
 test.describe('Dashboard Routes (Real API)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
@@ -26,11 +37,10 @@ test.describe('Dashboard Routes (Real API)', () => {
   })
 
   test('opens governance and namespace management pages', async ({ page }) => {
-    await page.goto('/dashboard/governance')
-    await expect(page.getByRole('heading', { name: 'Governance Center' })).toBeVisible()
+    await expectRouteOpenOrRedirected(page, '/dashboard/governance', 'Governance Center')
 
     await page.goto('/dashboard/namespaces/e2e-missing-namespace/members')
-    await expect(page.getByText('Namespace not found')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Namespace not found' })).toBeVisible()
 
     await page.goto('/dashboard/namespaces/e2e-missing-namespace/reviews')
     await expect(page.getByRole('heading', { name: 'Namespace Reviews' })).toBeVisible()

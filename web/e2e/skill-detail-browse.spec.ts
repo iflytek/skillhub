@@ -10,7 +10,7 @@ test.describe('Skill Detail Browse (Real API)', () => {
 
   test('shows not found for unknown namespace', async ({ page }) => {
     await page.goto('/space/e2e-missing-namespace')
-    await expect(page.getByText('Namespace not found')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Namespace not found' })).toBeVisible()
   })
 
   test('shows not found for unknown skill detail route', async ({ page }) => {
