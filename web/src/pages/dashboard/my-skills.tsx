@@ -56,7 +56,7 @@ export function MySkillsPage() {
 
   const handleSkillClick = (namespace: string, slug: string) => {
     navigate({
-      to: `/space/${namespace}/${slug}`,
+      to: `/space/${namespace}/${encodeURIComponent(slug)}`,
       search: { returnTo: '/dashboard/skills' },
     })
   }

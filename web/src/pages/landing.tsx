@@ -30,7 +30,7 @@ export function LandingPage() {
   })
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: `/space/${namespace}/${slug}` })
+    navigate({ to: `/space/${namespace}/${encodeURIComponent(slug)}` })
   }
 
   const heroView = useInView()
