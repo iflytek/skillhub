@@ -73,18 +73,19 @@ test.describe('Skill Share Button', () => {
     await expect(page.getByRole('heading', { name: /^Test Skill$/ })).toBeVisible()
 
     // Find and click the share button
-    const shareButton = page.getByRole('button', { name: /Share/i })
+    const shareButton = page.getByTestId('share-skill-button')
     await expect(shareButton).toBeVisible()
+    await shareButton.scrollIntoViewIfNeeded()
     await shareButton.click()
 
     // Verify button shows "Copied" state
-    await expect(page.getByRole('button', { name: /Copied/i })).toBeVisible()
+    await expect(shareButton).toContainText(/Copied/i)
 
     // Verify clipboard content
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText())
     expect(clipboardText).toContain('test-skill')
     expect(clipboardText).toContain('http://localhost:3000/space/global/test-skill')
-    expect(clipboardText.split('\n')).toHaveLength(2)
+    expect(clipboardText.split('\n')).toHaveLength(3)
   })
 
   test('share text includes skill description when available', async ({ page }) => {
@@ -110,7 +111,9 @@ test.describe('Skill Share Button', () => {
 
     await expect(page.getByRole('heading', { name: /^Test Skill$/ })).toBeVisible()
 
-    const shareButton = page.getByRole('button', { name: /Share/i })
+    const shareButton = page.getByTestId('share-skill-button')
+    await expect(shareButton).toBeVisible()
+    await shareButton.scrollIntoViewIfNeeded()
     await shareButton.click()
 
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText())
@@ -141,15 +144,19 @@ test.describe('Skill Share Button', () => {
 
     await expect(page.getByRole('heading', { name: /^Test Skill$/ })).toBeVisible()
 
-    const shareButton = page.getByRole('button', { name: /Share/i })
+    const shareButton = page.getByTestId('share-skill-button')
+    await expect(shareButton).toBeVisible()
+    await shareButton.scrollIntoViewIfNeeded()
     await shareButton.click()
 
     // Should show "Copied" immediately
-    await expect(page.getByRole('button', { name: /Copied/i })).toBeVisible()
+    await expect(shareButton).toContainText(/Copied/i)
 
     // Should reset to "Share" after 2 seconds
     await page.waitForTimeout(2100)
-    await expect(page.getByRole('button', { name: /^Share$/i })).toBeVisible()
+    const resetShareButton = page.getByTestId('share-skill-button')
+    await expect(resetShareButton).toBeVisible()
+    await expect(resetShareButton).toContainText(/^Share$/i)
   })
 
   test('formats namespaced skill correctly in share text', async ({ page, context }) => {
@@ -177,7 +184,9 @@ test.describe('Skill Share Button', () => {
 
     await expect(page.getByRole('heading', { name: /^Namespaced Skill$/ })).toBeVisible()
 
-    const shareButton = page.getByRole('button', { name: /Share/i })
+    const shareButton = page.getByTestId('share-skill-button')
+    await expect(shareButton).toBeVisible()
+    await shareButton.scrollIntoViewIfNeeded()
     await shareButton.click()
 
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText())

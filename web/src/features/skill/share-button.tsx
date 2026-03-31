@@ -43,6 +43,7 @@ export function ShareButton({ namespace, slug, description }: ShareButtonProps) 
   return (
     <button
       type="button"
+      data-testid="share-skill-button"
       onClick={handleShare}
       className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/50 px-4 py-3 transition-colors hover:bg-muted/70 active:bg-muted/80"
     >
