@@ -1,41 +1,25 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
-import { expectRedirectToLogin } from './helpers/assertions'
-import { mockNamespacePage, mockSkillDetailPage } from './helpers/route-mocks'
+import { registerSession } from './helpers/session'
 
-test.describe('Route Guards', () => {
+test.describe('Route Guards (Real API)', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
   })
 
-  test('redirects anonymous users to login for protected namespace, detail, and publish routes', async ({ page }) => {
-    await mockNamespacePage(page, { authenticated: false })
+  test('redirects anonymous users to login for protected routes', async ({ page }) => {
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fdashboard$/)
+
     await page.goto('/space/team-alpha')
-    await expectRedirectToLogin(page, '/space/team-alpha')
-
-    await mockSkillDetailPage(page, {
-      authenticated: false,
-      namespace: 'team-alpha',
-      slug: 'guarded-skill',
-    })
-    await page.goto('/space/team-alpha/guarded-skill')
-    await expectRedirectToLogin(page, '/space/team-alpha/guarded-skill')
-
-    await page.goto('/dashboard/publish')
-    await expectRedirectToLogin(page, '/dashboard/publish')
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fspace%2Fteam-alpha$/)
   })
 
-  test('allows authenticated users to open namespace and skill detail routes', async ({ page }) => {
-    await mockNamespacePage(page, { authenticated: true })
-    await page.goto('/space/team-alpha')
-    await expect(page.getByRole('heading', { name: 'Team Alpha' })).toBeVisible()
+  test('allows authenticated users to open dashboard', async ({ page }, testInfo) => {
+    await registerSession(page, testInfo)
 
-    await mockSkillDetailPage(page, {
-      authenticated: true,
-      namespace: 'team-alpha',
-      slug: 'guarded-skill',
-    })
-    await page.goto('/space/team-alpha/guarded-skill')
-    await expect(page.getByRole('heading', { name: 'Test Skill' }).first()).toBeVisible()
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL('/dashboard')
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
   })
 })

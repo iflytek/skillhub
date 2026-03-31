@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 4,
+  workers: 2,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
@@ -19,7 +19,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm preview --port 3000',
+    command: 'pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120000,
