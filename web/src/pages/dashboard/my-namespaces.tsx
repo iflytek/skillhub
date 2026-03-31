@@ -36,17 +36,17 @@ export function MyNamespacesPage() {
   const restoreMutation = useRestoreNamespace()
 
   const handleNamespaceClick = (slug: string) => {
-    navigate({ to: `/space/${slug}` })
+    navigate({ to: `/space/${encodeURIComponent(slug)}` })
   }
 
   const handleMembersClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: `/dashboard/namespaces/${slug}/members` })
+    navigate({ to: `/dashboard/namespaces/${encodeURIComponent(slug)}/members` })
   }
 
   const handleReviewsClick = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate({ to: `/dashboard/namespaces/${slug}/reviews` })
+    navigate({ to: `/dashboard/namespaces/${encodeURIComponent(slug)}/reviews` })
   }
 
   const resolveStatusLabel = (status: string) => {

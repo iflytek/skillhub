@@ -22,7 +22,7 @@ export function NamespacePage() {
   })
 
   const handleSkillClick = (slug: string) => {
-    navigate({ to: `/space/${namespace}/${slug}` })
+    navigate({ to: `/space/${namespace}/${encodeURIComponent(slug)}` })
   }
 
   if (isLoadingNamespace) {

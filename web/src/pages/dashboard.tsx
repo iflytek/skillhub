@@ -137,7 +137,7 @@ export function DashboardPage() {
                       <Link
                         key={skill.id}
                         to="/space/$namespace/$slug"
-                        params={{ namespace: skill.namespace, slug: skill.slug }}
+                        params={{ namespace: skill.namespace, slug: encodeURIComponent(skill.slug) }}
                         className="rounded-lg border border-border/60 px-3 py-3 transition-colors hover:bg-accent/40"
                       >
                         <div className="truncate text-sm font-medium">{skill.displayName}</div>
