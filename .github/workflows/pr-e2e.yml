@@ -60,6 +60,9 @@ jobs:
       - name: Start full dev stack
         run: make dev-all
 
+      - name: Install Playwright browsers
+        run: cd web && pnpm exec playwright install --with-deps chromium
+
       - name: Run frontend E2E tests
         run: make test-e2e-frontend
 
