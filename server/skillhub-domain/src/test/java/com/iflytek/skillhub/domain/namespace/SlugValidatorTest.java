@@ -51,8 +51,51 @@ class SlugValidatorTest {
         assertThrows(DomainBadRequestException.class, () -> SlugValidator.validate("system"));
     }
     @Test
-    void shouldRejectSpecialCharacters() {
+    void shouldRejectUnderscores() {
         DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () -> SlugValidator.validate("my_namespace"));
         assertEquals("error.slug.pattern", ex.messageCode());
+    }
+
+    @Test
+    void shouldAcceptChineseSlug() {
+        assertDoesNotThrow(() -> SlugValidator.validate("胡炎淋技能"));
+        assertDoesNotThrow(() -> SlugValidator.validate("技能包"));
+    }
+
+    @Test
+    void shouldAcceptEmojiSlug() {
+        assertDoesNotThrow(() -> SlugValidator.validate("🚀-rocket"));
+        assertDoesNotThrow(() -> SlugValidator.validate("🎯-target"));
+    }
+
+    @Test
+    void shouldAcceptMixedUnicodeSlug() {
+        assertDoesNotThrow(() -> SlugValidator.validate("my-技能-v2"));
+        assertDoesNotThrow(() -> SlugValidator.validate("skill-包-2024"));
+        assertDoesNotThrow(() -> SlugValidator.validate("测试-test-123"));
+    }
+
+    @Test
+    void shouldAcceptJapaneseSlug() {
+        assertDoesNotThrow(() -> SlugValidator.validate("スキル"));
+        assertDoesNotThrow(() -> SlugValidator.validate("テスト-skill"));
+    }
+
+    @Test
+    void shouldAcceptKoreanSlug() {
+        assertDoesNotThrow(() -> SlugValidator.validate("스킬"));
+        assertDoesNotThrow(() -> SlugValidator.validate("테스트-skill"));
+    }
+
+    @Test
+    void shouldSlugifyChineseName() {
+        String result = SlugValidator.slugify("胡炎淋技能");
+        assertEquals("胡炎淋技能", result);
+    }
+
+    @Test
+    void shouldSlugifyMixedUnicodeName() {
+        String result = SlugValidator.slugify("My 技能 Package!");
+        assertEquals("my-技能-package", result);
     }
 }

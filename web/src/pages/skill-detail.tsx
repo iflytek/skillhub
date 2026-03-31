@@ -280,7 +280,7 @@ export function SkillDetailPage() {
     if (!previewNode || !selectedVersion) return
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
     const url = buildApiUrl(
-      `${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersion}/file?path=${encodeURIComponent(previewNode.path)}`
+      `${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(selectedVersion)}/file?path=${encodeURIComponent(previewNode.path)}`
     )
     // Set download attribute to the original filename so the browser saves it correctly
     const link = document.createElement('a')
@@ -303,7 +303,7 @@ export function SkillDetailPage() {
     try {
       const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
       triggerBrowserDownload(
-        buildApiUrl(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${selectedVersionEntry.version}/download`),
+        buildApiUrl(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(selectedVersionEntry.version)}/download`),
       )
       incrementSkillDownloadCount(queryClient, { namespace, slug })
       queryClient.invalidateQueries({ queryKey: ['skills', namespace, slug] })

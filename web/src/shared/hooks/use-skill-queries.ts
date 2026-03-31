@@ -13,28 +13,28 @@ async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSu
 
 async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  return fetchJson<SkillDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}`)
+  return fetchJson<SkillDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}`)
 }
 
 async function getSkillVersions(namespace: string, slug: string): Promise<SkillVersion[]> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  const page = await fetchJson<PagedResponse<SkillVersion>>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions`)
+  const page = await fetchJson<PagedResponse<SkillVersion>>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions`)
   return page.items
 }
 
 async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  return fetchJson<SkillFile[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/files`)
+  return fetchJson<SkillFile[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/files`)
 }
 
 async function getSkillVersionDetail(namespace: string, slug: string, version: string): Promise<SkillVersionDetail> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  return fetchJson<SkillVersionDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}`)
+  return fetchJson<SkillVersionDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}`)
 }
 
 async function getSkillDocumentation(namespace: string, slug: string, version: string, path: string): Promise<string> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
-  return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${slug}/versions/${version}/file?path=${encodeURIComponent(path)}`)
+  return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/file?path=${encodeURIComponent(path)}`)
 }
 
 async function publishSkill(params: { namespace: string; file: File; visibility: string }): Promise<PublishResult> {

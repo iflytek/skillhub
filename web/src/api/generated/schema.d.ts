@@ -2820,6 +2820,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/skills/id/{skillId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteSkillById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/{id}": {
         parameters: {
             query?: never;
@@ -2895,6 +2911,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/id/{skillId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteSkillById_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -9391,6 +9423,28 @@ export interface operations {
             };
         };
     };
+    deleteSkillById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
     deleteRead: {
         parameters: {
             query?: never;
@@ -9498,6 +9552,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    deleteSkillById_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
             };
         };
     };
