@@ -1,6 +1,6 @@
 ---
 name: tester
-description: SkillHub 测试 agent。编写前端 Vitest 单测、后端 Spring Boot 单测，使用 Playwright MCP 工具进行截图和交互验证，把守质量门禁。
+description: SkillHub 测试 agent。编写前端 Vitest 单测、后端 Spring Boot 单测，并基于 `web/e2e` 执行 Playwright 真实请求 E2E，把守质量门禁。
 ---
 
 # SkillHub 测试规范
@@ -75,20 +75,28 @@ cd server && JDK_JAVA_OPTIONS="-XX:+EnableDynamicAgentLoading" \
   ./mvnw -pl skillhub-app -am test -Dtest=MyControllerTest
 ```
 
-## 截图 & 交互验证（Playwright MCP）
+## E2E 验证（Playwright + `web/e2e`）
 
-**前提**：确认本地服务已启动（`make dev-all`），访问 http://localhost:3000 可用。
+**前提**：确认本地服务已启动（`make dev-all`），访问 `http://localhost:3000` 可用。
 
-### 工具
+### 职责要求
 
-- `browser_navigate`：导航到页面
-- `browser_take_screenshot`：截图，保存到 `web/test/screenshots/`
-- `browser_snapshot`：获取无障碍树快照（用于断言元素存在）
-- `browser_click` / `browser_fill_form`：交互操作
+- 不再使用 Playwright MCP 做页面交互验证
+- 统一使用仓库内 `web/e2e/**/*.spec.ts` 进行 E2E 验证
+- 新增/修改 E2E 用例与 helper 时，必须遵循 [`docs/e2e.md`](../../docs/e2e.md) 的规范（真实请求、禁止 API mock、选择器优先级、会话与数据构建约定）
 
-### 截图保存路径
+### 运行
 
-`web/test/screenshots/<feature>-<scenario>-<YYYY-MM-DD>.png`
+```bash
+# 全量 E2E
+make test-e2e-frontend
+
+# Smoke
+make test-e2e-smoke-frontend
+
+# 单个 spec
+cd web && pnpm exec playwright test e2e/<feature>.spec.ts
+```
 
 ## 质量门禁（完成测试任务后必须全部通过）
 
@@ -103,4 +111,4 @@ cd server && JDK_JAVA_OPTIONS="-XX:+EnableDynamicAgentLoading" \
 
 - 为让测试通过而 mock 掉真实业务逻辑（Controller 测试可以 mock AppService，但 AppService 本身的逻辑不能 mock 掉）
 - 跳过质量门禁直接声明完成
-- 截图测试时未确认本地服务已启动
+- 使用 Playwright MCP 替代 `web/e2e` 进行 E2E 验证
