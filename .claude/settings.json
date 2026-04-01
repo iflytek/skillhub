@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/hyl/IdeaProjects/open-iflytek/skillhub/.claude/hooks/pre-tool-use.js"
+            "command": "node .claude/hooks/pre-tool-use.js"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/hyl/IdeaProjects/open-iflytek/skillhub/.claude/hooks/post-tool-use.js"
+            "command": "node .claude/hooks/post-tool-use.js"
           }
         ]
       }
@@ -27,15 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/hyl/IdeaProjects/open-iflytek/skillhub/.claude/hooks/stop-frontend-check.js"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /Users/hyl/IdeaProjects/open-iflytek/skillhub/.claude/hooks/stop-auto-retry.js"
+            "command": "node .claude/hooks/stop-auto-retry.js"
           }
         ]
       }

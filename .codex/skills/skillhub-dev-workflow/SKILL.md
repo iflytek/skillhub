@@ -17,7 +17,7 @@ description: Use when starting any development task in the SkillHub repository a
 | `backend` | `.codex/agents/backend.toml` | 后端 Java 实现（Spring Boot / 分层架构 / Flyway） | 修改 `server/**/*.java` 或新增后端能力 | 代码实现、分层合规、API 规范符合性 |
 | `api-drift` | `.codex/agents/api-drift.toml` | OpenAPI 与前端类型漂移检查 | 修改 Controller（`server/**/controller/**/*.java`）后 | `make generate-api` 执行提示、`schema.d.ts` 是否需提交 |
 | `frontend` | `.codex/agents/frontend.toml` | 前端 TypeScript/React 实现 | 修改 `web/src/**/*.ts(x)` 或新增前端功能 | 代码实现、i18n 合规、API 层调用合规 |
-| `tester` | `.codex/agents/tester.toml` | 测试编写与质量门禁执行（重点：Playwright MCP E2E） | 功能实现完成后、准备宣称完成前 | Vitest/SpringBoot/Playwright MCP 验证结果与失败定位 |
+| `tester` | `.codex/agents/tester.toml` | 测试编写与质量门禁执行（重点：Playwright `web/e2e`） | 功能实现完成后、准备宣称完成前 | Vitest/SpringBoot/Playwright 验证结果与失败定位 |
 | `reviewer` | `.codex/agents/reviewer.toml` | 结构化代码审查与合并前验收 | 质量门禁全部通过后 | 带文件路径和行号的审查清单（✅/⚠️/❌） |
 
 ## 调度原则
@@ -25,8 +25,9 @@ description: Use when starting any development task in the SkillHub repository a
 - 按依赖顺序调度：`migration-guard → backend/api-drift → frontend → tester → reviewer`
 - `api-drift` 不是独立开发阶段，而是 **Controller 变更后的契约同步检查**
 - `tester` 失败后必须回流到对应开发 agent 修复，再次进入质量门禁
-- **任何前端修改（`web/src/**/*.ts(x)`）都必须执行 Playwright MCP E2E，不得只用单测替代**
-- **E2E 测试必须包含关键步骤截图，保存到 `web/test/screenshots/` 并在报告中引用**
+- **任何前端修改（`web/src/**/*.ts(x)`）都必须执行 Playwright E2E，不得只用单测替代**
+- **新增/调整 E2E 用例统一放在 `web/e2e/**/*.spec.ts`，公共 Mock/工具放在 `web/e2e/helpers/`**
+- **E2E 证据以 Playwright 默认产物为准：`web/test-results/`（步骤截图）与 HTML Report**
 - `reviewer` 只在质量门禁通过后执行，不可前置
 
 ## 工作流
@@ -165,19 +166,27 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 |---|---|
 | 前端逻辑 | Vitest 单测，与源文件同目录，kebab-case 命名 |
 | 后端 Controller | `@SpringBootTest + @AutoConfigureMockMvc + @MockBean` |
-| **任何前端修改** | **Playwright MCP E2E（强制）**，必须包含关键步骤截图 |
+| **任何前端修改** | **Playwright E2E（强制）**，测试文件位于 `web/e2e` |
 
-### Playwright MCP E2E（重点）
+### Playwright E2E（`web/e2e`，重点）
 
 - **触发条件：任何前端修改（`web/src/**/*.ts(x)`）都必须执行 E2E 测试**
-- 最低要求：覆盖至少 1 条成功路径 + 1 条失败/边界路径
-- 推荐执行流：`browser_navigate` → `browser_snapshot`（定位元素）→ `browser_click`/`browser_fill_form` → `browser_wait_for` → `browser_take_screenshot`
-- **截图要求（强制）**：
-  - 每个关键步骤必须截图（页面加载、表单填写前、提交后、错误状态等）
-  - 截图保存到 `web/test/screenshots/<feature-name>/step-<N>-<description>.png`
-  - 文件名必须包含步骤序号和描述，例如：`step-1-login-page.png`、`step-2-form-filled.png`
-  - 在测试报告中引用所有截图路径
-- 证据沉淀：关键步骤截图保存到 `web/test/screenshots/`，并在结论中附失败定位信息
+- 编写位置与命名：
+  - 用例文件：`web/e2e/<feature-name>.spec.ts`
+  - 公共工具：`web/e2e/helpers/`
+  - 命名遵循 kebab-case，文件后缀固定 `*.spec.ts`
+- 最低覆盖：至少 1 条成功路径 + 1 条失败/边界路径
+- 选择器与稳定性要求：
+  - 优先 `getByRole` / `getByLabel` / `getByTestId`
+  - 避免脆弱选择器（深层 CSS / 文本片段硬匹配）
+  - 禁用 `waitForTimeout`，使用 `expect(...).toBeVisible()`、`toHaveURL()` 等显式断言等待
+- 执行命令：
+  - 全量：`cd web && pnpm test:e2e` 或 `make test-e2e-frontend`
+  - 单文件：`cd web && pnpm exec playwright test e2e/<feature-name>.spec.ts`
+- 结果与截图（强制）：
+  - Playwright 配置为 `screenshot: 'on'`，通过/失败都会在 `web/test-results/<case>/` 产出截图
+  - 提交结果时需附：执行命令、通过率、失败点、对应 `web/test-results/...` 路径
+  - 可选补充：`cd web && pnpm test:e2e:ui` 用于本地交互调试
 
 ## 阶段五 — Validation（功能验证）
 
@@ -235,7 +244,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 | ESLint | `make lint-web` | 0 errors，0 warnings |
 | 前端单测 | `make test-frontend` | 全部通过 |
 | 后端单测 | `make test-backend-app` | 全部通过（有后端变更时执行） |
-| E2E 关键路径回归 | Playwright MCP（`browser_*` 工具链） | 关键路径通过，且截图/日志可追溯 |
+| E2E 关键路径回归 | Playwright（`web/e2e`） | 关键路径通过，且 `web/test-results/`/report 可追溯 |
 
 ### 质量门禁失败处理流程
 
@@ -245,7 +254,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 2. **路由到对应 Agent 重新开发**：
    - 后端单测失败 / 后端类型错误 → 回到 **backend agent 规则**，重新实现
    - 前端单测失败 / TypeScript 错误 / ESLint 错误 → 回到 **frontend agent 规则**，重新实现
-   - Playwright MCP E2E 失败（UI 交互/路由问题）→ 回到 **frontend agent 规则**，必要时联动 **backend agent**
+   - Playwright E2E 失败（UI 交互/路由问题）→ 回到 **frontend agent 规则**，必要时联动 **backend agent**
    - 测试本身有问题 → 回到 **tester agent**，修复测试代码
 3. **修复后重新执行 Validation + 质量门禁** — 循环直到全部通过
 
@@ -290,7 +299,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 ### 测试覆盖
 - 后端单测：[列出新增/修改的测试类和覆盖的场景]
 - 前端单测：[列出新增/修改的测试文件和覆盖的场景]
-- E2E 测试：[列出 Playwright MCP 验证的关键路径，附截图路径]
+- E2E 测试：[列出 `web/e2e/*.spec.ts` 覆盖的关键路径，附 `web/test-results/` 路径]
 
 ## 质量门禁
 
@@ -298,7 +307,7 @@ git diff --name-only HEAD -- web/src/api/generated/schema.d.ts
 - [ ] `make lint-web` 通过（0 errors, 0 warnings）
 - [ ] `make test-frontend` 通过
 - [ ] `make test-backend-app` 通过（如有后端变更）
-- [ ] Playwright MCP E2E 关键路径通过（如有 UI 交互变更）
+- [ ] Playwright E2E（`web/e2e`）关键路径通过（如有 UI 交互变更）
 - [ ] `make generate-api` 已执行且 `schema.d.ts` 已提交（如有 Controller 变更）
 
 ## 安全考虑
