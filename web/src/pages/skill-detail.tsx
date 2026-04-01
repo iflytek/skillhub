@@ -240,7 +240,10 @@ export function SkillDetailPage() {
 
   const hideMutation = useMutation({
     mutationFn: () => adminApi.hideSkill(skill!.id),
-    onSuccess: refreshSkill,
+    onSuccess: () => {
+      refreshSkill()
+      handleBack()
+    },
   })
 
   const unhideMutation = useMutation({
