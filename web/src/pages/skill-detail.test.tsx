@@ -1,11 +1,31 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const navigateMock = vi.fn()
-const hasRoleMock = vi.fn((role: string) => role === 'USER')
-const useSkillDetailMock = vi.fn()
-const useSkillLabelsMock = vi.fn()
-const useSkillVersionsMock = vi.fn()
+const {
+  navigateMock,
+  hasRoleMock,
+  hideSkillMock,
+  unhideSkillMock,
+  yankVersionMock,
+  useSkillDetailMock,
+  useSkillLabelsMock,
+  useSkillVersionsMock,
+  mutationRecords,
+} = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+  hasRoleMock: vi.fn((role: string) => role === 'USER'),
+  hideSkillMock: vi.fn(),
+  unhideSkillMock: vi.fn(),
+  yankVersionMock: vi.fn(),
+  useSkillDetailMock: vi.fn(),
+  useSkillLabelsMock: vi.fn(),
+  useSkillVersionsMock: vi.fn(),
+  mutationRecords: [] as Array<{
+    mutate: ReturnType<typeof vi.fn>
+    mutationFn?: () => unknown | Promise<unknown>
+    onSuccess?: () => void
+  }>,
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -27,7 +47,18 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: null, isLoading: false, error: null }),
-  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useMutation: (options: { mutationFn?: () => unknown | Promise<unknown>; onSuccess?: () => void }) => {
+    const mutate = vi.fn(async () => {
+      await options.mutationFn?.()
+      options.onSuccess?.()
+    })
+    mutationRecords.push({
+      mutate,
+      mutationFn: options.mutationFn,
+      onSuccess: options.onSuccess,
+    })
+    return { mutate, isPending: false }
+  },
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
 
@@ -48,9 +79,9 @@ vi.mock('@/shared/lib/toast', () => ({
 
 vi.mock('@/api/client', () => ({
   adminApi: {
-    hideSkill: vi.fn(),
-    unhideSkill: vi.fn(),
-    yankVersion: vi.fn(),
+    hideSkill: hideSkillMock,
+    unhideSkill: unhideSkillMock,
+    yankVersion: yankVersionMock,
   },
   ApiError: class ApiError extends Error {
     serverMessageKey?: string
@@ -162,6 +193,10 @@ function createSkill(overrides: Record<string, unknown> = {}) {
 describe('SkillDetailPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    hideSkillMock.mockReset()
+    unhideSkillMock.mockReset()
+    yankVersionMock.mockReset()
+    mutationRecords.length = 0
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
     useSkillDetailMock.mockReturnValue({
       data: createSkill(),
@@ -365,5 +400,17 @@ describe('SkillDetailPage', () => {
 
     expect(html).toContain('break-all')
     expect(html).toContain('leading-snug')
+  })
+
+  it('navigates back after hide skill succeeds', async () => {
+    hasRoleMock.mockImplementation((role: string) => role === 'USER' || role === 'SUPER_ADMIN')
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.hideSkill')
+    await mutationRecords[0]!.mutate()
+
+    expect(hideSkillMock).toHaveBeenCalledWith(1)
+    expect(navigateMock).toHaveBeenCalledWith({ to: '/dashboard/skills' })
   })
 })
