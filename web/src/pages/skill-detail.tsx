@@ -241,7 +241,10 @@ export function SkillDetailPage() {
   const hideMutation = useMutation({
     mutationFn: () => adminApi.hideSkill(skill!.id),
     onSuccess: () => {
-      refreshSkill()
+      setSkillDeleted(true)
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'search'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })
       handleBack()
     },
   })
@@ -360,6 +363,10 @@ export function SkillDetailPage() {
     const returnTo = normalizeSkillDetailReturnTo(search.returnTo)
     if (returnTo) {
       navigate({ to: returnTo })
+      return
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back()
       return
     }
     navigate({ to: '/search', search: getSkillSquareSearch() })

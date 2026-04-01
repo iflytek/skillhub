@@ -10,6 +10,7 @@ const {
   useSkillDetailMock,
   useSkillLabelsMock,
   useSkillVersionsMock,
+  searchReturnToMock,
   mutationRecords,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
@@ -20,6 +21,7 @@ const {
   useSkillDetailMock: vi.fn(),
   useSkillLabelsMock: vi.fn(),
   useSkillVersionsMock: vi.fn(),
+  searchReturnToMock: { value: '/dashboard/skills' as string | undefined },
   mutationRecords: [] as Array<{
     mutate: ReturnType<typeof vi.fn>
     mutationFn?: () => unknown | Promise<unknown>
@@ -31,7 +33,7 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useParams: () => ({ namespace: 'global', slug: 'demo-skill' }),
   useRouterState: () => ({ pathname: '/space/global/demo-skill', searchStr: '', hash: '' }),
-  useSearch: () => ({ returnTo: '/dashboard/skills' }),
+  useSearch: () => ({ returnTo: searchReturnToMock.value }),
 }))
 
 vi.mock('react-i18next', async () => {
@@ -196,6 +198,7 @@ describe('SkillDetailPage', () => {
     hideSkillMock.mockReset()
     unhideSkillMock.mockReset()
     yankVersionMock.mockReset()
+    searchReturnToMock.value = '/dashboard/skills'
     mutationRecords.length = 0
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
     useSkillDetailMock.mockReturnValue({
@@ -412,5 +415,29 @@ describe('SkillDetailPage', () => {
 
     expect(hideSkillMock).toHaveBeenCalledWith(1)
     expect(navigateMock).toHaveBeenCalledWith({ to: '/dashboard/skills' })
+  })
+
+  it('falls back to browser history when no returnTo exists after hiding a skill', async () => {
+    hasRoleMock.mockImplementation((role: string) => role === 'USER' || role === 'SUPER_ADMIN')
+    searchReturnToMock.value = undefined
+    const historyBackMock = vi.fn()
+    const originalWindow = (globalThis as { window?: unknown }).window
+    ;(globalThis as { window?: unknown }).window = { history: { length: 2, back: historyBackMock } }
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.hideSkill')
+    await mutationRecords[0]!.mutate()
+
+    expect(hideSkillMock).toHaveBeenCalledWith(1)
+    expect(historyBackMock).toHaveBeenCalledOnce()
+    expect(navigateMock).not.toHaveBeenCalled()
+
+    if (originalWindow === undefined) {
+      delete (globalThis as { window?: unknown }).window
+    } else {
+      const globalWithWindow = globalThis as { window?: unknown }
+      globalWithWindow.window = originalWindow
+    }
   })
 })
