@@ -1,7 +1,7 @@
-# SkillHub 使用说明
+# OpenClaw 集成指南
 
 本文档说明如何配置 OpenClaw CLI 连接到 SkillHub 私有注册中心，实现技能的发布、搜索和下载。
-> 不仅适用于 Openclaw，通过指定安装目录，可适用于其他的 CLI Coding Agent 或者 Agent 助手。
+> 不仅适用于 Openclaw，通过指定安装目录，可适用于其他的 CLI Coding Agent (Claude Code、OpenCode、Qcoder等) 或者 Agent 助手（Nanobot、CoPaw等）。
 
 ## 概述
 
@@ -54,7 +54,7 @@ npx clawhub --help
 4. 设置 Token 名称和权限范围
 5. 复制生成的 Token
 
-### 3. 搜索/游览/查看技能
+### 3. 搜索/浏览/查看技能
 
 ```bash
 # 搜索，显示所有相关技能
@@ -63,16 +63,16 @@ npx clawhub search <skill-name>
 npx clawhub search <skill-name> --limit 5  
 # 显示 skill 详情
 npx clawhub inspect <skill-name>
-# 游览最新技能
+# 浏览最新技能
 npx clawhub explore
 npx clawhub explore --limit 20    # 前20个
 
-## 例子
+# 示例
 npx clawhub search find-skills
 npx clawhub search find-skills --limit 5 
 npx clawhub inspect find-skills
 
-## 使用帮助
+# 使用帮助
 npx clawhub search --help
 npx clawhub inspect --help
 ```
@@ -96,7 +96,7 @@ npx clawhub uninstall <skill-name>
 # 查看已安装 skills
 npx clawhub list
 
-## 指定目录例子
+# Claude Code 安装 Skill 示例
 npx clawhub --dir ~/.claude/skills install find-skills
 CLAWHUB_WORKDIR=~/.claude/skills npx clawhub install find-skills
 

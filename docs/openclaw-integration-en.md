@@ -1,7 +1,7 @@
 # OpenClaw Integration Guide
 
 This document explains how to configure OpenClaw CLI to connect to a SkillHub private registry for publishing, searching, and downloading skills.
-> Not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory.
+> Not only applicable to Openclaw, but also compatible with other CLI Coding Agents (Claude Code, OpenCode, Qcoder, etc.) or Agent assistants (Nanobot, CoPaw, etc.) by specifying the installation directory.
 
 ## Overview
 
@@ -67,12 +67,12 @@ npx clawhub inspect <skill-name>
 npx clawhub explore
 npx clawhub explore --limit 20    # First 20
 
-## Examples:
+# Examples
 npx clawhub search find-skills
 npx clawhub search find-skills --limit 5
 npx clawhub inspect find-skills
 
-## Help:
+# Help
 npx clawhub search --help
 npx clawhub inspect --help
 ```
@@ -96,11 +96,11 @@ npx clawhub uninstall <skill-name>
 # View installed skills
 npx clawhub list
 
-## Directory Examples:
+# Claude Code Installation Skill Example
 npx clawhub --dir ~/.claude/skills install find-skills
 CLAWHUB_WORKDIR=~/.claude/skills npx clawhub install find-skills
 
-## Help:
+# Help
 npx clawhub install --help
 npx clawhub update --help
 npx clawhub uninstall --help
@@ -114,7 +114,7 @@ npx clawhub list --help
 npx clawhub publish ./my-skill --slug my-skill --name "My Skill" --version 1.0.0
 npx clawhub sync --all # Upload all skills in current folder
 
-## Help:
+# Help
 npx clawhub publish --help
 npx clawhub sync --help
 ```
