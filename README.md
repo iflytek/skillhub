@@ -32,6 +32,10 @@ firewall, with the same polish you'd expect from a public registry.
 
 📖 **[Full Documentation →](https://zread.ai/iflytek/skillhub)**
 
+<div align="center">
+  <img src="./skillhub-demo.gif" alt="SkillHub Demo" width="100%" />
+</div>
+
 ## Highlights
 
 - **Self-Hosted & Private** — Deploy on your own infrastructure.
