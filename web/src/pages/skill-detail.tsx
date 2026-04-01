@@ -241,11 +241,9 @@ export function SkillDetailPage() {
   const hideMutation = useMutation({
     mutationFn: () => adminApi.hideSkill(skill!.id),
     onSuccess: () => {
-      handleBack()
       setSkillDeleted(true)
-      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', 'search'] })
-      queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })
+      clearDeletedSkillQueries(queryClient, namespace, slug, skill?.id)
+      handleBack()
     },
   })
 
