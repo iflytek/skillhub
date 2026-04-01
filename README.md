@@ -358,6 +358,8 @@ npx clawhub install my-namespace--my-skill
 npx clawhub publish ./my-skill
 ```
 
+> 💡 **Tip**: The above commands are not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory (`--dir`). For example: `npx clawhub --dir ~/.claude/skills install my-skill`
+
 📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
 
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)

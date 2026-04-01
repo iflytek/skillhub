@@ -1,6 +1,7 @@
 # OpenClaw Integration Guide
 
 This document explains how to configure OpenClaw CLI to connect to a SkillHub private registry for publishing, searching, and downloading skills.
+> Not only applicable to Openclaw, but also compatible with other CLI Coding Agents (Claude Code, OpenCode, Qcoder, etc.) or Agent assistants (Nanobot, CoPaw, etc.) by specifying the installation directory.
 
 ## Overview
 
@@ -18,7 +19,7 @@ SkillHub provides a ClawHub-compatible API layer, allowing OpenClaw CLI to seaml
 Set the SkillHub registry address in your OpenClaw configuration:
 
 ```bash
-# Via environment variable
+# Via environment variable (temporary)
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
@@ -32,7 +33,17 @@ For **global namespace (@global) PUBLIC skills**, no login is required to downlo
 
 ```bash
 # Log in with an API token
-clawhub login --token YOUR_API_TOKEN
+npx clawhub login --token YOUR_API_TOKEN
+# If you have installed clawhub via npm i -g clawhub, you can use clawhub directly instead of npx clawhub for all commands in this document
+
+# View current logged in user
+npx clawhub whoami
+
+# Log out current user
+npx clawhub logout
+
+# View help
+npx clawhub --help
 ```
 
 #### Obtaining an API Token
@@ -43,34 +54,69 @@ clawhub login --token YOUR_API_TOKEN
 4. Set token name and permissions
 5. Copy the generated token
 
-### 3. Search Skills
+### 3. Search/Explore/View Skills
 
 ```bash
-# Search for skills
-npx clawhub search email
+# Search, display all matching skills
+npx clawhub search <skill-name>
+# Search, display first 5 results
+npx clawhub search <skill-name> --limit 5
+# Show skill details
+npx clawhub inspect <skill-name>
+# Explore latest skills
+npx clawhub explore
+npx clawhub explore --limit 20    # First 20
 
-# View skill details
-npx clawhub info my-skill
+# Examples
+npx clawhub search find-skills
+npx clawhub search find-skills --limit 5
+npx clawhub inspect find-skills
+
+# Help
+npx clawhub search --help
+npx clawhub inspect --help
 ```
 
-### 4. Install Skills
+### 4. Install/Update/Uninstall Skills
 
 ```bash
-# Install latest published version
-npx clawhub install my-skill
+# Install
+npx clawhub install <skill-name>
+npx clawhub install <skill-name> --version <version number>   # Specific version
+npx clawhub install <skill-name> --force                      # Overwrite existing
+npx clawhub --dir <install-path> install <skill-name>         # Specific directory
 
-# Install specific version
-npx clawhub install my-skill@1.2.0
+# Update
+npx clawhub update <skill-name>
+npx clawhub update --all
 
-# Install skill from team namespace
-npx clawhub install my-namespace--my-skill
+# Uninstall
+npx clawhub uninstall <skill-name>
+
+# View installed skills
+npx clawhub list
+
+# Claude Code Installation Skill Example
+npx clawhub --dir ~/.claude/skills install find-skills
+CLAWHUB_WORKDIR=~/.claude/skills npx clawhub install find-skills
+
+# Help
+npx clawhub install --help
+npx clawhub update --help
+npx clawhub uninstall --help
+npx clawhub list --help
 ```
 
 ### 5. Publish Skills
 
 ```bash
-# Publish a skill (requires appropriate permissions)
-npx clawhub publish ./my-skill
+# Publish skill (requires appropriate permissions)
+npx clawhub publish ./my-skill --slug my-skill --name "My Skill" --version 1.0.0
+npx clawhub sync --all # Upload all skills in current folder
+
+# Help
+npx clawhub publish --help
+npx clawhub sync --help
 ```
 
 ## API Endpoints
@@ -79,15 +125,15 @@ SkillHub compatibility layer provides the following endpoints:
 
 | Endpoint | Method | Description | Auth Required |
 |----------|--------|-------------|---------------|
-| `/api/v1/whoami` | GET | Get current user info | Yes |
+| `/api/v1/whoami` | GET | Get current user info | Required |
 | `/api/v1/search` | GET | Search skills | Optional |
 | `/api/v1/resolve` | GET | Resolve skill version | Optional |
 | `/api/v1/download/{slug}` | GET | Download skill (redirect) | Optional* |
 | `/api/v1/download` | GET | Download skill (query params) | Optional* |
 | `/api/v1/skills/{slug}` | GET | Get skill details | Optional |
-| `/api/v1/skills/{slug}/star` | POST | Star a skill | Yes |
-| `/api/v1/skills/{slug}/unstar` | DELETE | Unstar a skill | Yes |
-| `/api/v1/publish` | POST | Publish a skill | Yes |
+| `/api/v1/skills/{slug}/star` | POST | Star a skill | Required |
+| `/api/v1/skills/{slug}/unstar` | DELETE | Unstar a skill | Required |
+| `/api/v1/publish` | POST | Publish a skill | Required |
 
 Notes:
 - The compatibility layer may still expose the term "latest" externally, but it must strictly mean "latest published version"
