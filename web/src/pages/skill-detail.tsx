@@ -240,7 +240,13 @@ export function SkillDetailPage() {
 
   const hideMutation = useMutation({
     mutationFn: () => adminApi.hideSkill(skill!.id),
-    onSuccess: refreshSkill,
+    onSuccess: () => {
+      handleBack()
+      setSkillDeleted(true)
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'search'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', 'stars'] })
+    },
   })
 
   const unhideMutation = useMutation({
@@ -609,6 +615,10 @@ export function SkillDetailPage() {
     )
   }
 
+  if (skillDeleted) {
+    return null
+  }
+
   if (skillError) {
     const isForbidden = skillError instanceof Error && skillError.message.includes('403')
 
@@ -646,10 +656,6 @@ export function SkillDetailPage() {
         <p className="text-muted-foreground">{t('skillDetail.notFoundDesc')}</p>
       </div>
     )
-  }
-
-  if (skillDeleted) {
-    return null
   }
 
   return (
