@@ -4,12 +4,11 @@
 
 使用 curl 命令快速部署 SkillHub（包含所有服务：Web UI、Backend API、PostgreSQL、Redis、MinIO、Skill Scanner）：
 
-**官方镜像（推荐）**：
 ```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
 ```
 
-**阿里云镜像**（国内用户推荐）：
+**国内用户（阿里云镜像）：**
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun
 ```
@@ -26,7 +25,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 | 参数 | 说明 | 示例 |
 |------|------|------|
 | `--version <tag>` | 指定版本 | `--version v0.2.0` |
-| `--aliyun` | 使用阿里云镜像 | `--aliyun` |
+| `--aliyun` | 使用阿里云镜像（国内推荐） | `--aliyun` |
 | `--home <dir>` | 指定安装目录 | `--home /opt/skillhub` |
 | `--no-scanner` | 禁用安全扫描服务 | `--no-scanner` |
 | `--mirror-registry <url>` | 自定义镜像仓库 | `--mirror-registry registry.example.com` |

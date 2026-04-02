@@ -4,12 +4,11 @@
 
 Use the curl command to quickly deploy SkillHub (includes all services: Web UI, Backend API, PostgreSQL, Redis, MinIO, Skill Scanner):
 
-**Official images (recommended)**:
 ```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
 ```
 
-**Alibaba Cloud mirror** (recommended for users in China):
+**For users in China (Alibaba Cloud mirror)**:
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun
 ```
@@ -26,7 +25,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `--version <tag>` | Specify version | `--version v0.2.0` |
-| `--aliyun` | Use Alibaba Cloud mirror | `--aliyun` |
+| `--aliyun` | Use Alibaba Cloud mirror (recommended for China) | `--aliyun` |
 | `--home <dir>` | Specify installation directory | `--home /opt/skillhub` |
 | `--no-scanner` | Disable security scanning service | `--no-scanner` |
 | `--mirror-registry <url>` | Custom image registry | `--mirror-registry registry.example.com` |
