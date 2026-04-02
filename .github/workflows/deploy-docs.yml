@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/claude/**'
+      - 'docs/skillhub/**'
   workflow_dispatch:
 
 permissions:
@@ -29,17 +29,17 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: docs/claude/package-lock.json
+          cache-dependency-path: docs/skillhub/package-lock.json
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Install dependencies
-        run: cd docs/claude && npm ci
+        run: cd docs/skillhub && npm ci
       - name: Build with VitePress
-        run: cd docs/claude && npm run build
+        run: cd docs/skillhub && npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/claude/.vitepress/dist
+          path: docs/skillhub/.vitepress/dist
 
   deploy:
     environment:
