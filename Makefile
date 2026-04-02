@@ -1,4 +1,4 @@
-.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test check clean web-deps web-install web-install-ci dev-server dev-server-restart dev-web build-backend test-backend build-frontend test-frontend test-e2e-frontend test-e2e-smoke-frontend build-web test-web typecheck-web lint-web generate-api db-reset namespace-smoke validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down
+.PHONY: help dev dev-all dev-down dev-all-down dev-all-reset dev-logs dev-status build test check clean web-deps web-install web-install-ci dev-server dev-server-restart dev-web build-backend test-backend build-frontend test-frontend test-e2e-frontend test-e2e-smoke-frontend build-web test-web typecheck-web lint-web generate-api db-reset namespace-smoke validate-release-config staging staging-down staging-logs pr parallel-init parallel-sync parallel-up parallel-down docs-dev docs-build docs-preview
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -347,3 +347,12 @@ parallel-up: ## 在 integration worktree 合并并启动联调环境（自动识
 
 parallel-down: ## 在 integration worktree 停止联调环境
 	./scripts/parallel-down.sh
+
+docs-dev: ## 启动文档开发服务器
+	cd docs/skillhub && npm run dev
+
+docs-build: ## 构建文档站点
+	cd docs/skillhub && npm run build
+
+docs-preview: ## 预览构建后的文档站点
+	cd docs/skillhub && npm run preview
