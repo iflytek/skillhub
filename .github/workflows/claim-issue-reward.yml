@@ -32,15 +32,6 @@ jobs:
         with:
           template-path: ".github/ISSUE_TEMPLATE/reward-task.yml"
 
-      - name: Validate amount
-        env:
-          AMOUNT: ${{ steps.parse_issue.outputs.issueparser_amount }}
-        run: |
-          if ! [[ "$AMOUNT" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-            echo "Invalid amount: $AMOUNT"
-            exit 1
-          fi
-
       - name: Calculate & Save Reward
         env:
           GH_TOKEN: ${{ github.token }}

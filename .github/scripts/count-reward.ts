@@ -51,9 +51,7 @@ const tagName = `statistic-${new Date().toJSON().slice(0, 7)}`;
 await $`git config user.name "github-actions[bot]"`;
 await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
 
-const headCommit = (await $`git rev-parse HEAD`).stdout.trim();
-
-await $`git tag -a ${tagName} ${headCommit} -m ${summaryText}`;
+await $`git tag -a ${tagName} $(git rev-parse HEAD) -m ${summaryText}`;
 await $`git push origin --tags --no-verify`;
 
 await $`gh release create ${tagName} --notes ${summaryText}`;
