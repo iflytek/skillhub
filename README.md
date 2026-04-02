@@ -30,7 +30,10 @@ it to a namespace, and let others find it through search or
 install it via CLI. Built for on-premise deployment behind your
 firewall, with the same polish you'd expect from a public registry.
 
-📖 **[Full Documentation →](https://zread.ai/iflytek/skillhub)**
+## Documentation
+
+- 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — 技能发布、搜索、CLI 使用等用户操作指南
+- 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — 架构设计、API 参考、本地开发、部署运维等技术文档
 
 ## Highlights
 
@@ -64,8 +67,6 @@ firewall, with the same polish you'd expect from a public registry.
 - **Internationalization** — Multi-language support with i18next.
 
 ## Quick Start
-
-📖 **[User Documentation →](https://iflytek.github.io/skillhub/)**
 
 Start the full local stack with:
 
