@@ -2,83 +2,82 @@
 .DS_Store
 Thumbs.db
 
-# Editors / IDEs
-.idea/
-.vscode/
+# Editors / IDEs / local tooling
 .claude/
-*.iml
-*.swp
-*.swo
+.idea/
+.omc
+.vscode/
 .classpath
 .project
 .settings/
+*.iml
+*.swp
+*.swo
 
 # Logs
 *.log
 logs/
 npm-debug.log*
+pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
 # Environment / local config
 .env
 .env.*
 !.env.example
 !.env.*.example
+.dev/
+.memory/
+*.local.json
 
 # Java / Spring Boot
-target/
-build/
 .gradle/
+build/
 out/
+target/
 *.class
+*.ear
 *.jar
 *.war
-*.ear
 
 # Keep wrapper binaries/config in VCS
 !gradle/wrapper/gradle-wrapper.jar
 !mvnw
 !mvnw.cmd
 
-# React / frontend
-node_modules/
-dist/
-coverage/
+# Frontend / Node.js
 .cache/
+.eslintcache
 .parcel-cache/
 .vite/
-.eslintcache
+coverage/
+dist/
+node_modules/
 *.tsbuildinfo
 package-lock.json
 
 # Playwright
+**/.playwright/
 **/playwright-report/
 **/test-results/
-**/.playwright/
 
-# Temporary files
+# Python / temporary files
+*.py[cod]
 .tmp/
 tmp/
 __pycache__/
-*.py[cod]
 
 # Git worktrees
 .worktrees/
 
-# Local dev runtime
-.dev/
-
 # Superpowers (AI planning artifacts)
-docs/superpowers/
 .superpowers/
-docs/review/
-docs/requirements/
 docs/prds/
+docs/requirements/
+docs/review/
+docs/superpowers/
 
-# oh-my-claudecode
-.omc
-
-#local
-*.local.json
+# Local workspace metadata
+AGENTS.md
+CLAUDE.md
