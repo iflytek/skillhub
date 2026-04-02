@@ -18,6 +18,9 @@ spec:
         - name: web
           image: ghcr.io/iflytek/skillhub-web:edge
           imagePullPolicy: IfNotPresent
+          env:
+            - name: SKILLHUB_API_UPSTREAM
+              value: http://skillhub-server:8080
           ports:
             - containerPort: 80
               name: http

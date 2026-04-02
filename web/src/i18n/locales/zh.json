@@ -107,7 +107,8 @@
       },
       "agent": {
         "description": "发送提示词给你的 Agent，以设置SkillHub Registry",
-        "command": "阅读 https://www.example.com/registry/skill.md，并按照说明完成 SkillHub Skills Registry 的配置"
+        "command": "阅读 https://www.example.com/registry/skill.md，并按照说明完成 SkillHub Skills Registry 的配置",
+        "commandTemplate": "阅读 {{url}}，并按照说明完成 SkillHub Skills Registry 的配置"
       },
       "human": {
         "description": "使用CLI工具安装Skills",

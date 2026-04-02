@@ -107,7 +107,8 @@
       },
       "agent": {
         "description": "Send a prompt to your Agent to set up the SkillHub Registry",
-        "command": "Read https://www.example.com/registry/skill.md and follow the instructions to setup SkillHub Skills Registry"
+        "command": "Read https://www.example.com/registry/skill.md and follow the instructions to setup SkillHub Skills Registry",
+        "commandTemplate": "Read {{url}} and follow the instructions to setup SkillHub Skills Registry"
       },
       "human": {
         "description": "Use the CLI tool to install Skills",

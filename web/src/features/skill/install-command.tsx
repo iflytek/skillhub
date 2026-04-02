@@ -19,9 +19,12 @@ export function getBaseUrl(): string {
     return ''
   }
   const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
-  if (runtimeConfig?.appBaseUrl) {
-    return runtimeConfig.appBaseUrl
+  const configuredUrl = runtimeConfig?.appBaseUrl
+  // Use configured URL only if it's set and not localhost
+  if (configuredUrl && !configuredUrl.includes('localhost')) {
+    return configuredUrl
   }
+  // Fallback to current page origin
   return `${window.location.protocol}//${window.location.host}`
 }
 
