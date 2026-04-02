@@ -240,7 +240,17 @@ export function SkillDetailPage() {
 
   const hideMutation = useMutation({
     mutationFn: () => adminApi.hideSkill(skill!.id),
-    onSuccess: refreshSkill,
+    onSuccess: () => {
+      // After hiding, this detail route can become inaccessible for current viewer context.
+      // Navigate away immediately to avoid landing on an access-denied state.
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+      const returnTo = normalizeSkillDetailReturnTo(search.returnTo)
+      if (returnTo) {
+        void navigate({ to: returnTo, replace: true })
+        return
+      }
+      void navigate({ to: '/search', search: getSkillSquareSearch(), replace: true })
+    },
   })
 
   const unhideMutation = useMutation({
@@ -392,6 +402,9 @@ export function SkillDetailPage() {
   const isLastVersion = versions?.length === 1
   const canWithdrawVersion = (status?: string) => status === 'PENDING_REVIEW'
   const canRereleaseVersion = (status?: string) => status === 'PUBLISHED'
+  const isForbiddenError = skillError instanceof ApiError
+    ? skillError.status === 403
+    : skillError instanceof Error && skillError.message.includes('403')
   const isNotFoundError = skillError instanceof ApiError
     ? skillError.status === 400 || skillError.status === 404 || skillError.serverMessageKey === 'skill.not_found'
     : false
@@ -402,6 +415,18 @@ export function SkillDetailPage() {
     }
     clearDeletedSkillQueries(queryClient, namespace, slug, skill?.id)
   }, [isNotFoundError, namespace, queryClient, skill?.id, slug])
+
+  useEffect(() => {
+    if (!isForbiddenError || !user) {
+      return
+    }
+    const returnTo = normalizeSkillDetailReturnTo(search.returnTo)
+    if (returnTo) {
+      void navigate({ to: returnTo, replace: true })
+      return
+    }
+    void navigate({ to: '/search', search: getSkillSquareSearch(), replace: true })
+  }, [isForbiddenError, navigate, search.returnTo, user])
 
   const metadataDiffEntries = (() => {
     const source = parseMetadataJson(diffSourceDetail?.parsedMetadataJson)
@@ -610,9 +635,7 @@ export function SkillDetailPage() {
   }
 
   if (skillError) {
-    const isForbidden = skillError instanceof Error && skillError.message.includes('403')
-
-    if (isForbidden && !user) {
+    if (isForbiddenError && !user) {
       return (
         <div className="text-center py-20 animate-fade-up">
           <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.loginRequired')}</h2>
@@ -620,6 +643,10 @@ export function SkillDetailPage() {
           <Button onClick={requireLogin}>{t('common.login')}</Button>
         </div>
       )
+    }
+
+    if (isForbiddenError) {
+      return null
     }
 
     if (isNotFoundError) {

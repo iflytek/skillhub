@@ -252,6 +252,20 @@ describe('SkillDetailPage', () => {
     expect(html).not.toContain('__RATING_WIDGET__')
   })
 
+  it('does not render access denied content for logged-in forbidden responses', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      error: new Error('HTTP 403'),
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toBe('')
+    expect(html).not.toContain('skillDetail.accessDenied')
+  })
+
   it('renders rejected owner preview without pending-review copy', () => {
     useSkillDetailMock.mockReturnValue({
       data: createSkill({
