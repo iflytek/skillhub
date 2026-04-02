@@ -4,6 +4,7 @@ Thumbs.db
 
 # Editors / IDEs / local tooling
 .claude/
+.codex/
 .idea/
 .omc
 .vscode/
