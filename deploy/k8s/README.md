@@ -8,7 +8,6 @@
 - kubectl 已配置并连接到集群
 - nginx ingress controller 已安装（可选，用于域名访问）
 - 默认 StorageClass 已配置（用于 PVC）
-- GitHub Container Registry 镜像拉取权限
 
 ## 目录结构
 
@@ -42,17 +41,7 @@ deploy/k8s/
 kubectl create namespace skillhub
 ```
 
-### 2. 配置镜像拉取凭证（如镜像私有）
-
-```bash
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=ghcr.io \
-  --docker-username=<GitHub用户名> \
-  --docker-password=<GitHub Token> \
-  -n skillhub
-```
-
-### 3. 创建应用 Secret
+### 2. 配置 Secret
 
 ```bash
 cd deploy/k8s/base
@@ -60,16 +49,22 @@ cd deploy/k8s/base
 # 复制示例文件
 cp secret.yaml.example secret.yaml
 
-# 编辑 secret.yaml，修改以下值：
-# - spring-datasource-url: 数据库连接地址
-# - spring-datasource-username: 数据库用户名
-# - spring-datasource-password: 数据库密码
-# - oauth2-github-client-id: GitHub OAuth 客户端 ID（可选）
-# - oauth2-github-client-secret: GitHub OAuth 客户端密钥（可选）
-# - skill-scanner-llm-api-key: LLM API 密钥（可选）
+# 编辑 secret.yaml，修改敏感配置
 ```
 
-### 4. 选择部署方式
+**Secret 配置项**：
+
+| 键 | 说明 | 必填 |
+|---|---|---|
+| spring-datasource-url | PostgreSQL 连接 URL | 是 |
+| spring-datasource-username | 数据库用户名 | 是 |
+| spring-datasource-password | 数据库密码 | 是 |
+| bootstrap-admin-password | 管理员密码 | 是 |
+| oauth2-github-client-id | GitHub OAuth ID | 否 |
+| oauth2-github-client-secret | GitHub OAuth 密钥 | 否 |
+| skill-scanner-llm-api-key | LLM API 密钥 | 否 |
+
+### 3. 选择部署方式
 
 **方式一：完整部署（包含 PostgreSQL + Redis）**
 
@@ -99,7 +94,7 @@ spring-datasource-url: jdbc:postgresql://your-postgres-host:5432/skillhub
 kubectl apply -k overlays/external/
 ```
 
-### 5. 验证部署
+### 4. 验证部署
 
 ```bash
 # 检查 Pod 状态
@@ -109,7 +104,7 @@ kubectl get pods -n skillhub
 kubectl wait --for=condition=ready pod --all -n skillhub --timeout=300s
 ```
 
-### 6. 访问服务
+### 5. 访问服务
 
 **方式一：端口转发（推荐本地测试）**
 
@@ -168,28 +163,67 @@ kubectl apply -k overlays/with-infra/  # 或 overlays/external/
 
 ## 配置说明
 
-### ConfigMap (`base/configmap.yaml`)
+### ConfigMap 配置项
 
-| 键 | 说明 | 默认值 |
+| 键 | 默认值 | 说明 |
 |---|---|---|
-| redis-host | Redis 主机地址 | redis |
-| redis-port | Redis 端口 | 6379 |
-| storage-base-path | 技能存储路径 | /var/lib/skillhub/storage |
-| skill-scanner-enabled | 是否启用扫描器 | true |
-| skill-scanner-url | 扫描器地址 | http://skillhub-scanner:8000 |
-| skill-scanner-mode | 扫描模式 | upload |
+| redis-host | redis | Redis 主机地址 |
+| redis-port | 6379 | Redis 端口 |
+| storage-base-path | /var/lib/skillhub/storage | 技能存储路径 |
+| skillhub-storage-provider | local | 存储类型（local/s3） |
+| skill-scanner-enabled | true | 是否启用扫描器 |
+| skill-scanner-url | http://skillhub-scanner:8000 | 扫描器地址 |
+| skill-scanner-mode | upload | 扫描模式 |
+| bootstrap-admin-enabled | true | 是否创建默认管理员 |
+| bootstrap-admin-user-id | docker-admin | 管理员用户 ID |
+| bootstrap-admin-username | admin | 管理员用户名 |
+| bootstrap-admin-display-name | Platform Admin | 管理员显示名称 |
+| bootstrap-admin-email | admin@example.com | 管理员邮箱 |
+| session-cookie-secure | false | HTTPS 环境设为 true |
 
-### Secret (`base/secret.yaml`)
+### Secret 配置项
 
 | 键 | 说明 | 必填 |
 |---|---|---|
 | spring-datasource-url | PostgreSQL 连接 URL | 是 |
 | spring-datasource-username | 数据库用户名 | 是 |
 | spring-datasource-password | 数据库密码 | 是 |
+| bootstrap-admin-password | 管理员密码 | 是 |
 | oauth2-github-client-id | GitHub OAuth ID | 否 |
 | oauth2-github-client-secret | GitHub OAuth 密钥 | 否 |
 | skill-scanner-llm-api-key | LLM API 密钥 | 否 |
 | skill-scanner-llm-model | LLM 模型名称 | 否 |
+
+### 存储配置
+
+**本地存储（默认）**
+
+默认使用本地文件存储，数据保存在 PVC `skillhub-storage-pvc` 中。
+
+**S3/OSS 存储**
+
+生产环境建议使用 S3 兼容的对象存储：
+
+1. 修改 ConfigMap：
+```yaml
+skillhub-storage-provider: s3
+```
+
+2. 在 Secret 中添加：
+```yaml
+skillhub-storage-s3-access-key: your-access-key
+skillhub-storage-s3-secret-key: your-secret-key
+```
+
+3. 在 backend-deployment.yaml 中添加环境变量：
+```yaml
+- name: SKILLHUB_STORAGE_S3_ENDPOINT
+  value: https://oss-cn-shanghai.aliyuncs.com
+- name: SKILLHUB_STORAGE_S3_BUCKET
+  value: skillhub-prod
+- name: SKILLHUB_STORAGE_S3_REGION
+  value: cn-shanghai
+```
 
 ### 持久化存储
 
@@ -203,11 +237,20 @@ kubectl apply -k overlays/with-infra/  # 或 overlays/external/
 
 | 组件 | 镜像 |
 |---|---|
-| 后端服务 | ghcr.io/iflytek/skillhub-server:edge |
-| 前端服务 | ghcr.io/iflytek/skillhub-web:edge |
-| 扫描器 | ghcr.io/iflytek/skillhub-scanner:edge |
+| 后端服务 | ghcr.io/iflytek/skillhub-server:latest |
+| 前端服务 | ghcr.io/iflytek/skillhub-web:latest |
+| 扫描器 | ghcr.io/iflytek/skillhub-scanner:latest |
 | PostgreSQL | postgres:16-alpine |
 | Redis | redis:7-alpine |
+
+## 默认管理员
+
+首次启动时，如果 `bootstrap-admin-enabled` 为 `true`，系统会自动创建管理员账户：
+
+- 用户名：`admin`
+- 密码：在 `secret.yaml` 的 `bootstrap-admin-password` 中配置
+
+**安全建议**：首次登录后，请立即修改默认密码。
 
 ## 常见问题
 
@@ -223,12 +266,14 @@ kubectl describe node <node-name>
 
 ### 镜像拉取失败
 
-```bash
-# 检查凭证是否创建
-kubectl get secret ghcr-secret -n skillhub
+如果镜像私有，需要创建拉取凭证：
 
-# 查看详细错误
-kubectl describe pod <pod-name> -n skillhub
+```bash
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=<GitHub用户名> \
+  --docker-password=<GitHub Token> \
+  -n skillhub
 ```
 
 ### 数据库连接失败
