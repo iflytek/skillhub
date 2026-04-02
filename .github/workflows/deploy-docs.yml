@@ -32,8 +32,6 @@ jobs:
           cache-dependency-path: docs/skillhub/package-lock.json
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        with:
-          enablement: true
       - name: Install dependencies
         run: cd docs/skillhub && npm ci
       - name: Build with VitePress
