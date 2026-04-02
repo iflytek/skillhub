@@ -65,6 +65,8 @@ firewall, with the same polish you'd expect from a public registry.
 
 ## Quick Start
 
+📖 **[User Documentation →](https://iflytek.github.io/skillhub/)**
+
 Start the full local stack with one of the following commands:
 
 Official images:
