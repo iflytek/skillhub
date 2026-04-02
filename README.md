@@ -30,7 +30,10 @@ it to a namespace, and let others find it through search or
 install it via CLI. Built for on-premise deployment behind your
 firewall, with the same polish you'd expect from a public registry.
 
-📖 **[Full Documentation →](https://zread.ai/iflytek/skillhub)**
+## Documentation
+
+- 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
+- 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
 
 ## Highlights
 
@@ -65,35 +68,30 @@ firewall, with the same polish you'd expect from a public registry.
 
 ## Quick Start
 
-📖 **[User Documentation →](https://iflytek.github.io/skillhub/)**
+Start the full local stack with:
 
-Start the full local stack with one of the following commands:
-
-Official images:
 ```bash
 rm -rf /tmp/skillhub-runtime
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
 ```
 
-The default command pulls the `latest` stable release images. Use
-`--version edge` if you want the newest build from `main`.
+The default command pulls the `latest` stable release images. Use `--version edge` if you want the newest build from `main`.
 
 **Configure public URL (recommended for production):**
 
 ```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up --public-url https://skillhub.your-company.com
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 ```
 
-The `--public-url` parameter sets the public access URL for your SkillHub instance.
-This ensures:
+The `--public-url` parameter sets the public access URL for your SkillHub instance. This ensures:
 - CLI install commands show the correct registry URL
 - Agent setup instructions display the correct skill.md URL
 - OAuth callbacks and device auth links work properly
 
-Aliyun mirror shortcut:
+**For users in China (Aliyun mirror):**
+
 ```bash
-rm -rf /tmp/skillhub-aliyun
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest --public-url https://skillhub.your-company.com
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com
 ```
 
 If deployment runs into problems, clear the existing runtime home and retry.
@@ -187,8 +185,8 @@ Published images target both `linux/amd64` and `linux/arm64`.
 **Quick deployment with curl:**
 
 ```bash
-# Official images
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up --public-url https://skillhub.your-company.com
+# Default (GHCR images)
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 
 # Aliyun mirror (recommended for users in China)
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com
