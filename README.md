@@ -78,10 +78,22 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh 
 The default command pulls the `latest` stable release images. Use
 `--version edge` if you want the newest build from `main`.
 
+**Configure public URL (recommended for production):**
+
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up --public-url https://skillhub.your-company.com
+```
+
+The `--public-url` parameter sets the public access URL for your SkillHub instance.
+This ensures:
+- CLI install commands show the correct registry URL
+- Agent setup instructions display the correct skill.md URL
+- OAuth callbacks and device auth links work properly
+
 Aliyun mirror shortcut:
 ```bash
 rm -rf /tmp/skillhub-aliyun
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest --public-url https://skillhub.your-company.com
 ```
 
 If deployment runs into problems, clear the existing runtime home and retry.
@@ -171,6 +183,30 @@ Published runtime images are built by GitHub Actions and pushed to GHCR.
 This is the supported path for anyone who wants a ready-to-use local
 environment without building the backend or frontend on their machine.
 Published images target both `linux/amd64` and `linux/arm64`.
+
+**Quick deployment with curl:**
+
+```bash
+# Official images
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime-github.sh | sh -s -- up --public-url https://skillhub.your-company.com
+
+# Aliyun mirror (recommended for users in China)
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com
+```
+
+**Deployment parameters:**
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `--public-url <url>` | Public access URL (recommended) | `--public-url https://skill.example.com` |
+| `--version <tag>` | Specific image tag | `--version v0.2.0` |
+| `--aliyun` | Use Aliyun mirror (China) | `--aliyun` |
+| `--home <dir>` | Runtime directory | `--home /opt/skillhub` |
+| `--no-scanner` | Disable security scanner | `--no-scanner` |
+
+> **Important**: Configure `--public-url` for production deployments to ensure CLI install commands and Agent setup instructions display the correct URLs.
+
+**Manual deployment:**
 
 1. Copy the runtime environment template.
 2. Pick an image tag.

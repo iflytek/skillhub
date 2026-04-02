@@ -7,4 +7,9 @@ describe('landing quick start locales', () => {
     expect(zh.landing.quickStart.agent.command).toBe('阅读 https://www.example.com/registry/skill.md，并按照说明完成 SkillHub Skills Registry 的配置')
     expect(en.landing.quickStart.agent.command).toBe('Read https://www.example.com/registry/skill.md and follow the instructions to setup SkillHub Skills Registry')
   })
+
+  it('provides command templates with url placeholder for dynamic rendering', () => {
+    expect(zh.landing.quickStart.agent.commandTemplate).toBe('阅读 {{url}}，并按照说明完成 SkillHub Skills Registry 的配置')
+    expect(en.landing.quickStart.agent.commandTemplate).toBe('Read {{url}} and follow the instructions to setup SkillHub Skills Registry')
+  })
 })

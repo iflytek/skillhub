@@ -50,10 +50,21 @@ curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runti
 默认命令会拉取 `latest` 稳定版镜像；如果你想跟随 `main`
 的最新构建，请显式传 `--version edge`。
 
+**配置公网访问地址（生产环境推荐）：**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
+```
+
+`--public-url` 参数用于设置 SkillHub 实例的公网访问地址。配置后：
+- CLI 安装命令会显示正确的注册中心地址
+- Agent 设置指引会显示正确的 skill.md URL
+- OAuth 回调和设备认证链接能正常工作
+
 阿里云镜像快捷方式：
 ```bash
 rm -rf /tmp/skillhub-aliyun
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --home /tmp/skillhub-aliyun --aliyun --version latest --public-url https://skillhub.your-company.com
 ```
 
 如果部署遇到问题，请清除现有的运行时目录并重试。
@@ -162,11 +173,23 @@ skillhub/
 
 ```bash
 # 使用官方镜像
-curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 
 # 使用阿里云镜像
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com
 ```
+
+### 配置参数说明
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `--public-url <url>` | 公网访问地址（推荐配置） | `--public-url https://skill.example.com` |
+| `--version <tag>` | 指定镜像版本 | `--version v0.2.0` |
+| `--aliyun` | 使用阿里云镜像（国内推荐） | `--aliyun` |
+| `--home <dir>` | 指定运行时目录 | `--home /opt/skillhub` |
+| `--no-scanner` | 禁用安全扫描服务 | `--no-scanner` |
+
+> **重要**：生产环境请务必配置 `--public-url`，确保 CLI 安装命令和 Agent 设置指引显示正确的地址。
 
 ### 使用 Kubernetes
 

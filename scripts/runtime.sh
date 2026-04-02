@@ -12,6 +12,7 @@ SKILLHUB_REF="${SKILLHUB_REF:-main}"
 SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
+SKILLHUB_PUBLIC_BASE_URL_VALUE="${SKILLHUB_PUBLIC_BASE_URL:-}"
 SKILLHUB_ALIYUN_REGISTRY="${SKILLHUB_ALIYUN_REGISTRY:-crpi-ptu2rqimrigtq0qx.cn-hangzhou.personal.cr.aliyuncs.com}"
 SKILLHUB_ALIYUN_NAMESPACE="${SKILLHUB_ALIYUN_NAMESPACE:-skill_hub}"
 SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
@@ -81,6 +82,11 @@ while [ "$#" -gt 0 ]; do
       DISABLE_SCANNER=true
       shift
       ;;
+    --public-url)
+      [ "$#" -ge 2 ] || { echo "Missing value for --public-url" >&2; exit 1; }
+      SKILLHUB_PUBLIC_BASE_URL_VALUE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<EOF
 Usage: sh runtime.sh [up|down|clean|ps|logs|pull] [options]
@@ -91,6 +97,7 @@ Options:
   --mirror-registry <r> Use mirrored images from <registry>/<namespace>
   --home <dir>          Store runtime files in a specific directory
   --ref <git-ref>       Download runtime files from a specific Git ref
+  --public-url <url>    Public access URL (e.g. https://skill.example.com)
   --server-image <img>  Override backend image repository
   --web-image <img>     Override frontend image repository
   --scanner-image <img> Override scanner image repository
@@ -204,6 +211,10 @@ prepare_runtime_files() {
   if [ -n "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
     set_env_value "SKILLHUB_SCANNER_IMAGE" "$SKILLHUB_SCANNER_IMAGE_VALUE"
   fi
+
+  if [ -n "$SKILLHUB_PUBLIC_BASE_URL_VALUE" ]; then
+    set_env_value "SKILLHUB_PUBLIC_BASE_URL" "$SKILLHUB_PUBLIC_BASE_URL_VALUE"
+  fi
 }
 
 run_compose() {
@@ -221,9 +232,10 @@ case "$COMMAND" in
     else
       run_compose up -d
     fi
+    PUBLIC_URL="${SKILLHUB_PUBLIC_BASE_URL_VALUE:-http://localhost}"
     cat <<EOF
 SkillHub runtime started.
-Web UI: http://localhost
+Web UI: $PUBLIC_URL
 Backend API: http://localhost:8080
 Runtime dir: $SKILLHUB_HOME
 Stop with:

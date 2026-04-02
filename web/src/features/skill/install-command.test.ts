@@ -73,6 +73,16 @@ describe('install-command', () => {
     expect(getBaseUrl()).toBe('https://fallback.example.com')
   })
 
+  it('falls back to browser origin when app base url is localhost', () => {
+    setMockWindow('http://localhost')
+    expect(getBaseUrl()).toBe('https://fallback.example.com')
+  })
+
+  it('falls back to browser origin when app base url contains localhost', () => {
+    setMockWindow('http://localhost:8080')
+    expect(getBaseUrl()).toBe('https://fallback.example.com')
+  })
+
   it('renders the install command in a more compact code block', () => {
     setMockWindow('http://localhost:3000')
 
