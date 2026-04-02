@@ -36,7 +36,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          deno --allow-run --allow-env --allow-read --allow-net=api.github.com \
+          deno --allow-run --allow-sys --allow-env --allow-read --allow-net=api.github.com \
             .github/scripts/share-reward.ts \
             "${{ github.repository_owner }}" \
             "${{ github.event.repository.name }}" \
