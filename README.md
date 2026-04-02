@@ -32,8 +32,8 @@ firewall, with the same polish you'd expect from a public registry.
 
 ## Documentation
 
-- 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — 技能发布、搜索、CLI 使用等用户操作指南
-- 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — 架构设计、API 参考、本地开发、部署运维等技术文档
+- 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
+- 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
 
 ## Highlights
 
