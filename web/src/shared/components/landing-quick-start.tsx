@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bot, Check, Copy, UserRound } from 'lucide-react'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
@@ -10,6 +10,25 @@ interface LandingQuickStartTab {
   label: string
   description: string
   command: string
+}
+
+/**
+ * Get the base URL for the application.
+ * Prefers the runtime config if set and not localhost.
+ * Falls back to the current page origin.
+ */
+function getAppBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
+  const configuredUrl = runtimeConfig?.appBaseUrl
+  // Use configured URL only if it's set and not localhost
+  if (configuredUrl && !configuredUrl.includes('localhost')) {
+    return configuredUrl
+  }
+  // Fallback to current page origin
+  return `${window.location.protocol}//${window.location.host}`
 }
 
 function CompactCopyButton({ text }: { text: string }) {
@@ -43,13 +62,20 @@ function CompactCopyButton({ text }: { text: string }) {
 export function LandingQuickStartSection() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<LandingQuickStartTabId>('agent')
+  const baseUrl = useMemo(() => getAppBaseUrl(), [])
+
+  // Build dynamic agent command with actual registry URL
+  const agentCommand = t('landing.quickStart.agent.commandTemplate', {
+    defaultValue: t('landing.quickStart.agent.command'),
+    url: `${baseUrl}/registry/skill.md`,
+  })
 
   const tabs: LandingQuickStartTab[] = [
     {
       id: 'agent',
       label: t('landing.quickStart.tabs.agent'),
       description: t('landing.quickStart.agent.description'),
-      command: t('landing.quickStart.agent.command'),
+      command: agentCommand,
     },
     {
       id: 'human',
