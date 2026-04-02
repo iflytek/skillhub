@@ -233,13 +233,17 @@ case "$COMMAND" in
       run_compose up -d
     fi
     PUBLIC_URL="${SKILLHUB_PUBLIC_BASE_URL_VALUE:-http://localhost}"
+    HOME_ARG=""
+    if [ "$SKILLHUB_HOME" != "$SKILLHUB_HOME_DEFAULT" ]; then
+      HOME_ARG=" --home $SKILLHUB_HOME"
+    fi
     cat <<EOF
 SkillHub runtime started.
 Web UI: $PUBLIC_URL
 Backend API: http://localhost:8080
 Runtime dir: $SKILLHUB_HOME
 Stop with:
-  curl -fsSL $SKILLHUB_RAW_BASE/scripts/runtime.sh | sh -s -- down
+  curl -fsSL $SKILLHUB_RAW_BASE/scripts/runtime.sh | sh -s -- down$HOME_ARG
 EOF
     ;;
   down)
