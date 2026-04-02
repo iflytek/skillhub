@@ -24,6 +24,8 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: docker
+
+            # Database
             - name: SPRING_DATASOURCE_URL
               valueFrom:
                 secretKeyRef:
@@ -39,6 +41,8 @@ spec:
                 secretKeyRef:
                   name: skillhub-secret
                   key: spring-datasource-password
+
+            # Redis
             - name: SPRING_DATA_REDIS_HOST
               valueFrom:
                 configMapKeyRef:
@@ -49,11 +53,20 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: redis-port
+
+            # Storage
             - name: STORAGE_BASE_PATH
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
                   key: storage-base-path
+            - name: SKILLHUB_STORAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skillhub-storage-provider
+
+            # Scanner
             - name: SKILLHUB_SECURITY_SCANNER_ENABLED
               valueFrom:
                 configMapKeyRef:
@@ -69,8 +82,50 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: skill-scanner-mode
+
+            # Session
             - name: SESSION_COOKIE_SECURE
-              value: "true"
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: session-cookie-secure
+
+            # Bootstrap Admin (non-sensitive from ConfigMap)
+            - name: BOOTSTRAP_ADMIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-enabled
+            - name: BOOTSTRAP_ADMIN_USER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-user-id
+            - name: BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-username
+            - name: BOOTSTRAP_ADMIN_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-display-name
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-email
+
+            # Bootstrap Admin Password (sensitive from Secret)
+            - name: BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: bootstrap-admin-password
+                  optional: true
+
+            # OAuth2 GitHub (optional)
             - name: OAUTH2_GITHUB_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -83,18 +138,19 @@ spec:
                   name: skillhub-secret
                   key: oauth2-github-client-secret
                   optional: true
+
           volumeMounts:
             - name: skillhub-storage
               mountPath: /var/lib/skillhub/storage
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /actuator/health
               port: http
             initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
+              path: /actuator/health
               port: http
             initialDelaySeconds: 30
             periodSeconds: 15

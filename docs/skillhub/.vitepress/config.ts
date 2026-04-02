@@ -43,6 +43,7 @@ export default defineConfig({
           {
             text: '更多',
             items: [
+              { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
               { text: '常见问题', link: '/faq' },
             ],
           },
@@ -87,6 +88,7 @@ export default defineConfig({
           {
             text: 'More',
             items: [
+              { text: 'Kubernetes Deployment', link: '/en/guide/kubernetes' },
               { text: 'FAQ', link: '/en/faq' },
             ],
           },
