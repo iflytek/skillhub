@@ -3037,6 +3037,8 @@ export interface components {
             /** Format: int64 */
             namespaceId?: number;
             userId?: string;
+            displayName?: string;
+            email?: string;
             /** @enum {string} */
             role?: "OWNER" | "ADMIN" | "MEMBER";
             /** Format: date-time */

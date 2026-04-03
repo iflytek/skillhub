@@ -983,6 +983,8 @@
     "savingRole": "Saving...",
     "changeRole": "Change role",
     "colUserId": "User ID",
+    "colUsername": "Username",
+    "colEmail": "Email",
     "colRole": "Role",
     "colJoinedAt": "Joined At",
     "colActions": "Actions",

@@ -8,6 +8,8 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.MyNamespaceResponse;
 import com.iflytek.skillhub.dto.NamespaceResponse;
@@ -15,6 +17,8 @@ import com.iflytek.skillhub.dto.PageResponse;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,15 +35,18 @@ public class NamespacePortalQueryAppService {
     private final NamespaceService namespaceService;
     private final NamespaceMemberService namespaceMemberService;
     private final NamespaceAccessPolicy namespaceAccessPolicy;
+    private final UserAccountRepository userAccountRepository;
 
     public NamespacePortalQueryAppService(NamespaceRepository namespaceRepository,
                                           NamespaceService namespaceService,
                                           NamespaceMemberService namespaceMemberService,
-                                          NamespaceAccessPolicy namespaceAccessPolicy) {
+                                          NamespaceAccessPolicy namespaceAccessPolicy,
+                                          UserAccountRepository userAccountRepository) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceService = namespaceService;
         this.namespaceMemberService = namespaceMemberService;
         this.namespaceAccessPolicy = namespaceAccessPolicy;
+        this.userAccountRepository = userAccountRepository;
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +85,18 @@ public class NamespacePortalQueryAppService {
         Namespace namespace = namespaceService.getNamespaceBySlug(slug);
         namespaceService.assertMember(namespace.getId(), userId);
         Page<NamespaceMember> members = namespaceMemberService.listMembers(namespace.getId(), pageable);
-        return PageResponse.from(members.map(MemberResponse::from));
+
+        List<String> memberUserIds = members.getContent().stream()
+                .map(NamespaceMember::getUserId)
+                .toList();
+
+        Map<String, UserAccount> userMap = memberUserIds.isEmpty()
+                ? Map.of()
+                : userAccountRepository.findByIdIn(memberUserIds).stream()
+                        .collect(Collectors.toMap(UserAccount::getId, Function.identity()));
+
+        return PageResponse.from(members.map(member ->
+                MemberResponse.from(member, userMap.get(member.getUserId()))
+        ));
     }
 }

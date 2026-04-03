@@ -178,7 +178,8 @@ export function NamespaceMembersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border/40">
-                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colUserId')}</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colUsername')}</th>
+                    <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colEmail')}</th>
                     <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colRole')}</th>
                     <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colJoinedAt')}</th>
                     <th className="text-right p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colActions')}</th>
@@ -193,7 +194,13 @@ export function NamespaceMembersPage() {
 
                     return (
                       <tr key={member.id} className="border-b border-border/40 last:border-b-0 hover:bg-secondary/30 transition-colors">
-                        <td className="p-4 font-medium font-mono">{member.userId}</td>
+                        <td className="p-4">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{member.displayName || member.userId}</span>
+                            <span className="text-xs text-muted-foreground">{member.userId}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-muted-foreground">{member.email || '-'}</td>
                         <td className="p-4">
                           {canManageMembers && !isOwner ? (
                             <div className="flex items-center gap-2">

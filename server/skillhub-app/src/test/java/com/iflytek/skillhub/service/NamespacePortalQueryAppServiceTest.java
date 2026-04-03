@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -25,11 +26,13 @@ class NamespacePortalQueryAppServiceTest {
     private final NamespaceService namespaceService = mock(NamespaceService.class);
     private final NamespaceMemberService namespaceMemberService = mock(NamespaceMemberService.class);
     private final NamespaceAccessPolicy namespaceAccessPolicy = mock(NamespaceAccessPolicy.class);
+    private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
     private final NamespacePortalQueryAppService service = new NamespacePortalQueryAppService(
             namespaceRepository,
             namespaceService,
             namespaceMemberService,
-            namespaceAccessPolicy
+            namespaceAccessPolicy,
+            userAccountRepository
     );
 
     @Test
