@@ -1,28 +1,15 @@
 # 基础镜像 - Alibaba Cloud Linux 3
+# 使用官方 PyPI（最稳定但可能较慢）
 FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/python:latest
 
 WORKDIR /app
 
-# 升级 pip
-RUN pip install --upgrade pip \
-    -i https://mirrors.aliyun.com/pypi/simple/ \
-    --timeout 120 \
-    --retries 5 \
-    --trusted-host mirrors.aliyun.com
+# 升级 pip（使用官方源）
+RUN pip install --upgrade pip --timeout 180 --retries 10
 
-# 检查 yum 配置并安装依赖
+# 安装编译依赖和 Python 包
 RUN set -ex && \
-    echo "=== 检查 yum 仓库配置 ===" && \
-    yum repolist || echo "repolist failed" && \
-    echo "" && \
-    echo "=== 清理 yum 缓存 ===" && \
     yum clean all && \
-    rm -rf /var/cache/yum && \
-    echo "" && \
-    echo "=== 更新 yum 元数据 ===" && \
-    yum makecache || yum makecache fast || true && \
-    echo "" && \
-    echo "=== 安装编译依赖 ===" && \
     yum install -y \
         gcc \
         gcc-c++ \
@@ -32,16 +19,10 @@ RUN set -ex && \
         openssl-devel \
         wget \
         ca-certificates && \
-    echo "" && \
-    echo "=== 安装 Python 包 ===" && \
     pip install --no-cache-dir \
-        -i https://mirrors.aliyun.com/pypi/simple/ \
-        --timeout 120 \
-        --retries 5 \
-        --trusted-host mirrors.aliyun.com \
+        --timeout 180 \
+        --retries 10 \
         cisco-ai-skill-scanner && \
-    echo "" && \
-    echo "=== 清理编译依赖 ===" && \
     yum remove -y \
         gcc \
         gcc-c++ \
