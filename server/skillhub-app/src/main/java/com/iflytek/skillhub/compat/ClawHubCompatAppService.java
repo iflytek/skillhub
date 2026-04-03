@@ -14,6 +14,7 @@ import com.iflytek.skillhub.controller.support.MultipartPackageExtractor;
 import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
@@ -93,11 +94,11 @@ public class ClawHubCompatAppService {
                                                  String hash,
                                                  String userId,
                                                  Map<Long, NamespaceRole> userNsRoles) {
-        CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.findByLegacySlug(slug);
+        SkillCoordinate coord = resolveQueryCoordinate(slug);
 
         SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                context.namespace().getSlug(),
-                context.skill().getSlug(),
+                coord.namespace(),
+                coord.slug(),
                 "latest".equals(version) ? null : version,
                 "latest".equals(version) ? "latest" : null,
                 hash,
@@ -132,10 +133,22 @@ public class ClawHubCompatAppService {
     }
 
     public String downloadLocationByQuery(String slug, String version) {
-        CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.findByLegacySlug(slug);
+        SkillCoordinate coord = resolveQueryCoordinate(slug);
         return "latest".equals(version)
-                ? "/api/v1/skills/" + context.namespace().getSlug() + "/" + context.skill().getSlug() + "/download"
-                : "/api/v1/skills/" + context.namespace().getSlug() + "/" + context.skill().getSlug() + "/versions/" + version + "/download";
+                ? "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/download"
+                : "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/versions/" + version + "/download";
+    }
+
+    private SkillCoordinate resolveQueryCoordinate(String slug) {
+        if (slug != null && slug.contains("--")) {
+            return mapper.fromCanonical(slug);
+        }
+        try {
+            CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.findByLegacySlug(slug);
+            return new SkillCoordinate(context.namespace().getSlug(), context.skill().getSlug());
+        } catch (DomainNotFoundException ex) {
+            return mapper.fromCanonical(slug);
+        }
     }
 
     public ClawHubSkillListResponse listSkills(int page,
