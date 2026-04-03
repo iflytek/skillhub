@@ -36,6 +36,7 @@ vi.mock('@/shared/lib/api-error', () => ({
 import {
   WEB_API_PREFIX,
   buildApiUrl,
+  fetchText,
   getDirectAuthRuntimeConfig,
   getSessionBootstrapRuntimeConfig,
 } from './client'
@@ -45,6 +46,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
+
   if (originalWindow) {
     Object.defineProperty(globalThis, 'window', {
       configurable: true,
@@ -78,6 +81,38 @@ describe('buildApiUrl', () => {
     window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com/' }
     const url = buildApiUrl('/api/v1/auth/me')
     expect(url).toBe('https://api.example.com/api/v1/auth/me')
+  })
+
+  it('preserves base URL path prefixes', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com/skill_hub' }
+    const url = buildApiUrl('/api/v1/auth/me')
+    expect(url).toBe('https://api.example.com/skill_hub/api/v1/auth/me')
+  })
+
+  it('supports relative base URL path prefixes', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: '/skill_hub' }
+    const url = buildApiUrl('/api/v1/auth/me')
+    expect(url).toBe('/skill_hub/api/v1/auth/me')
+  })
+})
+
+describe('fetchText', () => {
+  it('applies base URL path prefixes for fetch requests', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com/skill_hub' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => 'ok',
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchText('/api/v1/auth/me')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/skill_hub/api/v1/auth/me',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      }),
+    )
   })
 })
 

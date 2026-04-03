@@ -252,7 +252,7 @@ function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
   if (!baseUrl || typeof input !== 'string' || !input.startsWith('/')) {
     return input
   }
-  return new URL(input, ensureTrailingSlash(baseUrl))
+  return prependApiBaseUrl(baseUrl, input)
 }
 
 export function buildApiUrl(path: string): string {
@@ -260,11 +260,20 @@ export function buildApiUrl(path: string): string {
   if (!baseUrl) {
     return path
   }
-  return new URL(path, ensureTrailingSlash(baseUrl)).toString()
+  return prependApiBaseUrl(baseUrl, path)
 }
 
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith('/') ? value : `${value}/`
+function prependApiBaseUrl(baseUrl: string, path: string): string {
+  const normalizedBaseUrl = trimTrailingSlash(baseUrl)
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return `${normalizedBaseUrl}${normalizedPath}`
+}
+
+function trimTrailingSlash(value: string): string {
+  if (value.length > 1 && value.endsWith('/')) {
+    return value.slice(0, -1)
+  }
+  return value
 }
 
 export async function getCurrentUser(): Promise<User | null> {
