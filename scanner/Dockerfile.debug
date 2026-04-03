@@ -1,0 +1,42 @@
+# 调试版 Dockerfile - 用于排查基础镜像问题
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/python:latest
+
+WORKDIR /app
+
+# 显示系统信息
+RUN echo "=== 系统信息 ===" && \
+    cat /etc/os-release && \
+    echo "" && \
+    echo "=== Python 版本 ===" && \
+    python --version && \
+    echo "" && \
+    echo "=== 包管理器检测 ===" && \
+    (which apt-get && echo "Found: apt-get") || echo "Not found: apt-get" && \
+    (which apk && echo "Found: apk") || echo "Not found: apk" && \
+    (which yum && echo "Found: yum") || echo "Not found: yum" && \
+    echo "" && \
+    echo "=== 已有工具 ===" && \
+    which gcc || echo "gcc: not found" && \
+    which make || echo "make: not found" && \
+    which wget || echo "wget: not found"
+
+# 尝试最简单的 pip 安装（不安装系统依赖）
+RUN pip install --upgrade pip \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --timeout 120 \
+    --retries 5 \
+    --trusted-host mirrors.aliyun.com
+
+RUN pip install --no-cache-dir \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --timeout 120 \
+    --retries 5 \
+    --trusted-host mirrors.aliyun.com \
+    cisco-ai-skill-scanner || echo "Installation may have failed"
+
+# 创建目录
+RUN mkdir -p /tmp/skillhub-scans
+
+EXPOSE 8000
+
+CMD ["skill-scanner-api", "--host", "0.0.0.0", "--port", "8000"]
