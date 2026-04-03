@@ -106,6 +106,8 @@ If deployment runs into problems, clear the existing runtime home and retry.
 make dev-all
 ```
 
+> **For developers in China**: If Maven dependency download times out, configure Aliyun mirror. See [Local Development Guide](https://iflytek.github.io/skillhub/quickstart.html#本地开发) for details.
+
 Then open:
 
 - Web UI: `http://localhost:3000`

@@ -131,3 +131,74 @@ A: 可以通过以下方式获取帮助：
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
 - **文档**: 参考项目 README.md
 - **社区讨论**: https://github.com/iflytek/skillhub/discussions
+
+## Q: 本地开发启动失败怎么办？
+
+A: `make dev-all` 后端启动失败时，会显示详细的错误提示。常见问题：
+
+### 1. Maven 依赖下载失败（网络超时）
+
+**症状**：后端日志显示 `Could not transfer artifact` 或连接超时
+
+**解决方案**：配置阿里云镜像
+
+```bash
+# 复制项目内置的镜像配置到用户目录
+mkdir -p ~/.m2
+cp server/.mvn/settings.xml ~/.m2/settings.xml
+```
+
+或手动创建 `~/.m2/settings.xml`：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <mirrors>
+    <mirror>
+      <id>aliyun</id>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>
+```
+
+参考：[阿里云 Maven 镜像配置指南](https://maven.aliyun.com/mvn/guide)
+
+### 2. Java 版本不匹配
+
+**症状**：`Unsupported class file major version` 或 `java.lang.NoSuchMethodError`
+
+**解决方案**：安装 Java 21+
+
+```bash
+# macOS
+brew install openjdk@21
+
+# 验证版本
+java -version
+```
+
+### 3. 端口被占用
+
+**症状**：`Port 8080 already in use`
+
+**解决方案**：
+
+```bash
+# 查看占用端口的进程
+lsof -i :8080
+
+# 终止进程
+kill -9 <PID>
+```
+
+### 4. 查看详细日志
+
+如果以上方案无法解决，查看后端日志：
+
+```bash
+make dev-logs SERVICE=backend
+# 或直接查看
+cat .dev/server.log
+```
