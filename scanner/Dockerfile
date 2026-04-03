@@ -1,31 +1,27 @@
-# 基础镜像 - Ubuntu 26.04
+# 基础镜像 - Alibaba Cloud Linux 3
 FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/python:latest
 
 WORKDIR /app
 
-# 配置阿里云 Ubuntu 镜像源（加速 apt 下载）
-RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.aliyun.com@g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \
-    sed -i 's@//.*archive.ubuntu.com@//mirrors.aliyun.com@g' /etc/apt/sources.list 2>/dev/null || \
-    echo "sources.list not found, skipping"
+# 配置阿里云 yum 镜像源（可选，基础镜像可能已配置）
+RUN sed -i 's|releasever|3|g' /etc/yum.repos.d/*.repo 2>/dev/null || true
 
-# 升级 pip 并配置镜像源
+# 升级 pip
 RUN pip install --upgrade pip \
     -i https://mirrors.aliyun.com/pypi/simple/ \
     --timeout 120 \
     --retries 5 \
     --trusted-host mirrors.aliyun.com
 
-# 安装系统依赖和 Python 包
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# 安装编译依赖和 Python 包
+RUN yum install -y \
     gcc \
-    g++ \
+    gcc-c++ \
     make \
-    libc6-dev \
-    libffi-dev \
-    libssl-dev \
-    wget \
-    ca-certificates && \
+    glibc-devel \
+    libffi-devel \
+    openssl-devel \
+    wget && \
     pip install --no-cache-dir \
     -i https://mirrors.aliyun.com/pypi/simple/ \
     --timeout 120 \
@@ -33,14 +29,19 @@ RUN apt-get update && \
     --trusted-host mirrors.aliyun.com \
     --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     cisco-ai-skill-scanner && \
-    apt-get purge -y gcc g++ make libc6-dev libffi-dev libssl-dev && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    yum remove -y \
+    gcc \
+    gcc-c++ \
+    make \
+    glibc-devel \
+    libffi-devel \
+    openssl-devel && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
-# 创建 app 用户和组（Ubuntu 语法）
-RUN groupadd --system app && \
-    useradd --system --gid app --shell /bin/bash app && \
+# 创建 app 用户和组（RHEL 语法）
+RUN groupadd -r app && \
+    useradd -r -g app -s /sbin/nologin app && \
     mkdir -p /tmp/skillhub-scans && \
     chown -R app:app /tmp/skillhub-scans
 
@@ -48,7 +49,7 @@ USER app
 
 EXPOSE 8000
 
-# 健康检查（使用 wget）
+# 健康检查
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8000/health || exit 1
 
