@@ -42,10 +42,24 @@ export class ApiClient {
     return data as T;
   }
 
-  async post<T>(path: string): Promise<T> {
+  async post<T>(path: string, opts?: { body?: string; headers?: Record<string, string> }): Promise<T> {
     const url = new URL(path, this.options.baseUrl);
     const { statusCode, body } = await request(url.toString(), {
       method: "POST",
+      headers: { ...this.headers(), ...opts?.headers },
+      body: opts?.body,
+    });
+    const data = await body.json();
+    if (statusCode >= 400) {
+      throw new ApiError(statusCode, data);
+    }
+    return data as T;
+  }
+
+  async put<T>(path: string): Promise<T> {
+    const url = new URL(path, this.options.baseUrl);
+    const { statusCode, body } = await request(url.toString(), {
+      method: "PUT",
       headers: this.headers(),
     });
     const data = await body.json();

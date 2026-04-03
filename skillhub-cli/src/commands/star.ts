@@ -16,13 +16,16 @@ export function registerStar(program: Command) {
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
-        const path = `${ApiRoutes.skillStar.replace("{namespace}", opts.namespace).replace("{slug}", slug)}`;
 
+        const detailPath = ApiRoutes.skillDetail.replace("{namespace}", opts.namespace).replace("{slug}", slug);
+        const detail = await client.get<{ id: number }>(detailPath);
+
+        const starPath = `/api/v1/skills/${detail.id}/star`;
         if (opts.unstar) {
-          await client.delete(path);
+          await client.delete(starPath);
           success(`Unstarred ${slug}`);
         } else {
-          await client.post(path);
+          await client.put(starPath);
           success(`Starred ${slug}`);
         }
       } catch (e: any) {

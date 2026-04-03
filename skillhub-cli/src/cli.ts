@@ -43,6 +43,12 @@ export async function createCli(): Promise<Command> {
     { registerStar },
     { registerInfo },
     { registerInit },
+    { registerMe },
+    { registerReviews },
+    { registerNotifications },
+    { registerDelete },
+    { registerVersions },
+    { registerReport },
   ] = await Promise.all([
     import("./commands/login.js"),
     import("./commands/logout.js"),
@@ -58,6 +64,12 @@ export async function createCli(): Promise<Command> {
     import("./commands/star.js"),
     import("./commands/info.js"),
     import("./commands/init.js"),
+    import("./commands/me.js"),
+    import("./commands/reviews.js"),
+    import("./commands/notifications.js"),
+    import("./commands/delete.js"),
+    import("./commands/versions.js"),
+    import("./commands/report.js"),
   ]);
 
   registerLogin(program);
@@ -74,6 +86,12 @@ export async function createCli(): Promise<Command> {
   registerStar(program);
   registerInfo(program);
   registerInit(program);
+  registerMe(program);
+  registerReviews(program);
+  registerNotifications(program);
+  registerDelete(program);
+  registerVersions(program);
+  registerReport(program);
 
   return program;
 }
