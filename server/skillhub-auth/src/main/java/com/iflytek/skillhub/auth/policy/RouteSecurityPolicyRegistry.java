@@ -31,6 +31,7 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),
             RouteAuthorizationPolicy.permitAll(null, "/v3/api-docs/**"),
             RouteAuthorizationPolicy.permitAll(null, "/swagger-ui/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/swagger-ui.html"),
             RouteAuthorizationPolicy.permitAll(null, "/.well-known/**"),
             RouteAuthorizationPolicy.roles(null, "/actuator/prometheus", "SUPER_ADMIN", "AUDITOR"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/skills/*/star"),
