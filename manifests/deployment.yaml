@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: scanner
-        image: ${IMAGE}
+        image: jsessh-registry.cn-shanghai.cr.aliyuncs.com/apps/sh-skill-scanner:latest
         imagePullPolicy: Always
         ports:
         - name: http
