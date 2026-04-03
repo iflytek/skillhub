@@ -1,5 +1,5 @@
-# 使用阿里云容器镜像服务加速
-FROM registry.cn-hangzhou.aliyuncs.com/library/python:3.11-alpine
+# 使用阿里云企业镜像加速地址
+FROM c4crdxw4.mirror.aliyuncs.com/library/python:3.11-alpine
 
 WORKDIR /app
 
