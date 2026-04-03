@@ -56,11 +56,12 @@ export class ApiClient {
     return data as T;
   }
 
-  async put<T>(path: string): Promise<T> {
+  async put<T>(path: string, opts?: { body?: string; headers?: Record<string, string> }): Promise<T> {
     const url = new URL(path, this.options.baseUrl);
     const { statusCode, body } = await request(url.toString(), {
       method: "PUT",
-      headers: this.headers(),
+      headers: { ...this.headers(), ...opts?.headers },
+      body: opts?.body,
     });
     const data = await body.json();
     if (statusCode >= 400) {
