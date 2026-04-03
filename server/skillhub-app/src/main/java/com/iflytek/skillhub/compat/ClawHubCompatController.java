@@ -135,11 +135,13 @@ public class ClawHubCompatController {
     @PostMapping("/skills")
     public ClawHubPublishResponse publishSkill(@RequestParam("payload") String payloadJson,
                                                @RequestParam("files") MultipartFile[] files,
+                                               @RequestParam(value = "namespace", required = false) String namespace,
                                                @AuthenticationPrincipal PlatformPrincipal principal,
                                                HttpServletRequest request) throws IOException {
         return clawHubCompatAppService.publishSkill(
                 payloadJson,
                 files,
+                namespace,
                 principal,
                 request.getRemoteAddr(),
                 request.getHeader("User-Agent")

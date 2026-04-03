@@ -13,12 +13,16 @@ import com.iflytek.skillhub.compat.dto.ClawHubWhoamiResponse;
 import com.iflytek.skillhub.controller.support.MultipartPackageExtractor;
 import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.social.SkillStarService;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillSearchAppService;
@@ -46,6 +50,8 @@ public class ClawHubCompatAppService {
     private final AuditLogService auditLogService;
     private final CompatSkillLookupService compatSkillLookupService;
     private final SkillStarService skillStarService;
+    private final NamespaceRepository namespaceRepository;
+    private final NamespaceMemberRepository namespaceMemberRepository;
 
     public ClawHubCompatAppService(CanonicalSlugMapper mapper,
                                    SkillSearchAppService skillSearchAppService,
@@ -55,7 +61,9 @@ public class ClawHubCompatAppService {
                                    MultipartPackageExtractor multipartPackageExtractor,
                                    AuditLogService auditLogService,
                                    CompatSkillLookupService compatSkillLookupService,
-                                   SkillStarService skillStarService) {
+                                   SkillStarService skillStarService,
+                                   NamespaceRepository namespaceRepository,
+                                   NamespaceMemberRepository namespaceMemberRepository) {
         this.mapper = mapper;
         this.skillSearchAppService = skillSearchAppService;
         this.skillQueryService = skillQueryService;
@@ -65,6 +73,8 @@ public class ClawHubCompatAppService {
         this.auditLogService = auditLogService;
         this.compatSkillLookupService = compatSkillLookupService;
         this.skillStarService = skillStarService;
+        this.namespaceRepository = namespaceRepository;
+        this.namespaceMemberRepository = namespaceMemberRepository;
     }
 
     public ClawHubSearchResponse search(String q,
@@ -263,11 +273,12 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publishSkill(String payloadJson,
                                                MultipartFile[] files,
+                                               String requestedNamespace,
                                                PlatformPrincipal principal,
                                                String clientIp,
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
-        String namespace = determineNamespace(principal, extracted.payload());
+        String namespace = determineNamespace(principal, extracted.payload(), requestedNamespace);
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 extracted.entries(),
@@ -367,8 +378,21 @@ public class ClawHubCompatAppService {
         );
     }
 
-    private String determineNamespace(PlatformPrincipal principal, MultipartPackageExtractor.PublishPayload payload) {
+    private String determineNamespace(PlatformPrincipal principal,
+                                      MultipartPackageExtractor.PublishPayload payload,
+                                      String requestedNamespace) {
+        if (requestedNamespace != null && !requestedNamespace.isBlank()) {
+            assertPublishPermission(principal.userId(), requestedNamespace);
+            return requestedNamespace;
+        }
         return "global";
+    }
+
+    private void assertPublishPermission(String userId, String namespaceSlug) {
+        Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
+                .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
+        namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), userId)
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
     }
 
     private void recordCompatPublishAudit(String userId,
