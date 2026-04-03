@@ -1,5 +1,5 @@
-# 基础镜像（使用阿里云公共镜像仓库）
-FROM registry.cn-hangzhou.aliyuncs.com/library/python:3.11-alpine
+# 基础镜像（需要在云效中配置镜像加速器）
+FROM python:3.11-alpine
 
 WORKDIR /app
 
