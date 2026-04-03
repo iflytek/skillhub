@@ -1,0 +1,86 @@
+import { Command } from "commander";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+function getPackageVersion(): string {
+  try {
+    const pkgPath = resolve(__dirname, "../package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    return pkg.version;
+  } catch {
+    return "0.1.0";
+  }
+}
+
+export async function createCli(): Promise<Command> {
+  const program = new Command();
+  const version = getPackageVersion();
+
+  program
+    .name("skillhub")
+    .description("CLI for SkillHub — publish, search, and manage agent skills")
+    .version(version)
+    .option("--registry <url>", "Registry API base URL", "http://localhost:8080")
+    .option("--no-input", "Disable prompts");
+
+  const [
+    { registerLogin },
+    { registerLogout },
+    { registerWhoami },
+    { registerPublish },
+    { registerSearch },
+    { registerNamespaces },
+    { registerAdd },
+    { registerInstall },
+    { registerDownload },
+    { registerList },
+    { registerRemove },
+    { registerStar },
+    { registerInfo },
+    { registerInit },
+  ] = await Promise.all([
+    import("./commands/login.js"),
+    import("./commands/logout.js"),
+    import("./commands/whoami.js"),
+    import("./commands/publish.js"),
+    import("./commands/search.js"),
+    import("./commands/namespaces.js"),
+    import("./commands/add.js"),
+    import("./commands/install.js"),
+    import("./commands/download.js"),
+    import("./commands/list.js"),
+    import("./commands/remove.js"),
+    import("./commands/star.js"),
+    import("./commands/info.js"),
+    import("./commands/init.js"),
+  ]);
+
+  registerLogin(program);
+  registerLogout(program);
+  registerWhoami(program);
+  registerPublish(program);
+  registerSearch(program);
+  registerNamespaces(program);
+  registerAdd(program);
+  registerInstall(program);
+  registerDownload(program);
+  registerList(program);
+  registerRemove(program);
+  registerStar(program);
+  registerInfo(program);
+  registerInit(program);
+
+  return program;
+}
+
+export async function main() {
+  const program = await createCli();
+  program.parse();
+}
+
+main();
