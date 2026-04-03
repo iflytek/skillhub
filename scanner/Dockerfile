@@ -7,35 +7,27 @@ WORKDIR /app
 RUN pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ \
       --timeout 60 --retries 5 --trusted-host mirrors.aliyun.com
 
-# 原始的构建命令
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev && \
-    pip install --no-cache-dir cisco-ai-skill-scanner && \
-    apk del .build-deps && \
-    addgroup -S app && \
-    adduser -S app -G app && \
-    mkdir -p /tmp/skillhub-scans && \
-    chown app:app /tmp/skillhub-scans
+# 安装系统依赖（Debian/Ubuntu 系统使用 apt-get）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    libc6-dev \
+    libffi-dev \
+    wget && \
+    pip install --no-cache-dir \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --timeout 120 \
+    --retries 5 \
+    --trusted-host mirrors.aliyun.com \
+    --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    cisco-ai-skill-scanner && \
+    apt-get purge -y gcc libc6-dev libffi-dev && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
-
-# 优化使用阿里云加速
-# 1.使用阿里云 Alpine 镜像源加速 apk 下载
-# RUN #sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-
-
-# 3. 安装依赖包（使用阿里云 PyPI 镜像，增加超时时间和重试次数）
-#RUN apk add --no-cache gcc musl-dev libffi-dev wget && \
-#      pip install --no-cache-dir \
-#      -i https://mirrors.aliyun.com/pypi/simple/ \
-#      --timeout 120 \
-#      --retries 5 \
-#      --trusted-host mirrors.aliyun.com \
-#      --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-#      cisco-ai-skill-scanner && \
-#      apk del gcc musl-dev libffi-dev
-
-# 创建 app 用户和组
-RUN addgroup -S app && \
-    adduser -S app -G app && \
+# 创建 app 用户和组（Debian/Ubuntu 语法）
+RUN groupadd -r app && \
+    useradd -r -g app app && \
     mkdir -p /tmp/skillhub-scans && \
     chown app:app /tmp/skillhub-scans
 
