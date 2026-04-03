@@ -1,0 +1,98 @@
+version: v1.0
+name: skillhub-scanner-build-deploy
+stages:
+  - name: 构建镜像
+    jobs:
+      - job:
+        name: 构建并推送镜像
+        steps:
+          # 步骤 1: 构建 Docker 镜像（完全禁用缓存）
+          - step: script@1
+            name: 构建镜像
+            with:
+              script: |
+                #!/bin/bash
+                set -e
+
+                echo "========================================="
+                echo "开始构建 Docker 镜像（完全禁用缓存）"
+                echo "========================================="
+
+                # 镜像信息
+                IMAGE_NAME="jsessh-registry.cn-shanghai.cr.aliyuncs.com/apps/sh-skill-scanner"
+                IMAGE_TAG="${BUILD_NUMBER:-latest}"
+                FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
+
+                echo "镜像名称: ${FULL_IMAGE}"
+                echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S')"
+
+                # 方式 1: 使用 docker build（不使用 buildx）
+                docker build \
+                  --no-cache \
+                  --pull \
+                  -t "${FULL_IMAGE}" \
+                  -f scanner/Dockerfile \
+                  scanner/
+
+                # 如果必须使用 buildx，则明确禁用缓存
+                # docker buildx build \
+                #   --no-cache \
+                #   --pull \
+                #   --load \
+                #   --cache-from=type=inline \
+                #   -t "${FULL_IMAGE}" \
+                #   -f scanner/Dockerfile \
+                #   scanner/
+
+                echo "========================================="
+                echo "镜像构建成功"
+                echo "========================================="
+
+                # 打印镜像信息
+                docker images | grep sh-skill-scanner || true
+
+          # 步骤 2: 推送镜像
+          - step: script@1
+            name: 推送镜像
+            with:
+              script: |
+                #!/bin/bash
+                set -e
+
+                echo "========================================="
+                echo "推送镜像到仓库"
+                echo "========================================="
+
+                IMAGE_NAME="jsessh-registry.cn-shanghai.cr.aliyuncs.com/apps/sh-skill-scanner"
+                IMAGE_TAG="${BUILD_NUMBER:-latest}"
+                FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
+
+                # 推送镜像
+                docker push "${FULL_IMAGE}"
+
+                # 同时打 latest 标签
+                docker tag "${FULL_IMAGE}" "${IMAGE_NAME}:latest"
+                docker push "${IMAGE_NAME}:latest"
+
+                echo "========================================="
+                echo "镜像推送成功"
+                echo "镜像地址: ${FULL_IMAGE}"
+                echo "========================================="
+
+  - name: 部署到 Kubernetes
+    jobs:
+      - job:
+        name: 部署应用
+        steps:
+          # 步骤 1: 部署到 K8s
+          - step: kubectl-apply@1
+            name: 部署到集群
+            with:
+              kubectl_version: v1.27.9
+              cluster_type: ack
+              namespace: default
+              path_to_yaml: scanner/manifests
+              insecure_skip_tls_verify: true
+              # 替换镜像变量
+              variables: |
+                IMAGE=jsessh-registry.cn-shanghai.cr.aliyuncs.com/apps/sh-skill-scanner:${BUILD_NUMBER}
