@@ -124,6 +124,18 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 > **Note**: It is recommended to back up the database and object storage before upgrading. Database migrations are handled automatically by Flyway.
 
+## Q: Why can't administrators (admin) and regular users create namespaces?
+
+A: Older versions of SkillHub do not support creating namespaces, as this feature was introduced in later updates. Please upgrade your SkillHub instance to the latest version (`latest`).
+Upgrade command example:
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version latest
+```
+
+## Q: How do I search for or operate on a skill package within a specific namespace?
+
+A: When using the OpenClaw CLI, you can specify the namespace using the `<namespace>--<skill-name>` format for operations like search or installation. If you encounter issues finding it on the web interface, you can also manage it by exporting the skill package and importing it into your target namespace.
+
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:
