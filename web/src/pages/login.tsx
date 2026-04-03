@@ -33,19 +33,16 @@ export function LoginPage() {
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const { data: authMethods } = useAuthMethods(search.returnTo)
 
-  // Load saved credentials from localStorage on mount
+  // Load saved username from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBER_ME_KEY)
     if (saved) {
       try {
-        const { username: savedUsername, password: savedPassword } = JSON.parse(saved)
+        const { username: savedUsername } = JSON.parse(saved)
         if (savedUsername) {
           setUsername(savedUsername)
+          setRememberMe(true)
         }
-        if (savedPassword) {
-          setPassword(savedPassword)
-        }
-        setRememberMe(true)
       } catch {
         // Invalid data, ignore
       }
@@ -79,11 +76,10 @@ export function LoginPage() {
     setFieldErrors({})
     try {
       await loginMutation.mutateAsync({ username: trimmedUsername, password })
-      // Save credentials to localStorage if remember me is checked
+      // Save username to localStorage if remember me is checked
       if (rememberMe) {
         localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({
-          username: trimmedUsername,
-          password
+          username: trimmedUsername
         }))
       } else {
         localStorage.removeItem(REMEMBER_ME_KEY)

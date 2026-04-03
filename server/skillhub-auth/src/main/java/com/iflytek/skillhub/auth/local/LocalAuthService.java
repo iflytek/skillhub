@@ -47,8 +47,7 @@ public class LocalAuthService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
-    @Resource
-    private LocalAuthFailedService localAuthFailedService;
+    private final LocalAuthFailedService localAuthFailedService;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -56,7 +55,8 @@ public class LocalAuthService {
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
-                            Clock clock) {
+                            Clock clock,
+                            LocalAuthFailedService localAuthFailedService) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -64,6 +64,7 @@ public class LocalAuthService {
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.localAuthFailedService = localAuthFailedService;
     }
 
     /**

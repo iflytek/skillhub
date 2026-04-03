@@ -15,11 +15,18 @@ public class LocalAuthFailedService {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
 
-    @Resource
-    private Clock clock;
+    private final Clock clock;
 
-    @Resource
-    private LocalCredentialRepository credentialRepository;
+    private final LocalCredentialRepository credentialRepository;
+
+    public LocalAuthFailedService(Clock clock,
+                                  LocalCredentialRepository credentialRepository
+    ){
+        this.clock = clock;
+        this.credentialRepository = credentialRepository;
+    }
+
+
 
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
