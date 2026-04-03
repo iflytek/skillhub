@@ -203,6 +203,7 @@
     "password": "Password",
     "usernamePlaceholder": "Enter username",
     "passwordPlaceholder": "Enter password",
+    "rememberMe": "Remember me",
     "usernameRequired": "Username is required",
     "passwordRequired": "Password is required",
     "showPassword": "Show password",

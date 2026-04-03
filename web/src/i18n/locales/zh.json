@@ -203,6 +203,7 @@
     "password": "密码",
     "usernamePlaceholder": "输入用户名",
     "passwordPlaceholder": "输入密码",
+    "rememberMe": "记住我",
     "usernameRequired": "请输入用户名",
     "passwordRequired": "请输入密码",
     "showPassword": "显示密码",
