@@ -126,6 +126,8 @@ make dev-backend    # 仅后端
 make dev-web        # 仅前端
 ```
 
+> **国内开发者**：如果 Maven 依赖下载超时，需配置阿里云镜像。详见 [本地开发指南](https://iflytek.github.io/skillhub/quickstart.html#本地开发)。
+
 ### 常用命令
 
 ```bash

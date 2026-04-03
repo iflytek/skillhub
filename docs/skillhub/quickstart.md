@@ -64,6 +64,39 @@ cd skillhub
 make dev-all
 ```
 
+### 国内开发者注意事项
+
+如果 `make dev-all` 后端启动失败，常见原因：
+
+1. **Maven 依赖下载超时**
+
+   项目已内置阿里云镜像配置（`server/.mvn/settings.xml`），但 Maven 不会自动读取项目级配置。需要手动配置：
+
+   ```bash
+   # 方式一：复制到用户目录（推荐）
+   mkdir -p ~/.m2
+   cp server/.mvn/settings.xml ~/.m2/settings.xml
+
+   # 方式二：每次构建时指定
+   cd server && ./mvnw -s .mvn/settings.xml package
+   ```
+
+2. **Java 版本不匹配**
+
+   SkillHub 要求 Java 21+：
+   ```bash
+   java -version
+   ```
+
+3. **端口冲突**
+
+   检查 8080 端口是否被占用：
+   ```bash
+   lsof -i :8080
+   ```
+
+详细的错误排查步骤，请查看 [常见问题](faq.md#本地开发启动失败)。
+
 ## 登录系统
 
 ### 方式一：使用内置管理员账号
