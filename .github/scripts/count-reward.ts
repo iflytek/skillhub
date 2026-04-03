@@ -21,19 +21,25 @@ let rawYAML = "";
 for (const tag of rewardTags)
   rawYAML += (await $`git tag -l --format="%(contents)" ${tag}`) + "\n";
 
-if (!rawYAML.trim())
-  throw new ReferenceError("No reward data is found for the last month.");
+if (!rawYAML.trim()) {
+  console.warn("No reward data is found for the last month.");
+
+  process.exit(0);
+}
 
 const rewards = YAML.parse(rawYAML) as Reward[];
 
 const groupedRewards = Object.groupBy(rewards, ({ payee }) => payee);
 
 const summaryList = Object.entries(groupedRewards).map(([payee, rewards]) => {
-  const reward = rewards!.reduce((acc, { currency, reward }) => {
-    acc[currency] ??= 0;
-    acc[currency] += reward;
-    return acc;
-  }, {} as Record<string, number>);
+  const reward = rewards!.reduce(
+    (acc, { currency, reward }) => {
+      acc[currency] ??= 0;
+      acc[currency] += reward;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   return {
     payee,
@@ -53,5 +59,8 @@ await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
 
 await $`git tag -a ${tagName} $(git rev-parse HEAD) -m ${summaryText}`;
 await $`git push origin --tags --no-verify`;
+
+await $`git config unset user.name`;
+await $`git config unset user.email`;
 
 await $`gh release create ${tagName} --notes ${summaryText}`;
