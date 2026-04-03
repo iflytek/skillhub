@@ -15,7 +15,7 @@ WORKDIR /app
 
 # 优化使用阿里云加速
 # 1.使用阿里云 Alpine 镜像源加速 apk 下载
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# RUN #sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # 2. 升级 pip 并配置镜像源
 RUN pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ \
