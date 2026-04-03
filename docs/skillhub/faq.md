@@ -124,6 +124,18 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 > **注意**：升级前建议先备份数据库和对象存储。数据库迁移由 Flyway 自动执行。
 
+## Q: 为什么管理员（admin）和普通用户都无法创建命名空间？
+
+A: 较旧版本的 SkillHub 不支持创建命名空间。该功能是在后续版本迭代中添加的。请将您的 SkillHub 升级到最新版本（latest）。
+升级命令示例：
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version latest
+```
+
+## Q: 如何搜索或操作指定命名空间中的技能包（Skill）？
+
+A: 使用 OpenClaw CLI 命令行工具时，可以通过 `<namespace>--<skill-name>` 的格式来指定命名空间进行操作（例如搜索、安装）。如果在网页端搜索遇到问题，也可以尝试通过先导出技能、再导入到目标命名空间的方式来完成跨空间操作。
+
 ## Q: 遇到问题怎么办？
 
 A: 可以通过以下方式获取帮助：
