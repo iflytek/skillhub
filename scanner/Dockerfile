@@ -1,4 +1,5 @@
-FROM python:3.11-alpine
+# 使用阿里云容器镜像服务加速
+FROM registry.cn-hangzhou.aliyuncs.com/library/python:3.11-alpine
 
 WORKDIR /app
 
@@ -16,9 +17,9 @@ WORKDIR /app
 # 1.使用阿里云 Alpine 镜像源加速 apk 下载
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
-# 2. 安装依赖包（使用清华 PyPI 镜像）test_01
+# 2. 安装依赖包（使用阿里云 PyPI 镜像）
 RUN apk add --no-cache gcc musl-dev libffi-dev wget && \
-      pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple cisco-ai-skill-scanner && \
+      pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ cisco-ai-skill-scanner && \
       apk del gcc musl-dev libffi-dev
 
 # 创建 app 用户和组
