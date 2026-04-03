@@ -983,6 +983,8 @@
     "savingRole": "保存中...",
     "changeRole": "修改角色",
     "colUserId": "用户 ID",
+    "colUsername": "用户名",
+    "colEmail": "邮箱",
     "colRole": "角色",
     "colJoinedAt": "加入时间",
     "colActions": "操作",

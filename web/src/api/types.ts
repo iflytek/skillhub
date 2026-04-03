@@ -116,6 +116,8 @@ export interface ManagedNamespace extends Namespace {
 export interface NamespaceMember {
   id: number
   userId: string
+  displayName?: string
+  email?: string
   role: NamespaceRole
   createdAt: string
 }

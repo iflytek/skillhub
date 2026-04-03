@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.NamespaceLifecycleRequest;
 import com.iflytek.skillhub.dto.NamespaceRequest;
 import com.iflytek.skillhub.exception.ForbiddenException;
@@ -28,11 +29,13 @@ class NamespacePortalCommandAppServiceTest {
     private final NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
     private final NamespaceGovernanceService namespaceGovernanceService = mock(NamespaceGovernanceService.class);
     private final NamespaceMemberService namespaceMemberService = mock(NamespaceMemberService.class);
+    private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
     private final NamespacePortalCommandAppService service = new NamespacePortalCommandAppService(
             namespaceService,
             namespaceRepository,
             namespaceGovernanceService,
-            namespaceMemberService
+            namespaceMemberService,
+            userAccountRepository
     );
 
     @Test
