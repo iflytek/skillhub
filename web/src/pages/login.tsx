@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 import { getDirectAuthRuntimeConfig } from '@/api/client'
@@ -10,6 +10,8 @@ import { usePasswordLogin } from '@/features/auth/use-password-login'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+
+const REMEMBER_ME_KEY = 'skillhub.remember-me'
 
 /**
  * Authentication entry page.
@@ -26,9 +28,26 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const { data: authMethods } = useAuthMethods(search.returnTo)
+
+  // Load saved username from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_ME_KEY)
+    if (saved) {
+      try {
+        const { username: savedUsername } = JSON.parse(saved)
+        if (savedUsername) {
+          setUsername(savedUsername)
+          setRememberMe(true)
+        }
+      } catch {
+        // Invalid data, ignore
+      }
+    }
+  }, [])
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
   const disabledMessage = search.reason === 'accountDisabled' ? t('apiError.auth.accountDisabled') : null
@@ -57,6 +76,14 @@ export function LoginPage() {
     setFieldErrors({})
     try {
       await loginMutation.mutateAsync({ username: trimmedUsername, password })
+      // Save username to localStorage if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({
+          username: trimmedUsername
+        }))
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY)
+      }
       await navigate({ to: returnTo })
     } catch {
       // mutation state drives the error UI
@@ -107,6 +134,7 @@ export function LoginPage() {
                     <label className="text-sm font-medium" htmlFor="username">{t('login.username')}</label>
                     <Input
                       id="username"
+                      name="username"
                       autoComplete="username"
                       value={username}
                       onChange={(event) => {
@@ -127,6 +155,7 @@ export function LoginPage() {
                     <div className="relative">
                       <Input
                         id="password"
+                        name="password"
                         type={showPassword ? 'text' : 'password'}
                         autoComplete="current-password"
                         value={password}
@@ -153,6 +182,21 @@ export function LoginPage() {
                     {fieldErrors.password ? (
                       <p className="text-sm text-red-600">{fieldErrors.password}</p>
                     ) : null}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="rememberMe"
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 rounded border-input bg-background text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
+                    />
+                    <label
+                      htmlFor="rememberMe"
+                      className="text-sm font-medium cursor-pointer select-none"
+                    >
+                      {t('login.rememberMe')}
+                    </label>
                   </div>
                   {loginMutation.error ? (
                     <p className="text-sm text-red-600">{loginMutation.error.message}</p>
