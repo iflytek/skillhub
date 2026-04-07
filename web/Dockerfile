@@ -7,6 +7,11 @@ COPY . .
 RUN pnpm build
 
 FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/nginx-skillhub:alpine
+
+# 限制 envsubst 只替换 SKILLHUB_ 开头的变量，避免覆盖 nginx 的 $uri $host 等变量
+# 设置默认值，部署时通过环境变量覆盖
+ENV SKILLHUB_API_UPSTREAM=${SKILLHUB_API_UPSTREAM:-http://sz-api.indusmind.local/skillhub-server}
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY --from=build /app/src/docs/skill.md.template /usr/share/nginx/html/registry/skill.md.template
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
