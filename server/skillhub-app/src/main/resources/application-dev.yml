@@ -1,0 +1,183 @@
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: ${SERVER_SERVLET_SESSION_TIMEOUT:8h}
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+
+spring:
+  messages:
+    basename: messages
+  application:
+    name: skillhub
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+  jackson:
+    time-zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://sz-dev.indusmind.local:5432/skillhub}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:mBLv0oY7MYu9138mfvopumqYctZWxkO0a3RRSE9lmBxoYOJzclYhPihZfxrmeP0x}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:${REDIS_HOST:sz-dev.indusmind.local}}
+      port: ${SPRING_DATA_REDIS_PORT:${REDIS_PORT:6379}}
+      password: ${SPRING_DATA_REDIS_PASSWORD:${REDIS_PASSWORD:NIWe08wtVHN1YpCfuPER7IFd3FeVbtcR}}
+  session:
+    store-type: redis
+    redis:
+      namespace: ${SESSION_REDIS_NAMESPACE:skillhub:session}
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:placeholder}
+            scope: read:user,user:email
+        provider:
+          github:
+            user-info-uri: https://api.github.com/user
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+skillhub:
+  auth:
+    mock:
+      enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}
+    direct:
+      enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
+    session-bootstrap:
+      enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
+  public:
+    base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
+  access-policy:
+    mode: OPEN
+  storage:
+    provider: ${SKILLHUB_STORAGE_PROVIDER:local}
+    local:
+      base-path: ${STORAGE_BASE_PATH:/tmp/skillhub-storage}
+    s3:
+      endpoint: ${SKILLHUB_STORAGE_S3_ENDPOINT:http://sz-s3.indusmind.local/}
+      public-endpoint: ${SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT:skillhub-test}
+      bucket: ${SKILLHUB_STORAGE_S3_BUCKET:skillhub-test}
+      access-key: ${SKILLHUB_STORAGE_S3_ACCESS_KEY:S6XHHD7FU3MTYOI9CVMX}
+      secret-key: ${SKILLHUB_STORAGE_S3_SECRET_KEY:LifKsiAZqmJS69IQ2OSBVlLJi2upi4Ag7oWrcwHD}
+      region: ${SKILLHUB_STORAGE_S3_REGION:us-east-1}
+      force-path-style: ${SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE:true}
+      auto-create-bucket: ${SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET:false}
+      presign-expiry: ${SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY:PT10M}
+      max-connections: ${SKILLHUB_STORAGE_S3_MAX_CONNECTIONS:100}
+      connection-acquisition-timeout: ${SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT:PT2S}
+      api-call-attempt-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT:PT10S}
+      api-call-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT:PT30S}
+  label:
+    max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
+    max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
+  search:
+    engine: postgres
+    rebuild-on-startup: false
+    semantic:
+      enabled: true
+      weight: 0.35
+      candidate-multiplier: 8
+      max-candidates: 120
+  ratelimit:
+    download:
+      anonymous-cookie-name: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_NAME:skillhub_anon_dl}
+      anonymous-cookie-max-age: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_MAX_AGE:P30D}
+      anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:change-me-in-production}
+  publish:
+    max-file-count: 100
+    max-single-file-size: 10485760 # 10MB
+    max-package-size: 104857600 # 100MB
+    # allowed-file-extensions: uses SkillPackagePolicy.ALLOWED_EXTENSIONS by default
+    # Override via SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS env var if needed
+  profile:
+    moderation:
+      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true} # Enable machine review (e.g. sensitive word detection)
+      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true} # Enable human review queue
+    fields:
+      displayName:
+        editable: true
+        requires-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true}
+      email:
+        editable: false
+        requires-review: false
+  device-auth:
+    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
+  security:
+    scanner:
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
+      base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://sz-api.indusmind.local/skillhub}
+      health-path: /health
+      scan-path: /scan-upload
+      mode: ${SKILLHUB_SECURITY_SCANNER_MODE:local}
+      connect-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT:5000}
+      read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:300000}
+      retry-max-attempts: ${SKILLHUB_SECURITY_SCANNER_RETRY_MAX:3}
+      analyzers:
+        behavioral: ${SKILLHUB_SCANNER_USE_BEHAVIORAL:true}
+        llm: ${SKILLHUB_SCANNER_USE_LLM:false}
+        llm-provider: ${SKILLHUB_SCANNER_LLM_PROVIDER:anthropic}
+        llm-consensus-runs: ${SKILLHUB_SCANNER_LLM_CONSENSUS_RUNS:1}
+        meta: ${SKILLHUB_SCANNER_USE_META:false}
+        ai-defense: ${SKILLHUB_SCANNER_USE_AI_DEFENSE:false}
+        ai-defense-api-key: ${SKILLHUB_SCANNER_AI_DEFENSE_API_KEY:}
+        virus-total: ${SKILLHUB_SCANNER_USE_VIRUSTOTAL:false}
+        trigger: ${SKILLHUB_SCANNER_USE_TRIGGER:false}
+      policy:
+        preset: ${SKILLHUB_SCANNER_POLICY_PRESET:balanced}
+        custom-policy-path: ${SKILLHUB_SCANNER_CUSTOM_POLICY_PATH:}
+        fail-on-severity: ${SKILLHUB_SCANNER_FAIL_ON_SEVERITY:high}
+    stream:
+      key: ${SKILLHUB_SCAN_STREAM_KEY:skillhub:scan:requests}
+      group: ${SKILLHUB_SCAN_STREAM_GROUP:skillhub-scanners}
+      reclaim-enabled: ${SKILLHUB_SCAN_STREAM_RECLAIM_ENABLED:true}
+      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT2M}
+      reclaim-batch-size: ${SKILLHUB_SCAN_STREAM_RECLAIM_BATCH_SIZE:20}
+      reclaim-interval: ${SKILLHUB_SCAN_STREAM_RECLAIM_INTERVAL:PT30S}
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
+      username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
+      display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:Admin}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: skillhub
+    export:
+      prometheus:
+        enabled: true
