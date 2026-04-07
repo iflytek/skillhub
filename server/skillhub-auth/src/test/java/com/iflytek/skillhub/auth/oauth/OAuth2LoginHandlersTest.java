@@ -6,6 +6,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
@@ -52,11 +53,15 @@ class OAuth2LoginHandlersTest {
 
         handler.onAuthenticationSuccess(request, response, authentication);
 
+        SecurityContext securityContext = (SecurityContext) session.getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY
+        );
         assertThat(response.getRedirectedUrl()).isEqualTo("/dashboard/publish");
-        assertThat(request.getSession(false).getId()).isNotEqualTo(originalSessionId);
+        assertThat(request.getSession(false).getId()).isEqualTo(originalSessionId);
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
         assertThat(session.getAttribute("platformPrincipal")).isEqualTo(principal);
-        assertThat(session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNotNull();
+        assertThat(securityContext).isNotNull();
+        assertThat(securityContext.getAuthentication()).isSameAs(authentication);
     }
 
     @Test
