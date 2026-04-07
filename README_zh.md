@@ -17,6 +17,10 @@
 
 ---
 
+<div align="center">
+  <img src="./skillhub-demo.gif" alt="SkillHub Demo" width="800" />
+</div>
+
 SkillHub 是一个自托管平台，为团队提供私有的、受治理的智能体技能共享空间。发布技能包，推送到命名空间，让其他人通过搜索发现或通过 CLI 安装。专为防火墙后的本地部署而构建，提供与公共注册中心相同的精致体验。
 
 ## 文档

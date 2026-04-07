@@ -24,6 +24,10 @@
 
 ---
 
+<div align="center">
+  <img src="./skillhub-demo.gif" alt="SkillHub Demo" width="800" />
+</div>
+
 SkillHub is a self-hosted platform that gives teams a private,
 governed place to share agent skills. Publish a skill package, push
 it to a namespace, and let others find it through search or
