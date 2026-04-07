@@ -37,6 +37,7 @@ const sidebars = {
             'administration/security/authentication',
             'administration/security/authorization',
             'administration/security/audit-logs',
+            'administration/security/skill-security',
           ],
         },
         {
