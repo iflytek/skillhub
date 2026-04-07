@@ -1,4 +1,4 @@
-FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/node:22-alpine AS build
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/node-skillhub:22-alpine AS build
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
@@ -6,7 +6,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
-FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/nginx:alpine
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/nginx-skillhub:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY --from=build /app/src/docs/skill.md.template /usr/share/nginx/html/registry/skill.md.template
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
