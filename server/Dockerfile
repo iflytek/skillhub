@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin AS build
 WORKDIR /app
 
 # Cache dependencies
