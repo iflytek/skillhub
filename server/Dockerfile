@@ -43,6 +43,10 @@ RUN ./mvnw package -DskipTests -B
 
 # ---- Runtime Stage ----
 FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin:21-jre-alpine
+
+ARG SPRING_PROFILES_ACTIVE=dev
+ENV SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
