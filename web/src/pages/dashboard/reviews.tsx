@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { FileCheck2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -17,6 +16,7 @@ import {
 import { useReviewList } from '@/features/review/use-review-list'
 import { useAuth } from '@/features/auth/use-auth'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Pagination } from '@/shared/components/pagination'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { ProfileReviewTable } from './profile-review-table'
 
@@ -72,31 +72,11 @@ export function ReviewsPage() {
   }
 
   function renderPagination(status: ReviewStatus, totalElements: number, totalPages: number) {
-    if (totalPages <= 1) return null
     const currentPage = pages[status]
     return (
       <div className="flex flex-col gap-3 border-t border-border/60 px-6 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>{t('reviews.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 0}
-            onClick={() => changePage(status, currentPage - 1)}
-          >
-            {t('reviews.prevPage')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= totalPages - 1}
-            onClick={() => changePage(status, currentPage + 1)}
-          >
-            {t('reviews.nextPage')}
-          </Button>
-        </div>
+        <Pagination page={currentPage} totalPages={Math.max(totalPages, 1)} onPageChange={(nextPage) => changePage(status, nextPage)} />
       </div>
     )
   }

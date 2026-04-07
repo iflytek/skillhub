@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
-import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useNamespaceDetail } from '@/shared/hooks/use-namespace-queries'
 import { useReviewList } from '@/features/review/use-review-list'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Pagination } from '@/shared/components/pagination'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 
 type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
@@ -51,26 +51,7 @@ function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
     return (
       <div className="flex flex-col gap-3 border-t border-border/60 px-5 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>{t('nsReviews.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 0}
-            onClick={() => changePage(status, currentPage - 1)}
-          >
-            {t('nsReviews.prevPage')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= totalPages - 1}
-            onClick={() => changePage(status, currentPage + 1)}
-          >
-            {t('nsReviews.nextPage')}
-          </Button>
-        </div>
+        <Pagination page={currentPage} totalPages={totalPages} onPageChange={(nextPage) => changePage(status, nextPage)} />
       </div>
     )
   }
