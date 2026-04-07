@@ -65,4 +65,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8000/health || exit 1
 
-CMD ["skill-scanner-api", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["skill-scanner-api", "--host", "0.0.0.0", "--port", "8000", "--root-path", "/skillhub"]

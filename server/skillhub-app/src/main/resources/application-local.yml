@@ -3,6 +3,10 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
   flyway:
     enabled: true
   datasource:
@@ -51,3 +55,5 @@ logging:
   level:
     com.iflytek.skillhub: INFO
     org.springframework.security: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
