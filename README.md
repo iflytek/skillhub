@@ -25,7 +25,7 @@
 ---
 
 <div align="center">
-  <img src="./skillhub-demo.gif" alt="SkillHub Demo" width="800" />
+  <img src="https://xfyun-doc.xfyun.cn/lc-sp-skillhub-demo-1775551643410.gif" alt="SkillHub Demo" width="800" />
 </div>
 
 SkillHub is a self-hosted platform that gives teams a private,
