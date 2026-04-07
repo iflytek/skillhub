@@ -13,6 +13,29 @@ COPY skillhub-notification/pom.xml skillhub-notification/
 COPY skillhub-app/pom.xml skillhub-app/
 COPY mvnw .
 COPY .mvn .mvn
+
+# 配置阿里云 Maven 镜像加速
+RUN mkdir -p /root/.m2 && \
+    echo '<?xml version="1.0" encoding="UTF-8"?>\
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"\
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">\
+  <mirrors>\
+    <mirror>\
+      <id>aliyun</id>\
+      <mirrorOf>central</mirrorOf>\
+      <name>Alibaba Cloud Maven Mirror</name>\
+      <url>https://maven.aliyun.com/repository/central</url>\
+    </mirror>\
+    <mirror>\
+      <id>aliyun-public</id>\
+      <mirrorOf>*</mirrorOf>\
+      <name>Alibaba Cloud Public Maven Mirror</name>\
+      <url>https://maven.aliyun.com/repository/public</url>\
+    </mirror>\
+  </mirrors>\
+</settings>' > /root/.m2/settings.xml
+
 RUN ./mvnw dependency:go-offline -B
 
 COPY . .
