@@ -267,7 +267,7 @@ public class ClawHubCompatAppService {
                                                String clientIp,
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
-        String namespace = determineNamespace(principal, extracted.payload());
+        String namespace = determineNamespace(extracted.payload());
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 extracted.entries(),
@@ -285,15 +285,16 @@ public class ClawHubCompatAppService {
                                           PlatformPrincipal principal,
                                           String clientIp,
                                           String userAgent) throws IOException {
+        String targetNamespace = normalizeNamespace(namespace);
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
-                namespace,
+                targetNamespace,
                 zipPackageExtractor.extract(file),
                 principal.userId(),
                 SkillVisibility.PUBLIC,
                 principal.platformRoles()
         );
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
-                "{\"namespace\":\"" + namespace + "\"}");
+                "{\"namespace\":\"" + targetNamespace + "\"}");
         return new ClawHubPublishResponse(result.skillId().toString(), result.version().getId().toString());
     }
 
@@ -367,8 +368,16 @@ public class ClawHubCompatAppService {
         );
     }
 
-    private String determineNamespace(PlatformPrincipal principal, MultipartPackageExtractor.PublishPayload payload) {
-        return "global";
+    private String determineNamespace(MultipartPackageExtractor.PublishPayload payload) {
+        return normalizeNamespace(payload.namespace());
+    }
+
+    private String normalizeNamespace(String namespace) {
+        if (namespace == null) {
+            return "global";
+        }
+        String trimmed = namespace.trim();
+        return trimmed.isEmpty() ? "global" : trimmed;
     }
 
     private void recordCompatPublishAudit(String userId,

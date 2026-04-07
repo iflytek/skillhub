@@ -149,7 +149,7 @@ public class ClawHubCompatController {
     @RateLimit(category = "publish", authenticated = 60, anonymous = 20)
     @PostMapping("/publish")
     public ClawHubPublishResponse publish(@RequestParam("file") MultipartFile file,
-                                          @RequestParam("namespace") String namespace,
+                                          @RequestParam(value = "namespace", required = false) String namespace,
                                           @AuthenticationPrincipal PlatformPrincipal principal,
                                           HttpServletRequest request) throws IOException {
         return clawHubCompatAppService.publish(
