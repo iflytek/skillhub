@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin:21-jdk-alpine AS build
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin:21-jre-alpine AS build
 WORKDIR /app
 
 # Cache dependencies
@@ -19,7 +19,7 @@ COPY . .
 RUN ./mvnw package -DskipTests -B
 
 # ---- Runtime Stage ----
-FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin:21-jdk-alpine
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin:21-jre-alpine
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
