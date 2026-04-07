@@ -19,7 +19,7 @@ COPY . .
 RUN ./mvnw package -DskipTests -B
 
 # ---- Runtime Stage ----
-FROM eclipse-temurin:21-jre-alpine
+FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/eclipse-temurin:21-jdk-alpine
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
