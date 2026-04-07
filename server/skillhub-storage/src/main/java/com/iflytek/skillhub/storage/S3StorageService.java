@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -54,17 +55,24 @@ public class S3StorageService implements ObjectStorageService {
             builder.endpointOverride(URI.create(properties.getEndpoint()));
         }
         this.s3Client = builder.build();
+        this.s3Presigner = buildPresigner();
+        ensureBucketExists();
+    }
+
+    S3Presigner buildPresigner() {
         var presignerBuilder = S3Presigner.builder()
                 .region(Region.of(properties.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
+                        AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())))
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(properties.isForcePathStyle())
+                        .build());
         if (properties.getPublicEndpoint() != null && !properties.getPublicEndpoint().isBlank()) {
             presignerBuilder.endpointOverride(URI.create(properties.getPublicEndpoint()));
         } else if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
             presignerBuilder.endpointOverride(URI.create(properties.getEndpoint()));
         }
-        this.s3Presigner = presignerBuilder.build();
-        ensureBucketExists();
+        return presignerBuilder.build();
     }
 
     private void ensureBucketExists() {
