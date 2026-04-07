@@ -211,7 +211,9 @@ class NamespacePortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.userId").value("user-2"))
-                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+                .andExpect(jsonPath("$.data.role").value("ADMIN"))
+                .andExpect(jsonPath("$.data.displayName").value("Alice"))
+                .andExpect(jsonPath("$.data.email").value("alice@example.com"));
     }
 
     @Test
@@ -250,7 +252,9 @@ class NamespacePortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.userId").value("user-2"))
-                .andExpect(jsonPath("$.data.role").value("OWNER"));
+                .andExpect(jsonPath("$.data.role").value("OWNER"))
+                .andExpect(jsonPath("$.data.displayName").value("Alice"))
+                .andExpect(jsonPath("$.data.email").value("alice@example.com"));
     }
 
     @Test
