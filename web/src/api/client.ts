@@ -76,7 +76,7 @@ function getRuntimeConfig(): RuntimeConfig {
 }
 
 function getApiBaseUrl(): string {
-  return getRuntimeConfig().apiBaseUrl ?? ''
+  return getRuntimeConfig().apiBaseUrl || '/skillhub-server'
 }
 
 function parseBooleanFlag(value: string | undefined): boolean {
