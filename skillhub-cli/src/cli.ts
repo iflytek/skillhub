@@ -54,6 +54,7 @@ export async function createCli(): Promise<Command> {
     { registerRating, registerRate },
     { registerArchive },
     { registerUpdate },
+    { registerUninstall },
   ] = await Promise.all([
     import("./commands/login.js"),
     import("./commands/logout.js"),
@@ -79,6 +80,7 @@ export async function createCli(): Promise<Command> {
     import("./commands/rating.js"),
     import("./commands/archive.js"),
     import("./commands/update.js"),
+    import("./commands/uninstall.js"),
   ]);
 
   registerLogin(program);
@@ -105,6 +107,8 @@ export async function createCli(): Promise<Command> {
   registerRating(program);
   registerRate(program);
   registerArchive(program);
+  registerUpdate(program);
+  registerUninstall(program);
 
   return program;
 }
