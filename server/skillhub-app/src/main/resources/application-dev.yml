@@ -161,9 +161,9 @@ skillhub:
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
-      user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
+      user-id: ${BOOTSTRAP_ADMIN_USER_ID:sh-admin}
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
-      password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:12345678}
       display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:Admin}
       email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
 
