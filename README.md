@@ -438,6 +438,6 @@ what you'd like to change.
 
   ![WeChat Work Group](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)
 
-## License
+## 📄 Open Source License
 
-Apache License 2.0
+This project is licensed under the Apache 2.0 License, allowing free use, modification, distribution, and commercial use without any restrictions.

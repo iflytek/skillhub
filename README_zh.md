@@ -371,6 +371,6 @@ npx clawhub publish ./my-skill
 
   ![企业微信群](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)
 
-## 许可证
+## 📄 开源协议
 
-Apache License 2.0
+本项目基于 Apache 2.0 License 协议开源，允许自由使用、修改、分发，并可无限制地进行商业使用。
