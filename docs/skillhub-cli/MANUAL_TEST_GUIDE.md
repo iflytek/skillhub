@@ -11,12 +11,17 @@
 ### 1. 安装 CLI
 
 ```bash
-# 从源码构建
+# 从源码构建 (推荐使用 pnpm)
 cd skillhub-cli
-npm install
+pnpm install
+pnpm build
+
+# 或使用 npm (如果 pnpm 不可用)
+rm -rf node_modules package-lock.json
+npm install --legacy-peer-deps
 npm run build
 
-# 或安装已发布的 npm 包 (发布后)
+# 安装已发布的 npm 包 (发布后)
 npm i -g @motovis/skillhub
 ```
 
@@ -616,6 +621,24 @@ echo "[5/5] 测试 logout..."
 skillhub logout && echo "✓ PASS" || echo "✗ FAIL"
 
 echo "=== 回归测试完成 ==="
+```
+
+### 快速验证命令
+
+```bash
+# 安装依赖
+cd skillhub-cli
+pnpm install
+
+# 构建
+pnpm build
+
+# 运行测试
+pnpm test
+
+# 本地验证 CLI
+node dist/cli.mjs --version
+node dist/cli.mjs --help
 ```
 
 ---
