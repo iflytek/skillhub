@@ -24,7 +24,8 @@ export function registerSearch(program: Command) {
           return;
         }
         for (const s of result.results) {
-          console.log(`${s.slug} (${s.version}) — ${s.displayName}`);
+          const ns = s.namespace ? `[${s.namespace}] ` : '';
+          console.log(`${ns}${s.slug} (${s.version}) — ${s.displayName}`);
           if (s.summary) console.log(`  ${s.summary}`);
         }
       } catch (e: any) {

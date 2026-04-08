@@ -38,5 +38,6 @@ export interface SearchResponse {
     displayName: string;
     summary: string;
     version: string;
+    namespace?: string;  // Namespace where the skill is published
   }>;
 }
