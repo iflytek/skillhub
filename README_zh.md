@@ -360,6 +360,8 @@ npx clawhub publish ./my-skill
 
 欢迎贡献。请先开启 issue 讨论您想要更改的内容。
 
+我们的 CLA（贡献者许可协议）流程已经通过 CLA Assistant (https://cla-assistant.io/) 进行管理。当贡献者提交 PR 时，CLA 检查会自动出现并引导他们完成签署。不需要进行任何额外操作。
+
 - 贡献指南：[`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - 行为准则：[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 

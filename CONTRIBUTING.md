@@ -53,6 +53,11 @@ make dev-all-down
   contracts change.
 - Prefer backward-compatible changes unless the issue explicitly allows a break.
 
+## Contributor License Agreement (CLA)
+
+Our CLA process is already managed via CLA Assistant (https://cla-assistant.io/).
+When contributors submit a PR, the CLA check will automatically appear and guide them through signing. No additional action is needed.
+
 ## Pull Requests
 
 Before opening a pull request, make sure:

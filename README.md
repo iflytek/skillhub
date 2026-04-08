@@ -427,6 +427,9 @@ npx clawhub publish ./my-skill
 Contributions are welcome. Please open an issue first to discuss
 what you'd like to change.
 
+Our CLA process is already managed via CLA Assistant (https://cla-assistant.io/).
+When contributors submit a PR, the CLA check will automatically appear and guide them through signing. No additional action is needed.
+
 - Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 
