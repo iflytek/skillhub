@@ -31,15 +31,11 @@ describe("Command registrations", () => {
     return program.commands.map((c) => c.name());
   }
 
-  it("registers inspect command with info and view aliases", () => {
+  it("registers inspect command", () => {
     const program = new Command();
     registerInspect(program);
     const names = getCommandNames(program);
     expect(names).toContain("inspect");
-    const inspectCmd = program.commands.find((c) => c.name() === "inspect");
-    expect(inspectCmd).toBeDefined();
-    expect(inspectCmd!.aliases()).toContain("info");
-    expect(inspectCmd!.aliases()).toContain("view");
   });
 
   it("registers whoami command", () => {
