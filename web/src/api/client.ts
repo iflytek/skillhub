@@ -249,6 +249,7 @@ export async function fetchText(input: RequestInfo | URL, init?: RequestInit): P
 
 function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
   const baseUrl = getApiBaseUrl()
+  console.log('baseUrl', baseUrl)
   if (!baseUrl || typeof input !== 'string' || !input.startsWith('/')) {
     return input
   }
@@ -257,6 +258,7 @@ function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
 
 export function buildApiUrl(path: string): string {
   const baseUrl = getApiBaseUrl()
+  console.log('baseUrl', baseUrl)
   if (!baseUrl) {
     return path
   }
