@@ -1,10 +1,14 @@
 {
-  "name": "@skillhub/cli",
-  "version": "0.1.0",
+  "name": "@motovis/skillhub",
+  "version": "1.0.0",
   "type": "module",
-  "description": "CLI for SkillHub — publish, search, and manage agent skills",
+  "description": "SkillHub CLI - 企业级 Agent Skill 管理工具，支持命名空间",
   "bin": {
     "skillhub": "dist/cli.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "unbuild",
