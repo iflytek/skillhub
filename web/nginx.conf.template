@@ -10,11 +10,12 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml;
     gzip_min_length 1000;
 
-    location / {
-        try_files $uri $uri/ /index.html;
+    location /skillhub-web/ {
+        alias /usr/share/nginx/html/;
+        try_files $uri $uri/ /skillhub-web/index.html;
     }
 
-    location /api/ {
+    location /skillhub-web/api/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -22,45 +23,51 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /oauth2/ {
+    location /skillhub-web/oauth2/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /login/oauth2/ {
+    location /skillhub-web/login/oauth2/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /.well-known/ {
+    location /skillhub-web/.well-known/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /assets/ {
+    location /skillhub-web/assets/ {
+        alias /usr/share/nginx/html/assets/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
-    location = /registry/skill.md {
+    location = /skillhub-web/registry/skill.md {
+        alias /usr/share/nginx/html/registry/skill.md;
         default_type text/plain;
         add_header Content-Disposition "inline";
         add_header X-Content-Type-Options "nosniff";
-        try_files $uri =404;
     }
 
-    location = /runtime-config.js {
+    location = /skillhub-web/runtime-config.js {
+        alias /usr/share/nginx/html/runtime-config.js;
         add_header Cache-Control "no-store";
-        try_files $uri =404;
     }
 
     location /nginx-health {
         return 200 'ok';
         add_header Content-Type text/plain;
+    }
+
+    # 根路径重定向到子路径
+    location = / {
+        return 301 /skillhub-web/;
     }
 }
