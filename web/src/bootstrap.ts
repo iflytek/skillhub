@@ -17,8 +17,8 @@ async function loadRuntimeConfig() {
 
 function ensureRuntimeConfigFallback() {
   window.__SKILLHUB_RUNTIME_CONFIG__ ??= {
-    apiBaseUrl: '/skillhub-server/',
-    appBaseUrl: '/skillhub-web/',
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '',
+    appBaseUrl: import.meta.env.VITE_APP_BASE_URL || '',
     authDirectEnabled: 'false',
     authDirectProvider: '',
     authSessionBootstrapEnabled: 'false',

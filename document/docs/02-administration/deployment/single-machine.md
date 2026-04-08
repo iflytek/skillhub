@@ -23,16 +23,16 @@ git clone https://github.com/iflytek/skillhub.git
 cd skillhub
 
 # 2. 复制环境变量模板
-cp .env.release.example .env.release
+cp .env.dev.release.example .env.dev.release
 
 # 3. 编辑配置
-# 修改 .env.release 中的配置项，特别是密码和公网地址
+# 修改 .env.dev.release 中的配置项，特别是密码和公网地址
 
 # 4. 验证配置
 make validate-release-config
 
 # 5. 启动服务
-docker compose --env-file .env.release -f compose.release.yml up -d
+docker compose --env-file .env.dev.release -f compose.release.yml up -d
 ```
 
 ## 配置说明
@@ -43,7 +43,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 ```bash
 # 检查容器状态
-docker compose --env-file .env.release -f compose.release.yml ps
+docker compose --env-file .env.dev.release -f compose.release.yml ps
 
 # 检查后端健康状态
 curl -i http://127.0.0.1:8080/actuator/health

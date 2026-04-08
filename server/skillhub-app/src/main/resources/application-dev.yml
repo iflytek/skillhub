@@ -63,6 +63,8 @@ spring:
       max-request-size: 100MB
 
 skillhub:
+  cors:
+    allowed-origins: ${SKILLHUB_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://sz-api.indusmind.local}
   auth:
     mock:
       enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}

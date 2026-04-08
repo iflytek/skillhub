@@ -211,7 +211,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 3. Start the stack with Docker Compose.
 
 ```bash
-cp .env.release.example .env.release
+cp .env.dev.release.example .env.dev.release
 ```
 
 Recommended image tags:
@@ -223,7 +223,7 @@ Start the runtime:
 
 ```bash
 make validate-release-config
-docker compose --env-file .env.release -f compose.release.yml up -d
+docker compose --env-file .env.dev.release -f compose.release.yml up -d
 ```
 
 Then open:
@@ -234,7 +234,7 @@ Then open:
 Stop it with:
 
 ```bash
-docker compose --env-file .env.release -f compose.release.yml down
+docker compose --env-file .env.dev.release -f compose.release.yml down
 ```
 
 The runtime stack uses its own Compose project name, so it does not

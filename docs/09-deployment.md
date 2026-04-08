@@ -97,9 +97,9 @@ make dev-all-reset
 ### 5.1 启动
 
 ```bash
-cp .env.release.example .env.release
+cp .env.dev.release.example .env.dev.release
 make validate-release-config
-docker compose --env-file .env.release -f compose.release.yml up -d
+docker compose --env-file .env.dev.release -f compose.release.yml up -d
 ```
 
 默认访问地址：

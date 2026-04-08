@@ -225,8 +225,11 @@ web-deps: ## 确保前端依赖可用（本地开发优先复用现有 node_modu
 web-install-ci: ## 以 CI 方式安装前端依赖
 	cd web && CI=true pnpm install --frozen-lockfile
 
-dev-web: ## 启动前端开发服务器
+local-web: ## 启动前端开发服务器
 	cd web && pnpm run dev
+
+dev-web: ## 启动前端开发服务器
+	cd web && pnpm run fat
 
 build-frontend: web-deps ## 构建前端
 	cd web && pnpm run build

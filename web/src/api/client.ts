@@ -76,7 +76,8 @@ function getRuntimeConfig(): RuntimeConfig {
 }
 
 function getApiBaseUrl(): string {
-  return getRuntimeConfig().apiBaseUrl || '/skillhub-server/'
+  console.log('RuntimeConfig', getRuntimeConfig())
+  return getRuntimeConfig().apiBaseUrl || import.meta.env.VITE_API_BASE_URL || ''
 }
 
 function parseBooleanFlag(value: string | undefined): boolean {

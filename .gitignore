@@ -28,6 +28,9 @@ yarn-error.log*
 .env.*
 !.env.example
 !.env.*.example
+!web/.env.dev
+!web/.env.fat
+!web/.env.production
 .dev/
 .memory/
 *.local.json

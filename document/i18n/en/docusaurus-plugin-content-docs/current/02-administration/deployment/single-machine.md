@@ -23,16 +23,16 @@ git clone https://github.com/iflytek/skillhub.git
 cd skillhub
 
 # 2. Copy environment variable template
-cp .env.release.example .env.release
+cp .env.dev.release.example .env.dev.release
 
 # 3. Edit configuration
-# Modify configuration items in .env.release, especially passwords and public URLs
+# Modify configuration items in .env.dev.release, especially passwords and public URLs
 
 # 4. Validate configuration
 make validate-release-config
 
 # 5. Start services
-docker compose --env-file .env.release -f compose.release.yml up -d
+docker compose --env-file .env.dev.release -f compose.release.yml up -d
 ```
 
 ## Configuration
@@ -43,7 +43,7 @@ See [Configuration](./configuration) documentation for details.
 
 ```bash
 # Check container status
-docker compose --env-file .env.release -f compose.release.yml ps
+docker compose --env-file .env.dev.release -f compose.release.yml ps
 
 # Check backend health
 curl -i http://127.0.0.1:8080/actuator/health

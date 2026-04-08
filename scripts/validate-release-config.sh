@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-ENV_FILE="${1:-.env.release}"
+ENV_FILE="${1:-.env.dev.release}"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "ERROR: env file not found: $ENV_FILE" >&2

@@ -101,6 +101,8 @@ public class SecurityConfig {
         };
 
         http
+            .cors(cors -> cors.configurationSource(http.getSharedObject(org.springframework.context.ApplicationContext.class)
+                .getBean(org.springframework.web.cors.CorsConfigurationSource.class)))
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)

@@ -78,7 +78,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
       // Always clear cache and redirect, even if API call fails
       clearSessionScopedQueries(queryClient)
       queryClient.setQueryData(['auth', 'me'], null)
-      window.location.href = '/skillhub-web/index.html'
+      window.location.href = import.meta.env.BASE_URL || '/'
     }
   }
 

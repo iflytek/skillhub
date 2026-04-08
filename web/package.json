@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "install:ci": "pnpm install --frozen-lockfile",
-    "dev": "vite",
+    "fat": "vite --mode fat",
+    "dev": "vite --mode dev",
     "build": "tsc -b && vite build",
+    "build:production": "tsc -b && vite build --mode production",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
