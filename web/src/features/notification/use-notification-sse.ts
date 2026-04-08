@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { WEB_API_PREFIX } from '@/api/client'
+import { WEB_API_PREFIX, buildApiUrl } from '@/api/client'
 import { incrementUnreadCount } from './notification-unread-cache'
 import { createNotificationSseConnection } from './notification-sse-coordinator'
 
-const SSE_URL = `${WEB_API_PREFIX}/notifications/sse`
+const SSE_URL = buildApiUrl(`${WEB_API_PREFIX}/notifications/sse`)
 
 type NotificationSseConnectionLike = ReturnType<typeof createNotificationSseConnection>
 
