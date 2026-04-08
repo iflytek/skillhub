@@ -37,8 +37,47 @@ export SKILLHUB_NO_INPUT=true
 
 ### 3. 测试环境
 
-- **生产服务器**: https://skillhub.your-company.com
-- **本地开发**: http://localhost:8080
+#### 方式一: 使用隔离的 CLI 测试环境 (推荐)
+
+一键启动隔离的后端 + 前端，自动构建 Maven 模块：
+
+```bash
+# 启动隔离测试环境 (端口: 后端 8081, 前端 3001)
+/mnt/cfs/chenbaowang/skillhub/scripts/start-cli-test-env.sh
+
+# 设置 CLI registry
+export SKILLHUB_REGISTRY=http://localhost:8081
+
+# 测试 CLI
+skillhub --registry http://localhost:8081 --help
+skillhub --registry http://localhost:8081 whoami
+
+# 停止环境
+/mnt/cfs/chenbaowang/skillhub/scripts/stop-cli-test-env.sh
+```
+
+**端口说明**:
+| 服务 | CLI 测试环境 | 主开发环境 |
+|------|-------------|-----------|
+| Backend API | **8081** | 8080 |
+| Frontend | **3001** | 3000 |
+| PostgreSQL | 5432 (复用) | 5432 |
+| Redis | 6379 (复用) | 6379 |
+
+#### 方式二: 使用已有开发环境
+
+```bash
+# 已有环境运行在 8080/3000
+export SKILLHUB_REGISTRY=http://localhost:8080
+skillhub --registry http://localhost:8080 --help
+```
+
+#### 方式三: 生产服务器
+
+```bash
+export SKILLHUB_REGISTRY=https://skillhub.your-company.com
+skillhub --registry https://skillhub.your-company.com --help
+```
 
 ---
 
@@ -636,9 +675,25 @@ pnpm build
 # 运行测试
 pnpm test
 
-# 本地验证 CLI
+# 本地验证 CLI (需要先启动后端)
 node dist/cli.mjs --version
 node dist/cli.mjs --help
+```
+
+### CLI 测试环境命令
+
+```bash
+# 启动隔离测试环境 (自动构建 Maven 模块)
+/mnt/cfs/chenbaowang/skillhub/scripts/start-cli-test-env.sh
+
+# 测试 (在新终端)
+export SKILLHUB_REGISTRY=http://localhost:8081
+skillhub --registry http://localhost:8081 --version
+skillhub --registry http://localhost:8081 --help
+skillhub --registry http://localhost:8081 whoami
+
+# 停止环境
+/mnt/cfs/chenbaowang/skillhub/scripts/stop-cli-test-env.sh
 ```
 
 ---
