@@ -12,7 +12,7 @@ FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/nginx-skillhub:alpi
 # 限制 envsubst 只替换 SKILLHUB_ 开头的变量，避免覆盖 nginx 的 $uri $host 等变量
 # 设置默认值，部署时通过环境变量覆盖
 ENV SKILLHUB_API_UPSTREAM=${SKILLHUB_API_UPSTREAM:-http://skillhub-server-dev:8000}
-ENV SKILLHUB_WEB_API_BASE_URL=${SKILLHUB_WEB_API_BASE_URL:-http://sz-api.indusmind.local/skillhub-server}
+ENV SKILLHUB_WEB_API_BASE_URL=${SKILLHUB_WEB_API_BASE_URL:-http://sz-api.indusmind.local/skillhub-server/}
 ENV SKILLHUB_PUBLIC_BASE_URL=${SKILLHUB_PUBLIC_BASE_URL:-http://sz-api.indusmind.local/skillhub-web}
 
 COPY --from=build /app/dist /usr/share/nginx/html

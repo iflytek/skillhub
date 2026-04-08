@@ -76,7 +76,7 @@ function getRuntimeConfig(): RuntimeConfig {
 }
 
 function getApiBaseUrl(): string {
-  return getRuntimeConfig().apiBaseUrl || '/skillhub-server'
+  return getRuntimeConfig().apiBaseUrl || '/skillhub-server/'
 }
 
 function parseBooleanFlag(value: string | undefined): boolean {
@@ -253,7 +253,9 @@ function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
   if (!baseUrl || typeof input !== 'string' || !input.startsWith('/')) {
     return input
   }
-  return new URL(input, ensureTrailingSlash(baseUrl))
+  const url = new URL(input, ensureTrailingSlash(baseUrl))
+  // console.log('url info = ', url)
+  return url
 }
 
 export function buildApiUrl(path: string): string {
