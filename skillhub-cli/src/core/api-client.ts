@@ -5,8 +5,37 @@ export interface ApiClientOptions {
   token?: string;
 }
 
+interface NativeApiResponse<T> {
+  code: number;
+  msg: string;
+  data: T;
+  timestamp: string;
+}
+
 export class ApiClient {
   constructor(private options: ApiClientOptions) {}
+
+  /**
+   * Unwrap Native API response format:
+   * { code: 0, msg: "success", data: T } -> returns T
+   * { code: non-zero, msg: "error", data: null } -> throws ApiError
+   *
+   * Pass-through Compat API format (no code field):
+   * { user: {...} } -> returns as-is
+   * { results: [...] } -> returns as-is
+   */
+  private unwrapResponse<T>(data: unknown): T {
+    // Check if it's a Native API response (has code field)
+    if (typeof data === "object" && data !== null && "code" in data) {
+      const native = data as NativeApiResponse<unknown>;
+      if (native.code !== 0) {
+        throw new ApiError(native.code, native);
+      }
+      return native.data as T;
+    }
+    // Otherwise it's a Compat API response, return as-is
+    return data as T;
+  }
 
   async get<T>(path: string): Promise<T> {
     const url = new URL(path, this.options.baseUrl);
@@ -18,7 +47,7 @@ export class ApiClient {
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
-    return data as T;
+    return this.unwrapResponse<T>(data);
   }
 
   async postForm<T>(path: string, form: UndiciFormData, queryParams?: Record<string, string>): Promise<T> {
@@ -39,7 +68,7 @@ export class ApiClient {
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
-    return data as T;
+    return this.unwrapResponse<T>(data);
   }
 
   async post<T>(path: string, opts?: { body?: string; headers?: Record<string, string> }): Promise<T> {
@@ -53,7 +82,7 @@ export class ApiClient {
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
-    return data as T;
+    return this.unwrapResponse<T>(data);
   }
 
   async put<T>(path: string, opts?: { body?: string; headers?: Record<string, string> }): Promise<T> {
@@ -67,7 +96,7 @@ export class ApiClient {
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
-    return data as T;
+    return this.unwrapResponse<T>(data);
   }
 
   async delete<T>(path: string): Promise<T> {
@@ -80,7 +109,7 @@ export class ApiClient {
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
-    return data as T;
+    return this.unwrapResponse<T>(data);
   }
 
   private headers(): Record<string, string> {

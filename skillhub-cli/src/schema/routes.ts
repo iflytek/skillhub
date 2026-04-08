@@ -8,6 +8,7 @@ export const ApiRoutes = {
   skillVersions: "/api/v1/skills/{namespace}/{slug}/versions",
   skillDownload: "/api/v1/skills/{namespace}/{slug}/download",
   skillResolve: "/api/v1/skills/{namespace}/{slug}/resolve",
+  namespaceTransferOwnership: "/api/v1/namespaces/{namespace}/transfer-ownership",
 } as const;
 
 export interface PublishResponse {

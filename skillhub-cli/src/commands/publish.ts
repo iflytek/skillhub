@@ -16,7 +16,7 @@ export function registerPublish(program: Command) {
     .description("Publish a skill to SkillHub registry")
     .option("--namespace <ns>", "Target namespace (default: global)")
     .option("--slug <slug>", "Skill slug")
-    .option("--version <ver>", "Version (semver)")
+    .option("-v, --ver <ver>", "Version (semver)")
     .option("--name <name>", "Display name")
     .option("--changelog <text>", "Changelog text")
     .option("--tags <tags>", "Comma-separated tags", "latest")
@@ -29,7 +29,7 @@ export function registerPublish(program: Command) {
       }
 
       const slug = opts.slug || basename(folder);
-      const version = opts.version;
+      const version = opts.ver;
       if (!version || !semver.valid(version)) {
         error("--version must be a valid semver (e.g. 1.0.0)");
         process.exit(1);

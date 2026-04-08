@@ -7,6 +7,7 @@ const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 export interface CliConfig {
   registry: string;
+  dir?: string;
 }
 
 const DEFAULT_CONFIG: CliConfig = {
