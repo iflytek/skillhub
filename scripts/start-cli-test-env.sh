@@ -7,14 +7,12 @@ FRONTEND_PORT=3001
 
 echo "=== SkillHub CLI Testing Environment ==="
 echo "Home: $SKILLHUB_HOME"
-echo "Backend: http://localhost:$BACKEND_PORT"
-echo "Frontend: http://localhost:$FRONTEND_PORT"
 echo ""
 
 mkdir -p "$SKILLHUB_HOME"
 
 export SKILLHUB_HOME
-export SKILLHUB_PUBLIC_BASE_URL="http://localhost:$BACKEND_PORT"
+export SKILLHUB_PUBLIC_BASE_URL="http://0.0.0.0:$BACKEND_PORT"
 export SPRING_PROFILES_ACTIVE=local
 export SKILLHUB_DB_URL="jdbc:postgresql://localhost:5432/skillhub"
 export SKILLHUB_DB_USERNAME="skillhub"
@@ -27,9 +25,11 @@ cd /mnt/cfs/chenbaowang/skillhub/server
 ./mvnw install -DskipTests -pl skillhub-domain,skillhub-auth,skillhub-infra,skillhub-search,skillhub-notification -am -q
 echo "Maven modules built."
 
-echo "[2/4] Starting backend on port $BACKEND_PORT..."
+echo "[2/4] Starting backend on port $BACKEND_PORT (binding to 0.0.0.0)..."
 cd /mnt/cfs/chenbaowang/skillhub/server
-./mvnw spring-boot:run -pl skillhub-app -Dspring-boot.run.arguments="--server.port=$BACKEND_PORT" > "$SKILLHUB_HOME/backend.log" 2>&1 &
+./mvnw spring-boot:run -pl skillhub-app \
+    -Dspring-boot.run.arguments="--server.port=$BACKEND_PORT --server.address=0.0.0.0" \
+    > "$SKILLHUB_HOME/backend.log" 2>&1 &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID (log: $SKILLHUB_HOME/backend.log)"
 
@@ -47,7 +47,7 @@ for i in {1..60}; do
     sleep 3
 done
 
-echo "[3/4] Starting frontend on port $FRONTEND_PORT..."
+echo "[3/4] Starting frontend on port $FRONTEND_PORT (binding to 0.0.0.0)..."
 cd /mnt/cfs/chenbaowang/skillhub/web
 pnpm exec vite --host 0.0.0.0 --port $FRONTEND_PORT > "$SKILLHUB_HOME/frontend.log" 2>&1 &
 FRONTEND_PID=$!
@@ -56,14 +56,19 @@ echo "Frontend PID: $FRONTEND_PID (log: $SKILLHUB_HOME/frontend.log)"
 echo ""
 echo "[4/4] Environment ready!"
 echo ""
-echo "=== Testing Commands ==="
+
+HOST_IP=$(hostname -I | awk '{print $1}')
+echo "=== LAN Access URLs ==="
+echo "Backend API: http://$HOST_IP:$BACKEND_PORT"
+echo "Frontend:   http://$HOST_IP:$FRONTEND_PORT"
 echo ""
-echo "export SKILLHUB_REGISTRY=http://localhost:$BACKEND_PORT"
-echo "skillhub --registry http://localhost:$BACKEND_PORT --help"
-echo ""
-echo "=== Access URLs ==="
+echo "=== Local URLs ==="
 echo "Backend API: http://localhost:$BACKEND_PORT"
 echo "Frontend:   http://localhost:$FRONTEND_PORT"
+echo ""
+echo "=== CLI Test Commands ==="
+echo "node dist/cli.mjs --registry http://$HOST_IP:$BACKEND_PORT --help"
+echo "node dist/cli.mjs --registry http://localhost:$BACKEND_PORT --help"
 echo ""
 echo "=== Logs ==="
 echo "Backend: $SKILLHUB_HOME/backend.log"
