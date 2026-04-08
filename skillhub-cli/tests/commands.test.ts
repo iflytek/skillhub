@@ -24,6 +24,7 @@ import { registerList } from "../src/commands/list.js";
 import { registerRemove } from "../src/commands/remove.js";
 import { registerLogout } from "../src/commands/logout.js";
 import { registerUninstall } from "../src/commands/uninstall.js";
+import { registerSync } from "../src/commands/sync.js";
 
 describe("Command registrations", () => {
   function getCommandNames(program: Command): string[] {
@@ -198,5 +199,11 @@ describe("Command registrations", () => {
     const program = new Command();
     registerLogout(program);
     expect(getCommandNames(program)).toContain("logout");
+  });
+
+  it("registers sync command", () => {
+    const program = new Command();
+    registerSync(program);
+    expect(getCommandNames(program)).toContain("sync");
   });
 });
