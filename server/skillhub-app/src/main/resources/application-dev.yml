@@ -1,8 +1,9 @@
 server:
-  port: 8080
+  port: 8000
   shutdown: graceful
   forward-headers-strategy: framework
   servlet:
+    context-path: /skillhub-server
     session:
       timeout: ${SERVER_SERVLET_SESSION_TIMEOUT:8h}
       cookie:
