@@ -4,7 +4,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-ENV VITE_BASE_PATH=/skillhub-web/
 RUN pnpm build
 
 FROM jsessh-registry.cn-shanghai.cr.aliyuncs.com/base-images/nginx-skillhub:alpine
