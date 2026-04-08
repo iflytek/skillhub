@@ -10,64 +10,59 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml;
     gzip_min_length 1000;
 
-    location /skillhub-web/ {
-        alias /usr/share/nginx/html/;
-        try_files $uri $uri/ /skillhub-web/index.html;
+    # 静态资源和 SPA 路由
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 
-    location /skillhub-web/api/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+    # API 代理到后端 server 服务
+    location /api/ {
+        proxy_pass ${SKILLHUB_API_UPSTREAM}/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /skillhub-web/oauth2/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+    location /oauth2/ {
+        proxy_pass ${SKILLHUB_API_UPSTREAM}/oauth2/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /skillhub-web/login/oauth2/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+    location /login/oauth2/ {
+        proxy_pass ${SKILLHUB_API_UPSTREAM}/login/oauth2/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /skillhub-web/.well-known/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+    location /.well-known/ {
+        proxy_pass ${SKILLHUB_API_UPSTREAM}/.well-known/;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /skillhub-web/assets/ {
-        alias /usr/share/nginx/html/assets/;
+    location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
-    location = /skillhub-web/registry/skill.md {
-        alias /usr/share/nginx/html/registry/skill.md;
+    location = /registry/skill.md {
         default_type text/plain;
         add_header Content-Disposition "inline";
         add_header X-Content-Type-Options "nosniff";
+        try_files $uri =404;
     }
 
-    location = /skillhub-web/runtime-config.js {
-        alias /usr/share/nginx/html/runtime-config.js;
+    location = /runtime-config.js {
         add_header Cache-Control "no-store";
+        try_files $uri =404;
     }
 
     location /nginx-health {
         return 200 'ok';
         add_header Content-Type text/plain;
-    }
-
-    # 根路径重定向到子路径
-    location = / {
-        return 301 /skillhub-web/;
     }
 }

@@ -167,8 +167,17 @@ skillhub:
       display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:Admin}
       email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
 
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    swagger-model-name: SkillHub API
+
 springdoc:
+  api-docs:
+    path: /v3/api-docs
   swagger-ui:
+    path: /swagger-ui.html
     config-url: /skillhub-server/v3/api-docs/swagger-config
     url: /skillhub-server/v3/api-docs
     disable-swagger-default-url: true
