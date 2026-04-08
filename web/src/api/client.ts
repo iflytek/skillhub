@@ -267,6 +267,12 @@ export function buildApiUrl(path: string): string {
 // function ensureTrailingSlash(value: string): string {
 //   return value.endsWith('/') ? value : `${value}/`
 // }
+// function trimTrailingSlash(value: string): string {
+//   if (value.length > 1 && value.endsWith('/')) {
+//     return value.slice(0, -1)
+//   }
+//   return value
+// }
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
@@ -347,7 +353,7 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    const response = await fetch(withBaseUrl('/api/v1/auth/logout'), {
+    const response = await fetch('/api/v1/auth/logout', {
       method: 'POST',
       headers: withCsrf(),
     })

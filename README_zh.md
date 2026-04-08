@@ -17,6 +17,10 @@
 
 ---
 
+<div align="center">
+  <img src="https://xfyun-doc.xfyun.cn/lc-sp-skillhub-demo-1775551643410.gif" alt="SkillHub Demo" width="800" />
+</div>
+
 SkillHub 是一个自托管平台，为团队提供私有的、受治理的智能体技能共享空间。发布技能包，推送到命名空间，让其他人通过搜索发现或通过 CLI 安装。专为防火墙后的本地部署而构建，提供与公共注册中心相同的精致体验。
 
 ## 文档
@@ -125,6 +129,8 @@ make dev-all
 make dev-backend    # 仅后端
 make dev-web        # 仅前端
 ```
+
+> **国内开发者**：如果 Maven 依赖下载超时，需配置阿里云镜像。详见 [本地开发指南](https://iflytek.github.io/skillhub/quickstart.html#本地开发)。
 
 ### 常用命令
 

@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { createElement } from 'react'
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
@@ -18,10 +20,6 @@ vi.mock('react-i18next', async () => {
     }),
   }
 })
-
-vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
-}))
 
 vi.mock('@/shared/ui/card', () => ({
   Card: ({ children }: { children: unknown }) => children,
@@ -55,12 +53,22 @@ vi.mock('@/shared/ui/table', () => ({
   TableRow: ({ children }: { children: unknown }) => children,
 }))
 
-vi.mock('@/features/review/use-review-list', () => ({
-  useReviewList: () => ({ data: null, isLoading: false }),
+const paginationProps: Array<{ page: number; totalPages: number; onPageChange: (page: number) => void }> = []
+vi.mock('@/shared/components/pagination', () => ({
+  Pagination: (props: { page: number; totalPages: number; onPageChange: (page: number) => void }) => {
+    paginationProps.push(props)
+    return null
+  },
 }))
 
+const useReviewListMock = vi.fn()
+vi.mock('@/features/review/use-review-list', () => ({
+  useReviewList: (...args: unknown[]) => useReviewListMock(...args),
+}))
+
+const hasRoleMock = vi.fn()
 vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({ hasRole: () => false }),
+  useAuth: () => ({ hasRole: hasRoleMock }),
 }))
 
 vi.mock('@/shared/components/dashboard-page-header', () => ({
@@ -78,7 +86,86 @@ vi.mock('./profile-review-table', () => ({
 import { ReviewsPage } from './reviews'
 
 describe('ReviewsPage', () => {
+  function createReviewItem(id: number) {
+    return {
+      id,
+      namespace: 'demo',
+      skillSlug: `skill-${id}`,
+      version: '1.0.0',
+      submittedBy: 'user-1',
+      submittedByName: 'User 1',
+      submittedAt: '2026-04-01T12:00:00Z',
+      reviewedBy: null,
+      reviewedByName: null,
+      reviewedAt: null,
+      reviewComment: null,
+    }
+  }
+
+  beforeEach(() => {
+    paginationProps.length = 0
+    hasRoleMock.mockReset()
+    useReviewListMock.mockReset()
+    hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN')
+    useReviewListMock.mockImplementation((status: string, _namespaceId: unknown, page: number, _size: number, _sortDirection: string, enabled: boolean) => {
+      if (!enabled) {
+        return { data: null, isLoading: false }
+      }
+
+      if (status === 'PENDING') {
+        return {
+          data: {
+            items: [createReviewItem(1)],
+            totalElements: 21,
+            totalPages: 2,
+            page,
+            size: 20,
+            total: 21,
+          },
+          isLoading: false,
+        }
+      }
+
+      return { data: null, isLoading: false }
+    })
+  })
+
   it('exports a named component function', () => {
     expect(typeof ReviewsPage).toBe('function')
+  })
+
+  it('renders pagination for pending reviews when totalPages > 1', () => {
+    const html = renderToStaticMarkup(createElement(ReviewsPage))
+
+    expect(html).toContain('reviews.pageSummary')
+    expect(paginationProps).toHaveLength(1)
+    expect(paginationProps[0]?.page).toBe(0)
+    expect(paginationProps[0]?.totalPages).toBe(2)
+  })
+
+  it('renders disabled-style pagination when there is only one page', () => {
+    useReviewListMock.mockImplementation((status: string, _namespaceId: unknown, page: number, _size: number, _sortDirection: string, enabled: boolean) => {
+      if (!enabled || status !== 'PENDING') {
+        return { data: null, isLoading: false }
+      }
+
+      return {
+        data: {
+          items: [createReviewItem(2)],
+          totalElements: 1,
+          totalPages: 1,
+          page,
+          size: 20,
+          total: 1,
+        },
+        isLoading: false,
+      }
+    })
+
+    renderToStaticMarkup(createElement(ReviewsPage))
+
+    expect(paginationProps).toHaveLength(1)
+    expect(paginationProps[0]?.page).toBe(0)
+    expect(paginationProps[0]?.totalPages).toBe(1)
   })
 })

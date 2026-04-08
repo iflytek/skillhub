@@ -124,6 +124,18 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 > **注意**：升级前建议先备份数据库和对象存储。数据库迁移由 Flyway 自动执行。
 
+## Q: 为什么管理员（admin）和普通用户都无法创建命名空间？
+
+A: 较旧版本的 SkillHub 不支持创建命名空间。该功能是在后续版本迭代中添加的。请将您的 SkillHub 升级到最新版本（latest）。
+升级命令示例：
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version latest
+```
+
+## Q: 如何搜索或操作指定命名空间中的技能包（Skill）？
+
+A: 使用 OpenClaw CLI 命令行工具时，可以通过 `<namespace>--<skill-name>` 的格式来指定命名空间进行操作（例如搜索、安装）。如果在网页端搜索遇到问题，也可以尝试通过先导出技能、再导入到目标命名空间的方式来完成跨空间操作。
+
 ## Q: 遇到问题怎么办？
 
 A: 可以通过以下方式获取帮助：
@@ -131,3 +143,74 @@ A: 可以通过以下方式获取帮助：
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
 - **文档**: 参考项目 README.md
 - **社区讨论**: https://github.com/iflytek/skillhub/discussions
+
+## Q: 本地开发启动失败怎么办？
+
+A: `make dev-all` 后端启动失败时，会显示详细的错误提示。常见问题：
+
+### 1. Maven 依赖下载失败（网络超时）
+
+**症状**：后端日志显示 `Could not transfer artifact` 或连接超时
+
+**解决方案**：配置阿里云镜像
+
+```bash
+# 复制项目内置的镜像配置到用户目录
+mkdir -p ~/.m2
+cp server/.mvn/settings.xml ~/.m2/settings.xml
+```
+
+或手动创建 `~/.m2/settings.xml`：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <mirrors>
+    <mirror>
+      <id>aliyun</id>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>
+```
+
+参考：[阿里云 Maven 镜像配置指南](https://maven.aliyun.com/mvn/guide)
+
+### 2. Java 版本不匹配
+
+**症状**：`Unsupported class file major version` 或 `java.lang.NoSuchMethodError`
+
+**解决方案**：安装 Java 21+
+
+```bash
+# macOS
+brew install openjdk@21
+
+# 验证版本
+java -version
+```
+
+### 3. 端口被占用
+
+**症状**：`Port 8080 already in use`
+
+**解决方案**：
+
+```bash
+# 查看占用端口的进程
+lsof -i :8080
+
+# 终止进程
+kill -9 <PID>
+```
+
+### 4. 查看详细日志
+
+如果以上方案无法解决，查看后端日志：
+
+```bash
+make dev-logs SERVICE=backend
+# 或直接查看
+cat .dev/server.log
+```

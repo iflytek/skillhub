@@ -64,6 +64,39 @@ cd skillhub
 make dev-all
 ```
 
+### Notes for Developers in China
+
+If `make dev-all` fails to start the backend, common causes include:
+
+1. **Maven dependency download timeout**
+
+   The project includes a built-in Aliyun mirror configuration (`server/.mvn/settings.xml`), but Maven does not automatically read project-level settings. You need to configure it manually:
+
+   ```bash
+   # Option 1: Copy to user directory (recommended)
+   mkdir -p ~/.m2
+   cp server/.mvn/settings.xml ~/.m2/settings.xml
+
+   # Option 2: Specify on each build
+   cd server && ./mvnw -s .mvn/settings.xml package
+   ```
+
+2. **Java version mismatch**
+
+   SkillHub requires Java 21+:
+   ```bash
+   java -version
+   ```
+
+3. **Port conflict**
+
+   Check if port 8080 is in use:
+   ```bash
+   lsof -i :8080
+   ```
+
+For detailed troubleshooting steps, see [FAQ](faq.md#local-development-startup-failure).
+
 ## Logging In
 
 ### Option 1: Use the Built-in Admin Account

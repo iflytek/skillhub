@@ -8,10 +8,14 @@ import * as mod from './file-tree-node'
  *
  * We verify the module shape so downstream consumers break fast
  * if the export contract changes.
+ *
+ * Note: FileTreeNodeComponent is wrapped with React.memo, so typeof returns 'object'
+ * instead of 'function'. We check for both to handle the memo wrapper.
  */
 describe('file-tree-node module exports', () => {
   it('exports the FileTreeNodeComponent component', () => {
     expect(mod.FileTreeNodeComponent).toBeDefined()
-    expect(typeof mod.FileTreeNodeComponent).toBe('function')
+    // React.memo wraps the component in an object, so typeof is 'object'
+    expect(['function', 'object']).toContain(typeof mod.FileTreeNodeComponent)
   })
 })

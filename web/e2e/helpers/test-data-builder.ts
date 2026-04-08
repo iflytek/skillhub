@@ -155,7 +155,12 @@ export class E2eTestDataBuilder {
   }
 
   async createNamespace(base = 'e2e-team'): Promise<SeededNamespace> {
-    const slug = `${base}-${this.suffix}`.slice(0, 64)
+    const rawSlug = `${base}-${this.suffix}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+    const slug = rawSlug.slice(0, 64)
     const displayName = `E2E ${slug}`
 
     const created = await parseEnvelope<SeededNamespace>(

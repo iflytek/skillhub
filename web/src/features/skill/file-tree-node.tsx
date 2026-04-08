@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, FileCode, File } from 'lucide-react'
 import type { FileTreeNode } from './file-tree-builder'
 import { getFileIcon } from './file-type-utils'
@@ -33,14 +33,23 @@ function formatFileSize(bytes: number): string {
 /**
  * Recursive file tree node component.
  * Renders either a file or directory node with expand/collapse functionality.
+ * Memoized to prevent unnecessary re-renders when parent updates.
  */
-export function FileTreeNodeComponent({ node, onFileClick, defaultExpanded = false }: FileTreeNodeProps) {
+export const FileTreeNodeComponent = memo(function FileTreeNodeComponent({
+  node,
+  onFileClick,
+  defaultExpanded = false,
+}: FileTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+
+  // Cache icon computation
+  const IconComponent = useMemo(
+    () => getIconComponent(getFileIcon(node.name)),
+    [node.name]
+  )
 
   // Render file node
   if (node.type === 'file') {
-    const IconComponent = getIconComponent(getFileIcon(node.name))
-
     return (
       <div
         className="flex items-center justify-between px-3 py-2 hover:bg-accent/10 cursor-pointer transition-colors group"
@@ -94,4 +103,4 @@ export function FileTreeNodeComponent({ node, onFileClick, defaultExpanded = fal
       )}
     </div>
   )
-}
+})
