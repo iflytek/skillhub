@@ -249,27 +249,23 @@ export async function fetchText(input: RequestInfo | URL, init?: RequestInit): P
 
 function withBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
   const baseUrl = getApiBaseUrl()
-  console.log('baseUrl', baseUrl)
   if (!baseUrl || typeof input !== 'string' || !input.startsWith('/')) {
     return input
   }
-  const url = new URL(input, ensureTrailingSlash(baseUrl))
-  // console.log('url info = ', url)
-  return url
+  return `${baseUrl.replace(/\/+$/, '')}${input}`
 }
 
 export function buildApiUrl(path: string): string {
   const baseUrl = getApiBaseUrl()
-  console.log('baseUrl', baseUrl)
   if (!baseUrl) {
     return path
   }
-  return new URL(path, ensureTrailingSlash(baseUrl)).toString()
+  return `${baseUrl.replace(/\/+$/, '')}${path}`
 }
 
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith('/') ? value : `${value}/`
-}
+// function ensureTrailingSlash(value: string): string {
+//   return value.endsWith('/') ? value : `${value}/`
+// }
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
