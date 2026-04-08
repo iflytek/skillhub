@@ -7,7 +7,7 @@
 async function loadRuntimeConfig() {
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
-    const base = import.meta.env.BASE_URL || '/'
+    const base = new URL('./', document.baseURI).pathname
     script.src = `${base}runtime-config.js`
     script.async = false
     script.onload = () => resolve()
