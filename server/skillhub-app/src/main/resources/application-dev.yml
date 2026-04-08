@@ -67,9 +67,9 @@ skillhub:
     mock:
       enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}
     direct:
-      enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
+      enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:true}
     session-bootstrap:
-      enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
+      enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:true}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
@@ -160,7 +160,7 @@ skillhub:
       reclaim-interval: ${SKILLHUB_SCAN_STREAM_RECLAIM_INTERVAL:PT30S}
   bootstrap:
     admin:
-      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
       user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
