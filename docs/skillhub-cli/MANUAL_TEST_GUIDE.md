@@ -25,6 +25,8 @@ npm run build
 npm i -g @motovis/skillhub
 ```
 
+**发布前运行方式**: 使用 `node dist/cli.mjs` 而不是 `skillhub` 命令
+
 ### 2. 环境变量 (可选)
 
 ```bash
@@ -48,9 +50,9 @@ export SKILLHUB_NO_INPUT=true
 # 设置 CLI registry
 export SKILLHUB_REGISTRY=http://localhost:8081
 
-# 测试 CLI
-skillhub --registry http://localhost:8081 --help
-skillhub --registry http://localhost:8081 whoami
+# 测试 CLI (发布前用 node 运行)
+node dist/cli.mjs --registry http://localhost:8081 --help
+node dist/cli.mjs --registry http://localhost:8081 whoami
 
 # 停止环境
 /mnt/cfs/chenbaowang/skillhub/scripts/stop-cli-test-env.sh
@@ -69,14 +71,14 @@ skillhub --registry http://localhost:8081 whoami
 ```bash
 # 已有环境运行在 8080/3000
 export SKILLHUB_REGISTRY=http://localhost:8080
-skillhub --registry http://localhost:8080 --help
+node dist/cli.mjs --registry http://localhost:8080 --help
 ```
 
 #### 方式三: 生产服务器
 
 ```bash
 export SKILLHUB_REGISTRY=https://skillhub.your-company.com
-skillhub --registry https://skillhub.your-company.com --help
+node dist/cli.mjs --registry https://skillhub.your-company.com --help
 ```
 
 ---
@@ -104,7 +106,7 @@ skillhub --registry https://skillhub.your-company.com --help
 
 ```bash
 # 测试命令
-skillhub --help
+node dist/cli.mjs --help
 
 # 验证
 - 显示所有可用命令列表
@@ -116,7 +118,7 @@ skillhub --help
 
 ```bash
 # 测试命令
-skillhub --version
+node dist/cli.mjs --version
 
 # 验证
 - 输出: 1.0.0
@@ -126,7 +128,7 @@ skillhub --version
 
 ```bash
 # 测试命令
-skillhub login --token YOUR_API_TOKEN
+node dist/cli.mjs login --token YOUR_API_TOKEN
 
 # 验证
 - 成功消息
@@ -137,7 +139,7 @@ skillhub login --token YOUR_API_TOKEN
 
 ```bash
 # 测试命令 (需先登录)
-skillhub whoami
+node dist/cli.mjs whoami
 
 # 验证
 - 显示用户信息: userId, displayName, email
@@ -147,7 +149,7 @@ skillhub whoami
 
 ```bash
 # 测试命令
-skillhub logout
+node dist/cli.mjs logout
 
 # 验证
 - Token 从配置中移除
@@ -158,7 +160,7 @@ skillhub logout
 
 ```bash
 # 测试命令
-skillhub search openspec
+node dist/cli.mjs search openspec
 
 # 验证
 - 返回匹配的 skills 列表
@@ -169,7 +171,7 @@ skillhub search openspec
 
 ```bash
 # 测试命令
-skillhub install openspec
+node dist/cli.mjs install openspec
 
 # 验证
 - 从 global 命名空间下载
@@ -182,7 +184,7 @@ skillhub install openspec
 ```bash
 # 测试命令
 cd /path/to/your-skill
-skillhub publish -v 1.0.0
+node dist/cli.mjs publish -v 1.0.0
 
 # 验证
 - 发布到 global 命名空间
@@ -198,7 +200,7 @@ skillhub publish -v 1.0.0
 
 ```bash
 # 测试命令
-skillhub namespaces
+node dist/cli.mjs namespaces
 
 # 验证
 - 显示用户有权限的所有命名空间
@@ -209,7 +211,7 @@ skillhub namespaces
 
 ```bash
 # 测试命令
-skillhub search openspec --namespace your-team
+node dist/cli.mjs search openspec --namespace your-team
 
 # 验证
 - 只返回指定命名空间的结果
@@ -219,10 +221,10 @@ skillhub search openspec --namespace your-team
 
 ```bash
 # 测试命令
-skillhub install your-team--openspec --namespace your-team
+node dist/cli.mjs install your-team--openspec --namespace your-team
 
 # 或使用 slug 格式
-skillhub install openspec --namespace your-team
+node dist/cli.mjs install openspec --namespace your-team
 
 # 验证
 - 从 your-team 命名空间安装
@@ -233,7 +235,7 @@ skillhub install openspec --namespace your-team
 ```bash
 # 测试命令
 cd /path/to/your-skill
-skillhub publish -v 1.0.0 --namespace your-team
+node dist/cli.mjs publish -v 1.0.0 --namespace your-team
 
 # 验证
 - 发布到 your-team 命名空间
@@ -244,7 +246,7 @@ skillhub publish -v 1.0.0 --namespace your-team
 
 ```bash
 # 测试命令
-skillhub list
+node dist/cli.mjs list
 
 # 验证
 - 显示所有已安装的 skills
@@ -255,7 +257,7 @@ skillhub list
 
 ```bash
 # 测试命令
-skillhub install openspec --agent claude-code
+node dist/cli.mjs install openspec --agent claude-code
 
 # 验证
 - 安装到 .claude/skills/ 而不是其他 agent
@@ -265,7 +267,7 @@ skillhub install openspec --agent claude-code
 
 ```bash
 # 测试命令
-skillhub install openspec --global
+node dist/cli.mjs install openspec --global
 
 # 验证
 - 安装到所有检测到的 agents 的全局目录
@@ -279,7 +281,7 @@ skillhub install openspec --global
 
 ```bash
 # 测试命令
-skillhub search openspec --json
+node dist/cli.mjs search openspec --json
 
 # 验证
 - 输出有效的 JSON
@@ -290,7 +292,7 @@ skillhub search openspec --json
 
 ```bash
 # 测试命令
-skillhub install openspec --copy
+node dist/cli.mjs install openspec --copy
 
 # 验证
 - Skill 文件复制到本地
@@ -302,7 +304,7 @@ skillhub install openspec --copy
 
 ```bash
 # 测试命令
-skillhub uninstall openspec --yes
+node dist/cli.mjs uninstall openspec --yes
 
 # 验证
 - 不显示确认提示
@@ -313,7 +315,7 @@ skillhub uninstall openspec --yes
 
 ```bash
 # 测试命令
-skillhub update --all
+node dist/cli.mjs update --all
 
 # 验证
 - 检查所有已安装 skills 的更新
@@ -324,7 +326,7 @@ skillhub update --all
 
 ```bash
 # 测试命令
-skillhub update openspec
+node dist/cli.mjs update openspec
 
 # 验证
 - 只检查指定 skill 的更新
@@ -334,7 +336,7 @@ skillhub update openspec
 
 ```bash
 # 测试命令
-skillhub sync /path/to/skills --namespace your-team
+node dist/cli.mjs sync /path/to/skills --namespace your-team
 
 # 验证
 - 扫描目录下所有包含 SKILL.md 的子目录
@@ -345,7 +347,7 @@ skillhub sync /path/to/skills --namespace your-team
 
 ```bash
 # 测试命令
-skillhub sync /path/to/skills --namespace your-team --dry-run
+node dist/cli.mjs sync /path/to/skills --namespace your-team --dry-run
 
 # 验证
 - 只显示会发布什么，不实际发布
@@ -359,10 +361,10 @@ skillhub sync /path/to/skills --namespace your-team --dry-run
 
 ```bash
 # 测试命令
-skillhub info openspec
+node dist/cli.mjs info openspec
 
 # 或
-skillhub view openspec
+node dist/cli.mjs view openspec
 
 # 验证
 - 显示完整的 skill 信息
@@ -373,7 +375,7 @@ skillhub view openspec
 
 ```bash
 # 测试命令
-skillhub versions openspec
+node dist/cli.mjs versions openspec
 
 # 验证
 - 列出所有版本
@@ -384,7 +386,7 @@ skillhub versions openspec
 
 ```bash
 # 测试命令
-skillhub download openspec -v 1.0.0
+node dist/cli.mjs download openspec -v 1.0.0
 
 # 验证
 - 下载 zip 包到当前目录
@@ -395,7 +397,7 @@ skillhub download openspec -v 1.0.0
 
 ```bash
 # 测试命令
-skillhub star openspec
+node dist/cli.mjs star openspec
 
 # 验证
 - 成功消息
@@ -406,7 +408,7 @@ skillhub star openspec
 
 ```bash
 # 测试命令
-skillhub rate openspec 5
+node dist/cli.mjs rate openspec 5
 
 # 验证
 - 成功消息
@@ -417,7 +419,7 @@ skillhub rate openspec 5
 
 ```bash
 # 测试命令
-skillhub me skills
+node dist/cli.mjs me skills
 
 # 验证
 - 显示我发布的所有 skills
@@ -427,7 +429,7 @@ skillhub me skills
 
 ```bash
 # 测试命令
-skillhub me stars
+node dist/cli.mjs me stars
 
 # 验证
 - 显示我 starred 的 skills 列表
@@ -437,7 +439,7 @@ skillhub me stars
 
 ```bash
 # 测试命令
-skillhub delete openspec -v 1.0.0 --yes
+node dist/cli.mjs delete openspec -v 1.0.0 --yes
 
 # 验证
 - 删除指定版本
@@ -448,7 +450,7 @@ skillhub delete openspec -v 1.0.0 --yes
 
 ```bash
 # 测试命令
-skillhub archive openspec
+node dist/cli.mjs archive openspec
 
 # 验证
 - Skill 被归档
@@ -459,7 +461,7 @@ skillhub archive openspec
 
 ```bash
 # 测试命令
-skillhub notifications list
+node dist/cli.mjs notifications list
 
 # 验证
 - 显示通知列表
@@ -470,7 +472,7 @@ skillhub notifications list
 
 ```bash
 # 测试命令
-skillhub resolve openspec
+node dist/cli.mjs resolve openspec
 
 # 验证
 - 返回最新版本号和下载 URL
@@ -480,7 +482,7 @@ skillhub resolve openspec
 
 ```bash
 # 测试命令
-skillhub init my-new-skill
+node dist/cli.mjs init my-new-skill
 
 # 验证
 - 创建 my-new-skill/ 目录
@@ -495,7 +497,7 @@ skillhub init my-new-skill
 
 ```bash
 # 测试命令 (登出后)
-skillhub search openspec
+node dist/cli.mjs search openspec
 
 # 验证
 - 应该仍然可以搜索 (公开内容)
@@ -505,7 +507,7 @@ skillhub search openspec
 
 ```bash
 # 测试命令 (登出后)
-skillhub publish -v 1.0.0
+node dist/cli.mjs publish -v 1.0.0
 
 # 验证
 - 错误消息: 需要认证
@@ -515,7 +517,7 @@ skillhub publish -v 1.0.0
 
 ```bash
 # 测试命令
-skillhub install non-existent-skill-xyz
+node dist/cli.mjs install non-existent-skill-xyz
 
 # 验证
 - 错误消息: Skill not found
@@ -525,7 +527,7 @@ skillhub install non-existent-skill-xyz
 
 ```bash
 # 测试命令
-skillhub publish -v 1.0.0 --namespace other-team
+node dist/cli.mjs publish -v 1.0.0 --namespace other-team
 
 # 验证
 - 错误消息: Permission denied
@@ -535,7 +537,7 @@ skillhub publish -v 1.0.0 --namespace other-team
 
 ```bash
 # 测试命令
-skillhub publish --version invalid
+node dist/cli.mjs publish --version invalid
 
 # 验证
 - 错误消息: Invalid semver
@@ -549,7 +551,7 @@ skillhub publish --version invalid
 
 ```bash
 # 测试命令
-skillhub search ""
+node dist/cli.mjs search ""
 
 # 验证
 - 返回错误或所有结果
@@ -559,7 +561,7 @@ skillhub search ""
 
 ```bash
 # 测试命令
-skillhub search "a b c d e f g h i j k l m n o p q r s t u v w x y z a b c d e f g h i j k l m n o p q r s t u v w x y z"
+node dist/cli.mjs search "a b c d e f g h i j k l m n o p q r s t u v w x y z a b c d e f g h i j k l m n o p q r s t u v w x y z"
 
 # 验证
 - 正常处理
@@ -570,7 +572,7 @@ skillhub search "a b c d e f g h i j k l m n o p q r s t u v w x y z a b c d e f
 
 ```bash
 # 测试命令
-skillhub install "team--skill-name"
+node dist/cli.mjs install "team--skill-name"
 
 # 验证
 - 正确处理双破折号
@@ -580,7 +582,7 @@ skillhub install "team--skill-name"
 
 ```bash
 # 测试命令 (离线)
-skillhub search openspec
+node dist/cli.mjs search openspec
 
 # 验证
 - 错误消息: Network error / Connection refused
@@ -594,7 +596,7 @@ skillhub search openspec
 
 ```bash
 # 测试命令
-skillhub --registry https://custom-skillhub.example.com search openspec
+node dist/cli.mjs --registry https://custom-skillhub.example.com search openspec
 
 # 验证
 - 使用指定的 registry 而不是默认
@@ -604,7 +606,7 @@ skillhub --registry https://custom-skillhub.example.com search openspec
 
 ```bash
 # 测试命令
-skillhub --registry https://nonexistent.example.com whoami
+node dist/cli.mjs --registry https://nonexistent.example.com whoami
 
 # 验证
 - 清晰的错误消息
@@ -615,10 +617,12 @@ skillhub --registry https://nonexistent.example.com whoami
 ## 测试执行检查清单
 
 ### 测试前
-- [ ] CLI 已正确安装 (`skillhub --version` 工作)
+- [ ] CLI 已构建 (`cd skillhub-cli && pnpm build`)
+- [ ] 测试环境已启动 (8081端口)
 - [ ] 测试账号准备就绪 (token 可用)
 - [ ] 测试用 namespace 有正确权限
 - [ ] Registry 可访问
+- [ ] 注意: 发布前使用 `node dist/cli.mjs` 命令
 
 ### 测试中
 - [ ] 记录每个测试的实际输出
@@ -645,19 +649,19 @@ echo "=== 回归测试开始 ==="
 
 # P0: 核心功能
 echo "[1/5] 测试 help..."
-skillhub --help | grep -q "Commands:" && echo "✓ PASS" || echo "✗ FAIL"
+node dist/cli.mjs --help | grep -q "Commands:" && echo "✓ PASS" || echo "✗ FAIL"
 
 echo "[2/5] 测试 login..."
-skillhub login --token test-token && echo "✓ PASS" || echo "✗ FAIL"
+node dist/cli.mjs login --token test-token && echo "✓ PASS" || echo "✗ FAIL"
 
 echo "[3/5] 测试 search..."
-skillhub search openspec | grep -q "openspec" && echo "✓ PASS" || echo "✗ FAIL"
+node dist/cli.mjs search openspec | grep -q "openspec" && echo "✓ PASS" || echo "✗ FAIL"
 
 echo "[4/5] 测试 install..."
-skillhub install openspec && echo "✓ PASS" || echo "✗ FAIL"
+node dist/cli.mjs install openspec && echo "✓ PASS" || echo "✗ FAIL"
 
 echo "[5/5] 测试 logout..."
-skillhub logout && echo "✓ PASS" || echo "✗ FAIL"
+node dist/cli.mjs logout && echo "✓ PASS" || echo "✗ FAIL"
 
 echo "=== 回归测试完成 ==="
 ```
@@ -688,9 +692,9 @@ node dist/cli.mjs --help
 
 # 测试 (在新终端)
 export SKILLHUB_REGISTRY=http://localhost:8081
-skillhub --registry http://localhost:8081 --version
-skillhub --registry http://localhost:8081 --help
-skillhub --registry http://localhost:8081 whoami
+node dist/cli.mjs --registry http://localhost:8081 --version
+node dist/cli.mjs --registry http://localhost:8081 --help
+node dist/cli.mjs --registry http://localhost:8081 whoami
 
 # 停止环境
 /mnt/cfs/chenbaowang/skillhub/scripts/stop-cli-test-env.sh
@@ -759,47 +763,47 @@ baseten, modal, replicate, bolt, goose, devin, swethe
 
 ```bash
 # 认证
-skillhub login --token <token>
-skillhub logout
-skillhub whoami
+node dist/cli.mjs login --token <token>
+node dist/cli.mjs logout
+node dist/cli.mjs whoami
 
 # 搜索和发现
-skillhub search <query> [--namespace <ns>] [--json]
-skillhub namespaces
-skillhub info <slug> [--namespace <ns>]
-skillhub versions <slug> [--namespace <ns>]
-skillhub resolve <slug> [--namespace <ns>]
+node dist/cli.mjs search <query> [--namespace <ns>] [--json]
+node dist/cli.mjs namespaces
+node dist/cli.mjs info <slug> [--namespace <ns>]
+node dist/cli.mjs versions <slug> [--namespace <ns>]
+node dist/cli.mjs resolve <slug> [--namespace <ns>]
 
 # 安装
-skillhub install <slug> [--namespace <ns>] [--agent <agent>] [--global] [--copy]
-skillhub add <source> [--agent <agent>]
+node dist/cli.mjs install <slug> [--namespace <ns>] [--agent <agent>] [--global] [--copy]
+node dist/cli.mjs add <source> [--agent <agent>]
 
 # 发布
-skillhub publish [path] -v <ver> [--namespace <ns>] [--slug <slug>]
+node dist/cli.mjs publish [path] -v <ver> [--namespace <ns>] [--slug <slug>]
 
 # 管理
-skillhub update [slug] [--all]
-skillhub uninstall <name> [--global] [--yes]
-skillhub remove <name> [--global] [--yes]
-skillhub delete <slug> [-v <ver>] [--yes]
-skillhub archive <slug>
+node dist/cli.mjs update [slug] [--all]
+node dist/cli.mjs uninstall <name> [--global] [--yes]
+node dist/cli.mjs remove <name> [--global] [--yes]
+node dist/cli.mjs delete <slug> [-v <ver>] [--yes]
+node dist/cli.mjs archive <slug>
 
 # 社交
-skillhub star <slug>
-skillhub rating <slug>
-skillhub rate <slug> <score>
-skillhub me skills
-skillhub me stars
-skillhub notifications list|read|read-all
+node dist/cli.mjs star <slug>
+node dist/cli.mjs rating <slug>
+node dist/cli.mjs rate <slug> <score>
+node dist/cli.mjs me skills
+node dist/cli.mjs me stars
+node dist/cli.mjs notifications list|read|read-all
 
 # 工具
-skillhub list [--global]
-skillhub sync [path] [--namespace <ns>] [--dry-run]
-skillhub init [name]
-skillhub download <slug> [-v <ver>]
+node dist/cli.mjs list [--global]
+node dist/cli.mjs sync [path] [--namespace <ns>] [--dry-run]
+node dist/cli.mjs init [name]
+node dist/cli.mjs download <slug> [-v <ver>]
 
 # 全局选项
-skillhub --registry <url>
-skillhub --no-input
-skillhub --json
+node dist/cli.mjs --registry <url>
+node dist/cli.mjs --no-input
+node dist/cli.mjs --json
 ```
