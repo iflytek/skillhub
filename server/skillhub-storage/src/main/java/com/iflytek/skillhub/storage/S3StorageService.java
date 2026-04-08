@@ -30,53 +30,93 @@ import java.util.List;
 @ConditionalOnProperty(name = "skillhub.storage.provider", havingValue = "s3")
 public class S3StorageService implements ObjectStorageService {
     private static final Logger log = LoggerFactory.getLogger(S3StorageService.class);
+    private static final int HTTP_FORBIDDEN = 403;
+    private static final int HTTP_NOT_FOUND = 404;
     private final S3StorageProperties properties;
     private S3Client s3Client;
     private S3Presigner s3Presigner;
 
     public S3StorageService(S3StorageProperties properties) { this.properties = properties; }
 
+    S3StorageService(S3StorageProperties properties, S3Client s3Client, S3Presigner s3Presigner) {
+        this.properties = properties;
+        this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
+    }
+
     @PostConstruct
     void init() {
-        ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
-                .maxConnections(properties.getMaxConnections())
-                .connectionAcquisitionTimeout(properties.getConnectionAcquisitionTimeout());
-        var builder = S3Client.builder()
-                .region(Region.of(properties.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())))
-                .forcePathStyle(properties.isForcePathStyle())
-                .httpClientBuilder(httpClientBuilder)
-                .overrideConfiguration(config -> config
-                        .apiCallAttemptTimeout(properties.getApiCallAttemptTimeout())
-                        .apiCallTimeout(properties.getApiCallTimeout()));
-        if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
-            builder.endpointOverride(URI.create(properties.getEndpoint()));
+        if (s3Client == null) {
+            ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
+                    .maxConnections(properties.getMaxConnections())
+                    .connectionAcquisitionTimeout(properties.getConnectionAcquisitionTimeout());
+            var builder = S3Client.builder()
+                    .region(Region.of(properties.getRegion()))
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())))
+                    .forcePathStyle(properties.isForcePathStyle())
+                    .httpClientBuilder(httpClientBuilder)
+                    .overrideConfiguration(config -> config
+                            .apiCallAttemptTimeout(properties.getApiCallAttemptTimeout())
+                            .apiCallTimeout(properties.getApiCallTimeout()));
+            if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
+                builder.endpointOverride(URI.create(properties.getEndpoint()));
+            }
+            this.s3Client = builder.build();
         }
-        this.s3Client = builder.build();
-        var presignerBuilder = S3Presigner.builder()
-                .region(Region.of(properties.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
-        if (properties.getPublicEndpoint() != null && !properties.getPublicEndpoint().isBlank()) {
-            presignerBuilder.endpointOverride(URI.create(properties.getPublicEndpoint()));
-        } else if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
-            presignerBuilder.endpointOverride(URI.create(properties.getEndpoint()));
+        if (s3Presigner == null) {
+            var presignerBuilder = S3Presigner.builder()
+                    .region(Region.of(properties.getRegion()))
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
+            if (properties.getPublicEndpoint() != null && !properties.getPublicEndpoint().isBlank()) {
+                presignerBuilder.endpointOverride(URI.create(properties.getPublicEndpoint()));
+            } else if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
+                presignerBuilder.endpointOverride(URI.create(properties.getEndpoint()));
+            }
+            this.s3Presigner = presignerBuilder.build();
         }
-        this.s3Presigner = presignerBuilder.build();
         ensureBucketExists();
     }
 
     private void ensureBucketExists() {
+        String bucket = properties.getBucket();
         if (!properties.isAutoCreateBucket()) {
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(properties.getBucket()).build());
+            verifyBucketAccessForConfiguredProvider(bucket);
             return;
         }
-        try { s3Client.headBucket(HeadBucketRequest.builder().bucket(properties.getBucket()).build()); }
-        catch (NoSuchBucketException e) {
-            log.info("Bucket '{}' does not exist, creating...", properties.getBucket());
-            s3Client.createBucket(CreateBucketRequest.builder().bucket(properties.getBucket()).build());
+        try {
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+        } catch (NoSuchBucketException e) {
+            createBucket(bucket);
+        } catch (S3Exception e) {
+            if (e.statusCode() == HTTP_NOT_FOUND) {
+                createBucket(bucket);
+                return;
+            }
+            if (e.statusCode() == HTTP_FORBIDDEN) {
+                log.warn("Unable to verify bucket '{}' at startup because the storage provider returned 403 to HeadBucket. Continuing with configured S3-compatible storage and deferring validation to runtime object operations.", bucket);
+                return;
+            }
+            throw e;
         }
+    }
+
+    private void verifyBucketAccessForConfiguredProvider(String bucket) {
+        try {
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+        } catch (S3Exception e) {
+            if (e.statusCode() == HTTP_FORBIDDEN) {
+                log.warn("Storage provider returned 403 to HeadBucket for bucket '{}' during startup verification. Continuing because some S3-compatible providers deny bucket-level probes even when object operations are permitted.", bucket);
+                return;
+            }
+            throw e;
+        }
+    }
+
+    private void createBucket(String bucket) {
+        log.info("Bucket '{}' does not exist, creating...", bucket);
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
     }
 
     @Override public void putObject(String key, InputStream data, long size, String contentType) {
