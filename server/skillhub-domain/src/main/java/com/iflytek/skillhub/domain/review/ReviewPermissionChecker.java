@@ -28,7 +28,12 @@ public class ReviewPermissionChecker {
                              Map<Long, NamespaceRole> userNamespaceRoles,
                              Set<String> platformRoles) {
         if (task.getSubmittedBy().equals(userId)) {
-            return platformRoles.contains("SUPER_ADMIN");
+            if (platformRoles.contains("SUPER_ADMIN")) {
+                return true;
+            }
+            NamespaceRole role = userNamespaceRoles.get(task.getNamespaceId());
+            return hasPlatformReviewRole(platformRoles)
+                    && (role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER);
         }
         return canReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles, platformRoles);
     }
