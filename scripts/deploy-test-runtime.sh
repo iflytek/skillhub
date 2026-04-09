@@ -117,7 +117,7 @@ deploy_tag="$1"
 immutable_tag="$2"
 merged_sha="$3"
 pr_csv="$4"
-run_url="$5"
+run_url="${5:-}"
 
 sudo /usr/local/bin/skillhub-test-deploy \
   --deploy-tag "${deploy_tag}" \

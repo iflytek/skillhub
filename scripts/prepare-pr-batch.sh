@@ -56,7 +56,6 @@ fi
 normalized_input="$(printf '%s' "${pr_input}" | tr ',;\r\n\t' '     ')"
 
 declare -a pr_numbers=()
-declare -A seen_prs=()
 
 for token in ${normalized_input}; do
   if [[ ! "${token}" =~ ^[0-9]+$ ]]; then
@@ -64,11 +63,20 @@ for token in ${normalized_input}; do
     exit 1
   fi
 
-  if [[ -n "${seen_prs[${token}]:-}" ]]; then
+  already_seen=false
+  if [[ "${#pr_numbers[@]}" -gt 0 ]]; then
+    for existing in "${pr_numbers[@]}"; do
+      if [[ "${existing}" == "${token}" ]]; then
+        already_seen=true
+        break
+      fi
+    done
+  fi
+
+  if [[ "${already_seen}" == "true" ]]; then
     continue
   fi
 
-  seen_prs["${token}"]=1
   pr_numbers+=("${token}")
 done
 
