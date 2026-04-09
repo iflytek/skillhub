@@ -1,7 +1,7 @@
 # SkillHub CLI 优化方案
 
 > **日期**: 2026-04-09  
-> **版本**: v1.2.0  
+> **版本**: v1.4.0  
 > **目标**: 对标 vercel-labs/skills，实现交互式选择和 @skill 语法
 
 ---
@@ -16,6 +16,8 @@
 | 2 | `--skill '*'` | ✅ | ✅ | 已完成 |
 | 3 | 交互式选择 | ✅ (fzf) | ✅ | 已完成 |
 | 4 | `@skill` 语法 | ✅ | ✅ | 已完成 |
+| 5 | `DISABLE_TELEMETRY` | ✅ | ✅ | 已完成 |
+| 6 | `find` 命令 (交互式搜索) | ✅ | ✅ | 已完成 |
 
 ---
 
@@ -218,6 +220,13 @@ skillhub install owner/repo --skill openspec
 ---
 
 ## 历史记录
+
+### v1.4.0 (2026-04-09)
+
+- ✅ explore 命令添加 find 别名
+- ✅ 交互式 fzf 风格搜索 (直接输入关键词搜索)
+- ✅ 添加 telemetry opt-out 支持 (DISABLE_TELEMETRY, DO_NOT_TRACK)
+- ✅ 新建 src/utils/telemetry.ts 遥测工具模块
 
 ### v1.3.0 (2026-04-09)
 

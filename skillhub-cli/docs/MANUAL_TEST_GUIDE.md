@@ -341,9 +341,14 @@ node dist/cli.mjs whoami
 node dist/cli.mjs search <query> [--namespace <ns>] [--json]
 node dist/cli.mjs namespaces
 node dist/cli.mjs inspect <slug>  # info, view 是别名
-node dist/cli.mjs explore [--install | -i]
+node dist/cli.mjs explore [query] [--install | -i]  # find 是别名
 node dist/cli.mjs versions <slug>
 node dist/cli.mjs resolve <slug>
+
+# 环境变量
+DISABLE_TELEMETRY=1     # 禁用匿名遥测
+DO_NOT_TRACK=1          # 同上
+CI=true                 # CI 环境中自动禁用遥测
 
 # 安装 (install + add 合并)
 node dist/cli.mjs install <source> [--source auto|registry|git|local]
