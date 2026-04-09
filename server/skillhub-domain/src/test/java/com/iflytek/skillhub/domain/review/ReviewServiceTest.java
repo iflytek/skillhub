@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ class ReviewServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private SkillGovernanceService skillGovernanceService;
     @Mock private GovernanceNotificationService governanceNotificationService;
+    @Mock private EntityManager entityManager;
 
     private ReviewService reviewService;
 
@@ -70,7 +72,7 @@ class ReviewServiceTest {
         objectMapper = new ObjectMapper();
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService, CLOCK);
+                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService, entityManager, CLOCK);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -253,6 +255,10 @@ class ReviewServiceTest {
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.APPROVED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("LGTM", result.getReviewComment());
+            assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
             assertEquals(Instant.now(CLOCK), sv.getPublishedAt());
             assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
@@ -335,9 +341,13 @@ class ReviewServiceTest {
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
-            reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "Needs work",
+            ReviewTask result = reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "Needs work",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
+            assertEquals(ReviewTaskStatus.REJECTED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("Needs work", result.getReviewComment());
+            assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("REVIEW"), eq("REVIEW_TASK"), eq(REVIEW_TASK_ID), eq("Review rejected"), any());
         }
 
