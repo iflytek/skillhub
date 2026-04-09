@@ -21,7 +21,6 @@ import { registerDownload } from "../src/commands/download.js";
 import { registerAdd } from "../src/commands/add.js";
 import { registerInit } from "../src/commands/init.js";
 import { registerList } from "../src/commands/list.js";
-import { registerRemove } from "../src/commands/remove.js";
 import { registerLogout } from "../src/commands/logout.js";
 import { registerUninstall } from "../src/commands/uninstall.js";
 import { registerSync } from "../src/commands/sync.js";
@@ -177,12 +176,6 @@ describe("Command registrations", () => {
     const program = new Command();
     registerList(program);
     expect(getCommandNames(program)).toContain("list");
-  });
-
-  it("registers remove command", () => {
-    const program = new Command();
-    registerRemove(program);
-    expect(getCommandNames(program)).toContain("remove");
   });
 
   it("registers uninstall command", () => {

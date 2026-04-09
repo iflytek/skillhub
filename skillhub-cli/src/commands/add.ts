@@ -1,19 +1,19 @@
 import { Command } from "commander";
+import { parseSource, getCloneUrl } from "../core/source-parser.js";
+import { discoverSkills } from "../core/skill-discovery.js";
+import { installSkill } from "../core/installer.js";
+import { getAllAgents, detectInstalledAgents } from "../core/agent-detector.js";
+import { success, error, info, dim } from "../utils/logger.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseSource, getCloneUrl } from "../core/source-parser.js";
-import { discoverSkills } from "../core/skill-discovery.js";
-import { getAllAgents, detectInstalledAgents } from "../core/agent-detector.js";
-import { installSkill } from "../core/installer.js";
-import { success, error, info, dim } from "../utils/logger.js";
 import ora from "ora";
 import { execSync } from "node:child_process";
 
 export function registerAdd(program: Command) {
   program
     .command("add <source>")
-    .description("Install skills from a repository or local path")
+    .description("Install skills from git repositories or local paths")
     .option("-s, --skill <skills...>", "Install specific skills by name")
     .option("-a, --agent <agents...>", "Target specific agents")
     .option("-g, --global", "Install to global scope")

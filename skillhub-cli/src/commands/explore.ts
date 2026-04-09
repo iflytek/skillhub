@@ -4,6 +4,8 @@ import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { ApiRoutes, SearchResponse } from "../schema/routes.js";
 import { info, dim } from "../utils/logger.js";
+import { multiSelect } from "../utils/prompts.js";
+import { execSync } from "node:child_process";
 
 function parseNamespace(slug: string): { namespace: string; name: string } {
   const parts = slug.split("--");
@@ -18,7 +20,8 @@ export function registerExplore(program: Command) {
     .command("explore")
     .description("Browse latest updated skills from the registry")
     .option("-n, --limit <n>", "Max results", "20")
-    .action(async (opts: { limit: string }) => {
+    .option("-i, --install", "Interactive select and install")
+    .action(async (opts: { limit: string; install?: boolean }) => {
       const config = loadConfig();
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
@@ -37,6 +40,37 @@ export function registerExplore(program: Command) {
           console.log(JSON.stringify(result.results, null, 2));
           return;
         }
+
+        const items = result.results.map((s) => {
+          const { namespace, name } = parseNamespace(s.slug);
+          const displayName = s.displayName || name;
+          return {
+            value: `${namespace}/${name}`,
+            label: `${displayName} [${namespace}] - ${s.summary || s.version || "v1.0.0"}`,
+          };
+        });
+
+        if (opts.install) {
+          const selected = await multiSelect("选择要安装的 skills:", items);
+          if (!selected || selected.length === 0) {
+            console.log("已取消安装");
+            return;
+          }
+
+          console.log("");
+          info(`选择安装 ${selected.length} 个 skill(s)...`);
+          console.log("");
+
+          for (const slug of selected) {
+            try {
+              console.log(`Installing ${slug}...`);
+              execSync(`skillhub install ${slug}`, { stdio: "inherit" });
+            } catch {
+              console.log(`Failed to install ${slug}`);
+            }
+          }
+          return;
+        }
         
         console.log("");
         info(`Latest Skills (${result.results.length}):`);
@@ -48,6 +82,10 @@ export function registerExplore(program: Command) {
           if (s.summary) console.log(`  ${s.summary}`);
           console.log("");
         }
+
+        console.log("");
+        dim(`Tip: Use --install or -i for interactive install`);
+        console.log("");
       } catch (e: any) {
         console.log(`Error: ${e.message}`);
       }

@@ -52,3 +52,33 @@ it("getCloneUrl builds default for github without cloneUrl", async () => {
   const url = mod.getCloneUrl({ type: "github", owner: "x", repo: "y" } as any);
   expect(url).toBe("https://github.com/x/y.git");
 });
+
+it("parses @skill syntax: owner/repo@skillname", async () => {
+  vi.resetModules();
+  const mod = await import("../src/core/source-parser");
+  const res = mod.parseSource("vercel-labs/skills@openspec");
+  expect(res.type).toBe("github");
+  expect(res.owner).toBe("vercel-labs");
+  expect(res.repo).toBe("skills");
+  expect(res.skillFilter).toBe("openspec");
+});
+
+it("parses @skill syntax with branch: owner/repo@skillname", async () => {
+  vi.resetModules();
+  const mod = await import("../src/core/source-parser");
+  const res = mod.parseSource("owner/repo@something");
+  expect(res.type).toBe("github");
+  expect(res.owner).toBe("owner");
+  expect(res.repo).toBe("repo");
+  expect(res.skillFilter).toBe("something");
+});
+
+it("does not confuse @ in path with @skill syntax", async () => {
+  vi.resetModules();
+  const mod = await import("../src/core/source-parser");
+  const res = mod.parseSource("https://github.com/owner/repo");
+  expect(res.type).toBe("github");
+  expect(res.owner).toBe("owner");
+  expect(res.repo).toBe("repo");
+  expect(res.skillFilter).toBeUndefined();
+});

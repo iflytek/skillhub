@@ -9,6 +9,7 @@ export interface ParsedSource {
   subpath?: string;
   localPath?: string;
   cloneUrl?: string;
+  skillFilter?: string;
 }
 
 export function parseSource(input: string): ParsedSource {
@@ -35,6 +36,12 @@ export function parseSource(input: string): ParsedSource {
 
   const parts = input.split("/");
   if (parts.length === 2) {
+    const atIndex = parts[1].indexOf("@");
+    if (atIndex > 0) {
+      const repo = parts[1].substring(0, atIndex);
+      const skillFilter = parts[1].substring(atIndex + 1);
+      return { type: "github", owner: parts[0], repo, skillFilter };
+    }
     return { type: "github", owner: parts[0], repo: parts[1] };
   }
 

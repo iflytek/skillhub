@@ -7,7 +7,7 @@ import { success, error } from "../utils/logger.js";
 export function registerDelete(program: Command) {
   program
     .command("delete <slug>")
-    .alias("del")
+    .aliases(["del", "unpublish"])
     .description("Delete a skill you own")
     .option("--namespace <ns>", "Namespace", "global")
     .option("-y, --yes", "Skip confirmation")

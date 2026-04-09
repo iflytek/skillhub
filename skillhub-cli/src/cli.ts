@@ -40,9 +40,7 @@ export async function createCli(): Promise<Command> {
     { registerInstall },
     { registerDownload },
     { registerList },
-    { registerRemove },
     { registerStar },
-    { registerInfo },
     { registerInit },
     { registerMe },
     { registerReviews },
@@ -54,10 +52,13 @@ export async function createCli(): Promise<Command> {
     { registerRating, registerRate },
     { registerArchive },
     { registerUpdate },
+    { registerCheck },
     { registerUninstall },
     { registerSync },
     { registerInspect },
     { registerExplore },
+    { registerTransfer },
+    { registerHide },
   ] = await Promise.all([
     import("./commands/login.js"),
     import("./commands/logout.js"),
@@ -69,9 +70,7 @@ export async function createCli(): Promise<Command> {
     import("./commands/install.js"),
     import("./commands/download.js"),
     import("./commands/list.js"),
-    import("./commands/remove.js"),
     import("./commands/star.js"),
-    import("./commands/info.js"),
     import("./commands/init.js"),
     import("./commands/me.js"),
     import("./commands/reviews.js"),
@@ -83,10 +82,13 @@ export async function createCli(): Promise<Command> {
     import("./commands/rating.js"),
     import("./commands/archive.js"),
     import("./commands/update.js"),
+    import("./commands/check.js"),
     import("./commands/uninstall.js"),
     import("./commands/sync.js"),
     import("./commands/inspect.js"),
     import("./commands/explore.js"),
+    import("./commands/transfer.js"),
+    import("./commands/hide.js"),
   ]);
 
   registerLogin(program);
@@ -99,9 +101,7 @@ export async function createCli(): Promise<Command> {
   registerInstall(program);
   registerDownload(program);
   registerList(program);
-  registerRemove(program);
   registerStar(program);
-  registerInfo(program);
   registerInit(program);
   registerMe(program);
   registerReviews(program);
@@ -114,10 +114,13 @@ export async function createCli(): Promise<Command> {
   registerRate(program);
   registerArchive(program);
   registerUpdate(program);
+  registerCheck(program);
   registerUninstall(program);
   registerSync(program);
   registerInspect(program);
   registerExplore(program);
+  registerTransfer(program);
+  registerHide(program);
 
   return program;
 }

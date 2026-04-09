@@ -66,6 +66,7 @@ function printInspectHeader(detail: SkillDetailResponse) {
 export function registerInspect(program: Command) {
   program
     .command("inspect <slug>")
+    .aliases(["info", "view"])
     .description("View skill metadata without installing")
     .option("--namespace <ns>", "Namespace (searches all accessible namespaces if not specified)")
     .action(async (slug: string, opts: { namespace?: string }) => {
