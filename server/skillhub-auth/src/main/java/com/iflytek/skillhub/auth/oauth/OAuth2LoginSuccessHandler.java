@@ -1,23 +1,29 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import java.io.IOException;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
+
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
 
 /**
  * Login success handler that copies the resolved platform principal into the
- * HTTP session and then redirects to the stored return target.
+ * HTTP session and then redirects to the stored return target or default URL.
+ * 
+ * <p>This handler extends {@link SimpleUrlAuthenticationSuccessHandler} and only
+ * uses the returnTo parameter stored in session and the default target URL for
+ * redirect decisions, ignoring any saved request from Spring Security's RequestCache.
  */
 @Component
-public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
+public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final PlatformSessionService platformSessionService;
     private final OAuthLoginFlowService oauthLoginFlowService;
@@ -41,9 +47,10 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
         String returnTo = oauthLoginFlowService.consumeReturnTo(request.getSession(false));
         if (returnTo != null) {
             getRedirectStrategy().sendRedirect(request, response, returnTo);
-            clearAuthenticationAttributes(request);
             return;
         }
+        
+        // Use default target URL (/dashboard)
         super.onAuthenticationSuccess(request, response, authentication);
     }
 }
