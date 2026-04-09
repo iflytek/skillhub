@@ -230,7 +230,7 @@ public class LocalAuthService {
 
     private void validateEmail(String email) {
         if (email == null) {
-            return;
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.notBlank");
         }
         if (!EMAIL_PATTERN.matcher(email).matches()) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.invalid");

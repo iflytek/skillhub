@@ -3,16 +3,18 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.Namespace;
-import com.iflytek.skillhub.domain.namespace.NamespaceGovernanceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
-import com.iflytek.skillhub.domain.namespace.NamespaceMemberService;
-import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
-import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
+import com.iflytek.skillhub.dto.NamespaceResponse;
+import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
+import com.iflytek.skillhub.service.NamespacePortalCommandAppService;
+import com.iflytek.skillhub.service.NamespacePortalQueryAppService;
 import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,22 +51,19 @@ class NamespaceWorkflowContractTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private NamespaceService namespaceService;
+    private NamespacePortalCommandAppService namespacePortalCommandAppService;
 
     @MockBean
-    private NamespaceGovernanceService namespaceGovernanceService;
+    private NamespacePortalQueryAppService namespacePortalQueryAppService;
 
     @MockBean
-    private NamespaceMemberService namespaceMemberService;
-
-    @MockBean
-    private NamespaceRepository namespaceRepository;
-
-    @MockBean
-    private NamespaceMemberRepository namespaceMemberRepository;
+    private GovernanceWorkflowAppService governanceWorkflowAppService;
 
     @MockBean
     private NamespaceMemberCandidateService namespaceMemberCandidateService;
+
+    @MockBean
+    private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
     private DeviceAuthService deviceAuthService;
@@ -76,22 +75,27 @@ class NamespaceWorkflowContractTest {
         Namespace archived = namespace(7L, "team-flow", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
         NamespaceMember adminMember = new NamespaceMember(7L, "user-admin", NamespaceRole.ADMIN);
         setMemberId(adminMember, 11L);
+        NamespaceResponse namespaceResponse = NamespaceResponse.from(namespace);
+        NamespaceResponse frozenResponse = NamespaceResponse.from(frozen);
+        NamespaceResponse archivedResponse = NamespaceResponse.from(archived);
+        MemberResponse adminMemberResponse = MemberResponse.from(adminMember);
 
-        given(namespaceService.createNamespace(eq("team-flow"), eq("Team Flow"), eq("workflow"), eq("owner-1")))
-                .willReturn(namespace);
-        given(namespaceService.getNamespaceBySlug("team-flow")).willReturn(namespace);
-        given(namespaceGovernanceService.freezeNamespace(eq("team-flow"), eq("owner-1"), eq(null), eq(null), any(), any()))
-                .willReturn(frozen);
-        given(namespaceGovernanceService.archiveNamespace(eq("team-flow"), eq("owner-1"), eq("cleanup"), eq(null), any(), any()))
-                .willReturn(archived);
+        given(namespacePortalCommandAppService.createNamespace(any(), any()))
+                .willReturn(namespaceResponse);
+        given(governanceWorkflowAppService.freezeNamespace(eq("team-flow"), any(), eq("owner-1"), any()))
+                .willReturn(frozenResponse);
+        given(governanceWorkflowAppService.archiveNamespace(eq("team-flow"), any(), eq("owner-1"), any()))
+                .willReturn(archivedResponse);
         given(namespaceMemberCandidateService.searchCandidates("team-flow", "admin", "owner-1", 10))
                 .willReturn(List.of(new NamespaceCandidateUserResponse("user-admin", "Admin", "admin@example.com", "ACTIVE")));
-        given(namespaceMemberService.addMember(7L, "user-admin", NamespaceRole.ADMIN, "owner-1"))
-                .willReturn(adminMember);
-        given(namespaceMemberService.listMembers(eq(7L), any(org.springframework.data.domain.Pageable.class)))
-                .willReturn(new org.springframework.data.domain.PageImpl<>(List.of(adminMember)));
-        given(namespaceMemberService.updateMemberRole(7L, "user-admin", NamespaceRole.ADMIN, "owner-1"))
-                .willReturn(adminMember);
+        given(namespacePortalCommandAppService.addMember("team-flow", "user-admin", NamespaceRole.ADMIN, "owner-1"))
+                .willReturn(adminMemberResponse);
+        given(namespacePortalQueryAppService.listMembers(eq("team-flow"), any(org.springframework.data.domain.Pageable.class), eq("owner-1")))
+                .willReturn(new PageResponse<>(List.of(adminMemberResponse), 1, 0, 20));
+        given(namespacePortalCommandAppService.updateMemberRole(eq("team-flow"), eq("user-admin"), any(), eq("owner-1")))
+                .willReturn(adminMemberResponse);
+        given(namespacePortalCommandAppService.removeMember("team-flow", "user-admin", "owner-1"))
+                .willReturn(new com.iflytek.skillhub.dto.MessageResponse("Member removed successfully"));
 
         mockMvc.perform(post("/api/web/namespaces")
                         .with(csrf())

@@ -19,13 +19,21 @@ export function RegisterPage() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [emailError, setEmailError] = useState<string | null>(null)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setEmailError(t('register.emailRequired'))
+      return
+    }
+
+    setEmailError(null)
     try {
-      await registerMutation.mutateAsync({ username, email, password })
+      await registerMutation.mutateAsync({ username, email: trimmedEmail, password })
       await navigate({ to: returnTo })
     } catch {
       // mutation state drives the error UI
@@ -65,9 +73,18 @@ export function RegisterPage() {
                     type="email"
                     autoComplete="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value)
+                      if (emailError) {
+                        setEmailError(null)
+                      }
+                    }}
                     placeholder={t('register.emailPlaceholder')}
+                    required
                   />
+                  {emailError ? (
+                    <p className="text-sm text-red-600">{emailError}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="register-password">{t('register.password')}</label>

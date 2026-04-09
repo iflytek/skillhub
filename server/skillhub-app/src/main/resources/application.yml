@@ -61,6 +61,17 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:25}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
   auth:
@@ -70,6 +81,10 @@ skillhub:
       enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
     session-bootstrap:
       enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
+    password-reset:
+      code-expiry: ${SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY:PT10M}
+      email-from-address: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS:noreply@skillhub.local}
+      email-from-name: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME:SkillHub}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
@@ -168,6 +183,9 @@ skillhub:
       email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
 
 management:
+  health:
+    mail:
+      enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
   endpoints:
     web:
       exposure:

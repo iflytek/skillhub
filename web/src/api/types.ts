@@ -53,11 +53,21 @@ export interface LocalLoginRequest {
 }
 
 export interface LocalRegisterRequest extends LocalLoginRequest {
-  email?: string
+  email: string
 }
 
 export interface ChangePasswordRequest {
   currentPassword: string
+  newPassword: string
+}
+
+export interface PasswordResetRequest {
+  email: string
+}
+
+export interface PasswordResetConfirmRequest {
+  email: string
+  code: string
   newPassword: string
 }
 
