@@ -12,6 +12,8 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
 import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -67,6 +70,9 @@ class NamespaceWorkflowContractTest {
     private NamespaceMemberCandidateService namespaceMemberCandidateService;
 
     @MockBean
+    private UserAccountRepository userAccountRepository;
+
+    @MockBean
     private DeviceAuthService deviceAuthService;
 
     @Test
@@ -92,6 +98,8 @@ class NamespaceWorkflowContractTest {
                 .willReturn(new org.springframework.data.domain.PageImpl<>(List.of(adminMember)));
         given(namespaceMemberService.updateMemberRole(7L, "user-admin", NamespaceRole.ADMIN, "owner-1"))
                 .willReturn(adminMember);
+        given(userAccountRepository.findById("user-admin"))
+                .willReturn(Optional.of(new UserAccount("user-admin", "Admin", "admin@example.com", null)));
 
         mockMvc.perform(post("/api/web/namespaces")
                         .with(csrf())

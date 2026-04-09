@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -221,6 +222,7 @@ class ReviewPortalControllerTest {
     @Test
     void listReviews_appliesRequestedTimeSortDirection() throws Exception {
         stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
         PageRequest pageable = PageRequest.of(
                 1,
                 5,
@@ -245,6 +247,35 @@ class ReviewPortalControllerTest {
     }
 
     @Test
+    void listReviews_preservesRepositoryTotalForDefaultPageSize() throws Exception {
+        assertReviewTotalPreservedForDefaultPageSize(ReviewTaskStatus.PENDING);
+    }
+
+    @Test
+    void listApprovedReviews_preservesRepositoryTotalForDefaultPageSize() throws Exception {
+        assertReviewTotalPreservedForDefaultPageSize(ReviewTaskStatus.APPROVED);
+    }
+
+    @Test
+    void listRejectedReviews_preservesRepositoryTotalForDefaultPageSize() throws Exception {
+        assertReviewTotalPreservedForDefaultPageSize(ReviewTaskStatus.REJECTED);
+    }
+
+    @Test
+    void listReviews_forbidsGlobalQueueForNonPlatformReviewer() throws Exception {
+        stubNamespaceRoles("namespace-admin", List.of());
+        given(rbacService.getUserRoleCodes("namespace-admin")).willReturn(Set.of("NAMESPACE_ADMIN"));
+
+        mockMvc.perform(get("/api/v1/reviews")
+                        .param("status", "PENDING")
+                        .with(auth("namespace-admin")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+
+        verify(reviewTaskRepository, never()).findByStatus(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void downloadReviewVersion_streamsZipForAuthorizedReviewer() throws Exception {
         stubNamespaceRoles("admin", List.of());
         given(reviewSkillDetailAppService.downloadReviewPackage(1L, "admin", Map.of()))
@@ -264,21 +295,7 @@ class ReviewPortalControllerTest {
     }
 
     private void stubReviewResponse(ReviewTask task) {
-        given(governanceQueryRepository.getReviewTaskResponse(task)).willReturn(new ReviewTaskResponse(
-                task.getId(),
-                task.getSkillVersionId(),
-                "team-a",
-                "skill-a",
-                "1.0.0",
-                task.getStatus().name(),
-                task.getSubmittedBy(),
-                "Submitter",
-                task.getReviewedBy(),
-                null,
-                task.getReviewComment(),
-                task.getSubmittedAt(),
-                task.getReviewedAt()
-        ));
+        given(governanceQueryRepository.getReviewTaskResponse(task)).willReturn(toReviewResponse(task));
     }
 
     private void stubNamespaceRoles(String userId, List<NamespaceMember> members) {
@@ -309,10 +326,74 @@ class ReviewPortalControllerTest {
         return task;
     }
 
+    private ReviewTask createReviewTask(Long id, Long namespaceId, String submittedBy, ReviewTaskStatus status) {
+        ReviewTask task = createReviewTask(id, namespaceId, submittedBy);
+        setField(task, "status", status);
+        return task;
+    }
+
     private Namespace createNamespace(Long id, String slug) {
         Namespace namespace = new Namespace(slug, "Team", "owner-1");
         setField(namespace, "id", id);
         return namespace;
+    }
+
+    private ReviewTaskResponse toReviewResponse(ReviewTask task) {
+        return new ReviewTaskResponse(
+                task.getId(),
+                task.getSkillVersionId(),
+                "team-a",
+                "skill-a",
+                "1.0.0",
+                task.getStatus().name(),
+                task.getSubmittedBy(),
+                "Submitter",
+                task.getReviewedBy(),
+                null,
+                task.getReviewComment(),
+                task.getSubmittedAt(),
+                task.getReviewedAt()
+        );
+    }
+
+    private void assertReviewTotalPreservedForDefaultPageSize(ReviewTaskStatus status) throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        Namespace namespace = createNamespace(20L, "team-a");
+        List<ReviewTask> tasks = IntStream.rangeClosed(1, 20)
+                .mapToObj(index -> createReviewTask((long) index, 20L, "submitter-" + index, status))
+                .toList();
+        List<ReviewTaskResponse> responses = tasks.stream()
+                .map(this::toReviewResponse)
+                .toList();
+        PageRequest pageable = PageRequest.of(
+                0,
+                20,
+                Sort.by(
+                        new Sort.Order(Sort.Direction.DESC, status == ReviewTaskStatus.PENDING ? "submittedAt" : "reviewedAt"),
+                        new Sort.Order(Sort.Direction.DESC, "id")
+                )
+        );
+
+        given(reviewTaskRepository.findByStatus(status, pageable))
+                .willReturn(new PageImpl<>(tasks, pageable, 42));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        tasks.forEach(task -> given(reviewService.canViewReview(
+                task,
+                "admin",
+                namespace.getType(),
+                Map.of(),
+                Set.of("SKILL_ADMIN"))).willReturn(true));
+        given(governanceQueryRepository.getReviewTaskResponses(tasks)).willReturn(responses);
+
+        mockMvc.perform(get("/api/v1/reviews")
+                        .param("status", status.name())
+                        .with(auth("admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.total").value(42))
+                .andExpect(jsonPath("$.data.size").value(20))
+                .andExpect(jsonPath("$.data.items.length()").value(20));
     }
 
     private void setField(Object target, String fieldName, Object value) {
