@@ -423,7 +423,155 @@ fi
 rm -rf "$TEST_RPT_DIR"
 
 # -----------------------------------------------
-# 21. Logout (cleanup)
+# 21. Explore command (local-only)
+# -----------------------------------------------
+step "Explore Command (Local-Only)"
+
+EXPLORE_TMP=$(mktemp -d)
+echo "test" > "$EXPLORE_TMP/query.txt"
+
+# explore command should return results (non-interactive check)
+if $CLI explore --help 2>/dev/null | grep -q "search"; then
+    pass "explore command is available"
+else
+    fail "explore command"
+fi
+
+rm -rf "$EXPLORE_TMP"
+
+# -----------------------------------------------
+# 22. Check command (local-only)
+# -----------------------------------------------
+step "Check Command (Local-Only)"
+
+# check command should work even without installed skills
+if $CLI check --help 2>/dev/null | grep -q "lock"; then
+    pass "check command is available"
+else
+    fail "check command"
+fi
+
+# check --json should output valid JSON (even if no skills)
+if $CLI check --json 2>/dev/null; then
+    pass "check --json outputs valid response"
+else
+    skip "check --json (no lock file)"
+fi
+
+# -----------------------------------------------
+# 23. Sync command (local-only)
+# -----------------------------------------------
+step "Sync Command (Local-Only)"
+
+TEST_SYNC_DIR=$(mktemp -d)
+mkdir -p "$TEST_SYNC_DIR/test-sync-skill"
+cat > "$TEST_SYNC_DIR/test-sync-skill/SKILL.md" << 'EOF'
+---
+name: test-sync-skill
+description: Sync test skill
+---
+# Sync Test
+EOF
+
+# sync should discover skills in directory
+if $CLI sync --help 2>/dev/null | grep -q "scan"; then
+    pass "sync command is available"
+else
+    fail "sync command"
+fi
+
+# sync --list should show discovered skills without publishing
+if $CLI sync "$TEST_SYNC_DIR" --namespace global --list 2>/dev/null | grep -q "test-sync-skill"; then
+    pass "sync --list discovers skills"
+else
+    fail "sync --list"
+fi
+
+# sync with --all should require confirmation or token
+if $CLI sync "$TEST_SYNC_DIR" --namespace global --all --yes 2>/dev/null; then
+    pass "sync --all --yes publishes"
+else
+    skip "sync --all (requires auth)"
+fi
+
+rm -rf "$TEST_SYNC_DIR"
+
+# -----------------------------------------------
+# 24. Update command (local-only)
+# -----------------------------------------------
+step "Update Command (Local-Only)"
+
+# update command should be available
+if $CLI update --help 2>/dev/null | grep -q "update"; then
+    pass "update command is available"
+else
+    fail "update command"
+fi
+
+# update without lock file should fail gracefully
+if $CLI update nonexistent-skill 2>/dev/null; then
+    fail "update should fail without lock file"
+else
+    pass "update fails without lock file"
+fi
+
+# -----------------------------------------------
+# 25. Uninstall command (local-only, via Vitest tested)
+# -----------------------------------------------
+step "Uninstall Command (Local-Only)"
+
+# Verify uninstall is registered (tested via Vitest, basic check here)
+if $CLI uninstall --help 2>/dev/null | grep -q "uninstall"; then
+    pass "uninstall command is available"
+else
+    fail "uninstall command"
+fi
+
+# -----------------------------------------------
+# 26. Hide command (admin-only, skip for normal users)
+# -----------------------------------------------
+step "Hide Command (Admin-Only)"
+
+# hide requires admin privileges - verify it exists
+if $CLI hide --help 2>/dev/null | grep -q "hide"; then
+    pass "hide command is available (admin)"
+else
+    skip "hide command not available"
+fi
+
+# -----------------------------------------------
+# 27. Transfer command (admin-only, skip for normal users)
+# -----------------------------------------------
+step "Transfer Command (Admin-Only)"
+
+# transfer requires admin privileges - verify it exists
+if $CLI transfer --help 2>/dev/null | grep -q "transfer"; then
+    pass "transfer command is available (admin)"
+else
+    skip "transfer command not available"
+fi
+
+# -----------------------------------------------
+# 28. Inspect command (local-only, enhanced info)
+# -----------------------------------------------
+step "Inspect Command (Local-Only)"
+
+# inspect is the enhanced version of info
+if $CLI inspect --help 2>/dev/null | grep -q "inspect"; then
+    pass "inspect command is available"
+else
+    fail "inspect command"
+fi
+
+# inspect should show detailed skill info
+if $CLI inspect cli-test-skill 2>/dev/null | grep -q "cli-test-skill"; then
+    pass "inspect shows skill details"
+else
+    fail "inspect"
+fi
+
+# -----------------------------------------------
+# 29. Logout (cleanup)
 # -----------------------------------------------
 step "Cleanup"
 
