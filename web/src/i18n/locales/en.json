@@ -211,7 +211,7 @@
     "submit": "Login",
     "noAccount": "Don't have an account?",
     "register": "Sign up now",
-    "oauthHint": "After GitHub authentication, you will be automatically redirected back to this site.",
+    "oauthHint": "After OAuth authentication, you will be automatically redirected back to this site.",
     "passwordCompatHint": "This deployment has the password compatibility layer enabled. The form will route to {{name}} instead of the fixed local account endpoint.",
     "enterpriseSsoTitle": "Enterprise SSO",
     "enterpriseSsoHint": "This deployment has the compatibility layer enabled. If your browser already has a {{name}} session, you can try establishing a SkillHub session directly.",
