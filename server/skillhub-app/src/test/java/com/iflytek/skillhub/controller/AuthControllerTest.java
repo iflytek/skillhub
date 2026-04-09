@@ -45,7 +45,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "spring.security.oauth2.client.provider.gitee.authorization-uri=https://gitee.com/oauth/authorize",
     "spring.security.oauth2.client.provider.gitee.token-uri=https://gitee.com/oauth/token",
     "spring.security.oauth2.client.provider.gitee.user-info-uri=https://gitee.com/api/v5/user",
-    "spring.security.oauth2.client.provider.gitee.user-name-attribute=id"
+    "spring.security.oauth2.client.provider.gitee.user-name-attribute=id",
+    "spring.security.oauth2.client.registration.feishu.client-id=placeholder",
+    "spring.security.oauth2.client.registration.feishu.client-secret=placeholder",
+    "spring.security.oauth2.client.registration.feishu.provider=feishu",
+    "spring.security.oauth2.client.registration.feishu.authorization-grant-type=authorization_code",
+    "spring.security.oauth2.client.registration.feishu.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}",
+    "spring.security.oauth2.client.registration.feishu.scope=user:email,user:id",
+    "spring.security.oauth2.client.registration.feishu.client-name=Feishu",
+    "spring.security.oauth2.client.provider.feishu.authorization-uri=https://accounts.feishu.cn/open-apis/authen/v1/authorize",
+    "spring.security.oauth2.client.provider.feishu.token-uri=https://open.feishu.cn/open-apis/authen/v2/oauth/token",
+    "spring.security.oauth2.client.provider.feishu.user-info-uri=https://open.feishu.cn/open-apis/authen/v1/user_info",
+    "spring.security.oauth2.client.provider.feishu.user-name-attribute=union_id"
 })
 class AuthControllerTest {
 
@@ -142,11 +153,12 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/v1/auth/providers"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.data.length()").value(2))
-            .andExpect(jsonPath("$.data[*].id", hasItems("github", "gitee")))
+            .andExpect(jsonPath("$.data.length()").value(3))
+            .andExpect(jsonPath("$.data[*].id", hasItems("github", "gitee", "feishu")))
             .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
                 "/oauth2/authorization/github",
-                "/oauth2/authorization/gitee"
+                "/oauth2/authorization/gitee",
+                "/oauth2/authorization/feishu"
             )))
             .andExpect(jsonPath("$.timestamp").isNotEmpty())
             .andExpect(jsonPath("$.requestId").isNotEmpty());
@@ -159,7 +171,8 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
                 "/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish",
-                "/oauth2/authorization/gitee?returnTo=%2Fdashboard%2Fpublish"
+                "/oauth2/authorization/gitee?returnTo=%2Fdashboard%2Fpublish",
+                "/oauth2/authorization/feishu?returnTo=%2Fdashboard%2Fpublish"
             )));
     }
 
@@ -168,7 +181,7 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/v1/auth/methods").param("returnTo", "/dashboard/publish"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "oauth-github", "oauth-gitee")))
+            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "oauth-github", "oauth-gitee", "oauth-feishu")))
             .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
             .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
                 .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
