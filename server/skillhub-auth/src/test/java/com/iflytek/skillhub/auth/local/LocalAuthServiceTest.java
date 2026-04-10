@@ -9,9 +9,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.iflytek.skillhub.auth.config.LdapProperties;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
+import com.iflytek.skillhub.auth.ldap.LdapAuthService;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -51,6 +53,12 @@ class LocalAuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private LdapProperties ldapProperties;
+
+    @Mock
+    private LdapAuthService ldapAuthService;
+
     private LocalAuthService service;
 
     @BeforeEach
@@ -62,7 +70,9 @@ class LocalAuthServiceTest {
             globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
             passwordEncoder,
-            CLOCK
+            CLOCK,
+            ldapProperties,
+            ldapAuthService
         );
     }
 
