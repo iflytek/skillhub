@@ -54,9 +54,20 @@ spring:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID:placeholder}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:placeholder}
             scope: read:user,user:email
+          feishu:
+            client-id: ${FEISHU_CLIENT_ID:placeholder}
+            client-secret: ${FEISHU_CLIENT_SECRET:placeholder}
+            scope: user:email,user:id
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           github:
             user-info-uri: https://api.github.com/user
+          feishu:
+            authorization-uri: https://accounts.feishu.cn/open-apis/authen/v1/authorize
+            token-uri: https://open.feishu.cn/open-apis/authen/v2/oauth/token
+            user-info-uri: https://open.feishu.cn/open-apis/authen/v1/user_info
+            user-name-attribute: union_id
   servlet:
     multipart:
       max-file-size: 100MB
