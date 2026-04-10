@@ -56,7 +56,7 @@ export function parseSource(input: string): ParsedSource {
     return { type: "github", owner: parts[0], repo: parts[1] };
   }
 
-  throw new Error(`Invalid source format: ${input}. Use owner/repo, local path, or URL.`);
+  throw new Error(`Invalid source format: ${input}. Use owner/repo, local path, URL, or registry namespace/slug.`);
 }
 
 export function getCloneUrl(source: ParsedSource): string {

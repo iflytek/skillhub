@@ -26,11 +26,11 @@ function detectSourceType(arg: string): SourceType {
   if (arg.startsWith(".") || arg.startsWith("/") || arg.startsWith("~")) {
     return "local";
   }
-  if (arg.includes("github.com") || arg.includes("gitlab.com") || arg.includes("://")) {
+  if (arg.includes("github.com") || arg.includes("gitlab.com") || arg.includes("://") || arg.endsWith(".git")) {
     return "git";
   }
   if (/^[\w-]+\/[\w-]+$/.test(arg)) {
-    return "git";
+    return "registry";
   }
   return "registry";
 }
@@ -145,16 +145,26 @@ export function registerInstall(program: Command) {
 }
 
 async function installFromRegistry(slug: string, opts: Record<string, string | string[] | boolean>, spinner: any) {
-  const ns = (opts.namespace as string) || "global";
+  let ns = (opts.namespace as string) || "global";
+  let actualSlug = slug;
+
+  if (slug.includes("/") && !slug.startsWith("/")) {
+    const parts = slug.split("/");
+    if (parts.length === 2) {
+      ns = parts[0];
+      actualSlug = parts[1];
+    }
+  }
+
   const config = loadConfig();
   const token = await readToken();
   const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
-  spinner.text = `Fetching ${ns}/${slug}`;
+  spinner.text = `Fetching ${ns}/${actualSlug}`;
 
-  const downloadUrl = `/api/v1/skills/${ns}/${slug}/download`;
+  const downloadUrl = `/api/v1/skills/${ns}/${actualSlug}/download`;
   const tmpDir = await mkdtemp(join(tmpdir(), "skillhub-install-"));
-  const zipPath = join(tmpDir, `${slug}.zip`);
+  const zipPath = join(tmpDir, `${actualSlug}.zip`);
 
   const { request } = await import("undici");
   const url = new URL(downloadUrl, config.registry);
@@ -164,7 +174,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   });
 
   if (statusCode >= 400) {
-    spinner.fail(`Skill not found: ${slug}`);
+    spinner.fail(`Skill not found: ${ns}/${actualSlug}`);
     process.exit(1);
   }
 
@@ -183,7 +193,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     process.exit(1);
   }
 
-  spinner.succeed(`Found ${skills.length} skill(s) in ${slug}`);
+  spinner.succeed(`Found ${skills.length} skill(s) in ${ns}/${actualSlug}`);
 
   if (opts.list) {
     for (const s of skills) {
