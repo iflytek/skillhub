@@ -60,15 +60,29 @@ curl -s http://localhost:3000 | head -c 100
 ### 1.4 测试用户认证
 
 ```bash
-# 获取测试 Token (本地环境)
-TOKEN=$(curl -s http://localhost:8080/api/v1/auth/token/local -H "X-Mock-User-Id: local-user" | jq -r '.token')
+# 方法1: 使用已有 token (推荐)
+# 默认 token 文件位置: ~/.skillhub/token
+# 当前已配置的测试用户: docker-admin
+node dist/cli.mjs whoami  # 直接验证是否已登录
 
-# 登录
+# 方法2: 通过 Web UI 获取 token
+# 1. 打开 http://localhost:3000
+# 2. 登录后打开 DevTools (F12) -> Application -> Local Storage -> skillhub-token
+# 3. 复制 token 值后登录
+
+# 方法3: 使用已有的 docker-admin token (测试用)
+TOKEN="sk_vsZwUrmrEOYD3D3V1-IxFpaoU4kURH-9fJRg8nR8dv0"
 node dist/cli.mjs login --token $TOKEN
 
-# 验证
+# 方法4: 创建新用户 token (需要后端支持)
+# curl -X POST http://localhost:8080/api/v1/auth/token -d '{"username":"xxx"}'
+
+# 验证登录
 node dist/cli.mjs whoami
 ```
+
+**注意**: 本地开发环境 (`--spring.profiles.active=local`) 使用 Mock Auth，
+不支持通过 `/api/v1/auth/token/local` 获取 token。需要使用已有的 token 或通过 Web UI 登录获取。
 
 ---
 
