@@ -28,17 +28,21 @@ export function installSkill(
       mkdirSync(baseDir, { recursive: true });
     }
 
-    if (existsSync(skillTargetDir)) {
+    let targetExists = existsSync(skillTargetDir);
+    if (!targetExists) {
+      try {
+        const lst = lstatSync(skillTargetDir);
+        targetExists = true;
+      } catch {
+        targetExists = false;
+      }
+    }
+    if (targetExists) {
       removeDir(skillTargetDir);
     }
 
     if (mode === "symlink") {
-      try {
-        symlinkSync(skillDir, skillTargetDir, "dir");
-      } catch {
-        copyDir(skillDir, skillTargetDir);
-        return { skillName, agentKey, path: skillTargetDir, mode: "copy", success: true };
-      }
+      symlinkSync(skillDir, skillTargetDir, "dir");
     } else {
       copyDir(skillDir, skillTargetDir);
     }
@@ -63,12 +67,18 @@ function copyDir(src: string, dest: string) {
 }
 
 function removeDir(path: string) {
-  const stat = statSync(path);
-  if (stat.isDirectory()) {
-    for (const entry of readdirSync(path)) {
-      removeDir(join(path, entry));
+  const stat = lstatSync(path);
+  if (stat.isDirectory() || stat.isSymbolicLink()) {
+    if (stat.isSymbolicLink()) {
+      // Symlink: just unlink it directly
+      unlinkSync(path);
+    } else {
+      // Real directory: recursive remove
+      for (const entry of readdirSync(path)) {
+        removeDir(join(path, entry));
+      }
+      rmdirSync(path);
     }
-    rmdirSync(path);
   } else {
     unlinkSync(path);
   }
