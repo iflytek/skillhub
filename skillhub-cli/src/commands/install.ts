@@ -12,7 +12,8 @@ import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversa
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
-import { multiSelect, sectionMultiSelect, interactiveMultiSelect, cancelSymbol } from "../utils/prompts.js";
+import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
+import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import ora from "ora";
 import { execSync } from "node:child_process";
 import { finished } from "node:stream/promises";
@@ -57,36 +58,34 @@ async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | nu
     hint: isGlobal ? (a.globalSkillsDir || a.skillsDir) : a.skillsDir,
   }));
 
-  const result = await interactiveMultiSelect({
+  const result = await searchMultiselect({
     message: "Which agents do you want to install to?",
     items: selectableItems,
     lockedSection,
-    hint: "space select, enter confirm",
   });
 
   if (result === cancelSymbol) {
     return null;
   }
 
-  return result;
+  return result as string[];
 }
 
 async function selectInstallMode(): Promise<"symlink" | "copy" | null> {
-  const result = await interactiveMultiSelect({
+  const result = await searchMultiselect({
     message: "Installation method?",
     items: [
       { value: "symlink", label: "Symlink (Recommended)", hint: "single source of truth" },
       { value: "copy", label: "Copy to all agents", hint: "independent copies" },
     ],
     initialSelected: ["symlink"],
-    hint: "space select, enter confirm",
   });
 
   if (result === cancelSymbol) {
     return null;
   }
 
-  if (result.includes("symlink")) {
+  if ((result as string[]).includes("symlink")) {
     return "symlink";
   }
   return "copy";
