@@ -12,7 +12,7 @@ import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversa
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
-import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
+import { multiSelect, sectionMultiSelect, interactiveMultiSelect, cancelSymbol } from "../utils/prompts.js";
 import ora from "ora";
 import { execSync } from "node:child_process";
 import { finished } from "node:stream/promises";
@@ -43,27 +43,53 @@ async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | nu
   const universalAgents = getUniversalAgents();
   const nonUniversalAgents = getNonUniversalAgents();
 
-  const sections = [
-    {
-      title: "Universal (.agents/skills)",
-      locked: true,
-      items: universalAgents.map((a) => ({
-        value: a.key,
-        label: a.name,
-      })),
-    },
-    {
-      title: "Agent-specific paths",
-      locked: false,
-      items: nonUniversalAgents.map((a) => ({
-        value: a.key,
-        label: a.name,
-        hint: isGlobal ? a.globalPath : a.projectPath,
-      })),
-    },
-  ];
+  const lockedSection = {
+    title: "Universal (.agents/skills)",
+    items: universalAgents.map((a) => ({
+      value: a.key,
+      label: a.name,
+    })),
+  };
 
-  return sectionMultiSelect("Select agents to install to:", sections);
+  const selectableItems = nonUniversalAgents.map((a) => ({
+    value: a.key,
+    label: a.name,
+    hint: isGlobal ? a.globalPath : a.projectPath,
+  }));
+
+  const result = await interactiveMultiSelect({
+    message: "Which agents do you want to install to?",
+    items: selectableItems,
+    lockedSection,
+    hint: "space select, enter confirm",
+  });
+
+  if (result === cancelSymbol) {
+    return null;
+  }
+
+  return result;
+}
+
+async function selectInstallMode(): Promise<"symlink" | "copy" | null> {
+  const result = await interactiveMultiSelect({
+    message: "Installation method?",
+    items: [
+      { value: "symlink", label: "Symlink (Recommended)", hint: "single source of truth" },
+      { value: "copy", label: "Copy to all agents", hint: "independent copies" },
+    ],
+    initialSelected: ["symlink"],
+    hint: "space select, enter confirm",
+  });
+
+  if (result === cancelSymbol) {
+    return null;
+  }
+
+  if (result.includes("symlink")) {
+    return "symlink";
+  }
+  return "copy";
 }
 
 function buildAgentSummary(targetAgents: { key: string; name: string; projectPath: string }[], mode: "symlink" | "copy"): string[] {
@@ -190,7 +216,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     if (claude) targetAgents.push(claude);
   }
 
-  const mode = opts.copy ? ("copy" as const) : ("symlink" as const);
+  let mode: "symlink" | "copy" = opts.copy ? "copy" : "symlink";
 
   if (!opts.yes && !opts.agent) {
     const selected = await selectAgentsInteractive(isGlobal);
@@ -199,6 +225,15 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
       return;
     }
     targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
+  }
+
+  if (!opts.yes) {
+    const selectedMode = await selectInstallMode();
+    if (selectedMode === null) {
+      console.log("Cancelled.");
+      return;
+    }
+    mode = selectedMode;
   }
 
   if (!opts.yes) {
@@ -346,7 +381,7 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     else targetAgents.push(all[0]);
   }
 
-  const mode = opts.copy ? ("copy" as const) : ("symlink" as const);
+  let mode: "symlink" | "copy" = opts.copy ? "copy" : "symlink";
 
   if (!opts.yes && !opts.agent) {
     const selected = await selectAgentsInteractive(isGlobal);
@@ -355,6 +390,15 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
       return;
     }
     targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
+  }
+
+  if (!opts.yes) {
+    const selectedMode = await selectInstallMode();
+    if (selectedMode === null) {
+      console.log("Cancelled.");
+      return;
+    }
+    mode = selectedMode;
   }
 
   if (!opts.yes) {
