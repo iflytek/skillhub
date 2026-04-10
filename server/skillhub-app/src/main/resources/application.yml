@@ -70,6 +70,15 @@ skillhub:
       enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
     session-bootstrap:
       enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
+  ldap:
+    enabled: ${SKILLHUB_LDAP_ENABLED:false}
+    url: ${SKILLHUB_LDAP_URL:}
+    base: ${SKILLHUB_LDAP_BASE:}
+    username: ${SKILLHUB_LDAP_USERNAME:}
+    password: ${SKILLHUB_LDAP_PASSWORD:}
+    user-search-attribute: ${SKILLHUB_LDAP_USER_SEARCH_ATTRIBUTE:uid}
+    user-search-base: ${SKILLHUB_LDAP_USER_SEARCH_BASE:}
+
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
@@ -175,6 +184,9 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  health:
+    ldap:
+      enabled: false
   metrics:
     tags:
       application: skillhub
