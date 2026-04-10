@@ -1,6 +1,12 @@
 import * as readline from "readline";
 import { Writable } from "stream";
 
+const silentOutput = new Writable({
+  write(_chunk, _encoding, callback) {
+    callback();
+  },
+});
+
 const S_STEP_ACTIVE = "\x1b[32m◆\x1b[0m";
 const S_STEP_CANCEL = "\x1b[31m■\x1b[0m";
 const S_STEP_SUBMIT = "\x1b[32m◇\x1b[0m";
@@ -27,15 +33,19 @@ const green = (s: string) => `${S_GREEN}${s}${S_RESET}`;
 const yellow = (s: string) => `${S_YELLOW}${s}${S_RESET}`;
 const red = (s: string) => `${S_RED}${s}${S_RESET}`;
 
-const moveUp = (n: number) => `${S_ESC}${n}A`;
-const clearLine = () => `${S_ESC}2K`;
-const cursorLeft = () => `${S_ESC}G`;
+function moveUp(n: number): string {
+  return `${S_ESC}${n}A`;
+}
+
+function clearLine(): string {
+  return `${S_ESC}2K`;
+}
 
 function clearRender(lastHeight: number): void {
   if (lastHeight > 0) {
     process.stdout.write(moveUp(lastHeight));
     for (let i = 0; i < lastHeight; i++) {
-      process.stdout.write(clearLine() + (i < lastHeight - 1 ? moveUp(1) + cursorLeft() : "\n"));
+      process.stdout.write(clearLine() + (i < lastHeight - 1 ? moveUp(1) + "\x1b[G" : "\n"));
     }
     process.stdout.write(moveUp(lastHeight));
   }
@@ -183,7 +193,7 @@ export async function sectionMultiSelect(
   });
 }
 
-const cancelSymbol = Symbol("cancel");
+export const cancelSymbol = Symbol("cancel");
 
 export interface InteractiveSelectOptions {
   message: string;
@@ -209,8 +219,8 @@ export async function interactiveMultiSelect(
   return new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
-      output: process.stdout,
-      terminal: true,
+      output: silentOutput,
+      terminal: false,
     });
 
     if (process.stdin.isTTY) {
@@ -344,12 +354,14 @@ export async function interactiveMultiSelect(
     const submit = (): void => {
       render("submit");
       cleanup();
+      process.stdout.write("\n");
       resolve([...lockedValues, ...Array.from(selected)]);
     };
 
     const cancel = (): void => {
       render("cancel");
       cleanup();
+      process.stdout.write("\n");
       resolve(cancelSymbol);
     };
 
@@ -435,5 +447,3 @@ export async function interactiveSelect(
 
   return result[0];
 }
-
-export { cancelSymbol };

@@ -54,7 +54,7 @@ async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | nu
   const selectableItems = nonUniversalAgents.map((a) => ({
     value: a.key,
     label: a.name,
-    hint: isGlobal ? a.globalPath : a.projectPath,
+    hint: isGlobal ? (a.globalSkillsDir || a.skillsDir) : a.skillsDir,
   }));
 
   const result = await interactiveMultiSelect({
@@ -92,7 +92,7 @@ async function selectInstallMode(): Promise<"symlink" | "copy" | null> {
   return "copy";
 }
 
-function buildAgentSummary(targetAgents: { key: string; name: string; projectPath: string }[], mode: "symlink" | "copy"): string[] {
+function buildAgentSummary(targetAgents: { key: string; name: string; skillsDir: string }[], mode: "symlink" | "copy"): string[] {
   const lines: string[] = [];
   const universal = targetAgents.filter((a) => isUniversalAgent(a));
   const symlinked = targetAgents.filter((a) => !isUniversalAgent(a));
@@ -258,7 +258,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
         skill.dir,
         skill.name,
         agent.key,
-        isGlobal ? agent.globalPath : agent.projectPath,
+        isGlobal ? agent.globalSkillsDir || agent.skillsDir : agent.skillsDir,
         mode,
         isGlobal,
       );
@@ -423,7 +423,7 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
         skill.dir,
         skill.name,
         agent.key,
-        isGlobal ? agent.globalPath : agent.projectPath,
+        isGlobal ? agent.globalSkillsDir || agent.skillsDir : agent.skillsDir,
         mode,
         isGlobal,
       );
