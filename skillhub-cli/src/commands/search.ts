@@ -16,6 +16,8 @@ export function registerSearch(program: Command) {
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
+      const isJson = program.opts().json;
+
       try {
         let searchUrl = `${ApiRoutes.search}?q=${encodeURIComponent(query.join(" "))}&limit=${opts.limit}`;
         if (opts.namespace) {
@@ -23,17 +25,26 @@ export function registerSearch(program: Command) {
         }
         const result = await client.get<SearchResponse>(searchUrl);
         if (!result.results || result.results.length === 0) {
-          console.log("No skills found.");
+          if (isJson) {
+            console.log(JSON.stringify({ results: [] }));
+          } else {
+            console.log("No skills found.");
+          }
           return;
         }
-        const hasNamespaceFilter = !!opts.namespace;
-        for (const s of result.results) {
-          const ns = s.namespace ? `[${s.namespace}] ` : '';
-          console.log(`${ns}${s.slug} (${s.version}) — ${s.displayName}`);
-          if (s.summary) console.log(`  ${s.summary}`);
-        }
-        if (hasNamespaceFilter) {
-          dim(`\nTip: remove --namespace filter to search all namespaces`);
+
+        if (isJson) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          const hasNamespaceFilter = !!opts.namespace;
+          for (const s of result.results) {
+            const ns = s.namespace ? `[${s.namespace}] ` : '';
+            console.log(`${ns}${s.slug} (${s.version}) — ${s.displayName}`);
+            if (s.summary) console.log(`  ${s.summary}`);
+          }
+          if (hasNamespaceFilter) {
+            dim(`\nTip: remove --namespace filter to search all namespaces`);
+          }
         }
       } catch (e: any) {
         error(`Search failed: ${e.message}`);

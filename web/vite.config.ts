@@ -13,6 +13,7 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/e2e/**'],
   },
   server: {
+    host: true,
     port: 3000,
     watch: {
       usePolling: true,
