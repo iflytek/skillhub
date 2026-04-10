@@ -20,6 +20,8 @@ const BOLD = "\x1b[1m";
 const DIM = "\x1b[38;5;102m";
 const TEXT = "\x1b[38;5;145m";
 const CYAN = "\x1b[36m";
+const YELLOW = "\x1b[33m";
+const GREEN = "\x1b[32m";
 
 function formatInstalls(count: number): string {
   if (!count || count <= 0) return "";
@@ -43,6 +45,23 @@ interface SearchSkill {
   version?: string;
   summary?: string;
   installs?: number;
+}
+
+interface SkillDetail {
+  starCount: number;
+  downloadCount: number;
+  version: string;
+}
+
+async function fetchSkillDetail(client: ApiClient, namespace: string, name: string): Promise<SkillDetail | null> {
+  try {
+    const detail = await client.get<SkillDetail>(
+      `${ApiRoutes.skillDetail.replace("{namespace}", namespace).replace("{slug}", name)}`
+    );
+    return detail;
+  } catch {
+    return null;
+  }
 }
 
 async function searchSkills(
@@ -123,12 +142,11 @@ async function runInteractiveSearch(
         const isSelected = i === selectedIndex;
         const arrow = isSelected ? `${BOLD}>${RESET}` : " ";
         const name = isSelected ? `${BOLD}${skill.name}${RESET}` : `${TEXT}${skill.name}${RESET}`;
-        const installs = formatInstalls(skill.installs || 0);
-        const installsBadge = installs ? ` ${CYAN}${installs}${RESET}` : "";
+        const nsBadge = skill.namespace !== "global" ? ` ${YELLOW}[${skill.namespace}]${RESET}` : "";
+        const versionBadge = skill.version ? ` ${DIM}v${skill.version}${RESET}` : "";
         const loadingIndicator = loading && i === 0 ? ` ${DIM}...${RESET}` : "";
-        const summaryStr = skill.summary ? ` ${DIM}${skill.summary.slice(0, 30)}${RESET}` : "";
 
-        lines.push(`  ${arrow} ${name}${installsBadge}${summaryStr}${loadingIndicator}`);
+        lines.push(`  ${arrow} ${name}${nsBadge}${versionBadge}${loadingIndicator}`);
       }
     }
 
@@ -278,18 +296,26 @@ export function registerExplore(program: Command) {
           return;
         }
 
+        const maxResults = Math.min(results.length, 6);
+
+        const detailPromises = results.slice(0, maxResults).map((s) =>
+          fetchSkillDetail(client, s.namespace, s.name)
+        );
+        const details = await Promise.all(detailPromises);
+
         console.log(`${DIM}Install with${RESET} skillhub install <slug>`);
         console.log();
 
-        const maxResults = Math.min(results.length, 6);
         for (let i = 0; i < maxResults; i++) {
           const skill = results[i]!;
+          const detail = details[i];
           const slug = `${skill.namespace}--${skill.name}`;
-          const installs = formatInstalls(skill.installs || 0);
-          console.log(
-            `${TEXT}${slug}${RESET}${installs ? ` ${CYAN}${installs}${RESET}` : ""}`
-          );
-          console.log(`${DIM}└ skillhub ${skill.namespace}/${skill.name}${RESET}`);
+          const nsBadge = skill.namespace !== "global" ? ` ${YELLOW}[${skill.namespace}]${RESET}` : "";
+          const stars = detail?.starCount ? ` ${YELLOW}⭐ ${detail.starCount}${RESET}` : "";
+          const downloads = detail?.downloadCount ? ` ${CYAN}↓ ${formatInstalls(detail.downloadCount)}${RESET}` : "";
+
+          console.log(`${TEXT}${skill.name}${RESET}${nsBadge}${stars}${downloads}`);
+          console.log(`${DIM}└ skillhub install ${skill.namespace}/${skill.name}${RESET}`);
           if (skill.summary) {
             console.log(`${DIM}  ${skill.summary.slice(0, 60)}${RESET}`);
           }
