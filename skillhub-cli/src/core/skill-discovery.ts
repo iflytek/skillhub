@@ -29,6 +29,23 @@ export function discoverSkills(rootDir: string): DiscoveredSkill[] {
     skills.push(...scanDir(rootDir));
   }
 
+  // Also check for SKILL.md directly in rootDir (for registry downloads)
+  if (skills.length === 0) {
+    const rootSkillMd = join(rootDir, "SKILL.md");
+    if (existsSync(rootSkillMd)) {
+      try {
+        const content = readFileSync(rootSkillMd, "utf-8");
+        const name = extractFrontmatterField(content, "name");
+        const description = extractFrontmatterField(content, "description");
+        if (name) {
+          skills.push({ name, description: description || name, dir: rootDir });
+        }
+      } catch {
+        // Skip unreadable files
+      }
+    }
+  }
+
   return skills;
 }
 
@@ -61,7 +78,7 @@ function scanDir(dir: string): DiscoveredSkill[] {
 }
 
 function extractFrontmatterField(content: string, field: string): string | undefined {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return undefined;
   const frontmatter = match[1];
   const fieldMatch = frontmatter.match(new RegExp(`^${field}:\\s*(.+)$`, "m"));

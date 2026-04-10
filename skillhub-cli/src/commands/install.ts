@@ -15,6 +15,7 @@ import { success, error, info, dim } from "../utils/logger.js";
 import { multiSelect } from "../utils/prompts.js";
 import ora from "ora";
 import { execSync } from "node:child_process";
+import { finished } from "node:stream/promises";
 
 export type SourceType = "auto" | "registry" | "git" | "local";
 
@@ -96,7 +97,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
 
   spinner.text = "Downloading";
   const fileStream = createWriteStream(zipPath);
-  await body.pipe(fileStream);
+  await finished(body.pipe(fileStream));
 
   spinner.text = "Extracting";
   const extractDir = join(tmpDir, "extracted");
