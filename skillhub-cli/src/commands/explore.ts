@@ -284,7 +284,7 @@ export function registerExplore(program: Command) {
             execSync(`skillhub install ${selected}`, { stdio: "inherit" });
           } else {
             info(`\nSelected: ${selected}`);
-            dim("Use --install or -i to install, or run: skillhub inspect " + selected);
+            dim("Use --install or -i to install, or run: skillhub install " + selected);
           }
           return;
         }

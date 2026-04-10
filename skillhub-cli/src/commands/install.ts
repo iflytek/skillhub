@@ -117,25 +117,34 @@ export function registerInstall(program: Command) {
     .command("install <source>")
     .alias("i")
     .description("Install skills from registry, git repositories, or local paths")
-    .option("--source <type>", "Source type: auto, registry, git, local (default: auto)")
+    .option("-a, --add <source>", "Add from GitHub (owner/repo) or local path")
     .option("--namespace <ns>", "Namespace for registry install (default: global)")
     .option("-s, --skill <skills...>", "Install specific skills by name (for git/local sources)")
-    .option("-a, --agent <agents...>", "Target specific agents")
+    .option("--agent <agents...>", "Target specific agents")
     .option("-g, --global", "Install to global scope")
     .option("-y, --yes", "Skip all prompts")
     .option("--copy", "Copy instead of symlink")
     .option("--list", "List available skills without installing")
     .action(async (source: string, opts: Record<string, string | string[] | boolean>) => {
-      const sourceType = (opts.source as SourceType) || "auto";
-      const effectiveSource = sourceType === "auto" ? detectSourceType(source) : sourceType;
+      const addSource = opts.add as string | undefined;
 
-      const spinner = ora(getInstallSpinner(effectiveSource, source)).start();
+      let effectiveSource: SourceType;
+      let installSource = source;
+
+      if (addSource) {
+        effectiveSource = detectSourceType(addSource);
+        installSource = addSource;
+      } else {
+        effectiveSource = detectSourceType(source);
+      }
+
+      const spinner = ora(getInstallSpinner(effectiveSource, installSource)).start();
 
       try {
         if (effectiveSource === "registry") {
           await installFromRegistry(source, opts, spinner);
         } else {
-          await installFromGit(source, effectiveSource, opts, spinner);
+          await installFromGit(installSource, effectiveSource, opts, spinner);
         }
       } catch (e: any) {
         spinner.fail(e.message);
