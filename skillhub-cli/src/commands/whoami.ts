@@ -14,10 +14,9 @@ export function registerWhoami(program: Command) {
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
-        const user = await client.get<WhoamiResponse>(ApiRoutes.whoami);
-        console.log(`User ID:     ${user.userId}`);
-        console.log(`Display Name: ${user.displayName}`);
-        if (user.email) console.log(`Email:       ${user.email}`);
+        const resp = await client.get<WhoamiResponse>(ApiRoutes.whoami);
+        console.log(`Handle:      ${resp.user.handle}`);
+        console.log(`Display Name: ${resp.user.displayName}`);
       } catch (e: any) {
         error(`Not authenticated: ${e.message}`);
         process.exit(1);

@@ -20,9 +20,11 @@ export interface PublishResponse {
 }
 
 export interface WhoamiResponse {
-  userId: string;
-  displayName: string;
-  email?: string;
+  user: {
+    handle: string;
+    displayName: string;
+    image: string | null;
+  };
 }
 
 export interface NamespaceResponse {

@@ -23,9 +23,9 @@ export function registerLogin(program: Command) {
       const client = new ApiClient({ baseUrl: registry, token });
 
       try {
-        const user = await client.get<WhoamiResponse>(ApiRoutes.whoami);
+        const resp = await client.get<WhoamiResponse>(ApiRoutes.whoami);
         await writeToken(token);
-        success(`Authenticated as ${user.displayName} (${user.email || user.userId})`);
+        success(`Authenticated as ${resp.user.displayName} (@${resp.user.handle})`);
       } catch (e: any) {
         error(`Authentication failed: ${e.message}`);
         process.exit(1);

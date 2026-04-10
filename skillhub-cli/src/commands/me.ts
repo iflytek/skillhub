@@ -4,15 +4,23 @@ import { loadConfig } from "../core/config.js";
 import { requireToken } from "../core/auth-token.js";
 import { error, info, dim } from "../utils/logger.js";
 
-export interface MeSkill {
+export interface MeSkillItem {
   id: number;
   namespace: string;
   slug: string;
   displayName: string;
-  latestVersion: string;
   status: string;
-  stars: number;
-  downloads: number;
+  starCount: number;
+  downloadCount: number;
+  headlineVersion?: { version: string };
+  publishedVersion?: { version: string };
+}
+
+export interface MeSkillsResponse {
+  items: MeSkillItem[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 export function registerMe(program: Command) {
@@ -27,14 +35,16 @@ export function registerMe(program: Command) {
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
-        const skills = await client.get<MeSkill[]>("/api/v1/me/skills");
-        if (!skills || skills.length === 0) {
+        const resp = await client.get<MeSkillsResponse>("/api/v1/me/skills");
+        const skills = resp.items || [];
+        if (skills.length === 0) {
           console.log("No skills published yet.");
           return;
         }
         for (const s of skills) {
+          const version = s.headlineVersion?.version || s.publishedVersion?.version || "unknown";
           info(`${s.displayName} (${s.slug})`);
-          dim(`  ${s.namespace} · v${s.latestVersion} · ⭐ ${s.stars} · ↓ ${s.downloads} · ${s.status}`);
+          dim(`  ${s.namespace} · v${version} · ⭐ ${s.starCount} · ↓ ${s.downloadCount} · ${s.status}`);
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
@@ -50,14 +60,16 @@ export function registerMe(program: Command) {
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
-        const skills = await client.get<MeSkill[]>("/api/v1/me/stars");
-        if (!skills || skills.length === 0) {
+        const resp = await client.get<MeSkillsResponse>("/api/v1/me/stars");
+        const skills = resp.items || [];
+        if (skills.length === 0) {
           console.log("No starred skills.");
           return;
         }
         for (const s of skills) {
+          const version = s.headlineVersion?.version || s.publishedVersion?.version || "unknown";
           info(`${s.displayName} (${s.slug})`);
-          dim(`  ${s.namespace} · v${s.latestVersion} · ⭐ ${s.stars}`);
+          dim(`  ${s.namespace} · v${version} · ⭐ ${s.starCount}`);
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
