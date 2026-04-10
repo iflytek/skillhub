@@ -8,11 +8,11 @@ import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { discoverSkills } from "../core/skill-discovery.js";
 import { installSkill } from "../core/installer.js";
-import { getAllAgents, detectInstalledAgents } from "../core/agent-detector.js";
+import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversalAgents, isUniversalAgent } from "../core/agent-detector.js";
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
-import { multiSelect } from "../utils/prompts.js";
+import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
 import ora from "ora";
 import { execSync } from "node:child_process";
 import { finished } from "node:stream/promises";
@@ -37,6 +37,52 @@ function getInstallSpinner(sourceType: SourceType, arg: string): string {
     return `Fetching ${arg}`;
   }
   return `Resolving ${arg}`;
+}
+
+async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | null> {
+  const universalAgents = getUniversalAgents();
+  const nonUniversalAgents = getNonUniversalAgents();
+
+  const sections = [
+    {
+      title: "Universal (.agents/skills)",
+      locked: true,
+      items: universalAgents.map((a) => ({
+        value: a.key,
+        label: a.name,
+      })),
+    },
+    {
+      title: "Agent-specific paths",
+      locked: false,
+      items: nonUniversalAgents.map((a) => ({
+        value: a.key,
+        label: a.name,
+        hint: isGlobal ? a.globalPath : a.projectPath,
+      })),
+    },
+  ];
+
+  return sectionMultiSelect("Select agents to install to:", sections);
+}
+
+function buildAgentSummary(targetAgents: { key: string; name: string; projectPath: string }[], mode: "symlink" | "copy"): string[] {
+  const lines: string[] = [];
+  const universal = targetAgents.filter((a) => isUniversalAgent(a));
+  const symlinked = targetAgents.filter((a) => !isUniversalAgent(a));
+
+  if (mode === "symlink") {
+    if (universal.length > 0) {
+      lines.push(`  universal: ${universal.map((a) => a.name).join(", ")}`);
+    }
+    if (symlinked.length > 0) {
+      lines.push(`  symlink → ${symlinked.map((a) => a.name).join(", ")}`);
+    }
+  } else {
+    lines.push(`  copy → ${targetAgents.map((a) => a.name).join(", ")}`);
+  }
+
+  return lines;
 }
 
 export function registerInstall(program: Command) {
@@ -133,7 +179,9 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     selectedSkills = skills.filter((s) => selected.includes(s.name));
   }
 
-  const targetAgents = opts.agent
+  const isGlobal = !!opts.global;
+
+  let targetAgents = opts.agent
     ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
     : detectInstalledAgents();
 
@@ -143,9 +191,32 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   }
 
   const mode = opts.copy ? ("copy" as const) : ("symlink" as const);
-  const isGlobal = !!opts.global;
+
+  if (!opts.yes && !opts.agent) {
+    const selected = await selectAgentsInteractive(isGlobal);
+    if (!selected) {
+      console.log("Cancelled.");
+      return;
+    }
+    targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
+  }
+
+  if (!opts.yes) {
+    console.log("");
+    info("Installation summary:");
+    for (const skill of selectedSkills) {
+      console.log(`  ${skill.name}`);
+      for (const line of buildAgentSummary(targetAgents, mode)) {
+        console.log(`    ${line}`);
+      }
+    }
+    console.log(`  Mode:    ${mode}`);
+    console.log(`  Scope:   ${isGlobal ? "global" : "project"}`);
+    console.log("");
+  }
 
   let installed = 0;
+  let failed = 0;
   for (const skill of selectedSkills) {
     for (const agent of targetAgents) {
       const result = installSkill(
@@ -166,11 +237,21 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
           slug: skill.name,
           version: "latest",
         });
+      } else {
+        failed++;
+        error(`Failed to install ${skill.name} to ${agent.name}: ${result.error}`);
       }
     }
   }
 
-  success(`Installed ${installed} skill(s) from ${slug}`);
+  console.log("");
+  for (const skill of selectedSkills) {
+    console.log(`  ${skill.name}`);
+    for (const line of buildAgentSummary(targetAgents, mode)) {
+      console.log(`    ${line}`);
+    }
+  }
+  success(`Installed ${installed} skill(s) from ${slug}${failed > 0 ? ` (${failed} failed)` : ""}`);
   await rm(tmpDir, { recursive: true, force: true });
 }
 
@@ -249,7 +330,9 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     selectedSkills = skills.filter((s) => selected.includes(s.name));
   }
 
-  const targetAgents = opts.agent
+  const isGlobal = !!opts.global;
+
+  let targetAgents = opts.agent
     ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
     : detectInstalledAgents();
 
@@ -264,19 +347,32 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
   }
 
   const mode = opts.copy ? ("copy" as const) : ("symlink" as const);
-  const isGlobal = !!opts.global;
+
+  if (!opts.yes && !opts.agent) {
+    const selected = await selectAgentsInteractive(isGlobal);
+    if (!selected) {
+      console.log("Cancelled.");
+      return;
+    }
+    targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
+  }
 
   if (!opts.yes) {
     console.log("");
     info("Installation summary:");
-    console.log(`  Skills:  ${selectedSkills.map((s) => s.name).join(", ")}`);
-    console.log(`  Agents:  ${targetAgents.map((a) => a.name).join(", ")}`);
+    for (const skill of selectedSkills) {
+      console.log(`  ${skill.name}`);
+      for (const line of buildAgentSummary(targetAgents, mode)) {
+        console.log(`    ${line}`);
+      }
+    }
     console.log(`  Mode:    ${mode}`);
     console.log(`  Scope:   ${isGlobal ? "global" : "project"}`);
     console.log("");
   }
 
   let installed = 0;
+  let failed = 0;
   for (const skill of selectedSkills) {
     for (const agent of targetAgents) {
       const result = installSkill(
@@ -302,10 +398,18 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
           version: parsed.ref || "main",
         });
       } else {
+        failed++;
         error(`Failed to install ${skill.name} to ${agent.name}: ${result.error}`);
       }
     }
   }
 
-  success(`Installed ${installed} skill(s) to ${targetAgents.length} agent(s)`);
+  console.log("");
+  for (const skill of selectedSkills) {
+    console.log(`  ${skill.name}`);
+    for (const line of buildAgentSummary(targetAgents, mode)) {
+      console.log(`    ${line}`);
+    }
+  }
+  success(`Installed ${installed} skill(s) to ${targetAgents.length} agent(s)${failed > 0 ? ` (${failed} failed)` : ""}`);
 }

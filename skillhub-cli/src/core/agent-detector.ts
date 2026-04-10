@@ -71,3 +71,17 @@ export function detectInstalledAgents(): AgentInfo[] {
 export function getAgentByKey(key: string): AgentInfo | undefined {
   return AGENTS.find((a) => a.key === key);
 }
+
+const UNIVERSAL_PATH = ".agents/skills";
+
+export function isUniversalAgent(agent: AgentInfo): boolean {
+  return agent.projectPath === UNIVERSAL_PATH;
+}
+
+export function getUniversalAgents(): AgentInfo[] {
+  return AGENTS.filter((a) => isUniversalAgent(a));
+}
+
+export function getNonUniversalAgents(): AgentInfo[] {
+  return AGENTS.filter((a) => !isUniversalAgent(a));
+}
