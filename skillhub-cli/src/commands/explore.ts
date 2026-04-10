@@ -7,6 +7,27 @@ import { info, dim } from "../utils/logger.js";
 import { execSync } from "node:child_process";
 import * as readline from "readline";
 
+// ANSI escape codes for terminal control (from skills/find.ts)
+const HIDE_CURSOR = "\x1b[?25l";
+const SHOW_CURSOR = "\x1b[?25h";
+const CLEAR_DOWN = "\x1b[J";
+const MOVE_UP = (n: number) => `\x1b[${n}A`;
+const MOVE_TO_COL = (n: number) => `\x1b[${n}G`;
+
+// Color scheme (matching skills/find.ts)
+const RESET = "\x1b[0m";
+const BOLD = "\x1b[1m";
+const DIM = "\x1b[38;5;102m";
+const TEXT = "\x1b[38;5;145m";
+const CYAN = "\x1b[36m";
+
+function formatInstalls(count: number): string {
+  if (!count || count <= 0) return "";
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M installs`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}K installs`;
+  return `${count} install${count === 1 ? "" : "s"}`;
+}
+
 function parseNamespace(slug: string): { namespace: string; name: string } {
   const parts = slug.split("--");
   if (parts.length >= 2) {
@@ -58,7 +79,9 @@ async function runInteractiveSearch(
   let query = initialQuery;
   let results: SearchSkill[] = [];
   let selectedIndex = 0;
-  let cursorRow = 0;
+  let loading = false;
+  let lastRenderedLines = 0;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -67,73 +90,120 @@ async function runInteractiveSearch(
 
   const width = process.stdout.columns || 80;
 
-  function clearLines(n: number): void {
-    for (let i = 0; i < n; i++) {
-      process.stdout.write(`\x1B[2K\x1B[${0}G`);
-      if (i < n - 1) process.stdout.write("\n\x1B[1A");
-    }
-    if (n > 0) {
-      process.stdout.write(`\x1B[${n}A`);
-    }
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true);
   }
+  process.stdin.resume();
+  readline.emitKeypressEvents(process.stdin);
+  process.stdout.write(HIDE_CURSOR);
 
-  async function render(): Promise<void> {
-    clearLines(cursorRow + 2);
+  function render(): void {
+    if (lastRenderedLines > 0) {
+      process.stdout.write(MOVE_UP(lastRenderedLines) + MOVE_TO_COL(1));
+    }
+    process.stdout.write(CLEAR_DOWN);
 
-    const searchLine = `\x1B[1m? Search skills:\x1B[0m ${query || "(type to search)"}`;
-    process.stdout.write(`${searchLine}\n`);
+    const lines: string[] = [];
 
-    const visibleResults = results.slice(0, MAX_VISIBLE);
-    for (let i = 0; i < visibleResults.length; i++) {
-      const skill = visibleResults[i];
-      const isSelected = i === selectedIndex;
-      const prefix = isSelected ? `\x1B[36m>\x1B[0m ` : "  ";
-      const nameStr = isSelected ? `\x1B[1m${skill.name}\x1B[0m` : skill.name;
-      const installStr = skill.installs ? ` (${skill.installs} installs)` : "";
-      const summaryStr = skill.summary ? ` - ${skill.summary.slice(0, 40)}` : "";
-      const line = `${prefix}${nameStr}\x1B[2m${installStr}${summaryStr}\x1B[0m`;
-      const truncated = line.length > width - 2 ? line.slice(0, width - 5) + "..." : line;
-      process.stdout.write(`  ${truncated}\n`);
+    const cursor = `${BOLD}_${RESET}`;
+    const searchLine = `${TEXT}Search skills:${RESET} ${query}${cursor}`;
+    lines.push(searchLine);
+    lines.push("");
+
+    if (!query || query.length < 2) {
+      lines.push(`${DIM}Start typing to search (min 2 chars)${RESET}`);
+    } else if (results.length === 0 && loading) {
+      lines.push(`${DIM}Searching...${RESET}`);
+    } else if (results.length === 0) {
+      lines.push(`${DIM}No skills found${RESET}`);
+    } else {
+      const visible = results.slice(0, MAX_VISIBLE);
+      for (let i = 0; i < visible.length; i++) {
+        const skill = visible[i]!;
+        const isSelected = i === selectedIndex;
+        const arrow = isSelected ? `${BOLD}>${RESET}` : " ";
+        const name = isSelected ? `${BOLD}${skill.name}${RESET}` : `${TEXT}${skill.name}${RESET}`;
+        const installs = formatInstalls(skill.installs || 0);
+        const installsBadge = installs ? ` ${CYAN}${installs}${RESET}` : "";
+        const loadingIndicator = loading && i === 0 ? ` ${DIM}...${RESET}` : "";
+        const summaryStr = skill.summary ? ` ${DIM}${skill.summary.slice(0, 30)}${RESET}` : "";
+
+        lines.push(`  ${arrow} ${name}${installsBadge}${summaryStr}${loadingIndicator}`);
+      }
     }
 
-    if (results.length === 0 && query.length > 0) {
-      process.stdout.write(`\x1B[2m  No results found\x1B[0m\n`);
+    lines.push("");
+    lines.push(`${DIM}up/down navigate | enter select | esc cancel${RESET}`);
+
+    for (const line of lines) {
+      process.stdout.write(line + "\n");
     }
 
-    cursorRow = Math.min(selectedIndex, visibleResults.length - 1, MAX_VISIBLE - 1);
-    if (results.length === 0) cursorRow = 0;
-
-    dim(`\n  ↑↓ navigate · Enter select · Esc cancel`);
+    lastRenderedLines = lines.length;
   }
-
-  let searchTimeout: NodeJS.Timeout | null = null;
 
   function triggerSearch(q: string): void {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(async () => {
-      results = await searchSkills(client, q);
-      selectedIndex = 0;
-      await render();
-    }, 150);
-  }
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
 
-  process.stdin.setRawMode?.(true);
-  process.stdin.resume?.();
-  readline.emitKeypressEvents(process.stdin);
+    loading = false;
+
+    if (!q || q.length < 2) {
+      results = [];
+      selectedIndex = 0;
+      render();
+      return;
+    }
+
+    loading = true;
+    render();
+
+    const debounceMs = Math.max(150, 350 - q.length * 50);
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        results = await searchSkills(client, q);
+        selectedIndex = 0;
+      } catch {
+        results = [];
+      } finally {
+        loading = false;
+        debounceTimer = null;
+        render();
+      }
+    }, debounceMs);
+  }
 
   if (initialQuery) {
-    query = initialQuery;
-    results = await searchSkills(client, query);
-    selectedIndex = 0;
+    triggerSearch(initialQuery);
   }
-
-  await render();
+  render();
 
   return new Promise<string | null>((resolve) => {
-    const handler = (str: string, key: { name?: string }) => {
-      if (key.name === "escape") {
+    function cleanup(): void {
+      process.stdin.removeListener("keypress", handleKeypress);
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      process.stdout.write(SHOW_CURSOR);
+      process.stdin.pause();
+      rl.close();
+    }
+
+    function handleKeypress(_ch: string | undefined, key: readline.Key): void {
+      if (!key) return;
+
+      if (key.name === "escape" || (key.ctrl && key.name === "c")) {
         cleanup();
         resolve(null);
+        return;
+      }
+
+      if (key.name === "return") {
+        cleanup();
+        resolve(results[selectedIndex] ? `${results[selectedIndex].namespace}/${results[selectedIndex].name}` : null);
         return;
       }
 
@@ -144,50 +214,29 @@ async function runInteractiveSearch(
       }
 
       if (key.name === "down" || key.name === "j") {
-        selectedIndex = Math.min(Math.min(results.length, MAX_VISIBLE) - 1, selectedIndex + 1);
+        selectedIndex = Math.min(Math.max(0, results.length - 1), selectedIndex + 1);
         render();
-        return;
-      }
-
-      if (key.name === "return" || key.name === "enter") {
-        if (results.length > 0 && selectedIndex < results.length) {
-          cleanup();
-          resolve(`${results[selectedIndex].namespace}/${results[selectedIndex].name}`);
-        } else {
-          cleanup();
-          resolve(null);
-        }
         return;
       }
 
       if (key.name === "backspace") {
-        query = query.slice(0, -1);
-        render();
         if (query.length > 0) {
+          query = query.slice(0, -1);
           triggerSearch(query);
-        } else {
-          results = [];
-          selectedIndex = 0;
-          render();
         }
         return;
       }
 
-      if (str && str.length === 1 && !(key as any).ctrl && !(key as any).meta && str >= ' ') {
-        query += str;
-        render();
-        triggerSearch(query);
+      if (key.sequence && !key.ctrl && !key.meta && key.sequence.length === 1) {
+        const char = key.sequence;
+        if (char >= " " && char <= "~") {
+          query += char;
+          triggerSearch(query);
+        }
       }
-    };
-
-    function cleanup(): void {
-      process.stdin.setRawMode?.(false);
-      process.stdin.pause?.();
-      rl.close();
-      process.stdin.removeListener("keypress", handler);
     }
 
-    process.stdin.on("keypress", handler);
+    process.stdin.on("keypress", handleKeypress);
   });
 }
 
@@ -225,19 +274,29 @@ export function registerExplore(program: Command) {
         const results = await searchSkills(client, query, parseInt(opts.limit, 10));
 
         if (results.length === 0) {
-          console.log(`\nNo skills found matching: ${query}`);
+          console.log(`${DIM}No skills found for "${query}"${RESET}`);
           return;
         }
 
-        console.log(`\n\x1B[1mSkills matching "${query}"\x1B[0m (${results.length}):\n`);
-        for (const skill of results) {
-          console.log(`\x1B[1m${skill.name}\x1B[0m  [${skill.namespace}]`);
-          dim(`  version · ${skill.version || "N/A"}`);
-          if (skill.summary) console.log(`  ${skill.summary}`);
-          console.log("");
+        console.log(`${DIM}Install with${RESET} skillhub install <slug>`);
+        console.log();
+
+        const maxResults = Math.min(results.length, 6);
+        for (let i = 0; i < maxResults; i++) {
+          const skill = results[i]!;
+          const slug = `${skill.namespace}--${skill.name}`;
+          const installs = formatInstalls(skill.installs || 0);
+          console.log(
+            `${TEXT}${slug}${RESET}${installs ? ` ${CYAN}${installs}${RESET}` : ""}`
+          );
+          console.log(`${DIM}└ skillhub ${skill.namespace}/${skill.name}${RESET}`);
+          if (skill.summary) {
+            console.log(`${DIM}  ${skill.summary.slice(0, 60)}${RESET}`);
+          }
+          console.log();
         }
 
-        dim("Tip: Use skillhub install <slug> to install, or skillhub explore --install for interactive mode");
+        dim("Tip: Use skillhub explore --install for interactive mode");
         console.log("");
       } catch (e: any) {
         console.log(`Error: ${e.message}`);
