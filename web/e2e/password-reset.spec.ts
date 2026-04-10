@@ -1,14 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { setEnglishLocale } from './helpers/auth-fixtures'
+import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 
 test.describe('Password Reset (Real API)', () => {
   function uniqueResetEmail(seed: string) {
     return `nonexistent_${seed}_${Date.now()}@example.com`
-  }
-
-  function forwardedIp(seed: string) {
-    const hash = Array.from(seed).reduce((value, char) => value + char.charCodeAt(0), 0)
-    return `198.51.${(hash % 200) + 1}.${(Date.now() % 200) + 1}`
   }
 
   test.beforeEach(async ({ page }) => {
@@ -17,9 +12,7 @@ test.describe('Password Reset (Real API)', () => {
 
   test('sends verification code from reset-password page', async ({ page }) => {
     const email = uniqueResetEmail('request')
-    await page.context().setExtraHTTPHeaders({
-      'X-Forwarded-For': forwardedIp('request'),
-    })
+    await setUniqueClientIp(page, 'password-reset-request')
 
     await page.goto('/reset-password')
 
@@ -32,9 +25,7 @@ test.describe('Password Reset (Real API)', () => {
 
   test('shows backend validation error for an invalid reset code', async ({ page }) => {
     const email = uniqueResetEmail('invalid-code')
-    await page.context().setExtraHTTPHeaders({
-      'X-Forwarded-For': forwardedIp('invalid-code'),
-    })
+    await setUniqueClientIp(page, 'password-reset-invalid-code')
 
     await page.goto('/reset-password')
 
