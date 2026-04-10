@@ -309,6 +309,30 @@ class SkillPackageValidatorTest {
         assertTrue(result.passed());
     }
 
+    @Test
+    void acceptsCjsFile() {
+        byte[] cjsContent = "module.exports = {};".getBytes();
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("index.cjs", cjsContent, cjsContent.length, "text/javascript")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertTrue(result.passed());
+        assertTrue(result.errors().isEmpty());
+    }
+
+    @Test
+    void acceptsMjsFile() {
+        byte[] mjsContent = "export default {};".getBytes();
+        List<PackageEntry> entries = List.of(
+                skillMdEntry(),
+                new PackageEntry("index.mjs", mjsContent, mjsContent.length, "text/javascript")
+        );
+        ValidationResult result = validator.validate(entries);
+        assertTrue(result.passed());
+        assertTrue(result.errors().isEmpty());
+    }
+
     private PackageEntry skillMdEntry() {
         String skillMdContent = """
             ---
