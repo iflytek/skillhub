@@ -21,55 +21,56 @@
 | 变量名 | 说明 | 示例 |
 |---|---|---|
 | `SPRING_MAIL_HOST` | SMTP 服务器地址 | `smtp.example.com` |
-| `SPRING_MAIL_PORT` | SMTP 端口 | `587` |
+| `SPRING_MAIL_PORT` | SMTP 端口 | `465` |
 | `SPRING_MAIL_USERNAME` | SMTP 用户名 | `noreply@example.com` |
 | `SPRING_MAIL_PASSWORD` | SMTP 密码/授权码 | `xxxxxx` |
 | `SPRING_MAIL_SMTP_AUTH` | 是否启用 SMTP AUTH | `true` |
-| `SPRING_MAIL_SMTP_STARTTLS_ENABLE` | 是否启用 STARTTLS | `true` |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE` | 是否启用 SMTP SSL 直连（常用于 465 端口） | `true` |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST` | SSL 信任主机（用于规避部分环境下证书链校验失败） | `smtp.163.com` |
+| `SPRING_MAIL_SMTP_STARTTLS_ENABLE` | 是否启用 STARTTLS | `false` |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE` | 是否启用 SMTP SSL 直连 | `true` |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST` | SSL 信任主机（用于规避部分环境下证书链校验失败） | `smtp.mail.example` |
 | `SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY` | 验证码有效期（ISO-8601 Duration） | `PT10M` |
 | `SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS` | 发件人邮箱 | `noreply@example.com` |
 | `SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME` | 发件人名称 | `SkillHub` |
 
 说明：
-- `587 + STARTTLS` 与 `465 + SSL` 二选一，不要混配。
-- 使用 `465` 时通常配置：`STARTTLS=false`、`SSL_ENABLE=true`。
-- 使用 `587` 时通常配置：`STARTTLS=true`、`SSL_ENABLE` 留空或 `false`。
+- 当前文档统一按 `465 + SSL` 配置，不再展开 `587 + STARTTLS` 方案。
+- 使用 `465` 时配置：`STARTTLS=false`、`SSL_ENABLE=true`。
 - 若出现 `PKIX path building failed` / `SSLHandshakeException`，可尝试增加 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=<SMTP_HOST>`（本地联调常用）。
 - 生产环境默认不建议配置 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST`，仅在证书链异常时临时启用。
 - `SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY` 支持如 `PT5M`、`PT10M`、`PT30M`。
 
 ## 1.1 配置方案速查（推荐）
 
-### A. 163 邮箱（本地直连真实邮箱）
+### A. 通用 SMTP 邮箱（本地直连真实邮箱）
 
 ```dotenv
-SPRING_MAIL_HOST=smtp.163.com
+SPRING_MAIL_HOST=smtp.mail.example
 SPRING_MAIL_PORT=465
-SPRING_MAIL_USERNAME=your-account@163.com
-SPRING_MAIL_PASSWORD=your-client-auth-code
+SPRING_MAIL_USERNAME=mailer@example.com
+SPRING_MAIL_PASSWORD=your-smtp-app-password
 SPRING_MAIL_SMTP_AUTH=true
 SPRING_MAIL_SMTP_STARTTLS_ENABLE=false
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.163.com
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=your-account@163.com
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example
+SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name
 ```
 
-已验证可用的本地 `export` 写法（请替换密码/授权码）：
+本地 `export` 示例写法：
 
 ```bash
-export SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.163.com
-export SPRING_MAIL_HOST=smtp.163.com
+export SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example
+export SPRING_MAIL_HOST=smtp.mail.example
 export SPRING_MAIL_PORT=465
-export SPRING_MAIL_USERNAME=your-account@163.com
-export SPRING_MAIL_PASSWORD=your-client-auth-code
+export SPRING_MAIL_USERNAME=mailer@example.com
+export SPRING_MAIL_PASSWORD=your-smtp-app-password
 export SPRING_MAIL_SMTP_AUTH=true
 export SPRING_MAIL_SMTP_STARTTLS_ENABLE=false
 export SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true
-export SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=your-account@163.com
-export SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub
+export SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M
+export SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com
+export SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name
 ```
 
 ### B. MailHog（本地联调推荐）
@@ -86,18 +87,20 @@ SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=noreply@skillhub.local
 SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub
 ```
 
-### C. 线上部署（通用推荐）
+### C. 线上部署（465 端口示例）
 
 ```dotenv
-SPRING_MAIL_HOST=smtp.your-provider.com
-SPRING_MAIL_PORT=587
-SPRING_MAIL_USERNAME=noreply@your-domain.com
+SPRING_MAIL_HOST=smtp.mail.example
+SPRING_MAIL_PORT=465
+SPRING_MAIL_USERNAME=mailer@example.com
 SPRING_MAIL_PASSWORD=your-smtp-app-password
 SPRING_MAIL_SMTP_AUTH=true
-SPRING_MAIL_SMTP_STARTTLS_ENABLE=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=false
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=noreply@your-domain.com
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub
+SPRING_MAIL_SMTP_STARTTLS_ENABLE=false
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example
+SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name
 ```
 
 ## 2. 单机交付（Compose）配置步骤
@@ -111,18 +114,18 @@ cp .env.release.example .env.release
 2. 编辑 `.env.release`，填写 SMTP 变量：
 
 ```dotenv
-SPRING_MAIL_HOST=smtp.example.com
-SPRING_MAIL_PORT=587
-SPRING_MAIL_USERNAME=noreply@example.com
-SPRING_MAIL_PASSWORD=your-smtp-password-or-app-token
+SPRING_MAIL_HOST=smtp.mail.example
+SPRING_MAIL_PORT=465
+SPRING_MAIL_USERNAME=mailer@example.com
+SPRING_MAIL_PASSWORD=your-smtp-app-password
 SPRING_MAIL_SMTP_AUTH=true
-SPRING_MAIL_SMTP_STARTTLS_ENABLE=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=false
-# SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.example.com # 仅证书链异常时临时启用
+SPRING_MAIL_SMTP_STARTTLS_ENABLE=false
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example
 
 SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=noreply@example.com
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name
 ```
 
 3. 重启后端容器使配置生效：
@@ -144,16 +147,17 @@ docker compose --env-file .env.release -f compose.release.yml logs -f server
 适合当前终端临时测试，重开终端后失效。
 
 ```bash
-SPRING_MAIL_HOST=smtp.163.com \
+SPRING_MAIL_HOST=smtp.mail.example \
 SPRING_MAIL_PORT=465 \
-SPRING_MAIL_USERNAME=your-account@163.com \
-SPRING_MAIL_PASSWORD=your-client-auth-code \
+SPRING_MAIL_USERNAME=mailer@example.com \
+SPRING_MAIL_PASSWORD=your-smtp-app-password \
 SPRING_MAIL_SMTP_AUTH=true \
 SPRING_MAIL_SMTP_STARTTLS_ENABLE=false \
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true \
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.163.com \
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=your-account@163.com \
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub \
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example \
+SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M \
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com \
+SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name \
 make dev-server
 ```
 
@@ -250,7 +254,7 @@ curl -X POST http://localhost:8080/api/v1/auth/local/password-reset/request \
 ### 5.2 连接超时或拒绝连接
 
 排查方向：
-- 主机到 SMTP 服务端口（如 `587` 或 `465`）是否可达
+- 主机到 SMTP 服务端口 `465` 是否可达
 - 安全组/防火墙是否放行出站连接
 - SMTP 服务地址是否填写正确
 
@@ -287,7 +291,7 @@ env | rg '^(SPRING_MAIL_|SKILLHUB_AUTH_PASSWORD_RESET_)'
 MANAGEMENT_HEALTH_MAIL_ENABLED=true
 ```
 
-### 5.6 163 报 `PKIX path building failed`（证书链校验失败）
+### 5.6 SMTP 报 `PKIX path building failed`（证书链校验失败）
 
 典型日志：
 - `SSLHandshakeException`
@@ -297,7 +301,7 @@ MANAGEMENT_HEALTH_MAIL_ENABLED=true
 - 增加：
 
 ```dotenv
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.163.com
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example
 ```
 
 - 然后重启后端，再触发一次“发送验证码”。
