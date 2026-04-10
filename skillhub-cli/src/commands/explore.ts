@@ -94,7 +94,7 @@ async function runInteractiveSearch(
   client: ApiClient,
   initialQuery: string = ""
 ): Promise<string | null> {
-  const MAX_RESULTS = 4;
+  const MAX_VISIBLE = 8;
   let query = initialQuery;
   let results: SearchSkill[] = [];
   let selectedIndex = 0;
@@ -136,18 +136,17 @@ async function runInteractiveSearch(
     } else if (results.length === 0) {
       lines.push(`${DIM}No skills found${RESET}`);
     } else {
-      const visible = results.slice(0, MAX_RESULTS);
+      const visible = results.slice(0, MAX_VISIBLE);
       for (let i = 0; i < visible.length; i++) {
         const skill = visible[i]!;
         const isSelected = i === selectedIndex;
         const arrow = isSelected ? `${BOLD}>${RESET}` : " ";
         const name = isSelected ? `${BOLD}${skill.name}${RESET}` : `${TEXT}${skill.name}${RESET}`;
-        const nsBadge = skill.namespace !== "global" ? `${YELLOW}[${skill.namespace}]${RESET}` : "global";
-        const versionBadge = skill.version ? `v${skill.version}` : "";
-        const detailInfo = [nsBadge, versionBadge].filter(Boolean).join(" · ");
+        const nsBadge = skill.namespace !== "global" ? ` ${YELLOW}[${skill.namespace}]${RESET}` : "";
+        const versionBadge = skill.version ? ` ${DIM}v${skill.version}${RESET}` : "";
+        const loadingIndicator = loading && i === 0 ? ` ${DIM}...${RESET}` : "";
 
-        lines.push(`  ${arrow} ${name}`);
-        lines.push(`    ${DIM}${detailInfo}${RESET}`);
+        lines.push(`  ${arrow} ${name}${nsBadge}${versionBadge}${loadingIndicator}`);
       }
     }
 
