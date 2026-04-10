@@ -8,7 +8,7 @@ import { error, dim } from "../utils/logger.js";
 export function registerSearch(program: Command) {
   program
     .command("search <query...>")
-    .description("Search for skills on SkillHub")
+    .description("[Deprecated: use 'explore' instead] Search for skills on SkillHub")
     .option("-n, --limit <n>", "Max results", "20")
     .option("--namespace <ns>", "Filter by namespace")
     .action(async (query: string[], opts: { limit: string; namespace?: string }) => {

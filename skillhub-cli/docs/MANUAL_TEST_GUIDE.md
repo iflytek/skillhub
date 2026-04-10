@@ -12,9 +12,7 @@
 ### 1.1 构建 CLI
 
 ```bash
-cd skillhub-cli
-pnpm install
-pnpm build
+cd skillhub-cli && pnpm install && pnpm build
 ```
 
 ### 1.2 环境配置
