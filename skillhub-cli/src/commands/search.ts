@@ -3,30 +3,37 @@ import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes, SearchResponse } from "../schema/routes.js";
 import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
-import { error } from "../utils/logger.js";
+import { error, dim } from "../utils/logger.js";
 
 export function registerSearch(program: Command) {
   program
     .command("search <query...>")
     .description("Search for skills on SkillHub")
     .option("-n, --limit <n>", "Max results", "20")
-    .action(async (query: string[], opts: { limit: string }) => {
+    .option("--namespace <ns>", "Filter by namespace")
+    .action(async (query: string[], opts: { limit: string; namespace?: string }) => {
       const config = loadConfig();
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
       try {
-        const result = await client.get<SearchResponse>(
-          `${ApiRoutes.search}?q=${encodeURIComponent(query.join(" "))}&limit=${opts.limit}`
-        );
+        let searchUrl = `${ApiRoutes.search}?q=${encodeURIComponent(query.join(" "))}&limit=${opts.limit}`;
+        if (opts.namespace) {
+          searchUrl += `&namespace=${encodeURIComponent(opts.namespace)}`;
+        }
+        const result = await client.get<SearchResponse>(searchUrl);
         if (!result.results || result.results.length === 0) {
           console.log("No skills found.");
           return;
         }
+        const hasNamespaceFilter = !!opts.namespace;
         for (const s of result.results) {
           const ns = s.namespace ? `[${s.namespace}] ` : '';
           console.log(`${ns}${s.slug} (${s.version}) — ${s.displayName}`);
           if (s.summary) console.log(`  ${s.summary}`);
+        }
+        if (hasNamespaceFilter) {
+          dim(`\nTip: remove --namespace filter to search all namespaces`);
         }
       } catch (e: any) {
         error(`Search failed: ${e.message}`);

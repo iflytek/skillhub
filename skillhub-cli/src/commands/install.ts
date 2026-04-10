@@ -119,6 +119,19 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     return;
   }
 
+  let selectedSkills = skills;
+  if (!opts.yes && skills.length > 1) {
+    const selected = await multiSelect(
+      "Select skills to install (space to toggle, comma-separated numbers):",
+      skills.map((s) => ({ value: s.name, label: `${s.name} — ${s.description}` }))
+    );
+    if (!selected) {
+      console.log("Cancelled.");
+      return;
+    }
+    selectedSkills = skills.filter((s) => selected.includes(s.name));
+  }
+
   const targetAgents = opts.agent
     ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
     : detectInstalledAgents();
@@ -132,7 +145,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   const isGlobal = !!opts.global;
 
   let installed = 0;
-  for (const skill of skills) {
+  for (const skill of selectedSkills) {
     for (const agent of targetAgents) {
       const result = installSkill(
         skill.dir,
@@ -275,8 +288,8 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
       );
       if (result.success) {
         installed++;
-        const sourceUrl = parsed.type === "local" 
-          ? parsed.localPath 
+        const sourceUrl = parsed.type === "local"
+          ? (parsed.localPath as string)
           : getCloneUrl(parsed);
         await addToLock(skill.name, {
           source: source,

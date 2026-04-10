@@ -11,9 +11,7 @@
 ### 1. 构建 CLI
 
 ```bash
-cd skillhub-cli
-pnpm install
-pnpm build
+cd skillhub-cli && pnpm install && pnpm build
 ```
 
 ### 2. 设置 Registry
@@ -64,7 +62,7 @@ export SKILLHUB_REGISTRY=http://localhost:8081
 | TC-S02 | `node dist/cli.mjs search <keyword> --json` | JSON 输出 | 输出有效 JSON |
 | TC-S03 | `node dist/cli.mjs search <keyword> --namespace <ns>` | 限定命名空间 | 只返回该 NS 结果 |
 | TC-S04 | `node dist/cli.mjs namespaces` | 列出命名空间 | 显示用户有权限的 NS |
-| TC-S05 | `node dist/cli.mjs inspect <slug>` | 查看 skill 详情 (info别名) | 显示完整信息 |
+| TC-S05 | `node dist/cli.mjs inspect <slug> --namespace <ns>` | 查看 skill 详情 (info别名) | 显示完整信息 |
 | TC-S06 | `node dist/cli.mjs view <slug>` | 查看 skill 详情 (inspect别名) | 同 inspect |
 | TC-S07 | `node dist/cli.mjs inspect <slug>` | 跨 NS 搜索详情 | 搜索所有 NS |
 | TC-S08 | `node dist/cli.mjs explore` | 浏览最新 skills | 显示最新列表 |

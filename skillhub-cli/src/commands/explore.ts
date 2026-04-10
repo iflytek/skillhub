@@ -45,7 +45,7 @@ async function searchSkills(
       namespace,
       version: s.version,
       summary: s.summary,
-      installs: s.installCount || 0,
+      installs: (s as any).installCount || 0,
     };
   }).sort((a, b) => (b.installs || 0) - (a.installs || 0));
 }
@@ -173,7 +173,7 @@ async function runInteractiveSearch(
         return;
       }
 
-      if (str && str.length === 1 && !key.ctrl && !key.meta) {
+      if (str && str.length === 1 && !(key as any).ctrl && !(key as any).meta && str >= ' ') {
         query += str;
         render();
         triggerSearch(query);

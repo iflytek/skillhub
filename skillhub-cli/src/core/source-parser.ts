@@ -1,6 +1,17 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+const DEFAULT_GITHUB_HOST = "github.com";
+
+function getGitHubHost(): string {
+  return process.env.GITHUB_MIRROR || DEFAULT_GITHUB_HOST;
+}
+
+function isGitHubHost(hostname: string): boolean {
+  const ghHost = getGitHubHost();
+  return hostname === ghHost || hostname.endsWith(`.${ghHost}`);
+}
+
 export interface ParsedSource {
   type: "local" | "github" | "gitlab" | "url";
   owner?: string;
@@ -23,7 +34,7 @@ export function parseSource(input: string): ParsedSource {
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
     const url = new URL(input);
-    if (url.hostname.includes("github.com")) {
+    if (isGitHubHost(url.hostname)) {
       const [, owner, repo, , ref] = url.pathname.split("/");
       return { type: "github", owner, repo: repo?.replace(/\.git$/, ""), ref, cloneUrl: input };
     }
@@ -51,7 +62,8 @@ export function parseSource(input: string): ParsedSource {
 export function getCloneUrl(source: ParsedSource): string {
   if (source.cloneUrl) return source.cloneUrl;
   if (source.type === "github" && source.owner && source.repo) {
-    return `https://github.com/${source.owner}/${source.repo}.git`;
+    const ghHost = getGitHubHost();
+    return `https://${ghHost}/${source.owner}/${source.repo}.git`;
   }
   throw new Error("Cannot determine clone URL");
 }
