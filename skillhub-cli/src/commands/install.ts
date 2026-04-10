@@ -14,6 +14,8 @@ import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
 import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
+import * as p from "@clack/prompts";
+import pc from "picocolors";
 import ora from "ora";
 import { execSync } from "node:child_process";
 import { finished } from "node:stream/promises";
@@ -193,18 +195,18 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
 
   let selectedSkills = skills;
   if (!opts.yes && skills.length > 1) {
-    const selected = await multiSelect(
-      "Select skills to install (space to toggle, comma-separated numbers):",
-      skills.map((s) => ({ value: s.name, label: `${s.name} — ${s.description}` }))
-    );
-    if (!selected) {
+    const selected = await searchMultiselect({
+      message: "Select skills to install",
+      items: skills.map((s) => ({ value: s.name, label: s.name, hint: s.description })),
+    });
+    if (selected === cancelSymbol) {
       console.log("Cancelled.");
       return;
     }
-    selectedSkills = skills.filter((s) => selected.includes(s.name));
+    selectedSkills = skills.filter((s) => (selected as string[]).includes(s.name));
   }
 
-  const isGlobal = !!opts.global;
+  let isGlobal = !!opts.global;
 
   let targetAgents = opts.agent
     ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
@@ -226,6 +228,33 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
   }
 
+  const supportsGlobal = targetAgents.some((a) => a.globalSkillsDir);
+
+  if (opts.global === undefined && !opts.yes && supportsGlobal) {
+    const scope = await p.select({
+      message: "Installation scope",
+      options: [
+        {
+          value: false,
+          label: "Project",
+          hint: "Install in current directory (committed with your project)",
+        },
+        {
+          value: true,
+          label: "Global",
+          hint: "Install in home directory (available across all projects)",
+        },
+      ],
+    });
+
+    if (p.isCancel(scope)) {
+      console.log("Cancelled.");
+      return;
+    }
+
+    isGlobal = scope as boolean;
+  }
+
   if (!opts.yes) {
     const selectedMode = await selectInstallMode();
     if (selectedMode === null) {
@@ -235,22 +264,41 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     mode = selectedMode;
   }
 
-  if (!opts.yes) {
-    console.log("");
-    info("Installation summary:");
-    for (const skill of selectedSkills) {
-      console.log(`  ${skill.name}`);
-      for (const line of buildAgentSummary(targetAgents, mode)) {
-        console.log(`    ${line}`);
-      }
+  const cwd = process.cwd();
+  const summaryLines: string[] = [];
+
+  for (const skill of selectedSkills) {
+    if (summaryLines.length > 0) summaryLines.push("");
+    const canonicalPath = isGlobal
+      ? `~/.agents/skills/${skill.name}`
+      : `./.agents/skills/${skill.name}`;
+    summaryLines.push(`${pc.cyan(canonicalPath)}`);
+    for (const line of buildAgentSummary(targetAgents, mode)) {
+      summaryLines.push(`  ${line}`);
     }
-    console.log(`  Mode:    ${mode}`);
-    console.log(`  Scope:   ${isGlobal ? "global" : "project"}`);
-    console.log("");
   }
+  summaryLines.push("");
+  summaryLines.push(`${pc.dim("Mode:")} ${mode}`);
+  summaryLines.push(`${pc.dim("Scope:")} ${isGlobal ? "global" : "project"}`);
+
+  console.log("");
+  p.note(summaryLines.join("\n"), "Installation Summary");
+
+  if (!opts.yes) {
+    const confirmed = await p.confirm({ message: "Proceed with installation?" });
+
+    if (p.isCancel(confirmed) || !confirmed) {
+      console.log("Cancelled.");
+      return;
+    }
+  }
+
+  spinner.start("Installing skills...");
 
   let installed = 0;
   let failed = 0;
+  const results: { skill: string; agent: string; success: boolean; path: string; error?: string }[] = [];
+
   for (const skill of selectedSkills) {
     for (const agent of targetAgents) {
       const result = installSkill(
@@ -261,6 +309,13 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
         mode,
         isGlobal,
       );
+      results.push({
+        skill: skill.name,
+        agent: agent.name,
+        success: result.success,
+        path: result.path || "",
+        error: result.error,
+      });
       if (result.success) {
         installed++;
         await addToLock(skill.name, {
@@ -278,14 +333,35 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
   }
 
+  spinner.stop("Installation complete");
+
   console.log("");
-  for (const skill of selectedSkills) {
-    console.log(`  ${skill.name}`);
-    for (const line of buildAgentSummary(targetAgents, mode)) {
-      console.log(`    ${line}`);
+  const successful = results.filter((r) => r.success);
+
+  if (successful.length > 0) {
+    const resultLines: string[] = [];
+    for (const skill of selectedSkills) {
+      const skillResults = results.filter((r) => r.skill === skill.name && r.success);
+      if (skillResults.length > 0) {
+        resultLines.push(`${pc.green("✓")} ${skill.name}`);
+        for (const r of skillResults) {
+          resultLines.push(`  ${pc.dim("→")} ${r.agent}: ${r.path}`);
+        }
+      }
+    }
+    p.note(resultLines.join("\n"), `Installed ${successful.length} skill(s)`);
+  }
+
+  if (failed > 0) {
+    p.log.error(pc.red(`Failed to install ${failed}`));
+    for (const r of results.filter((r) => !r.success)) {
+      p.log.message(`${pc.red("✗")} ${r.skill} → ${r.agent}: ${pc.dim(r.error || "unknown error")}`);
     }
   }
-  success(`Installed ${installed} skill(s) from ${slug}${failed > 0 ? ` (${failed} failed)` : ""}`);
+
+  console.log("");
+  p.outro(pc.green("Done!") + pc.dim("  Review skills before use; they run with full agent permissions."));
+
   await rm(tmpDir, { recursive: true, force: true });
 }
 
@@ -351,20 +427,20 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
       }
     }
   } else if (!opts.yes && skills.length > 1) {
-    const selected = await multiSelect(
-      "选择要安装的 skills (按空格分隔输入):",
-      skills.map((s) => ({ value: s.name, label: `${s.name} — ${s.description}` }))
-    );
+    const selected = await searchMultiselect({
+      message: "Select skills to install",
+      items: skills.map((s) => ({ value: s.name, label: s.name, hint: s.description })),
+    });
 
-    if (!selected) {
-      console.log("已取消安装");
+    if (selected === cancelSymbol) {
+      console.log("Cancelled.");
       return;
     }
 
-    selectedSkills = skills.filter((s) => selected.includes(s.name));
+    selectedSkills = skills.filter((s) => (selected as string[]).includes(s.name));
   }
 
-  const isGlobal = !!opts.global;
+  let isGlobal = !!opts.global;
 
   let targetAgents = opts.agent
     ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
@@ -391,6 +467,33 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
   }
 
+  const supportsGlobal = targetAgents.some((a) => a.globalSkillsDir);
+
+  if (opts.global === undefined && !opts.yes && supportsGlobal) {
+    const scope = await p.select({
+      message: "Installation scope",
+      options: [
+        {
+          value: false,
+          label: "Project",
+          hint: "Install in current directory (committed with your project)",
+        },
+        {
+          value: true,
+          label: "Global",
+          hint: "Install in home directory (available across all projects)",
+        },
+      ],
+    });
+
+    if (p.isCancel(scope)) {
+      console.log("Cancelled.");
+      return;
+    }
+
+    isGlobal = scope as boolean;
+  }
+
   if (!opts.yes) {
     const selectedMode = await selectInstallMode();
     if (selectedMode === null) {
@@ -400,22 +503,41 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     mode = selectedMode;
   }
 
-  if (!opts.yes) {
-    console.log("");
-    info("Installation summary:");
-    for (const skill of selectedSkills) {
-      console.log(`  ${skill.name}`);
-      for (const line of buildAgentSummary(targetAgents, mode)) {
-        console.log(`    ${line}`);
-      }
+  const cwd = process.cwd();
+  const summaryLines: string[] = [];
+
+  for (const skill of selectedSkills) {
+    if (summaryLines.length > 0) summaryLines.push("");
+    const canonicalPath = isGlobal
+      ? `~/.agents/skills/${skill.name}`
+      : `./.agents/skills/${skill.name}`;
+    summaryLines.push(`${pc.cyan(canonicalPath)}`);
+    for (const line of buildAgentSummary(targetAgents, mode)) {
+      summaryLines.push(`  ${line}`);
     }
-    console.log(`  Mode:    ${mode}`);
-    console.log(`  Scope:   ${isGlobal ? "global" : "project"}`);
-    console.log("");
   }
+  summaryLines.push("");
+  summaryLines.push(`${pc.dim("Mode:")} ${mode}`);
+  summaryLines.push(`${pc.dim("Scope:")} ${isGlobal ? "global" : "project"}`);
+
+  console.log("");
+  p.note(summaryLines.join("\n"), "Installation Summary");
+
+  if (!opts.yes) {
+    const confirmed = await p.confirm({ message: "Proceed with installation?" });
+
+    if (p.isCancel(confirmed) || !confirmed) {
+      console.log("Cancelled.");
+      return;
+    }
+  }
+
+  spinner.start("Installing skills...");
 
   let installed = 0;
   let failed = 0;
+  const results: { skill: string; agent: string; success: boolean; path: string; error?: string }[] = [];
+
   for (const skill of selectedSkills) {
     for (const agent of targetAgents) {
       const result = installSkill(
@@ -426,6 +548,13 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
         mode,
         isGlobal,
       );
+      results.push({
+        skill: skill.name,
+        agent: agent.name,
+        success: result.success,
+        path: result.path || "",
+        error: result.error,
+      });
       if (result.success) {
         installed++;
         const sourceUrl = parsed.type === "local"
@@ -447,12 +576,32 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     }
   }
 
+  spinner.stop("Installation complete");
+
   console.log("");
-  for (const skill of selectedSkills) {
-    console.log(`  ${skill.name}`);
-    for (const line of buildAgentSummary(targetAgents, mode)) {
-      console.log(`    ${line}`);
+  const successful = results.filter((r) => r.success);
+
+  if (successful.length > 0) {
+    const resultLines: string[] = [];
+    for (const skill of selectedSkills) {
+      const skillResults = results.filter((r) => r.skill === skill.name && r.success);
+      if (skillResults.length > 0) {
+        resultLines.push(`${pc.green("✓")} ${skill.name}`);
+        for (const r of skillResults) {
+          resultLines.push(`  ${pc.dim("→")} ${r.agent}: ${r.path}`);
+        }
+      }
+    }
+    p.note(resultLines.join("\n"), `Installed ${successful.length} skill(s)`);
+  }
+
+  if (failed > 0) {
+    p.log.error(pc.red(`Failed to install ${failed}`));
+    for (const r of results.filter((r) => !r.success)) {
+      p.log.message(`${pc.red("✗")} ${r.skill} → ${r.agent}: ${pc.dim(r.error || "unknown error")}`);
     }
   }
-  success(`Installed ${installed} skill(s) to ${targetAgents.length} agent(s)${failed > 0 ? ` (${failed} failed)` : ""}`);
+
+  console.log("");
+  p.outro(pc.green("Done!") + pc.dim("  Review skills before use; they run with full agent permissions."));
 }
