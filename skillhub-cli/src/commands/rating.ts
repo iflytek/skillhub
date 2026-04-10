@@ -3,20 +3,21 @@ import { ApiClient } from "../core/api-client.js";
 import { loadConfig } from "../core/config.js";
 import { requireToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
+import { parseSkillName } from "../core/skill-name.js";
 
 export function registerRating(program: Command) {
   program
     .command("rating <slug>")
     .description("View your rating for a skill")
-    .option("--namespace <ns>", "Namespace", "global")
-    .action(async (slug: string, opts: { namespace: string }) => {
+    .action(async (slug: string) => {
       try {
+        const { namespace, slug: skillSlug } = parseSkillName(slug);
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const detail = await client.get<{ id: number }>(
-          `/api/v1/skills/${opts.namespace}/${slug}`
+          `/api/v1/skills/${namespace}/${skillSlug}`
         );
 
         const rating = await client.get<{ score: number; rated: boolean }>(
@@ -24,9 +25,9 @@ export function registerRating(program: Command) {
         );
 
         if (rating.rated) {
-          info(`${slug}: ${"★".repeat(rating.score)}${"☆".repeat(5 - rating.score)} (${rating.score}/5)`);
+          info(`${skillSlug}: ${"★".repeat(rating.score)}${"☆".repeat(5 - rating.score)} (${rating.score}/5)`);
         } else {
-          info(`${slug}: Not rated yet`);
+          info(`${skillSlug}: Not rated yet`);
           dim("Use: skillhub rate <slug> <score>");
         }
       } catch (e: any) {
@@ -40,8 +41,7 @@ export function registerRate(program: Command) {
   program
     .command("rate <slug> <score>")
     .description("Rate a skill (1-5)")
-    .option("--namespace <ns>", "Namespace", "global")
-    .action(async (slug: string, scoreStr: string, opts: { namespace: string }) => {
+    .action(async (slug: string, scoreStr: string) => {
       const score = parseInt(scoreStr, 10);
       if (isNaN(score) || score < 1 || score > 5) {
         error("Score must be between 1 and 5");
@@ -49,19 +49,20 @@ export function registerRate(program: Command) {
       }
 
       try {
+        const { namespace, slug: skillSlug } = parseSkillName(slug);
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const detail = await client.get<{ id: number }>(
-          `/api/v1/skills/${opts.namespace}/${slug}`
+          `/api/v1/skills/${namespace}/${skillSlug}`
         );
 
         await client.put(`/api/v1/skills/${detail.id}/rating`, {
           body: JSON.stringify({ score }),
           headers: { "Content-Type": "application/json" },
         });
-        success(`Rated ${slug}: ${"★".repeat(score)}${"☆".repeat(5 - score)}`);
+        success(`Rated ${skillSlug}: ${"★".repeat(score)}${"☆".repeat(5 - score)}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
         process.exit(1);

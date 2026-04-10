@@ -3,6 +3,7 @@ import { ApiClient } from "../core/api-client.js";
 import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
+import { parseSkillName } from "../core/skill-name.js";
 
 export interface ResolveResponse {
   skillId: number;
@@ -19,12 +20,12 @@ export function registerResolve(program: Command) {
   program
     .command("resolve <slug>")
     .description("Resolve the latest version of a skill")
-    .option("--namespace <ns>", "Namespace", "global")
     .option("--version <ver>", "Specific version")
     .option("--tag <tag>", "Tag to resolve", "latest")
     .option("--hash <hash>", "Content hash")
     .action(async (slug: string, opts: Record<string, string>) => {
       try {
+        const { namespace, slug: skillSlug } = parseSkillName(slug);
         const config = loadConfig();
         const token = await readToken();
         const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
@@ -35,7 +36,7 @@ export function registerResolve(program: Command) {
         if (opts.hash) params.set("hash", opts.hash);
 
         const qs = params.toString();
-        const path = `/api/v1/skills/${opts.namespace}/${slug}/resolve${qs ? "?" + qs : ""}`;
+        const path = `/api/v1/skills/${namespace}/${skillSlug}/resolve${qs ? "?" + qs : ""}`;
         const result = await client.get<ResolveResponse>(path);
 
         info(`${result.slug}@${result.version}`);

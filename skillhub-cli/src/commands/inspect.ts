@@ -68,17 +68,17 @@ export function registerInspect(program: Command) {
     .command("inspect <slug>")
     .aliases(["info", "view"])
     .description("View skill metadata without installing")
-    .option("--namespace <ns>", "Namespace (searches all accessible namespaces if not specified)")
+    .option("--namespace <ns>", "Search in specific namespace (searches all if not specified)")
     .action(async (slug: string, opts: { namespace?: string }) => {
       const config = loadConfig();
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
       const isJson = program.opts().json;
-      const { namespace: defaultNs, slug: parsedSlug } = parseSkillName(slug, "global");
+      const { namespace: defaultNs, slug: parsedSlug } = parseSkillName(slug, "");
       const targetNamespace = opts.namespace || defaultNs;
 
-      if (targetNamespace !== "global" || opts.namespace) {
+      if (targetNamespace) {
         const detail = await client.get<SkillDetailResponse>(
           `${ApiRoutes.skillDetail.replace("{namespace}", targetNamespace).replace("{slug}", parsedSlug)}`
         );
@@ -91,7 +91,7 @@ export function registerInspect(program: Command) {
       }
 
       const namespaces = await client.get<NamespaceInfo[]>(ApiRoutes.meNamespaces);
-      
+
       if (!namespaces || namespaces.length === 0) {
         error("No namespaces found. You may need to log in.");
         process.exit(1);

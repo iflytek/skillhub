@@ -3,6 +3,7 @@ import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
 import { loadConfig } from "../core/config.js";
 import { success, error, info, dim } from "../utils/logger.js";
+import { parseSkillName } from "../core/skill-name.js";
 
 export interface SkillVersionItem {
   id: number;
@@ -26,14 +27,14 @@ export function registerVersions(program: Command) {
   program
     .command("versions <slug>")
     .description("List skill versions")
-    .option("--namespace <ns>", "Namespace", "global")
-    .action(async (slug: string, opts: { namespace: string }) => {
+    .action(async (slug: string) => {
       try {
+        const { namespace, slug: skillSlug } = parseSkillName(slug);
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
         const resp = await client.get<VersionsResponse>(
-          `/api/v1/skills/${opts.namespace}/${slug}/versions`
+          `/api/v1/skills/${namespace}/${skillSlug}/versions`
         );
         const versions = resp.items || [];
         if (versions.length === 0) {

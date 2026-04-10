@@ -4,15 +4,16 @@ import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
 import { loadConfig } from "../core/config.js";
 import { success, error } from "../utils/logger.js";
+import { parseSkillName } from "../core/skill-name.js";
 
 export function registerReport(program: Command) {
   program
     .command("report <slug>")
     .description("Report a skill for review")
-    .option("--namespace <ns>", "Namespace", "global")
     .option("--reason <reason>", "Report reason")
-    .action(async (slug: string, opts: { namespace: string; reason?: string }) => {
+    .action(async (slug: string, opts: { reason?: string }) => {
       try {
+        const { namespace, slug: skillSlug } = parseSkillName(slug);
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
@@ -26,11 +27,11 @@ export function registerReport(program: Command) {
           rl.close();
         }
 
-        await client.post(`/api/v1/skills/${opts.namespace}/${slug}/reports`, {
+        await client.post(`/api/v1/skills/${namespace}/${skillSlug}/reports`, {
           body: JSON.stringify({ reason }),
           headers: { "Content-Type": "application/json" },
         });
-        success(`Report submitted for ${slug}`);
+        success(`Report submitted for ${skillSlug}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
         process.exit(1);

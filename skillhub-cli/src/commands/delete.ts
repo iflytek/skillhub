@@ -3,20 +3,21 @@ import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
 import { loadConfig } from "../core/config.js";
 import { success, error } from "../utils/logger.js";
+import { parseSkillName } from "../core/skill-name.js";
 
 export function registerDelete(program: Command) {
   program
     .command("delete <slug>")
     .aliases(["del", "unpublish"])
     .description("Delete a skill you own")
-    .option("--namespace <ns>", "Namespace", "global")
     .option("-y, --yes", "Skip confirmation")
-    .action(async (slug: string, opts: { namespace: string; yes?: boolean }) => {
+    .action(async (slug: string, opts: { yes?: boolean }) => {
+      const { namespace, slug: skillSlug } = parseSkillName(slug);
       if (!opts.yes) {
         const { createInterface } = await import("node:readline");
         const rl = createInterface({ input: process.stdin, output: process.stdout });
         const answer = await new Promise<string>((r) =>
-          rl.question(`Delete ${slug} from ${opts.namespace}? This cannot be undone. [y/N] `, r)
+          rl.question(`Delete ${skillSlug} from ${namespace}? This cannot be undone. [y/N] `, r)
         );
         rl.close();
         if (answer.toLowerCase() !== "y") {
@@ -29,8 +30,8 @@ export function registerDelete(program: Command) {
         const token = await requireToken();
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
-        await client.delete(`/api/v1/skills/${opts.namespace}/${slug}`);
-        success(`Deleted ${slug} from ${opts.namespace}`);
+        await client.delete(`/api/v1/skills/${namespace}/${skillSlug}`);
+        success(`Deleted ${skillSlug} from ${namespace}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
         process.exit(1);
