@@ -8,6 +8,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
 import com.iflytek.skillhub.dto.NamespaceResponse;
@@ -78,7 +79,10 @@ class NamespaceWorkflowContractTest {
         NamespaceResponse namespaceResponse = NamespaceResponse.from(namespace);
         NamespaceResponse frozenResponse = NamespaceResponse.from(frozen);
         NamespaceResponse archivedResponse = NamespaceResponse.from(archived);
-        MemberResponse adminMemberResponse = MemberResponse.from(adminMember);
+        MemberResponse adminMemberResponse = MemberResponse.from(
+                adminMember,
+                new UserAccount("user-admin", "Admin", "admin@example.com", null)
+        );
 
         given(namespacePortalCommandAppService.createNamespace(any(), any()))
                 .willReturn(namespaceResponse);
@@ -123,14 +127,18 @@ class NamespaceWorkflowContractTest {
                         .content("{\"userId\":\"user-admin\",\"role\":\"ADMIN\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.userId").value("user-admin"));
+                .andExpect(jsonPath("$.data.userId").value("user-admin"))
+                .andExpect(jsonPath("$.data.displayName").value("Admin"))
+                .andExpect(jsonPath("$.data.email").value("admin@example.com"));
 
         mockMvc.perform(get("/api/web/namespaces/team-flow/members")
                         .with(auth("owner-1"))
                         .requestAttr("userId", "owner-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.items[0].userId").value("user-admin"));
+                .andExpect(jsonPath("$.data.items[0].userId").value("user-admin"))
+                .andExpect(jsonPath("$.data.items[0].displayName").value("Admin"))
+                .andExpect(jsonPath("$.data.items[0].email").value("admin@example.com"));
 
         mockMvc.perform(put("/api/web/namespaces/team-flow/members/user-admin/role")
                         .with(csrf())
