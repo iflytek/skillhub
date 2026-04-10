@@ -118,7 +118,6 @@ export function registerInstall(program: Command) {
     .alias("i")
     .description("Install skills from registry, git repositories, or local paths")
     .option("-a, --add <source>", "Add from GitHub (owner/repo) or local path")
-    .option("--namespace <ns>", "Namespace for registry install (default: global)")
     .option("-s, --skill <skills...>", "Install specific skills by name (for git/local sources)")
     .option("--agent <agents...>", "Target specific agents")
     .option("-g, --global", "Install to global scope")
@@ -154,7 +153,7 @@ export function registerInstall(program: Command) {
 }
 
 async function installFromRegistry(slug: string, opts: Record<string, string | string[] | boolean>, spinner: any) {
-  let ns = (opts.namespace as string) || "global";
+  let ns = "global";
   let actualSlug = slug;
 
   if (slug.includes("/") && !slug.startsWith("/")) {
