@@ -263,20 +263,21 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publishSkill(String payloadJson,
                                                MultipartFile[] files,
+                                               String namespace,
                                                PlatformPrincipal principal,
                                                String clientIp,
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
-        String namespace = determineNamespace(principal, extracted.payload());
+        String resolvedNamespace = determineNamespace(namespace);
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
-                namespace,
+                resolvedNamespace,
                 extracted.entries(),
                 principal.userId(),
                 SkillVisibility.PUBLIC,
                 principal.platformRoles()
         );
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
-                "{\"namespace\":\"" + namespace + "\",\"slug\":\"" + extracted.payload().slug() + "\"}");
+                "{\"namespace\":\"" + resolvedNamespace + "\",\"slug\":\"" + extracted.payload().slug() + "\"}");
         return new ClawHubPublishResponse(result.skillId().toString(), result.version().getId().toString());
     }
 
@@ -367,8 +368,8 @@ public class ClawHubCompatAppService {
         );
     }
 
-    private String determineNamespace(PlatformPrincipal principal, MultipartPackageExtractor.PublishPayload payload) {
-        return "global";
+    private String determineNamespace(String namespace) {
+        return (namespace == null || namespace.isBlank()) ? "global" : namespace;
     }
 
     private void recordCompatPublishAudit(String userId,

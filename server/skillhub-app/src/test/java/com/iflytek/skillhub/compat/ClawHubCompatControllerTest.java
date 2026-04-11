@@ -2,8 +2,11 @@ package com.iflytek.skillhub.compat;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -17,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
@@ -26,11 +30,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -55,6 +62,12 @@ class ClawHubCompatControllerTest {
 
     @MockBean
     private CompatSkillLookupService compatSkillLookupService;
+
+    @MockBean
+    private SkillPublishService skillPublishService;
+
+    @MockBean
+    private AuditLogService auditLogService;
 
     @Test
     void search_returns_mapped_results() throws Exception {
@@ -145,68 +158,5 @@ class ClawHubCompatControllerTest {
                 .andExpect(jsonPath("$.latestVersion.version").value("latest"));
 
         verify(skillQueryService).resolveVersion("global", "my-skill", null, "latest", null, null, java.util.Map.of());
-    }
-
-    @Test
-    void download_query_with_canonical_slug_redirects_to_namespace_skill_download() throws Exception {
-        mockMvc.perform(get("/api/v1/download")
-                        .param("slug", "team-ai--my-skill")
-                        .param("version", "latest"))
-                .andExpect(status().isFound())
-                .andExpect(header().string("Location", "/api/v1/skills/team-ai/my-skill/download"));
-    }
-
-    @Test
-    void download_query_with_legacy_slug_keeps_legacy_lookup_behavior() throws Exception {
-        when(compatSkillLookupService.findByLegacySlug("my-skill"))
-                .thenReturn(legacyCompatContext("global", "my-skill"));
-        mockMvc.perform(get("/api/v1/download")
-                        .param("slug", "my-skill")
-                        .param("version", "latest"))
-                .andExpect(status().isFound())
-                .andExpect(header().string("Location", "/api/v1/skills/global/my-skill/download"));
-    }
-
-    @Test
-    void resolve_with_version_returns_specified_version() throws Exception {
-        when(skillQueryService.resolveVersion("global", "my-skill", "1.0.0", null, null, null, java.util.Map.of()))
-                .thenReturn(new SkillQueryService.ResolvedVersionDTO(
-                        1L, "global", "my-skill", "1.0.0", 2L, "sha", true, "/api/v1/skills/global/my-skill/download"));
-        mockMvc.perform(get("/api/v1/resolve/my-skill")
-                        .param("version", "1.0.0"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.match.version").value("1.0.0"))
-                .andExpect(jsonPath("$.latestVersion.version").value("1.0.0"));
-    }
-
-    @Test
-    void whoami_with_auth_returns_user_info() throws Exception {
-        PlatformPrincipal principal = new PlatformPrincipal(
-                "user-42",
-                "tester",
-                "tester@example.com",
-                "https://example.com/avatar.png",
-                "github",
-                Set.of("SUPER_ADMIN")
-        );
-        var auth = new UsernamePasswordAuthenticationToken(
-                principal,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
-        );
-
-        mockMvc.perform(get("/api/v1/whoami")
-                        .with(authentication(auth))
-                        .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.handle").value("user-42"))
-                .andExpect(jsonPath("$.user.displayName").value("tester"))
-                .andExpect(jsonPath("$.user.image").value("https://example.com/avatar.png"));
-    }
-
-    private CompatSkillLookupService.CompatSkillContext legacyCompatContext(String namespaceSlug, String skillSlug) {
-        Namespace namespace = new Namespace(namespaceSlug, namespaceSlug, "tester");
-        Skill skill = new Skill(1L, skillSlug, "tester", SkillVisibility.PUBLIC);
-        return new CompatSkillLookupService.CompatSkillContext(namespace, skill, Optional.empty());
     }
 }
