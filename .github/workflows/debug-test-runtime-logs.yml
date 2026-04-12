@@ -1,0 +1,76 @@
+name: Debug Test Runtime Logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tail_lines:
+        description: "How many log lines to print per service"
+        required: false
+        default: "200"
+        type: string
+
+jobs:
+  inspect-runtime:
+    name: Inspect HK Test Runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Validate deploy secrets
+        env:
+          TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
+          TEST_RUNTIME_SSH_KEY: ${{ secrets.TEST_RUNTIME_SSH_KEY }}
+        run: |
+          [[ -n "${TEST_RUNTIME_SSH_HOST}" ]] || { echo "::error::Missing secret TEST_RUNTIME_SSH_HOST"; exit 1; }
+          [[ -n "${TEST_RUNTIME_SSH_KEY}" ]] || { echo "::error::Missing secret TEST_RUNTIME_SSH_KEY"; exit 1; }
+
+      - name: Prepare SSH key
+        id: ssh
+        env:
+          TEST_RUNTIME_SSH_KEY: ${{ secrets.TEST_RUNTIME_SSH_KEY }}
+        run: |
+          key_file="${RUNNER_TEMP}/test-runtime.key"
+          printf '%s\n' "${TEST_RUNTIME_SSH_KEY}" > "${key_file}"
+          chmod 600 "${key_file}"
+          echo "key_file=${key_file}" >> "${GITHUB_OUTPUT}"
+
+      - name: Fetch remote runtime state and logs
+        env:
+          TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
+          TEST_RUNTIME_SSH_USER: ${{ secrets.TEST_RUNTIME_SSH_USER }}
+          TEST_RUNTIME_SSH_PORT: ${{ secrets.TEST_RUNTIME_SSH_PORT }}
+          TAIL_LINES: ${{ inputs.tail_lines }}
+        run: |
+          ssh_port="${TEST_RUNTIME_SSH_PORT:-22}"
+          ssh_user="${TEST_RUNTIME_SSH_USER:-skillhub-deploy}"
+          ssh -i "${{ steps.ssh.outputs.key_file }}" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            -o TCPKeepAlive=yes \
+            -o ConnectTimeout=10 \
+            -p "${ssh_port}" \
+            "${ssh_user}@${TEST_RUNTIME_SSH_HOST}" bash -s -- "${TAIL_LINES:-200}" <<'REMOTE'
+          set -euo pipefail
+          tail_lines="$1"
+          cd /opt/skillhub-runtime
+          echo '=== runtime metadata ==='
+          cat manual-test-deployment.txt || true
+          echo
+          echo '=== compose ps ==='
+          docker compose --env-file .env.release -f compose.release.yml ps || true
+          echo
+          echo '=== server inspect ==='
+          docker inspect skillhub-runtime-server-1 --format '{{json .State}}' || true
+          echo
+          echo '=== server logs ==='
+          docker compose --env-file .env.release -f compose.release.yml logs --tail "$tail_lines" server || true
+          echo
+          echo '=== postgres logs ==='
+          docker compose --env-file .env.release -f compose.release.yml logs --tail 80 postgres || true
+          echo
+          echo '=== scanner logs ==='
+          docker compose --env-file .env.release -f compose.release.yml logs --tail 80 skill-scanner || true
+          REMOTE
