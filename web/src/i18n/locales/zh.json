@@ -238,7 +238,15 @@
     "submit": "注册并登录",
     "hasAccount": "已有账号？",
     "login": "返回登录",
-    "oauthHint": "直接使用现有 OAuth 账户进入平台，无需再创建本地密码。"
+    "oauthHint": "直接使用现有 OAuth 账户进入平台，无需再创建本地密码。",
+    "usernameRequired": "请输入用户名",
+    "usernameInvalid": "仅支持字母、数字或下划线（3-64 位）",
+    "usernameExists": "用户名已存在",
+    "passwordRequired": "请输入密码",
+    "passwordTooShort": "密码至少需要 8 个字符",
+    "passwordTooWeak": "密码需包含至少 3 种字符类型（大写、小写、数字、特殊字符）",
+    "emailInvalid": "邮箱格式不正确",
+    "emailExists": "邮箱已存在"
   },
   "device": {
     "title": "设备授权",

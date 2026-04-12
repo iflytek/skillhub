@@ -238,7 +238,15 @@
     "submit": "Register & Login",
     "hasAccount": "Already have an account?",
     "login": "Back to login",
-    "oauthHint": "Sign in directly with your existing OAuth account, no local password needed."
+    "oauthHint": "Sign in directly with your existing OAuth account, no local password needed.",
+    "usernameRequired": "Username is required",
+    "usernameInvalid": "Only letters, numbers, or underscores allowed (3-64 characters)",
+    "usernameExists": "Username already exists",
+    "passwordRequired": "Password is required",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordTooWeak": "Password must contain at least 3 character types (uppercase, lowercase, numbers, special)",
+    "emailInvalid": "Invalid email format",
+    "emailExists": "Email already exists"
   },
   "device": {
     "title": "Device Authorization",
