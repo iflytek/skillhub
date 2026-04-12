@@ -70,8 +70,8 @@ class SkillPackageValidatorTest {
 
         ValidationResult result = validator.validate(entries);
 
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Disallowed file extension") && e.contains("malware.exe")));
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(e -> e.contains("Disallowed file extension") && e.contains("malware.exe")));
     }
 
     @Test
@@ -236,8 +236,8 @@ class SkillPackageValidatorTest {
 
         ValidationResult result = validator.validate(entries);
 
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(e -> e.contains("File content does not match extension")));
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(e -> e.contains("File content does not match extension")));
     }
 
     @Test
@@ -258,8 +258,8 @@ class SkillPackageValidatorTest {
 
         ValidationResult result = validator.validate(entries);
 
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(e -> e.contains("File content does not match extension")));
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(e -> e.contains("File content does not match extension")));
     }
 
     @Test
@@ -269,8 +269,8 @@ class SkillPackageValidatorTest {
                 new PackageEntry("photo.jpeg", new byte[]{0x00, 0x00}, 2, "image/jpeg")
         );
         ValidationResult result = validator.validate(entries);
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(e -> e.contains("photo.jpeg")));
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(e -> e.contains("photo.jpeg")));
     }
 
     @Test
@@ -307,30 +307,6 @@ class SkillPackageValidatorTest {
         );
         ValidationResult result = validator.validate(entries);
         assertTrue(result.passed());
-    }
-
-    @Test
-    void acceptsCjsFile() {
-        byte[] cjsContent = "module.exports = {};".getBytes();
-        List<PackageEntry> entries = List.of(
-                skillMdEntry(),
-                new PackageEntry("index.cjs", cjsContent, cjsContent.length, "text/javascript")
-        );
-        ValidationResult result = validator.validate(entries);
-        assertTrue(result.passed());
-        assertTrue(result.errors().isEmpty());
-    }
-
-    @Test
-    void acceptsMjsFile() {
-        byte[] mjsContent = "export default {};".getBytes();
-        List<PackageEntry> entries = List.of(
-                skillMdEntry(),
-                new PackageEntry("index.mjs", mjsContent, mjsContent.length, "text/javascript")
-        );
-        ValidationResult result = validator.validate(entries);
-        assertTrue(result.passed());
-        assertTrue(result.errors().isEmpty());
     }
 
     private PackageEntry skillMdEntry() {

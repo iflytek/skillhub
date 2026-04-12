@@ -263,6 +263,7 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publishSkill(String payloadJson,
                                                MultipartFile[] files,
+                                               boolean confirmWarnings,
                                                PlatformPrincipal principal,
                                                String clientIp,
                                                String userAgent) throws IOException {
@@ -273,7 +274,8 @@ public class ClawHubCompatAppService {
                 extracted.entries(),
                 principal.userId(),
                 SkillVisibility.PUBLIC,
-                principal.platformRoles()
+                principal.platformRoles(),
+                confirmWarnings
         );
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
                 "{\"namespace\":\"" + namespace + "\",\"slug\":\"" + extracted.payload().slug() + "\"}");
@@ -282,6 +284,7 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publish(MultipartFile file,
                                           String namespace,
+                                          boolean confirmWarnings,
                                           PlatformPrincipal principal,
                                           String clientIp,
                                           String userAgent) throws IOException {
@@ -290,7 +293,8 @@ public class ClawHubCompatAppService {
                 zipPackageExtractor.extract(file),
                 principal.userId(),
                 SkillVisibility.PUBLIC,
-                principal.platformRoles()
+                principal.platformRoles(),
+                confirmWarnings
         );
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
                 "{\"namespace\":\"" + namespace + "\"}");

@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { UploadZone } from '@/features/publish/upload-zone'
+import {
+  extractPrecheckWarnings,
+  isFrontmatterFailureMessage,
+  isPrecheckConfirmationMessage,
+  isPrecheckFailureMessage,
+  isVersionExistsMessage,
+} from '@/features/publish/publish-error-utils'
 import { Button } from '@/shared/ui/button'
 import {
   Select,
@@ -15,45 +22,10 @@ import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { usePublishSkill } from '@/shared/hooks/use-skill-queries'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
-
-/**
- * Skill publish page used inside the dashboard.
- *
- * It coordinates namespace selection, visibility selection, zip upload, and backend publish error
- * translation into user-facing toasts.
- */
-function isVersionExistsMessage(message?: string): boolean {
-  if (!message) {
-    return false
-  }
-
-  return message.includes('error.skill.version.exists')
-    || message.includes('Version already exists')
-    || message.includes('版本已存在')
-}
-
-function isPrecheckFailureMessage(message?: string): boolean {
-  if (!message) {
-    return false
-  }
-
-  return message.includes('error.skill.publish.precheck.failed')
-    || message.includes('Pre-publish validation failed')
-    || message.includes('预发布校验失败')
-    || message.includes('looks like a secret or token')
-}
-
-function isFrontmatterFailureMessage(message?: string): boolean {
-  if (!message) {
-    return false
-  }
-
-  return message.includes('Invalid SKILL.md frontmatter')
-    || message.includes('技能包校验失败：Invalid SKILL.md frontmatter')
-}
 
 const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
 
@@ -63,6 +35,8 @@ export function PublishPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [namespaceSlug, setNamespaceSlug] = useState<string>('')
   const [visibility, setVisibility] = useState<string>('PUBLIC')
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false)
+  const [precheckWarnings, setPrecheckWarnings] = useState<string[]>([])
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
@@ -73,9 +47,17 @@ export function PublishPage() {
 
   const handleRemoveSelectedFile = () => {
     setSelectedFile(null)
+    setPrecheckWarnings([])
+    setWarningDialogOpen(false)
   }
 
-  const handlePublish = async () => {
+  const handleFileSelect = (file: File | null) => {
+    setSelectedFile(file)
+    setPrecheckWarnings([])
+    setWarningDialogOpen(false)
+  }
+
+  const publishSkill = async (confirmWarnings = false) => {
     if (!selectedFile || !namespaceSlug) {
       toast.error(t('publish.selectRequired'))
       return
@@ -86,7 +68,10 @@ export function PublishPage() {
         namespace: namespaceSlug,
         file: selectedFile,
         visibility,
+        confirmWarnings,
       })
+      setPrecheckWarnings([])
+      setWarningDialogOpen(false)
       const skillLabel = `${result.namespace}/${result.slug}@${result.version}`
       if (result.status === 'PUBLISHED') {
         toast.success(
@@ -114,6 +99,12 @@ export function PublishPage() {
         return
       }
 
+      if (error instanceof ApiError && isPrecheckConfirmationMessage(error.serverMessage || error.message)) {
+        setPrecheckWarnings(extractPrecheckWarnings(error.serverMessage || error.message))
+        setWarningDialogOpen(true)
+        return
+      }
+
       if (error instanceof ApiError && isPrecheckFailureMessage(error.serverMessage || error.message)) {
         toast.error(
           t('publish.precheckFailedTitle'),
@@ -132,6 +123,10 @@ export function PublishPage() {
 
       toast.error(t('publish.error'), error instanceof Error ? error.message : '')
     }
+  }
+
+  const handlePublish = async () => {
+    await publishSkill(false)
   }
 
   return (
@@ -195,7 +190,7 @@ export function PublishPage() {
           <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           <UploadZone
             key={selectedFile ? `${selectedFile.name}-${selectedFile.lastModified}` : 'empty'}
-            onFileSelect={setSelectedFile}
+            onFileSelect={handleFileSelect}
             disabled={publishMutation.isPending}
           />
           {selectedFile && (
@@ -230,6 +225,27 @@ export function PublishPage() {
           {publishMutation.isPending ? t('publish.publishing') : t('publish.confirm')}
         </Button>
       </Card>
+
+      <ConfirmDialog
+        open={warningDialogOpen}
+        onOpenChange={setWarningDialogOpen}
+        title={t('publish.warningConfirmTitle')}
+        description={(
+          <div className="space-y-3 text-left">
+            <p>{t('publish.warningConfirmDescription')}</p>
+            {precheckWarnings.length > 0 && (
+              <ul className="list-disc space-y-1 pl-5">
+                {precheckWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        confirmText={t('publish.warningConfirmContinue')}
+        cancelText={t('publish.warningConfirmCancel')}
+        onConfirm={() => publishSkill(true)}
+      />
     </div>
   )
 }

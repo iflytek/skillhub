@@ -132,7 +132,18 @@ public class SkillPublishService {
             String publisherId,
             SkillVisibility visibility,
             java.util.Set<String> platformRoles) {
-        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles, false, false);
+        return publishFromEntries(namespaceSlug, entries, publisherId, visibility, platformRoles, false);
+    }
+
+    @Transactional
+    public PublishResult publishFromEntries(
+            String namespaceSlug,
+            List<PackageEntry> entries,
+            String publisherId,
+            SkillVisibility visibility,
+            java.util.Set<String> platformRoles,
+            boolean confirmWarnings) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles, confirmWarnings, false, false);
     }
 
     /**
@@ -168,6 +179,7 @@ public class SkillPublishService {
                 skill.getVisibility(),
                 Set.of(),
                 true,
+                true,
                 true
         );
     }
@@ -178,6 +190,7 @@ public class SkillPublishService {
             String publisherId,
             SkillVisibility visibility,
             Set<String> platformRoles,
+            boolean confirmWarnings,
             boolean forceAutoPublish,
             boolean bypassMembershipCheck) {
 
@@ -224,6 +237,13 @@ public class SkillPublishService {
             throw new DomainBadRequestException(
                     "error.skill.publish.precheck.failed",
                     String.join(", ", prePublishValidation.errors()));
+        }
+        List<String> publishWarnings = new ArrayList<>(packageValidation.warnings());
+        publishWarnings.addAll(prePublishValidation.warnings());
+        if (!confirmWarnings && !publishWarnings.isEmpty()) {
+            throw new DomainBadRequestException(
+                    "error.skill.publish.precheck.confirmRequired",
+                    formatValidationMessages(publishWarnings));
         }
 
         // 6. Find or create Skill record (with owner isolation)
@@ -455,6 +475,12 @@ public class SkillPublishService {
 
     private String buildBundleStorageKey(Long skillId, Long versionId) {
         return String.format("packages/%d/%d/bundle.zip", skillId, versionId);
+    }
+
+    private String formatValidationMessages(List<String> warnings) {
+        return warnings.stream()
+                .map(warning -> "- " + warning)
+                .reduce("", (left, right) -> left.isEmpty() ? right : left + "\n" + right);
     }
 
     private void assertNamespaceWritable(Namespace namespace) {

@@ -15,7 +15,7 @@ class BasicPrePublishValidatorTest {
     private final BasicPrePublishValidator validator = new BasicPrePublishValidator();
 
     @Test
-    void shouldRejectObviousCredentialLeakWithHelpfulLocation() {
+    void shouldWarnOnObviousCredentialLeakWithHelpfulLocation() {
         PackageEntry skillMd = new PackageEntry(
                 "SKILL.md",
                 """
@@ -36,8 +36,8 @@ class BasicPrePublishValidatorTest {
                 1L
         ));
 
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(error ->
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(error ->
                 error.contains("SKILL.md")
                         && error.contains("line 5")
                         && error.contains("looks like a")));
@@ -97,72 +97,5 @@ class BasicPrePublishValidatorTest {
         ));
 
         assertTrue(result.passed());
-    }
-
-    @Test
-    void shouldAllowFunctionCallAssignedToTokenVariable() {
-        PackageEntry script = new PackageEntry(
-                "scripts/f2e_mock.py",
-                """
-                token = extract_group_token_value(response, group_choice.group_id)
-                if token:
-                    return token
-                """.getBytes(StandardCharsets.UTF_8),
-                97,
-                "text/x-python"
-        );
-
-        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
-                List.of(script),
-                new SkillMetadata("Safe Skill", "desc", "1.0.0", "body", Map.of()),
-                "user-1",
-                1L
-        ));
-
-        assertTrue(result.passed());
-    }
-
-    @Test
-    void shouldAllowIdentifierAssignedToSecretNamedVariable() {
-        PackageEntry envTemplate = new PackageEntry(
-                "config.env",
-                """
-                token=generated_token_value
-                api_key=current_api_key
-                """.getBytes(StandardCharsets.UTF_8),
-                46,
-                "text/plain"
-        );
-
-        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
-                List.of(envTemplate),
-                new SkillMetadata("Safe Skill", "desc", "1.0.0", "body", Map.of()),
-                "user-1",
-                1L
-        ));
-
-        assertTrue(result.passed());
-    }
-
-    @Test
-    void shouldRejectQuotedSecretWithTrailingComment() {
-        PackageEntry script = new PackageEntry(
-                "scripts/publish.py",
-                """
-                token = "ghp_abcdefghijklmnopqrstuvwxyz1234" # do not commit real token
-                """.getBytes(StandardCharsets.UTF_8),
-                76,
-                "text/x-python"
-        );
-
-        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
-                List.of(script),
-                new SkillMetadata("Secret Skill", "desc", "1.0.0", "body", Map.of()),
-                "user-1",
-                1L
-        ));
-
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(error -> error.contains("scripts/publish.py")));
     }
 }

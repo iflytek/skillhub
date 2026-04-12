@@ -5624,6 +5624,7 @@ export interface operations {
         parameters: {
             query: {
                 visibility: string;
+                confirmWarnings?: boolean;
             };
             header?: never;
             path: {
@@ -5655,6 +5656,7 @@ export interface operations {
         parameters: {
             query: {
                 visibility: string;
+                confirmWarnings?: boolean;
             };
             header?: never;
             path: {
@@ -6678,6 +6680,7 @@ export interface operations {
             query: {
                 payload: string;
                 files: string[];
+                confirmWarnings?: boolean;
             };
             header?: never;
             path?: never;
@@ -6722,6 +6725,7 @@ export interface operations {
         parameters: {
             query: {
                 namespace: string;
+                confirmWarnings?: boolean;
             };
             header?: never;
             path?: never;
