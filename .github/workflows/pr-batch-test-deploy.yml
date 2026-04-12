@@ -34,7 +34,7 @@ jobs:
           chmod 600 "${key_file}"
           echo "key_file=${key_file}" >> "${GITHUB_OUTPUT}"
 
-      - name: Fetch remote runtime state and logs
+      - name: Probe remote runtime permissions and logs
         env:
           TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
           TEST_RUNTIME_SSH_USER: ${{ secrets.TEST_RUNTIME_SSH_USER }}
@@ -55,25 +55,48 @@ jobs:
             "${ssh_user}@${TEST_RUNTIME_SSH_HOST}" bash -s -- "${TAIL_LINES:-250}" <<'REMOTE'
           set -euo pipefail
           tail_lines="$1"
-          cd /opt/skillhub-runtime
-          echo '=== runtime metadata ==='
-          cat manual-test-deployment.txt || true
+
+          echo '=== identity ==='
+          id || true
+          groups || true
           echo
-          echo '=== compose ps ==='
-          docker compose --env-file .env.release -f compose.release.yml ps || true
+
+          echo '=== sudo -n -l ==='
+          sudo -n -l || true
           echo
-          echo '=== server inspect ==='
+
+          echo '=== runtime dir perms ==='
+          ls -ld /opt /opt/skillhub-runtime || true
+          echo
+
+          echo '=== docker ps (user) ==='
+          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
+          echo
+
+          echo '=== docker ps (sudo) ==='
+          sudo -n docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
+          echo
+
+          echo '=== server inspect (user) ==='
           docker inspect skillhub-runtime-server-1 --format '{{json .State}}' || true
           echo
-          echo '=== server logs ==='
-          docker compose --env-file .env.release -f compose.release.yml logs --tail "$tail_lines" server || true
+
+          echo '=== server inspect (sudo) ==='
+          sudo -n docker inspect skillhub-runtime-server-1 --format '{{json .State}}' || true
           echo
-          echo '=== postgres logs ==='
-          docker compose --env-file .env.release -f compose.release.yml logs --tail 120 postgres || true
+
+          echo '=== server logs (user) ==='
+          docker logs --tail "$tail_lines" skillhub-runtime-server-1 || true
           echo
-          echo '=== redis logs ==='
-          docker compose --env-file .env.release -f compose.release.yml logs --tail 80 redis || true
+
+          echo '=== server logs (sudo) ==='
+          sudo -n docker logs --tail "$tail_lines" skillhub-runtime-server-1 || true
           echo
-          echo '=== scanner logs ==='
-          docker compose --env-file .env.release -f compose.release.yml logs --tail 120 skill-scanner || true
+
+          echo '=== deployment metadata (sudo) ==='
+          sudo -n cat /opt/skillhub-runtime/manual-test-deployment.txt || true
+          echo
+
+          echo '=== selected env (sudo) ==='
+          sudo -n sh -lc 'grep -E "^(SKILLHUB_VERSION|SKILLHUB_STORAGE_PROVIDER|SKILLHUB_SECURITY_SCANNER_ENABLED|BOOTSTRAP_ADMIN_ENABLED|WEB_PORT|POSTGRES_DB|POSTGRES_USER)=" /opt/skillhub-runtime/.env.release' || true
           REMOTE
