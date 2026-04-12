@@ -3,100 +3,79 @@ name: PR Batch Test Deploy
 on:
   workflow_dispatch:
     inputs:
-      tail_lines:
-        description: "How many log lines to print per service"
+      image_tag:
+        description: "Image tag to reproduce with compose.release.yml"
         required: false
-        default: "250"
+        default: "manual-test-hk-1-d58139060a82"
+        type: string
+      storage_provider:
+        description: "Storage provider override"
+        required: false
+        default: "local"
         type: string
 
 jobs:
-  inspect-runtime:
-    name: Inspect HK Test Runtime
+  reproduce-runtime:
+    name: Reproduce Runtime Health
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
 
     steps:
-      - name: Validate deploy secrets
-        env:
-          TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
-          TEST_RUNTIME_SSH_KEY: ${{ secrets.TEST_RUNTIME_SSH_KEY }}
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare release env
         run: |
-          [[ -n "${TEST_RUNTIME_SSH_HOST}" ]] || { echo "::error::Missing secret TEST_RUNTIME_SSH_HOST"; exit 1; }
-          [[ -n "${TEST_RUNTIME_SSH_KEY}" ]] || { echo "::error::Missing secret TEST_RUNTIME_SSH_KEY"; exit 1; }
+          cp .env.release.example .env.release.repro
+          sed -i "s/^SKILLHUB_VERSION=.*/SKILLHUB_VERSION=${{ inputs.image_tag }}/" .env.release.repro
+          sed -i "s/^SKILLHUB_STORAGE_PROVIDER=.*/SKILLHUB_STORAGE_PROVIDER=${{ inputs.storage_provider }}/" .env.release.repro
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=skillhub_demo/' .env.release.repro
+          echo '=== effective env excerpt ==='
+          grep -E '^(SKILLHUB_VERSION|SKILLHUB_STORAGE_PROVIDER|SKILLHUB_SECURITY_SCANNER_ENABLED|BOOTSTRAP_ADMIN_ENABLED|POSTGRES_DB|POSTGRES_USER|WEB_PORT|API_PORT)=' .env.release.repro
 
-      - name: Prepare SSH key
-        id: ssh
-        env:
-          TEST_RUNTIME_SSH_KEY: ${{ secrets.TEST_RUNTIME_SSH_KEY }}
+      - name: Pull images
+        run: docker compose --env-file .env.release.repro -f compose.release.yml pull
+
+      - name: Start runtime and wait for health
+        run: docker compose --env-file .env.release.repro -f compose.release.yml up -d --wait --wait-timeout 180
+
+      - name: Show compose state
+        if: always()
         run: |
-          key_file="${RUNNER_TEMP}/test-runtime.key"
-          printf '%s\n' "${TEST_RUNTIME_SSH_KEY}" > "${key_file}"
-          chmod 600 "${key_file}"
-          echo "key_file=${key_file}" >> "${GITHUB_OUTPUT}"
-
-      - name: Probe remote runtime permissions and logs
-        env:
-          TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
-          TEST_RUNTIME_SSH_USER: ${{ secrets.TEST_RUNTIME_SSH_USER }}
-          TEST_RUNTIME_SSH_PORT: ${{ secrets.TEST_RUNTIME_SSH_PORT }}
-          TAIL_LINES: ${{ inputs.tail_lines }}
-        run: |
-          ssh_port="${TEST_RUNTIME_SSH_PORT:-22}"
-          ssh_user="${TEST_RUNTIME_SSH_USER:-skillhub-deploy}"
-          ssh -i "${{ steps.ssh.outputs.key_file }}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=accept-new \
-            -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=3 \
-            -o TCPKeepAlive=yes \
-            -o ConnectTimeout=10 \
-            -p "${ssh_port}" \
-            "${ssh_user}@${TEST_RUNTIME_SSH_HOST}" bash -s -- "${TAIL_LINES:-250}" <<'REMOTE'
-          set -euo pipefail
-          tail_lines="$1"
-
-          echo '=== identity ==='
-          id || true
-          groups || true
+          echo '=== compose ps ==='
+          docker compose --env-file .env.release.repro -f compose.release.yml ps
           echo
-
-          echo '=== sudo -n -l ==='
-          sudo -n -l || true
+          echo '=== server inspect ==='
+          cid=$(docker compose --env-file .env.release.repro -f compose.release.yml ps -q server)
+          if [ -n "$cid" ]; then
+            docker inspect "$cid" --format '{{json .State}}'
+          fi
           echo
-
-          echo '=== runtime dir perms ==='
-          ls -ld /opt /opt/skillhub-runtime || true
+          echo '=== actuator health ==='
+          curl -fsS http://127.0.0.1:8080/actuator/health || true
           echo
-
-          echo '=== docker ps (user) ==='
-          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
+          echo '=== server logs ==='
+          docker compose --env-file .env.release.repro -f compose.release.yml logs --tail 300 server || true
           echo
-
-          echo '=== docker ps (sudo) ==='
-          sudo -n docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' || true
+          echo '=== postgres logs ==='
+          docker compose --env-file .env.release.repro -f compose.release.yml logs --tail 120 postgres || true
           echo
-
-          echo '=== server inspect (user) ==='
-          docker inspect skillhub-runtime-server-1 --format '{{json .State}}' || true
+          echo '=== redis logs ==='
+          docker compose --env-file .env.release.repro -f compose.release.yml logs --tail 120 redis || true
           echo
+          echo '=== scanner logs ==='
+          docker compose --env-file .env.release.repro -f compose.release.yml logs --tail 120 skill-scanner || true
 
-          echo '=== server inspect (sudo) ==='
-          sudo -n docker inspect skillhub-runtime-server-1 --format '{{json .State}}' || true
-          echo
-
-          echo '=== server logs (user) ==='
-          docker logs --tail "$tail_lines" skillhub-runtime-server-1 || true
-          echo
-
-          echo '=== server logs (sudo) ==='
-          sudo -n docker logs --tail "$tail_lines" skillhub-runtime-server-1 || true
-          echo
-
-          echo '=== deployment metadata (sudo) ==='
-          sudo -n cat /opt/skillhub-runtime/manual-test-deployment.txt || true
-          echo
-
-          echo '=== selected env (sudo) ==='
-          sudo -n sh -lc 'grep -E "^(SKILLHUB_VERSION|SKILLHUB_STORAGE_PROVIDER|SKILLHUB_SECURITY_SCANNER_ENABLED|BOOTSTRAP_ADMIN_ENABLED|WEB_PORT|POSTGRES_DB|POSTGRES_USER)=" /opt/skillhub-runtime/.env.release' || true
-          REMOTE
+      - name: Tear down
+        if: always()
+        run: docker compose --env-file .env.release.repro -f compose.release.yml down -v
