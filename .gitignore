@@ -83,3 +83,4 @@ docs/superpowers/
 AGENTS.md
 CLAUDE.md
 .gstack/
+.worktrees/
