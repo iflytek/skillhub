@@ -32,7 +32,7 @@ RUN mkdir -p /var/lib/skillhub/storage && \
 USER app
 
 EXPOSE 8080
-HEALTHCHECK --interval=10s --timeout=3s \
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=12 \
   CMD wget -qO- http://localhost:8080/actuator/health || exit 1
 
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
