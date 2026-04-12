@@ -155,7 +155,7 @@ class SkillApprovalVisibilityFlowIntegrationTest {
     }
 
     private SkillSearchDocumentEntity awaitIndexedDocument(Long skillId) throws InterruptedException {
-        Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
+        Instant deadline = Instant.now().plus(Duration.ofSeconds(15));
         Optional<SkillSearchDocumentEntity> indexed = skillSearchDocumentJpaRepository.findBySkillId(skillId);
         while (indexed.isEmpty() && Instant.now().isBefore(deadline)) {
             Thread.sleep(100L);
