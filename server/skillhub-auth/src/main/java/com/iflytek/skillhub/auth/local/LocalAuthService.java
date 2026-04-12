@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import jakarta.annotation.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,13 +47,16 @@ public class LocalAuthService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
+    private final LocalAuthFailedService localAuthFailedService;
+
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
                             UserRoleBindingRepository userRoleBindingRepository,
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
-                            Clock clock) {
+                            Clock clock,
+                            LocalAuthFailedService localAuthFailedService) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -59,6 +64,7 @@ public class LocalAuthService {
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.localAuthFailedService = localAuthFailedService;
     }
 
     /**
@@ -126,7 +132,7 @@ public class LocalAuthService {
         ensureNotLocked(credential);
 
         if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
-            handleFailedLogin(credential);
+            localAuthFailedService.handleFailedLogin(credential);
             throw invalidCredentials();
         }
 
