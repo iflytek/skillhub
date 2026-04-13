@@ -4,6 +4,7 @@ import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
 import { parseSkillName } from "../core/skill-name.js";
+import { runInteractiveSearch, searchSkills } from "../core/interactive-search.js";
 
 export interface ResolveResponse {
   skillId: number;
@@ -20,8 +21,8 @@ export function registerResolve(program: Command) {
   program
     .command("resolve <slug>")
     .description("Resolve the latest version of a skill")
-    .option("--version <ver>", "Specific version")
-    .option("--tag <tag>", "Tag to resolve", "latest")
+    .option("-v, --skill-version <ver>", "Specific version")
+    .option("--tag <tag>", "Tag to resolve (default: latest, ignored if --skill-version)")
     .option("--hash <hash>", "Content hash")
     .action(async (slug: string, opts: Record<string, string>) => {
       try {
@@ -30,13 +31,52 @@ export function registerResolve(program: Command) {
         const token = await readToken();
         const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
+        let targetNamespace = namespace;
+        let targetSlug = skillSlug;
+
+        if (namespace === "global") {
+          const results = await searchSkills(client, skillSlug, 50);
+
+          const seen = new Set<string>();
+          const uniqueResults = results.filter(r => {
+            const key = `${r.namespace}/${r.name}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              return true;
+            }
+            return false;
+          });
+
+          if (uniqueResults.length === 0) {
+            error(`Skill not found: ${skillSlug}`);
+            process.exit(1);
+          }
+
+          if (uniqueResults.length === 1) {
+            targetNamespace = uniqueResults[0].namespace;
+            targetSlug = uniqueResults[0].name;
+          } else {
+            const selected = await runInteractiveSearch(client, skillSlug);
+            if (!selected) {
+              info("Cancelled.");
+              return;
+            }
+            const [ns, name] = selected.split("/", 2);
+            targetNamespace = ns;
+            targetSlug = name;
+          }
+        }
+
         const params = new URLSearchParams();
-        if (opts.version) params.set("version", opts.version);
-        if (opts.tag) params.set("tag", opts.tag);
+        if (opts["skill-version"]) {
+          params.set("version", opts["skill-version"]);
+        } else if (opts.tag) {
+          params.set("tag", opts.tag);
+        }
         if (opts.hash) params.set("hash", opts.hash);
 
         const qs = params.toString();
-        const path = `/api/v1/skills/${namespace}/${skillSlug}/resolve${qs ? "?" + qs : ""}`;
+        const path = `/api/v1/skills/${targetNamespace}/${targetSlug}/resolve${qs ? "?" + qs : ""}`;
         const result = await client.get<ResolveResponse>(path);
 
         info(`${result.slug}@${result.version}`);
