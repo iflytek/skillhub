@@ -69,7 +69,6 @@ async function runInteractiveSearch(
     process.stdin.setRawMode(true);
   }
   process.stdin.resume();
-  readline.emitKeyEvents(process.stdin);
   process.stdout.write(HIDE_CURSOR);
 
   function render(): void {
