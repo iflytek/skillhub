@@ -238,4 +238,13 @@ class LocalAuthServiceTest {
             .isInstanceOf(AuthFlowException.class)
             .hasMessageContaining("validation.auth.local.email.invalid");
     }
+
+    @Test
+    void register_rejectsBlankEmail() {
+        given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(false);
+
+        assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "   "))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("validation.auth.local.email.notBlank");
+    }
 }

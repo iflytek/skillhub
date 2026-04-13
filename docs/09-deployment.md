@@ -195,6 +195,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - 外部对象存储通过 `SKILLHUB_STORAGE_S3_*` 注入
 - 前端反代和运行时 API 地址通过 `SKILLHUB_API_UPSTREAM` / `SKILLHUB_WEB_API_BASE_URL` 注入
 - 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
+- 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
 
 ## 8 裸金属上线清单
 
