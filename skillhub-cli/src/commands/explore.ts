@@ -4,9 +4,8 @@ import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { ApiRoutes } from "../schema/routes.js";
 import { info, dim } from "../utils/logger.js";
-import { execSync } from "node:child_process";
 import * as readline from "readline";
-import { searchSkills, parseNamespace, type SearchSkill } from "../core/interactive-search.js";
+import { searchSkills, type SearchSkill } from "../core/interactive-search.js";
 
 const HIDE_CURSOR = "\x1b[?25l";
 const SHOW_CURSOR = "\x1b[?25h";
@@ -220,27 +219,20 @@ export function registerExplore(program: Command) {
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
-    .option("-i, --install", "Interactive select and install")
-    .action(async (query: string | undefined, opts: { limit: string; install?: boolean }) => {
+    .action(async (query: string | undefined, opts: { limit: string }) => {
       const config = loadConfig();
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
       try {
         if (!query) {
-          const selected = await runInteractiveSearch(client);
+          const selected = await runInteractiveSearch(client, "");
           if (!selected) {
             console.log("\nCancelled.");
             return;
           }
-
-          if (opts.install) {
-            console.log(`\nInstalling ${selected}...`);
-            execSync(`skillhub install ${selected}`, { stdio: "inherit" });
-          } else {
-            info(`\nSelected: ${selected}`);
-            dim("Use --install or -i to install, or run: skillhub install " + selected);
-          }
+          info(`\nSelected: ${selected}`);
+          dim("Run: skillhub install " + selected);
           return;
         }
 
@@ -277,7 +269,7 @@ export function registerExplore(program: Command) {
           console.log();
         }
 
-        dim("Tip: Use skillhub explore --install for interactive mode");
+        dim("Tip: Use skillhub explore without args for interactive mode");
         console.log("");
       } catch (e: any) {
         console.log(`Error: ${e.message}`);

@@ -16,10 +16,10 @@ export function registerPublish(program: Command) {
     .description("Publish a skill to SkillHub registry")
     .option("--namespace <ns>", "Target namespace (default: global)")
     .option("--slug <slug>", "Skill slug")
-    .option("-v, --ver <ver>", "Version (semver)")
+    .option("-v, --skill-version <ver>", "Version (semver)")
     .option("--name <name>", "Display name")
     .option("--changelog <text>", "Changelog text")
-    .option("--tags <tags>", "Comma-separated tags", "latest")
+    .option("--tag <tags>", "Comma-separated tags (e.g. beta,stable)", "latest")
     .action(async (path: string | undefined, opts: Record<string, string>) => {
       const folder = path ? resolve(process.cwd(), path) : process.cwd();
       const folderStat = await stat(folder).catch(() => null);
@@ -29,15 +29,15 @@ export function registerPublish(program: Command) {
       }
 
       const slug = opts.slug || basename(folder);
-      const version = opts.ver;
+      const version = opts["skill-version"] || opts.ver;
       if (!version || !semver.valid(version)) {
-        error("--version must be a valid semver (e.g. 1.0.0)");
+        error("--skill-version must be a valid semver (e.g. 1.0.0)");
         process.exit(1);
       }
 
       const namespace = opts.namespace || "global";
       const changelog = opts.changelog || "";
-      const tags = opts.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const tags = opts.tag.split(",").map((t: string) => t.trim()).filter(Boolean);
 
       try {
         const token = await requireToken();

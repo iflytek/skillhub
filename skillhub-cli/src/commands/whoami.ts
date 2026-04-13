@@ -15,8 +15,13 @@ export function registerWhoami(program: Command) {
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
         const resp = await client.get<WhoamiResponse>(ApiRoutes.whoami);
-        console.log(`Handle:      ${resp.user.handle}`);
-        console.log(`Display Name: ${resp.user.displayName}`);
+        const isJson = program.opts().json;
+        if (isJson) {
+          console.log(JSON.stringify(resp, null, 2));
+        } else {
+          console.log(`Handle:      ${resp.user.handle}`);
+          console.log(`Display Name: ${resp.user.displayName}`);
+        }
       } catch (e: any) {
         error(`Not authenticated: ${e.message}`);
         process.exit(1);

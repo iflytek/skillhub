@@ -18,7 +18,6 @@ import { registerReport } from "../src/commands/report.js";
 import { registerSearch } from "../src/commands/search.js";
 import { registerInstall } from "../src/commands/install.js";
 import { registerDownload } from "../src/commands/download.js";
-import { registerAdd } from "../src/commands/add.js";
 import { registerInit } from "../src/commands/init.js";
 import { registerList } from "../src/commands/list.js";
 import { registerLogout } from "../src/commands/logout.js";
@@ -57,7 +56,7 @@ describe("Command registrations", () => {
     const opts = cmd!.options.map((o) => o.flags);
     expect(opts).toContain("--namespace <ns>");
     expect(opts).toContain("--slug <slug>");
-    expect(opts).toContain("-v, --ver <ver>");
+    expect(opts).toContain("-v, --skill-version <ver>");
     expect(opts).not.toContain("--version <ver>");
   });
 
@@ -158,12 +157,6 @@ describe("Command registrations", () => {
     const program = new Command();
     registerDownload(program);
     expect(getCommandNames(program)).toContain("download");
-  });
-
-  it("registers add command", () => {
-    const program = new Command();
-    registerAdd(program);
-    expect(getCommandNames(program)).toContain("add");
   });
 
   it("registers init command", () => {

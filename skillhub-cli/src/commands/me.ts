@@ -37,14 +37,19 @@ export function registerMe(program: Command) {
         const client = new ApiClient({ baseUrl: config.registry, token });
         const resp = await client.get<MeSkillsResponse>("/api/v1/me/skills");
         const skills = resp.items || [];
-        if (skills.length === 0) {
-          console.log("No skills published yet.");
-          return;
-        }
-        for (const s of skills) {
-          const version = s.headlineVersion?.version || s.publishedVersion?.version || "unknown";
-          info(`${s.displayName} (${s.slug})`);
-          dim(`  ${s.namespace} · v${version} · ⭐ ${s.starCount} · ↓ ${s.downloadCount} · ${s.status}`);
+        const isJson = program.opts().json;
+        if (isJson) {
+          console.log(JSON.stringify(resp, null, 2));
+        } else {
+          if (skills.length === 0) {
+            console.log("No skills published yet.");
+            return;
+          }
+          for (const s of skills) {
+            const version = s.headlineVersion?.version || s.publishedVersion?.version || "unknown";
+            info(`${s.displayName} (${s.slug})`);
+            dim(`  ${s.namespace} · v${version} · ⭐ ${s.starCount} · ↓ ${s.downloadCount} · ${s.status}`);
+          }
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
@@ -62,14 +67,19 @@ export function registerMe(program: Command) {
         const client = new ApiClient({ baseUrl: config.registry, token });
         const resp = await client.get<MeSkillsResponse>("/api/v1/me/stars");
         const skills = resp.items || [];
-        if (skills.length === 0) {
-          console.log("No starred skills.");
-          return;
-        }
-        for (const s of skills) {
-          const version = s.headlineVersion?.version || s.publishedVersion?.version || "unknown";
-          info(`${s.displayName} (${s.slug})`);
-          dim(`  ${s.namespace} · v${version} · ⭐ ${s.starCount}`);
+        const isJson = program.opts().json;
+        if (isJson) {
+          console.log(JSON.stringify(resp, null, 2));
+        } else {
+          if (skills.length === 0) {
+            console.log("No starred skills.");
+            return;
+          }
+          for (const s of skills) {
+            const version = s.headlineVersion?.version || s.publishedVersion?.version || "unknown";
+            info(`${s.displayName} (${s.slug})`);
+            dim(`  ${s.namespace} · v${version} · ⭐ ${s.starCount}`);
+          }
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);

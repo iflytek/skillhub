@@ -19,8 +19,8 @@ function findInstalledSkills(scope: "local" | "global"): Map<string, string[]> {
 
   for (const agent of agents) {
     const baseDir = scope === "global"
-      ? join(homedir(), agent.globalPath)
-      : join(process.cwd(), agent.projectPath);
+      ? join(homedir(), agent.globalSkillsDir || agent.skillsDir)
+      : join(process.cwd(), agent.skillsDir);
 
     if (!existsSync(baseDir)) continue;
 

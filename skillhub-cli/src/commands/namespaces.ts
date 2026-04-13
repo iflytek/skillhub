@@ -15,12 +15,17 @@ export function registerNamespaces(program: Command) {
         const config = loadConfig();
         const client = new ApiClient({ baseUrl: config.registry, token });
         const namespaces = await client.get<NamespaceResponse[]>(ApiRoutes.meNamespaces);
-        if (!namespaces || namespaces.length === 0) {
-          console.log("No namespaces found.");
-          return;
-        }
-        for (const ns of namespaces) {
-          console.log(`${ns.slug} — ${ns.displayName} [${ns.currentUserRole}] (${ns.status})`);
+        const isJson = program.opts().json;
+        if (isJson) {
+          console.log(JSON.stringify(namespaces, null, 2));
+        } else {
+          if (!namespaces || namespaces.length === 0) {
+            console.log("No namespaces found.");
+            return;
+          }
+          for (const ns of namespaces) {
+            console.log(`${ns.slug} — ${ns.displayName} [${ns.currentUserRole}] (${ns.status})`);
+          }
         }
       } catch (e: any) {
         error(`Failed to list namespaces: ${e.message}`);

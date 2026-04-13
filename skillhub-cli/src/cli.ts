@@ -26,7 +26,6 @@ export async function createCli(): Promise<Command> {
     .description("CLI for SkillHub — publish, search, and manage agent skills")
     .version(version)
     .option("--registry <url>", "Registry API base URL", "http://localhost:8080")
-    .option("--no-input", "Disable prompts")
     .option("--json", "Output results as JSON");
 
   const [
@@ -34,9 +33,7 @@ export async function createCli(): Promise<Command> {
     { registerLogout },
     { registerWhoami },
     { registerPublish },
-    { registerSearch },
     { registerNamespaces },
-    { registerAdd },
     { registerInstall },
     { registerDownload },
     { registerList },
@@ -64,9 +61,7 @@ export async function createCli(): Promise<Command> {
     import("./commands/logout.js"),
     import("./commands/whoami.js"),
     import("./commands/publish.js"),
-    import("./commands/search.js"),
     import("./commands/namespaces.js"),
-    import("./commands/add.js"),
     import("./commands/install.js"),
     import("./commands/download.js"),
     import("./commands/list.js"),
@@ -95,9 +90,7 @@ export async function createCli(): Promise<Command> {
   registerLogout(program);
   registerWhoami(program);
   registerPublish(program);
-  registerSearch(program);
   registerNamespaces(program);
-  registerAdd(program);
   registerInstall(program);
   registerDownload(program);
   registerList(program);

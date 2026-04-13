@@ -43,7 +43,7 @@ export interface AuditData {
   snyk?: { risk: string };
 }
 
-export type AuditResponse = Record<string, Record<string, AuditData>>;
+export type AuditResponse = Record<string, AuditData>;
 
 export function buildSecurityLines(
   auditData: AuditResponse | null,

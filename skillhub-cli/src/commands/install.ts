@@ -126,8 +126,8 @@ export function registerInstall(program: Command) {
     .command("install <source>")
     .alias("i")
     .description("Install skills from registry, git repositories, or local paths")
-    .option("-a, --add <source>", "Add from GitHub (owner/repo) or local path")
-    .option("-s, --skill <skills...>", "Install specific skills by name (for git/local sources)")
+    .option("-a, --add <source>", "Install from GitHub or local path (alias for --from)")
+    .option("--from <source>", "Install from GitHub or local path (alias for -a)")
     .option("--agent <agents...>", "Target specific agents")
     .option("-g, --global", "Install to global scope")
     .option("-y, --yes", "Skip all prompts")
@@ -136,14 +136,14 @@ export function registerInstall(program: Command) {
     .option("-v, --skill-version <ver>", "Install specific version (non-interactive)")
     .option("--tag <tag>", "Install specific tag (non-interactive, resolves to version)")
     .action(async (source: string, opts: Record<string, string | string[] | boolean>) => {
-      const addSource = opts.add as string | undefined;
+      const fromSource = (opts.from || opts.add) as string | undefined;
 
       let effectiveSource: SourceType;
       let installSource = source;
 
-      if (addSource) {
-        effectiveSource = detectSourceType(addSource);
-        installSource = addSource;
+      if (fromSource) {
+        effectiveSource = detectSourceType(fromSource);
+        installSource = fromSource;
       } else {
         effectiveSource = detectSourceType(source);
       }
@@ -154,7 +154,7 @@ export function registerInstall(program: Command) {
         if (effectiveSource === "registry") {
           await installFromRegistry(source, opts, spinner);
         } else {
-          await installFromGit(installSource, effectiveSource, opts, spinner);
+          await installFromGit(source, installSource, effectiveSource, opts, spinner);
         }
       } catch (e: any) {
         spinner.fail(e.message);
@@ -378,7 +378,16 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     isGlobal = scope as boolean;
   }
 
-  if (!opts.yes) {
+  // Only prompt for install mode when there are multiple unique target directories.
+  // When all selected agents share the same skillsDir, symlink vs copy is meaningless.
+  const uniqueDirs = new Set(targetAgents.map((a) =>
+    isGlobal ? (a.globalSkillsDir || a.skillsDir) : a.skillsDir
+  ));
+
+  if (uniqueDirs.size <= 1) {
+    // Single target directory — default to copy (no symlink needed)
+    mode = 'copy';
+  } else if (!opts.yes) {
     const selectedMode = await selectInstallMode();
     if (selectedMode === null) {
       console.log("Cancelled.");
@@ -488,7 +497,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   await rm(tmpDir, { recursive: true, force: true });
 }
 
-async function installFromGit(source: string, sourceType: SourceType, opts: Record<string, string | string[] | boolean>, spinner: any) {
+async function installFromGit(skillName: string, source: string, sourceType: SourceType, opts: Record<string, string | string[] | boolean>, spinner: any) {
   let skillsDir: string;
 
   const parsed = parseSource(source);
@@ -500,6 +509,17 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     }
     if (!opts.skill.includes(parsed.skillFilter)) {
       opts.skill.push(parsed.skillFilter);
+    }
+  }
+
+  // If skillName is a skill identifier (not a path), use it to filter
+  if (skillName && !skillName.startsWith(".") && !skillName.startsWith("/") && !skillName.startsWith("~")) {
+    opts.skill = opts.skill || [];
+    if (!Array.isArray(opts.skill)) {
+      opts.skill = [opts.skill as string];
+    }
+    if (!opts.skill.includes(skillName)) {
+      opts.skill.push(skillName);
     }
   }
 
@@ -617,7 +637,16 @@ async function installFromGit(source: string, sourceType: SourceType, opts: Reco
     isGlobal = scope as boolean;
   }
 
-  if (!opts.yes) {
+  // Only prompt for install mode when there are multiple unique target directories.
+  // When all selected agents share the same skillsDir, symlink vs copy is meaningless.
+  const uniqueDirs = new Set(targetAgents.map((a) =>
+    isGlobal ? (a.globalSkillsDir || a.skillsDir) : a.skillsDir
+  ));
+
+  if (uniqueDirs.size <= 1) {
+    // Single target directory — default to copy (no symlink needed)
+    mode = 'copy';
+  } else if (!opts.yes) {
     const selectedMode = await selectInstallMode();
     if (selectedMode === null) {
       console.log("Cancelled.");

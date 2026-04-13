@@ -13,7 +13,7 @@ export function registerDownload(program: Command) {
   program
     .command("download <slug>")
     .description("Download a skill package to local directory")
-    .option("--version <ver>", "Specific version")
+    .option("-v, --skill-version <ver>", "Specific version")
     .option("--tag <tag>", "Tag to download", "latest")
     .option("--output <dir>", "Output directory")
     .action(async (slug: string, opts: Record<string, string>) => {
@@ -28,8 +28,8 @@ export function registerDownload(program: Command) {
         const spinner = ora(`Downloading ${skillSlug} from ${namespace}`).start();
 
         let downloadUrl = `${ApiRoutes.skillDownload.replace("{namespace}", namespace).replace("{slug}", skillSlug)}`;
-        if (opts.version) {
-          downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/versions/${opts.version}/download`;
+        if (opts["skill-version"]) {
+          downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/versions/${opts["skill-version"]}/download`;
         } else if (opts.tag) {
           downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/tags/${opts.tag}/download`;
         }
