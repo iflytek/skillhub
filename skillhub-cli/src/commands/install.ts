@@ -166,12 +166,14 @@ export function registerInstall(program: Command) {
 async function installFromRegistry(slug: string, opts: Record<string, string | string[] | boolean>, spinner: any) {
   let ns = "global";
   let actualSlug = slug;
+  let userSpecifiedNamespace = false;
 
   if (slug.includes("/") && !slug.startsWith("/")) {
     const parts = slug.split("/");
     if (parts.length === 2) {
       ns = parts[0];
       actualSlug = parts[1];
+      userSpecifiedNamespace = true;
     }
   }
 
@@ -179,8 +181,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   const token = await readToken();
   const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
-  // When namespace is not specified (default "global"), search and select namespace/skill
-  if (ns === "global") {
+  if (!userSpecifiedNamespace) {
     const results = await searchSkills(client, actualSlug, 50);
 
     // Deduplicate by namespace/name
