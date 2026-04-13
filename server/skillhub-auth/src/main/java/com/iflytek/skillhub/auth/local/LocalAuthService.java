@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.auth.local;
 
+import com.iflytek.skillhub.auth.config.LdapProperties;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
+import com.iflytek.skillhub.auth.ldap.LdapAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
@@ -16,6 +18,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class LocalAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(LocalAuthService.class);
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,64}$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -44,6 +50,8 @@ public class LocalAuthService {
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+    private final LdapProperties ldapProperties;
+    private final LdapAuthService ldapAuthService;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -51,7 +59,9 @@ public class LocalAuthService {
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
-                            Clock clock) {
+                            Clock clock,
+                            LdapProperties ldapProperties,
+                            LdapAuthService ldapAuthService) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -59,6 +69,8 @@ public class LocalAuthService {
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.ldapProperties = ldapProperties;
+        this.ldapAuthService = ldapAuthService;
     }
 
     /**
@@ -107,6 +119,7 @@ public class LocalAuthService {
     /**
      * Authenticates a local account and returns the principal snapshot used to
      * establish a web session.
+     * If the user is not found locally, falls back to LDAP authentication if enabled.
      */
     @Transactional
     public PlatformPrincipal login(String username, String password) {
@@ -115,7 +128,29 @@ public class LocalAuthService {
             .orElse(null);
 
         if (credential == null) {
+            // Blur timing to prevent username enumeration
             passwordEncoder.matches(password == null ? "" : password, DUMMY_PASSWORD_HASH);
+            
+            // Fallback to LDAP authentication if enabled
+            if (ldapProperties.isEnabled()) {
+                log.info("Local user not found, attempting LDAP authentication for username: {}", username);
+                log.debug("LDAP enabled: {}, URL: {}, Base: {}", 
+                    ldapProperties.isEnabled(), 
+                    ldapProperties.getUrl(), 
+                    ldapProperties.getBase());
+                try {
+                    PlatformPrincipal ldapPrincipal = ldapAuthService.login(username, password);
+                    log.info("LDAP authentication successful for username: {}", username);
+                    return ldapPrincipal;
+                } catch (AuthFlowException e) {
+                    log.warn("LDAP authentication failed for username: {}, error: {}", username, e.getMessage());
+                    // LDAP authentication failed, throw invalid credentials
+                    throw invalidCredentials();
+                }
+            } else {
+                log.debug("LDAP authentication is disabled, rejecting login for username: {}", username);
+            }
+            
             throw invalidCredentials();
         }
 
