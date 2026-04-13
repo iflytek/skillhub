@@ -118,6 +118,7 @@ export function registerUninstall(program: Command) {
     .option("--all", "Uninstall all installed skills")
     .action(async (name: string | undefined, opts: { global?: boolean; agent?: string[]; yes?: boolean; all?: boolean }) => {
       let scope: "global" | "local" = opts.global ? "global" : "local";
+      let scopeAll = false;
 
       if (!opts.global && !opts.agent) {
         const scopeSelection = await p.select({
@@ -138,6 +139,8 @@ export function registerUninstall(program: Command) {
           scope = "global";
         } else if (scopeSelection === "project") {
           scope = "local";
+        } else if (scopeSelection === "all") {
+          scopeAll = true;
         }
       }
 
@@ -215,12 +218,23 @@ export function registerUninstall(program: Command) {
 
       let agentsWithSkill = findAgentsWithSkill(name, scope, allAgents);
 
-      if (agentsWithSkill.length === 0) {
+      if (agentsWithSkill.length === 0 && !scopeAll) {
         agentsWithSkill = findAgentsWithSkill(name, scope === "global" ? "local" : "global", allAgents);
         if (agentsWithSkill.length > 0) {
           const otherScope = scope === "global" ? "project" : "global";
           dim(`Skill "${name}" not found in ${scope}, but found in ${otherScope}.`);
         } else {
+          info(`Skill "${name}" not found.`);
+          return;
+        }
+      }
+
+      if (agentsWithSkill.length === 0 && scopeAll) {
+        agentsWithSkill = [
+          ...findAgentsWithSkill(name, "global", allAgents),
+          ...findAgentsWithSkill(name, "local", allAgents),
+        ];
+        if (agentsWithSkill.length === 0) {
           info(`Skill "${name}" not found.`);
           return;
         }
@@ -263,18 +277,55 @@ export function registerUninstall(program: Command) {
       }
 
       const selectedAgentKeys = selected as string[];
-      let uninstalled = 0;
+      const pathToAgents = new Map<string, string[]>();
 
       for (const agentKey of selectedAgentKeys) {
         const agent = allAgents.find((a) => a.key === agentKey);
         if (agent) {
-          const ok = await uninstallSkill(name, agent, scope, !!opts.yes);
-          if (ok) uninstalled++;
+          if (scopeAll) {
+            const okGlobal = await uninstallSkill(name, agent, "global", !!opts.yes);
+            const okLocal = await uninstallSkill(name, agent, "local", !!opts.yes);
+            if (okGlobal) {
+              const skillPath = getSkillPath(name, agent, "global");
+              if (skillPath) {
+                const agents = pathToAgents.get(skillPath) || [];
+                agents.push(agent.name);
+                pathToAgents.set(skillPath, agents);
+              }
+            }
+            if (okLocal) {
+              const skillPath = getSkillPath(name, agent, "local");
+              if (skillPath) {
+                const agents = pathToAgents.get(skillPath) || [];
+                agents.push(agent.name);
+                pathToAgents.set(skillPath, agents);
+              }
+            }
+          } else {
+            const ok = await uninstallSkill(name, agent, scope, !!opts.yes);
+            if (ok) {
+              const skillPath = getSkillPath(name, agent, scope);
+              if (skillPath) {
+                const agents = pathToAgents.get(skillPath) || [];
+                agents.push(agent.name);
+                pathToAgents.set(skillPath, agents);
+              }
+            }
+          }
         }
       }
 
-      if (uninstalled > 0) {
-        success(`Uninstalled ${name} from ${uninstalled} agent(s).`);
+      if (pathToAgents.size > 0) {
+        const lines: string[] = [];
+        for (const [path, agents] of pathToAgents) {
+          if (agents.length > 1) {
+            lines.push(`  ${agents.join(", ")} (${path})`);
+          } else {
+            lines.push(`  ${agents[0]} (${path})`);
+          }
+        }
+        success(`Uninstalled ${name} from ${selectedAgentKeys.length} agent(s):`);
+        console.log(lines.join("\n"));
         await removeFromLock(name);
       } else {
         info(`Skill "${name}" not found.`);
