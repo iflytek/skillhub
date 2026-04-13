@@ -82,8 +82,10 @@ public class ClawHubCompatController {
     @RateLimit(category = "download", authenticated = 60, anonymous = 20)
     @GetMapping("/download")
     public ResponseEntity<Void> downloadByQuery(@RequestParam String slug,
-                                                @RequestParam(defaultValue = "latest") String version) {
-        return redirect(clawHubCompatAppService.downloadLocationByQuery(slug, version));
+                                                @RequestParam(defaultValue = "latest") String version,
+                                                @RequestAttribute(value = "userId", required = false) String userId,
+                                                @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        return redirect(clawHubCompatAppService.downloadLocationByQuery(slug, version, userId, userNsRoles));
     }
 
     @RateLimit(category = "skills", authenticated = 60, anonymous = 20)
@@ -99,8 +101,9 @@ public class ClawHubCompatController {
     @RateLimit(category = "skills", authenticated = 60, anonymous = 20)
     @GetMapping("/skills/{canonicalSlug}")
     public ClawHubSkillResponse getSkill(@PathVariable String canonicalSlug,
-                                         @RequestAttribute(value = "userId", required = false) String userId) {
-        return clawHubCompatAppService.getSkill(canonicalSlug, userId);
+                                         @RequestAttribute(value = "userId", required = false) String userId,
+                                         @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        return clawHubCompatAppService.getSkill(canonicalSlug, userId, userNsRoles);
     }
 
     @RateLimit(category = "skills", authenticated = 60, anonymous = 20)

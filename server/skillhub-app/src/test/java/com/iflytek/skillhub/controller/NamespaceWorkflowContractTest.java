@@ -81,6 +81,7 @@ class NamespaceWorkflowContractTest {
         Namespace frozen = namespace(7L, "team-flow", NamespaceStatus.FROZEN, NamespaceType.TEAM);
         Namespace archived = namespace(7L, "team-flow", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
         NamespaceMember adminMember = new NamespaceMember(7L, "user-admin", NamespaceRole.ADMIN);
+        UserAccount adminUser = new UserAccount("user-admin", "Admin", "admin@example.com", null);
         setMemberId(adminMember, 11L);
 
         given(namespaceService.createNamespace(eq("team-flow"), eq("Team Flow"), eq("workflow"), eq("owner-1")))
@@ -98,8 +99,8 @@ class NamespaceWorkflowContractTest {
                 .willReturn(new org.springframework.data.domain.PageImpl<>(List.of(adminMember)));
         given(namespaceMemberService.updateMemberRole(7L, "user-admin", NamespaceRole.ADMIN, "owner-1"))
                 .willReturn(adminMember);
-        given(userAccountRepository.findById("user-admin"))
-                .willReturn(Optional.of(new UserAccount("user-admin", "Admin", "admin@example.com", null)));
+        given(userAccountRepository.findById("user-admin")).willReturn(Optional.of(adminUser));
+        given(userAccountRepository.findByIdIn(List.of("user-admin"))).willReturn(List.of(adminUser));
 
         mockMvc.perform(post("/api/web/namespaces")
                         .with(csrf())

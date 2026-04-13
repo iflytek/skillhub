@@ -83,7 +83,8 @@ public class ClawHubRegistryFacade {
         CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.resolveVisible(
                 coordinate.namespace(),
                 coordinate.slug(),
-                userId
+                userId,
+                normalizeRoles(userNsRoles)
         );
         Skill skill = context.skill();
 

@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -133,6 +136,7 @@ class ClawHubCompatControllerTest {
     void resolve_query_with_legacy_slug_keeps_legacy_lookup_behavior() throws Exception {
         when(compatSkillLookupService.findByLegacySlug("my-skill"))
                 .thenReturn(legacyCompatContext("global", "my-skill"));
+        when(compatSkillLookupService.canAccess(any(), isNull(), anyMap())).thenReturn(true);
         when(skillQueryService.resolveVersion("global", "my-skill", null, "latest", null, null, java.util.Map.of()))
                 .thenReturn(new SkillQueryService.ResolvedVersionDTO(
                         1L, "global", "my-skill", "latest", 2L, "sha", true, "/api/v1/skills/global/my-skill/download"));
@@ -160,6 +164,7 @@ class ClawHubCompatControllerTest {
     void download_query_with_legacy_slug_keeps_legacy_lookup_behavior() throws Exception {
         when(compatSkillLookupService.findByLegacySlug("my-skill"))
                 .thenReturn(legacyCompatContext("global", "my-skill"));
+        when(compatSkillLookupService.canAccess(any(), isNull(), anyMap())).thenReturn(true);
         mockMvc.perform(get("/api/v1/download")
                         .param("slug", "my-skill")
                         .param("version", "latest"))

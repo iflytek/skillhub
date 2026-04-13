@@ -55,8 +55,10 @@ public class NamespaceController extends BaseApiController {
     }
 
     @GetMapping("/namespaces")
-    public ApiResponse<PageResponse<NamespaceResponse>> listNamespaces(Pageable pageable) {
-        return ok("response.success.read", namespacePortalQueryAppService.listNamespaces(pageable));
+    public ApiResponse<PageResponse<NamespaceResponse>> listNamespaces(
+            Pageable pageable,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        return ok("response.success.read", namespacePortalQueryAppService.listNamespaces(pageable, userNsRoles));
     }
 
     @GetMapping("/me/namespaces")
@@ -68,7 +70,7 @@ public class NamespaceController extends BaseApiController {
 
     @GetMapping("/namespaces/{slug}")
     public ApiResponse<NamespaceResponse> getNamespace(@PathVariable String slug,
-                                                       @RequestAttribute(value = "userId", required = false) String userId,
+                                                       @RequestAttribute("userId") String userId,
                                                        @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         return ok("response.success.read",
                 namespacePortalQueryAppService.getNamespace(slug, userId, userNsRoles));
