@@ -110,14 +110,21 @@ npx clawhub list --help
 ### 5. Publish Skills
 
 ```bash
-# Publish skill (requires appropriate permissions)
+# Publish to the global namespace (requires appropriate permissions)
 npx clawhub publish ./my-skill --slug my-skill --name "My Skill" --version 1.0.0
+
+# Publish to a team namespace such as my-space
+npx clawhub publish ./my-skill --slug my-space--my-skill --name "My Skill" --version 1.0.0
 npx clawhub sync --all # Upload all skills in current folder
 
 # Help
 npx clawhub publish --help
 npx clawhub sync --help
 ```
+
+Notes:
+- `my-space--my-skill` is the canonical compatibility slug. SkillHub parses it as namespace `my-space` plus skill slug `my-skill`
+- To avoid mismatches between CLI display text and the final persisted coordinate, keep the `name` in `SKILL.md` aligned with the canonical slug suffix
 
 ## API Endpoints
 

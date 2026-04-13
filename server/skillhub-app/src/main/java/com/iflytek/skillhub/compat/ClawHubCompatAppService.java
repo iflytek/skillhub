@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -36,6 +37,8 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Service
 public class ClawHubCompatAppService {
+
+    private static final String GLOBAL_NAMESPACE = "global";
 
     private final CanonicalSlugMapper mapper;
     private final SkillSearchAppService skillSearchAppService;
@@ -268,7 +271,7 @@ public class ClawHubCompatAppService {
                                                String clientIp,
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
-        String namespace = determineNamespace(principal, extracted.payload());
+        String namespace = determineNamespace(extracted.payload());
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 extracted.entries(),
@@ -371,8 +374,28 @@ public class ClawHubCompatAppService {
         );
     }
 
-    private String determineNamespace(PlatformPrincipal principal, MultipartPackageExtractor.PublishPayload payload) {
-        return "global";
+    private String determineNamespace(MultipartPackageExtractor.PublishPayload payload) {
+        if (payload == null) {
+            return GLOBAL_NAMESPACE;
+        }
+
+        if (StringUtils.hasText(payload.namespace())) {
+            return normalizeNamespace(payload.namespace());
+        }
+
+        if (StringUtils.hasText(payload.slug()) && payload.slug().contains("--")) {
+            return mapper.fromCanonical(payload.slug()).namespace();
+        }
+
+        return GLOBAL_NAMESPACE;
+    }
+
+    private String normalizeNamespace(String namespace) {
+        String trimmed = namespace.trim();
+        if (trimmed.startsWith("@")) {
+            return trimmed.substring(1);
+        }
+        return trimmed;
     }
 
     private void recordCompatPublishAudit(String userId,

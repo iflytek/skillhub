@@ -2,35 +2,46 @@ package com.iflytek.skillhub.compat;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -55,6 +66,12 @@ class ClawHubCompatControllerTest {
 
     @MockBean
     private CompatSkillLookupService compatSkillLookupService;
+
+    @MockBean
+    private SkillPublishService skillPublishService;
+
+    @MockBean
+    private AuditLogService auditLogService;
 
     @Test
     void search_returns_mapped_results() throws Exception {
@@ -204,9 +221,122 @@ class ClawHubCompatControllerTest {
                 .andExpect(jsonPath("$.user.image").value("https://example.com/avatar.png"));
     }
 
+    @Test
+    void publish_skill_with_canonical_slug_routes_to_namespace_publish() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 34L);
+        given(skillPublishService.publishFromEntries(
+                eq("team-ai"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.PUBLIC),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(12L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/skills")
+                        .file(skillMdFile())
+                        .param("payload", """
+                                {"slug":"team-ai--my-skill","displayName":"My Skill","version":"1.0.0","acceptLicenseTerms":true,"tags":["latest"]}
+                                """)
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("12"))
+                .andExpect(jsonPath("$.versionId").value("34"));
+    }
+
+    @Test
+    void publish_skill_with_plain_slug_defaults_to_global_namespace() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 35L);
+        given(skillPublishService.publishFromEntries(
+                eq("global"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.PUBLIC),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(13L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/skills")
+                        .file(skillMdFile())
+                        .param("payload", """
+                                {"slug":"my-skill","displayName":"My Skill","version":"1.0.0","acceptLicenseTerms":true,"tags":["latest"]}
+                                """)
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("13"))
+                .andExpect(jsonPath("$.versionId").value("35"));
+    }
+
+    @Test
+    void publish_skill_with_payload_namespace_uses_explicit_namespace() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 36L);
+        given(skillPublishService.publishFromEntries(
+                eq("team-explicit"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.PUBLIC),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(14L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/skills")
+                        .file(skillMdFile())
+                        .param("payload", """
+                                {"namespace":"@team-explicit","slug":"my-skill","displayName":"My Skill","version":"1.0.0","acceptLicenseTerms":true,"tags":["latest"]}
+                                """)
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("14"))
+                .andExpect(jsonPath("$.versionId").value("36"));
+    }
+
     private CompatSkillLookupService.CompatSkillContext legacyCompatContext(String namespaceSlug, String skillSlug) {
         Namespace namespace = new Namespace(namespaceSlug, namespaceSlug, "tester");
         Skill skill = new Skill(1L, skillSlug, "tester", SkillVisibility.PUBLIC);
         return new CompatSkillLookupService.CompatSkillContext(namespace, skill, Optional.empty());
+    }
+
+    private MockMultipartFile skillMdFile() {
+        return new MockMultipartFile(
+                "files",
+                "SKILL.md",
+                "text/markdown",
+                """
+                ---
+                name: my-skill
+                description: Demo skill
+                version: 1.0.0
+                ---
+                """.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private SkillVersion publishVersion(String versionValue, long versionId) {
+        SkillVersion version = new SkillVersion(12L, versionValue, "user-42");
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        ReflectionTestUtils.setField(version, "id", versionId);
+        return version;
+    }
+
+    private UsernamePasswordAuthenticationToken superAdminAuth() {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42",
+                "tester",
+                "tester@example.com",
+                "https://example.com/avatar.png",
+                "github",
+                Set.of("SUPER_ADMIN")
+        );
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
     }
 }
