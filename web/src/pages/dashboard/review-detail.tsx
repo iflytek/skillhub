@@ -1,7 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Folder } from 'lucide-react'
+import { useAuth } from '@/features/auth/use-auth'
+import {
+  buildGlobalReviewsPath,
+  buildNamespaceReviewDetailPath,
+  buildNamespaceReviewsPath,
+  canAccessGlobalReviewCenter,
+} from '@/features/review/review-paths'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
@@ -25,11 +32,18 @@ import { useReviewDetail, useReviewSkillDetail, useApproveReview, useRejectRevie
  * interaction state because both actions depend on route-local confirmation
  * dialogs, comment input, and redirect behavior after completion.
  */
-export function ReviewDetailPage() {
-  const { id } = useParams({ from: '/dashboard/reviews/$id' })
+function ReviewDetailScreen({
+  taskId,
+  backTo,
+  namespaceSlug,
+}: {
+  taskId: number
+  backTo: string
+  namespaceSlug?: string
+}) {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
-  const taskId = Number(id)
+  const { user } = useAuth()
 
   const { data: review, isLoading } = useReviewDetail(taskId)
   const {
@@ -40,7 +54,7 @@ export function ReviewDetailPage() {
   const approveMutation = useApproveReview({
     onSuccess: () => {
       toast.success(t('review.approveSuccess'))
-      navigate({ to: '/dashboard/reviews' })
+      navigate({ to: backTo })
     },
     onError: (error) => {
       toast.error(t('review.approveFailed'), resolveReviewActionErrorDescription(error))
@@ -49,7 +63,7 @@ export function ReviewDetailPage() {
   const rejectMutation = useRejectReview({
     onSuccess: () => {
       toast.success(t('review.rejectSuccess'))
-      navigate({ to: '/dashboard/reviews' })
+      navigate({ to: backTo })
     },
     onError: (error) => {
       toast.error(t('review.rejectFailed'), resolveReviewActionErrorDescription(error))
@@ -64,6 +78,12 @@ export function ReviewDetailPage() {
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const hasGlobalReviewAccess = canAccessGlobalReviewCenter(user?.platformRoles)
+  const shouldRedirectToNamespaceRoute =
+    !namespaceSlug &&
+    !!review &&
+    review.namespace !== 'global' &&
+    !hasGlobalReviewAccess
 
   // File content for preview — uses the review-bound version via review file API
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useReviewFile(
@@ -92,6 +112,17 @@ export function ReviewDetailPage() {
     return formatLocalDateTime(dateString, i18n.language)
   }
 
+  useEffect(() => {
+    if (!shouldRedirectToNamespaceRoute || !review) {
+      return
+    }
+
+    void navigate({
+      to: buildNamespaceReviewDetailPath(review.namespace, review.id),
+      replace: true,
+    })
+  }, [navigate, review, shouldRedirectToNamespaceRoute])
+
   const handleApprove = async () => {
     approveMutation.mutate({ taskId, comment: comment || undefined })
   }
@@ -113,10 +144,31 @@ export function ReviewDetailPage() {
     )
   }
 
+  if (shouldRedirectToNamespaceRoute) {
+    return null
+  }
+
   if (!review) {
     return (
       <div className="text-center py-20 animate-fade-up">
         <h2 className="text-2xl font-bold font-heading mb-2">{t('review.notFound')}</h2>
+      </div>
+    )
+  }
+
+  const hasNamespaceMismatch = Boolean(namespaceSlug && review.namespace !== namespaceSlug)
+
+  if (hasNamespaceMismatch) {
+    return (
+      <div className="space-y-6 max-w-3xl animate-fade-up">
+        <div className="text-center py-20">
+          <h2 className="text-2xl font-bold font-heading mb-2">{t('review.notFound')}</h2>
+        </div>
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => navigate({ to: backTo })}>
+            {t('review.backToList')}
+          </Button>
+        </div>
       </div>
     )
   }
@@ -136,7 +188,7 @@ export function ReviewDetailPage() {
           <h1 className="text-4xl font-bold font-heading mb-2">{t('review.detail')}</h1>
           <p className="text-muted-foreground">{t('review.id')}: {review.id}</p>
         </div>
-        <Button variant="outline" onClick={() => navigate({ to: '/dashboard/reviews' })}>
+        <Button variant="outline" onClick={() => navigate({ to: backTo })}>
           {t('review.backToList')}
         </Button>
       </div>
@@ -361,5 +413,28 @@ export function ReviewDetailPage() {
         onDownload={handleDownloadFile}
       />
     </div>
+  )
+}
+
+export function ReviewDetailPage() {
+  const { id } = useParams({ from: '/dashboard/reviews/$id' })
+
+  return (
+    <ReviewDetailScreen
+      taskId={Number(id)}
+      backTo={buildGlobalReviewsPath()}
+    />
+  )
+}
+
+export function NamespaceReviewDetailPage() {
+  const { id, slug } = useParams({ from: '/dashboard/namespaces/$slug/reviews/$id' })
+
+  return (
+    <ReviewDetailScreen
+      taskId={Number(id)}
+      backTo={buildNamespaceReviewsPath(slug)}
+      namespaceSlug={slug}
+    />
   )
 }

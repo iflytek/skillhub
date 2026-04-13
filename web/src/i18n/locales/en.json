@@ -1035,6 +1035,7 @@
     "sortLabel": "Time Order",
     "sortNewest": "Newest first",
     "sortOldest": "Oldest first",
+    "openReview": "Open review",
     "pageSummary": "Total {{total}} records, page {{page}}",
     "prevPage": "Previous",
     "nextPage": "Next",

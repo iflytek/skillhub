@@ -1035,6 +1035,7 @@
     "sortLabel": "时间排序",
     "sortNewest": "最新优先",
     "sortOldest": "最早优先",
+    "openReview": "进入审核详情",
     "pageSummary": "共 {{total}} 条记录，第 {{page}} 页",
     "prevPage": "上一页",
     "nextPage": "下一页",

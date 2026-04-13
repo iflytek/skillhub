@@ -7,6 +7,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.review.ReviewTask;
@@ -128,6 +129,37 @@ class SkillApprovalVisibilityFlowIntegrationTest {
         assertThat(indexedDocument.getTitle()).isEqualTo(graph.skill().getDisplayName());
     }
 
+    @Test
+    void namespaceAdminCanApproveOwnTeamReview() throws Exception {
+        PendingSkillGraph graph = createPendingTeamSkill("team-admin");
+        when(namespaceMemberRepository.findByUserId("team-admin"))
+                .thenReturn(List.of(new com.iflytek.skillhub.domain.namespace.NamespaceMember(
+                        graph.namespace().getId(),
+                        "team-admin",
+                        NamespaceRole.ADMIN
+                )));
+        when(rbacService.getUserRoleCodes("team-admin")).thenReturn(Set.of());
+
+        mockMvc.perform(post("/api/v1/reviews/" + graph.reviewTask().getId() + "/approve")
+                        .contentType("application/json")
+                        .content("{\"comment\":\"approved by namespace admin\"}")
+                        .with(authentication(apiAuth("team-admin")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id").value(graph.reviewTask().getId()))
+                .andExpect(jsonPath("$.data.status").value("APPROVED"))
+                .andExpect(jsonPath("$.data.reviewedBy").value("team-admin"))
+                .andExpect(jsonPath("$.data.reviewComment").value("approved by namespace admin"));
+
+        Skill savedSkill = skillRepository.findById(graph.skill().getId()).orElseThrow();
+        SkillVersion savedVersion = skillVersionRepository.findById(graph.version().getId()).orElseThrow();
+
+        assertThat(savedSkill.getLatestVersionId()).isEqualTo(graph.version().getId());
+        assertThat(savedVersion.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
+        assertThat(savedVersion.getPublishedAt()).isNotNull();
+    }
+
     private PendingSkillGraph createPendingGlobalSkill(String ownerId) {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
 
@@ -138,6 +170,31 @@ class SkillApprovalVisibilityFlowIntegrationTest {
         Skill skill = new Skill(namespace.getId(), "approval-skill-" + suffix, ownerId, SkillVisibility.PUBLIC);
         skill.setDisplayName("Approval Skill " + suffix);
         skill.setSummary("Visible in search only after approval.");
+        skill.setCreatedBy(ownerId);
+        skill.setUpdatedBy(ownerId);
+        skill = skillRepository.save(skill);
+        skillRepository.flush();
+
+        SkillVersion version = new SkillVersion(skill.getId(), "1.0.0", ownerId);
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        version.setRequestedVisibility(SkillVisibility.PUBLIC);
+        version = skillVersionRepository.save(version);
+        skillVersionRepository.flush();
+
+        ReviewTask reviewTask = reviewTaskJpaRepository.saveAndFlush(new ReviewTask(version.getId(), namespace.getId(), ownerId));
+
+        return new PendingSkillGraph(namespace, skill, version, reviewTask);
+    }
+
+    private PendingSkillGraph createPendingTeamSkill(String ownerId) {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+
+        Namespace namespace = new Namespace("team-approval-" + suffix, "Team Approval " + suffix, ownerId);
+        namespace = namespaceRepository.save(namespace);
+
+        Skill skill = new Skill(namespace.getId(), "approval-skill-" + suffix, ownerId, SkillVisibility.PUBLIC);
+        skill.setDisplayName("Approval Skill " + suffix);
+        skill.setSummary("Team namespace self-review should be allowed for namespace admins.");
         skill.setCreatedBy(ownerId);
         skill.setUpdatedBy(ownerId);
         skill = skillRepository.save(skill);
