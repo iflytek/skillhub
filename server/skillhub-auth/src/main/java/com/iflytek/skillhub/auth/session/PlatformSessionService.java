@@ -1,7 +1,5 @@
 package com.iflytek.skillhub.auth.session;
 
-import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -9,6 +7,10 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Service;
+
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Synchronizes {@link PlatformPrincipal} snapshots with Spring Security's
@@ -53,7 +55,13 @@ public class PlatformSessionService {
                                              Authentication authentication,
                                              HttpServletRequest request,
                                              boolean rotateSessionId) {
-        persist(principal, authentication, request, rotateSessionId);
+        // Create a new authentication with PlatformPrincipal as the principal
+        // instead of using the OAuth2 authentication which has OAuth2User as principal
+        var authorities = principal.platformRoles().stream()
+            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+            .toList();
+        Authentication platformAuth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
+        persist(principal, platformAuth, request, rotateSessionId);
     }
 
     private void persist(PlatformPrincipal principal,
