@@ -14,6 +14,15 @@ import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
 import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
+import { runInteractiveSearch, searchSkills } from "../core/interactive-search.js";
+import type { SkillVersionItem } from "./versions.js";
+
+interface SkillTag {
+  id: number;
+  tagName: string;
+  versionId: number;
+  createdAt: string;
+}
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import ora from "ora";
@@ -124,6 +133,8 @@ export function registerInstall(program: Command) {
     .option("-y, --yes", "Skip all prompts")
     .option("--copy", "Copy instead of symlink")
     .option("--list", "List available skills without installing")
+    .option("-v, --skill-version <ver>", "Install specific version (non-interactive)")
+    .option("--tag <tag>", "Install specific tag (non-interactive, resolves to version)")
     .action(async (source: string, opts: Record<string, string | string[] | boolean>) => {
       const addSource = opts.add as string | undefined;
 
@@ -170,23 +181,81 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
 
   spinner.text = `Fetching ${ns}/${actualSlug}`;
 
-  const downloadUrl = `/api/v1/skills/${ns}/${actualSlug}/download`;
+  // Fetch versions and tags for selection
+  const [versionsResp, tagsResp] = await Promise.all([
+    client.get<{ items: SkillVersionItem[] }>(`/api/v1/skills/${ns}/${actualSlug}/versions`),
+    client.get<SkillTag[]>(`/api/v1/skills/${ns}/${actualSlug}/tags`).catch(() => [] as SkillTag[]),
+  ]);
+
+  const versions = versionsResp.items || [];
+
+  // Map tags to versions by versionId
+  const versionTagsMap = new Map<number, string[]>();
+  for (const tag of tagsResp || []) {
+    if (!versionTagsMap.has(tag.versionId)) {
+      versionTagsMap.set(tag.versionId, []);
+    }
+    versionTagsMap.get(tag.versionId)!.push(tag.tagName);
+  }
+
+  // Present version selection
+  let selectedVersion: string = "latest";
+  if (opts.yes && opts["skill-version"]) {
+    // Non-interactive: use command-line version if provided
+    selectedVersion = opts["skill-version"] as string;
+  } else if (opts.yes && opts.tag) {
+    // Non-interactive: resolve tag to version
+    for (const [vid, tags] of versionTagsMap) {
+      if (tags.includes(opts.tag as string)) {
+        const v = versions.find((ver) => ver.id === vid);
+        if (v) {
+          selectedVersion = v.version;
+          break;
+        }
+      }
+    }
+    if (!selectedVersion) {
+      // Fallback: use latest if tag not found
+      selectedVersion = versions[0]?.version || "latest";
+    }
+  } else {
+    // Interactive: show version selection
+    const picked = await p.select({
+      message: "Select version",
+      options: versions.map((v) => ({
+        value: v.version,
+        label: `v${v.version}`,
+        hint: versionTagsMap.get(v.id)?.join(", ") || "",
+      })),
+    });
+
+    if (p.isCancel(picked)) {
+      console.log("Cancelled.");
+      return;
+    }
+
+    selectedVersion = picked as string;
+  }
+
+  const baseUrl = config.registry.replace(/\/$/, "");
+  const downloadUrl = `${baseUrl}/api/v1/skills/${ns}/${actualSlug}/versions/${selectedVersion}/download`;
   const tmpDir = await mkdtemp(join(tmpdir(), "skillhub-install-"));
   const zipPath = join(tmpDir, `${actualSlug}.zip`);
 
+  spinner.text = "Downloading";
+
   const { request } = await import("undici");
-  const url = new URL(downloadUrl, config.registry);
-  const { statusCode, body } = await request(url.toString(), {
+  const { statusCode, body } = await request(downloadUrl, {
     method: "GET",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 
   if (statusCode >= 400) {
     spinner.fail(`Skill not found: ${ns}/${actualSlug}`);
+    await rm(tmpDir, { recursive: true, force: true });
     process.exit(1);
   }
 
-  spinner.text = "Downloading";
   const fileStream = createWriteStream(zipPath);
   await finished(body.pipe(fileStream));
 
