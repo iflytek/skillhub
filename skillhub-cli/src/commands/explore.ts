@@ -2,19 +2,18 @@ import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
-import { ApiRoutes, SearchResponse } from "../schema/routes.js";
+import { ApiRoutes } from "../schema/routes.js";
 import { info, dim } from "../utils/logger.js";
 import { execSync } from "node:child_process";
 import * as readline from "readline";
+import { searchSkills, parseNamespace, type SearchSkill } from "../core/interactive-search.js";
 
-// ANSI escape codes for terminal control (from skills/find.ts)
 const HIDE_CURSOR = "\x1b[?25l";
 const SHOW_CURSOR = "\x1b[?25h";
 const CLEAR_DOWN = "\x1b[J";
 const MOVE_UP = (n: number) => `\x1b[${n}A`;
 const MOVE_TO_COL = (n: number) => `\x1b[${n}G`;
 
-// Color scheme (matching skills/find.ts)
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
 const DIM = "\x1b[38;5;102m";
@@ -28,23 +27,6 @@ function formatInstalls(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M installs`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}K installs`;
   return `${count} install${count === 1 ? "" : "s"}`;
-}
-
-function parseNamespace(slug: string): { namespace: string; name: string } {
-  const parts = slug.split("--");
-  if (parts.length >= 2) {
-    return { namespace: parts[0], name: parts.slice(1).join("--") };
-  }
-  return { namespace: "global", name: slug };
-}
-
-interface SearchSkill {
-  name: string;
-  slug: string;
-  namespace: string;
-  version?: string;
-  summary?: string;
-  installs?: number;
 }
 
 interface SkillDetail {
@@ -62,32 +44,6 @@ async function fetchSkillDetail(client: ApiClient, namespace: string, name: stri
   } catch {
     return null;
   }
-}
-
-async function searchSkills(
-  client: ApiClient,
-  query: string,
-  limit: number = 10
-): Promise<SearchSkill[]> {
-  const result = await client.get<SearchResponse>(
-    `${ApiRoutes.search}?q=${encodeURIComponent(query)}&limit=${limit}`
-  );
-
-  if (!result.results || result.results.length === 0) {
-    return [];
-  }
-
-  return result.results.map((s) => {
-    const { namespace, name } = parseNamespace(s.slug);
-    return {
-      name,
-      slug: s.slug,
-      namespace,
-      version: s.version,
-      summary: s.summary,
-      installs: (s as any).installCount || 0,
-    };
-  }).sort((a, b) => (b.installs || 0) - (a.installs || 0));
 }
 
 async function runInteractiveSearch(
@@ -113,7 +69,7 @@ async function runInteractiveSearch(
     process.stdin.setRawMode(true);
   }
   process.stdin.resume();
-  readline.emitKeypressEvents(process.stdin);
+  readline.emitKeyEvents(process.stdin);
   process.stdout.write(HIDE_CURSOR);
 
   function render(): void {
@@ -261,7 +217,7 @@ async function runInteractiveSearch(
 export function registerExplore(program: Command) {
   program
     .command("explore")
-    .aliases(["find"])
+    .aliases(["find", "find-skills", "search"])
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
