@@ -331,9 +331,15 @@ npx clawhub search email
 npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
-# 发布技能
-npx clawhub publish ./my-skill
+# 发布到 global 空间
+npx clawhub publish ./my-skill --slug my-skill --version 1.0.0
+
+# 发布到如 my-space 这样的团队空间
+npx clawhub publish ./my-skill --slug my-space--my-skill --version 1.0.0
 ```
+
+其中 `my-space--my-skill` 是兼容层使用的 canonical slug，SkillHub 会将其解析为
+namespace `my-space` 和 skill slug `my-skill`。
 
 > 💡 **提示**：上述命令不仅适用于 OpenClaw，通过指定安装目录（`--dir`），也可适用于其他的 CLI Coding Agent 或 Agent 助手。例如：`npx clawhub --dir ~/.claude/skills install my-skill`
 

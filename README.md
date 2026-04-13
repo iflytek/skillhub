@@ -396,9 +396,15 @@ npx clawhub search email
 npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
-# Publish a skill
-npx clawhub publish ./my-skill
+# Publish to global namespace
+npx clawhub publish ./my-skill --slug my-skill --version 1.0.0
+
+# Publish to a team namespace such as my-space
+npx clawhub publish ./my-skill --slug my-space--my-skill --version 1.0.0
 ```
+
+`my-space--my-skill` is the canonical compat slug. SkillHub parses it as
+namespace `my-space` plus skill slug `my-skill`.
 
 > 💡 **Tip**: The above commands are not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory (`--dir`). For example: `npx clawhub --dir ~/.claude/skills install my-skill`
 
