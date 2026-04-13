@@ -179,6 +179,41 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   const token = await readToken();
   const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
+  // When namespace is not specified (default "global"), search and select namespace/skill
+  if (ns === "global") {
+    const results = await searchSkills(client, actualSlug, 50);
+
+    // Deduplicate by namespace/name
+    const seen = new Set<string>();
+    const uniqueResults = results.filter(r => {
+      const key = `${r.namespace}/${r.name}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        return true;
+      }
+      return false;
+    });
+
+    if (uniqueResults.length === 0) {
+      spinner.fail(`Skill not found: ${actualSlug}`);
+      process.exit(1);
+    }
+
+    if (uniqueResults.length === 1) {
+      ns = uniqueResults[0].namespace;
+      actualSlug = uniqueResults[0].name;
+    } else {
+      const selected = await runInteractiveSearch(client, actualSlug);
+      if (!selected) {
+        console.log("Cancelled.");
+        return;
+      }
+      const [selectedNs, selectedName] = selected.split("/", 2);
+      ns = selectedNs;
+      actualSlug = selectedName;
+    }
+  }
+
   spinner.text = `Fetching ${ns}/${actualSlug}`;
 
   // Fetch versions and tags for selection
