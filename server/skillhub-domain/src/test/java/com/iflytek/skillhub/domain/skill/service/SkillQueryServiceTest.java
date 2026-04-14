@@ -772,6 +772,56 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldNotGrantLifecyclePermissionToSuperAdminInPortal() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "super-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(
+                namespaceSlug, skillSlug, userId, userNsRoles, Set.of("SUPER_ADMIN"));
+
+        assertFalse(result.canManageLifecycle());
+        assertFalse(result.canSubmitPromotion());
+        assertEquals("PUBLISHED", result.resolutionMode());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldNotGrantPrivateVisibilityToSuperAdminInPortal() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "super-1";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PRIVATE);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.getSkillDetail(namespaceSlug, skillSlug, userId, Map.of(), Set.of("SUPER_ADMIN")));
+    }
+
+    @Test
     void testGetSkillDetail_ShouldPreferPendingVersionForOwnerPreview() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";

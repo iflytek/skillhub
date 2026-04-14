@@ -149,8 +149,7 @@ class SkillControllerTest {
                 eq("team"),
                 eq("demo"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of()),
-                org.mockito.ArgumentMatchers.<java.util.Set<String>>any()))
+                eq(Map.<Long, NamespaceRole>of())))
                 .thenReturn(new SkillQueryService.SkillDetailDTO(
                         1L,
                         "demo",
@@ -197,8 +196,7 @@ class SkillControllerTest {
                 eq("team"),
                 eq("demo"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of()),
-                org.mockito.ArgumentMatchers.<java.util.Set<String>>any()))
+                eq(Map.<Long, NamespaceRole>of())))
                 .thenThrow(new DomainForbiddenException("error.namespace.archived", "team"));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
