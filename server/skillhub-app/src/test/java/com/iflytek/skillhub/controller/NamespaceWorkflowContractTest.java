@@ -75,6 +75,7 @@ class NamespaceWorkflowContractTest {
         Namespace frozen = namespace(7L, "team-flow", NamespaceStatus.FROZEN, NamespaceType.TEAM);
         Namespace archived = namespace(7L, "team-flow", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
         NamespaceMember adminMember = new NamespaceMember(7L, "user-admin", NamespaceRole.ADMIN);
+        UserAccount adminUser = new UserAccount("user-admin", "Admin", "admin@example.com", null);
         setMemberId(adminMember, 11L);
         NamespaceResponse namespaceResponse = NamespaceResponse.from(namespace);
         NamespaceResponse frozenResponse = NamespaceResponse.from(frozen);

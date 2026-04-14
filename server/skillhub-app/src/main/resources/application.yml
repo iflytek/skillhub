@@ -189,7 +189,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info
   endpoint:
     health:
       show-details: when-authorized
@@ -198,4 +198,4 @@ management:
       application: skillhub
     export:
       prometheus:
-        enabled: true
+        enabled: false
