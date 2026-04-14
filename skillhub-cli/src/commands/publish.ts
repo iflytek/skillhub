@@ -86,6 +86,10 @@ export function registerPublish(program: Command) {
         const isDefaultNamespace = actualNamespace === namespace && !opts.namespace;
         info(`Namespace: ${actualNamespace}${isDefaultNamespace ? " (default)" : ""}`);
         info(`Status:    Published`);
+        info(`Tags:      ${tags.join(", ")}`);
+        if (changelog) {
+          info(`Changelog: ${changelog}`);
+        }
       } catch (e: any) {
         error(`Publish failed: ${e.message}`);
         process.exit(1);
