@@ -83,23 +83,27 @@ async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | nu
 }
 
 async function selectInstallMode(): Promise<"symlink" | "copy" | null> {
-  const result = await searchMultiselect({
+  const result = await p.select({
     message: "Installation method?",
-    items: [
-      { value: "symlink", label: "Symlink (Recommended)", hint: "single source of truth" },
-      { value: "copy", label: "Copy to all agents", hint: "independent copies" },
+    options: [
+      {
+        value: "symlink",
+        label: "Symlink (Recommended)",
+        hint: "single source of truth",
+      },
+      {
+        value: "copy",
+        label: "Copy to all agents",
+        hint: "independent copies",
+      },
     ],
-    initialSelected: ["symlink"],
   });
 
-  if (result === cancelSymbol) {
+  if (p.isCancel(result)) {
     return null;
   }
 
-  if ((result as string[]).includes("symlink")) {
-    return "symlink";
-  }
-  return "copy";
+  return result as "symlink" | "copy";
 }
 
 function buildAgentSummary(targetAgents: { key: string; name: string; skillsDir: string }[], mode: "symlink" | "copy"): string[] {
