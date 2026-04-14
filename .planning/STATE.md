@@ -2,9 +2,9 @@
 
 ## Current Position
 
-**Phase:** Not started (defining requirements)  
+**Phase:** Not started (ready for discuss/plan)  
 **Plan:** —  
-**Status:** Milestone initialized — requirements and roadmap drafted  
+**Status:** Milestone v1.0 initialized — PROJECT, REQUIREMENTS, ROADMAP committed  
 **Last activity:** 2026-04-15 — Milestone v1.0 Skill Collections (GSD) started from `docs/2026-04-15-skill-collections-research.md`
 
 ## Accumulated Context
