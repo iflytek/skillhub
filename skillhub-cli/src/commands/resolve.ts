@@ -57,7 +57,8 @@ export function registerResolve(program: Command) {
 
         let targetNamespace = namespace;
         let targetSlug = skillSlug;
-        const specifiedVersion = opts.skillVersion;
+        // Strip 'v' prefix if present (both 1.0.0 and v1.0.0 should work)
+        const specifiedVersion = opts.skillVersion?.replace(/^v/, "");
 
         // Case 1: User specified a version
         if (specifiedVersion) {
