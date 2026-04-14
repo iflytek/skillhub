@@ -47,7 +47,8 @@ async function fetchSkillDetail(client: ApiClient, namespace: string, name: stri
 
 async function runInteractiveSearch(
   client: ApiClient,
-  initialQuery: string = ""
+  initialQuery: string = "",
+  sort: string = "newest"
 ): Promise<string | null> {
   const MAX_VISIBLE = 8;
   let query = initialQuery;
@@ -136,7 +137,7 @@ async function runInteractiveSearch(
 
     debounceTimer = setTimeout(async () => {
       try {
-        results = await searchSkills(client, q);
+        results = await searchSkills(client, q, 10, sort);
         selectedIndex = 0;
       } catch {
         results = [];
@@ -179,13 +180,13 @@ async function runInteractiveSearch(
         return;
       }
 
-      if (key.name === "up" || key.name === "k") {
+      if (key.name === "up") {
         selectedIndex = Math.max(0, selectedIndex - 1);
         render();
         return;
       }
 
-      if (key.name === "down" || key.name === "j") {
+      if (key.name === "down") {
         selectedIndex = Math.min(Math.max(0, results.length - 1), selectedIndex + 1);
         render();
         return;
@@ -219,14 +220,17 @@ export function registerExplore(program: Command) {
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
-    .action(async (query: string | undefined, opts: { limit: string }) => {
+    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads (default: interactive mode)")
+    .action(async (query: string | undefined, opts: { limit: string; sort?: string }) => {
       const config = loadConfig();
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
+      const sortMap: Record<string, string> = { hot: "rating", newest: "newest", downloads: "downloads" };
+      const apiSort = sortMap[opts.sort || "newest"] || "newest";
 
       try {
-        if (!query) {
-          const selected = await runInteractiveSearch(client, "");
+        if (!query && !opts.sort) {
+          const selected = await runInteractiveSearch(client, "", apiSort);
           if (!selected) {
             console.log("\nCancelled.");
             return;
@@ -236,14 +240,14 @@ export function registerExplore(program: Command) {
           return;
         }
 
-        const results = await searchSkills(client, query, parseInt(opts.limit, 10));
+        const results = await searchSkills(client, query || "", parseInt(opts.limit, 10), apiSort);
 
         if (results.length === 0) {
-          console.log(`${DIM}No skills found for "${query}"${RESET}`);
+          console.log(`${DIM}No skills found${RESET}`);
           return;
         }
 
-        const maxResults = Math.min(results.length, 6);
+        const maxResults = Math.min(results.length, parseInt(opts.limit, 10));
 
         const detailPromises = results.slice(0, maxResults).map((s) =>
           fetchSkillDetail(client, s.namespace, s.name)

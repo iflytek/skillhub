@@ -1,5 +1,5 @@
 import { ApiClient } from "./api-client.js";
-import { ApiRoutes, SearchResponse } from "../schema/routes.js";
+import { ApiRoutes, SearchResponse, SkillsListResponse } from "../schema/routes.js";
 import * as readline from "readline";
 import { dim, info } from "../utils/logger.js";
 
@@ -59,17 +59,56 @@ async function fetchSkillDetail(client: ApiClient, namespace: string, name: stri
 export async function searchSkills(
   client: ApiClient,
   query: string,
-  limit: number = 10
+  limit: number = 10,
+  sort?: string
 ): Promise<SearchSkill[]> {
+  if (!query) {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (sort && sort !== "newest") {
+      params.set("sort", sort);
+    }
+    const result = await client.get<SkillsListResponse>(
+      `${ApiRoutes.skills}?${params.toString()}`
+    );
+    if (!result.items || result.items.length === 0) {
+      return [];
+    }
+    const skills = result.items.map((s) => {
+      const { namespace, name } = parseNamespace(s.slug);
+      return {
+        name,
+        slug: s.slug,
+        namespace,
+        version: s.latestVersion?.version || "",
+        summary: s.summary,
+        installs: s.stats?.downloads || 0,
+        stars: s.stats?.stars || 0,
+        rating: 0,
+        updatedAt: s.updatedAt || 0,
+      };
+    });
+    if (sort === "downloads") {
+      return skills.sort((a, b) => b.installs - a.installs);
+    } else if (sort === "rating") {
+      return skills.sort((a, b) => b.rating - a.rating || b.stars - a.stars);
+    } else {
+      return skills.sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+  }
+
+  const params = new URLSearchParams({ q: query, limit: limit.toString() });
+  if (sort) {
+    params.set("sort", sort);
+  }
   const result = await client.get<SearchResponse>(
-    `${ApiRoutes.search}?q=${encodeURIComponent(query)}&limit=${limit}`
+    `${ApiRoutes.search}?${params.toString()}`
   );
 
   if (!result.results || result.results.length === 0) {
     return [];
   }
 
-  return result.results.map((s) => {
+  const skills = result.results.map((s) => {
     const { namespace, name } = parseNamespace(s.slug);
     return {
       name,
@@ -77,14 +116,26 @@ export async function searchSkills(
       namespace,
       version: s.version,
       summary: s.summary,
-      installs: (s as any).installCount || 0,
+      installs: s.downloadCount || 0,
+      stars: s.starCount || 0,
+      rating: s.ratingAvg || 0,
+      updatedAt: s.updatedAt ? new Date(s.updatedAt).getTime() : 0,
     };
-  }).sort((a, b) => (b.installs || 0) - (a.installs || 0));
+  });
+
+  if (sort === "downloads") {
+    return skills.sort((a, b) => b.installs - a.installs);
+  } else if (sort === "rating") {
+    return skills.sort((a, b) => b.rating - a.rating || b.stars - a.stars);
+  } else {
+    return skills.sort((a, b) => b.updatedAt - a.updatedAt);
+  }
 }
 
 export async function runInteractiveSearch(
   client: ApiClient,
-  initialQuery: string = ""
+  initialQuery: string = "",
+  sort: string = "newest"
 ): Promise<string | null> {
   const MAX_VISIBLE = 8;
   let query = initialQuery;
@@ -172,7 +223,7 @@ export async function runInteractiveSearch(
 
     debounceTimer = setTimeout(async () => {
       try {
-        results = await searchSkills(client, q);
+        results = await searchSkills(client, q, 10, sort);
         selectedIndex = 0;
       } catch {
         results = [];
@@ -215,13 +266,13 @@ export async function runInteractiveSearch(
         return;
       }
 
-      if (key.name === "up" || key.name === "k") {
+      if (key.name === "up") {
         selectedIndex = Math.max(0, selectedIndex - 1);
         render();
         return;
       }
 
-      if (key.name === "down" || key.name === "j") {
+      if (key.name === "down") {
         selectedIndex = Math.min(Math.max(0, results.length - 1), selectedIndex + 1);
         render();
         return;
