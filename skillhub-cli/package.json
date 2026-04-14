@@ -1,5 +1,5 @@
 {
-  "name": "@iflytek/skillhub",
+  "name": "@seasoning/skillhub",
   "version": "1.0.0",
   "type": "module",
   "description": "SkillHub CLI - 企业级 Agent Skill 管理工具，支持命名空间",
