@@ -63,8 +63,13 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
             log.info("Bootstrap admin is disabled");
             return;
         }
-        if (localCredentialRepository.existsByUsernameIgnoreCase(bootstrapAdminProperties.getUsername())) {
-            log.info("Bootstrap admin already exists, skipping");
+        LocalCredential existingCredential = localCredentialRepository
+                .findByUsernameIgnoreCase(bootstrapAdminProperties.getUsername())
+                .orElse(null);
+        if (existingCredential != null
+                && !bootstrapAdminProperties.getUserId().equals(existingCredential.getUserId())) {
+            log.info("Bootstrap admin username '{}' is already bound to another user, skipping",
+                    bootstrapAdminProperties.getUsername());
             return;
         }
 
@@ -83,13 +88,15 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         admin = userAccountRepository.save(admin);
 
         // 2. Create local credential (username/password)
-        localCredentialRepository.save(
-                new LocalCredential(
-                        admin.getId(),
-                        bootstrapAdminProperties.getUsername(),
-                        passwordEncoder.encode(bootstrapAdminProperties.getPassword())
-                )
-        );
+        if (existingCredential == null) {
+            localCredentialRepository.save(
+                    new LocalCredential(
+                            admin.getId(),
+                            bootstrapAdminProperties.getUsername(),
+                            passwordEncoder.encode(bootstrapAdminProperties.getPassword())
+                    )
+            );
+        }
 
         // 3. Assign SUPER_ADMIN role
         Role superAdmin = roleRepository.findByCode("SUPER_ADMIN")
