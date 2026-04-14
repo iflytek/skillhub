@@ -29,9 +29,17 @@ export function registerPublish(program: Command) {
       }
 
       const slug = opts.slug || basename(folder);
-      const version = opts["skill-version"] || opts.ver;
-      if (!version || !semver.valid(version)) {
-        error("--skill-version must be a valid semver (e.g. 1.0.0)");
+      let version = opts["skill-version"] || opts.ver;
+      if (!version) {
+        const now = new Date();
+        const yyyymmdd = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+        const hhmmss = now.getHours() * 10000 + now.getMinutes() * 100 + now.getSeconds();
+        version = `${yyyymmdd}.${hhmmss}`;
+      }
+      // Allow timestamp format (YYYYMMDD.HHMMSS) or standard semver
+      const isValidVersion = semver.valid(version) || /^\d{8}\.\d+$/.test(version);
+      if (!isValidVersion) {
+        error("--skill-version must be a valid semver (e.g. 1.0.0) or timestamp (e.g. 20260414.123045)");
         process.exit(1);
       }
 
@@ -74,8 +82,10 @@ export function registerPublish(program: Command) {
         );
 
         spinner.succeed(`Published ${slug}@${version} (${result.skillId})`);
-        info(`Namespace: ${result.namespace}`);
-        info(`Status:    ${result.status}`);
+        const actualNamespace = result.namespace || namespace;
+        const isDefaultNamespace = actualNamespace === namespace && !opts.namespace;
+        info(`Namespace: ${actualNamespace}${isDefaultNamespace ? " (default)" : ""}`);
+        info(`Status:    Published`);
       } catch (e: any) {
         error(`Publish failed: ${e.message}`);
         process.exit(1);
