@@ -13,6 +13,8 @@ import java.util.List;
 @Repository
 public interface SkillCollectionContributorJpaRepository
         extends JpaRepository<SkillCollectionContributor, Long>, SkillCollectionContributorRepository {
+    @Override
+    List<SkillCollectionContributor> findByUserId(String userId);
 
     @Override
     List<SkillCollectionContributor> findByCollectionId(Long collectionId);

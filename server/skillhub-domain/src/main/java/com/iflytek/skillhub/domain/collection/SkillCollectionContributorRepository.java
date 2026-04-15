@@ -9,6 +9,8 @@ public interface SkillCollectionContributorRepository {
 
     boolean existsByCollectionIdAndUserId(Long collectionId, String userId);
 
+    List<SkillCollectionContributor> findByUserId(String userId);
+
     long countByCollectionId(Long collectionId);
 
     void deleteByCollectionIdAndUserId(Long collectionId, String userId);

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.collection;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,17 @@ public class SkillCollectionContributorService {
             throw new DomainBadRequestException("error.skillCollection.cap.contributorsPerCollection");
         }
         return contributorRepository.save(new SkillCollectionContributor(collectionId, uid));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SkillCollectionContributor> listContributors(Long collectionId, String actingUserId, boolean adminEquivalent) {
+        SkillCollection collection = requireCollection(collectionId);
+        boolean owner = collection.getOwnerId().equals(actingUserId);
+        boolean contributor = !owner
+                && contributorRepository.existsByCollectionIdAndUserId(collectionId, actingUserId);
+        authorizationPolicy.checkAllowed(owner, contributor, adminEquivalent,
+                SkillCollectionAuthorizationPolicy.CollectionOperation.ADD_REMOVE_CONTRIBUTOR);
+        return contributorRepository.findByCollectionId(collectionId);
     }
 
     @Transactional
