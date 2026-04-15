@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.config;
 
 import java.time.Duration;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +11,14 @@ public class DownloadRateLimitProperties {
 
     private String anonymousCookieName = "skillhub_anon_dl";
     private Duration anonymousCookieMaxAge = Duration.ofDays(30);
-    private String anonymousCookieSecret = "change-me-in-production";
+    private String anonymousCookieSecret;
+
+    @PostConstruct
+    void validate() {
+        if (anonymousCookieSecret == null || anonymousCookieSecret.isBlank()) {
+            throw new IllegalStateException("skillhub.ratelimit.download.anonymous-cookie-secret must be configured");
+        }
+    }
 
     public String getAnonymousCookieName() {
         return anonymousCookieName;

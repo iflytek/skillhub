@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -51,6 +52,7 @@ class BootstrapAdminInitializerTest {
     @BeforeEach
     void setUp() {
         bootstrapAdminProperties = new BootstrapAdminProperties();
+        bootstrapAdminProperties.setPassword("test-bootstrap-password");
         initializer = new BootstrapAdminInitializer(
                 bootstrapAdminProperties,
                 userAccountRepository,
@@ -76,7 +78,7 @@ class BootstrapAdminInitializerTest {
         when(localCredentialRepository.existsByUsernameIgnoreCase("admin")).thenReturn(false);
         when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(passwordEncoder.encode("ChangeMe!2026")).thenReturn("encoded-password");
+        when(passwordEncoder.encode("test-bootstrap-password")).thenReturn("encoded-password");
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
         when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
@@ -129,6 +131,20 @@ class BootstrapAdminInitializerTest {
 
         verify(localCredentialRepository, never()).existsByUsernameIgnoreCase(any());
         verify(userAccountRepository, never()).save(any(UserAccount.class));
+    }
+
+    @Test
+    void shouldFailFastWhenPasswordMissingAndBootstrapEnabled() {
+        bootstrapAdminProperties.setEnabled(true);
+        bootstrapAdminProperties.setPassword(" ");
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> initializer.run(new DefaultApplicationArguments(new String[0]))
+        );
+
+        assertTrue(ex.getMessage().contains("skillhub.bootstrap.admin.password"));
+        verify(localCredentialRepository, never()).existsByUsernameIgnoreCase(any());
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

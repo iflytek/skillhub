@@ -27,6 +27,9 @@ skillhub:
   auth:
     mock:
       enabled: true
+  ratelimit:
+    download:
+      anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:local-dev-anon-cookie-secret-change-before-sharing}
   notification:
     cleanup:
       read-retention-days: 30
@@ -42,6 +45,7 @@ skillhub:
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:LocalDevOnly!ChangeBeforeSharing}
   profile:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true}

@@ -14,6 +14,7 @@ import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.core.io.ClassPathResource;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BootstrapAdminPropertiesBindingTest {
@@ -36,6 +37,8 @@ class BootstrapAdminPropertiesBindingTest {
         );
 
         assertTrue(properties.isEnabled());
+        assertNotNull(properties.getPassword());
+        assertFalse(properties.getPassword().isBlank());
     }
 
     @Test

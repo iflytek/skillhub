@@ -63,6 +63,7 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
             log.info("Bootstrap admin is disabled");
             return;
         }
+        validateRequiredConfiguration();
         if (localCredentialRepository.existsByUsernameIgnoreCase(bootstrapAdminProperties.getUsername())) {
             log.info("Bootstrap admin already exists, skipping");
             return;
@@ -108,5 +109,16 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         }
 
         log.info("Bootstrap admin initialized for account: {}", bootstrapAdminProperties.getUsername());
+    }
+
+    private void validateRequiredConfiguration() {
+        requireNotBlank(bootstrapAdminProperties.getUsername(), "skillhub.bootstrap.admin.username");
+        requireNotBlank(bootstrapAdminProperties.getPassword(), "skillhub.bootstrap.admin.password");
+    }
+
+    private void requireNotBlank(String value, String propertyName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(propertyName + " must be configured when bootstrap admin is enabled");
+        }
     }
 }

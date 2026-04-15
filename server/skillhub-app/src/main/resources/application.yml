@@ -124,7 +124,7 @@ skillhub:
     download:
       anonymous-cookie-name: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_NAME:skillhub_anon_dl}
       anonymous-cookie-max-age: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_MAX_AGE:P30D}
-      anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:change-me-in-production}
+      anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:}
   publish:
     max-file-count: 100
     max-single-file-size: 10485760 # 10MB
@@ -180,7 +180,7 @@ skillhub:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
       user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
-      password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
       display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:Admin}
       email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
 

@@ -41,6 +41,9 @@ skillhub:
     enforce-active-user-check: false
   access-policy:
     mode: OPEN
+  ratelimit:
+    download:
+      anonymous-cookie-secret: test-anonymous-cookie-secret-for-tests-only
   security:
     scanner:
       enabled: false

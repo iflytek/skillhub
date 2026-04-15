@@ -12,7 +12,7 @@ public class BootstrapAdminProperties {
     private boolean enabled = false;
     private String userId = "docker-admin";
     private String username = "admin";
-    private String password = "ChangeMe!2026";
+    private String password;
     private String displayName = "Admin";
     private String email = "admin@skillhub.local";
 
