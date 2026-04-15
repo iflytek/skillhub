@@ -93,7 +93,12 @@ public class SkillCollectionMembershipService {
         if (new HashSet<>(orderedSkillIds).size() != orderedSkillIds.size()) {
             throw new DomainBadRequestException("error.skillCollection.reorder.duplicateIds");
         }
-        if (!existingIds.equals(Set.copyOf(orderedSkillIds))) {
+        Set<Long> requestedIds = Set.copyOf(orderedSkillIds);
+        if (!owner && !adminEquivalent) {
+            reorderContributorVisibleSubset(existing, existingIds, requestedIds, orderedSkillIds, actingUserId);
+            return;
+        }
+        if (!existingIds.equals(requestedIds)) {
             throw new DomainBadRequestException("error.skillCollection.reorder.setMismatch");
         }
         var bySkill = existing.stream().collect(Collectors.toMap(SkillCollectionMember::getSkillId, m -> m, (a, b) -> a));
@@ -103,6 +108,45 @@ public class SkillCollectionMembershipService {
             SkillCollectionMember m = Objects.requireNonNull(bySkill.get(skillId), "member");
             m.setSortOrder(order++);
             toSave.add(m);
+        }
+        memberRepository.saveAll(toSave);
+    }
+
+    private void reorderContributorVisibleSubset(List<SkillCollectionMember> existing,
+                                                 Set<Long> existingIds,
+                                                 Set<Long> requestedIds,
+                                                 List<Long> orderedSkillIds,
+                                                 String actingUserId) {
+        if (!existingIds.containsAll(requestedIds)) {
+            throw new DomainBadRequestException("error.skillCollection.reorder.setMismatch");
+        }
+
+        Set<Long> visibleIds = existing.stream()
+                .map(SkillCollectionMember::getSkillId)
+                .filter(skillId -> skillReadableForActorPort.canActingUserReadSkill(actingUserId, skillId))
+                .collect(Collectors.toSet());
+        if (!visibleIds.equals(requestedIds)) {
+            throw new DomainBadRequestException("error.skillCollection.reorder.setMismatch");
+        }
+
+        var bySkill = existing.stream().collect(Collectors.toMap(SkillCollectionMember::getSkillId, m -> m, (a, b) -> a));
+        List<SkillCollectionMember> toSave = new ArrayList<>(existing.size());
+        int order = 0;
+        int visibleIndex = 0;
+        for (SkillCollectionMember member : existing) {
+            Long skillId = member.getSkillId();
+            if (visibleIds.contains(skillId)) {
+                Long nextVisibleSkillId = orderedSkillIds.get(visibleIndex++);
+                SkillCollectionMember mapped = Objects.requireNonNull(bySkill.get(nextVisibleSkillId), "member");
+                mapped.setSortOrder(order++);
+                toSave.add(mapped);
+                continue;
+            }
+            member.setSortOrder(order++);
+            toSave.add(member);
+        }
+        if (visibleIndex != orderedSkillIds.size()) {
+            throw new DomainBadRequestException("error.skillCollection.reorder.setMismatch");
         }
         memberRepository.saveAll(toSave);
     }

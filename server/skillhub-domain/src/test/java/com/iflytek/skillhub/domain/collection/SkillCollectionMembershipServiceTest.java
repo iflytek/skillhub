@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -129,5 +130,64 @@ class SkillCollectionMembershipServiceTest {
         );
 
         assertEquals("error.skillCollection.reorder.nullId", ex.messageCode());
+    }
+
+    @Test
+    @DisplayName("D-11: contributor reorder merges visible subset while keeping hidden order stable")
+    void contributorReorder_mergesVisibleSubset() {
+        SkillCollection c = new SkillCollection("owner-1", "col", "T", SkillVisibility.PUBLIC);
+        when(skillCollectionRepository.findById(1L)).thenReturn(Optional.of(c));
+        when(contributorRepository.existsByCollectionIdAndUserId(1L, "contributor-1")).thenReturn(true);
+
+        SkillCollectionMember m1 = new SkillCollectionMember(1L, 10L, 0);
+        SkillCollectionMember m2 = new SkillCollectionMember(1L, 20L, 1);
+        SkillCollectionMember m3 = new SkillCollectionMember(1L, 30L, 2);
+        SkillCollectionMember m4 = new SkillCollectionMember(1L, 40L, 3);
+        when(memberRepository.findByCollectionIdOrderBySortOrderAscIdAsc(1L)).thenReturn(List.of(m1, m2, m3, m4));
+
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(10L))).thenReturn(true);
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(20L))).thenReturn(false);
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(30L))).thenReturn(true);
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(40L))).thenReturn(false);
+
+        service.reorderSkills(1L, "contributor-1", List.of(30L, 10L), false);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<SkillCollectionMember>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(memberRepository).saveAll(captor.capture());
+        List<SkillCollectionMember> updated = new ArrayList<>();
+        captor.getValue().forEach(updated::add);
+
+        assertEquals(30L, updated.get(0).getSkillId());
+        assertEquals(0, updated.get(0).getSortOrder());
+        assertEquals(20L, updated.get(1).getSkillId());
+        assertEquals(1, updated.get(1).getSortOrder());
+        assertEquals(10L, updated.get(2).getSkillId());
+        assertEquals(2, updated.get(2).getSortOrder());
+        assertEquals(40L, updated.get(3).getSkillId());
+        assertEquals(3, updated.get(3).getSortOrder());
+    }
+
+    @Test
+    @DisplayName("Contributor reorder rejects request when visible subset is incomplete")
+    void contributorReorder_incompleteVisibleSubset_rejected() {
+        SkillCollection c = new SkillCollection("owner-1", "col", "T", SkillVisibility.PUBLIC);
+        when(skillCollectionRepository.findById(1L)).thenReturn(Optional.of(c));
+        when(contributorRepository.existsByCollectionIdAndUserId(1L, "contributor-1")).thenReturn(true);
+        SkillCollectionMember m1 = new SkillCollectionMember(1L, 10L, 0);
+        SkillCollectionMember m2 = new SkillCollectionMember(1L, 20L, 1);
+        SkillCollectionMember m3 = new SkillCollectionMember(1L, 30L, 2);
+        when(memberRepository.findByCollectionIdOrderBySortOrderAscIdAsc(1L)).thenReturn(List.of(m1, m2, m3));
+
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(10L))).thenReturn(true);
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(20L))).thenReturn(false);
+        when(skillReadableForActorPort.canActingUserReadSkill(eq("contributor-1"), eq(30L))).thenReturn(true);
+
+        DomainBadRequestException ex = assertThrows(
+                DomainBadRequestException.class,
+                () -> service.reorderSkills(1L, "contributor-1", List.of(30L), false)
+        );
+
+        assertEquals("error.skillCollection.reorder.setMismatch", ex.messageCode());
     }
 }

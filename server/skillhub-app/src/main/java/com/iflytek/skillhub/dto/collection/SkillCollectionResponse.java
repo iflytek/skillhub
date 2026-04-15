@@ -12,6 +12,7 @@ public record SkillCollectionResponse(
         String description,
         String visibility,
         List<SkillCollectionMemberResponse> members,
+        int additionalMembersHiddenFromActorCount,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -20,6 +21,14 @@ public record SkillCollectionResponse(
     }
 
     public static SkillCollectionResponse from(SkillCollection collection, List<SkillCollectionMemberResponse> members) {
+        return from(collection, members, 0);
+    }
+
+    public static SkillCollectionResponse from(
+            SkillCollection collection,
+            List<SkillCollectionMemberResponse> members,
+            int additionalMembersHiddenFromActorCount
+    ) {
         return new SkillCollectionResponse(
                 collection.getId(),
                 collection.getOwnerId(),
@@ -28,6 +37,7 @@ public record SkillCollectionResponse(
                 collection.getDescription(),
                 collection.getVisibility().name(),
                 members,
+                additionalMembersHiddenFromActorCount,
                 collection.getCreatedAt(),
                 collection.getUpdatedAt()
         );

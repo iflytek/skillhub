@@ -308,18 +308,7 @@ class SkillCollectionSecurityIT {
     @Test
     void anonymousV1PublicEndpointFiltersInvisibleMembersVis03() throws Exception {
         TestFixture fixture = createFixture();
-        skillCollectionMembershipService.addSkill(
-                fixture.collection().getId(),
-                fixture.ownerUserId(),
-                fixture.publicSkill().getId(),
-                false
-        );
-        skillCollectionMembershipService.addSkill(
-                fixture.collection().getId(),
-                fixture.ownerUserId(),
-                fixture.ownerPrivateSkill().getId(),
-                false
-        );
+        addPublicAndOwnerPrivateMembers(fixture);
 
         mockMvc.perform(get("/api/v1/public/collections/{ownerId}/{slug}",
                         fixture.ownerUserId(),
@@ -328,6 +317,47 @@ class SkillCollectionSecurityIT {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.members.length()").value(1))
                 .andExpect(jsonPath("$.data.members[0].skillId").value(fixture.publicSkill().getId()));
+    }
+
+    @Test
+    void contributorAuthenticatedReadIncludesHiddenMemberCount() throws Exception {
+        TestFixture fixture = createFixture();
+        addPublicAndOwnerPrivateMembers(fixture);
+
+        mockMvc.perform(get("/api/web/collections/{id}", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.contributorUserId(), "USER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.members.length()").value(1))
+                .andExpect(jsonPath("$.data.members[0].skillId").value(fixture.publicSkill().getId()))
+                .andExpect(jsonPath("$.data.additionalMembersHiddenFromActorCount").value(1));
+    }
+
+    @Test
+    void ownerAuthenticatedReadKeepsHiddenCountAtZero() throws Exception {
+        TestFixture fixture = createFixture();
+        addPublicAndOwnerPrivateMembers(fixture);
+
+        mockMvc.perform(get("/api/web/collections/{id}", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.ownerUserId(), "USER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.members.length()").value(2))
+                .andExpect(jsonPath("$.data.additionalMembersHiddenFromActorCount").value(0));
+    }
+
+    @Test
+    void publicEndpointKeepsHiddenCountAtZero() throws Exception {
+        TestFixture fixture = createFixture();
+        addPublicAndOwnerPrivateMembers(fixture);
+
+        mockMvc.perform(get("/api/web/public/collections/{ownerId}/{slug}",
+                        fixture.ownerUserId(),
+                        fixture.collection().getSlug()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.members.length()").value(1))
+                .andExpect(jsonPath("$.data.additionalMembersHiddenFromActorCount").value(0));
     }
 
     @Test
@@ -359,6 +389,21 @@ class SkillCollectionSecurityIT {
         boolean deniedByCode = status == 400 && body.contains("Contributors cannot perform");
         assertTrue(deniedByStatus || deniedByCode,
                 () -> "Expected contributor denied status/body but got status=" + status + " body=" + body);
+    }
+
+    private void addPublicAndOwnerPrivateMembers(TestFixture fixture) {
+        skillCollectionMembershipService.addSkill(
+                fixture.collection().getId(),
+                fixture.ownerUserId(),
+                fixture.publicSkill().getId(),
+                false
+        );
+        skillCollectionMembershipService.addSkill(
+                fixture.collection().getId(),
+                fixture.ownerUserId(),
+                fixture.ownerPrivateSkill().getId(),
+                false
+        );
     }
 
     private void assertDomainBadRequest(MvcResult result, String expectedCode) throws Exception {

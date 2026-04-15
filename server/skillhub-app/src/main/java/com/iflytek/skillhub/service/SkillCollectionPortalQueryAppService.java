@@ -39,7 +39,7 @@ public class SkillCollectionPortalQueryAppService {
     public Page<SkillCollectionResponse> listMine(Pageable pageable, String actingUserId, boolean adminEquivalent) {
         if (adminEquivalent) {
             return collectionRepository.findByOwnerIdOrIdIn(actingUserId, List.of(-1L), pageable)
-                    .map(collection -> SkillCollectionResponse.from(collection, listVisibleMembers(collection.getId(), actingUserId)));
+                    .map(collection -> buildCollectionResponse(collection, actingUserId, false, false));
         }
 
         Set<Long> contributorCollectionIds = contributorRepository.findByUserId(actingUserId).stream()
@@ -48,7 +48,11 @@ public class SkillCollectionPortalQueryAppService {
         List<Long> ids = contributorCollectionIds.isEmpty() ? List.of(-1L) : List.copyOf(contributorCollectionIds);
 
         return collectionRepository.findByOwnerIdOrIdIn(actingUserId, ids, pageable)
-                .map(collection -> SkillCollectionResponse.from(collection, listVisibleMembers(collection.getId(), actingUserId)));
+                .map(collection -> {
+                    boolean contributor = !actingUserId.equals(collection.getOwnerId())
+                            && contributorCollectionIds.contains(collection.getId());
+                    return buildCollectionResponse(collection, actingUserId, contributor, true);
+                });
     }
 
     @Transactional(readOnly = true)
@@ -59,21 +63,25 @@ public class SkillCollectionPortalQueryAppService {
         SkillCollection collection = collectionRepository.findById(id)
                 .orElseThrow(() -> new DomainBadRequestException("error.skillCollection.notFound", id));
 
+        boolean owner = false;
+        boolean contributor = false;
+        if (!anonymous && actingUserId != null) {
+            owner = actingUserId.equals(collection.getOwnerId());
+            contributor = !owner && contributorRepository.existsByCollectionIdAndUserId(collection.getId(), actingUserId);
+        }
+
         if (anonymous && collection.getVisibility() != SkillVisibility.PUBLIC) {
             throw new DomainBadRequestException("error.skillCollection.notFound", id);
         }
 
         if (!anonymous && !adminEquivalent) {
-            boolean owner = actingUserId != null && actingUserId.equals(collection.getOwnerId());
-            boolean contributor = actingUserId != null
-                    && contributorRepository.existsByCollectionIdAndUserId(collection.getId(), actingUserId);
             if (!owner && !contributor && collection.getVisibility() != SkillVisibility.PUBLIC) {
                 throw new DomainBadRequestException("error.skillCollection.notFound", id);
             }
         }
 
         String viewer = anonymous ? null : actingUserId;
-        return SkillCollectionResponse.from(collection, listVisibleMembers(collection.getId(), viewer));
+        return buildCollectionResponse(collection, viewer, contributor, !anonymous && !adminEquivalent);
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +91,7 @@ public class SkillCollectionPortalQueryAppService {
         if (collection.getVisibility() != SkillVisibility.PUBLIC) {
             throw new DomainBadRequestException("error.skillCollection.notFound", slug);
         }
-        return SkillCollectionResponse.from(collection, listVisibleMembers(collection.getId(), viewerUserIdOrNull));
+        return buildCollectionResponse(collection, viewerUserIdOrNull, false, false);
     }
 
     private List<SkillCollectionMemberResponse> listVisibleMembers(Long collectionId, String viewerUserIdOrNull) {
@@ -91,5 +99,21 @@ public class SkillCollectionPortalQueryAppService {
                 .filter(member -> skillReadableForActorPort.canActingUserReadSkill(viewerUserIdOrNull, member.getSkillId()))
                 .map(SkillCollectionMemberResponse::from)
                 .toList();
+    }
+
+    private SkillCollectionResponse buildCollectionResponse(
+            SkillCollection collection,
+            String viewerUserIdOrNull,
+            boolean contributor,
+            boolean includeContributorHiddenCount
+    ) {
+        List<SkillCollectionMemberResponse> visibleMembers = listVisibleMembers(collection.getId(), viewerUserIdOrNull);
+        int hiddenCount = 0;
+        if (includeContributorHiddenCount && contributor) {
+            long totalMembers = memberRepository.countByCollectionId(collection.getId());
+            long hiddenMembers = Math.max(0L, totalMembers - visibleMembers.size());
+            hiddenCount = hiddenMembers > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) hiddenMembers;
+        }
+        return SkillCollectionResponse.from(collection, visibleMembers, hiddenCount);
     }
 }
