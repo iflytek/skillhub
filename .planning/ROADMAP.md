@@ -48,7 +48,7 @@ Plans:
 2. Public collection API never returns forbidden skill payloads to anonymous users.
 3. `RouteSecurityPolicyRegistry` documents new routes; session auth works for private collections.
 
-**Plans:** 3 plans in `.planning/phases/02-application-api/`
+**Plans:** 1/3 plans executed
 
 Plans:
 

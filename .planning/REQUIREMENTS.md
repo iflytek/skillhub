@@ -29,30 +29,30 @@ These are **binding for v1** unless explicitly revised in this file:
 
 ### Collections core (COL)
 
-- [ ] **COL-01**: Owner can create a collection with title, optional description, and visibility `public` or `private`.
-- [ ] **COL-02**: Owner can edit title, description, and visibility of their collection.
-- [ ] **COL-03**: Owner can delete a collection; deletion removes all memberships and collaborator rows.
-- [ ] **COL-04**: Owner can add a skill to a collection only if the server validates the skill is **readable by the acting user** under existing SkillHub visibility rules.
-- [ ] **COL-05**: Owner can remove a skill from a collection.
-- [ ] **COL-06**: Owner can reorder skills in a collection (stable ordering persisted).
-- [ ] **COL-07**: Collection has a stable **share identifier** for URLs (e.g. owner slug + collection slug or opaque id—implementation plan picks one pattern consistent with routing).
+- [x] **COL-01**: Owner can create a collection with title, optional description, and visibility `public` or `private`.
+- [x] **COL-02**: Owner can edit title, description, and visibility of their collection.
+- [x] **COL-03**: Owner can delete a collection; deletion removes all memberships and collaborator rows.
+- [x] **COL-04**: Owner can add a skill to a collection only if the server validates the skill is **readable by the acting user** under existing SkillHub visibility rules.
+- [x] **COL-05**: Owner can remove a skill from a collection.
+- [x] **COL-06**: Owner can reorder skills in a collection (stable ordering persisted).
+- [x] **COL-07**: Collection has a stable **share identifier** for URLs (e.g. owner slug + collection slug or opaque id—implementation plan picks one pattern consistent with routing).
 
 ### Roles & collaboration (ROL)
 
-- [ ] **ROL-01**: Each collection has exactly **one** owner (`owner_id`); creator becomes owner.
-- [ ] **ROL-02**: Owner can grant **contributor** role to another **registered** user via UI (reuse or mirror patterns from namespace member / user lookup where applicable).
-- [ ] **ROL-03**: Owner can revoke contributor access.
-- [ ] **ROL-04**: Contributor can add a skill subject to the same validation as **COL-04**.
-- [ ] **ROL-05**: Contributor can remove a skill from the collection.
-- [ ] **ROL-06**: Contributor can reorder skills (**same as owner** for membership ordering only).
-- [ ] **ROL-07**: Contributor **cannot** perform metadata edits, visibility changes, collection delete, or contributor management (server-enforced).
-- [ ] **ROL-08**: Platform roles with global admin privileges (**as already defined in SkillHub**) can perform owner-equivalent operations for support.
+- [x] **ROL-01**: Each collection has exactly **one** owner (`owner_id`); creator becomes owner.
+- [x] **ROL-02**: Owner can grant **contributor** role to another **registered** user via UI (reuse or mirror patterns from namespace member / user lookup where applicable).
+- [x] **ROL-03**: Owner can revoke contributor access.
+- [x] **ROL-04**: Contributor can add a skill subject to the same validation as **COL-04**.
+- [x] **ROL-05**: Contributor can remove a skill from the collection.
+- [x] **ROL-06**: Contributor can reorder skills (**same as owner** for membership ordering only).
+- [x] **ROL-07**: Contributor **cannot** perform metadata edits, visibility changes, collection delete, or contributor management (server-enforced).
+- [x] **ROL-08**: Platform roles with global admin privileges (**as already defined in SkillHub**) can perform owner-equivalent operations for support.
 
 ### Visibility & discovery (VIS)
 
-- [ ] **VIS-01**: `private` collections are visible in list/detail **only** to owner, contributors, and platform admins.
-- [ ] **VIS-02**: `public` collection **metadata** is readable per route policy (including anonymous read if product allows public catalog pages—**default:** match existing public skill catalog stance: anonymous may read **public** collection metadata).
-- [ ] **VIS-03**: For `public` collections, **skill member list** returns only skills the **current viewer** is allowed to see; no leakage of private skill fields.
+- [x] **VIS-01**: `private` collections are visible in list/detail **only** to owner, contributors, and platform admins.
+- [x] **VIS-02**: `public` collection **metadata** is readable per route policy (including anonymous read if product allows public catalog pages—**default:** match existing public skill catalog stance: anonymous may read **public** collection metadata).
+- [x] **VIS-03**: For `public` collections, **skill member list** returns only skills the **current viewer** is allowed to see; no leakage of private skill fields.
 
 ### Web experience (WEB)
 
@@ -64,8 +64,8 @@ These are **binding for v1** unless explicitly revised in this file:
 
 ### Integrity & lifecycle (INT)
 
-- [ ] **INT-01**: Server rejects add-skill requests with a clear error when the acting user cannot read the skill.
-- [ ] **INT-02**: Duplicate membership of the same skill in one collection is impossible (unique constraint).
+- [x] **INT-01**: Server rejects add-skill requests with a clear error when the acting user cannot read the skill.
+- [x] **INT-02**: Duplicate membership of the same skill in one collection is impossible (unique constraint).
 - [ ] **INT-03**: When a skill becomes inactive/invisible to everyone who matters, membership rows are **removed or reconciled** by a defined strategy (job on read, periodic task, or domain event—implementation plan chooses; user-visible result: item no longer appears).
 
 ### Governance & quality (GOV / QA)
