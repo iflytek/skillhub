@@ -11,7 +11,8 @@
     "security_asvs_level": 1,
     "security_block_on": "high",
     "discuss_mode": "discuss",
-    "research_before_questions": false
+    "research_before_questions": false,
+    "_auto_chain_active": false
   },
   "planning": {
     "commit_docs": true,
