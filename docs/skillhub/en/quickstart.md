@@ -61,12 +61,12 @@ git clone https://github.com/iflytek/skillhub.git
 cd skillhub
 
 # Start all services (including Scanner)
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 ### Notes for Developers in China
 
-If `make dev-all` fails to start the backend, common causes include:
+If `docker compose -f compose.dev.yml` fails to start the backend, common causes include:
 
 1. **Maven dependency download timeout**
 

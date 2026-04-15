@@ -146,7 +146,7 @@ A: You can get help through the following channels:
 
 ## Q: What should I do if local development fails to start?
 
-A: When `make dev-all` fails to start the backend, detailed error messages will be displayed. Common issues:
+A: When `docker compose -f compose.dev.yml` fails to start the stack, check container logs first. Common issues:
 
 ### 1. Maven dependency download failed (network timeout)
 
@@ -210,7 +210,5 @@ kill -9 <PID>
 If the above solutions don't help, check the backend logs:
 
 ```bash
-make dev-logs SERVICE=backend
-# Or view directly
-cat .dev/server.log
+docker compose -f compose.dev.yml logs -f server
 ```

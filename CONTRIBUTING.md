@@ -23,7 +23,7 @@ Prerequisites:
 Start the local stack:
 
 ```bash
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 Useful commands:
@@ -40,7 +40,7 @@ make generate-api
 Stop the stack:
 
 ```bash
-make dev-all-down
+docker compose -f compose.dev.yml down
 ```
 
 ## Change Guidelines

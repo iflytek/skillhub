@@ -71,3 +71,19 @@ integration_dir_for_task() {
   root="$(repo_root)"
   printf '%s/%s-integration-%s\n' "$(worktree_root "$root")" "$(repo_name)" "$task"
 }
+
+compose_dev_project_name_for_dir() {
+  local dir="$1"
+  local base
+  base="$(basename "$dir")"
+  if [ -n "${SKILLHUB_DEV_COMPOSE_PROJECT:-}" ]; then
+    printf '%s\n' "$SKILLHUB_DEV_COMPOSE_PROJECT"
+    return 0
+  fi
+  slugify "$base"
+}
+
+compose_dev_args() {
+  local dir="$1"
+  printf '%s\n' "-p $(compose_dev_project_name_for_dir "$dir")"
+}

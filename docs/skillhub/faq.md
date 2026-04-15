@@ -146,7 +146,7 @@ A: 可以通过以下方式获取帮助：
 
 ## Q: 本地开发启动失败怎么办？
 
-A: `make dev-all` 后端启动失败时，会显示详细的错误提示。常见问题：
+A: `docker compose -f compose.dev.yml` 启动失败时，请优先查看容器日志定位问题。常见问题：
 
 ### 1. Maven 依赖下载失败（网络超时）
 
@@ -210,7 +210,5 @@ kill -9 <PID>
 如果以上方案无法解决，查看后端日志：
 
 ```bash
-make dev-logs SERVICE=backend
-# 或直接查看
-cat .dev/server.log
+docker compose -f compose.dev.yml logs -f server
 ```

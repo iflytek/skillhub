@@ -89,6 +89,6 @@ Integration branch is up to date:
 
 Next steps:
   cd "$INTEGRATION_DIR"
-  make dev-all
+  docker compose $(compose_dev_args "$INTEGRATION_DIR") -f compose.dev.yml up -d --build
   open http://localhost:3000
 EOF

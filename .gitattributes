@@ -1,0 +1,2 @@
+# Keep shell scripts POSIX-friendly on Windows checkouts.
+*.sh text eol=lf

@@ -158,14 +158,14 @@ SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp.mail.example \
 SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M \
 SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com \
 SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name \
-make dev-server
+docker compose -f compose.dev.yml up -d --build server
 ```
 
 ### 3.2 长期生效（shell 配置）
 
 如果你写到了 `~/.zshrc`，请注意：
 - 必须 `source ~/.zshrc` 或重开终端后变量才会生效
-- 需要在“同一个终端”启动 `make dev-server`
+- 需要在“同一个终端”执行 `docker compose ...`，确保变量注入到 Compose 进程环境中
 
 可先确认变量是否在当前 shell 中：
 
@@ -186,10 +186,10 @@ docker run -d --name skillhub-mailhog \
   mailhog/mailhog
 ```
 
-2. 启动依赖服务（Postgres/Redis）：
+2. 启动依赖服务（Postgres/Redis/MinIO/scanner）：
 
 ```bash
-make dev
+docker compose -f docker-compose.yml up -d --build
 ```
 
 3. 启动后端时注入 SMTP 环境变量（示例）：
@@ -204,7 +204,7 @@ SPRING_MAIL_SMTP_STARTTLS_ENABLE=false \
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=false \
 SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=noreply@skillhub.local \
 SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=SkillHub \
-make dev-server
+docker compose -f compose.dev.yml up -d --build server
 ```
 
 4. 打开 MailHog Web UI 查看邮件：

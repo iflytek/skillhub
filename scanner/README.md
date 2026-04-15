@@ -1,6 +1,6 @@
 # Skill Scanner
 
-本目录提供 Cisco skill-scanner 的本地 Docker 构建上下文，用于 `make dev-all` 开发流程。
+本目录提供 Cisco skill-scanner 的本地 Docker 构建上下文，用于 `compose.dev.yml` / `docker-compose.yml` 中的 `skill-scanner` 服务构建。
 
 开发流程会将 `cisco-ai-skill-scanner` 构建到本地容器中，并在 `http://localhost:8000` 上暴露服务。
 
@@ -18,7 +18,7 @@ Scanner 服务的可选环境变量：
 
 ```bash
 # 启动所有服务（包括 Scanner）
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 
 # 检查 Scanner 服务状态
 curl http://localhost:8000/health

@@ -61,12 +61,12 @@ git clone https://github.com/iflytek/skillhub.git
 cd skillhub
 
 # 启动所有服务（包含 Scanner）
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 ### 国内开发者注意事项
 
-如果 `make dev-all` 后端启动失败，常见原因：
+如果 `docker compose -f compose.dev.yml` 后端启动失败，常见原因：
 
 1. **Maven 依赖下载超时**
 

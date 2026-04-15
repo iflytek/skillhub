@@ -44,7 +44,7 @@ firewall, with the same polish you'd expect from a public registry.
 
 - **Self-Hosted & Private** — Deploy on your own infrastructure.
   Keep proprietary skills behind your firewall with full data
-  sovereignty. One `make dev-all` command to get running locally.
+  sovereignty. One `docker compose` command to get running locally.
 - **Publish & Version** — Upload agent skill packages with semantic
   versioning, custom tags (`beta`, `stable`), and automatic
   `latest` tracking.
@@ -108,7 +108,7 @@ If deployment runs into problems, clear the existing runtime home and retry.
 ### Local Development
 
 ```bash
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 > **For developers in China**: If Maven dependency download times out, configure Aliyun mirror. See [Local Development Guide](https://iflytek.github.io/skillhub/quickstart.html#本地开发) for details.
@@ -118,7 +118,7 @@ Then open:
 - Web UI: `http://localhost:3000`
 - Backend API: `http://localhost:8080`
 
-By default, `make dev-all` starts the backend with the `local` profile.
+By default, `compose.dev.yml` starts the backend with the `local` profile.
 In that mode, local development keeps the mock-auth users below and also
 creates a password-based bootstrap admin account by default:
 
@@ -136,13 +136,13 @@ The local bootstrap admin is enabled by default in `application-local.yml`:
 Stop everything with:
 
 ```bash
-make dev-all-down
+docker compose -f compose.dev.yml down
 ```
 
 Reset local dependencies and start from a clean slate with:
 
 ```bash
-make dev-all-reset
+docker compose -f compose.dev.yml down -v
 ```
 
 Run `make help` to see all available commands.
@@ -246,7 +246,7 @@ docker compose --env-file .env.release -f compose.release.yml down
 ```
 
 The runtime stack uses its own Compose project name, so it does not
-collide with containers from `make dev-all`.
+collide with containers from `compose.dev.yml`.
 
 The production Compose stack now defaults to the `docker` profile only.
 It does not enable local mock auth. The release template (`.env.release.example`)

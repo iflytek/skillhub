@@ -2,18 +2,25 @@
 
 ## 1 运行模型
 
-当前仓库只保留两种运行方式：
+当前仓库保留三种常见运行方式：
 
-- 开发环境：`make dev-all`
-  - 前端和后端运行在宿主机
-  - `docker-compose.yml` 只负责 PostgreSQL、Redis、MinIO
+- 本地开发全栈：`docker compose -f compose.dev.yml up -d --build`
+  - 依赖 + scanner + 后端 + 前端均在容器内运行
+  - 使用 `build.context` 从本仓库源码构建镜像
+- 预发布/私有化（预构建镜像）：`docker compose --env-file .env -f compose.prod.yml up -d`
+  - 前端与后端使用 `.env` 中指定的镜像名
+  - 仍然由 Compose 拉起 PostgreSQL、Redis、MinIO（默认配置偏“单机一体”）
 - 单机交付环境：`docker compose --env-file .env.release -f compose.release.yml up -d`
   - 前端和后端都运行在容器内
-- 使用 GitHub Actions 发布到 GHCR 的镜像
-- 默认发布 `linux/amd64` 与 `linux/arm64` 多架构镜像
-  - PostgreSQL、Redis 与应用容器一起通过 Compose 启动
 
-不再维护本地构建整套 demo 容器的中间模式，也不再保留 `docker-compose.prod.yml`。
+镜像发布：
+
+- 使用 GitHub Actions 发布到 GHCR
+- 默认发布 `linux/amd64` 与 `linux/arm64` 多架构镜像
+
+另外保留 `docker-compose.yml` 作为“仅依赖服务”模式（scanner + postgres + redis + minio），便于你只跑应用进程时使用。
+
+不再保留历史 `docker-compose.prod.yml` 命名（已由 `compose.prod.yml` 取代）。
 
 ## 2 单机交付拓扑
 
@@ -70,26 +77,26 @@
 
 ## 4 开发环境
 
-开发入口保持不变：
+开发入口：
 
 ```bash
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 行为：
 
-- `docker-compose.yml` 启动 PostgreSQL、Redis、MinIO
-- `server` 在宿主机通过 Maven Wrapper 启动
-- `web` 在宿主机通过 Vite 启动
+- Compose 启动 PostgreSQL、Redis、MinIO、scanner、server、web
+- `server` 使用 `SPRING_PROFILES_ACTIVE=local`（启用 mock 登录等本地开发能力）
+- `web` 使用 Vite 开发服务器（并通过 `VITE_DEV_PROXY_TARGET` 反代到后端容器）
 
 常用命令：
 
 ```bash
-make dev
-make dev-all
-make dev-down
-make dev-all-down
-make dev-all-reset
+docker compose -f compose.dev.yml logs -f server
+docker compose -f compose.dev.yml logs -f web
+
+docker compose -f compose.dev.yml down
+docker compose -f compose.dev.yml down -v
 ```
 
 ## 5 单机交付环境

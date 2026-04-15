@@ -19,7 +19,7 @@ Or clone the repository and start manually:
 ```bash
 git clone https://github.com/iflytek/skillhub.git
 cd skillhub
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 ## Default Account
@@ -38,7 +38,7 @@ Both startup methods create a bootstrap admin account by default:
 
 Log in with the default credentials above. **Change the password for production.**
 
-### `make dev-all` Local Development
+### `compose.dev.yml` Local Development
 
 | Service | Address |
 |---------|---------|
@@ -60,19 +60,14 @@ To disable the bootstrap admin, set `BOOTSTRAP_ADMIN_ENABLED=false` before start
 
 ```bash
 # Start complete development environment
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 
 # Stop all services
-make dev-all-down
+docker compose -f compose.dev.yml down
 
-# Reset and restart
-make dev-all-reset
-
-# Start backend only
-make dev
-
-# Start frontend only
-make dev-web
+# Reset and restart (removes volumes)
+docker compose -f compose.dev.yml down -v
+docker compose -f compose.dev.yml up -d --build
 
 # View all available commands
 make help

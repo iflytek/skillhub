@@ -9,7 +9,8 @@ usage() {
   cat <<'EOF'
 Usage: parallel-up.sh [task-slug] [source-branch...]
 
-Syncs Claude and Codex into the integration worktree, then starts `make dev-all`.
+Syncs Claude and Codex into the integration worktree, then starts the local dev
+Docker Compose stack (`compose.dev.yml`).
 
 Arguments:
   task-slug      Optional task identifier. When omitted, infer it from the
@@ -44,7 +45,12 @@ fi
 
 PARALLEL_WORKTREE_ROOT="$(worktree_root "$REPO_ROOT")" "$REPO_ROOT/scripts/parallel-sync.sh" "$TASK_SLUG" "$@"
 info "Starting integration stack in $INTEGRATION_DIR"
-make -C "$INTEGRATION_DIR" dev-all
+COMPOSE_ARGS="$(compose_dev_args "$INTEGRATION_DIR")"
+(
+  cd "$INTEGRATION_DIR"
+  # shellcheck disable=SC2086
+  docker compose $COMPOSE_ARGS -f compose.dev.yml up -d --build
+)
 
 cat <<EOF
 
@@ -57,5 +63,5 @@ Next steps:
   1. Open http://localhost:3000
   2. Verify the merged behavior
   3. Stop when done:
-       make -C "$INTEGRATION_DIR" parallel-down
+       cd "$INTEGRATION_DIR" && ./scripts/parallel-down.sh
 EOF

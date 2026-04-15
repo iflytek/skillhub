@@ -19,7 +19,7 @@ curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runti
 ```bash
 git clone https://github.com/iflytek/skillhub.git
 cd skillhub
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 ```
 
 ## 默认账号
@@ -38,7 +38,7 @@ make dev-all
 
 使用上述默认账号密码登录即可。**生产环境请务必修改密码。**
 
-### `make dev-all` 本地开发
+### `compose.dev.yml` 本地开发
 
 | 服务 | 地址 |
 |------|------|
@@ -60,19 +60,14 @@ make dev-all
 
 ```bash
 # 启动完整开发环境
-make dev-all
+docker compose -f compose.dev.yml up -d --build
 
 # 停止所有服务
-make dev-all-down
+docker compose -f compose.dev.yml down
 
-# 重置并重新启动
-make dev-all-reset
-
-# 仅启动后端
-make dev
-
-# 仅启动前端
-make dev-web
+# 重置并重新启动（会删除数据卷）
+docker compose -f compose.dev.yml down -v
+docker compose -f compose.dev.yml up -d --build
 
 # 查看所有可用命令
 make help

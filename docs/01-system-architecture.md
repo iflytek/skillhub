@@ -120,21 +120,24 @@ skillhub/
 │   ├── nginx.conf.template        # Nginx 运行时模板
 │   └── runtime-config.js.template # 前端运行时环境变量模板
 ├── docker-compose.yml    # 本地开发依赖服务（PostgreSQL/Redis/MinIO）
+├── compose.dev.yml       # 本地开发全栈（build.context：scanner + server + web）
+├── compose.prod.yml      # 生产/预发布栈（镜像名由 .env 注入）
 ├── compose.release.yml   # 单机运行时编排（发布镜像 + PostgreSQL + Redis）
 ├── .env.release.example  # 单机运行时环境变量模板
 ├── .github/workflows/    # GitHub Actions 镜像发布流程
-├── Makefile              # 顶层开发编排（dev / dev-all / build）
+├── Makefile              # 常用构建/测试任务（不用于启动本地栈）
 ├── docs/                 # 设计文档
 └── README.md
 ```
 
-简单分目录，各自独立构建，Makefile 串联。
+简单分目录，各自独立构建；本地运行以 Docker Compose 为主，Makefile 负责构建与测试。
 
 ## 8. 部署架构
 
-部署模型收敛为两条路径：
+部署模型收敛为三条路径：
 
-- 开发路径：`make dev-all`。前后端在宿主机运行，`docker-compose.yml` 只负责 PostgreSQL、Redis、MinIO。
+- 开发路径：`docker compose -f compose.dev.yml up -d --build`。前后端与依赖均在容器内构建运行（`build.context`）。
+- 预发布/私有化快速路径：`docker compose --env-file .env -f compose.prod.yml up -d`。使用已构建镜像（镜像名由 `.env` 提供）。
 - 交付路径：GitHub Actions 构建并发布 `server` / `web` 镜像；用户通过 `compose.release.yml` 在本地一键拉起前后端容器和基础服务。
 - 发布镜像为多架构 manifest，至少覆盖 `linux/amd64` 与 `linux/arm64`。
 

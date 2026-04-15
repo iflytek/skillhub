@@ -112,7 +112,7 @@ Recommended flow:
   2. Run Codex only in:  $CODEX_DIR
   3. Work only in the integration worktree when you need merged verification:
        cd "$INTEGRATION_DIR"
-       make parallel-up
+       ./scripts/parallel-up.sh
   4. Verify the merged result in the browser:
        http://localhost:3000
 EOF

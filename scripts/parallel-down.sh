@@ -21,7 +21,16 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
 fi
 
 TASK_SLUG="$(require_integration_task)"
-REPO_ROOT="$(repo_root)"
+INTEGRATION_DIR="$(integration_dir_for_task "$TASK_SLUG")"
 
-info "Stopping integration stack for task $TASK_SLUG in $REPO_ROOT"
-make -C "$REPO_ROOT" dev-all-down
+if [ ! -e "$INTEGRATION_DIR/.git" ]; then
+  fail "Integration worktree not found: $INTEGRATION_DIR"
+fi
+
+info "Stopping integration stack for task $TASK_SLUG in $INTEGRATION_DIR"
+COMPOSE_ARGS="$(compose_dev_args "$INTEGRATION_DIR")"
+(
+  cd "$INTEGRATION_DIR"
+  # shellcheck disable=SC2086
+  docker compose $COMPOSE_ARGS -f compose.dev.yml down --remove-orphans
+)

@@ -12,7 +12,8 @@ on:
       - 'server/**'
       - 'scripts/**'
       - 'docker-compose.yml'
-      - 'docker-compose.staging.yml'
+      - 'compose.dev.yml'
+      - 'compose.prod.yml'
       - 'Makefile'
       - '.github/workflows/pr-e2e.yml'
   workflow_dispatch:
@@ -58,7 +59,7 @@ jobs:
         run: chmod +x server/mvnw
 
       - name: Start full dev stack
-        run: make dev-all
+        run: docker compose -p skillhub-pr-e2e -f compose.dev.yml up -d --build --wait
 
       - name: Install Playwright browsers
         run: cd web && pnpm exec playwright install --with-deps chromium
@@ -86,4 +87,4 @@ jobs:
 
       - name: Stop full dev stack
         if: ${{ always() }}
-        run: make dev-all-down
+        run: docker compose -p skillhub-pr-e2e -f compose.dev.yml down -v --remove-orphans

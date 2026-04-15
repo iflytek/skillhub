@@ -1,3 +1,10 @@
+# NOTE: This file only starts local dependency services (scanner + postgres + redis + minio).
+#
+# For a full local dev stack (backend + frontend + deps), use:
+#   docker compose -f compose.dev.yml up -d --build
+#
+# For a production-style stack driven by prebuilt images, use:
+#   docker compose --env-file .env -f compose.prod.yml up -d
 services:
   skill-scanner:
     build: ./scanner

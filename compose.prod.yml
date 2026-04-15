@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-skillhub}
+      POSTGRES_USER: ${POSTGRES_USER:-skillhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skillhub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    image: ${SKILLHUB_SERVER_IMAGE:?SKILLHUB_SERVER_IMAGE is required}
+    ports:
+      - "${SKILLHUB_SERVER_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-skillhub}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-skillhub}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SKILLHUB_PUBLIC_BASE_URL: ${SKILLHUB_PUBLIC_BASE_URL:-}
+      SKILLHUB_STORAGE_PROVIDER: s3
+      STORAGE_BASE_PATH: /var/lib/skillhub/storage
+      SKILLHUB_STORAGE_S3_ENDPOINT: http://minio:9000
+      SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT: ${SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      SKILLHUB_STORAGE_S3_BUCKET: ${SKILLHUB_STORAGE_S3_BUCKET:-skillhub}
+      SKILLHUB_STORAGE_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      SKILLHUB_STORAGE_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      SKILLHUB_STORAGE_S3_REGION: ${SKILLHUB_STORAGE_S3_REGION:-us-east-1}
+      SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE: "true"
+      SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET: "true"
+      OAUTH2_GITHUB_CLIENT_ID: ${OAUTH2_GITHUB_CLIENT_ID:-placeholder}
+      OAUTH2_GITHUB_CLIENT_SECRET: ${OAUTH2_GITHUB_CLIENT_SECRET:-placeholder}
+    volumes:
+      - server_storage:/var/lib/skillhub/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  web:
+    image: ${SKILLHUB_WEB_IMAGE:?SKILLHUB_WEB_IMAGE is required}
+    ports:
+      - "${SKILLHUB_WEB_PORT:-80}:80"
+    volumes:
+      - ./web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      SKILLHUB_API_UPSTREAM: http://server:8080
+      SKILLHUB_WEB_API_BASE_URL: ${SKILLHUB_WEB_API_BASE_URL:-}
+      SKILLHUB_PUBLIC_BASE_URL: ${SKILLHUB_PUBLIC_BASE_URL:-}
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  postgres_data:
+  minio_data:
+  server_storage:

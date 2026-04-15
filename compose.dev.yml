@@ -1,0 +1,123 @@
+services:
+  skill-scanner:
+    build:
+      context: ./scanner
+    ports:
+      - "8000:8000"
+    environment:
+      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
+      SKILL_SCANNER_LLM_BASE_URL: ${SKILL_SCANNER_LLM_BASE_URL:-}
+      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: skillhub
+      POSTGRES_USER: skillhub
+      POSTGRES_PASSWORD: skillhub_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skillhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/skillhub
+      SPRING_DATASOURCE_USERNAME: skillhub
+      SPRING_DATASOURCE_PASSWORD: skillhub_dev
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SKILLHUB_SECURITY_SCANNER_ENABLED: "true"
+      SKILLHUB_SECURITY_SCANNER_URL: http://skill-scanner:8000
+      SKILLHUB_SECURITY_SCANNER_MODE: upload
+      SKILLHUB_STORAGE_PROVIDER: s3
+      STORAGE_BASE_PATH: /var/lib/skillhub/storage
+      SKILLHUB_STORAGE_S3_ENDPOINT: http://minio:9000
+      SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT: http://localhost:9000
+      SKILLHUB_STORAGE_S3_BUCKET: skillhub
+      SKILLHUB_STORAGE_S3_ACCESS_KEY: minioadmin
+      SKILLHUB_STORAGE_S3_SECRET_KEY: minioadmin
+      SKILLHUB_STORAGE_S3_REGION: us-east-1
+      SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE: "true"
+      SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET: "true"
+    volumes:
+      - server_storage:/var/lib/skillhub/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      skill-scanner:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_DEV_PROXY_TARGET: http://server:8080
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  minio_data:
+  server_storage:
+  web_node_modules:
