@@ -7,7 +7,7 @@ Deliver **user-owned skill collections** with **owner/contributor** collaboratio
 ## Phases
 
 - [x] **Phase 1: Domain & persistence** — Collections aggregate, collaborators, membership ordering; Flyway; repositories; domain services with authorization matrix groundwork.
-- [ ] **Phase 2: Application & API** — App services, REST controllers (`/api/web/...` primary), `RouteSecurityPolicyRegistry` updates, admin parity, integrity rules **INT-***, audit alignment **ADM-01**.
+- [x] **Phase 2: Application & API** — App services, REST controllers (`/api/web/...` primary), `RouteSecurityPolicyRegistry` updates, admin parity, integrity rules **INT-***, audit alignment **ADM-01**.
 - [ ] **Phase 3: Web UI** — Dashboard surfaces **WEB-*** flows; public collection page respects **VIS-***.
 - [ ] **Phase 4: Verification & docs** — Automated + E2E tests **QA-***; short developer/user documentation.
 
@@ -48,13 +48,13 @@ Plans:
 2. Public collection API never returns forbidden skill payloads to anonymous users.
 3. `RouteSecurityPolicyRegistry` documents new routes; session auth works for private collections.
 
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 
-- [ ] `02-01-PLAN.md` — DTOs + portal app services + `SkillCollectionController` / `PublicSkillCollectionController`
-- [ ] `02-02-PLAN.md` — `RouteSecurityPolicyRegistry` + `RouteSecurityPolicyRegistryTest` + `SkillCollectionSecurityIT`
-- [ ] `02-03-PLAN.md` — `reconcileInvisibleSkillsForCollection` + scheduler + **ADM-01** admin audit on commands
+- [x] `02-01-PLAN.md` — DTOs + portal app services + `SkillCollectionController` / `PublicSkillCollectionController`
+- [x] `02-02-PLAN.md` — `RouteSecurityPolicyRegistry` + `RouteSecurityPolicyRegistryTest` + `SkillCollectionSecurityIT`
+- [x] `02-03-PLAN.md` — `reconcileInvisibleSkillsForCollection` + scheduler + **ADM-01** admin audit on commands
 
 ### Phase 3: Web UI
 
