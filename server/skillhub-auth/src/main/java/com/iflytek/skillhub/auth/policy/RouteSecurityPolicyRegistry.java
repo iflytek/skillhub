@@ -150,13 +150,7 @@ public class RouteSecurityPolicyRegistry {
     }
 
     public boolean shouldIgnoreCsrf(String path, String authorizationHeader) {
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            return true;
-        }
-        if (path == null) {
-            return false;
-        }
-        return path.startsWith("/api/");
+        return authorizationHeader != null && authorizationHeader.startsWith("Bearer ");
     }
 
     public boolean shouldProjectRequestContext(String path) {

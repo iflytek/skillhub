@@ -104,8 +104,9 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
-    void shouldIgnoreCsrf_forBearerAndApiPaths() {
-        assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
+    void shouldIgnoreCsrf_onlyForBearerTokens() {
+        assertFalse(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
+        assertFalse(registry.shouldIgnoreCsrf("/api/v1/admin/users", "Basic dXNlcjpwYXNz"));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));
         assertFalse(registry.shouldIgnoreCsrf("/ui/settings", null));
     }

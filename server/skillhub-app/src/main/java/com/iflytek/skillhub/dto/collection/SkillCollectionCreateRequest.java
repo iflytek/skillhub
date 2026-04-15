@@ -18,5 +18,9 @@ public record SkillCollectionCreateRequest(
 
         @NotBlank(message = "{validation.skillCollection.slug.notBlank}")
         @Size(min = 2, max = 64, message = "{validation.skillCollection.slug.size}")
+        @Pattern(
+                regexp = "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+                message = "{validation.skillCollection.slug.pattern}"
+        )
         String slug
 ) {}

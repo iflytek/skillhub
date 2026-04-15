@@ -87,6 +87,9 @@ public class SkillCollectionMembershipService {
         if (orderedSkillIds == null || orderedSkillIds.isEmpty()) {
             throw new DomainBadRequestException("error.skillCollection.reorder.empty");
         }
+        if (orderedSkillIds.stream().anyMatch(Objects::isNull)) {
+            throw new DomainBadRequestException("error.skillCollection.reorder.nullId");
+        }
         if (new HashSet<>(orderedSkillIds).size() != orderedSkillIds.size()) {
             throw new DomainBadRequestException("error.skillCollection.reorder.duplicateIds");
         }

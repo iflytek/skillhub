@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -111,5 +112,22 @@ class SkillCollectionMembershipServiceTest {
         assertEquals(0, updated.get(0).getSortOrder());
         assertEquals(10L, updated.get(1).getSkillId());
         assertEquals(1, updated.get(1).getSortOrder());
+    }
+
+    @Test
+    @DisplayName("Reorder with null skill id is rejected as bad request")
+    void reorder_withNullSkillId_rejected() {
+        SkillCollection c = new SkillCollection("owner-1", "col", "T", SkillVisibility.PUBLIC);
+        when(skillCollectionRepository.findById(1L)).thenReturn(Optional.of(c));
+        SkillCollectionMember m1 = new SkillCollectionMember(1L, 10L, 0);
+        SkillCollectionMember m2 = new SkillCollectionMember(1L, 20L, 1);
+        when(memberRepository.findByCollectionIdOrderBySortOrderAscIdAsc(1L)).thenReturn(List.of(m1, m2));
+
+        DomainBadRequestException ex = assertThrows(
+                DomainBadRequestException.class,
+                () -> service.reorderSkills(1L, "owner-1", Arrays.asList(20L, null), false)
+        );
+
+        assertEquals("error.skillCollection.reorder.nullId", ex.messageCode());
     }
 }

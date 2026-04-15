@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.dto.collection;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record SkillCollectionUpdateRequest(
@@ -12,5 +13,9 @@ public record SkillCollectionUpdateRequest(
         String description,
 
         @Size(min = 2, max = 64, message = "{validation.skillCollection.slug.size}")
+        @Pattern(
+                regexp = "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+                message = "{validation.skillCollection.slug.pattern}"
+        )
         String slug
 ) {}
