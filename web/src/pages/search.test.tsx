@@ -46,7 +46,13 @@ vi.mock('@/shared/components/skeleton-loader', () => ({
 }))
 
 vi.mock('@/shared/components/empty-state', () => ({
-  EmptyState: () => <div>empty-state</div>,
+  EmptyState: ({ title, description }: { title: string; description?: string }) => (
+    <div>
+      empty-state
+      <span>{title}</span>
+      {description ? <span>{description}</span> : null}
+    </div>
+  ),
 }))
 
 vi.mock('@/shared/components/pagination', () => ({
@@ -201,5 +207,56 @@ describe('SearchPage', () => {
         starredOnly: true,
       },
     })
+  })
+
+  it('renders the default skill list when the empty query still returns items', () => {
+    useSearchMock.mockReturnValue({
+      q: '',
+      label: '',
+      sort: 'newest',
+      page: 0,
+      starredOnly: false,
+    })
+    useSearchSkillsMock.mockReturnValue({
+      data: {
+        items: [{ id: 1, displayName: 'Demo Skill', summary: 'summary', namespace: 'global', slug: 'demo', downloadCount: 1, starCount: 1, ratingCount: 0, updatedAt: '2026-03-20T00:00:00Z', canSubmitPromotion: false }],
+        total: 1,
+        page: 0,
+        size: 12,
+      },
+      isLoading: false,
+      isFetching: false,
+    })
+
+    const html = renderToStaticMarkup(<SearchPage />)
+
+    expect(html).toContain('skill-card')
+    expect(html).not.toContain('empty-state')
+  })
+
+  it('shows a generic empty state when the default discovery list is empty', () => {
+    useSearchMock.mockReturnValue({
+      q: '',
+      label: '',
+      sort: 'newest',
+      page: 0,
+      starredOnly: false,
+    })
+    useSearchSkillsMock.mockReturnValue({
+      data: {
+        items: [],
+        total: 0,
+        page: 0,
+        size: 12,
+      },
+      isLoading: false,
+      isFetching: false,
+    })
+
+    const html = renderToStaticMarkup(<SearchPage />)
+
+    expect(html).toContain('empty-state')
+    expect(html).toContain('search.noResults')
+    expect(html).not.toContain('search.enterKeyword')
   })
 })
