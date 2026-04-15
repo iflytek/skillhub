@@ -39,4 +39,35 @@ describe('router', () => {
     // In test environment, flatRoutes may not be populated until router is used
     expect(router.routeTree).toBeDefined()
   })
+
+  it('registers authenticated dashboard collection routes', () => {
+    const collectedPaths = new Set<string>()
+    const visited = new Set<object>()
+
+    const collectPaths = (node: unknown) => {
+      if (!node || typeof node !== 'object' || visited.has(node as object)) {
+        return
+      }
+      visited.add(node as object)
+
+      const candidate = (node as { path?: unknown }).path
+      if (typeof candidate === 'string' && candidate.length > 0) {
+        collectedPaths.add(candidate)
+      }
+
+      const children = (node as { children?: unknown }).children
+      if (Array.isArray(children)) {
+        children.forEach(collectPaths)
+      }
+    }
+
+    collectPaths(router.routeTree)
+    expect(Array.from(collectedPaths)).toEqual(
+      expect.arrayContaining([
+        'dashboard/collections',
+        'dashboard/collections/new',
+        'dashboard/collections/$collectionId/edit',
+      ]),
+    )
+  })
 })

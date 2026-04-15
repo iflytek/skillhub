@@ -151,6 +151,9 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             <Link to="/dashboard/namespaces" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.myNamespaces')}
             </Link>
+            <Link to="/dashboard/collections" className={menuItemClassName} onClick={closeMenu}>
+              {t('user.menu.myCollections')}
+            </Link>
             {canSeeGovernance ? (
               <Link to="/dashboard/governance" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.governance')}
