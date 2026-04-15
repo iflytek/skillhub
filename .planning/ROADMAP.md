@@ -70,12 +70,13 @@ Plans:
 2. Contributor restrictions observable in UI (disabled controls + server errors as backstop).
 3. Public collection page matches **VIS-** filtering rules.
 
-**Plans:** TBD in `/gsd-plan-phase 3`
+**Plans:** 3 in `/gsd-plan-phase 3`
 
 Plans:
 
 - [ ] 03-01: Routes + list/create/edit screens
-- [ ] 03-02: Detail + contributor management + share affordance
+- [ ] 03-02: Backend — D-09 aggregate + D-11 contributor reorder merge
+- [ ] 03-03: Detail + contributor management + share + public page
 
 ### Phase 4: Verification & docs
 

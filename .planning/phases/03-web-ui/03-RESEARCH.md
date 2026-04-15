@@ -254,22 +254,20 @@ Source: [VERIFIED: `web/src/pages/dashboard.tsx`]
 
 **If this table is empty:** N/A — assumptions listed for planner triage.
 
-## Open Questions
+## Open questions (resolved)
 
-1. **Resolve D-11 vs server reorder invariant**  
-   - What we know: Server requires **full** ID set on reorder [VERIFIED: `SkillCollectionMembershipService`].  
-   - What’s unclear: Whether contributors may ever have hidden members in realistic data.  
-   - Recommendation: Product + backend decision; UI cannot safely fake hidden IDs.
+1. **D-11 vs server reorder invariant — RESOLVED**  
+   - **Decision:** Extend **`SkillCollectionMembershipService.reorderSkills`** (or equivalent) so **contributors** may submit **partial** `orderedSkillIds` (visible subset only); service loads **full** membership and **merges** order without exposing hidden skill ids to the client.  
+   - **Rationale:** Matches CONTEXT **D-11** (reorder visible only) without client-side knowledge of hidden ids.  
+   - **Fallback:** If merge cannot ship in one iteration, **disable** contributor reorder when `additionalMembersHiddenFromActorCount > 0` until backend ships (document in SUMMARY).
 
-2. **Hidden member count without metadata leaks (D-09)**  
-   - What we know: API returns filtered `members` only [VERIFIED: `SkillCollectionPortalQueryAppService`].  
-   - What’s unclear: Acceptable server addition (`visibleCount` / `hiddenCount` with strict rules).  
-   - Recommendation: Prefer a **single aggregate field** from backend over inferring from list length.
+2. **Hidden member count (D-09) — RESOLVED**  
+   - **Decision:** Add **one** aggregate numeric field on **`SkillCollectionResponse`** (name TBD in plan, e.g. `additionalMembersHiddenFromActorCount`) populated **only** for **contributor** actors on **authenticated** `GET /api/web/collections/{id}`; **null or 0** for owner, admin, strangers, and **all** public-endpoint responses.  
+   - **Rationale:** Satisfies non-leaking count + helper text without listing hidden skills.
 
-3. **Logged-in public page data source (VIS-03)**  
-   - What we know: Public controller fixes viewer to `null` [VERIFIED: `PublicSkillCollectionController`].  
-   - What’s unclear: Whether sequential `GET public` + `GET /collections/{id}` is acceptable for SEO/perf.  
-   - Recommendation: Use **authenticated GET** whenever `getCurrentUser` succeeds, after resolving `id`.
+3. **Logged-in public page (VIS-03) — RESOLVED**  
+   - **Decision:** Sequential **`GET /api/web/public/collections/{ownerKey}/{slug}`** then, when session exists and response includes collection **`id`**, **`GET /api/web/collections/{id}`** and **replace** rendered payload for members/title/description.  
+   - **Rationale:** Acceptable for v1 SPA; public SEO is out of scope for this milestone; correctness over extra round trip.
 
 ## Environment Availability
 
