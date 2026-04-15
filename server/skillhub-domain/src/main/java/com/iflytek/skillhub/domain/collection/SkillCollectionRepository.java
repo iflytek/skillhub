@@ -19,6 +19,8 @@ public interface SkillCollectionRepository {
 
     Page<SkillCollection> findByOwnerIdOrIdIn(String ownerId, Collection<Long> ids, Pageable pageable);
 
+    Page<SkillCollection> findAll(Pageable pageable);
+
     long countByOwnerId(String ownerId);
 
     boolean existsByOwnerIdAndSlug(String ownerId, String slug);

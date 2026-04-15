@@ -74,6 +74,8 @@ spring:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
+  collections:
+    reconcile-cron: ${SKILLHUB_COLLECTIONS_RECONCILE_CRON:0 0 * * * *}
   auth:
     mock:
       enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}
