@@ -112,22 +112,22 @@
       },
       "human": {
         "description": "使用CLI工具安装Skills",
-        "command": "npx clawhub search <keyword>"
+        "command": "npx motovis-skillhub search <keyword>"
       },
       "steps": {
         "configureEnv": {
           "title": "1. 配置环境变量",
-          "description": "设置 ClawHub CLI 连接到 SkillHub"
+          "description": "设置 SkillHub CLI 连接到 Registry"
         },
         "installSkills": {
           "title": "2. 安装技能",
           "description": "搜索并安装你需要的技能",
-          "code": "# 搜索技能\nclawhub search <keyword>\n\n# 安装技能\nclawhub install <skill>"
+          "code": "# 搜索技能\nskillhub search <keyword>\n\n# 安装技能\nskillhub install <skill>"
         },
         "publishSkills": {
           "title": "3. 发布技能",
           "description": "分享你的技能给团队使用",
-          "code": "# 发布技能\nclawhub publish\n\n# 或使用网页界面\n# 点击\"发布技能\""
+          "code": "# 发布技能\nskillhub publish\n\n# 或使用网页界面\n# 点击\"发布技能\""
         }
       }
     }
@@ -150,17 +150,17 @@
       "steps": {
         "configureEnv": {
           "title": "1. 配置环境变量",
-          "description": "设置 ClawHub CLI 连接到 SkillHub"
+          "description": "设置 SkillHub CLI 连接到 Registry"
         },
         "installSkills": {
           "title": "2. 安装技能",
           "description": "搜索并安装你需要的技能",
-          "code": "# 搜索技能\nclawhub search <keyword>\n\n# 安装技能\nclawhub install <skill>"
+          "code": "# 搜索技能\nskillhub search <keyword>\n\n# 安装技能\nskillhub install <skill>"
         },
         "publishSkills": {
           "title": "3. 发布技能",
           "description": "分享你的技能给团队使用",
-          "code": "# 发布技能\nclawhub publish\n\n# 或使用网页界面\n# 点击\"发布技能\""
+          "code": "# 发布技能\nskillhub publish\n\n# 或使用网页界面\n# 点击\"发布技能\""
         }
       }
     }
