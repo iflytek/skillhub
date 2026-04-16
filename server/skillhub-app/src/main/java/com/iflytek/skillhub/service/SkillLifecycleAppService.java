@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
+import com.iflytek.skillhub.domain.skill.service.SkillReviewSubmitService;
 import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
@@ -31,6 +32,7 @@ public class SkillLifecycleAppService {
     private final SkillGovernanceService skillGovernanceService;
     private final ReviewService reviewService;
     private final SkillPublishService skillPublishService;
+    private final SkillReviewSubmitService skillReviewSubmitService;
     private final AuditLogService auditLogService;
     private final SkillSlugResolutionService skillSlugResolutionService;
 
@@ -39,6 +41,7 @@ public class SkillLifecycleAppService {
                                     SkillGovernanceService skillGovernanceService,
                                     ReviewService reviewService,
                                     SkillPublishService skillPublishService,
+                                    SkillReviewSubmitService skillReviewSubmitService,
                                     AuditLogService auditLogService,
                                     SkillSlugResolutionService skillSlugResolutionService) {
         this.namespaceRepository = namespaceRepository;
@@ -46,6 +49,7 @@ public class SkillLifecycleAppService {
         this.skillGovernanceService = skillGovernanceService;
         this.reviewService = reviewService;
         this.skillPublishService = skillPublishService;
+        this.skillReviewSubmitService = skillReviewSubmitService;
         this.auditLogService = auditLogService;
         this.skillSlugResolutionService = skillSlugResolutionService;
     }
@@ -150,7 +154,8 @@ public class SkillLifecycleAppService {
                 skillVersion.getVersion(),
                 targetVersion,
                 userId,
-                normalizeRoles(userNamespaceRoles)
+                normalizeRoles(userNamespaceRoles),
+                request.confirmWarnings()
         );
         auditLogService.record(
                 userId,
@@ -168,6 +173,74 @@ public class SkillLifecycleAppService {
                 result.version().getId(),
                 "RERELEASE_VERSION",
                 result.version().getStatus().name()
+        );
+    }
+
+    @Transactional
+    public SkillLifecycleMutationResponse submitForReview(String namespace,
+                                                           String slug,
+                                                           String version,
+                                                           String targetVisibility,
+                                                           String userId,
+                                                           Map<Long, NamespaceRole> userNamespaceRoles,
+                                                           AuditRequestContext auditContext) {
+        Skill skill = findSkill(namespace, slug, userId);
+        SkillVersion skillVersion = findVersion(skill.getId(), version);
+        skillReviewSubmitService.submitForReview(
+                skill.getId(),
+                skillVersion.getId(),
+                com.iflytek.skillhub.domain.skill.SkillVisibility.valueOf(targetVisibility),
+                userId,
+                normalizeRoles(userNamespaceRoles)
+        );
+        auditLogService.record(
+                userId,
+                "SUBMIT_REVIEW",
+                "SKILL_VERSION",
+                skillVersion.getId(),
+                null,
+                auditContext.clientIp(),
+                auditContext.userAgent(),
+                "{\"version\":\"" + version.replace("\"", "\\\"") + "\",\"targetVisibility\":\"" + targetVisibility + "\"}"
+        );
+        return new SkillLifecycleMutationResponse(
+                skill.getId(),
+                skillVersion.getId(),
+                "SUBMIT_REVIEW",
+                "PENDING_REVIEW"
+        );
+    }
+
+    @Transactional
+    public SkillLifecycleMutationResponse confirmPublish(String namespace,
+                                                          String slug,
+                                                          String version,
+                                                          String userId,
+                                                          Map<Long, NamespaceRole> userNamespaceRoles,
+                                                          AuditRequestContext auditContext) {
+        Skill skill = findSkill(namespace, slug, userId);
+        SkillVersion skillVersion = findVersion(skill.getId(), version);
+        skillReviewSubmitService.confirmPublish(
+                skill.getId(),
+                skillVersion.getId(),
+                userId,
+                normalizeRoles(userNamespaceRoles)
+        );
+        auditLogService.record(
+                userId,
+                "CONFIRM_PUBLISH",
+                "SKILL_VERSION",
+                skillVersion.getId(),
+                null,
+                auditContext.clientIp(),
+                auditContext.userAgent(),
+                "{\"version\":\"" + version.replace("\"", "\\\"") + "\"}"
+        );
+        return new SkillLifecycleMutationResponse(
+                skill.getId(),
+                skillVersion.getId(),
+                "CONFIRM_PUBLISH",
+                "PUBLISHED"
         );
     }
 

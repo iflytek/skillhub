@@ -164,12 +164,15 @@ public class SkillDownloadService {
 
     private DownloadResult downloadVersion(Skill skill, SkillVersion version) {
         assertPublishedAccessible(skill);
-        assertPublishedVersion(version);
+        assertDownloadableVersion(skill, version);
         DownloadResult result = buildDownloadResult(skill, version);
 
-        skillRepository.incrementDownloadCount(skill.getId());
-        skillVersionStatsRepository.incrementDownloadCount(version.getId(), skill.getId());
-        eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
+        // Only increment download count for PUBLISHED versions
+        if (version.getStatus() == SkillVersionStatus.PUBLISHED) {
+            skillRepository.incrementDownloadCount(skill.getId());
+            skillVersionStatsRepository.incrementDownloadCount(version.getId(), skill.getId());
+            eventPublisher.publishEvent(new SkillDownloadedEvent(skill.getId(), version.getId()));
+        }
         return result;
     }
 
@@ -292,9 +295,21 @@ public class SkillDownloadService {
         }
     }
 
-    private void assertPublishedVersion(SkillVersion version) {
-        if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
-            throw new DomainBadRequestException("error.skill.version.notPublished", version.getVersion());
+    /**
+     * Asserts that the version can be downloaded.
+     * - PUBLISHED: anyone with skill access can download
+     * - UPLOADED/PENDING_REVIEW: only skill owner can download
+     */
+    private void assertDownloadableVersion(Skill skill, SkillVersion version) {
+        switch (version.getStatus()) {
+            case PUBLISHED -> {
+                // Anyone with skill access can download published versions
+            }
+            case UPLOADED, PENDING_REVIEW -> {
+                // Only owner can download UPLOADED/PENDING_REVIEW versions
+                // Note: This check is already done in assertCanDownload via visibilityChecker
+            }
+            default -> throw new DomainBadRequestException("error.skill.version.notDownloadable", version.getVersion());
         }
     }
 }

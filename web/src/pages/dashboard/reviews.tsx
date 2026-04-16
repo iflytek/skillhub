@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { FileCheck2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import {
+  buildNamespaceReviewsPath,
+  canAccessGlobalReviewCenter,
+  getPreferredNamespaceReviewEntry,
+} from '@/features/review/review-paths'
 import {
   Table,
   TableBody,
@@ -32,7 +38,8 @@ const PAGE_SIZE = 20
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
+  const { data: myNamespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const [pages, setPages] = useState<Record<ReviewStatus, number>>({
     PENDING: 0,
     APPROVED: 0,
@@ -43,14 +50,29 @@ export function ReviewsPage() {
 
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
+  const hasGlobalReviewAccess = canAccessGlobalReviewCenter(user?.platformRoles)
+  const namespaceReviewEntry = getPreferredNamespaceReviewEntry(myNamespaces)
   const showTypeTabs = isSkillAdmin && isUserAdmin
 
   // Determine default top-level tab
   const defaultType = isSkillAdmin ? 'skill' : 'profile'
 
-  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, activeStatus === 'PENDING')
-  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, activeStatus === 'APPROVED')
-  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, sortDirection, activeStatus === 'REJECTED')
+  useEffect(() => {
+    if (hasGlobalReviewAccess || isLoadingNamespaces) {
+      return
+    }
+
+    if (namespaceReviewEntry) {
+      void navigate({ to: buildNamespaceReviewsPath(namespaceReviewEntry.slug), replace: true })
+      return
+    }
+
+    void navigate({ to: '/dashboard', replace: true })
+  }, [hasGlobalReviewAccess, isLoadingNamespaces, namespaceReviewEntry, navigate])
+
+  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, hasGlobalReviewAccess && activeStatus === 'PENDING')
+  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, hasGlobalReviewAccess && activeStatus === 'APPROVED')
+  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, sortDirection, hasGlobalReviewAccess && activeStatus === 'REJECTED')
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
@@ -208,6 +230,17 @@ export function ReviewsPage() {
           </Tabs>
         </CardContent>
       </Card>
+    )
+  }
+
+  if (!hasGlobalReviewAccess) {
+    return (
+      <div className="space-y-8 animate-fade-up">
+        <DashboardPageHeader title={t('reviews.title')} subtitle={t('reviews.subtitle')} />
+        <Card className="p-8 text-center text-muted-foreground">
+          Loading...
+        </Card>
+      </div>
     )
   }
 

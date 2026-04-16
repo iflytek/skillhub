@@ -37,11 +37,12 @@ async function getSkillDocumentation(namespace: string, slug: string, version: s
   return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/file?path=${encodeURIComponent(path)}`)
 }
 
-async function publishSkill(params: { namespace: string; file: File; visibility: string }): Promise<PublishResult> {
+async function publishSkill(params: { namespace: string; file: File; visibility: string; confirmWarnings?: boolean }): Promise<PublishResult> {
   const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
   const formData = new FormData()
   formData.append('file', params.file)
   formData.append('visibility', params.visibility)
+  formData.append('confirmWarnings', String(params.confirmWarnings === true))
 
   return fetchJson<PublishResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/publish`, {
     method: 'POST',
@@ -205,8 +206,49 @@ export function useRereleaseSkillVersion() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ namespace, slug, version, targetVersion }: { namespace: string; slug: string; version: string; targetVersion: string }) =>
-      skillLifecycleApi.rereleaseVersion(namespace, slug, version, targetVersion),
+    mutationFn: ({ namespace, slug, version, targetVersion, confirmWarnings }: { namespace: string; slug: string; version: string; targetVersion: string; confirmWarnings?: boolean }) =>
+      skillLifecycleApi.rereleaseVersion(namespace, slug, version, targetVersion, confirmWarnings),
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+/**
+ * Submit an UPLOADED version for review.
+ * Transitions version status from UPLOADED to PENDING_REVIEW.
+ */
+export function useSubmitForReview() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version, targetVisibility }: { namespace: string; slug: string; version: string; targetVisibility: 'PUBLIC' | 'NAMESPACE_ONLY' }) =>
+      skillLifecycleApi.submitForReview(namespace, slug, version, targetVisibility),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+/**
+ * Confirm publish for a PRIVATE skill version.
+ * Transitions version status from UPLOADED to PUBLISHED without review.
+ */
+export function useConfirmPublish() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
+      skillLifecycleApi.confirmPublish(namespace, slug, version),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })

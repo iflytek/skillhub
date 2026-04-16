@@ -8,9 +8,17 @@ import java.util.Set;
 public record SearchVisibilityScope(
         String userId,
         Set<Long> memberNamespaceIds,
-        Set<Long> adminNamespaceIds
+        Set<Long> adminNamespaceIds,
+        boolean platformWideAccess
 ) {
+    public SearchVisibilityScope(
+            String userId,
+            Set<Long> memberNamespaceIds,
+            Set<Long> adminNamespaceIds) {
+        this(userId, memberNamespaceIds, adminNamespaceIds, false);
+    }
+
     public static SearchVisibilityScope anonymous() {
-        return new SearchVisibilityScope(null, Set.of(), Set.of());
+        return new SearchVisibilityScope(null, Set.of(), Set.of(), false);
     }
 }

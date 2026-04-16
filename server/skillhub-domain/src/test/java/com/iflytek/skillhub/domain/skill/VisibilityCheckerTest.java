@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -157,5 +158,35 @@ class VisibilityCheckerTest {
         Map<Long, NamespaceRole> roles = Map.of(NAMESPACE_ID, NamespaceRole.ADMIN);
         boolean canAccess = checker.canAccess(hiddenPublicSkill, ADMIN_USER_ID, roles);
         assertTrue(canAccess);
+    }
+
+    @Test
+    void testSuperAdminCanAccessPrivateSkill() {
+        boolean canAccess = checker.canAccess(privateSkill, OTHER_USER_ID, Map.of(), Set.of("SUPER_ADMIN"));
+        assertTrue(canAccess);
+    }
+
+    @Test
+    void testSuperAdminCanAccessHiddenSkill() {
+        boolean canAccess = checker.canAccess(hiddenPublicSkill, OTHER_USER_ID, Map.of(), Set.of("SUPER_ADMIN"));
+        assertTrue(canAccess);
+    }
+
+    @Test
+    void testSuperAdminCanAccessUnpublishedSkill() {
+        boolean canAccess = checker.canAccess(unpublishedPublicSkill, OTHER_USER_ID, Map.of(), Set.of("SUPER_ADMIN"));
+        assertTrue(canAccess);
+    }
+
+    @Test
+    void testNonSuperAdminPlatformRolesDoNotGrantAccess() {
+        boolean canAccess = checker.canAccess(privateSkill, OTHER_USER_ID, Map.of(), Set.of("REVIEWER"));
+        assertFalse(canAccess);
+    }
+
+    @Test
+    void testEmptyPlatformRolesDoNotGrantAccess() {
+        boolean canAccess = checker.canAccess(privateSkill, OTHER_USER_ID, Map.of(), Set.of());
+        assertFalse(canAccess);
     }
 }

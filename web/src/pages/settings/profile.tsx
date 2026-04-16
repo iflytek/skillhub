@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, profileApi } from '@/api/client'
@@ -38,6 +39,7 @@ function getFieldValue(
 export function ProfileSettingsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const [isEditing, setIsEditing] = useState(false)
@@ -180,10 +182,17 @@ export function ProfileSettingsPage() {
             <CardTitle>{t('profile.title')}</CardTitle>
             <CardDescription>{t('profile.subtitle')}</CardDescription>
           </div>
-          {!isEditing && hasEditableFields ? (
-            <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
-              {t('profile.edit')}
-            </Button>
+          {!isEditing ? (
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/reset-password' })}>
+                {t('profile.resetPassword')}
+              </Button>
+              {hasEditableFields ? (
+                <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
+                  {t('profile.edit')}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </CardHeader>
         <CardContent className="space-y-6">

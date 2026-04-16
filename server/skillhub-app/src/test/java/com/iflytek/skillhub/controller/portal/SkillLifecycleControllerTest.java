@@ -212,7 +212,8 @@ class SkillLifecycleControllerTest {
                 eq("1.2.3"),
                 eq("1.2.4"),
                 eq("usr_1"),
-                anyMap()))
+                anyMap(),
+                eq(false)))
                 .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
@@ -279,7 +280,8 @@ class SkillLifecycleControllerTest {
                 eq("1.2.3"),
                 eq("1.2.4"),
                 eq("usr_1"),
-                anyMap()))
+                anyMap(),
+                eq(false)))
                 .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
@@ -299,7 +301,44 @@ class SkillLifecycleControllerTest {
                 eq("1.2.3"),
                 eq("1.2.4"),
                 eq("usr_1"),
-                anyMap());
+                anyMap(),
+                eq(false));
+    }
+
+    @Test
+    void rereleaseVersion_passesConfirmWarningsToService() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion newVersion = new SkillVersion(1L, "1.2.4", "owner");
+        setSkillVersionId(newVersion, 3L);
+        newVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        SkillVersion sourceVersion = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(sourceVersion, 2L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(sourceVersion));
+        given(skillPublishService.rereleasePublishedVersion(
+                eq(1L), eq("1.2.3"), eq("1.2.4"), eq("usr_1"), anyMap(), eq(true)))
+                .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetVersion\":\"1.2.4\",\"confirmWarnings\":true}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.action").value("RERELEASE_VERSION"));
+
+        verify(skillPublishService).rereleasePublishedVersion(
+                eq(1L), eq("1.2.3"), eq("1.2.4"), eq("usr_1"), anyMap(), eq(true));
     }
 
     private Skill skillWithStatus(Skill skill, com.iflytek.skillhub.domain.skill.SkillStatus status) {

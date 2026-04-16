@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useParams } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { buildNamespaceReviewDetailPath } from '@/features/review/review-paths'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -15,8 +16,9 @@ type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 type TimeSortDirection = 'ASC' | 'DESC'
 const PAGE_SIZE = 10
 
-function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
+function ReviewListSection({ namespaceId, slug }: { namespaceId?: number; slug: string }) {
   const { t, i18n } = useTranslation()
+  const reviewsEnabled = typeof namespaceId === 'number' && namespaceId > 0
   const [pages, setPages] = useState<Record<ReviewStatus, number>>({
     PENDING: 0,
     APPROVED: 0,
@@ -24,9 +26,9 @@ function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
   })
   const [activeStatus, setActiveStatus] = useState<ReviewStatus>('PENDING')
   const [sortDirection, setSortDirection] = useState<TimeSortDirection>('DESC')
-  const pending = useReviewList('PENDING', namespaceId, pages.PENDING, PAGE_SIZE, sortDirection, activeStatus === 'PENDING')
-  const approved = useReviewList('APPROVED', namespaceId, pages.APPROVED, PAGE_SIZE, sortDirection, activeStatus === 'APPROVED')
-  const rejected = useReviewList('REJECTED', namespaceId, pages.REJECTED, PAGE_SIZE, sortDirection, activeStatus === 'REJECTED')
+  const pending = useReviewList('PENDING', namespaceId, pages.PENDING, PAGE_SIZE, sortDirection, reviewsEnabled && activeStatus === 'PENDING')
+  const approved = useReviewList('APPROVED', namespaceId, pages.APPROVED, PAGE_SIZE, sortDirection, reviewsEnabled && activeStatus === 'APPROVED')
+  const rejected = useReviewList('REJECTED', namespaceId, pages.REJECTED, PAGE_SIZE, sortDirection, reviewsEnabled && activeStatus === 'REJECTED')
 
   const changePage = (status: ReviewStatus, nextPage: number) => {
     setPages((current) => ({ ...current, [status]: nextPage }))
@@ -90,6 +92,14 @@ function ReviewListSection({ namespaceId }: { namespaceId?: number }) {
             {review.reviewComment ? (
               <p className="mt-3 text-sm text-muted-foreground">{review.reviewComment}</p>
             ) : null}
+            <div className="mt-4 flex justify-end">
+              <Link
+                to={buildNamespaceReviewDetailPath(slug, review.id)}
+                className="inline-flex items-center rounded-md border border-border/60 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                {t('nsReviews.openReview')}
+              </Link>
+            </div>
           </div>
         ))}
         {query.data ? renderPagination(status, query.data.totalElements, query.data.totalPages) : null}
@@ -151,7 +161,7 @@ export function NamespaceReviewsPage() {
           {readOnlyMessage}
         </Card>
       ) : null}
-      <ReviewListSection namespaceId={namespace?.id} />
+      <ReviewListSection namespaceId={namespace?.id} slug={slug} />
     </div>
   )
 }

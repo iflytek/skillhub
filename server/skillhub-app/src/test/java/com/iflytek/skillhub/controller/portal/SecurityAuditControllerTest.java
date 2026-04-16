@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityAudit;
@@ -55,6 +57,9 @@ class SecurityAuditControllerTest {
 
     @MockBean
     private ScanTaskProducer scanTaskProducer;
+
+    @MockBean
+    private NamespaceMemberRepository namespaceMemberRepository;
 
     @Test
     void getSecurityAudit_returnsAuditPayload() throws Exception {
@@ -127,6 +132,29 @@ class SecurityAuditControllerTest {
         mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit").with(auth("viewer-1")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void getSecurityAudit_allowsNamespaceAdminForPendingUnpublishedSkill() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 9L);
+        audit.setScanId("scan-team-admin");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "owner-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+        given(namespaceMemberRepository.findByUserId("team-admin"))
+                .willReturn(List.of(new NamespaceMember(5L, "team-admin", NamespaceRole.ADMIN)));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("team-admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].id").value(9L))
+                .andExpect(jsonPath("$.data[0].scanId").value("scan-team-admin"));
     }
 
     private RequestPostProcessor auth(String userId) {

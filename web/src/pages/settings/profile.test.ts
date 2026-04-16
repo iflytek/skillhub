@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import React from 'react'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -9,6 +10,10 @@ vi.mock('react-i18next', async () => {
     }),
   }
 })
+
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => vi.fn(),
+}))
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: null }),
@@ -53,10 +58,16 @@ vi.mock('@/shared/ui/input', () => ({
   Input: () => null,
 }))
 
+import { renderToStaticMarkup } from 'react-dom/server'
 import { ProfileSettingsPage } from './profile'
 
 describe('ProfileSettingsPage', () => {
   it('exports a named component function', () => {
     expect(typeof ProfileSettingsPage).toBe('function')
+  })
+
+  it('renders reset-password entry action', () => {
+    const html = renderToStaticMarkup(React.createElement(ProfileSettingsPage))
+    expect(html).toContain('profile.resetPassword')
   })
 })

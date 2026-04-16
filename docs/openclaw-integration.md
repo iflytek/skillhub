@@ -110,14 +110,21 @@ npx clawhub list --help
 ### 5. 发布技能
 
 ```bash
-# 发布技能（需要相应权限）
+# 发布到 global 空间（需要相应权限）
 npx clawhub publish ./my-skill --slug my-skill --name "My Skill" --version 1.0.0
+
+# 发布到如 my-space 这样的团队空间
+npx clawhub publish ./my-skill --slug my-space--my-skill --name "My Skill" --version 1.0.0
 npx clawhub sync --all # 上传当前文件夹中所有的 skill
 
 # 使用帮助
 npx clawhub publish --help
 npx clawhub sync --help
 ```
+
+说明：
+- `my-space--my-skill` 是兼容层 canonical slug，SkillHub 会将其解析为 namespace `my-space` 和 skill slug `my-skill`
+- 为避免 CLI 展示与服务端最终坐标不一致，建议让 `SKILL.md` 中的 `name` 与 canonical slug 后半段保持一致
 
 ## API 端点说明
 

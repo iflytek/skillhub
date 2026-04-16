@@ -156,7 +156,7 @@ class SkillGovernanceServiceTest {
     }
 
     @Test
-    void withdrawPendingVersion_demotesVersionToDraft() {
+    void withdrawPendingVersion_demotesVersionToUploaded() {
         Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
         setField(skill, "id", 1L);
         SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
@@ -167,7 +167,7 @@ class SkillGovernanceServiceTest {
 
         SkillVersion result = service.withdrawPendingVersion(skill, version, "owner");
 
-        assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.DRAFT);
+        assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.UPLOADED);
         verify(skillVersionRepository).save(version);
         verify(skillRepository).save(skill);
         verify(objectStorageService, never()).deleteObject(any());

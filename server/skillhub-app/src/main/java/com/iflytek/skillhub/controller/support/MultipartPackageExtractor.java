@@ -30,6 +30,7 @@ public class MultipartPackageExtractor {
     }
 
     public record PublishPayload(
+        String namespace,
         String slug,
         String displayName,
         String version,

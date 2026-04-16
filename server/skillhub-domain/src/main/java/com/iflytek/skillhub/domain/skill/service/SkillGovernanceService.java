@@ -162,7 +162,8 @@ public class SkillGovernanceService {
         assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
         if (version.getStatus() != SkillVersionStatus.DRAFT
                 && version.getStatus() != SkillVersionStatus.REJECTED
-                && version.getStatus() != SkillVersionStatus.SCAN_FAILED) {
+                && version.getStatus() != SkillVersionStatus.SCAN_FAILED
+                && version.getStatus() != SkillVersionStatus.UPLOADED) {
             throw new DomainBadRequestException("error.skill.version.delete.unsupported", version.getVersion());
         }
 
@@ -242,7 +243,7 @@ public class SkillGovernanceService {
         if (version.getStatus() != SkillVersionStatus.PENDING_REVIEW) {
             throw new DomainBadRequestException("review.withdraw.not_pending", version.getId());
         }
-        version.setStatus(SkillVersionStatus.DRAFT);
+        version.setStatus(SkillVersionStatus.UPLOADED);
         SkillVersion savedVersion = skillVersionRepository.save(version);
         skill.setUpdatedBy(actorUserId);
         skillRepository.save(skill);

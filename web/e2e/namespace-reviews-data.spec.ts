@@ -1,26 +1,24 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
-import { registerSession } from './helpers/session'
-import { E2eTestDataBuilder } from './helpers/test-data-builder'
+import { createNamespaceReviewData } from './helpers/review-seed'
 
 test.describe('Namespace Reviews Data (Real API)', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.describe.configure({ timeout: 120_000 })
+
+  test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
-    await registerSession(page, testInfo)
   })
 
-  test('opens namespace reviews page with seeded review data context', async ({ page }, testInfo) => {
-    const builder = new E2eTestDataBuilder(page, testInfo)
-    await builder.init()
-
+  test('opens namespace reviews page with seeded review data context', async ({ browser, page }, testInfo) => {
+    let seeded: Awaited<ReturnType<typeof createNamespaceReviewData>> | undefined
     try {
-      const seeded = await builder.createReviewData()
+      seeded = await createNamespaceReviewData(browser, page, testInfo)
       await page.goto(`/dashboard/namespaces/${seeded.namespace.slug}/reviews`)
 
       await expect(page.getByRole('heading', { name: 'Namespace Reviews' })).toBeVisible()
       await expect(page.getByText(`Review tasks for ${seeded.namespace.displayName}`)).toBeVisible()
     } finally {
-      await builder.cleanup()
+      await seeded?.cleanup()
     }
   })
 })
