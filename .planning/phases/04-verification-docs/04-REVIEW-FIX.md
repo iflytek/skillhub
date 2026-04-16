@@ -3,15 +3,15 @@ phase: "04-verification-docs"
 fixed_at: "2026-04-17T00:00:00Z"
 review_path: ".planning/phases/04-verification-docs/04-REVIEW-UNIFIED.md"
 iteration: 1
-findings_in_scope: 7
+findings_in_scope: 9
 fixed: 7
-skipped: 0
-status: all_fixed
+skipped: 2
+status: applied
 ---
 
 # Phase 04: Code review fix report (unified)
 
-**Source reviews:** `04-REVIEW-UNIFIED.md`, `04-REVIEW.md` (items below applied per user scope; U-M and IN-002 intentionally out of scope).
+**Source reviews:** `04-REVIEW-UNIFIED.md`, `04-REVIEW.md` (code/doc fixes below; **U-M** tooling notes and **IN-002** `SkillCollectionSecurityIT` assertion tightening intentionally out of scope).
 
 **Summary**
 

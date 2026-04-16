@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Browser, type BrowserContext, type TestInfo } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 import { registerSession, createFreshSession } from './helpers/session'
 import { E2eTestDataBuilder } from './helpers/test-data-builder'
