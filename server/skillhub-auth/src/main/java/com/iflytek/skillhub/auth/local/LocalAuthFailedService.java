@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.local;
 
-import jakarta.annotation.Resource;
+import jakarta.annotation.Nonnull;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,14 +30,20 @@ public class LocalAuthFailedService {
 
 
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleFailedLogin(LocalCredential credential) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void handleFailedLogin(@Nonnull Long credentialId) {
+
+        LocalCredential credential = credentialRepository.findById(credentialId)
+                .orElseThrow(() -> new EntityNotFoundException("Invalid credential id"));
+
         int failedAttempts = credential.getFailedAttempts() + 1;
-        credential.setFailedAttempts(failedAttempts);
-        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-            credential.setLockedUntil(currentTime().plus(LOCK_DURATION));
+        Instant lockedUntil = credential.getLockedUntil();
+
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS && lockedUntil == null) {
+            lockedUntil = currentTime().plus(LOCK_DURATION);
         }
-        credentialRepository.save(credential);
+
+        credentialRepository.updateFailedAttemptsAndLockedUntil(credentialId, failedAttempts, lockedUntil);
     }
 
     private Instant currentTime() {

@@ -35,17 +35,17 @@ export function LoginPage() {
 
   // Load saved username from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem(REMEMBER_ME_KEY)
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem(REMEMBER_ME_KEY)
+      if (saved) {
         const { username: savedUsername } = JSON.parse(saved)
         if (savedUsername) {
           setUsername(savedUsername)
           setRememberMe(true)
         }
-      } catch {
-        // Invalid data, ignore
       }
+    } catch (e) {
+      console.warn('Failed to load remembered username:', e)
     }
   }, [])
 
@@ -76,7 +76,12 @@ export function LoginPage() {
     setFieldErrors({})
     try {
       await loginMutation.mutateAsync({ username: trimmedUsername, password })
-      // Save username to localStorage if remember me is checked
+    } catch {
+      // mutation state drives the error UI
+      return
+    }
+
+    try {
       if (rememberMe) {
         localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({
           username: trimmedUsername
@@ -84,10 +89,11 @@ export function LoginPage() {
       } else {
         localStorage.removeItem(REMEMBER_ME_KEY)
       }
-      await navigate({ to: returnTo })
-    } catch {
-      // mutation state drives the error UI
+    } catch (e) {
+      console.warn('Failed to save remember-me preference:', e)
     }
+
+    await navigate({ to: returnTo })
   }
 
   return (
