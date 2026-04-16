@@ -7,10 +7,7 @@ import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js"
 
 function getCliCommand(): string {
   const cliPath = process.argv[1];
-  if (cliPath && cliPath.endsWith("cli.mjs")) {
-    return `node "${cliPath}"`;
-  }
-  return "node dist/cli.mjs";
+  return `node "${cliPath}"`;
 }
 
 export function registerUpdate(program: Command) {

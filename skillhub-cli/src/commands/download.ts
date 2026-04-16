@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { createWriteStream } from "node:fs";
 import { resolve } from "node:path";
+import { finished } from "node:stream/promises";
 import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes } from "../schema/routes.js";
 import { loadConfig } from "../core/config.js";
@@ -57,7 +58,7 @@ export function registerDownload(program: Command) {
 
         const outPath = resolve(outputDir, `${skillSlug}.zip`);
         const fileStream = createWriteStream(outPath);
-        await body.pipe(fileStream);
+        await finished(body.pipe(fileStream));
 
         spinner.succeed(`Downloaded ${skillSlug} to ${outPath}`);
       } catch (e: any) {

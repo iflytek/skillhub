@@ -468,9 +468,9 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
       if (result.success) {
         installed++;
         await addToLock(skill.name, {
-          source: `${ns}/${slug}`,
+          source: `${ns}/${actualSlug}`,
           sourceType: "registry",
-          sourceUrl: `${config.registry}/api/v1/skills/${ns}/${slug}`,
+          sourceUrl: `${config.registry}/api/v1/skills/${ns}/${actualSlug}`,
           namespace: ns,
           slug: skill.name,
           version: "latest",
