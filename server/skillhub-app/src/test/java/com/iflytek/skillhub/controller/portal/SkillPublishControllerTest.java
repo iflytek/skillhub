@@ -4,6 +4,9 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+
+import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
+import org.mockito.ArgumentMatchers;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -69,10 +72,11 @@ class SkillPublishControllerTest {
 
         given(skillPublishService.publishFromEntries(
             eq("global"),
-            anyList(),
+            ArgumentMatchers.<List<PackageEntry>>any(),
             eq("usr_1"),
             eq(SkillVisibility.PUBLIC),
-            eq(Set.of("SUPER_ADMIN"))))
+            eq(Set.of("SUPER_ADMIN")),
+            eq(false)))
             .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
 
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -107,6 +111,54 @@ class SkillPublishControllerTest {
             .andExpect(jsonPath("$.data.slug").value("demo-skill"));
 
         verify(skillHubMetrics).incrementSkillPublish("global", "PENDING_REVIEW");
+    }
+
+    @Test
+    void publish_passesWarningConfirmationFlag() throws Exception {
+        SkillVersion version = new SkillVersion(12L, "1.0.0", "usr_1");
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        version.setFileCount(1);
+        version.setTotalSize(128L);
+        ReflectionTestUtils.setField(version, "id", 34L);
+
+        given(skillPublishService.publishFromEntries(
+            eq("global"),
+            ArgumentMatchers.<List<PackageEntry>>any(),
+            eq("usr_1"),
+            eq(SkillVisibility.PUBLIC),
+            eq(Set.of("SUPER_ADMIN")),
+            eq(true)))
+            .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+            "usr_1",
+            "publisher",
+            "publisher@example.com",
+            "",
+            "local",
+            Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+            principal,
+            null,
+            List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "skill.zip",
+            "application/zip",
+            buildZipBytes()
+        );
+
+        mockMvc.perform(multipart("/api/v1/skills/global/publish")
+                .file(file)
+                .param("visibility", "PUBLIC")
+                .param("confirmWarnings", "true")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0));
     }
 
     private byte[] buildZipBytes() throws Exception {

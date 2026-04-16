@@ -14,6 +14,7 @@ import com.iflytek.skillhub.controller.support.MultipartPackageExtractor;
 import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -35,6 +37,8 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Service
 public class ClawHubCompatAppService {
+
+    private static final String GLOBAL_NAMESPACE = "global";
 
     private final CanonicalSlugMapper mapper;
     private final SkillSearchAppService skillSearchAppService;
@@ -93,16 +97,17 @@ public class ClawHubCompatAppService {
                                                  String hash,
                                                  String userId,
                                                  Map<Long, NamespaceRole> userNsRoles) {
-        CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.findByLegacySlug(slug);
+        SkillCoordinate coord = resolveQueryCoordinate(slug, userId, userNsRoles);
+        Map<Long, NamespaceRole> roles = normalizeRoles(userNsRoles);
 
         SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                context.namespace().getSlug(),
-                context.skill().getSlug(),
+                coord.namespace(),
+                coord.slug(),
                 "latest".equals(version) ? null : version,
                 "latest".equals(version) ? "latest" : null,
                 hash,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                roles
         );
         return toResolveResponse(resolved);
     }
@@ -131,11 +136,37 @@ public class ClawHubCompatAppService {
                 : "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/versions/" + version + "/download";
     }
 
-    public String downloadLocationByQuery(String slug, String version) {
-        CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.findByLegacySlug(slug);
+    public String downloadLocationByQuery(String slug,
+                                          String version,
+                                          String userId,
+                                          Map<Long, NamespaceRole> userNsRoles) {
+        SkillCoordinate coord = resolveQueryCoordinate(slug, userId, userNsRoles);
         return "latest".equals(version)
-                ? "/api/v1/skills/" + context.namespace().getSlug() + "/" + context.skill().getSlug() + "/download"
-                : "/api/v1/skills/" + context.namespace().getSlug() + "/" + context.skill().getSlug() + "/versions/" + version + "/download";
+                ? "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/download"
+                : "/api/v1/skills/" + coord.namespace() + "/" + coord.slug() + "/versions/" + version + "/download";
+    }
+
+    private SkillCoordinate resolveQueryCoordinate(String slug,
+                                                   String userId,
+                                                   Map<Long, NamespaceRole> userNsRoles) {
+        if (slug != null && slug.contains("--")) {
+            return mapper.fromCanonical(slug);
+        }
+        CompatSkillLookupService.CompatSkillContext context;
+        try {
+            context = compatSkillLookupService.findByLegacySlug(slug);
+        } catch (DomainNotFoundException ex) {
+            return mapper.fromCanonical(slug);
+        }
+        Map<Long, NamespaceRole> roles = normalizeRoles(userNsRoles);
+        if (!compatSkillLookupService.canAccess(context.skill(), userId, roles)) {
+            throw new DomainNotFoundException("error.skill.notFound", slug);
+        }
+        return new SkillCoordinate(context.namespace().getSlug(), context.skill().getSlug());
+    }
+
+    private Map<Long, NamespaceRole> normalizeRoles(Map<Long, NamespaceRole> userNsRoles) {
+        return userNsRoles != null ? userNsRoles : Map.of();
     }
 
     public ClawHubSkillListResponse listSkills(int page,
@@ -169,11 +200,18 @@ public class ClawHubCompatAppService {
     }
 
     public ClawHubSkillResponse getSkill(String canonicalSlug, String userId) {
+        return getSkill(canonicalSlug, userId, Map.of());
+    }
+
+    public ClawHubSkillResponse getSkill(String canonicalSlug,
+                                         String userId,
+                                         Map<Long, NamespaceRole> userNsRoles) {
         SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
         CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.resolveVisible(
                 coord.namespace(),
                 coord.slug(),
-                userId
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of()
         );
         SkillVersion latestVersionEntity = context.latestVersion().orElse(null);
 
@@ -250,17 +288,19 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publishSkill(String payloadJson,
                                                MultipartFile[] files,
+                                               boolean confirmWarnings,
                                                PlatformPrincipal principal,
                                                String clientIp,
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
-        String namespace = determineNamespace(principal, extracted.payload());
+        String namespace = determineNamespace(extracted.payload());
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 extracted.entries(),
                 principal.userId(),
                 SkillVisibility.PUBLIC,
-                principal.platformRoles()
+                principal.platformRoles(),
+                confirmWarnings
         );
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
                 "{\"namespace\":\"" + namespace + "\",\"slug\":\"" + extracted.payload().slug() + "\"}");
@@ -269,6 +309,7 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publish(MultipartFile file,
                                           String namespace,
+                                          boolean confirmWarnings,
                                           PlatformPrincipal principal,
                                           String clientIp,
                                           String userAgent) throws IOException {
@@ -277,7 +318,8 @@ public class ClawHubCompatAppService {
                 zipPackageExtractor.extract(file),
                 principal.userId(),
                 SkillVisibility.PUBLIC,
-                principal.platformRoles()
+                principal.platformRoles(),
+                confirmWarnings
         );
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
                 "{\"namespace\":\"" + namespace + "\"}");
@@ -354,8 +396,28 @@ public class ClawHubCompatAppService {
         );
     }
 
-    private String determineNamespace(PlatformPrincipal principal, MultipartPackageExtractor.PublishPayload payload) {
-        return "global";
+    private String determineNamespace(MultipartPackageExtractor.PublishPayload payload) {
+        if (payload == null) {
+            return GLOBAL_NAMESPACE;
+        }
+
+        if (StringUtils.hasText(payload.namespace())) {
+            return normalizeNamespace(payload.namespace());
+        }
+
+        if (StringUtils.hasText(payload.slug()) && payload.slug().contains("--")) {
+            return mapper.fromCanonical(payload.slug()).namespace();
+        }
+
+        return GLOBAL_NAMESPACE;
+    }
+
+    private String normalizeNamespace(String namespace) {
+        String trimmed = namespace.trim();
+        if (trimmed.startsWith("@")) {
+            return trimmed.substring(1);
+        }
+        return trimmed;
     }
 
     private void recordCompatPublishAudit(String userId,

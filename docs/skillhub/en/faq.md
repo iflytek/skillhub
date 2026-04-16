@@ -124,6 +124,18 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 > **Note**: It is recommended to back up the database and object storage before upgrading. Database migrations are handled automatically by Flyway.
 
+## Q: Why can't administrators (admin) and regular users create namespaces?
+
+A: Older versions of SkillHub do not support creating namespaces, as this feature was introduced in later updates. Please upgrade your SkillHub instance to the latest version (`latest`).
+Upgrade command example:
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version latest
+```
+
+## Q: How do I search for or operate on a skill package within a specific namespace?
+
+A: When using the OpenClaw CLI, you can specify the namespace using the `<namespace>--<skill-name>` format for operations like search or installation. If you encounter issues finding it on the web interface, you can also manage it by exporting the skill package and importing it into your target namespace.
+
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:
@@ -131,3 +143,74 @@ A: You can get help through the following channels:
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
 - **Documentation**: Refer to the project README.md
 - **Community Discussions**: https://github.com/iflytek/skillhub/discussions
+
+## Q: What should I do if local development fails to start?
+
+A: When `make dev-all` fails to start the backend, detailed error messages will be displayed. Common issues:
+
+### 1. Maven dependency download failed (network timeout)
+
+**Symptoms**: Backend logs show `Could not transfer artifact` or connection timeout
+
+**Solution**: Configure Aliyun mirror
+
+```bash
+# Copy the project's built-in mirror configuration to user directory
+mkdir -p ~/.m2
+cp server/.mvn/settings.xml ~/.m2/settings.xml
+```
+
+Or manually create `~/.m2/settings.xml`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <mirrors>
+    <mirror>
+      <id>aliyun</id>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>
+```
+
+Reference: [Aliyun Maven Mirror Configuration Guide](https://maven.aliyun.com/mvn/guide)
+
+### 2. Java version mismatch
+
+**Symptoms**: `Unsupported class file major version` or `java.lang.NoSuchMethodError`
+
+**Solution**: Install Java 21+
+
+```bash
+# macOS
+brew install openjdk@21
+
+# Verify version
+java -version
+```
+
+### 3. Port already in use
+
+**Symptoms**: `Port 8080 already in use`
+
+**Solution**:
+
+```bash
+# Find the process using the port
+lsof -i :8080
+
+# Terminate the process
+kill -9 <PID>
+```
+
+### 4. View detailed logs
+
+If the above solutions don't help, check the backend logs:
+
+```bash
+make dev-logs SERVICE=backend
+# Or view directly
+cat .dev/server.log
+```

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
@@ -17,6 +18,7 @@ interface MarkdownRendererProps {
  * Renders markdown from skill packages using a constrained plugin stack.
  * Frontmatter is stripped before render because package metadata is surfaced in
  * dedicated UI sections and should not appear twice in the document body.
+ * Memoized to prevent re-parsing on every render.
  */
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   const containerClassName = [
@@ -25,7 +27,12 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   ]
     .filter(Boolean)
     .join(' ')
-  const normalizedContent = stripMarkdownFrontmatter(content)
+
+  // Cache the normalized content to prevent re-parsing on every render
+  const normalizedContent = useMemo(
+    () => stripMarkdownFrontmatter(content),
+    [content]
+  )
 
   return (
     <div className={containerClassName}>
@@ -103,8 +110,8 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             </li>
           ),
           pre: ({ children }) => (
-            <div className="my-6 rounded-2xl border border-border/60 bg-gradient-to-br from-secondary/45 via-background to-secondary/20 p-1 shadow-sm">
-              <div className="max-w-full overflow-x-auto rounded-xl bg-background/80 px-4 py-4 backdrop-blur-sm">
+            <div className="my-4 rounded-lg border border-border/60 bg-secondary/30">
+              <div className="max-w-full overflow-x-auto rounded-lg bg-background px-4 py-3">
                 <pre className="m-0 min-w-max bg-transparent p-0 text-[13px] leading-6">{children}</pre>
               </div>
             </div>
@@ -132,7 +139,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           blockquote: ({ className: blockquoteClassName, children, ...props }) => (
             <blockquote
               className={cn(
-                'relative my-6 overflow-hidden rounded-r-xl border-l-4 border-l-primary/35 bg-secondary/30 px-5 py-4 text-foreground/80 shadow-sm',
+                'my-4 border-l-4 border-l-primary/40 bg-secondary/20 px-4 py-3 text-foreground/80',
                 blockquoteClassName
               )}
               {...props}
@@ -144,7 +151,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             <hr className={cn('my-10 mx-auto w-full max-w-full border-border/50', hrClassName)} {...props} />
           ),
           table: ({ children }) => (
-            <div className="my-6 overflow-hidden rounded-2xl border border-border/80 bg-card/80 shadow-sm">
+            <div className="my-4 overflow-hidden rounded-lg border border-border/60 bg-card/80">
               <div className="max-w-full overflow-x-auto">
                 <table className="m-0 min-w-full border-separate border-spacing-0 text-sm">{children}</table>
               </div>

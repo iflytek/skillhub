@@ -1,8 +1,9 @@
 package com.iflytek.skillhub.service;
 
-import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.auth.rbac.RbacService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -12,13 +13,12 @@ import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 /**
  * Application service that assembles discovery responses from search matches.
@@ -36,18 +36,21 @@ public class SkillSearchAppService {
     private final NamespaceRepository namespaceRepository;
     private final NamespaceService namespaceService;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
+    private final RbacService rbacService;
 
     public SkillSearchAppService(
             SearchQueryService searchQueryService,
             SkillRepository skillRepository,
             NamespaceRepository namespaceRepository,
             NamespaceService namespaceService,
-            SkillLifecycleProjectionService skillLifecycleProjectionService) {
+            SkillLifecycleProjectionService skillLifecycleProjectionService,
+            RbacService rbacService) {
         this.searchQueryService = searchQueryService;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.namespaceService = namespaceService;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
+        this.rbacService = rbacService;
     }
 
     public record SearchResponse(
@@ -93,21 +96,36 @@ public class SkillSearchAppService {
     }
 
     private SearchVisibilityScope buildVisibilityScope(String userId, Map<Long, NamespaceRole> userNsRoles) {
-        if (userId == null || userNsRoles == null) {
+        if (userId == null) {
             return SearchVisibilityScope.anonymous();
         }
 
-        Set<Long> memberNamespaceIds = userNsRoles.keySet();
-        Set<Long> adminNamespaceIds = userNsRoles.entrySet().stream()
+        Map<Long, NamespaceRole> normalizedRoles = userNsRoles != null ? userNsRoles : Map.of();
+        Set<Long> memberNamespaceIds = normalizedRoles.keySet();
+        Set<Long> adminNamespaceIds = normalizedRoles.entrySet().stream()
                 .filter(e -> e.getValue() == NamespaceRole.ADMIN)
                 .map(Map.Entry::getKey)
                 .collect(java.util.stream.Collectors.toSet());
-        adminNamespaceIds.addAll(userNsRoles.entrySet().stream()
+        adminNamespaceIds.addAll(normalizedRoles.entrySet().stream()
                 .filter(e -> e.getValue() == NamespaceRole.OWNER)
                 .map(Map.Entry::getKey)
                 .toList());
 
-        return new SearchVisibilityScope(userId, memberNamespaceIds, adminNamespaceIds);
+        Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
+
+        return new SearchVisibilityScope(
+                userId,
+                memberNamespaceIds,
+                adminNamespaceIds,
+                hasPlatformWideReadAccess(platformRoles)
+        );
+    }
+
+    private boolean hasPlatformWideReadAccess(Set<String> platformRoles) {
+        if (platformRoles == null || platformRoles.isEmpty()) {
+            return false;
+        }
+        return platformRoles.contains("SUPER_ADMIN");
     }
 
     private SearchResponse searchVisibleSkills(

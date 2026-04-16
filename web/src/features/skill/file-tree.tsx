@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Folder } from 'lucide-react'
 import type { SkillFile } from '@/api/types'
@@ -18,13 +19,19 @@ interface FileTreeProps {
  */
 export function FileTree({ files, onFileClick, bare }: FileTreeProps) {
   const { t } = useTranslation()
-  const tree = buildFileTree(files)
 
-  const handleFileClick = (node: FileTreeNode) => {
-    if (node.type === 'file' && onFileClick) {
-      onFileClick(node)
-    }
-  }
+  // Cache tree structure to avoid rebuilding on every render
+  const tree = useMemo(() => buildFileTree(files), [files])
+
+  // Stable callback reference to prevent child re-renders
+  const handleFileClick = useCallback(
+    (node: FileTreeNode) => {
+      if (node.type === 'file' && onFileClick) {
+        onFileClick(node)
+      }
+    },
+    [onFileClick]
+  )
 
   const treeContent = (
     <div>

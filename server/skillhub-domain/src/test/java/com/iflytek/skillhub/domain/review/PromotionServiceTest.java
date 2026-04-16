@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.*;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class PromotionServiceTest {
     @Mock private ReviewPermissionChecker permissionChecker;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private GovernanceNotificationService governanceNotificationService;
+    @Mock private EntityManager entityManager;
 
     private PromotionService promotionService;
 
@@ -58,7 +60,7 @@ class PromotionServiceTest {
     void setUp() {
         promotionService = new PromotionService(
                 promotionRequestRepository, skillRepository, skillVersionRepository,
-                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher, governanceNotificationService, CLOCK);
+                skillFileRepository, namespaceRepository, permissionChecker, eventPublisher, governanceNotificationService, entityManager, CLOCK);
     }
 
     private static void setField(Object target, String fieldName, Object value) {
@@ -391,17 +393,11 @@ class PromotionServiceTest {
         @Test
         void shouldApprovePromotionSuccessfully() {
             PromotionRequest pr = createPendingPromotion();
-            PromotionRequest approvedPromotion = createPendingPromotion();
-            setField(approvedPromotion, "status", ReviewTaskStatus.APPROVED);
-            setField(approvedPromotion, "version", 2);
-            setField(approvedPromotion, "reviewedBy", REVIEWER_ID);
-            setField(approvedPromotion, "reviewComment", "LGTM");
             Skill sourceSkill = createSourceSkill();
             SkillVersion sourceVersion = createPublishedVersion();
             List<SkillFile> sourceFiles = createSourceFiles();
 
-            when(promotionRequestRepository.findById(PROMOTION_ID))
-                    .thenReturn(Optional.of(pr), Optional.of(approvedPromotion));
+            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", null, pr.getVersion()))
@@ -420,12 +416,16 @@ class PromotionServiceTest {
             });
             when(skillFileRepository.findByVersionId(SOURCE_VERSION_ID)).thenReturn(sourceFiles);
             when(skillFileRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
-            when(promotionRequestRepository.save(approvedPromotion)).thenReturn(approvedPromotion);
+            when(promotionRequestRepository.save(pr)).thenReturn(pr);
 
             PromotionRequest result = promotionService.approvePromotion(
                     PROMOTION_ID, REVIEWER_ID, "LGTM", Set.of("SKILL_ADMIN"));
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.APPROVED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("LGTM", result.getReviewComment());
+            assertEquals(Instant.now(CLOCK), result.getReviewedAt());
 
             // Verify new skill created in global namespace
             ArgumentCaptor<Skill> skillCaptor = ArgumentCaptor.forClass(Skill.class);
@@ -467,8 +467,8 @@ class PromotionServiceTest {
             assertEquals(REVIEWER_ID, event.publisherId());
 
             // Verify targetSkillId updated on promotion request
-            verify(promotionRequestRepository).save(approvedPromotion);
-            assertEquals(NEW_SKILL_ID, approvedPromotion.getTargetSkillId());
+            verify(promotionRequestRepository).save(pr);
+            assertEquals(NEW_SKILL_ID, pr.getTargetSkillId());
         }
 
         @Test
@@ -556,12 +556,14 @@ class PromotionServiceTest {
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion()))
                     .thenReturn(1);
-            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
-
             PromotionRequest result = promotionService.rejectPromotion(
                     PROMOTION_ID, REVIEWER_ID, "Not ready", Set.of("SKILL_ADMIN"));
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.REJECTED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("Not ready", result.getReviewComment());
+            assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             verify(promotionRequestRepository).updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion());
             verify(eventPublisher, never()).publishEvent(any());

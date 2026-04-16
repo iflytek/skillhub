@@ -28,7 +28,8 @@ public class ReviewPermissionChecker {
                              Map<Long, NamespaceRole> userNamespaceRoles,
                              Set<String> platformRoles) {
         if (task.getSubmittedBy().equals(userId)) {
-            return platformRoles.contains("SUPER_ADMIN");
+            return platformRoles.contains("SUPER_ADMIN")
+                    || canSelfReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles);
         }
         return canReviewNamespace(task.getNamespaceId(), namespaceType, userNamespaceRoles, platformRoles);
     }
@@ -134,5 +135,16 @@ public class ReviewPermissionChecker {
     private boolean hasPlatformReviewRole(Set<String> platformRoles) {
         return platformRoles.contains("SKILL_ADMIN")
                 || platformRoles.contains("SUPER_ADMIN");
+    }
+
+    private boolean canSelfReviewNamespace(Long namespaceId,
+                                           NamespaceType namespaceType,
+                                           Map<Long, NamespaceRole> userNamespaceRoles) {
+        if (namespaceType == NamespaceType.GLOBAL) {
+            return false;
+        }
+
+        NamespaceRole role = userNamespaceRoles.get(namespaceId);
+        return role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN;
     }
 }

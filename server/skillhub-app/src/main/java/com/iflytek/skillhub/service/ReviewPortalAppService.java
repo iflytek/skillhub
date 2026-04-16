@@ -119,6 +119,7 @@ public class ReviewPortalAppService {
                                                         Map<Long, NamespaceRole> userNsRoles) {
         ReviewTaskStatus reviewStatus = ReviewTaskStatus.valueOf(status.toUpperCase());
         Map<Long, NamespaceRole> namespaceRoles = normalizeRoles(userNsRoles);
+        Set<String> platformRoles = platformRoles(userId);
         Pageable pageable = buildReviewPageable(reviewStatus, page, size, sortDirection);
 
         Page<ReviewTask> tasks;
@@ -131,11 +132,14 @@ public class ReviewPortalAppService {
                     userId,
                     namespace.getType(),
                     namespaceRoles,
-                    platformRoles(userId))) {
+                    platformRoles)) {
                 throw new DomainForbiddenException("review.no_permission");
             }
             tasks = reviewTaskRepository.findByNamespaceIdAndStatus(namespaceId, reviewStatus, pageable);
         } else {
+            if (!hasPlatformReviewRole(platformRoles)) {
+                throw new DomainForbiddenException("review.no_permission");
+            }
             tasks = reviewTaskRepository.findByStatus(reviewStatus, pageable);
         }
 
@@ -146,7 +150,7 @@ public class ReviewPortalAppService {
         return PageResponse.from(new PageImpl<>(
                 governanceQueryRepository.getReviewTaskResponses(visibleItems),
                 tasks.getPageable(),
-                visibleItems.size()
+                tasks.getTotalElements()
         ));
     }
 
@@ -231,6 +235,11 @@ public class ReviewPortalAppService {
 
     private Set<String> platformRoles(String userId) {
         return rbacService.getUserRoleCodes(userId);
+    }
+
+    private boolean hasPlatformReviewRole(Set<String> platformRoles) {
+        return platformRoles.contains("SKILL_ADMIN")
+                || platformRoles.contains("SUPER_ADMIN");
     }
 
     private Map<Long, NamespaceRole> normalizeRoles(Map<Long, NamespaceRole> userNsRoles) {

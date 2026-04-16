@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.security;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
@@ -105,7 +106,12 @@ public class SecurityScanService {
         audit.setScannedAt(Instant.now(Clock.systemUTC()));
         auditRepository.save(audit);
 
-        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        // Set status based on requestedVisibility
+        if (version.getRequestedVisibility() == SkillVisibility.PRIVATE) {
+            version.setStatus(SkillVersionStatus.UPLOADED);
+        } else {
+            version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        }
         skillVersionRepository.save(version);
     }
 

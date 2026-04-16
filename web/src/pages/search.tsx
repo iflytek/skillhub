@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useState } from 'react'
+import { startTransition, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
@@ -17,6 +17,37 @@ import { Button } from '@/shared/ui/button'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 
 const PAGE_SIZE = 12
+
+function blurActiveElement() {
+  if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') {
+    return
+  }
+
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+}
+
+function scrollToTopOnPageChange() {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
+  let secondFrame = 0
+  const firstFrame = window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+    secondFrame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+  })
+
+  return () => {
+    window.cancelAnimationFrame(firstFrame)
+    if (secondFrame) {
+      window.cancelAnimationFrame(secondFrame)
+    }
+  }
+}
 
 /**
  * Skill discovery page with synchronized URL state.
@@ -60,10 +91,25 @@ export function SearchPage() {
   const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
   const [queryInput, setQueryInput] = useState(q)
+  const previousPageRef = useRef(page)
 
   useEffect(() => {
     setQueryInput(q)
   }, [q])
+
+  useEffect(() => {
+    if (previousPageRef.current !== page) {
+      blurActiveElement()
+      const cleanupScroll = scrollToTopOnPageChange()
+
+      previousPageRef.current = page
+      return () => {
+        cleanupScroll()
+      }
+    }
+
+    previousPageRef.current = page
+  }, [page])
 
   const { data, isLoading, isFetching } = useSearchSkills({
     q,
@@ -79,7 +125,6 @@ export function SearchPage() {
     isLoading: isLoadingStarred,
     isFetching: isFetchingStarred,
   } = useMyStars(starredOnly && isAuthenticated)
-
   useEffect(() => {
     // Debounce URL updates while the user is typing so query state stays shareable without
     // triggering a navigation on every keystroke.
@@ -117,6 +162,7 @@ export function SearchPage() {
   }
 
   const handlePageChange = (newPage: number) => {
+    blurActiveElement()
     navigate({ to: '/search', search: { q, label: selectedLabel, sort, page: newPage, starredOnly } })
   }
 
@@ -267,7 +313,7 @@ export function SearchPage() {
           description={
             starredOnly
               ? (q ? t('search.noStarredResultsFor', { q }) : t('search.noStarredSkills'))
-              : (q ? t('search.noResultsFor', { q }) : t('search.enterKeyword'))
+              : (q ? t('search.noResultsFor', { q }) : undefined)
           }
         />
       )}

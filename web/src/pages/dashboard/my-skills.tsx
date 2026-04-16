@@ -83,6 +83,9 @@ export function MySkillsPage() {
     if (status === 'SCAN_FAILED') {
       return t('mySkills.statusScanFailed')
     }
+    if (status === 'UPLOADED') {
+      return t('skillDetail.versionStatusUploaded')
+    }
     return status
   }
 
@@ -107,6 +110,9 @@ export function MySkillsPage() {
     }
     if (status === 'SCAN_FAILED') {
       return 'status-pill status-pill--rejected'
+    }
+    if (status === 'UPLOADED') {
+      return 'status-pill status-pill--review'
     }
     return 'status-pill'
   }

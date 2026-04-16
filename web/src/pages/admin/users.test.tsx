@@ -64,6 +64,7 @@ vi.mock('@/features/admin/use-admin-users', () => ({
   useApproveUser: () => ({ mutate: vi.fn(), isPending: false }),
   useDisableUser: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useEnableUser: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useTriggerUserPasswordReset: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateUserRole: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 

@@ -67,7 +67,7 @@ my-skill/
 
 校验规则：
 - 根目录必须包含 `SKILL.md`
-- 文件类型白名单：`.md`, `.txt`, `.json`, `.yaml`, `.yml`, `.js`, `.ts`, `.py`, `.sh`, `.png`, `.jpg`, `.svg`
+- 文件类型白名单：`.md`, `.txt`, `.json`, `.yaml`, `.yml`, `.js`, `.cjs`, `.mjs`, `.ts`, `.py`, `.sh`, `.png`, `.jpg`, `.svg`
 - 单文件大小限制：1MB（可配置）
 - 总包大小限制：10MB（可配置）
 - 文件数量限制：100 个（可配置）

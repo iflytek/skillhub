@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 
 public record SkillVersionRereleaseRequest(
         @NotBlank(message = "{validation.required}")
-        String targetVersion
+        String targetVersion,
+        boolean confirmWarnings
 ) {
 }

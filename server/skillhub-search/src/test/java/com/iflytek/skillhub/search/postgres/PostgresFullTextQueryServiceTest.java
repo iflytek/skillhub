@@ -393,6 +393,40 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void platformWideAccessShouldBypassNamespaceVisibilityRestrictions() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                null,
+                null,
+                new SearchVisibilityScope("admin-1", Set.of(), Set.of(), true),
+                "newest",
+                0,
+                12
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst())
+                .contains("OR (d.visibility = 'NAMESPACE_ONLY' AND :platformWideAccess = TRUE)")
+                .contains("OR (d.visibility = 'PRIVATE' AND :platformWideAccess = TRUE)")
+                .contains("OR :platformWideAccess = TRUE");
+        verify(nativeQuery).setParameter("platformWideAccess", true);
+        verify(countQuery).setParameter("platformWideAccess", true);
+    }
+
+    @Test
     void maliciousKeywordShouldBeBoundAsParameterInsteadOfInlinedIntoSql() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);

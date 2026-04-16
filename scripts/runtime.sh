@@ -22,6 +22,7 @@ SKILLHUB_SCANNER_IMAGE_VALUE="${SKILLHUB_SCANNER_IMAGE:-}"
 POSTGRES_IMAGE_VALUE="${POSTGRES_IMAGE:-}"
 REDIS_IMAGE_VALUE="${REDIS_IMAGE:-}"
 DISABLE_SCANNER=false
+USE_ALIYUN=false
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -36,6 +37,7 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_ALIYUN_REGISTRY%/}/${SKILLHUB_ALIYUN_NAMESPACE}"
+      USE_ALIYUN=true
       shift
       ;;
     --mirror-registry)
@@ -114,7 +116,13 @@ EOF
   esac
 done
 
-SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF}"
+if [ "$USE_ALIYUN" = "true" ]; then
+  SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://imageless.oss-cn-beijing.aliyuncs.com}"
+  echo "Using Aliyun OSS for runtime files: $SKILLHUB_RAW_BASE"
+else
+  SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF}"
+  echo "Using GitHub raw for runtime files: $SKILLHUB_RAW_BASE"
+fi
 COMPOSE_FILE="$SKILLHUB_HOME/compose.release.yml"
 ENV_EXAMPLE_FILE="$SKILLHUB_HOME/.env.release.example"
 ENV_FILE="$SKILLHUB_HOME/.env.release"

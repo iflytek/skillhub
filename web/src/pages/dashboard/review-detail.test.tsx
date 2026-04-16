@@ -5,7 +5,11 @@ const navigateMock = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
-  useParams: () => ({ id: '13' }),
+  useParams: (options?: { from?: string }) => (
+    options?.from === '/dashboard/namespaces/$slug/reviews/$id'
+      ? { id: '13', slug: 'team-alpha' }
+      : { id: '13' }
+  ),
 }))
 
 vi.mock('react-i18next', async () => {
@@ -112,6 +116,11 @@ vi.mock('@/features/review/use-review-detail', () => ({
   }),
 }))
 
+const userMock = { platformRoles: ['SKILL_ADMIN'] as string[] }
+vi.mock('@/features/auth/use-auth', () => ({
+  useAuth: () => ({ user: userMock }),
+}))
+
 // Mock hooks used directly by the review-detail page for file browser sidebar
 vi.mock('@/features/review/use-review-file', () => ({
   useReviewFile: () => ({ data: null, isLoading: false, error: null }),
@@ -122,11 +131,12 @@ vi.mock('@/api/client', () => ({
   WEB_API_PREFIX: '/api/web',
 }))
 
-import { ReviewDetailPage } from './review-detail'
+import { NamespaceReviewDetailPage, ReviewDetailPage } from './review-detail'
 
 describe('ReviewDetailPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    userMock.platformRoles = ['SKILL_ADMIN']
     useReviewDetailMock.mockReset()
     useReviewSkillDetailMock.mockReset()
     useReviewDetailMock.mockReturnValue({
@@ -204,6 +214,81 @@ describe('ReviewDetailPage', () => {
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
     expect(html).toContain('review.notFound')
+  })
+
+  it('renders namespace review detail through the namespace route wrapper', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'team-alpha',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedByName: 'Local Admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+        reviewedBy: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewComment: null,
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
+
+    expect(html).toContain('review.detail')
+    expect(html).toContain('demo-skill')
+  })
+
+  it('redirects namespace reviews opened through the global route for namespace operators', () => {
+    userMock.platformRoles = []
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'team-alpha',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedByName: 'Local Admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+        reviewedBy: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewComment: null,
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toBe('')
+  })
+
+  it('shows not-found state when the namespace route slug does not match the review namespace', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'other-team',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedByName: 'Local Admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+        reviewedBy: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewComment: null,
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
+
+    expect(html).toContain('review.notFound')
+    expect(html).toContain('review.backToList')
   })
 
   it('disables approval and shows a scanning hint while the active review version is scanning', () => {

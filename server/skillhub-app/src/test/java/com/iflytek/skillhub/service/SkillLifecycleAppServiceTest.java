@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
+import com.iflytek.skillhub.domain.skill.service.SkillReviewSubmitService;
 import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ class SkillLifecycleAppServiceTest {
     private final SkillGovernanceService skillGovernanceService = mock(SkillGovernanceService.class);
     private final ReviewService reviewService = mock(ReviewService.class);
     private final SkillPublishService skillPublishService = mock(SkillPublishService.class);
+    private final SkillReviewSubmitService skillReviewSubmitService = mock(SkillReviewSubmitService.class);
     private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final SkillSlugResolutionService skillSlugResolutionService = mock(SkillSlugResolutionService.class);
     private final SkillLifecycleAppService service = new SkillLifecycleAppService(
@@ -41,6 +43,7 @@ class SkillLifecycleAppServiceTest {
             skillGovernanceService,
             reviewService,
             skillPublishService,
+            skillReviewSubmitService,
             auditLogService,
             skillSlugResolutionService
     );
