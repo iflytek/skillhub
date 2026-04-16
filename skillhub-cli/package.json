@@ -1,6 +1,6 @@
 {
   "name": "motovis-skillhub",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "type": "module",
   "description": "SkillHub CLI - 企业级 Agent Skill 管理工具，支持命名空间",
   "bin": {
@@ -19,11 +19,13 @@
     "ora": "^9.3.0",
     "picocolors": "^1.1.1",
     "semver": "^7.7.4",
-    "undici": "^7.24.0"
+    "undici": "^7.24.0",
+    "unzipper": "^0.12.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/semver": "^7.5.8",
+    "@types/unzipper": "^0.10.11",
     "typescript": "^5.6.0",
     "unbuild": "^3.0.0",
     "vitest": "^3.0.0"

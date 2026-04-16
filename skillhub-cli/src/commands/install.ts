@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { createWriteStream, createReadStream, existsSync, mkdirSync } from "node:fs";
 import { ApiClient } from "../core/api-client.js";
 import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
@@ -12,6 +12,7 @@ import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversa
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
+import unzipper from "unzipper";
 import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import { runInteractiveSearch, searchSkills } from "../core/interactive-search.js";
@@ -296,7 +297,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
       await rm(tmpDir, { recursive: true, force: true });
       process.exit(1);
     }
-    response = await request(location, { method: "GET" });
+          response = await request(location as string, { method: "GET" });
   }
   const { statusCode, body } = response;
 
@@ -312,7 +313,9 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   spinner.text = "Extracting";
   const extractDir = join(tmpDir, "extracted");
   mkdirSync(extractDir, { recursive: true });
-  execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { stdio: "pipe" });
+  await createReadStream(zipPath)
+    .pipe(unzipper.Extract({ path: extractDir }))
+    .promise();
 
   const skills = discoverSkills(extractDir);
   if (skills.length === 0) {

@@ -46,7 +46,7 @@ export function registerDownload(program: Command) {
             spinner.fail(`Redirect response has no Location header`);
             process.exit(1);
           }
-          response = await request(location, { method: "GET" });
+          response = await request(location as string, { method: "GET" });
         }
         const { statusCode, body } = response;
 
