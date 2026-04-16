@@ -132,7 +132,7 @@ public class LocalAuthService {
         ensureNotLocked(credential);
 
         if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
-            localAuthFailedService.handleFailedLogin(credential);
+            localAuthFailedService.handleFailedLogin(credential.getId());
             throw invalidCredentials();
         }
 

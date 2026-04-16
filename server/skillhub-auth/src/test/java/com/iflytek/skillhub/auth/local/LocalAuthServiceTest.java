@@ -122,21 +122,12 @@ class LocalAuthServiceTest {
         given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("bad", "encoded")).willReturn(false);
 
-        // Mock handleFailedLogin to increment failedAttempts
-        doAnswer(invocation -> {
-                LocalCredential cred = invocation.getArgument(0);
-                cred.setFailedAttempts(cred.getFailedAttempts() + 1);
-                credentialRepository.save(cred);
-                return null;
-        }).when(localAuthFailedService).handleFailedLogin(any(LocalCredential.class));
-
         assertThatThrownBy(() -> service.login("alice", "bad"))
             .isInstanceOf(AuthFlowException.class)
             .extracting("status")
             .isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        assertThat(credential.getFailedAttempts()).isEqualTo(1);
-        verify(credentialRepository).save(credential);
+        verify(localAuthFailedService).handleFailedLogin(credential.getId());
     }
 
     @Test
@@ -149,23 +140,12 @@ class LocalAuthServiceTest {
         given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("bad", "encoded")).willReturn(false);
 
-        // Mock handleFailedLogin to set lockedUntil using CLOCK
-        doAnswer(invocation -> {
-                LocalCredential cred = invocation.getArgument(0);
-                cred.setFailedAttempts(cred.getFailedAttempts() + 1);
-                cred.setLockedUntil(Instant.now(CLOCK).plus(java.time.Duration.ofMinutes(15)));
-                credentialRepository.save(cred);
-                return null;
-        }).when(localAuthFailedService).handleFailedLogin(any(LocalCredential.class));
-
         assertThatThrownBy(() -> service.login("alice", "bad"))
             .isInstanceOf(AuthFlowException.class)
             .extracting("status")
             .isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        assertThat(credential.getFailedAttempts()).isEqualTo(5);
-        assertThat(credential.getLockedUntil()).isEqualTo(Instant.now(CLOCK).plusSeconds(15 * 60));
-        verify(credentialRepository).save(credential);
+        verify(localAuthFailedService).handleFailedLogin(credential.getId());
     }
 
     @Test
