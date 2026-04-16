@@ -27,14 +27,15 @@ Teams can **govern, publish, and reuse** agent skills in one place—with visibi
 ### Validated
 
 - **Phase 3 (Web UI):** Dashboard collection detail (reorder, D-09 hint), contributor add/remove, share copy link, public `/u/.../c/...` with session refetch — validated in code review / verification pass 2026-04-16 (`WEB-03`..`WEB-05`, `VIS-02`/`VIS-03` UX).
+- **Phase 4 (Verification & docs):** Backend role-matrix tests, collections Playwright flows, developer API + E2E docs, Docusaurus build — validated 2026-04-16 (`QA-01`..`QA-03`; INT-03 regression named in `SkillCollectionMembershipReconcileTest`).
 
 ### Active
 
 - [x] Collections domain model, persistence, and visibility rules (`COL-*`, `VIS-*`, `ROL-*`)
 - [x] Backend APIs + web security alignment for collection CRUD and membership
 - [x] Web UI: list, create/edit, detail, sharing entry points, contributor management (owner)
-- [ ] Lifecycle handling for collection items when skills become unavailable (`INT-*`)
-- [ ] Verification: automated tests + critical path manual / E2E notes (`QA-*`)
+- [x] Lifecycle handling for collection items when skills become unavailable (`INT-*`)
+- [x] Verification: automated tests + critical path manual / E2E notes (`QA-*`)
 
 ### Out of Scope (this milestone)
 
@@ -88,4 +89,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-15 after `/gsd-new-milestone` — Skill Collections*
+*Last updated: 2026-04-16 after phase 04 (verification-docs) completion.*
