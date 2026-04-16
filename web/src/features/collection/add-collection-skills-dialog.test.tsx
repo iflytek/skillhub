@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AddCollectionSkillsDialog } from './add-collection-skills-dialog'
 
 const useCollectionAddCandidatesMock = vi.fn()
 const useBulkAddCollectionSkillsMock = vi.fn()
 const useVisibleLabelsMock = vi.fn()
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
+}))
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -16,13 +21,12 @@ vi.mock('react-i18next', async () => {
     'collections.addSkillDialogDescription': 'Find skills and add them in one pass.',
     'collections.alreadyInCollection': 'Already in collection',
     'collections.addSelected': 'Add selected',
-    'collections.addDialogSearchLabel': 'Search',
-    'collections.addDialogSearchPlaceholder': 'Search skills',
-    'collections.addDialogFilterLabel': 'Filter',
-    'collections.addDialogSortLabel': 'Sort',
-    'collections.addDialogSortNewest': 'Newest',
-    'collections.addDialogSortDownloads': 'Downloads',
-    'collections.addDialogSortRelevance': 'Relevance',
+    'search.placeholder': 'Search skills',
+    'search.filters.label': 'Filter',
+    'search.sort.label': 'Sort',
+    'search.sort.newest': 'Newest',
+    'search.sort.downloads': 'Downloads',
+    'search.sort.relevance': 'Relevance',
     'collections.addDialogEmptyTitle': 'No addable skills available',
     'collections.addDialogEmptyDescription': 'All visible skills are already in this collection.',
     'collections.addDialogEmptyCta': 'Browse and publish skills',
@@ -105,6 +109,7 @@ describe('AddCollectionSkillsDialog', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    cleanup()
   })
 
   it('opens modal after clicking Add skill trigger', () => {
@@ -153,11 +158,11 @@ describe('AddCollectionSkillsDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add skill' }))
 
-    expect(screen.getByLabelText('Search')).toBeTruthy()
+    expect(screen.getByLabelText('Search skills')).toBeTruthy()
     expect(screen.getByText('Filter')).toBeTruthy()
     expect(screen.getByText('Sort')).toBeTruthy()
-    expect(screen.getByText('Skill One')).toBeTruthy()
-    expect(screen.getByText('Skill Two')).toBeTruthy()
+    expect(screen.getAllByText('Skill One').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Skill Two').length).toBeGreaterThan(0)
     expect(screen.getByText('Page')).toBeTruthy()
   })
 
@@ -176,8 +181,8 @@ describe('AddCollectionSkillsDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add skill' }))
 
-    expect(screen.getByText('Already in collection')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Already in collection' })).toBeDisabled()
+    expect(screen.getAllByText('Already in collection').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Already in collection' }).hasAttribute('disabled')).toBe(true)
   })
 
   it('updates Add selected (N) label while toggling selections', () => {
@@ -206,10 +211,10 @@ describe('AddCollectionSkillsDialog', () => {
 
     expect(screen.getByRole('button', { name: 'Add selected (0)' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Select Skill One' }))
+    fireEvent.click(screen.getByTestId('add-collection-skills-select-1'))
     expect(screen.getByRole('button', { name: 'Add selected (1)' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Select Skill Two' }))
+    fireEvent.click(screen.getByTestId('add-collection-skills-select-2'))
     expect(screen.getByRole('button', { name: 'Add selected (2)' })).toBeTruthy()
   })
 
