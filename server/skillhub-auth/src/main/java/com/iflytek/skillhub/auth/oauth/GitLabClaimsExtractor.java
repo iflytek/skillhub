@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -26,8 +27,8 @@ public class GitLabClaimsExtractor implements OAuthClaimsExtractor {
 
     private final RestClient restClient;
 
-    public GitLabClaimsExtractor() {
-        this.restClient = RestClient.builder()
+    public GitLabClaimsExtractor(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
             .build();
     }
@@ -45,9 +46,7 @@ public class GitLabClaimsExtractor implements OAuthClaimsExtractor {
         // GitLab returns email directly in user info
         String email = (String) attrs.get("email");
 
-        // GitLab provides email_verified field in the user info response
-        Boolean emailVerifiedObj = (Boolean) attrs.get("email_verified");
-        boolean emailVerified = emailVerifiedObj != null && emailVerifiedObj;
+        boolean emailVerified = isConfirmed(attrs.get("confirmed_at"));
 
         log.debug("Initial email from GitLab: {}, verified: {}", email, emailVerified);
 
@@ -129,10 +128,15 @@ public class GitLabClaimsExtractor implements OAuthClaimsExtractor {
     }
 
     /**
-     * Represents a GitLab email object from the /user/emails API.
-     *
-     * @param email     the email address
-     * @param confirmed whether the email has been confirmed
+     * GitLab marks a confirmed email by populating confirmed_at.
      */
-    private record GitLabEmail(String email, boolean confirmed) {}
+    private record GitLabEmail(String email, @JsonProperty("confirmed_at") String confirmedAt) {
+        boolean confirmed() {
+            return confirmedAt != null && !confirmedAt.isBlank();
+        }
+    }
+
+    private boolean isConfirmed(Object confirmedAt) {
+        return confirmedAt instanceof String value && !value.isBlank();
+    }
 }

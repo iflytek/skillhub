@@ -56,7 +56,7 @@ spring:
             scope:
               - read:user
               - user:email
-            redirect-uri: ${SKILLHUB_PUBLIC_BASE_URL:http://localhost:8080}/login/oauth2/code/github
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: GitHub
             authorization-grant-type: authorization_code
           gitlab:
@@ -66,7 +66,7 @@ spring:
               - read_user
               - email
             authorization-grant-type: authorization_code
-            redirect-uri: ${SKILLHUB_PUBLIC_BASE_URL:http://localhost:8080}/login/oauth2/code/gitlab
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
         provider:
           github:
