@@ -382,6 +382,180 @@ class SkillCollectionSecurityIT {
         assertNotFoundLike(result, "error.skillCollection.notFound");
     }
 
+    @Test
+    void roleMatrixMetadataUpdateOwnerAndAdminAllowedOthersDenied() throws Exception {
+        TestFixture fixture = createFixture();
+
+        mockMvc.perform(patch("/api/web/collections/{id}", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.ownerUserId(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "owner can update",
+                                "description", "owner update",
+                                "slug", fixture.collection().getSlug()
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(patch("/api/web/collections/{id}", fixture.collection().getId())
+                        .with(authentication(portalAuth("admin-" + UUID.randomUUID(), "SKILL_ADMIN")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "admin can update",
+                                "description", "admin update",
+                                "slug", fixture.collection().getSlug()
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        MvcResult contributor = mockMvc.perform(patch("/api/web/collections/{id}", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.contributorUserId(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "contributor denied",
+                                "description", "denied",
+                                "slug", fixture.collection().getSlug()
+                        ))))
+                .andReturn();
+        assertContributorDenied(contributor);
+
+        MvcResult stranger = mockMvc.perform(patch("/api/web/collections/{id}", fixture.collection().getId())
+                        .with(authentication(portalAuth("stranger-" + UUID.randomUUID(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "stranger denied",
+                                "description", "denied",
+                                "slug", fixture.collection().getSlug()
+                        ))))
+                .andReturn();
+        assertDeniedLike(stranger);
+    }
+
+    @Test
+    void roleMatrixContributorManagementOwnerAndAdminAllowedOthersDenied() throws Exception {
+        TestFixture fixture = createFixture();
+        String invitee = "invitee-" + UUID.randomUUID();
+
+        mockMvc.perform(post("/api/web/collections/{id}/contributors", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.ownerUserId(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("userId", invitee))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(delete("/api/web/collections/{id}/contributors/{userId}", fixture.collection().getId(), invitee)
+                        .with(authentication(portalAuth("admin-" + UUID.randomUUID(), "SKILL_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        MvcResult contributor = mockMvc.perform(post("/api/web/collections/{id}/contributors", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.contributorUserId(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("userId", "blocked-" + UUID.randomUUID()))))
+                .andReturn();
+        assertContributorDenied(contributor);
+
+        MvcResult stranger = mockMvc.perform(post("/api/web/collections/{id}/contributors", fixture.collection().getId())
+                        .with(authentication(portalAuth("stranger-" + UUID.randomUUID(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("userId", "blocked-" + UUID.randomUUID()))))
+                .andReturn();
+        assertDeniedLike(stranger);
+    }
+
+    @Test
+    void roleMatrixMembershipMutationOwnerContributorAdminAllowedStrangerDenied() throws Exception {
+        TestFixture fixture = createFixture();
+
+        mockMvc.perform(post("/api/web/collections/{id}/skills", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.ownerUserId(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("skillId", fixture.publicSkill().getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        skillCollectionMembershipService.removeSkill(
+                fixture.collection().getId(),
+                fixture.ownerUserId(),
+                fixture.publicSkill().getId(),
+                false
+        );
+
+        mockMvc.perform(post("/api/web/collections/{id}/skills", fixture.collection().getId())
+                        .with(authentication(portalAuth(fixture.contributorUserId(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("skillId", fixture.publicSkill().getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(delete("/api/web/collections/{id}/skills/{skillId}",
+                        fixture.collection().getId(), fixture.publicSkill().getId())
+                        .with(authentication(portalAuth("admin-" + UUID.randomUUID(), "SKILL_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        MvcResult stranger = mockMvc.perform(post("/api/web/collections/{id}/skills", fixture.collection().getId())
+                        .with(authentication(portalAuth("stranger-" + UUID.randomUUID(), "USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("skillId", fixture.publicSkill().getId()))))
+                .andReturn();
+        assertDeniedLike(stranger);
+    }
+
+    @Test
+    void roleMatrixPrivateReadOwnerContributorAdminAllowedStrangerDenied() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String ownerUserId = "owner-private-" + suffix;
+        String contributorUserId = "contributor-private-" + suffix;
+        SkillCollection privateCollection = skillCollectionDomainService.createCollection(
+                ownerUserId,
+                "Private matrix " + suffix,
+                "private matrix fixture",
+                SkillVisibility.PRIVATE,
+                "private-matrix-" + suffix,
+                false,
+                ownerUserId
+        );
+        skillCollectionContributorService.addContributor(
+                privateCollection.getId(),
+                ownerUserId,
+                contributorUserId,
+                false
+        );
+
+        mockMvc.perform(get("/api/web/collections/{id}", privateCollection.getId())
+                        .with(authentication(portalAuth(ownerUserId, "USER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(get("/api/web/collections/{id}", privateCollection.getId())
+                        .with(authentication(portalAuth(contributorUserId, "USER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(get("/api/web/collections/{id}", privateCollection.getId())
+                        .with(authentication(portalAuth("admin-private-" + suffix, "SKILL_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        MvcResult stranger = mockMvc.perform(get("/api/web/collections/{id}", privateCollection.getId())
+                        .with(authentication(portalAuth("stranger-private-" + suffix, "USER"))))
+                .andReturn();
+        assertNotFoundLike(stranger, "error.skillCollection.notFound");
+    }
+
     private void assertContributorDenied(MvcResult result) throws Exception {
         int status = result.getResponse().getStatus();
         String body = result.getResponse().getContentAsString();
@@ -421,6 +595,16 @@ class SkillCollectionSecurityIT {
                 && (body.contains(expectedCode) || body.contains("Skill collection not found"));
         assertTrue(matches, () -> "Expected not-found-like response with code=" + expectedCode + " but got status="
                 + status + " body=" + body);
+    }
+
+    private void assertDeniedLike(MvcResult result) throws Exception {
+        int status = result.getResponse().getStatus();
+        String body = result.getResponse().getContentAsString();
+        boolean denied = status == 403
+                || (status == 400 && (body.contains("Contributors cannot perform")
+                || body.contains("error.skillCollection.permissionDenied")
+                || body.contains("error.skillCollection.notFound")));
+        assertTrue(denied, () -> "Expected denied response but got status=" + status + " body=" + body);
     }
 
     private TestFixture createFixture() {
