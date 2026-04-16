@@ -254,4 +254,36 @@ public class GovernanceWorkflowAppService {
                                               AuditRequestContext auditContext) {
         return namespacePortalCommandAppService.restoreNamespace(slug, userId, auditContext);
     }
+
+    public SkillLifecycleMutationResponse submitForReview(String namespace,
+                                                           String slug,
+                                                           String version,
+                                                           String targetVisibility,
+                                                           String userId,
+                                                           Map<Long, NamespaceRole> userNsRoles,
+                                                           AuditRequestContext auditContext) {
+        return skillLifecycleAppService.submitForReview(
+                namespace,
+                slug,
+                version,
+                targetVisibility,
+                userId,
+                userNsRoles,
+                auditContext);
+    }
+
+    public SkillLifecycleMutationResponse confirmPublish(String namespace,
+                                                          String slug,
+                                                          String version,
+                                                          String userId,
+                                                          Map<Long, NamespaceRole> userNsRoles,
+                                                          AuditRequestContext auditContext) {
+        return skillLifecycleAppService.confirmPublish(
+                namespace,
+                slug,
+                version,
+                userId,
+                userNsRoles,
+                auditContext);
+    }
 }

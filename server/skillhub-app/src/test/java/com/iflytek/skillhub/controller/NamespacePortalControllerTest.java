@@ -12,6 +12,8 @@ import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
 import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
 import org.junit.jupiter.api.Test;
@@ -71,6 +73,9 @@ class NamespacePortalControllerTest {
     @MockBean
     private DeviceAuthService deviceAuthService;
 
+    @MockBean
+    private UserAccountRepository userAccountRepository;
+
     @Test
     void listMyNamespaces_returnsFrozenAndArchivedNamespacesWithCurrentRole() throws Exception {
         Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
@@ -89,18 +94,9 @@ class NamespacePortalControllerTest {
     }
 
     @Test
-    void getNamespace_hidesArchivedNamespaceFromAnonymousUsers() throws Exception {
-        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
-        given(namespaceService.getNamespaceBySlugForRead("team-a", null, Map.of())).willThrow(
-                new com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException(
-                        "error.namespace.slug.notFound",
-                        "team-a"
-                )
-        );
-
+    void getNamespace_requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/namespaces/team-a"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(400));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -188,9 +184,12 @@ class NamespacePortalControllerTest {
     void addMember_returnsCreatedMember() throws Exception {
         Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
         NamespaceMember member = new NamespaceMember(1L, "user-2", NamespaceRole.ADMIN);
+        UserAccount user = new UserAccount("user-2", "Alice", "alice@example.com", null);
         given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
         given(namespaceMemberService.addMember(1L, "user-2", NamespaceRole.ADMIN, "owner-1"))
                 .willReturn(member);
+        given(userAccountRepository.findById("user-2"))
+                .willReturn(java.util.Optional.of(user));
 
         mockMvc.perform(post("/api/v1/namespaces/team-a/members")
                         .with(csrf())
@@ -203,7 +202,9 @@ class NamespacePortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.userId").value("user-2"))
-                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+                .andExpect(jsonPath("$.data.role").value("ADMIN"))
+                .andExpect(jsonPath("$.data.displayName").value("Alice"))
+                .andExpect(jsonPath("$.data.email").value("alice@example.com"));
     }
 
     @Test
@@ -224,9 +225,12 @@ class NamespacePortalControllerTest {
     void updateMemberRole_returnsUpdatedMember() throws Exception {
         Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
         NamespaceMember member = new NamespaceMember(1L, "user-2", NamespaceRole.OWNER);
+        UserAccount user = new UserAccount("user-2", "Alice", "alice@example.com", null);
         given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
         given(namespaceMemberService.updateMemberRole(1L, "user-2", NamespaceRole.OWNER, "owner-1"))
                 .willReturn(member);
+        given(userAccountRepository.findById("user-2"))
+                .willReturn(java.util.Optional.of(user));
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/namespaces/team-a/members/user-2/role")
                         .with(csrf())
@@ -239,7 +243,9 @@ class NamespacePortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.userId").value("user-2"))
-                .andExpect(jsonPath("$.data.role").value("OWNER"));
+                .andExpect(jsonPath("$.data.role").value("OWNER"))
+                .andExpect(jsonPath("$.data.displayName").value("Alice"))
+                .andExpect(jsonPath("$.data.email").value("alice@example.com"));
     }
 
     @Test

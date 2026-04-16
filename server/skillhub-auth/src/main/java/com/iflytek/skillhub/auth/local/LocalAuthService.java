@@ -47,8 +47,7 @@ public class LocalAuthService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
-    @Resource
-    private LocalAuthFailedService localAuthFailedService;
+    private final LocalAuthFailedService localAuthFailedService;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -56,7 +55,8 @@ public class LocalAuthService {
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
-                            Clock clock) {
+                            Clock clock,
+                            LocalAuthFailedService localAuthFailedService) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -64,6 +64,7 @@ public class LocalAuthService {
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.localAuthFailedService = localAuthFailedService;
     }
 
     /**
@@ -235,7 +236,7 @@ public class LocalAuthService {
 
     private void validateEmail(String email) {
         if (email == null) {
-            return;
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.notBlank");
         }
         if (!EMAIL_PATTERN.matcher(email).matches()) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.invalid");

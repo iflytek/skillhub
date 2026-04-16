@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller.admin;
 
 import com.iflytek.skillhub.TestRedisConfig;
+import com.iflytek.skillhub.auth.local.PasswordResetService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -51,6 +52,9 @@ class UserManagementControllerTest {
 
     @MockBean
     private AdminUserAppService adminUserAppService;
+
+    @MockBean
+    private PasswordResetService passwordResetService;
 
     @Test
     void listUsers_unauthenticated_returns401() throws Exception {
@@ -242,5 +246,23 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
         verify(adminUserAppService).updateUserStatus("user-123", "ACTIVE");
+    }
+
+    @Test
+    void triggerPasswordReset_withUserAdminRole_returns200() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-42", "admin", "admin@example.com", "", "github", Set.of("USER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER_ADMIN"))
+        );
+
+        mockMvc.perform(post("/api/v1/admin/users/user-123/password-reset")
+                        .with(authentication(auth))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        verify(passwordResetService).adminTriggerPasswordReset("user-123", "user-42");
     }
 }

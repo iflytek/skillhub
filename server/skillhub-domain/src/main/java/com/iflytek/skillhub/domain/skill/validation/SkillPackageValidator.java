@@ -49,6 +49,7 @@ public class SkillPackageValidator {
 
     public ValidationResult validate(List<PackageEntry> entries) {
         List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
         Set<String> normalizedPaths = new HashSet<>();
         PackageEntry skillMd = null;
 
@@ -66,12 +67,12 @@ public class SkillPackageValidator {
             }
 
             if (!hasAllowedExtension(normalizedPath)) {
-                errors.add("Disallowed file extension: " + normalizedPath);
+                warnings.add("Disallowed file extension: " + normalizedPath);
             }
 
             String contentMismatch = SkillPackagePolicy.validateContentMatchesExtension(normalizedPath, entry.content());
             if (contentMismatch != null) {
-                errors.add(contentMismatch);
+                warnings.add(contentMismatch);
             }
 
             if (SkillPackagePolicy.SKILL_MD_PATH.equals(normalizedPath) && skillMd == null) {
@@ -82,7 +83,7 @@ public class SkillPackageValidator {
         // 1. Check SKILL.md exists at root
         if (skillMd == null) {
             errors.add("Missing required file: SKILL.md at root");
-            return ValidationResult.fail(errors);
+            return ValidationResult.of(errors, warnings);
         }
 
         // 2. Validate frontmatter
@@ -111,7 +112,7 @@ public class SkillPackageValidator {
             errors.add("Package too large: " + totalSize + " bytes (max: " + maxTotalPackageSize + ")");
         }
 
-        return errors.isEmpty() ? ValidationResult.pass() : ValidationResult.fail(errors);
+        return ValidationResult.of(errors, warnings);
     }
 
     private boolean hasAllowedExtension(String normalizedPath) {

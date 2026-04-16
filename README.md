@@ -8,6 +8,7 @@
 
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/iflytek/skillhub)
 [![Docs](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
+[![Discord](https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qHYvtDNPHS)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
@@ -95,7 +96,7 @@ The `--public-url` parameter sets the public access URL for your SkillHub instan
 **For users in China (Aliyun mirror):**
 
 ```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
 If deployment runs into problems, clear the existing runtime home and retry.
@@ -195,7 +196,7 @@ Published images target both `linux/amd64` and `linux/arm64`.
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 
 # Aliyun mirror (recommended for users in China)
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
 **Deployment parameters:**
@@ -222,6 +223,7 @@ cp .env.dev.release.example .env.dev.release
 
 Recommended image tags:
 
+- `SKILLHUB_VERSION=latest` for the latest stable release (default)
 - `SKILLHUB_VERSION=edge` for the latest `main` build
 - `SKILLHUB_VERSION=vX.Y.Z` for a fixed release
 
@@ -396,9 +398,15 @@ npx clawhub search email
 npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
-# Publish a skill
-npx clawhub publish ./my-skill
+# Publish to global namespace
+npx clawhub publish ./my-skill --slug my-skill --version 1.0.0
+
+# Publish to a team namespace such as my-space
+npx clawhub publish ./my-skill --slug my-space--my-skill --version 1.0.0
 ```
+
+`my-space--my-skill` is the canonical compat slug. SkillHub parses it as
+namespace `my-space` plus skill slug `my-skill`.
 
 > 💡 **Tip**: The above commands are not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory (`--dir`). For example: `npx clawhub --dir ~/.claude/skills install my-skill`
 
@@ -434,6 +442,7 @@ what you'd like to change.
 
 - 💬 **Community Discussion**: [GitHub Discussions](https://github.com/iflytek/skillhub/discussions)
 - 🐛 **Bug Reports**: [Issues](https://github.com/iflytek/skillhub/issues)
+- 👾 **Discord**: [Join our Server](https://discord.gg/qHYvtDNPHS)
 - 👥 **WeChat Work Group**:
 
   ![WeChat Work Group](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)

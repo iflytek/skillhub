@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -149,11 +150,14 @@ public class SkillQueryService {
             String skillSlug,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
-
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
-        // Visibility check
+        if (namespace.getStatus() == com.iflytek.skillhub.domain.namespace.NamespaceStatus.ARCHIVED
+                && !isNamespaceMember(namespace.getId(), currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.namespace.archived", namespaceSlug);
+        }
+
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
         }
@@ -196,6 +200,15 @@ public class SkillQueryService {
                 ownerPreviewReviewComment,
                 projection.resolutionMode().name()
         );
+    }
+
+    public SkillDetailDTO getSkillDetail(
+            String namespaceSlug,
+            String skillSlug,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
+        return getSkillDetail(namespaceSlug, skillSlug, currentUserId, userNsRoles);
     }
 
     /**
@@ -333,6 +346,7 @@ public class SkillQueryService {
             visibleVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
                     .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED
                             || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
+                            || version.getStatus() == SkillVersionStatus.UPLOADED
                             || version.getStatus() == SkillVersionStatus.DRAFT
                             || version.getStatus() == SkillVersionStatus.REJECTED
                             || version.getStatus() == SkillVersionStatus.YANKED
@@ -382,6 +396,7 @@ public class SkillQueryService {
         List<SkillVersion> versions = skillVersionRepository.findBySkillId(skill.getId()).stream()
                 .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED
                         || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
+                        || version.getStatus() == SkillVersionStatus.UPLOADED
                         || version.getStatus() == SkillVersionStatus.DRAFT
                         || version.getStatus() == SkillVersionStatus.REJECTED
                         || version.getStatus() == SkillVersionStatus.YANKED
@@ -689,14 +704,17 @@ public class SkillQueryService {
         if (status == SkillVersionStatus.SCAN_FAILED) {
             return 1;
         }
-        if (status == SkillVersionStatus.REJECTED) {
+        if (status == SkillVersionStatus.UPLOADED) {
             return 2;
         }
-        if (status == SkillVersionStatus.PENDING_REVIEW) {
+        if (status == SkillVersionStatus.REJECTED) {
             return 3;
         }
-        if (status == SkillVersionStatus.DRAFT) {
+        if (status == SkillVersionStatus.PENDING_REVIEW) {
             return 4;
+        }
+        if (status == SkillVersionStatus.DRAFT) {
+            return 5;
         }
         if (status == SkillVersionStatus.YANKED) {
             return 5;

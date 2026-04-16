@@ -15,7 +15,7 @@ class BasicPrePublishValidatorTest {
     private final BasicPrePublishValidator validator = new BasicPrePublishValidator();
 
     @Test
-    void shouldRejectObviousCredentialLeakWithHelpfulLocation() {
+    void shouldWarnOnObviousCredentialLeakWithHelpfulLocation() {
         PackageEntry skillMd = new PackageEntry(
                 "SKILL.md",
                 """
@@ -36,8 +36,8 @@ class BasicPrePublishValidatorTest {
                 1L
         ));
 
-        assertFalse(result.passed());
-        assertTrue(result.errors().stream().anyMatch(error ->
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(error ->
                 error.contains("SKILL.md")
                         && error.contains("line 5")
                         && error.contains("looks like a")));

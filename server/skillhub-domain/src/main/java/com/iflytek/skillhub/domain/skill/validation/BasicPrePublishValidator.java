@@ -31,7 +31,7 @@ public class BasicPrePublishValidator implements PrePublishValidator {
 
     @Override
     public ValidationResult validate(SkillPackageContext context) {
-        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
 
         for (PackageEntry entry : context.entries()) {
             if (!isTextLike(entry.path())) {
@@ -50,7 +50,7 @@ public class BasicPrePublishValidator implements PrePublishValidator {
                     if (isPlaceholderValue(matchedValue)) {
                         continue;
                     }
-                    errors.add(entry.path()
+                    warnings.add(entry.path()
                             + " line " + (i + 1)
                             + " contains a value that looks like a "
                             + rule.label()
@@ -60,7 +60,7 @@ public class BasicPrePublishValidator implements PrePublishValidator {
             }
         }
 
-        return errors.isEmpty() ? ValidationResult.pass() : ValidationResult.fail(errors);
+        return warnings.isEmpty() ? ValidationResult.pass() : ValidationResult.warn(warnings);
     }
 
     private boolean isTextLike(String path) {

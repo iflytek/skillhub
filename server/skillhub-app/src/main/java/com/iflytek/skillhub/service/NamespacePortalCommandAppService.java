@@ -7,6 +7,8 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.MessageResponse;
 import com.iflytek.skillhub.dto.NamespaceLifecycleRequest;
@@ -28,15 +30,18 @@ public class NamespacePortalCommandAppService {
     private final NamespaceRepository namespaceRepository;
     private final NamespaceGovernanceService namespaceGovernanceService;
     private final NamespaceMemberService namespaceMemberService;
+    private final UserAccountRepository userAccountRepository;
 
     public NamespacePortalCommandAppService(NamespaceService namespaceService,
                                             NamespaceRepository namespaceRepository,
                                             NamespaceGovernanceService namespaceGovernanceService,
-                                            NamespaceMemberService namespaceMemberService) {
+                                            NamespaceMemberService namespaceMemberService,
+                                            UserAccountRepository userAccountRepository) {
         this.namespaceService = namespaceService;
         this.namespaceRepository = namespaceRepository;
         this.namespaceGovernanceService = namespaceGovernanceService;
         this.namespaceMemberService = namespaceMemberService;
+        this.userAccountRepository = userAccountRepository;
     }
 
     @Transactional
@@ -135,7 +140,8 @@ public class NamespacePortalCommandAppService {
                 role,
                 operatorUserId
         );
-        return MemberResponse.from(member);
+        UserAccount user = userAccountRepository.findById(memberUserId).orElse(null);
+        return MemberResponse.from(member, user);
     }
 
     @Transactional
@@ -157,7 +163,7 @@ public class NamespacePortalCommandAppService {
                 request.role(),
                 operatorUserId
         );
-        return MemberResponse.from(member);
+        return MemberResponse.from(member, userAccountRepository.findById(userId).orElse(null));
     }
 
     private boolean canCreateNamespace(PlatformPrincipal principal) {

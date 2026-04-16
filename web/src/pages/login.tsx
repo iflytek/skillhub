@@ -33,22 +33,19 @@ export function LoginPage() {
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const { data: authMethods } = useAuthMethods(search.returnTo)
 
-  // Load saved credentials from localStorage on mount
+  // Load saved username from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem(REMEMBER_ME_KEY)
-    if (saved) {
-      try {
-        const { username: savedUsername, password: savedPassword } = JSON.parse(saved)
+    try {
+      const saved = localStorage.getItem(REMEMBER_ME_KEY)
+      if (saved) {
+        const { username: savedUsername } = JSON.parse(saved)
         if (savedUsername) {
           setUsername(savedUsername)
+          setRememberMe(true)
         }
-        if (savedPassword) {
-          setPassword(savedPassword)
-        }
-        setRememberMe(true)
-      } catch {
-        // Invalid data, ignore
       }
+    } catch (e) {
+      console.warn('Failed to load remembered username:', e)
     }
   }, [])
 
@@ -79,19 +76,24 @@ export function LoginPage() {
     setFieldErrors({})
     try {
       await loginMutation.mutateAsync({ username: trimmedUsername, password })
-      // Save credentials to localStorage if remember me is checked
+    } catch {
+      // mutation state drives the error UI
+      return
+    }
+
+    try {
       if (rememberMe) {
         localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({
-          username: trimmedUsername,
-          password
+          username: trimmedUsername
         }))
       } else {
         localStorage.removeItem(REMEMBER_ME_KEY)
       }
-      await navigate({ to: returnTo })
-    } catch {
-      // mutation state drives the error UI
+    } catch (e) {
+      console.warn('Failed to save remember-me preference:', e)
     }
+
+    await navigate({ to: returnTo })
   }
 
   return (
@@ -208,6 +210,11 @@ export function LoginPage() {
                   <Button className="w-full" disabled={loginMutation.isPending} type="submit">
                     {loginMutation.isPending ? t('login.submitting') : t('login.submit')}
                   </Button>
+                  <p className="text-center text-sm">
+                    <Link to="/reset-password" className="font-medium text-primary hover:underline">
+                      {t('login.forgotPassword')}
+                    </Link>
+                  </p>
                   <p className="text-center text-sm text-muted-foreground">
                     {t('login.noAccount')}
                     {' '}

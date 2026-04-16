@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ class ReviewServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private SkillGovernanceService skillGovernanceService;
     @Mock private GovernanceNotificationService governanceNotificationService;
+    @Mock private EntityManager entityManager;
 
     private ReviewService reviewService;
 
@@ -70,7 +72,7 @@ class ReviewServiceTest {
         objectMapper = new ObjectMapper();
         reviewService = new ReviewService(
                 reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService, CLOCK);
+                namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService, entityManager, CLOCK);
     }
 
     private SkillVersion createDraftSkillVersion() {
@@ -253,6 +255,10 @@ class ReviewServiceTest {
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
             assertNotNull(result);
+            assertEquals(ReviewTaskStatus.APPROVED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("LGTM", result.getReviewComment());
+            assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
             assertEquals(Instant.now(CLOCK), sv.getPublishedAt());
             assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
@@ -335,9 +341,13 @@ class ReviewServiceTest {
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
 
-            reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "Needs work",
+            ReviewTask result = reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "Needs work",
                     Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
 
+            assertEquals(ReviewTaskStatus.REJECTED, result.getStatus());
+            assertEquals(REVIEWER_ID, result.getReviewedBy());
+            assertEquals("Needs work", result.getReviewComment());
+            assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("REVIEW"), eq("REVIEW_TASK"), eq(REVIEW_TASK_ID), eq("Review rejected"), any());
         }
 
@@ -474,6 +484,46 @@ class ReviewServiceTest {
         }
 
         @Test
+        void namespaceAdminCanApproveOwnSubmission() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(
+                    eq(task),
+                    eq(USER_ID),
+                    eq(ns.getType()),
+                    eq(Map.of(NAMESPACE_ID, NamespaceRole.ADMIN)),
+                    eq(Set.of())))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID,
+                    ReviewTaskStatus.APPROVED,
+                    USER_ID,
+                    "self approved as namespace admin",
+                    task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.approveReview(
+                    REVIEW_TASK_ID,
+                    USER_ID,
+                    "self approved as namespace admin",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN),
+                    Set.of());
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
+            assertEquals(USER_ID, skill.getUpdatedBy());
+        }
+
+        @Test
         void shouldThrowOnConcurrentModification() {
             ReviewTask task = createPendingReviewTask();
             Namespace ns = createTeamNamespace();
@@ -587,6 +637,43 @@ class ReviewServiceTest {
 
             ReviewTask result = reviewService.rejectReview(
                     REVIEW_TASK_ID, USER_ID, "self rejected", Map.of(), Set.of("SUPER_ADMIN"));
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
+        }
+
+        @Test
+        void namespaceAdminCanRejectOwnSubmission() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(
+                    eq(task),
+                    eq(USER_ID),
+                    eq(ns.getType()),
+                    eq(Map.of(NAMESPACE_ID, NamespaceRole.ADMIN)),
+                    eq(Set.of())))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID,
+                    ReviewTaskStatus.REJECTED,
+                    USER_ID,
+                    "self rejected as namespace admin",
+                    task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.rejectReview(
+                    REVIEW_TASK_ID,
+                    USER_ID,
+                    "self rejected as namespace admin",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN),
+                    Set.of());
 
             assertNotNull(result);
             assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
