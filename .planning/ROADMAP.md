@@ -4,6 +4,8 @@
 
 Deliver **user-owned skill collections** with **owner/contributor** collaboration, **public/private** visibility, strict **visibility-safe membership**, and **Web UI** management—backed by new persistence and APIs integrated into existing Spring/React/security patterns.
 
+**Milestone acceptance:** Per-phase UAT for phase 04 is deferred; a **single milestone acceptance** (including collections QA/E2E/doc smoke from the phase-04 checklist) runs **after phases 05–06** complete. See `.planning/phases/04-verification-docs/04-UAT.md`.
+
 ## Phases
 
 - **Phase 1: Domain & persistence** — Collections aggregate, collaborators, membership ordering; Flyway; repositories; domain services with authorization matrix groundwork.

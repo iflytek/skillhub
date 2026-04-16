@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-04-16T20:20:06.831Z"
-last_activity: 2026-04-16
+last_updated: "2026-04-17T00:00:00.000Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 7
   completed_phases: 4
@@ -24,6 +24,8 @@ progress:
 **Last activity:** 2026-04-16
 
 Phase 04 (verification-docs) is **complete** (see `04-VERIFICATION.md`).
+
+**Acceptance:** Per-phase UAT for phase 04 is **deferred** — checklist moved to **milestone v1.0 acceptance** after phases **05–06** (`04-UAT.md`, `status: deferred`). Engineering verification remains the gate for phase 04.
 
 ## Accumulated Context
 
