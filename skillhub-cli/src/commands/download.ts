@@ -28,18 +28,27 @@ export function registerDownload(program: Command) {
         const spinner = ora(`Downloading ${skillSlug} from ${namespace}`).start();
 
         let downloadUrl = `${ApiRoutes.skillDownload.replace("{namespace}", namespace).replace("{slug}", skillSlug)}`;
-        if (opts["skill-version"]) {
-          downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/versions/${opts["skill-version"]}/download`;
+        if (opts.skillVersion) {
+          downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/versions/${opts.skillVersion}/download`;
         } else if (opts.tag) {
           downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/tags/${opts.tag}/download`;
         }
 
         const { request } = await import("undici");
         const url = new URL(downloadUrl, config.registry);
-        const { statusCode, body } = await request(url.toString(), {
+        let response = await request(url.toString(), {
           method: "GET",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
+        if (response.statusCode === 302 || response.statusCode === 307 || response.statusCode === 308) {
+          const location = response.headers.location;
+          if (!location) {
+            spinner.fail(`Redirect response has no Location header`);
+            process.exit(1);
+          }
+          response = await request(location, { method: "GET" });
+        }
+        const { statusCode, body } = response;
 
         if (statusCode >= 400) {
           spinner.fail(`Download failed: HTTP ${statusCode}`);

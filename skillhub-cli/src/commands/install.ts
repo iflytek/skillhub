@@ -240,9 +240,8 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
 
   // Present version selection
   let selectedVersion: string = "latest";
-  if (opts.yes && opts["skill-version"]) {
-    // Non-interactive: use command-line version if provided
-    selectedVersion = opts["skill-version"] as string;
+  if (opts.yes && opts.skillVersion) {
+    selectedVersion = String(opts.skillVersion);
   } else if (opts.yes && opts.tag) {
     // Non-interactive: resolve tag to version
     for (const [vid, tags] of versionTagsMap) {
@@ -285,10 +284,21 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   spinner.text = "Downloading";
 
   const { request } = await import("undici");
-  const { statusCode, body } = await request(downloadUrl, {
+  let response = await request(downloadUrl, {
     method: "GET",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+  // undici 不自动跟随 redirect，手动处理 302/307/308
+  if (response.statusCode === 302 || response.statusCode === 307 || response.statusCode === 308) {
+    const location = response.headers.location;
+    if (!location) {
+      spinner.fail(`Redirect response has no Location header`);
+      await rm(tmpDir, { recursive: true, force: true });
+      process.exit(1);
+    }
+    response = await request(location, { method: "GET" });
+  }
+  const { statusCode, body } = response;
 
   if (statusCode >= 400) {
     spinner.fail(`Skill not found: ${ns}/${actualSlug}`);
