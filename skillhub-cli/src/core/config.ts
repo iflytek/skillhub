@@ -15,6 +15,16 @@ const DEFAULT_CONFIG: CliConfig = {
 };
 
 export function loadConfig(): CliConfig {
+  const envRegistry = process.env.SKILLHUB_REGISTRY;
+  if (envRegistry) {
+    if (!existsSync(CONFIG_FILE)) return { registry: envRegistry };
+    try {
+      const raw = readFileSync(CONFIG_FILE, "utf-8");
+      return { registry: envRegistry, ...JSON.parse(raw) };
+    } catch {
+      return { registry: envRegistry };
+    }
+  }
   if (!existsSync(CONFIG_FILE)) return { ...DEFAULT_CONFIG };
   try {
     const raw = readFileSync(CONFIG_FILE, "utf-8");
