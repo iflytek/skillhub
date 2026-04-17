@@ -35,13 +35,14 @@ class PrometheusEndpointTest {
     private DeviceAuthService deviceAuthService;
 
     @Test
-    void prometheusEndpoint_exposesCustomMetrics() {
+    void metricsRegistry_stillRecordsCustomMetrics_whenPrometheusEndpointIsDisabled() {
         skillHubMetrics.incrementUserRegister();
         skillHubMetrics.recordLocalLogin(true);
         skillHubMetrics.incrementSkillPublish("global", "PENDING_REVIEW");
 
         assertThat(environment.getProperty("management.endpoints.web.exposure.include"))
-            .contains("prometheus");
+            .doesNotContain("prometheus")
+            .doesNotContain("metrics");
         assertThat(meterRegistry.get("skillhub.user.register").counter().count()).isEqualTo(1.0d);
         assertThat(meterRegistry.get("skillhub.auth.login")
             .tag("method", "local")

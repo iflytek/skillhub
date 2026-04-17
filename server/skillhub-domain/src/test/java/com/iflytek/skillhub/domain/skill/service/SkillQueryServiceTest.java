@@ -30,6 +30,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -50,7 +51,6 @@ class SkillQueryServiceTest {
     private SkillTagRepository skillTagRepository;
     @Mock
     private ObjectStorageService objectStorageService;
-    @Mock
     private VisibilityChecker visibilityChecker;
     @Mock
     private PromotionRequestRepository promotionRequestRepository;
@@ -65,6 +65,7 @@ class SkillQueryServiceTest {
 
     @BeforeEach
     void setUp() {
+        visibilityChecker = new VisibilityChecker();
         skillSlugResolutionService = new SkillSlugResolutionService(skillRepository);
         skillLifecycleProjectionService = new SkillLifecycleProjectionService(skillVersionRepository);
         service = new SkillQueryService(
@@ -105,7 +106,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
         when(userAccountRepository.findById(userId)).thenReturn(Optional.of(new UserAccount(userId, "Alice", "alice@example.com", null)));
 
@@ -148,7 +148,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(publishedSkill, ownSkill));
-        when(visibilityChecker.canAccess(ownSkill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(22L)).thenReturn(Optional.of(ownVersion));
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
@@ -176,7 +175,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(false);
 
         // Act & Assert
         assertThrows(DomainForbiddenException.class, () ->
@@ -215,13 +213,11 @@ class SkillQueryServiceTest {
         setId(namespace, 1L);
         Skill skill1 = new Skill(1L, "skill1", userId, SkillVisibility.PUBLIC);
         setId(skill1, 1L);
-        Skill skill2 = new Skill(1L, "skill2", userId, SkillVisibility.PRIVATE);
+        Skill skill2 = new Skill(1L, "skill2", "user-200", SkillVisibility.PRIVATE);
         setId(skill2, 2L);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE)).thenReturn(List.of(skill1, skill2));
-        when(visibilityChecker.canAccess(skill1, userId, userNsRoles)).thenReturn(true);
-        when(visibilityChecker.canAccess(skill2, userId, userNsRoles)).thenReturn(false);
 
         // Act
         Page<Skill> result = service.listSkillsByNamespace(namespaceSlug, userId, userNsRoles, pageable);
@@ -267,8 +263,6 @@ class SkillQueryServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE))
                 .thenReturn(List.of(ownUnpublishedSkill, othersUnpublishedSkill));
-        when(visibilityChecker.canAccess(ownUnpublishedSkill, userId, userNsRoles)).thenReturn(true);
-        when(visibilityChecker.canAccess(othersUnpublishedSkill, userId, userNsRoles)).thenReturn(false);
 
         Page<Skill> result = service.listSkillsByNamespace(namespaceSlug, userId, userNsRoles, pageable);
 
@@ -296,8 +290,6 @@ class SkillQueryServiceTest {
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE))
                 .thenReturn(List.of(visibleSkill, hiddenSkill));
-        when(visibilityChecker.canAccess(visibleSkill, userId, userNsRoles)).thenReturn(true);
-        when(visibilityChecker.canAccess(hiddenSkill, userId, userNsRoles)).thenReturn(false);
 
         Page<Skill> result = service.listSkillsByNamespace(namespaceSlug, userId, userNsRoles, pageable);
 
@@ -325,7 +317,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
         when(skillFileRepository.findByVersionId(1L)).thenReturn(List.of(file1));
         when(objectStorageService.exists("key1")).thenReturn(true);
@@ -358,7 +349,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, callerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
 
         assertThrows(DomainBadRequestException.class, () ->
@@ -385,7 +375,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
         when(skillFileRepository.findByVersionId(1L)).thenReturn(List.of(file));
         when(objectStorageService.exists(file.getStorageKey())).thenReturn(true);
@@ -419,7 +408,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
         when(skillFileRepository.findByVersionId(1L)).thenReturn(List.of(availableFile, missingFile));
         when(objectStorageService.exists("skills/1/1/SKILL.md")).thenReturn(true);
@@ -482,7 +470,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(skillVersion));
 
         SkillQueryService.SkillVersionDetailDTO result = service.getVersionDetail(
@@ -516,7 +503,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(latestVersion));
         when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
         when(objectStorageService.exists("storage-key")).thenReturn(true);
@@ -555,7 +541,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(pending, published, rejected));
 
         Page<SkillVersion> result = service.listVersions(namespaceSlug, skillSlug, ownerId, userNsRoles, PageRequest.of(0, 20));
@@ -589,7 +574,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, "user-100", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
                 .thenReturn(List.of(version100, version110));
         when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version110));
@@ -631,7 +615,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, null, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(version));
         when(skillVersionRepository.findBySkillIdAndStatus(3L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(version));
         when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
@@ -664,7 +647,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
@@ -691,7 +673,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).thenReturn(Optional.empty());
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED)).thenReturn(Optional.empty());
@@ -723,7 +704,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING))
                 .thenReturn(Optional.of(mock(com.iflytek.skillhub.domain.review.PromotionRequest.class)));
@@ -753,7 +733,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).thenReturn(Optional.empty());
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED))
@@ -784,13 +763,62 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
         assertFalse(result.canManageLifecycle());
         assertFalse(result.canSubmitPromotion());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldNotGrantLifecyclePermissionToSuperAdminInPortal() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "super-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of(1L, NamespaceRole.MEMBER);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(
+                namespaceSlug, skillSlug, userId, userNsRoles, Set.of("SUPER_ADMIN"));
+
+        assertFalse(result.canManageLifecycle());
+        assertFalse(result.canSubmitPromotion());
+        assertEquals("PUBLISHED", result.resolutionMode());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldNotGrantPrivateVisibilityToSuperAdminInPortal() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String userId = "super-1";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PRIVATE);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(11L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.getSkillDetail(namespaceSlug, skillSlug, userId, Map.of(), Set.of("SUPER_ADMIN")));
     }
 
     @Test
@@ -813,7 +841,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(12L)).thenReturn(Optional.of(pending));
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
                 .thenReturn(List.of());
@@ -853,7 +880,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
@@ -889,7 +915,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findById(12L)).thenReturn(Optional.of(rejected));
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of());
         when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(rejected));
@@ -925,7 +950,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
 
         SkillQueryService.SkillVersionDetailDTO result = service.getVersionDetail(
@@ -960,7 +984,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, ownerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
         when(skillFileRepository.findByVersionId(11L)).thenReturn(List.of(file));
         when(objectStorageService.exists("storage-key")).thenReturn(true);
@@ -992,7 +1015,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, viewerId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, version)).thenReturn(Optional.of(pending));
 
         assertThrows(DomainBadRequestException.class, () ->
@@ -1024,7 +1046,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(rejected, draft, published));
 
         Page<SkillVersion> result = service.listVersions(
@@ -1059,7 +1080,6 @@ class SkillQueryServiceTest {
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(published));
 
         Page<SkillVersion> result = service.listVersions(

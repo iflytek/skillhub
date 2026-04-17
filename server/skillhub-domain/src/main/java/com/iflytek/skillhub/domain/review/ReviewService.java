@@ -101,7 +101,9 @@ public class ReviewService {
             throw new DomainForbiddenException("review.submit.no_permission");
         }
 
-        if (skillVersion.getStatus() != SkillVersionStatus.DRAFT) {
+        // Support both DRAFT (legacy) and UPLOADED (new flow) status
+        if (skillVersion.getStatus() != SkillVersionStatus.DRAFT
+                && skillVersion.getStatus() != SkillVersionStatus.UPLOADED) {
             throw new DomainBadRequestException("review.submit.not_draft", skillVersionId);
         }
 
@@ -137,7 +139,9 @@ public class ReviewService {
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
         assertNamespaceActive(namespace);
 
-        if (skillVersion.getStatus() != SkillVersionStatus.DRAFT) {
+        // Support both DRAFT (legacy) and UPLOADED (new flow) status
+        if (skillVersion.getStatus() != SkillVersionStatus.DRAFT
+                && skillVersion.getStatus() != SkillVersionStatus.UPLOADED) {
             throw new DomainBadRequestException("review.submit.not_draft", skillVersionId);
         }
 

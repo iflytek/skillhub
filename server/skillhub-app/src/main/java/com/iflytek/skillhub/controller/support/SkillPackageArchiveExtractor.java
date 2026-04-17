@@ -136,7 +136,7 @@ public class SkillPackageArchiveExtractor {
         if (lower.endsWith(".css")) return "text/css";
         if (lower.endsWith(".csv")) return "text/csv";
         if (lower.endsWith(".xml")) return "application/xml";
-        if (lower.endsWith(".js")) return "text/javascript";
+        if (lower.endsWith(".js") || lower.endsWith(".cjs") || lower.endsWith(".mjs")) return "text/javascript";
         if (lower.endsWith(".ts")) return "text/typescript";
         if (lower.endsWith(".sh") || lower.endsWith(".bash") || lower.endsWith(".zsh")) return "text/x-shellscript";
         if (lower.endsWith(".png")) return "image/png";

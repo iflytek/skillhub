@@ -160,6 +160,11 @@ export function LoginPage() {
                   <Button className="w-full" disabled={loginMutation.isPending} type="submit">
                     {loginMutation.isPending ? t('login.submitting') : t('login.submit')}
                   </Button>
+                  <p className="text-center text-sm">
+                    <Link to="/reset-password" className="font-medium text-primary hover:underline">
+                      {t('login.forgotPassword')}
+                    </Link>
+                  </p>
                   <p className="text-center text-sm text-muted-foreground">
                     {t('login.noAccount')}
                     {' '}

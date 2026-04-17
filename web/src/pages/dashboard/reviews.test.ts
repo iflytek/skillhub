@@ -67,8 +67,14 @@ vi.mock('@/features/review/use-review-list', () => ({
 }))
 
 const hasRoleMock = vi.fn()
+const userMock = { platformRoles: ['SKILL_ADMIN'] }
 vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({ hasRole: hasRoleMock }),
+  useAuth: () => ({ hasRole: hasRoleMock, user: userMock }),
+}))
+
+const useMyNamespacesMock = vi.fn()
+vi.mock('@/shared/hooks/use-namespace-queries', () => ({
+  useMyNamespaces: () => useMyNamespacesMock(),
 }))
 
 vi.mock('@/shared/components/dashboard-page-header', () => ({
@@ -106,7 +112,13 @@ describe('ReviewsPage', () => {
     paginationProps.length = 0
     hasRoleMock.mockReset()
     useReviewListMock.mockReset()
+    useMyNamespacesMock.mockReset()
     hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN')
+    userMock.platformRoles = ['SKILL_ADMIN']
+    useMyNamespacesMock.mockReturnValue({
+      data: [],
+      isLoading: false,
+    })
     useReviewListMock.mockImplementation((status: string, _namespaceId: unknown, page: number, _size: number, _sortDirection: string, enabled: boolean) => {
       if (!enabled) {
         return { data: null, isLoading: false }

@@ -30,38 +30,61 @@ async function waitForCards(page: Page) {
 
   const keyword = basicSeed?.keyword
   const encodedKeyword = keyword ? encodeURIComponent(keyword) : null
+  let reloaded = false
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    await page.waitForLoadState('networkidle')
+  const waitForMatchingResponse = async () => {
+    if (!encodedKeyword) {
+      return
+    }
+
+    await page.waitForResponse(async (response) => {
+      if (!response.url().includes('/api/web/skills?') || !response.url().includes(`q=${encodedKeyword}`)) {
+        return false
+      }
+      if (response.status() !== 200) {
+        return false
+      }
+
+      try {
+        const payload = await response.json() as { data?: { items?: Array<unknown> } }
+        return Array.isArray(payload.data?.items) && payload.data.items.length > 0
+      } catch {
+        return false
+      }
+    }, { timeout: 15_000 }).catch(() => null)
+  }
+
+  const waitForCardCount = async () => {
+    await expect.poll(
+      async () => cards.count(),
+      {
+        timeout: 20_000,
+        intervals: [250, 500, 1_000, 2_000],
+      },
+    ).toBeGreaterThan(0)
+  }
+
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByRole('textbox', { name: 'Search skills...' })).toBeVisible({ timeout: 8_000 })
+
+  if (await cards.count() > 0) {
+    return cards
+  }
+
+  await waitForMatchingResponse()
+
+  try {
+    await waitForCardCount()
+  } catch {
+    if (reloaded) {
+      throw new Error('Timed out waiting for search cards after one reload fallback')
+    }
+
+    reloaded = true
+    await page.reload({ waitUntil: 'networkidle' })
     await expect(page.getByRole('textbox', { name: 'Search skills...' })).toBeVisible({ timeout: 8_000 })
-
-    if (await cards.count() > 0) {
-      return cards
-    }
-
-    if (attempt < 3) {
-      const responsePromise = encodedKeyword
-        ? page.waitForResponse(async (response) => {
-          if (!response.url().includes('/api/web/skills?') || !response.url().includes(`q=${encodedKeyword}`)) {
-            return false
-          }
-          if (response.status() !== 200) {
-            return false
-          }
-
-          try {
-            const payload = await response.json() as { data?: { items?: Array<unknown> } }
-            return Array.isArray(payload.data?.items) && payload.data.items.length > 0
-          } catch {
-            return false
-          }
-        }, { timeout: 12_000 }).catch(() => null)
-        : Promise.resolve(null)
-
-      await page.waitForTimeout(750 * (attempt + 1))
-      await page.reload({ waitUntil: 'networkidle' })
-      await responsePromise
-    }
+    await waitForMatchingResponse()
+    await waitForCardCount()
   }
 
   return cards

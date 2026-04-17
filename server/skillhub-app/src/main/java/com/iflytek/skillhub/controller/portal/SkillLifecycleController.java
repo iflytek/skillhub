@@ -5,8 +5,10 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.ConfirmPublishRequest;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
+import com.iflytek.skillhub.dto.SubmitReviewRequest;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.validation.Valid;
@@ -114,6 +116,41 @@ public class SkillLifecycleController extends BaseApiController {
                         slug,
                         version,
                         request,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
+    }
+
+    @PostMapping("/{namespace}/{slug}/submit-review")
+    public ApiResponse<SkillLifecycleMutationResponse> submitForReview(@PathVariable String namespace,
+                                                                        @PathVariable String slug,
+                                                                        @Valid @RequestBody SubmitReviewRequest request,
+                                                                        @RequestAttribute("userId") String userId,
+                                                                        @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                        HttpServletRequest httpRequest) {
+        return ok("response.success.updated",
+                governanceWorkflowAppService.submitForReview(
+                        namespace,
+                        slug,
+                        request.version(),
+                        request.targetVisibility(),
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
+    }
+
+    @PostMapping("/{namespace}/{slug}/confirm-publish")
+    public ApiResponse<SkillLifecycleMutationResponse> confirmPublish(@PathVariable String namespace,
+                                                                       @PathVariable String slug,
+                                                                       @Valid @RequestBody ConfirmPublishRequest request,
+                                                                       @RequestAttribute("userId") String userId,
+                                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                       HttpServletRequest httpRequest) {
+        return ok("response.success.updated",
+                governanceWorkflowAppService.confirmPublish(
+                        namespace,
+                        slug,
+                        request.version(),
                         userId,
                         userNsRoles,
                         AuditRequestContext.from(httpRequest)));

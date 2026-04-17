@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setEnglishLocale } from './helpers/auth-fixtures'
+import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 import { createFreshSession } from './helpers/session'
 
 // TC_UN_* 用户名输入框 / TC_EM_* 邮箱输入框 / TC_PW_* 密码输入框
@@ -10,14 +10,16 @@ const DUPLICATE_USERNAME_ERROR = /already.*exist|taken|username.*used/i
 const REGISTER_RATE_LIMIT_ERROR = /too many|too frequent|rate limit|请求过于频繁/
 
 test.describe('Register - Username Validation (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
+    await setUniqueClientIp(page, `register-validation-${testInfo.title}`)
     await page.goto('/register')
   })
 
   // TC_UN_008 P0
   test('TC_UN_008: shows required error when username is empty', async ({ page }) => {
-    await page.getByRole('button', { name: 'Register' }).click()
+    await page.getByLabel(/username/i).click()
+    await page.getByLabel(/email/i).click()
     await expect(page.getByText(/username.*required|required.*username/i)).toBeVisible()
   })
 
@@ -51,18 +53,19 @@ test.describe('Register - Username Validation (Real API)', () => {
 })
 
 test.describe('Register - Email Validation (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
+    await setUniqueClientIp(page, `register-validation-${testInfo.title}`)
     await page.goto('/register')
   })
 
-  // TC_EM_007 P0 - email is optional
-  test('TC_EM_007: allows empty email (email is optional)', async ({ page }) => {
+  // TC_EM_007 P0 - email is required
+  test('TC_EM_007: shows required error when email is empty', async ({ page }) => {
     const emailField = page.getByLabel(/email/i)
     if (await emailField.isVisible()) {
       await emailField.clear()
       await emailField.blur()
-      await expect(page.getByText(/email.*required/i)).not.toBeVisible()
+      await expect(page.getByText(/email.*required|required.*email/i)).toBeVisible()
     }
   })
 
@@ -88,14 +91,16 @@ test.describe('Register - Email Validation (Real API)', () => {
 })
 
 test.describe('Register - Password Validation (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
+    await setUniqueClientIp(page, `register-validation-${testInfo.title}`)
     await page.goto('/register')
   })
 
   // TC_PW_013 P0 - empty password
   test('TC_PW_013: shows required error when password is empty', async ({ page }) => {
-    await page.getByRole('button', { name: 'Register' }).click()
+    await page.getByLabel(/^password/i).click()
+    await page.getByLabel(/username/i).click()
     await expect(page.getByText(/password.*required|required.*password/i)).toBeVisible()
   })
 
@@ -123,8 +128,9 @@ test.describe('Register - Password Validation (Real API)', () => {
 })
 
 test.describe('Register Flow (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
+    await setUniqueClientIp(page, `register-validation-${testInfo.title}`)
   })
 
   // TC_REG_001 P0 - successful registration with all fields
@@ -138,7 +144,7 @@ test.describe('Register Flow (Real API)', () => {
       await emailField.fill(`test_${suffix}@example.test`)
     }
     await page.getByLabel(/^password/i).fill('Test123!@')
-    await page.getByRole('button', { name: 'Register' }).click()
+    await page.getByRole('button', { name: 'Register & Login' }).click()
     // Should redirect away from /register on success
     await expect(page).not.toHaveURL('/register')
     existingRegisteredUsername = username
@@ -160,13 +166,14 @@ test.describe('Register Flow (Real API)', () => {
     await page.goto('/register')
     await setEnglishLocale(page)
     await page.getByLabel(/username/i).fill(username)
+    await page.getByLabel(/email/i).fill(`duplicate_${Date.now()}@example.test`)
     await page.getByLabel(/^password/i).fill('Test123!@')
     const main = page.getByRole('main')
     const duplicateUsernameError = main.getByText(DUPLICATE_USERNAME_ERROR).first()
     const registerRateLimitError = main.getByText(REGISTER_RATE_LIMIT_ERROR).first()
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      await page.getByRole('button', { name: 'Register' }).click()
+      await page.getByRole('button', { name: 'Register & Login' }).click()
 
       if (await duplicateUsernameError.isVisible().catch(() => false)) {
         return
@@ -184,27 +191,35 @@ test.describe('Register Flow (Real API)', () => {
   })
 
   // TC_REG_002 P0 - registration without email
-  test('TC_REG_002: registers successfully without email (email is optional)', async ({ page }) => {
+  test('TC_REG_002: shows required validation when email is missing', async ({ page }) => {
     await page.goto('/register')
     const suffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
-    await page.getByLabel(/username/i).fill(`noemail_${suffix}`)
+    await page.getByLabel(/username/i).fill(`emailrequired_${suffix}`)
     await page.getByLabel(/^password/i).fill('Test123!@')
-    await page.getByRole('button', { name: 'Register' }).click()
-    await expect(page).not.toHaveURL('/register')
+    await page.getByLabel(/email/i).click()
+    await page.getByLabel(/username/i).click()
+    await page.getByRole('button', { name: 'Register & Login' }).click()
+    const emailField = page.getByLabel(/email/i)
+    await expect(emailField).toBeFocused()
+    await expect
+      .poll(async () => emailField.evaluate((input) => (input as HTMLInputElement).validity.valueMissing))
+      .toBe(true)
   })
 
   // TC_REG_005 P0 - required fields empty on submit
   test('TC_REG_005: shows validation errors when submitting empty required fields', async ({ page }) => {
     await page.goto('/register')
-    await page.getByRole('button', { name: 'Register' }).click()
+    await page.getByLabel(/email/i).fill(`required_fields_${Date.now()}@example.test`)
+    await page.getByRole('button', { name: 'Register & Login' }).click()
     await expect(page.getByText(/username.*required|required.*username/i)).toBeVisible()
     await expect(page.getByText(/password.*required|required.*password/i)).toBeVisible()
   })
 })
 
 test.describe('Login Flow (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
+    await setUniqueClientIp(page, `register-validation-${testInfo.title}`)
   })
 
   // TC_REG_006 P0 - successful login (already tested in auth-entry.spec.ts partially; extend here)
@@ -223,8 +238,9 @@ test.describe('Login Flow (Real API)', () => {
 
     await page.goto('/register')
     await page.getByLabel(/username/i).fill(username)
+    await page.getByLabel(/email/i).fill(`login_${suffix}@example.test`)
     await page.getByLabel(/^password/i).fill('Test123!@')
-    await page.getByRole('button', { name: 'Register' }).click()
+    await page.getByRole('button', { name: 'Register & Login' }).click()
     await expect(page).not.toHaveURL('/register')
 
     await page.goto('/login')

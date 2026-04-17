@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 
 vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to }: { children: unknown; to: string }) => createElement('a', { href: to }, children as string),
   useParams: () => ({ slug: 'test-ns' }),
 }))
 
@@ -127,6 +128,8 @@ describe('NamespaceReviewsPage', () => {
     const html = renderToStaticMarkup(createElement(NamespaceReviewsPage))
 
     expect(html).toContain('nsReviews.pageSummary')
+    expect(html).toContain('/dashboard/namespaces/test-ns/reviews/1')
+    expect(html).toContain('nsReviews.openReview')
     expect(paginationProps).toHaveLength(1)
     expect(paginationProps[0]?.page).toBe(0)
     expect(paginationProps[0]?.totalPages).toBe(2)
@@ -153,5 +156,19 @@ describe('NamespaceReviewsPage', () => {
     renderToStaticMarkup(createElement(NamespaceReviewsPage))
 
     expect(paginationProps).toHaveLength(0)
+  })
+
+  it('does not enable review queries before namespace detail resolves', () => {
+    useNamespaceDetailMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    })
+
+    renderToStaticMarkup(createElement(NamespaceReviewsPage))
+
+    expect(useReviewListMock).toHaveBeenCalled()
+    for (const call of useReviewListMock.mock.calls) {
+      expect(call[5]).toBe(false)
+    }
   })
 })

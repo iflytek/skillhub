@@ -484,6 +484,46 @@ class ReviewServiceTest {
         }
 
         @Test
+        void namespaceAdminCanApproveOwnSubmission() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+            Skill skill = createSkill();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(
+                    eq(task),
+                    eq(USER_ID),
+                    eq(ns.getType()),
+                    eq(Map.of(NAMESPACE_ID, NamespaceRole.ADMIN)),
+                    eq(Set.of())))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID,
+                    ReviewTaskStatus.APPROVED,
+                    USER_ID,
+                    "self approved as namespace admin",
+                    task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+            when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.approveReview(
+                    REVIEW_TASK_ID,
+                    USER_ID,
+                    "self approved as namespace admin",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN),
+                    Set.of());
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.PUBLISHED, sv.getStatus());
+            assertEquals(USER_ID, skill.getUpdatedBy());
+        }
+
+        @Test
         void shouldThrowOnConcurrentModification() {
             ReviewTask task = createPendingReviewTask();
             Namespace ns = createTeamNamespace();
@@ -597,6 +637,43 @@ class ReviewServiceTest {
 
             ReviewTask result = reviewService.rejectReview(
                     REVIEW_TASK_ID, USER_ID, "self rejected", Map.of(), Set.of("SUPER_ADMIN"));
+
+            assertNotNull(result);
+            assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
+        }
+
+        @Test
+        void namespaceAdminCanRejectOwnSubmission() {
+            ReviewTask task = createPendingReviewTask();
+            Namespace ns = createTeamNamespace();
+            SkillVersion sv = createPendingReviewSkillVersion();
+
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+            when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
+            when(permissionChecker.canReview(
+                    eq(task),
+                    eq(USER_ID),
+                    eq(ns.getType()),
+                    eq(Map.of(NAMESPACE_ID, NamespaceRole.ADMIN)),
+                    eq(Set.of())))
+                    .thenReturn(true);
+            when(reviewTaskRepository.updateStatusWithVersion(
+                    REVIEW_TASK_ID,
+                    ReviewTaskStatus.REJECTED,
+                    USER_ID,
+                    "self rejected as namespace admin",
+                    task.getVersion()))
+                    .thenReturn(1);
+            when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
+            when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
+            when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+
+            ReviewTask result = reviewService.rejectReview(
+                    REVIEW_TASK_ID,
+                    USER_ID,
+                    "self rejected as namespace admin",
+                    Map.of(NAMESPACE_ID, NamespaceRole.ADMIN),
+                    Set.of());
 
             assertNotNull(result);
             assertEquals(SkillVersionStatus.REJECTED, sv.getStatus());
