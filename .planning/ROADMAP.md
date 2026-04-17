@@ -119,14 +119,16 @@ Plans:
 
 ### Phase 6: Переработать цветовую схему с AI Slop на нормальную
 
-**Goal:** [Captured from backlog; to be planned]
+**Goal:** Перевести web UI на production-ready semantic color system (Enterprise Blue/Slate) с полной light/dark parity, system+manual theme toggle и удалением legacy AI-slop visual effects.
 **Depends on:** Phase 5
-**Requirements:** TBD
-**Plans:** 0 plans
+**Requirements:** D-01..D-20 (см. `.planning/phases/06-color-scheme-refresh/06-CONTEXT.md`)
+**Plans:** 3 plans
 
 Plans:
 
-- TBD (run /gsd-plan-phase 6 to break down)
+- `06-01-PLAN.md` — Theme core foundation: semantic token contract, theme bootstrap, hardcoded-color policy gate
+- `06-02-PLAN.md` — App shell + shared primitives migration, theme toggle UX, auth/dashboard semantic conversion
+- `06-03-PLAN.md` — Feature hotspot sweep, light/dark parity matrix, strict completion hardening
 
 ---
 
@@ -135,6 +137,16 @@ Plans:
 ## Backlog
 
 ### Phase 999.2: Добавить в поиск поиск по коллекциям как first-class citizens (BACKLOG)
+
+**Goal:** [Captured for future planning]
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+
+- TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.3: Добавить вход через Google OAuth (BACKLOG)
 
 **Goal:** [Captured for future planning]
 **Requirements:** TBD
