@@ -54,4 +54,9 @@ describe('Layout', () => {
     expect(typeof Layout).toBe('function')
     expect(Layout.name).toBe('Layout')
   })
+
+  it('keeps Layout export stable for theme wiring integration', () => {
+    expect(Layout).toBeDefined()
+    expect(typeof Layout).toBe('function')
+  })
 })
