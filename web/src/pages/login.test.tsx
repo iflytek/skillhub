@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AuthMethod } from '@/api/types'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: unknown }) => children,
@@ -11,7 +15,12 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string) => key,
+      t: (key: string, options?: { name?: string }) => {
+        if (key === 'loginButton.loginWith') {
+          return `Continue with ${options?.name ?? 'provider'}`
+        }
+        return key
+      },
       i18n: { resolvedLanguage: 'en' },
     }),
   }
@@ -26,16 +35,29 @@ vi.mock('@/api/client', () => ({
   getDirectAuthRuntimeConfig: () => ({ enabled: false }),
 }))
 
-vi.mock('@/features/auth/login-button', () => ({
-  LoginButton: () => null,
-}))
-
 vi.mock('@/features/auth/session-bootstrap-entry', () => ({
   SessionBootstrapEntry: () => null,
 }))
 
+const authMethods: AuthMethod[] = [
+  {
+    id: 'oauth-google',
+    methodType: 'OAUTH_REDIRECT',
+    provider: 'google',
+    displayName: 'Google',
+    actionUrl: '/oauth2/authorization/google?returnTo=%2F',
+  },
+  {
+    id: 'oauth-github',
+    methodType: 'OAUTH_REDIRECT',
+    provider: 'github',
+    displayName: 'GitHub',
+    actionUrl: '/oauth2/authorization/github?returnTo=%2F',
+  },
+]
+
 vi.mock('@/features/auth/use-auth-methods', () => ({
-  useAuthMethods: () => ({ data: [] }),
+  useAuthMethods: () => ({ data: authMethods, isLoading: false }),
 }))
 
 vi.mock('@/features/auth/use-password-login', () => ({
@@ -47,33 +69,60 @@ vi.mock('@/features/auth/use-password-login', () => ({
 }))
 
 vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
+  Button: ({ children, ...props }: { children: unknown } & Record<string, unknown>) => <button {...props}>{children}</button>,
 }))
 
 vi.mock('@/shared/ui/input', () => ({
-  Input: () => null,
+  Input: (props: Record<string, unknown>) => <input {...props} />,
 }))
 
 vi.mock('@/shared/ui/tabs', () => ({
-  Tabs: ({ children }: { children: unknown }) => children,
-  TabsContent: ({ children }: { children: unknown }) => children,
-  TabsList: ({ children }: { children: unknown }) => children,
-  TabsTrigger: ({ children }: { children: unknown }) => children,
+  Tabs: ({ children }: { children: unknown }) => <div>{children}</div>,
+  TabsContent: ({ children }: { children: unknown }) => <div>{children}</div>,
+  TabsList: ({ children }: { children: unknown }) => <div>{children}</div>,
+  TabsTrigger: ({ children }: { children: unknown }) => <button type="button">{children}</button>,
 }))
 
-import { renderToStaticMarkup } from 'react-dom/server'
 import { LoginPage } from './login'
 
 describe('LoginPage', () => {
+  const originalLocation = window.location
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/login' },
+    })
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    })
+  })
+
   it('exports a named component function', () => {
     expect(typeof LoginPage).toBe('function')
   })
 
   it('renders the login title and form elements', () => {
-    const html = renderToStaticMarkup(<LoginPage />)
+    render(<LoginPage />)
 
-    expect(html).toContain('login.title')
-    expect(html).toContain('login.subtitle')
-    expect(html).toContain('login.submit')
+    expect(screen.getByText('login.title')).toBeTruthy()
+    expect(screen.getByText('login.subtitle')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'login.submit' })).toBeTruthy()
+  })
+
+  it('renders_google_provider_and_redirects_to_google_action_on_oauth_tab', () => {
+    render(<LoginPage />)
+
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' })
+    fireEvent.click(googleButton)
+
+    expect(googleButton).toBeTruthy()
+    expect(window.location.href).toBe('/oauth2/authorization/google?returnTo=%2F')
   })
 })
