@@ -159,6 +159,21 @@ function collectAllFiles(directoryPath) {
   return result
 }
 
+function resolveScopeFiles(scopePath) {
+  if (!fs.existsSync(scopePath)) {
+    throw new Error(`Scope path does not exist: ${scopePath}`)
+  }
+
+  const isDefaultScope = path.resolve(scopePath) === DEFAULT_SCOPE
+  return collectAllFiles(scopePath)
+    .map((absolutePath) => ({
+      absolutePath,
+      relativePath: normalizePath(path.relative(process.cwd(), absolutePath)),
+    }))
+    .filter(({ relativePath }) => !isDefaultScope || relativePath.startsWith('src/'))
+    .filter(({ relativePath }) => !isAllowedPath(relativePath))
+}
+
 function normalizePath(filePath) {
   return filePath.split(path.sep).join('/')
 }
@@ -409,22 +424,17 @@ function scanFileForViolations(absolutePath, relativePath, allowlistEntries) {
 }
 
 function scanScope(scopePath, allowlistEntries) {
-  const isDefaultScope = path.resolve(scopePath) === DEFAULT_SCOPE
-  const files = collectAllFiles(scopePath)
-    .map((absolutePath) => ({
-      absolutePath,
-      relativePath: normalizePath(path.relative(process.cwd(), absolutePath)),
-    }))
-    .filter(({ relativePath }) => !isDefaultScope || relativePath.startsWith('src/'))
-    .filter(({ relativePath }) => !isAllowedPath(relativePath))
-
+  const files = resolveScopeFiles(scopePath)
   const violations = []
   for (const file of files) {
     const currentViolations = scanFileForViolations(file.absolutePath, file.relativePath, allowlistEntries)
     violations.push(...currentViolations)
   }
 
-  return violations
+  return {
+    files,
+    violations,
+  }
 }
 
 function serializeViolation(violation) {
@@ -472,7 +482,7 @@ function printViolations(violations, prefix = '') {
 function main() {
   const options = parseArgs(process.argv.slice(2))
   const allowlistEntries = loadAllowlistManifest()
-  const allViolations = scanScope(options.scope, allowlistEntries)
+  const { files: scannedFiles, violations: allViolations } = scanScope(options.scope, allowlistEntries)
 
   if (options.writeBaselinePath) {
     writeBaseline(options.writeBaselinePath, options.mode, allViolations)
@@ -481,6 +491,10 @@ function main() {
   }
 
   if (options.mode === 'strict') {
+    if (scannedFiles.length === 0) {
+      throw new Error(`Strict mode requires at least one scannable file in scope '${options.scope}'.`)
+    }
+
     if (allViolations.length > 0) {
       printViolations(allViolations)
       process.exitCode = 1

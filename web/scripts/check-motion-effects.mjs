@@ -21,14 +21,7 @@ const BLUR_SCALE_TO_PX = {
   '3xl': 64,
 }
 
-const DEFAULT_SCAN_PATHS = [
-  'src/app',
-  'src/shared/ui',
-  'src/pages/login.tsx',
-  'src/pages/register.tsx',
-  'src/pages/reset-password.tsx',
-  'src/pages/dashboard.tsx',
-]
+const DEFAULT_SCAN_PATHS = ['src']
 
 function normalizePath(filePath) {
   return filePath.split(path.sep).join('/')
@@ -79,7 +72,7 @@ function collectFiles(startPath) {
 
 function isScannableFile(filePath) {
   const normalized = normalizePath(filePath)
-  if (!normalized.endsWith('.ts') && !normalized.endsWith('.tsx')) {
+  if (!/\.(ts|tsx|css)$/.test(normalized)) {
     return false
   }
 

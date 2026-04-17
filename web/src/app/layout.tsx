@@ -6,6 +6,7 @@ import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { Button } from '@/shared/ui/button'
 import { UserMenu } from '@/shared/components/user-menu'
 import { NotificationBell } from '@/features/notification/notification-bell'
+import { Laptop, Moon, Sun } from 'lucide-react'
 import { THEME_TOGGLE_RELEASED } from '@/shared/theme/theme-release'
 import {
   applyThemeMode,
@@ -100,16 +101,20 @@ export function Layout() {
     return pathname === to
   }
 
-  const themeOptions: Array<{ value: ThemePreference; label: string }> = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'system', label: 'System' },
-  ]
+  const themeControlMeta: Record<ThemePreference, { label: string; icon: typeof Sun; next: ThemePreference }> = {
+    light: { label: 'Light', icon: Sun, next: 'dark' },
+    dark: { label: 'Dark', icon: Moon, next: 'system' },
+    system: { label: 'System', icon: Laptop, next: 'light' },
+  }
 
   const handleThemePreferenceChange = (nextPreference: ThemePreference) => {
     setThemePreference(nextPreference)
     persistAndApplyThemePreference(nextPreference)
   }
+
+  const currentThemeControl = themeControlMeta[themePreference]
+  const nextThemeControl = themeControlMeta[currentThemeControl.next]
+  const ThemeIcon = currentThemeControl.icon
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
@@ -143,20 +148,19 @@ export function Layout() {
         <div className="flex items-center gap-6 text-sm font-normal text-muted-foreground">
           {/* THEME_TOGGLE_RELEASED controls UX visibility only, never security/policy behavior. */}
           {THEME_TOGGLE_RELEASED ? (
-            <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1" aria-label="Theme mode controls">
-              {themeOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={themePreference === option.value ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => handleThemePreferenceChange(option.value)}
-                  className="h-8 px-3"
-                  aria-label={`Set theme ${option.label}`}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full border-border/80 bg-card text-foreground"
+              onClick={() => handleThemePreferenceChange(currentThemeControl.next)}
+              aria-label={`Theme mode: ${currentThemeControl.label}. Click to switch to ${nextThemeControl.label}.`}
+              title={`Theme: ${currentThemeControl.label} -> ${nextThemeControl.label}`}
+            >
+              <ThemeIcon className="h-4 w-4" aria-hidden />
+              <span className="sr-only">
+                Theme mode: {currentThemeControl.label}. Click to switch to {nextThemeControl.label}.
+              </span>
+            </Button>
           ) : null}
           <LanguageSwitcher />
           {user && <NotificationBell />}

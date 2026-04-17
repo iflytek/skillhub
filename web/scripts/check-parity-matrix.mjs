@@ -41,6 +41,7 @@ export const REQUIRED_FIELDS = [
 ]
 
 const ALLOWED_RESULTS = new Set(['PASS', 'FAIL', 'N/A'])
+const REQUIRED_THEMES = ['light', 'dark']
 
 function parseArgs(argv) {
   const args = {
@@ -168,6 +169,7 @@ function assertEvidenceLog(evidenceLog, artifactsRoot) {
     throw new Error('Evidence Log: at least one evidence row is required.')
   }
 
+  const normalizedRows = []
   const seenStates = new Set()
   const screenThemeCoverage = new Map()
 
@@ -234,6 +236,13 @@ function assertEvidenceLog(evidenceLog, artifactsRoot) {
       throw new Error(`Evidence Log row ${rowNumber}: N/A requires non-empty na_reason.`)
     }
 
+    normalizedRows.push({
+      screen: normalizeKey(screen),
+      state: normalizeKey(state),
+      theme: normalizedTheme,
+      result,
+    })
+
     seenStates.add(normalizeKey(state))
     const coverageKey = normalizeKey(screen)
     if (!screenThemeCoverage.has(coverageKey)) {
@@ -254,6 +263,58 @@ function assertEvidenceLog(evidenceLog, artifactsRoot) {
       throw new Error(`Evidence Log: screen '${screen}' must include both light and dark evidence rows.`)
     }
   }
+
+  return normalizedRows
+}
+
+function assertStateMatrixEvidenceParity(stateMatrix, evidenceRows) {
+  const normalizedHeader = stateMatrix.header.map(normalizeKey)
+  const screenColumnIndex = normalizedHeader.indexOf('screen')
+  const stateColumnIndices = new Map(
+    REQUIRED_STATES.map((state) => [state, normalizedHeader.indexOf(state)]),
+  )
+
+  const evidenceIndex = new Map()
+  for (const row of evidenceRows) {
+    const key = `${row.screen}|${row.state}|${row.theme}`
+    if (!evidenceIndex.has(key)) {
+      evidenceIndex.set(key, new Set())
+    }
+    evidenceIndex.get(key).add(row.result)
+  }
+
+  for (const record of stateMatrix.records) {
+    const screen = normalizeKey(record[stateMatrix.header[screenColumnIndex]])
+    for (const state of REQUIRED_STATES) {
+      const stateColumnIndex = stateColumnIndices.get(state)
+      const rawMatrixValue = String(record[stateMatrix.header[stateColumnIndex]] ?? '').trim().toUpperCase()
+      if (!ALLOWED_RESULTS.has(rawMatrixValue)) {
+        throw new Error(
+          `State Matrix: unsupported value '${rawMatrixValue || '(empty)'}' for screen '${screen}', state '${state}'.`,
+        )
+      }
+
+      if (rawMatrixValue !== 'PASS' && rawMatrixValue !== 'N/A') {
+        continue
+      }
+
+      for (const theme of REQUIRED_THEMES) {
+        const key = `${screen}|${state}|${theme}`
+        const resultsForCombination = evidenceIndex.get(key)
+        if (!resultsForCombination) {
+          throw new Error(
+            `State Matrix: missing evidence for screen '${screen}', state '${state}', theme '${theme}' (expected result '${rawMatrixValue}').`,
+          )
+        }
+
+        if (!resultsForCombination.has(rawMatrixValue)) {
+          throw new Error(
+            `State Matrix: evidence for screen '${screen}', state '${state}', theme '${theme}' must include result '${rawMatrixValue}'.`,
+          )
+        }
+      }
+    }
+  }
 }
 
 function main() {
@@ -271,7 +332,8 @@ function main() {
   const evidenceLog = parseMarkdownTable(evidenceLogSection, 'Evidence Log')
 
   assertStateMatrix(stateMatrix)
-  assertEvidenceLog(evidenceLog, args.artifactsRoot)
+  const evidenceRows = assertEvidenceLog(evidenceLog, args.artifactsRoot)
+  assertStateMatrixEvidenceParity(stateMatrix, evidenceRows)
 
   console.log(`check:parity-matrix passed (${evidenceLog.records.length} evidence rows validated).`)
 }

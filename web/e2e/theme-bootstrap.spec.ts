@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test'
 
 const THEME_STORAGE_KEY = 'skillhub-theme'
 const SYSTEM_PREFERS_DARK_KEY = 'skillhub-theme-system-prefers-dark'
-const HIDDEN_THEME_OPTIONS = ['Light', 'Dark', 'System'] as const
 
 test.describe('Theme bootstrap smoke', () => {
   test('no FOUC: applies persisted dark mode and bootstrap markers before interactive frame', async ({ context, page }) => {
@@ -18,26 +17,23 @@ test.describe('Theme bootstrap smoke', () => {
     await expect(page.locator('html')).toHaveClass(/(^|\s)dark(\s|$)/)
   })
 
-  test('hidden-toggle contract: validates dark/light/system via seeded storage while toggle stays hidden', async ({ page }) => {
+  test('released-toggle contract: exposes tri-state icon switch on /login and syncs persisted mode', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' })
-    await page.evaluate((storageKey) => {
-      window.localStorage.setItem(storageKey, 'dark')
-    }, THEME_STORAGE_KEY)
-    await page.reload({ waitUntil: 'domcontentloaded' })
 
-    for (const label of HIDDEN_THEME_OPTIONS) {
-      await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0)
-    }
+    const toggle = page.getByRole('button', { name: /Theme mode: system/i })
+    await expect(toggle).toBeVisible()
 
-    await expect(page.locator('html')).toHaveAttribute('data-theme-bootstrap', 'done')
-    await expect(page.locator('html')).toHaveAttribute('data-theme-mode', 'dark')
-
-    await page.evaluate((storageKey) => {
-      window.localStorage.setItem(storageKey, 'light')
-    }, THEME_STORAGE_KEY)
-    await page.reload({ waitUntil: 'domcontentloaded' })
+    await toggle.click()
+    await expect(page.getByRole('button', { name: /Theme mode: light/i })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('data-theme-mode', 'light')
-    await expect(page.locator('html')).toHaveClass(/(^|\s)light(\s|$)/)
+    await expect.poll(async () => page.evaluate((storageKey) => window.localStorage.getItem(storageKey), THEME_STORAGE_KEY))
+      .toBe('light')
+
+    await page.getByRole('button', { name: /Theme mode: light/i }).click()
+    await expect(page.getByRole('button', { name: /Theme mode: dark/i })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme-mode', 'dark')
+    await expect.poll(async () => page.evaluate((storageKey) => window.localStorage.getItem(storageKey), THEME_STORAGE_KEY))
+      .toBe('dark')
   })
 
   test('persists preference and follows mocked system mode changes', async ({ context, page }) => {

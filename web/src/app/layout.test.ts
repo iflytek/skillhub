@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -82,18 +82,21 @@ describe('Layout', () => {
     const GatedLayout = await importLayoutWithGate(false)
     render(createElement(GatedLayout))
 
-    expect(screen.queryByText('Light')).toBeNull()
-    expect(screen.queryByText('Dark')).toBeNull()
-    expect(screen.queryByText('System')).toBeNull()
+    expect(screen.queryByRole('button', { name: /theme mode:/i })).toBeNull()
   })
 
-  it('shows Light/Dark/System options when THEME_TOGGLE_RELEASED is true', async () => {
+  it('shows tri-state icon switch when THEME_TOGGLE_RELEASED is true', async () => {
     const GatedLayout = await importLayoutWithGate(true)
     render(createElement(GatedLayout))
 
-    expect(screen.getByText('Light')).toBeTruthy()
-    expect(screen.getByText('Dark')).toBeTruthy()
-    expect(screen.getByText('System')).toBeTruthy()
+    const toggle = screen.getByRole('button', { name: /theme mode: system/i })
+    expect(toggle).toBeTruthy()
+
+    fireEvent.click(toggle)
+    expect(screen.getByRole('button', { name: /theme mode: light/i })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /theme mode: light/i }))
+    expect(screen.getByRole('button', { name: /theme mode: dark/i })).toBeTruthy()
   })
 
   it('does not render legacy decorative orb class and keeps semantic shell tokens', async () => {
