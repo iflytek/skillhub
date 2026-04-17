@@ -260,6 +260,8 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
   } else {
     // Interactive: show version selection
+    spinner.stop();
+
     const picked = await p.select({
       message: "Select version",
       options: versions.map((v) => ({
@@ -275,6 +277,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
 
     selectedVersion = picked as string;
+    spinner.start("Downloading");
   }
 
   const baseUrl = config.registry.replace(/\/$/, "");
