@@ -168,7 +168,7 @@ export function RegisterPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center">
-      <Card className="w-full border-slate-200 bg-white/95 shadow-xl">
+      <Card className="w-full border-border bg-card shadow-card">
         <CardHeader className="space-y-3 text-center">
           <CardTitle>{t('register.title')}</CardTitle>
           <CardDescription>{t('register.subtitle')}</CardDescription>
@@ -202,7 +202,7 @@ export function RegisterPage() {
                       setFieldErrors((current) => ({ ...current, username: validateUsername(username) }))
                     }}
                   />
-                  {fieldErrors.username ? <p className="text-sm text-red-600">{fieldErrors.username}</p> : null}
+                  {fieldErrors.username ? <p className="text-sm text-state-danger">{fieldErrors.username}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="register-email">{t('register.email')}</label>
@@ -226,7 +226,7 @@ export function RegisterPage() {
                       setFieldErrors((current) => ({ ...current, email: validateEmail(email) }))
                     }}
                   />
-                  {fieldErrors.email ? <p className="text-sm text-red-600">{fieldErrors.email}</p> : null}
+                  {fieldErrors.email ? <p className="text-sm text-state-danger">{fieldErrors.email}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="register-password">{t('register.password')}</label>
@@ -249,9 +249,9 @@ export function RegisterPage() {
                       setFieldErrors((current) => ({ ...current, password: validatePassword(password) }))
                     }}
                   />
-                  {fieldErrors.password ? <p className="text-sm text-red-600">{fieldErrors.password}</p> : null}
+                  {fieldErrors.password ? <p className="text-sm text-state-danger">{fieldErrors.password}</p> : null}
                 </div>
-                {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
+                {formError ? <p className="text-sm text-state-danger">{formError}</p> : null}
                 <Button className="w-full" disabled={registerMutation.isPending} type="submit">
                   {registerMutation.isPending ? t('register.submitting') : t('register.submit')}
                 </Button>

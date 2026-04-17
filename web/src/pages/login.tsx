@@ -79,7 +79,7 @@ export function LoginPage() {
         <div className="glass-strong p-8 rounded-2xl">
           <div className="space-y-6">
             {disabledMessage ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-xl border border-state-danger/20 bg-state-danger/10 px-4 py-3 text-sm text-state-danger">
                 {disabledMessage}
               </div>
             ) : null}
@@ -119,7 +119,7 @@ export function LoginPage() {
                       aria-invalid={fieldErrors.username ? 'true' : 'false'}
                     />
                     {fieldErrors.username ? (
-                      <p className="text-sm text-red-600">{fieldErrors.username}</p>
+                      <p className="text-sm text-state-danger">{fieldErrors.username}</p>
                     ) : null}
                   </div>
                   <div className="space-y-2">
@@ -151,11 +151,11 @@ export function LoginPage() {
                       </button>
                     </div>
                     {fieldErrors.password ? (
-                      <p className="text-sm text-red-600">{fieldErrors.password}</p>
+                      <p className="text-sm text-state-danger">{fieldErrors.password}</p>
                     ) : null}
                   </div>
                   {loginMutation.error ? (
-                    <p className="text-sm text-red-600">{loginMutation.error.message}</p>
+                    <p className="text-sm text-state-danger">{loginMutation.error.message}</p>
                   ) : null}
                   <Button className="w-full" disabled={loginMutation.isPending} type="submit">
                     {loginMutation.isPending ? t('login.submitting') : t('login.submit')}

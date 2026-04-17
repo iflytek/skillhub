@@ -29,8 +29,8 @@ export function DashboardPage() {
   return (
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
       <div>
-        <h1 className="text-4xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>{t('dashboard.title')}</h1>
-        <p className="mt-2 text-lg" style={{ color: 'hsl(var(--text-secondary))' }}>
+        <h1 className="text-4xl font-bold text-foreground">{t('dashboard.title')}</h1>
+        <p className="mt-2 text-lg text-content-secondary">
           {t('dashboard.subtitle')}
         </p>
       </div>
@@ -53,7 +53,7 @@ export function DashboardPage() {
               <div className="text-xl font-semibold font-heading">{user?.displayName}</div>
               <div className="text-sm text-muted-foreground">{user?.email}</div>
               <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="w-2 h-2 rounded-full bg-state-success" />
                 {t('dashboard.loginVia', { provider: user?.oauthProvider })}
               </div>
             </div>

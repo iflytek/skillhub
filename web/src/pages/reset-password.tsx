@@ -89,7 +89,7 @@ export function ResetPasswordPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center">
-      <Card className="w-full border-slate-200 bg-white/95 shadow-xl">
+      <Card className="w-full border-border bg-card shadow-card">
         <CardHeader className="space-y-3 text-center">
           <CardTitle>{t('resetPassword.title')}</CardTitle>
           <CardDescription>{t('resetPassword.subtitle')}</CardDescription>
@@ -97,7 +97,7 @@ export function ResetPasswordPage() {
         <CardContent>
           {isSuccess ? (
             <div className="space-y-4">
-              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              <p className="rounded-md border border-state-success/20 bg-state-success/10 px-3 py-2 text-sm text-state-success">
                 {t('resetPassword.successMessage')}
               </p>
               <Link to="/login" search={{ returnTo: '' }} className="block text-center font-medium text-primary hover:underline">
@@ -170,10 +170,10 @@ export function ResetPasswordPage() {
                 />
               </div>
               {errorMessage ? (
-                <p className="text-sm text-red-600">{errorMessage}</p>
+                <p className="text-sm text-state-danger">{errorMessage}</p>
               ) : null}
               {codeSentMessage ? (
-                <p className="text-sm text-emerald-700">{codeSentMessage}</p>
+                <p className="text-sm text-state-success">{codeSentMessage}</p>
               ) : null}
               <Button className="w-full" disabled={isSubmitting} type="submit">
                 {isSubmitting ? t('resetPassword.submitting') : t('resetPassword.submit')}
