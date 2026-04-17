@@ -37,7 +37,7 @@ export function CodeRenderer({ code, language, className }: CodeRendererProps) {
       {/* Simplified styling - removed gradient, blur, and shadow for better performance */}
       <div className="my-4 rounded-lg border border-border/60 bg-secondary/30">
         <div className="max-w-full overflow-x-auto rounded-lg bg-background px-4 py-3">
-          <pre className="m-0 min-w-max bg-transparent p-0 text-[13px] leading-6">
+          <pre className="m-0 min-w-max bg-transparent p-0 text-sm leading-6">
             <code
               className="hljs"
               dangerouslySetInnerHTML={{ __html: highlightedCode }}

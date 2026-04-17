@@ -44,15 +44,15 @@ const i18nKeys: Record<VersionStatus, string> = {
 /** Color-coded row styles (left-border + subtle background) for version cards. */
 export const versionRowStyles: Record<VersionStatus, string> = {
   UPLOADED:
-    'border-l-[3px] !border-l-blue-500 bg-blue-500/[0.03]',
+    'border-l-4 !border-l-blue-500 bg-blue-500/[0.03]',
   PENDING_REVIEW:
-    'border-l-[3px] !border-l-amber-500 bg-amber-500/[0.03]',
+    'border-l-4 !border-l-amber-500 bg-amber-500/[0.03]',
   REJECTED:
-    'border-l-[3px] !border-l-red-500 bg-red-500/[0.04]',
+    'border-l-4 !border-l-red-500 bg-red-500/[0.04]',
   SCANNING:
-    'border-l-[3px] !border-l-purple-500 bg-purple-500/[0.03]',
+    'border-l-4 !border-l-purple-500 bg-purple-500/[0.03]',
   SCAN_FAILED:
-    'border-l-[3px] !border-l-red-500 bg-red-500/[0.04]',
+    'border-l-4 !border-l-red-500 bg-red-500/[0.04]',
   PUBLISHED: '',
   YANKED: '',
   DRAFT: '',

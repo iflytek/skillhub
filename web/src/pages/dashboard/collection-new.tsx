@@ -74,19 +74,20 @@ export function CollectionNewPage() {
         title={t('collections.createTitle')}
         subtitle={t('collections.createSubtitle')}
         actions={(
-          <Link to="/dashboard/collections" className={buttonVariants({ variant: 'outline' })}>
+          <Link to="/dashboard/collections" className={buttonVariants({ variant: 'outline' })} data-testid="collection-new-back-to-list">
             {t('collections.backToList')}
           </Link>
         )}
       />
 
-      <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-6">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-6" data-testid="collection-new-form">
         {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
 
         <div className="space-y-2">
           <Label htmlFor="collection-title">{t('collections.fieldTitle')}</Label>
           <Input
             id="collection-title"
+            data-testid="collection-new-title-input"
             value={title}
             onChange={(e) => {
               setTitle(e.target.value)
@@ -102,6 +103,7 @@ export function CollectionNewPage() {
           <Label htmlFor="collection-description">{t('collections.fieldDescription')}</Label>
           <Textarea
             id="collection-description"
+            data-testid="collection-new-description-input"
             value={description}
             onChange={(e) => {
               setDescription(e.target.value)
@@ -117,6 +119,7 @@ export function CollectionNewPage() {
           <Label htmlFor="collection-slug">{t('collections.fieldSlug')}</Label>
           <Input
             id="collection-slug"
+            data-testid="collection-new-slug-input"
             value={slug}
             onChange={(e) => {
               setSlug(e.target.value)
@@ -137,22 +140,22 @@ export function CollectionNewPage() {
               clearFieldError('visibility')
             }}
           >
-            <SelectTrigger aria-invalid={fieldErrors.visibility ? 'true' : 'false'}>
+            <SelectTrigger aria-invalid={fieldErrors.visibility ? 'true' : 'false'} data-testid="collection-new-visibility-trigger">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PUBLIC">{t('collections.visibilityPublic')}</SelectItem>
-              <SelectItem value="PRIVATE">{t('collections.visibilityPrivate')}</SelectItem>
+              <SelectItem value="PUBLIC" data-testid="collection-new-visibility-public">{t('collections.visibilityPublic')}</SelectItem>
+              <SelectItem value="PRIVATE" data-testid="collection-new-visibility-private">{t('collections.visibilityPrivate')}</SelectItem>
             </SelectContent>
           </Select>
           {fieldErrors.visibility ? <p className="text-sm text-destructive">{fieldErrors.visibility}</p> : null}
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={createMutation.isPending}>
+          <Button type="submit" disabled={createMutation.isPending} data-testid="collection-new-submit">
             {createMutation.isPending ? t('collections.saving') : t('collections.submitCreate')}
           </Button>
-          <Link to="/dashboard/collections" className={buttonVariants({ variant: 'ghost' })}>
+          <Link to="/dashboard/collections" className={buttonVariants({ variant: 'ghost' })} data-testid="collection-new-cancel">
             {t('collections.cancel')}
           </Link>
         </div>

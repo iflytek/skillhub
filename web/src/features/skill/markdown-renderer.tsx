@@ -41,7 +41,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         rehypePlugins={[rehypeSanitize, [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
           p: ({ className: paragraphClassName, children, ...props }) => (
-            <p className={cn('my-4 text-[15px] leading-8 text-foreground/85', paragraphClassName)} {...props}>
+            <p className={cn('my-4 text-base leading-8 text-foreground/85', paragraphClassName)} {...props}>
               {children}
             </p>
           ),
@@ -112,7 +112,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           pre: ({ children }) => (
             <div className="my-4 rounded-lg border border-border/60 bg-secondary/30">
               <div className="max-w-full overflow-x-auto rounded-lg bg-background px-4 py-3">
-                <pre className="m-0 min-w-max bg-transparent p-0 text-[13px] leading-6">{children}</pre>
+                <pre className="m-0 min-w-max bg-transparent p-0 text-sm leading-6">{children}</pre>
               </div>
             </div>
           ),
@@ -122,7 +122,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             if (isInline) {
               return (
                 <code
-                  className="break-words rounded-md border border-border/40 bg-secondary/45 px-1.5 py-0.5 text-[0.9em] font-medium text-foreground/95"
+                  className="break-words rounded-md border border-border/40 bg-secondary/45 px-1.5 py-0.5 text-sm font-medium text-foreground/95"
                   {...props}
                 >
                   {children}
@@ -175,7 +175,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           th: ({ className: cellClassName, children, ...props }) => (
             <th
               className={cn(
-                'border-b border-r border-border/70 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground last:border-r-0',
+                'border-b border-r border-border/70 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground last:border-r-0',
                 cellClassName
               )}
               {...props}

@@ -55,7 +55,7 @@ export function AddCollectionContributorDialog({ collectionId, children }: AddCo
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent data-testid="collection-detail-contributor-dialog">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle>{t('collections.contributorsAddTitle')}</DialogTitle>
           <DialogDescription>{t('collections.contributorsAddDescription')}</DialogDescription>
@@ -84,7 +84,12 @@ export function AddCollectionContributorDialog({ collectionId, children }: AddCo
           <Button type="button" variant="outline" onClick={closeDialog}>
             {t('dialog.cancel')}
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={addContributorMutation.isPending}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={addContributorMutation.isPending}
+            data-testid="collection-detail-add-contributor-submit"
+          >
             {addContributorMutation.isPending ? t('collections.contributorsAdding') : t('collections.contributorsAdd')}
           </Button>
         </DialogFooter>

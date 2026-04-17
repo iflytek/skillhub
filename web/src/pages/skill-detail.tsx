@@ -748,12 +748,12 @@ export function SkillDetailPage() {
               </span>
             )}
             {isReviewFlowPending && (
-              <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
+              <span className="badge-soft bg-secondary text-foreground">
                 {t('skillDetail.versionStatusPendingReview')}
               </span>
             )}
             {!isPendingPreview && (isRejectedPreview || hasRejectedOwnerPreview || hasRejectedVersion) && skill.canManageLifecycle && (
-              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+              <span className="badge-soft bg-destructive/10 text-destructive">
                 {t('skillDetail.rejectedBadge')}
               </span>
             )}
@@ -762,7 +762,7 @@ export function SkillDetailPage() {
           {skill.ownerDisplayName && (
             <div className="flex min-w-0">
               <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/85 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm">
-                <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+                <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase tracking-wide text-primary">
                   <User className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 truncate">{t('skillDetail.authorLabel', { name: skill.ownerDisplayName })}</span>
@@ -800,7 +800,7 @@ export function SkillDetailPage() {
               <div className="font-medium text-foreground">{t('skillDetail.rejectedFeedbackTitle')}</div>
               <p className="mt-1">{t('skillDetail.rejectedPreviewDescription')}</p>
               <div className="mt-3 rounded-xl border border-red-500/20 bg-background/80 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {t('skillDetail.rejectedFeedbackLabel')}
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
@@ -822,7 +822,7 @@ export function SkillDetailPage() {
             {readme ? (
               <Card className="p-8 space-y-4">
                 {documentationPath ? (
-                  <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
                     {t('skillDetail.documentationSource', { path: documentationPath })}
                   </div>
                 ) : null}
@@ -871,7 +871,7 @@ export function SkillDetailPage() {
                 </div>
                 {skill.summary ? (
                   <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
                       {t('skillDetail.summaryLabel')}
                     </div>
                     <p className="mt-2 text-sm leading-6 text-foreground">{skill.summary}</p>
@@ -1023,7 +1023,7 @@ export function SkillDetailPage() {
               </span>
             </button>
             {fileBrowserOpen && (
-              <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+              <div className="max-h-96 overflow-y-auto -mx-5 px-5">
                 <FileTree files={files} onFileClick={handleFileClick} bare />
               </div>
             )}
@@ -1033,7 +1033,7 @@ export function SkillDetailPage() {
         <Card className="p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.version')}</div>
-            <div className="max-w-[11rem] break-all text-right font-mono font-semibold leading-snug text-foreground">
+            <div className="max-w-44 break-all text-right font-mono font-semibold leading-snug text-foreground">
               {headlineVersion ? `v${headlineVersion.version}` : '—'}
             </div>
           </div>
@@ -1124,7 +1124,7 @@ export function SkillDetailPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-amber-500/20 bg-background/70 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {t('skillDetail.pendingReviewVersionLabel')}
                 </div>
                 <div className="mt-2 break-all font-mono text-sm font-semibold leading-snug text-foreground">
@@ -1132,7 +1132,7 @@ export function SkillDetailPage() {
                 </div>
               </div>
               <div className="rounded-xl border border-amber-500/20 bg-background/70 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {t('skillDetail.pendingReviewStatusLabel')}
                 </div>
                 <div className="mt-2 text-sm font-semibold text-amber-700">
@@ -1194,7 +1194,7 @@ export function SkillDetailPage() {
             </p>
             <div className="space-y-3">
               <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {t('skillDetail.lifecyclePublicVersionLabel')}
                 </div>
                 <div className="mt-2 text-sm font-semibold text-foreground">
@@ -1202,7 +1202,7 @@ export function SkillDetailPage() {
                 </div>
               </div>
               <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {t('skillDetail.lifecyclePendingVersionLabel')}
                 </div>
                 <div className="mt-2 text-sm font-semibold text-foreground">
@@ -1212,7 +1212,7 @@ export function SkillDetailPage() {
                 </div>
               </div>
               <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {t('skillDetail.lifecycleContainerStateLabel')}
                 </div>
                 <div className="mt-2 text-sm font-semibold text-foreground">

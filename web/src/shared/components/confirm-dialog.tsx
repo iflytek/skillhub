@@ -17,6 +17,8 @@ interface ConfirmDialogProps {
   description?: string | ReactNode
   confirmText?: string
   cancelText?: string
+  confirmButtonTestId?: string
+  cancelButtonTestId?: string
   variant?: 'default' | 'destructive'
   onConfirm: () => void | Promise<void>
 }
@@ -28,6 +30,8 @@ export function ConfirmDialog({
   description,
   confirmText,
   cancelText,
+  confirmButtonTestId,
+  cancelButtonTestId,
   variant = 'default',
   onConfirm,
 }: ConfirmDialogProps) {
@@ -47,10 +51,10 @@ export function ConfirmDialog({
           {description && <DialogDescription className="text-center break-all">{description}</DialogDescription>}
         </DialogHeader>
         <DialogFooter className="sm:justify-center sm:space-x-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} data-testid={cancelButtonTestId}>
             {resolvedCancelText}
           </Button>
-          <Button variant={variant} onClick={handleConfirm}>
+          <Button variant={variant} onClick={handleConfirm} data-testid={confirmButtonTestId}>
             {resolvedConfirmText}
           </Button>
         </DialogFooter>

@@ -33,8 +33,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="ml-4 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors hover:bg-white/10"
-      style={{ color: 'var(--code-url, #CBD5E0)' }}
+      className="ml-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-current transition-colors hover:bg-white/10"
       title={copied ? (t('copyButton.copied') || 'Copied') : (t('copyButton.copy') || 'Copy')}
     >
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -45,13 +44,13 @@ function CopyButton({ text }: { text: string }) {
 
 function CodeLine({ line }: { line: string }) {
   if (line.startsWith('#')) {
-    return <span style={{ color: 'var(--code-comment, #A0AEC0)' }}>{line}</span>
+    return <span className="opacity-70">{line}</span>
   }
   if (line.startsWith('export')) {
     return (
       <>
-        <span style={{ color: 'var(--code-keyword, #5EEAD4)' }}>export</span>
-        <span style={{ color: 'var(--code-url, #CBD5E0)' }}>{line.slice(6)}</span>
+        <span className="text-primary">export</span>
+        <span>{line.slice(6)}</span>
       </>
     )
   }
@@ -59,15 +58,15 @@ function CodeLine({ line }: { line: string }) {
     const eqIdx = line.indexOf('=')
     return (
       <>
-        <span style={{ color: 'var(--code-keyword, #5EEAD4)' }}>{line.slice(0, eqIdx).trim()}</span>
-        <span style={{ color: 'var(--code-url, #CBD5E0)' }}>{` = ${line.slice(eqIdx + 1).trim()}`}</span>
+        <span className="text-primary">{line.slice(0, eqIdx).trim()}</span>
+        <span>{` = ${line.slice(eqIdx + 1).trim()}`}</span>
       </>
     )
   }
   if (line.startsWith('clawhub')) {
     return (
       <>
-        <span style={{ color: 'var(--code-keyword, #5EEAD4)' }}>clawhub</span>
+        <span className="text-primary">clawhub</span>
         <span>{line.slice(7)}</span>
       </>
     )
@@ -77,27 +76,23 @@ function CodeLine({ line }: { line: string }) {
 
 interface CodeBlockProps {
   icon: React.ReactNode
-  iconBg: string
-  iconColor: string
+  iconClassName: string
   title: string
   description: string
   code: string
 }
 
-function CodeBlock({ icon, iconBg, iconColor, title, description, code }: CodeBlockProps) {
+function CodeBlock({ icon, iconClassName, title, description, code }: CodeBlockProps) {
   return (
     <div className="code-block overflow-hidden">
-      <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="flex items-center justify-between border-b border-border/40 px-6 py-4">
         <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ background: iconBg, color: iconColor }}
-          >
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconClassName}`}>
             {icon}
           </div>
           <div>
-            <div className="text-sm font-medium text-white">{title}</div>
-            <div className="text-xs" style={{ color: 'var(--code-comment, #A0AEC0)' }}>
+            <div className="text-sm font-medium">{title}</div>
+            <div className="text-xs opacity-70">
               {description}
             </div>
           </div>
@@ -109,7 +104,7 @@ function CodeBlock({ icon, iconBg, iconColor, title, description, code }: CodeBl
           <CopyButton text={code} />
         </div>
       </div>
-      <div className="p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--code-url, #CBD5E0)' }}>
+      <div className="whitespace-pre-wrap p-6 font-mono text-sm leading-relaxed">
         {code.split('\n').map((line, i) => (
           <div key={i}>
             <CodeLine line={line} />
@@ -150,24 +145,21 @@ $env:CLAWHUB_REGISTRY = '${baseUrl}'`
   const steps: CodeBlockProps[] = [
     {
       icon: <Settings className="w-4 h-4" strokeWidth={1.5} />,
-      iconBg: 'rgba(94,234,212,0.15)',
-      iconColor: 'var(--code-keyword, #5EEAD4)',
+      iconClassName: 'bg-primary/15 text-primary',
       title: t(`${ns}.quickStart.steps.configureEnv.title`),
       description: t(`${ns}.quickStart.steps.configureEnv.description`),
       code: envCode,
     },
     {
       icon: <Download className="w-4 h-4" strokeWidth={1.5} />,
-      iconBg: 'rgba(96,165,250,0.15)',
-      iconColor: '#60A5FA',
+      iconClassName: 'bg-secondary/90 text-foreground',
       title: t(`${ns}.quickStart.steps.installSkills.title`),
       description: t(`${ns}.quickStart.steps.installSkills.description`),
       code: installCode,
     },
     {
       icon: <Upload className="w-4 h-4" strokeWidth={1.5} />,
-      iconBg: 'rgba(167,139,250,0.15)',
-      iconColor: '#A78BFA',
+      iconClassName: 'bg-accent/15 text-accent',
       title: t(`${ns}.quickStart.steps.publishSkills.title`),
       description: t(`${ns}.quickStart.steps.publishSkills.description`),
       code: publishCode,
@@ -176,16 +168,16 @@ $env:CLAWHUB_REGISTRY = '${baseUrl}'`
 
   if (variant === 'landing') {
     return (
-      <section className="relative z-10 w-full py-20 md:py-24 px-6" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+      <section className="relative z-10 w-full bg-background px-6 py-20 md:py-24">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
+            <h2 className="mb-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
               {t(`${ns}.quickStart.title`)}
             </h2>
-            <p className="text-sm uppercase tracking-widest font-medium mb-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <p className="mb-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
               Quick Start
             </p>
-            <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
               {t(`${ns}.quickStart.description`, { defaultValue: t(`${ns}.quickStart.subtitle`) })}
             </p>
           </div>
@@ -202,10 +194,10 @@ $env:CLAWHUB_REGISTRY = '${baseUrl}'`
   return (
     <section className="space-y-6 animate-fade-up">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
+        <h2 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
           {t(`${ns}.quickStart.title`)}
         </h2>
-        <p style={{ color: 'hsl(var(--text-secondary))' }}>
+        <p className="text-muted-foreground">
           {t(`${ns}.quickStart.description`, { defaultValue: t(`${ns}.quickStart.subtitle`) })}
         </p>
       </div>
