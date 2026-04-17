@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillhub-server
+  labels:
+    app.kubernetes.io/name: skillhub-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skillhub-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skillhub-server
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/iflytek/skillhub-server:edge
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+
+            # Database
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: spring-datasource-url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: spring-datasource-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: spring-datasource-password
+
+            # Redis
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-host
+            - name: SPRING_DATA_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-port
+
+            # Storage
+            - name: STORAGE_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-base-path
+            - name: SKILLHUB_STORAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skillhub-storage-provider
+
+            # Scanner
+            - name: SKILLHUB_SECURITY_SCANNER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-enabled
+            - name: SKILLHUB_SECURITY_SCANNER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-url
+            - name: SKILLHUB_SECURITY_SCANNER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-mode
+
+            # Session
+            - name: SESSION_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: session-cookie-secure
+
+            # Bootstrap Admin (non-sensitive from ConfigMap)
+            - name: BOOTSTRAP_ADMIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-enabled
+            - name: BOOTSTRAP_ADMIN_USER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-user-id
+            - name: BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-username
+            - name: BOOTSTRAP_ADMIN_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-display-name
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-email
+
+            # Bootstrap Admin Password (sensitive from Secret)
+            - name: BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: bootstrap-admin-password
+                  optional: true
+
+          volumeMounts:
+            - name: skillhub-storage
+              mountPath: /var/lib/skillhub/storage
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+      volumes:
+        - name: skillhub-storage
+          persistentVolumeClaim:
+            claimName: skillhub-storage-pvc
