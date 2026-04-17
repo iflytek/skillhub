@@ -18,7 +18,7 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@/features/search/search-bar', () => ({
-  SearchBar: () => null,
+  SearchBar: () => <div data-testid="search-bar">search-bar</div>,
 }))
 
 vi.mock('@/features/skill/skill-card', () => ({
@@ -30,7 +30,7 @@ vi.mock('@/shared/components/skeleton-loader', () => ({
 }))
 
 vi.mock('@/shared/components/quick-start', () => ({
-  QuickStartSection: () => null,
+  QuickStartSection: () => <section data-testid="quick-start">quick-start</section>,
 }))
 
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
@@ -44,10 +44,6 @@ vi.mock('@/shared/lib/search-query', () => ({
   normalizeSearchQuery: (q: string) => q.trim(),
 }))
 
-vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
-}))
-
 import { renderToStaticMarkup } from 'react-dom/server'
 import { HomePage } from './home'
 
@@ -56,10 +52,20 @@ describe('HomePage', () => {
     expect(typeof HomePage).toBe('function')
   })
 
-  it('renders the hero section with brand name', () => {
+  it('renders only the required home blocks', () => {
     const html = renderToStaticMarkup(<HomePage />)
 
-    expect(html).toContain('SkillHub')
-    expect(html).toContain('home.subtitle')
+    expect(html).toContain('search-bar')
+    expect(html).toContain('home.browseSkills')
+    expect(html).toContain('home.publishSkill')
+    expect(html).toContain('home.popularTitle')
+    expect(html).toContain('home.latestTitle')
+    expect(html).toContain('quick-start')
+
+    expect(html).not.toContain('SkillHub')
+    expect(html).not.toContain('home.subtitle')
+    expect(html).not.toContain('home.description')
+    expect(html).not.toContain('home.popularDescription')
+    expect(html).not.toContain('home.latestDescription')
   })
 })

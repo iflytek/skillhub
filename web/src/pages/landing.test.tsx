@@ -15,18 +15,12 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-vi.mock('lucide-react', () => ({
-  PackageOpen: () => null,
-  Terminal: () => null,
-  Shield: () => null,
-  Users: () => null,
-  GitBranch: () => null,
-  Search: () => null,
-  Settings: () => null,
+vi.mock('@/features/search/search-bar', () => ({
+  SearchBar: ({ placeholder }: { placeholder?: string }) => <div>{placeholder}</div>,
 }))
 
 vi.mock('@/shared/components/landing-quick-start', () => ({
-  LandingQuickStartSection: () => null,
+  LandingQuickStartSection: () => <section data-testid="quick-start">quick-start</section>,
 }))
 
 vi.mock('@/features/skill/skill-card', () => ({
@@ -44,16 +38,8 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   }),
 }))
 
-vi.mock('@/shared/hooks/use-in-view', () => ({
-  useInView: () => ({ ref: vi.fn(), inView: true }),
-}))
-
 vi.mock('@/shared/lib/search-query', () => ({
   normalizeSearchQuery: (q: string) => q.trim(),
-}))
-
-vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
 }))
 
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -64,11 +50,20 @@ describe('LandingPage', () => {
     expect(typeof LandingPage).toBe('function')
   })
 
-  it('renders the brand name in the hero section', () => {
+  it('renders only required sections for the home route', () => {
     const html = renderToStaticMarkup(<LandingPage />)
 
-    expect(html).toContain('SkillHub')
-    expect(html).toContain('landing.hero.title')
-    expect(html).toContain('bg-background')
+    expect(html).toContain('landing.hero.searchPlaceholder')
+    expect(html).toContain('landing.hero.exploreSkills')
+    expect(html).toContain('landing.hero.publishSkill')
+    expect(html).toContain('home.popularTitle')
+    expect(html).toContain('home.latestTitle')
+    expect(html).toContain('quick-start')
+
+    expect(html).not.toContain('SkillHub')
+    expect(html).not.toContain('landing.hero.title')
+    expect(html).not.toContain('landing.hero.subtitle')
+    expect(html).not.toContain('landing.stats.skills')
+    expect(html).not.toContain('landing.whySkillHub.title')
   })
 })

@@ -6,7 +6,6 @@ import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { QuickStartSection } from '@/shared/components/quick-start'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
-import { Button } from '@/shared/ui/button'
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -31,21 +30,8 @@ export function HomePage() {
   }
 
   return (
-    <div className="space-y-20">
-      {/* Hero Section */}
-      <div className="text-center space-y-8 py-16 animate-fade-up">
-        <div className="space-y-4">
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-brand-gradient leading-tight">
-            SkillHub
-          </h1>
-          <p className="text-xl md:text-2xl max-w-2xl mx-auto" style={{ color: 'hsl(var(--text-secondary))' }}>
-            {t('home.subtitle')}
-          </p>
-          <p className="text-base max-w-xl mx-auto" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            {t('home.description')}
-          </p>
-        </div>
-
+    <div className="space-y-16">
+      <div className="text-center space-y-8 py-10 animate-fade-up">
         <div className="max-w-2xl mx-auto animate-fade-up delay-1">
           <SearchBar onSearch={handleSearch} />
         </div>
@@ -69,20 +55,9 @@ export function HomePage() {
 
       {/* Popular Downloads Section */}
       <section className="space-y-6 animate-fade-up">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
-              {t('home.popularTitle')}
-            </h2>
-            <p style={{ color: 'hsl(var(--text-secondary))' }}>{t('home.popularDescription')}</p>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0, starredOnly: false } })}
-          >
-            {t('home.viewAll')}
-          </Button>
-        </div>
+        <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
+          {t('home.popularTitle')}
+        </h2>
         {isLoadingPopular ? (
           <SkeletonList count={6} />
         ) : (
@@ -101,20 +76,9 @@ export function HomePage() {
 
       {/* Latest Releases Section */}
       <section className="space-y-6 animate-fade-up">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
-              {t('home.latestTitle')}
-            </h2>
-            <p style={{ color: 'hsl(var(--text-secondary))' }}>{t('home.latestDescription')}</p>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}
-          >
-            {t('home.viewAll')}
-          </Button>
-        </div>
+        <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
+          {t('home.latestTitle')}
+        </h2>
         {isLoadingLatest ? (
           <SkeletonList count={6} />
         ) : (
