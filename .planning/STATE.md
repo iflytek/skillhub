@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase 6 context gathered
-last_updated: "2026-04-17T00:14:52.310Z"
+last_updated: "2026-04-17T00:15:08.214Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 8
@@ -20,7 +20,7 @@ progress:
 **Phase:** 06 (color-scheme-refresh)
 **Plan:** Not started
 **Status:** Phase 6 context gathered
-**Resume:** `.planning/phases/06-color-scheme-refresh/`
+**Resume:** .planning/phases/06-color-scheme-refresh/06-CONTEXT.md
 **Last activity:** 2026-04-17
 
 Phase 04 (verification-docs) is **complete** (see `04-VERIFICATION.md`).
