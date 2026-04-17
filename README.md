@@ -327,6 +327,16 @@ kubectl apply -f deploy/k8s/services.yaml
 kubectl apply -f deploy/k8s/ingress.yaml
 ```
 
+### K3s
+
+For K3s clusters, a self-contained quickstart overlay is available under [`deploy/k3s/overlays/quickstart/`](./deploy/k3s/overlays/quickstart). It includes PostgreSQL, Redis, and all SkillHub services, and is compatible with K3s' default Traefik Ingress:
+
+```bash
+kubectl apply -k deploy/k3s/overlays/quickstart/
+```
+
+See [`deploy/k3s/README_zh.md`](./deploy/k3s/README_zh.md) for full details.
+
 ## Smoke Test
 
 A lightweight smoke test script is available at [`scripts/smoke-test.sh`](./scripts/smoke-test.sh).
