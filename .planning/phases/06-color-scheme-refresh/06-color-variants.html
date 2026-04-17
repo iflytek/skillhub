@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase 06 — Color Scheme Variants</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --fg: #182033;
+      --muted: #5f6b82;
+      --border: #d8dfec;
+      --surface: #ffffff;
+      --radius: 14px;
+      --shadow: 0 16px 40px -24px rgba(19, 31, 60, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      max-width: 860px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 18px;
+    }
+
+    .variant {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .variant-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .variant-body {
+      padding: 14px 16px 16px;
+    }
+
+    .hint {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tokens {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+
+    .token-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 9px;
+      border-radius: 10px;
+      background: #f7f9fd;
+      border: 1px solid #e8edf6;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      margin-right: 8px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .preview {
+      border: 1px solid #e8edf6;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+
+    .preview-body {
+      padding: 10px 12px 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .card {
+      border-radius: 10px;
+      border: 1px solid;
+      padding: 10px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px dashed #c4cfdf;
+      color: #394b67;
+      background: #f1f5fb;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Phase 06: варианты color scheme</h1>
+    <p class="subtitle">
+      Страница для выбора visual direction перед планированием. Ниже 4 кандидата с базовыми токенами
+      и одинаковым UI-превью для быстрого сравнения.
+    </p>
+
+    <div class="grid">
+      <section class="variant">
+        <div class="variant-head" style="background: linear-gradient(135deg,#4f5bdb,#7a57de);">A. Refined Indigo/Violet</div>
+        <div class="variant-body">
+          <p class="hint">Эволюция текущего бренда: меньше неона, лучше контраст, более зрелый вид.</p>
+          <div class="tokens">
+            <div class="token-row"><span><i class="swatch" style="background:#eef2ff"></i>Background</span><code>#eef2ff</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#2f3a66"></i>Foreground</span><code>#2f3a66</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#5562d8"></i>Primary</span><code>#5562d8</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#7f5bd6"></i>Accent</span><code>#7f5bd6</code></div>
+          </div>
+          <div class="preview">
+            <div class="preview-header" style="background:#f4f6ff;color:#2f3a66;">
+              <strong>SkillHub</strong><span class="badge" style="background:#e5e9ff;color:#4956be;border-color:#d3dbff;">Dashboard</span>
+            </div>
+            <div class="preview-body">
+              <div class="card" style="background:#fff;border-color:#dbe2ff;">
+                <strong style="display:block;color:#2f3a66;">Collection Insights</strong>
+                <small style="color:#5f6aa0;">Stabilized token hierarchy</small>
+              </div>
+              <div class="row">
+                <button class="btn" style="background:#5562d8;color:#fff;">Primary</button>
+                <button class="btn" style="background:#f2edff;color:#6f52bf;border-color:#d7ccfb;">Accent</button>
+                <span class="badge" style="background:#eaf5ff;color:#365f8e;border-color:#c9e3fb;">Info</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="variant">
+        <div class="variant-head" style="background: linear-gradient(135deg,#35537a,#51627c);">B. Enterprise Blue/Slate</div>
+        <div class="variant-body">
+          <p class="hint">Консервативная enterprise-палитра: спокойная, высокая читаемость, low-risk.</p>
+          <div class="tokens">
+            <div class="token-row"><span><i class="swatch" style="background:#f5f8fb"></i>Background</span><code>#f5f8fb</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#24364d"></i>Foreground</span><code>#24364d</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#3f6da0"></i>Primary</span><code>#3f6da0</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#6d8098"></i>Accent</span><code>#6d8098</code></div>
+          </div>
+          <div class="preview">
+            <div class="preview-header" style="background:#edf2f8;color:#24364d;">
+              <strong>SkillHub</strong><span class="badge" style="background:#dde8f5;color:#345679;border-color:#c8d9ed;">Dashboard</span>
+            </div>
+            <div class="preview-body">
+              <div class="card" style="background:#fff;border-color:#d4e0ee;">
+                <strong style="display:block;color:#24364d;">Collection Insights</strong>
+                <small style="color:#607287;">Production-safe and neutral</small>
+              </div>
+              <div class="row">
+                <button class="btn" style="background:#3f6da0;color:#fff;">Primary</button>
+                <button class="btn" style="background:#eff3f7;color:#506176;border-color:#d8e1ea;">Accent</button>
+                <span class="badge" style="background:#e6f6ef;color:#2d6b56;border-color:#c7ebdc;">Success</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="variant">
+        <div class="variant-head" style="background: linear-gradient(135deg,#0d7b8c,#2a8f9f);">C. Teal/Blue Modern</div>
+        <div class="variant-body">
+          <p class="hint">Более свежий и “product” вид, но потребует более широкого visual tuning.</p>
+          <div class="tokens">
+            <div class="token-row"><span><i class="swatch" style="background:#eef8f9"></i>Background</span><code>#eef8f9</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#1f3840"></i>Foreground</span><code>#1f3840</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#0f8da1"></i>Primary</span><code>#0f8da1</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#4da4b2"></i>Accent</span><code>#4da4b2</code></div>
+          </div>
+          <div class="preview">
+            <div class="preview-header" style="background:#e8f4f6;color:#1f3840;">
+              <strong>SkillHub</strong><span class="badge" style="background:#d8eef2;color:#1f6e7c;border-color:#bbe3ea;">Dashboard</span>
+            </div>
+            <div class="preview-body">
+              <div class="card" style="background:#fff;border-color:#cbe5ea;">
+                <strong style="display:block;color:#1f3840;">Collection Insights</strong>
+                <small style="color:#4e6e75;">Modern but still restrained</small>
+              </div>
+              <div class="row">
+                <button class="btn" style="background:#0f8da1;color:#fff;">Primary</button>
+                <button class="btn" style="background:#e8f7f9;color:#2b7d8a;border-color:#cbe9ee;">Accent</button>
+                <span class="badge" style="background:#fff5e5;color:#8a641f;border-color:#f5e0b8;">Warning</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="variant">
+        <div class="variant-head" style="background: linear-gradient(135deg,#2c3550,#5a4f73);">D. Midnight Plum</div>
+        <div class="variant-body">
+          <p class="hint">Более контрастный премиальный тон без кислотного эффекта, акцент на depth.</p>
+          <div class="tokens">
+            <div class="token-row"><span><i class="swatch" style="background:#f3f2f8"></i>Background</span><code>#f3f2f8</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#2a3042"></i>Foreground</span><code>#2a3042</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#46507a"></i>Primary</span><code>#46507a</code></div>
+            <div class="token-row"><span><i class="swatch" style="background:#7a5e97"></i>Accent</span><code>#7a5e97</code></div>
+          </div>
+          <div class="preview">
+            <div class="preview-header" style="background:#eceaf4;color:#2a3042;">
+              <strong>SkillHub</strong><span class="badge" style="background:#ddd7ea;color:#5f4a7a;border-color:#cfc5e2;">Dashboard</span>
+            </div>
+            <div class="preview-body">
+              <div class="card" style="background:#fff;border-color:#d9d3e7;">
+                <strong style="display:block;color:#2a3042;">Collection Insights</strong>
+                <small style="color:#6f6785;">Higher depth, low neon</small>
+              </div>
+              <div class="row">
+                <button class="btn" style="background:#46507a;color:#fff;">Primary</button>
+                <button class="btn" style="background:#f2edf8;color:#6a5482;border-color:#deceed;">Accent</button>
+                <span class="badge" style="background:#fcebea;color:#9b3d40;border-color:#f5c8c9;">Critical</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="note">
+      После выбора варианта я зафиксирую его в CONTEXT фазы как <strong>Area 1 decision</strong> и перейду к Area 2
+      (semantic token model) с учетом выбранной палитры.
+    </div>
+  </div>
+</body>
+</html>
