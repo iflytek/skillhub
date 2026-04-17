@@ -138,11 +138,13 @@ Plans:
 **Goal:** Добавить production-ready Google OAuth login/signup для web-приложения с безопасным линкингом аккаунтов и без регрессии текущей auth-модели.
 **Depends on:** Phase 6
 **Requirements:** OAuth-01..OAuth-06, SEC-01, QA-01
-**Plans:** 0 plans
+**Plans:** 3/3 planned
 
 Plans:
 
-- TBD (plan with /gsd-plan-phase 7)
+- 07-01-PLAN.md — Backend Google OAuth integration: claims extractor + policy-safe account binding + auth catalog tests
+- 07-02-PLAN.md — Web login UX integration: provider rendering, redirect flow, and i18n copy for Google sign-in
+- 07-03-PLAN.md — Verification and docs: security regression suite, env/config docs, rollout checklist
 
 ### Phase 8: В профиль пользователя добавить компонент с ID и кнопкой копировать ID в буфер обмена
 
