@@ -170,6 +170,18 @@ class AuthControllerTest {
     }
 
     @Test
+    void providersShouldIgnoreUnsafeReturnToWhenRequested() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/providers").param("returnTo", "https://evil.example/steal"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems(
+                "/oauth2/authorization/github",
+                "/oauth2/authorization/google",
+                "/oauth2/authorization/gitee"
+            )));
+    }
+
+    @Test
     void methodsShouldExposeStandardLoginCatalog() throws Exception {
         mockMvc.perform(get("/api/v1/auth/methods").param("returnTo", "/dashboard/publish"))
             .andExpect(status().isOk())
