@@ -66,6 +66,7 @@ package-lock.json
 **/.playwright/
 **/playwright-report/
 **/test-results/
+.playwright-mcp/
 
 # Python / temporary files
 *.py[cod]
@@ -87,3 +88,6 @@ docs/superpowers/
 AGENTS.md
 CLAUDE.md
 .gitnexus
+
+# Local config file
+.mcp.json

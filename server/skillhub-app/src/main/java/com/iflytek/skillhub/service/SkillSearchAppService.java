@@ -122,10 +122,8 @@ public class SkillSearchAppService {
     }
 
     private boolean hasPlatformWideReadAccess(Set<String> platformRoles) {
-        if (platformRoles == null || platformRoles.isEmpty()) {
-            return false;
-        }
-        return platformRoles.contains("SUPER_ADMIN");
+        // Super admins should use a dedicated admin interface, not the public portal
+        return false;
     }
 
     private SearchResponse searchVisibleSkills(

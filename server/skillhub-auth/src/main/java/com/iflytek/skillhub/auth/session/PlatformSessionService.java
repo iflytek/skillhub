@@ -1,7 +1,5 @@
 package com.iflytek.skillhub.auth.session;
 
-import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -9,6 +7,10 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Service;
+
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Synchronizes {@link PlatformPrincipal} snapshots with Spring Security's
