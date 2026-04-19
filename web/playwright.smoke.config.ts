@@ -8,7 +8,10 @@ const smokeSpecs = [
   'dashboard-shell.spec.ts',
 ]
 
+const smokeProjects = (baseConfig.projects ?? []).filter((project) => project.name === 'chromium')
+
 export default defineConfig({
   ...baseConfig,
   testMatch: smokeSpecs,
+  projects: smokeProjects,
 })

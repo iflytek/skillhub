@@ -1,9 +1,13 @@
-import { expect, type Page, type TestInfo } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 const password = 'Passw0rd!123'
 const cachedUserByWorker = new Map<number, string>()
 const cachedSessionByAccount = new Map<string, SessionSnapshot>()
 const requestTimeoutMs = process.env.CI ? 12_000 : 8_000
+
+interface SessionWorkerInfo {
+  parallelIndex?: number
+}
 
 export interface TestCredentials {
   password: string
@@ -30,12 +34,12 @@ interface SessionSnapshot {
 
 const cachedSessionByWorker = new Map<number, SessionSnapshot>()
 
-function usernameForWorker(testInfo?: TestInfo): string {
+function usernameForWorker(testInfo?: SessionWorkerInfo): string {
   const worker = testInfo?.parallelIndex ?? 0
   return `e2e_worker_${worker}`
 }
 
-function uniqueUsernameForWorker(testInfo?: TestInfo): string {
+function uniqueUsernameForWorker(testInfo?: SessionWorkerInfo): string {
   const worker = testInfo?.parallelIndex ?? 0
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
   return `e2e_w${worker}_${suffix}`
@@ -88,6 +92,25 @@ async function hasActiveSession(page: Page): Promise<boolean> {
     return response.ok()
   } catch {
     return false
+  }
+}
+
+async function getActiveSessionUsername(page: Page): Promise<string | null> {
+  try {
+    const response = await page.context().request.get('/api/v1/auth/me', {
+      timeout: requestTimeoutMs,
+    })
+    if (!response.ok()) {
+      return null
+    }
+
+    const payload = await response.json().catch(() => null) as
+      | { data?: { username?: unknown } }
+      | null
+    const username = payload?.data?.username
+    return typeof username === 'string' && username.length > 0 ? username : null
+  } catch {
+    return null
   }
 }
 
@@ -164,7 +187,7 @@ async function tryBootstrapMockSession(page: Page, worker: number): Promise<{ us
   return { username: 'local-user', password }
 }
 
-async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: RegisterSessionOptions) {
+async function registerSessionOnce(page: Page, testInfo?: SessionWorkerInfo, options?: RegisterSessionOptions) {
   const worker = testInfo?.parallelIndex ?? 0
   const cached = cachedUserByWorker.get(worker)
   const username = usernameForWorker(testInfo)
@@ -177,6 +200,13 @@ async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: Re
   if (restored) {
     cachedUserByWorker.set(worker, restored.username)
     return { username: restored.username, password }
+  }
+
+  const activeUsername = await getActiveSessionUsername(page)
+  if (activeUsername) {
+    cachedUserByWorker.set(worker, activeUsername)
+    await cacheSession(page, worker, activeUsername)
+    return { username: activeUsername, password }
   }
 
   if (options?.allowMockSession !== false) {
@@ -279,7 +309,7 @@ async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: Re
   throw new Error(`Failed to establish e2e session for worker ${worker}`)
 }
 
-async function createFreshSessionOnce(page: Page, testInfo?: TestInfo) {
+async function createFreshSessionOnce(page: Page, testInfo?: SessionWorkerInfo) {
   const worker = testInfo?.parallelIndex ?? 0
   const request = page.context().request
 
@@ -323,7 +353,7 @@ async function createFreshSessionOnce(page: Page, testInfo?: TestInfo) {
   throw new Error(`Failed to create fresh e2e session for worker ${worker}`)
 }
 
-export async function registerSession(page: Page, testInfo?: TestInfo, options?: RegisterSessionOptions) {
+export async function registerSession(page: Page, testInfo?: SessionWorkerInfo, options?: RegisterSessionOptions) {
   let lastError: unknown
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -340,7 +370,7 @@ export async function registerSession(page: Page, testInfo?: TestInfo, options?:
   throw lastError
 }
 
-export async function createFreshSession(page: Page, testInfo?: TestInfo) {
+export async function createFreshSession(page: Page, testInfo?: SessionWorkerInfo) {
   let lastError: unknown
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -357,7 +387,7 @@ export async function createFreshSession(page: Page, testInfo?: TestInfo) {
   throw lastError
 }
 
-export async function loginWithCredentials(page: Page, credentials: TestCredentials, _testInfo?: TestInfo) {
+export async function loginWithCredentials(page: Page, credentials: TestCredentials, _testInfo?: SessionWorkerInfo) {
   const request = page.context().request
 
   await primeAuthProviders(page)

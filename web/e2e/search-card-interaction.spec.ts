@@ -3,32 +3,28 @@ import { setEnglishLocale } from './helpers/auth-fixtures'
 import {
   getSearchCard,
   getSearchCards,
-  prepareSearchSeed,
-  type PreparedSearchSeed,
+  readSearchSeedDataset,
 } from './helpers/search-seed'
-import { registerSession } from './helpers/session'
+import { authedTest } from './helpers/worker-auth-fixture'
 
 const SEARCH_URL = (q: string, sort = 'relevance', page = 0) =>
   `/search?q=${encodeURIComponent(q)}&sort=${sort}&page=${page}&starredOnly=false`
 
-function latestSeed(seed: PreparedSearchSeed) {
+function latestSeed() {
+  const seed = readSearchSeedDataset()
   return {
     skill: seed.skills[seed.skills.length - 1],
     skillName: seed.skillNames[seed.skillNames.length - 1],
   }
 }
 
+function searchSeedKeyword(): string {
+  return readSearchSeedDataset().keyword
+}
+
 async function waitForCards(page: Page) {
   const cards = getSearchCards(page)
-
-  if (basicSeed) {
-    await basicSeed.builder.waitForSearchResults(
-      basicSeed.keyword,
-      basicSeed.skills.map((skill) => skill.slug),
-    )
-  }
-
-  const keyword = basicSeed?.keyword
+  const keyword = searchSeedKeyword()
   const encodedKeyword = keyword ? encodeURIComponent(keyword) : null
   let reloaded = false
 
@@ -90,18 +86,10 @@ async function waitForCards(page: Page) {
   return cards
 }
 
-let basicSeed: PreparedSearchSeed | undefined
-
 test.setTimeout(300_000)
 
-test.beforeAll(async ({ browser }, testInfo) => {
-  test.setTimeout(300_000)
-  basicSeed = await prepareSearchSeed(browser, testInfo, { count: 13 })
-})
-
-test.afterAll(async () => {
-  await basicSeed?.dispose()
-  basicSeed = undefined
+authedTest.beforeEach(async ({ page }) => {
+  await setEnglishLocale(page)
 })
 
 // ─── Card Display After Search ────────────────────────────────────────────────
@@ -113,15 +101,15 @@ test.describe('Search Card Display (Real API)', () => {
 
   // TC_SEARCH_INTERACT_001 P0
   test('TC_SEARCH_INTERACT_001: cards appear immediately after search', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const cards = await waitForCards(page)
     await expect(cards.first()).toBeVisible({ timeout: 8_000 })
   })
 
   // TC_SEARCH_INTERACT_005 P0 - cards show complete info
   test('TC_SEARCH_INTERACT_005: each card shows name, description, and version', async ({ page }) => {
-    const current = latestSeed(basicSeed!)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    const current = latestSeed()
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await expect(firstCard.getByRole('heading', { name: current.skillName, exact: true })).toBeVisible()
@@ -130,13 +118,13 @@ test.describe('Search Card Display (Real API)', () => {
 
   // TC_SEARCH_INTERACT_039 P0 - version number format
   test('TC_SEARCH_INTERACT_039: version number is displayed in v1.2.3 format', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(page.getByText(/v\d+\.\d+\.\d+/).first()).toBeVisible({ timeout: 8_000 })
   })
 
   // TC_SEARCH_INTERACT_038 P0 - long descriptions truncated
   test('TC_SEARCH_INTERACT_038: long descriptions are truncated with ellipsis', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const cards = await waitForCards(page)
     expect(await cards.count()).toBeGreaterThan(0)
   })
@@ -151,7 +139,7 @@ test.describe('Search Card Display (Real API)', () => {
 
   // TC_SEARCH_INTERACT_035 P0 - large results show pagination
   test('TC_SEARCH_INTERACT_035: large result sets show pagination controls', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('button', { name: /next|›/i })).toBeVisible({ timeout: 10_000 })
   })
@@ -166,7 +154,7 @@ test.describe('Search Card Content (Real API)', () => {
 
   // TC_SEARCH_INTERACT_003 P0 - card count matches count indicator
   test('TC_SEARCH_INTERACT_003: displayed card count is consistent with skill count indicator', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const cards = getSearchCards(page)
     const cardCount = await cards.count()
     const countText = await page.getByText(/\d+\s+skills found/i).first().textContent()
@@ -179,7 +167,7 @@ test.describe('Search Card Content (Real API)', () => {
 
   // TC_SEARCH_INTERACT_040 P0 - download count formatted
   test('TC_SEARCH_INTERACT_040: download counts are formatted correctly (numbers or K/M)', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(page.locator('body')).not.toContainText(/error|500/i)
     await expect(getSearchCards(page).first()).toContainText(/\d/)
   })
@@ -193,10 +181,9 @@ test.describe('Search Card Navigation (Real API)', () => {
   })
 
   // TC_SEARCH_INTERACT_007 P0 - clicking card navigates to detail page
-  test('TC_SEARCH_INTERACT_007: clicking a skill card navigates to the skill detail page', async ({ page }, testInfo) => {
-    const current = latestSeed(basicSeed!)
-    await registerSession(page, testInfo)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+  authedTest('TC_SEARCH_INTERACT_007: clicking a skill card navigates to the skill detail page', async ({ page }) => {
+    const current = latestSeed()
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await firstCard.click()
@@ -204,10 +191,9 @@ test.describe('Search Card Navigation (Real API)', () => {
   })
 
   // TC_SEARCH_INTERACT_008 P0 - detail page matches clicked card
-  test('TC_SEARCH_INTERACT_008: skill detail page matches the card that was clicked', async ({ page }, testInfo) => {
-    const current = latestSeed(basicSeed!)
-    await registerSession(page, testInfo)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+  authedTest('TC_SEARCH_INTERACT_008: skill detail page matches the card that was clicked', async ({ page }) => {
+    const current = latestSeed()
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await firstCard.click()
@@ -218,8 +204,8 @@ test.describe('Search Card Navigation (Real API)', () => {
   // TC_SEARCH_INTERACT_009 P1 - Ctrl+click opens in new tab
   test('TC_SEARCH_INTERACT_009: Ctrl+click on card opens skill detail in new tab', async ({ page, context }) => {
     test.skip(true, 'Skill cards render as clickable divs, so browser-level new-tab semantics do not apply.')
-    const current = latestSeed(basicSeed!)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    const current = latestSeed()
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
 
@@ -242,7 +228,7 @@ test.describe('Search Card Sort Interaction (Real API)', () => {
 
   // TC_SEARCH_INTERACT_021 P0 - switching sort updates cards
   test('TC_SEARCH_INTERACT_021: switching sort tab re-renders card list', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
 
     await page.getByRole('button', { name: 'Downloads' }).click()
@@ -255,18 +241,18 @@ test.describe('Search Card Sort Interaction (Real API)', () => {
   test('TC_SEARCH_INTERACT_026: re-searching with new keyword replaces card list', async ({ page }) => {
     await page.goto(SEARCH_URL(''))
     const searchInput = page.getByPlaceholder('Search skills...')
-    await searchInput.fill(basicSeed!.keyword)
+    await searchInput.fill(searchSeedKeyword())
     await searchInput.press('Enter')
     await page.waitForLoadState('networkidle')
-    await expect(page).toHaveURL(new RegExp(`q=${basicSeed!.keyword}`))
+    await expect(page).toHaveURL(new RegExp(`q=${searchSeedKeyword()}`))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
   })
 
   // TC_SEARCH_INTERACT_027 P0 - re-search resets page to 0
   test('TC_SEARCH_INTERACT_027: re-searching resets page number to 0', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword, 'relevance', 1))
+    await page.goto(SEARCH_URL(searchSeedKeyword(), 'relevance', 1))
     const searchInput = page.getByPlaceholder('Search skills...')
-    await searchInput.fill(basicSeed!.keyword)
+    await searchInput.fill(searchSeedKeyword())
     await searchInput.press('Enter')
     await expect(page).toHaveURL(/page=0/)
   })
@@ -281,7 +267,7 @@ test.describe('Search Card Pagination (Real API)', () => {
 
   // TC_SEARCH_INTERACT_023 P0 - switching page updates cards
   test('TC_SEARCH_INTERACT_023: switching to next page shows different cards', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await page.waitForLoadState('networkidle')
 
     const nextBtn = page.getByRole('button', { name: /next|›/i })
@@ -297,7 +283,7 @@ test.describe('Search Card Pagination (Real API)', () => {
 
   // TC_SEARCH_INTERACT_025 P1 - page switch scrolls to top
   test('TC_SEARCH_INTERACT_025: switching page scrolls back to top of results', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await page.waitForLoadState('networkidle')
 
     const nextBtn = page.getByRole('button', { name: /next|›/i })
@@ -321,7 +307,7 @@ test.describe('Search Card Loading State (Real API)', () => {
 
   // TC_SEARCH_INTERACT_030 P0 - skeleton disappears after load
   test('TC_SEARCH_INTERACT_030: skeleton screen disappears and real cards appear after load', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await page.waitForLoadState('networkidle')
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
     await expect(page.locator('[class*="skeleton"], [class*="shimmer"]')).toHaveCount(0)
@@ -341,7 +327,7 @@ test.describe('Search Card Responsive Layout (Real API)', () => {
   // TC_SEARCH_INTERACT_042 P0 - desktop 3-column grid
   test('TC_SEARCH_INTERACT_042: desktop viewport shows 3-column card grid', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
     const grid = page.locator('[class*="grid"]').first()
     await expect(grid).toBeVisible()
@@ -350,7 +336,7 @@ test.describe('Search Card Responsive Layout (Real API)', () => {
   // TC_SEARCH_INTERACT_044 P0 - mobile 1-column layout
   test('TC_SEARCH_INTERACT_044: mobile viewport shows single-column card layout', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const cards = await waitForCards(page)
     await expect(cards.first()).toBeVisible({ timeout: 8_000 })
     await expect(page.locator('body')).not.toContainText(/error|500/i)
@@ -359,7 +345,7 @@ test.describe('Search Card Responsive Layout (Real API)', () => {
   // TC_SEARCH_INTERACT_043 P0 - tablet 2-column layout
   test('TC_SEARCH_INTERACT_043: tablet viewport shows 2-column card layout', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 })
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const cards = await waitForCards(page)
     await expect(cards.first()).toBeVisible({ timeout: 8_000 })
     await expect(page.locator('body')).not.toContainText(/error|500/i)
@@ -368,7 +354,7 @@ test.describe('Search Card Responsive Layout (Real API)', () => {
   // TC_SEARCH_INTERACT_045 P1 - responsive layout adjusts on resize
   test('TC_SEARCH_INTERACT_045: card layout adjusts when browser window is resized', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
 
     await page.setViewportSize({ width: 375, height: 812 })
@@ -377,11 +363,10 @@ test.describe('Search Card Responsive Layout (Real API)', () => {
   })
 
   // TC_SEARCH_INTERACT_046 P0 - mobile touch interaction
-  test('TC_SEARCH_INTERACT_046: mobile touch on card navigates to skill detail', async ({ page }, testInfo) => {
-    const current = latestSeed(basicSeed!)
-    await registerSession(page, testInfo)
+  authedTest('TC_SEARCH_INTERACT_046: mobile touch on card navigates to skill detail', async ({ page }) => {
+    const current = latestSeed()
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await firstCard.tap()
@@ -398,7 +383,7 @@ test.describe('Search Card Keyboard Navigation (Real API)', () => {
 
   // TC_SEARCH_INTERACT_049 P1 - Tab key navigates between cards
   test('TC_SEARCH_INTERACT_049: Tab key can navigate between skill cards', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
 
     await page.keyboard.press('Tab')
@@ -408,10 +393,9 @@ test.describe('Search Card Keyboard Navigation (Real API)', () => {
   })
 
   // TC_SEARCH_INTERACT_050 P1 - Enter key opens focused card
-  test('TC_SEARCH_INTERACT_050: pressing Enter on a focused card opens the skill detail', async ({ page }, testInfo) => {
-    const current = latestSeed(basicSeed!)
-    await registerSession(page, testInfo)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+  authedTest('TC_SEARCH_INTERACT_050: pressing Enter on a focused card opens the skill detail', async ({ page }) => {
+    const current = latestSeed()
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
 
@@ -422,8 +406,8 @@ test.describe('Search Card Keyboard Navigation (Real API)', () => {
 
   // TC_SEARCH_INTERACT_051 P1 - focus state visible on cards
   test('TC_SEARCH_INTERACT_051: focused card has a visible focus indicator', async ({ page }) => {
-    const current = latestSeed(basicSeed!)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    const current = latestSeed()
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const firstCard = getSearchCard(page, current.skillName)
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await firstCard.focus()
@@ -441,16 +425,15 @@ test.describe('Search Card Error Handling (Real API)', () => {
 
   // TC_SEARCH_INTERACT_033 P1 - single result displays correctly
   test('TC_SEARCH_INTERACT_033: single search result displays card layout correctly', async ({ page }) => {
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     const cards = await waitForCards(page)
     expect(await cards.count()).toBeGreaterThan(0)
     await expect(page.locator('body')).not.toContainText(/error|500/i)
   })
 
   // TC_SEARCH_INTERACT_060 P1 - cache: returning to search page shows results quickly
-  test('TC_SEARCH_INTERACT_060: returning to search page shows cached results quickly', async ({ page }, testInfo) => {
-    await registerSession(page, testInfo)
-    await page.goto(SEARCH_URL(basicSeed!.keyword))
+  authedTest('TC_SEARCH_INTERACT_060: returning to search page shows cached results quickly', async ({ page }) => {
+    await page.goto(SEARCH_URL(searchSeedKeyword()))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
 
     await page.goto('/dashboard')

@@ -58,18 +58,21 @@ jobs:
       - name: Ensure Maven wrapper is executable
         run: chmod +x server/mvnw
 
-      - name: Start full dev stack
-        run: docker compose -p skillhub-pr-e2e -f compose.dev.yml up -d --build --wait
+      - name: Start backend dev stack (without web container)
+        run: docker compose -p skillhub-pr-e2e -f compose.dev.yml up -d --build --wait postgres redis minio skill-scanner server
 
       - name: Install Playwright browsers
         run: cd web && pnpm exec playwright install --with-deps chromium
+
+      - name: Policy check (no waitForTimeout in e2e)
+        run: cd web && pnpm run check:e2e-policy
 
       # QA-02 explicit paths (do not rely on glob drift): e2e/collections-flow.spec.ts e2e/collections-visibility-guard.spec.ts
       - name: Run frontend E2E tests
         run: make test-e2e-frontend
 
       - name: Upload Playwright HTML report
-        if: ${{ !cancelled() }}
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -78,7 +81,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Playwright raw test results
-        if: ${{ !cancelled() }}
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results

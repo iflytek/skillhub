@@ -1,6 +1,13 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import type { Browser, Locator, Page, TestInfo } from '@playwright/test'
 import { createFreshSession, loginWithCredentials, registerSession } from './session'
-import { E2eTestDataBuilder, type SeededNamespace, type SeededSkill } from './test-data-builder'
+import {
+  E2eTestDataBuilder,
+  deterministicSuffix,
+  type SeededNamespace,
+  type SeededSkill,
+} from './test-data-builder'
 
 export const DEFAULT_SEARCH_KEYWORD = 'agent'
 
@@ -16,12 +23,21 @@ export interface PreparedSearchSeed extends SearchSeedContext {
   dispose: () => Promise<void>
 }
 
+export interface SearchSeedDataset {
+  keyword: string
+  namespace: SeededNamespace
+  skills: SeededSkill[]
+  skillNames: string[]
+}
+
 interface PublisherSession {
   builder: E2eTestDataBuilder
   context: Awaited<ReturnType<Browser['newContext']>>
   namespace: SeededNamespace
   page: Page
 }
+
+const searchSeedDatasetPath = path.join(process.cwd(), '.playwright', 'search-heavy-seed.json')
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -76,11 +92,10 @@ async function openAdhocPublisherSession(browser: Browser, testInfo: TestInfo): 
   const builder = new E2eTestDataBuilder(page, testInfo)
 
   try {
-    await createFreshSession(page, testInfo)
-  } catch {
-    // Fall back to a regular worker session when transient registration issues happen
-    // after Playwright restarts the worker following an earlier test failure.
     await registerSession(page, testInfo)
+  } catch {
+    // Fall back to a brand-new account if worker/mock session bootstrap is unavailable.
+    await createFreshSession(page, testInfo)
   }
   await builder.init()
 
@@ -129,7 +144,7 @@ export async function seedPublicSearchSkills(
 ): Promise<SearchSeedContext> {
   const count = options?.count ?? 1
   const builder = new E2eTestDataBuilder(page, testInfo)
-  const seedSuffix = `${testInfo.parallelIndex ?? 0}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const seedSuffix = deterministicSuffix('search-seed', testInfo)
   const keyword = options?.keyword || `agent-${seedSuffix}`.slice(0, 32)
 
   await loginWithCredentials(page, publisherCredentials(), testInfo)
@@ -176,13 +191,14 @@ export async function prepareSearchSeed(
     count?: number
     keyword?: string
     description?: string
+    persistSeed?: boolean
   },
 ): Promise<PreparedSearchSeed> {
   const count = options?.count ?? 1
-  const seedSuffix = `${testInfo.parallelIndex ?? 0}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const seedSuffix = deterministicSuffix('search-prepare', testInfo)
   const keyword = options?.keyword || `agent-${seedSuffix}`.slice(0, 32)
   const description = options?.description || `Searchable ${keyword} skill for Playwright E2E coverage.`
-  const useProvidedPublisher = count <= 3 && hasPublisherCredentials()
+  const useProvidedPublisher = hasPublisherCredentials()
   const publisherSessions: PublisherSession[] = [
     useProvidedPublisher
       ? await openProvidedPublisherSession(browser, testInfo)
@@ -193,7 +209,7 @@ export async function prepareSearchSeed(
   let publishedCount = 0
 
   while (publishedCount < count) {
-    if (publishedCount >= 10 && publisherSessions.length === 1) {
+    if (publishedCount >= 10 && publisherSessions.length === 1 && !useProvidedPublisher) {
       publisherSessions.push(await openAdhocPublisherSession(browser, testInfo))
     }
 
@@ -239,16 +255,34 @@ export async function prepareSearchSeed(
     dispose: async () => {
       await adminContext.close()
       for (let index = publisherSessions.length - 1; index >= 0; index -= 1) {
-        await cleanupSearchSeed({
-          builder: publisherSessions[index].builder,
-          keyword: seed.keyword,
-          namespace: publisherSessions[index].namespace,
-          skills: [],
-          skillNames: [],
-        })
+        if (!options?.persistSeed) {
+          await cleanupSearchSeed({
+            builder: publisherSessions[index].builder,
+            keyword: seed.keyword,
+            namespace: publisherSessions[index].namespace,
+            skills: [],
+            skillNames: [],
+          })
+        }
         await publisherSessions[index].context.close()
       }
     },
+  }
+}
+
+export function writeSearchSeedDataset(seed: SearchSeedDataset): void {
+  mkdirSync(path.dirname(searchSeedDatasetPath), { recursive: true })
+  writeFileSync(searchSeedDatasetPath, JSON.stringify(seed, null, 2), 'utf8')
+}
+
+export function readSearchSeedDataset(): SearchSeedDataset {
+  try {
+    const raw = readFileSync(searchSeedDatasetPath, 'utf8')
+    return JSON.parse(raw) as SearchSeedDataset
+  } catch {
+    throw new Error(
+      `Search seed dataset not found at ${searchSeedDatasetPath}. Ensure setup-search-seed project dependency ran.`,
+    )
   }
 }
 

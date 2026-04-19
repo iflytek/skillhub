@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test -c playwright.smoke.config.ts",
     "test:e2e:ui": "playwright test --ui",
+    "check:e2e-policy": "node scripts/check-no-waitfor-timeout.mjs",
     "check:colors": "node scripts/check-no-hardcoded-colors.mjs",
     "check:motion": "node scripts/check-motion-effects.mjs",
     "check:parity-matrix": "node scripts/check-parity-matrix.mjs",

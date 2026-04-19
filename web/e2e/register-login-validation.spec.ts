@@ -5,7 +5,6 @@ import { createFreshSession } from './helpers/session'
 // TC_UN_* 用户名输入框 / TC_EM_* 邮箱输入框 / TC_PW_* 密码输入框
 // TC_REG_* 注册/登录流程 / TC_UI_* UI/UX
 
-let existingRegisteredUsername: string | null = null
 const DUPLICATE_USERNAME_ERROR = /already.*exist|taken|username.*used/i
 const REGISTER_RATE_LIMIT_ERROR = /too many|too frequent|rate limit|请求过于频繁/
 
@@ -147,20 +146,15 @@ test.describe('Register Flow (Real API)', () => {
     await page.getByRole('button', { name: 'Register & Login' }).click()
     // Should redirect away from /register on success
     await expect(page).not.toHaveURL('/register')
-    existingRegisteredUsername = username
   })
 
   // TC_REG_003 P0 - duplicate username
   test('TC_REG_003: shows error when registering with existing username', async ({ browser, page }, testInfo) => {
-    let username = existingRegisteredUsername
-    if (!username) {
-      const seedContext = await browser.newContext()
-      const seedPage = await seedContext.newPage()
-      const seedCredentials = await createFreshSession(seedPage, testInfo)
-      username = seedCredentials.username
-      existingRegisteredUsername = username
-      await seedContext.close()
-    }
+    const seedContext = await browser.newContext()
+    const seedPage = await seedContext.newPage()
+    const seedCredentials = await createFreshSession(seedPage, testInfo)
+    const username = seedCredentials.username
+    await seedContext.close()
 
     // Now try to register with the same username again
     await page.goto('/register')
@@ -180,7 +174,7 @@ test.describe('Register Flow (Real API)', () => {
       }
 
       if (attempt < 2 && await registerRateLimitError.isVisible().catch(() => false)) {
-        await page.waitForTimeout(1_500 * (attempt + 1))
+        await expect(registerRateLimitError).toBeHidden({ timeout: 10_000 })
         continue
       }
 

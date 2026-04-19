@@ -58,6 +58,8 @@ interface ApiFailure extends Error {
 }
 
 const cleanupTimeoutMs = process.env.CI ? 8_000 : 5_000
+const runScope = (process.env.E2E_RUN_ID ?? `${Date.now().toString(36)}${process.pid.toString(36)}`).toLowerCase()
+const workerSequence = new Map<number, number>()
 
 export interface SeedSkillOptions {
   name?: string
@@ -74,9 +76,31 @@ function asApiErrorBody(value: unknown): string {
   return typeof maybe.msg === 'string' ? maybe.msg : ''
 }
 
-function uniqueSuffix(testInfo?: TestInfo): string {
+function nextWorkerSequence(worker: number): number {
+  const next = (workerSequence.get(worker) ?? 0) + 1
+  workerSequence.set(worker, next)
+  return next
+}
+
+function hashText(value: string): string {
+  let hash = 2166136261
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+export function deterministicSuffix(scope: string, testInfo?: TestInfo): string {
   const worker = testInfo?.parallelIndex ?? 0
-  return `${worker}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const retry = testInfo?.retry ?? 0
+  const sequence = nextWorkerSequence(worker)
+  const identity = `${testInfo?.testId ?? testInfo?.title ?? 'global'}:${scope}:${retry}:${sequence}:${runScope}`
+  return `${worker}_${retry}_${sequence}_${hashText(identity)}`.slice(0, 48)
+}
+
+function uniqueSuffix(testInfo?: TestInfo): string {
+  return deterministicSuffix('builder', testInfo)
 }
 
 async function runCleanupTaskWithTimeout(task: CleanupTask): Promise<void> {
