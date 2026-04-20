@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { existsSync, readdirSync, lstatSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { getAllAgents, getUniversalAgents, getNonUniversalAgents } from "../core/agent-detector.js";
+import { getAllAgents, isUniversalForScope } from "../core/agent-detector.js";
 import { info, dim } from "../utils/logger.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import * as p from "@clack/prompts";
@@ -53,11 +53,20 @@ export function registerList(program: Command) {
         }
       }
 
-      const universalAgents = getUniversalAgents();
-      const nonUniversalAgents = getNonUniversalAgents();
+      // Determine scope for dynamic universal grouping
+      const isGlobal = scopeGlobal === true;
+      const allAgents = getAllAgents();
 
+      const universalAgents = allAgents
+        .filter((a) => isUniversalForScope(a, isGlobal) && a.showInUniversalList !== false)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const nonUniversalAgents = allAgents
+        .filter((a) => !isUniversalForScope(a, isGlobal))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const canonicalLabel = isGlobal ? "Universal (~/.agents/skills)" : "Universal (.agents/skills)";
       const universalSection = {
-        title: "Universal (.agents/skills)",
+        title: canonicalLabel,
         items: universalAgents.map((a) => ({
           value: a.key,
           label: a.name,
@@ -81,7 +90,7 @@ export function registerList(program: Command) {
       }
 
       const selectedAgents = agentSelection as string[];
-      const agents = getAllAgents().filter((a) => selectedAgents.includes(a.key));
+      const agents = allAgents.filter((a) => selectedAgents.includes(a.key));
 
       if (agents.length === 0) {
         console.log("No agents selected.");
@@ -90,42 +99,74 @@ export function registerList(program: Command) {
 
       console.log("");
 
-      let found = false;
+      // Collect all skill entries grouped by (skillName, path) -> agentNames
+      const skillMap = new Map<string, Map<string, string[]>>();
+      const home = homedir();
+      const cwd = process.cwd();
+
       for (const agent of agents) {
         const showProject = scopeGlobal === null || scopeGlobal === false;
         const showGlobal = scopeGlobal === null || scopeGlobal === true;
 
         if (showProject) {
-          const projectDir = join(process.cwd(), agent.skillsDir);
-          const skills = getSkillsInDir(projectDir);
-          if (skills.length > 0) {
-            found = true;
-            info(`\n${agent.name} (project):`);
-            for (const s of skills) {
-              dim(`  ${s}`);
-            }
-          }
+          const projectDir = join(cwd, agent.skillsDir);
+          collectSkills(skillMap, projectDir, agent.name, cwd, true);
         }
 
         if (showGlobal && agent.globalSkillsDir) {
-          const globalDir = join(homedir(), agent.globalSkillsDir);
-          const skills = getSkillsInDir(globalDir);
-          if (skills.length > 0) {
-            found = true;
-            info(`\n${agent.name} (global):`);
-            for (const s of skills) {
-              dim(`  ${s}`);
-            }
-          }
+          const globalDir = join(home, agent.globalSkillsDir);
+          collectSkills(skillMap, globalDir, agent.name, home, false);
         }
       }
 
-      if (!found) {
+      if (skillMap.size === 0) {
         dim("No skills installed for selected agents and scope.");
+      } else {
+        // Output grouped by skill, then by path with agent names merged
+        const sortedSkills = [...skillMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+        for (const [skillName, pathGroups] of sortedSkills) {
+          info(`${skillName}`);
+          const sortedPaths = [...pathGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+          for (const [displayPath, agentNames] of sortedPaths) {
+            const sorted = agentNames.sort((a, b) => a.localeCompare(b));
+            const label = sorted.length <= 5
+              ? sorted.join(", ")
+              : sorted.slice(0, 5).join(", ") + ` ${pc.dim(`+${sorted.length - 5}`)}`;
+            dim(`  ${pc.dim("→")} ${label}: ${displayPath}`);
+          }
+        }
       }
 
       console.log("");
     });
+}
+
+/**
+ * Collect skills from a directory into the skillMap.
+ * skillMap: skillName -> (displayPath -> agentNames[])
+ */
+function collectSkills(
+  skillMap: Map<string, Map<string, string[]>>,
+  dir: string,
+  agentName: string,
+  baseForRelative: string,
+  isProject: boolean,
+) {
+  if (!existsSync(dir)) return;
+  const skills = getSkillsInDir(dir);
+  for (const skillName of skills) {
+    const displayPath = isProject
+      ? dir.replace(baseForRelative, ".")
+      : dir.replace(baseForRelative, "~");
+    let pathGroups = skillMap.get(skillName);
+    if (!pathGroups) {
+      pathGroups = new Map();
+      skillMap.set(skillName, pathGroups);
+    }
+    const agents = pathGroups.get(displayPath) || [];
+    agents.push(agentName);
+    pathGroups.set(displayPath, agents);
+  }
 }
 
 function getSkillsInDir(dir: string): string[] {
@@ -138,5 +179,5 @@ function getSkillsInDir(dir: string): string[] {
     } catch {
       return false;
     }
-  });
+  }).sort((a, b) => a.localeCompare(b));
 }

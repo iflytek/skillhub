@@ -2,11 +2,12 @@ import { Command } from "commander";
 import { existsSync, readdirSync, statSync, unlinkSync, rmdirSync, lstatSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { getAllAgents, isUniversalForScope, getUniversalAgents, getNonUniversalAgents, type AgentInfo } from "../core/agent-detector.js";
+import { getAllAgents, isUniversalForScope, type AgentInfo } from "../core/agent-detector.js";
 import { success, info, dim } from "../utils/logger.js";
 import { removeFromLock } from "../core/skill-lock.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import * as p from "@clack/prompts";
+import pc from "picocolors";
 
 function removeDir(path: string) {
   try {
@@ -100,7 +101,7 @@ function discoverInstalledSkills(scope: "local" | "global", agent?: AgentInfo): 
     } catch {}
   }
 
-  return [...new Set(skills)];
+  return [...new Set(skills)].sort((a, b) => a.localeCompare(b));
 }
 
 function findAgentsWithSkill(skillName: string, scope: "global" | "local", agents: AgentInfo[]): AgentInfo[] {
@@ -145,6 +146,7 @@ export function registerUninstall(program: Command) {
       }
 
       const allAgents = getAllAgents();
+      const isGlobal = scope === "global";
 
       if (opts.all) {
         const skills = discoverInstalledSkills(scope);
@@ -166,18 +168,19 @@ export function registerUninstall(program: Command) {
         }
 
         const selectedSkills = selected as string[];
-        let uninstalled = 0;
+        const results: { skill: string; agent: string; path: string; ok: boolean }[] = [];
 
         for (const skill of selectedSkills) {
           const agentsWithSkill = findAgentsWithSkill(skill, scope, allAgents);
           for (const agent of agentsWithSkill) {
             const ok = await uninstallSkill(skill, agent, scope, true);
-            if (ok) uninstalled++;
+            const skillPath = getSkillPath(skill, agent, scope);
+            results.push({ skill, agent: agent.name, path: skillPath || "", ok });
           }
           await removeFromLock(skill);
         }
 
-        success(`Uninstalled ${uninstalled} skill(s).`);
+        printUninstallResults(results);
         return;
       }
 
@@ -201,18 +204,19 @@ export function registerUninstall(program: Command) {
         }
 
         const selectedSkills = selected as string[];
-        let uninstalled = 0;
+        const results: { skill: string; agent: string; path: string; ok: boolean }[] = [];
 
         for (const skill of selectedSkills) {
           const agentsWithSkill = findAgentsWithSkill(skill, scope, allAgents);
           for (const agent of agentsWithSkill) {
             const ok = await uninstallSkill(skill, agent, scope, !!opts.yes);
-            if (ok) uninstalled++;
+            const skillPath = getSkillPath(skill, agent, scope);
+            results.push({ skill, agent: agent.name, path: skillPath || "", ok });
           }
           await removeFromLock(skill);
         }
 
-        success(`Uninstalled ${uninstalled} skill(s).`);
+        printUninstallResults(results);
         return;
       }
 
@@ -240,11 +244,17 @@ export function registerUninstall(program: Command) {
         }
       }
 
-      const universalAgents = getUniversalAgents();
-      const nonUniversalAgents = getNonUniversalAgents();
+      // Dynamic universal grouping based on scope
+      const universalAgents = allAgents
+        .filter((a) => isUniversalForScope(a, isGlobal) && a.showInUniversalList !== false)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const nonUniversalAgents = allAgents
+        .filter((a) => !isUniversalForScope(a, isGlobal))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
+      const canonicalLabel = isGlobal ? "Universal (~/.agents/skills)" : "Universal (.agents/skills)";
       const universalSection = {
-        title: "Universal (.agents/skills)",
+        title: canonicalLabel,
         items: universalAgents
           .filter((a) => agentsWithSkill.some((w) => w.key === a.key))
           .map((a) => ({
@@ -317,12 +327,13 @@ export function registerUninstall(program: Command) {
 
       if (pathToAgents.size > 0) {
         const lines: string[] = [];
-        for (const [path, agents] of pathToAgents) {
-          if (agents.length > 1) {
-            lines.push(`  ${agents.join(", ")} (${path})`);
-          } else {
-            lines.push(`  ${agents[0]} (${path})`);
-          }
+        const sortedEntries = [...pathToAgents.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+        for (const [path, agents] of sortedEntries) {
+          const sorted = agents.sort((a, b) => a.localeCompare(b));
+          const label = sorted.length <= 5
+            ? sorted.join(", ")
+            : sorted.slice(0, 5).join(", ") + ` ${pc.dim(`+${sorted.length - 5}`)}`;
+          lines.push(`  ${pc.dim("→")} ${label}: ${pc.dim(path)}`);
         }
         success(`Uninstalled ${name} from ${selectedAgentKeys.length} agent(s):`);
         console.log(lines.join("\n"));
@@ -331,4 +342,52 @@ export function registerUninstall(program: Command) {
         info(`Skill "${name}" not found.`);
       }
     });
+}
+
+/**
+ * Print uninstall results grouped by skill and path (consistent with install output format).
+ */
+function printUninstallResults(results: { skill: string; agent: string; path: string; ok: boolean }[]) {
+  const successful = results.filter((r) => r.ok);
+  if (successful.length === 0) {
+    info("No skills were uninstalled.");
+    return;
+  }
+
+  // Group by skill
+  const skillGroups = new Map<string, { agent: string; path: string }[]>();
+  for (const r of successful) {
+    let group = skillGroups.get(r.skill);
+    if (!group) {
+      group = [];
+      skillGroups.set(r.skill, group);
+    }
+    group.push({ agent: r.agent, path: r.path });
+  }
+
+  const lines: string[] = [];
+  const sortedSkills = [...skillGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  for (const [skillName, entries] of sortedSkills) {
+    lines.push(`${pc.green("✓")} ${skillName}`);
+
+    // Group by path
+    const pathGroups = new Map<string, string[]>();
+    for (const e of entries) {
+      const agents = pathGroups.get(e.path) || [];
+      agents.push(e.agent);
+      pathGroups.set(e.path, agents);
+    }
+
+    const sortedPaths = [...pathGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    for (const [path, agents] of sortedPaths) {
+      const sorted = agents.sort((a, b) => a.localeCompare(b));
+      const label = sorted.length <= 5
+        ? sorted.join(", ")
+        : sorted.slice(0, 5).join(", ") + ` ${pc.dim(`+${sorted.length - 5}`)}`;
+      lines.push(`  ${pc.dim("→")} ${label}: ${pc.dim(path)}`);
+    }
+  }
+
+  p.note(lines.join("\n"), `Uninstalled ${successful.length} skill(s)`);
 }

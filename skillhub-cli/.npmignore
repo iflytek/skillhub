@@ -5,3 +5,10 @@ unbuild.config.ts
 tsconfig.json
 *.test.ts
 src/
+.claude/
+.omc/
+AGENTS.md
+README.md
+Makefile
+docs/
+scripts/
