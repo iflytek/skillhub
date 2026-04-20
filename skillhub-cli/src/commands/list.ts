@@ -57,31 +57,17 @@ export function registerList(program: Command) {
       const isGlobal = scopeGlobal === true;
       const allAgents = getAllAgents();
 
-      const universalAgents = allAgents
-        .filter((a) => isUniversalForScope(a, isGlobal) && a.showInUniversalList !== false)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      const nonUniversalAgents = allAgents
-        .filter((a) => !isUniversalForScope(a, isGlobal))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      const canonicalLabel = isGlobal ? "Universal (~/.agents/skills)" : "Universal (.agents/skills)";
-      const universalSection = {
-        title: canonicalLabel,
-        items: universalAgents.map((a) => ({
+      // All agents are selectable - no locked section
+      const selectableItems = allAgents
+        .map((a) => ({
           value: a.key,
           label: a.name,
-        })),
-      };
-
-      const selectableItems = nonUniversalAgents.map((a) => ({
-        value: a.key,
-        label: a.name,
-      }));
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
 
       const agentSelection = await searchMultiselect({
         message: "Which agents to list from?",
         items: selectableItems,
-        lockedSection: universalSection,
       });
 
       if (agentSelection === cancelSymbol) {
