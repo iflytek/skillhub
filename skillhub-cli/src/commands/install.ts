@@ -52,6 +52,64 @@ function getInstallSpinner(sourceType: SourceType, arg: string): string {
   return `Resolving ${arg}`;
 }
 
+interface InstallResult {
+  skill: string;
+  agent: string;
+  success: boolean;
+  path: string;
+  error?: string;
+}
+
+/**
+ * Build grouped install result lines: agents sharing the same install path
+ * are merged into one line for cleaner output.
+ *
+ * Example:
+ *   ✓ fork-workflow
+ *     → Amp, Cline, Codex, Cursor, Deep Agents +7: .agents/skills/fork-workflow
+ *     → Claude Code: .claude/skills/fork-workflow
+ */
+function buildInstallResultLines(
+  selectedSkills: { name: string }[],
+  results: InstallResult[],
+): string[] {
+  const MAX_NAMES = 5;
+  const resultLines: string[] = [];
+
+  for (const skill of selectedSkills) {
+    const skillResults = results.filter((r) => r.skill === skill.name && r.success);
+    if (skillResults.length === 0) continue;
+
+    resultLines.push(`${pc.green("✓")} ${skill.name}`);
+
+    // Group agents by install path
+    const pathGroups = new Map<string, string[]>();
+    for (const r of skillResults) {
+      const agents = pathGroups.get(r.path) || [];
+      agents.push(r.agent);
+      pathGroups.set(r.path, agents);
+    }
+
+    // Sort groups: put the group with the most agents first
+    const sortedGroups = [...pathGroups.entries()].sort((a, b) => b[1].length - a[1].length);
+
+    for (const [path, agents] of sortedGroups) {
+      const sorted = agents.sort((a, b) => a.localeCompare(b));
+      let label: string;
+      if (sorted.length <= MAX_NAMES) {
+        label = sorted.join(", ");
+      } else {
+        const shown = sorted.slice(0, MAX_NAMES).join(", ");
+        const extra = sorted.length - MAX_NAMES;
+        label = `${shown} ${pc.dim(`+${extra}`)}`;
+      }
+      resultLines.push(`  ${pc.dim("→")} ${label}: ${pc.dim(path)}`);
+    }
+  }
+
+  return resultLines;
+}
+
 async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | null> {
   const allAgents = getAllAgents();
 
@@ -503,16 +561,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   const successful = results.filter((r) => r.success);
 
   if (successful.length > 0) {
-    const resultLines: string[] = [];
-    for (const skill of selectedSkills) {
-      const skillResults = results.filter((r) => r.skill === skill.name && r.success);
-      if (skillResults.length > 0) {
-        resultLines.push(`${pc.green("✓")} ${skill.name}`);
-        for (const r of skillResults) {
-          resultLines.push(`  ${pc.dim("→")} ${r.agent}: ${r.path}`);
-        }
-      }
-    }
+    const resultLines = buildInstallResultLines(selectedSkills, results);
     p.note(resultLines.join("\n"), `Installed ${successful.length} skill(s)`);
   }
 
@@ -767,16 +816,7 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
   const successful = results.filter((r) => r.success);
 
   if (successful.length > 0) {
-    const resultLines: string[] = [];
-    for (const skill of selectedSkills) {
-      const skillResults = results.filter((r) => r.skill === skill.name && r.success);
-      if (skillResults.length > 0) {
-        resultLines.push(`${pc.green("✓")} ${skill.name}`);
-        for (const r of skillResults) {
-          resultLines.push(`  ${pc.dim("→")} ${r.agent}: ${r.path}`);
-        }
-      }
-    }
+    const resultLines = buildInstallResultLines(selectedSkills, results);
     p.note(resultLines.join("\n"), `Installed ${successful.length} skill(s)`);
   }
 
