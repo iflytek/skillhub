@@ -47,7 +47,7 @@ function detectSourceType(arg: string): SourceType {
 
 function getInstallSpinner(sourceType: SourceType, arg: string): string {
   if (sourceType === "registry") {
-    return `Fetching ${arg}`;
+    return `Searching registry for ${arg}`;
   }
   return `Resolving ${arg}`;
 }
@@ -209,20 +209,20 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
       ns = uniqueResults[0].namespace;
       actualSlug = uniqueResults[0].name;
     } else {
+      spinner.stop();
       const selected = await runInteractiveSearch(client, actualSlug);
       if (!selected) {
         console.log("Cancelled.");
         return;
       }
+      spinner.start(`Fetching ${selected}`);
       const [selectedNs, selectedName] = selected.split("/", 2);
       ns = selectedNs;
       actualSlug = selectedName;
     }
   }
 
-  spinner.text = `Fetching ${ns}/${actualSlug}`;
-
-  // Fetch versions and tags for selection
+  spinner.text = `Fetching versions for ${ns}/${actualSlug}`;
   const [versionsResp, tagsResp] = await Promise.all([
     client.get<{ items: SkillVersionItem[] }>(`/api/v1/skills/${ns}/${actualSlug}/versions`),
     client.get<SkillTag[]>(`/api/v1/skills/${ns}/${actualSlug}/tags`).catch(() => [] as SkillTag[]),
@@ -277,7 +277,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
 
     selectedVersion = picked as string;
-    spinner.start("Downloading");
+    spinner.start(`Downloading ${ns}/${actualSlug}@${selectedVersion}`);
   }
 
   const baseUrl = config.registry.replace(/\/$/, "");
@@ -285,7 +285,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   const tmpDir = await mkdtemp(join(tmpdir(), "skillhub-install-"));
   const zipPath = join(tmpDir, `${actualSlug}.zip`);
 
-  spinner.text = "Downloading";
+  spinner.text = `Downloading ${ns}/${actualSlug}@${selectedVersion}`;
 
   const { request } = await import("undici");
   let response = await request(downloadUrl, {
@@ -313,7 +313,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   const fileStream = createWriteStream(zipPath);
   await finished(body.pipe(fileStream));
 
-  spinner.text = "Extracting";
+  spinner.text = `Extracting ${actualSlug}`;
   const extractDir = join(tmpDir, "extracted");
   mkdirSync(extractDir, { recursive: true });
   await createReadStream(zipPath)
@@ -545,7 +545,7 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
 
   if (parsed.type === "local") {
     skillsDir = parsed.localPath!;
-    spinner.text = "Scanning local directory";
+    spinner.text = `Scanning ${parsed.localPath}`;
   } else {
     const cloneUrl = getCloneUrl(parsed);
     spinner.text = `Cloning ${cloneUrl}`;
