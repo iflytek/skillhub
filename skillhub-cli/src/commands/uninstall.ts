@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { existsSync, readdirSync, statSync, unlinkSync, rmdirSync, lstatSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { getAllAgents, isUniversalAgent, getUniversalAgents, getNonUniversalAgents, type AgentInfo } from "../core/agent-detector.js";
+import { getAllAgents, isUniversalForScope, getUniversalAgents, getNonUniversalAgents, type AgentInfo } from "../core/agent-detector.js";
 import { success, info, dim } from "../utils/logger.js";
 import { removeFromLock } from "../core/skill-lock.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
@@ -34,7 +34,7 @@ async function uninstallSkill(
   let baseDir: string;
 
   if (scope === "global") {
-    if (isUniversalAgent(agent)) {
+    if (isUniversalForScope(agent, true)) {
       baseDir = join(home, ".agents/skills");
     } else {
       baseDir = join(home, agent.globalSkillsDir || agent.skillsDir);
@@ -65,7 +65,7 @@ function getSkillPath(skillName: string, agent: AgentInfo, scope: "global" | "lo
   let baseDir: string;
 
   if (scope === "global") {
-    if (isUniversalAgent(agent)) {
+    if (isUniversalForScope(agent, true)) {
       baseDir = join(home, ".agents/skills");
     } else {
       baseDir = join(home, agent.globalSkillsDir || agent.skillsDir);

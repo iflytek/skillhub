@@ -1,6 +1,7 @@
 import { mkdirSync, symlinkSync, copyFileSync, readdirSync, lstatSync, unlinkSync, existsSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { homedir, platform } from "node:os";
+import { isUniversalForScope, type AgentInfo } from "./agent-detector.js";
 
 export interface SkillInstallResult {
   skillName: string;
@@ -11,15 +12,11 @@ export interface SkillInstallResult {
   error?: string;
 }
 
-const UNIVERSAL_PATH = ".agents/skills";
-
-function isUniversalAgent(skillsDir: string): boolean {
-  return skillsDir === UNIVERSAL_PATH;
-}
+const CANONICAL_SKILLS_DIR = ".agents/skills";
 
 function getCanonicalBase(isGlobal: boolean, cwd: string): string {
   const home = homedir();
-  return isGlobal ? join(home, UNIVERSAL_PATH) : join(cwd, UNIVERSAL_PATH);
+  return isGlobal ? join(home, CANONICAL_SKILLS_DIR) : join(cwd, CANONICAL_SKILLS_DIR);
 }
 
 function getAgentBaseDir(skillsDir: string, isGlobal: boolean, cwd: string): string {
@@ -83,6 +80,7 @@ export function installSkill(
   targetDir: string,
   mode: "symlink" | "copy",
   isGlobal: boolean,
+  agent?: AgentInfo,
 ): SkillInstallResult {
   const cwd = process.cwd();
   const canonicalBase = getCanonicalBase(isGlobal, cwd);
@@ -90,7 +88,11 @@ export function installSkill(
   const agentBase = getAgentBaseDir(targetDir, isGlobal, cwd);
   const agentDir = join(agentBase, skillName);
 
-  const agentIsUniversal = isUniversalAgent(targetDir);
+  // Use dynamic scope-aware universal check if agent info is available,
+  // otherwise fall back to static targetDir check
+  const agentIsUniversal = agent
+    ? isUniversalForScope(agent, isGlobal)
+    : targetDir === CANONICAL_SKILLS_DIR;
 
   try {
     if (mode === "copy") {

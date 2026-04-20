@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { existsSync, readdirSync, lstatSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { getAllAgents, isUniversalAgent, getUniversalAgents, getNonUniversalAgents } from "../core/agent-detector.js";
+import { getAllAgents, getUniversalAgents, getNonUniversalAgents } from "../core/agent-detector.js";
 import { info, dim } from "../utils/logger.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import * as p from "@clack/prompts";

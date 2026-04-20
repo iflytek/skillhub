@@ -8,7 +8,7 @@ import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { discoverSkills } from "../core/skill-discovery.js";
 import { installSkill } from "../core/installer.js";
-import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversalAgents, isUniversalAgent } from "../core/agent-detector.js";
+import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversalAgents, isUniversalForScope, getAgentTargetDir, type AgentInfo } from "../core/agent-detector.js";
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
@@ -107,10 +107,10 @@ async function selectInstallMode(): Promise<"symlink" | "copy" | null> {
   return result as "symlink" | "copy";
 }
 
-function buildAgentSummary(targetAgents: { key: string; name: string; skillsDir: string }[], mode: "symlink" | "copy"): string[] {
+function buildAgentSummary(targetAgents: AgentInfo[], mode: "symlink" | "copy", isGlobal: boolean): string[] {
   const lines: string[] = [];
-  const universal = targetAgents.filter((a) => isUniversalAgent(a));
-  const symlinked = targetAgents.filter((a) => !isUniversalAgent(a));
+  const universal = targetAgents.filter((a) => isUniversalForScope(a, isGlobal));
+  const symlinked = targetAgents.filter((a) => !isUniversalForScope(a, isGlobal));
 
   if (mode === "symlink") {
     if (universal.length > 0) {
@@ -400,9 +400,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
 
   // Only prompt for install mode when there are multiple unique target directories.
   // When all selected agents share the same skillsDir, symlink vs copy is meaningless.
-  const uniqueDirs = new Set(targetAgents.map((a) =>
-    isGlobal ? (a.globalSkillsDir || a.skillsDir) : a.skillsDir
-  ));
+  const uniqueDirs = new Set(targetAgents.map((a) => getAgentTargetDir(a, isGlobal)));
 
   if (uniqueDirs.size <= 1) {
     // Single target directory — default to copy (no symlink needed)
@@ -425,7 +423,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
       ? `~/.agents/skills/${skill.name}`
       : `./.agents/skills/${skill.name}`;
     summaryLines.push(`${pc.cyan(canonicalPath)}`);
-    for (const line of buildAgentSummary(targetAgents, mode)) {
+    for (const line of buildAgentSummary(targetAgents, mode, isGlobal)) {
       summaryLines.push(`  ${line}`);
     }
   }
@@ -457,9 +455,10 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
         skill.dir,
         skill.name,
         agent.key,
-        isGlobal ? agent.globalSkillsDir || agent.skillsDir : agent.skillsDir,
+        getAgentTargetDir(agent, isGlobal),
         mode,
         isGlobal,
+        agent,
       );
       results.push({
         skill: skill.name,
@@ -659,9 +658,7 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
 
   // Only prompt for install mode when there are multiple unique target directories.
   // When all selected agents share the same skillsDir, symlink vs copy is meaningless.
-  const uniqueDirs = new Set(targetAgents.map((a) =>
-    isGlobal ? (a.globalSkillsDir || a.skillsDir) : a.skillsDir
-  ));
+  const uniqueDirs = new Set(targetAgents.map((a) => getAgentTargetDir(a, isGlobal)));
 
   if (uniqueDirs.size <= 1) {
     // Single target directory — default to copy (no symlink needed)
@@ -684,7 +681,7 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
       ? `~/.agents/skills/${skill.name}`
       : `./.agents/skills/${skill.name}`;
     summaryLines.push(`${pc.cyan(canonicalPath)}`);
-    for (const line of buildAgentSummary(targetAgents, mode)) {
+    for (const line of buildAgentSummary(targetAgents, mode, isGlobal)) {
       summaryLines.push(`  ${line}`);
     }
   }
@@ -716,9 +713,10 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
         skill.dir,
         skill.name,
         agent.key,
-        isGlobal ? agent.globalSkillsDir || agent.skillsDir : agent.skillsDir,
+        getAgentTargetDir(agent, isGlobal),
         mode,
         isGlobal,
+        agent,
       );
       results.push({
         skill: skill.name,
