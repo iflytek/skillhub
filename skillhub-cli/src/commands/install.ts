@@ -8,7 +8,7 @@ import { loadConfig } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { discoverSkills } from "../core/skill-discovery.js";
 import { installSkill } from "../core/installer.js";
-import { getAllAgents, detectInstalledAgents, getUniversalAgents, getNonUniversalAgents, isUniversalForScope, getAgentTargetDir, type AgentInfo } from "../core/agent-detector.js";
+import { getAllAgents, detectInstalledAgents, isUniversalForScope, getAgentTargetDir, type AgentInfo } from "../core/agent-detector.js";
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
@@ -53,11 +53,16 @@ function getInstallSpinner(sourceType: SourceType, arg: string): string {
 }
 
 async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | null> {
-  const universalAgents = getUniversalAgents();
-  const nonUniversalAgents = getNonUniversalAgents();
+  const allAgents = getAllAgents();
 
+  // Use scope-aware universal check: an agent is "universal" when its target
+  // install dir equals the canonical .agents/skills directory for the given scope.
+  const universalAgents = allAgents.filter((a) => isUniversalForScope(a, isGlobal));
+  const nonUniversalAgents = allAgents.filter((a) => !isUniversalForScope(a, isGlobal));
+
+  const canonicalLabel = isGlobal ? "Universal (~/.agents/skills)" : "Universal (.agents/skills)";
   const lockedSection = {
-    title: "Universal (.agents/skills)",
+    title: canonicalLabel,
     items: universalAgents.map((a) => ({
       value: a.key,
       label: a.name,
@@ -351,27 +356,10 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
 
   let isGlobal = !!opts.global;
 
-  let targetAgents = opts.agent
-    ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
-    : detectInstalledAgents();
-
-  if (targetAgents.length === 0) {
-    const claude = getAllAgents().find((a) => a.key === "claude-code");
-    if (claude) targetAgents.push(claude);
-  }
-
-  let mode: "symlink" | "copy" = opts.copy ? "copy" : "symlink";
-
-  if (!opts.yes && !opts.agent) {
-    const selected = await selectAgentsInteractive(isGlobal);
-    if (!selected) {
-      console.log("Cancelled.");
-      return;
-    }
-    targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
-  }
-
-  const supportsGlobal = targetAgents.some((a) => a.globalSkillsDir);
+  // Determine scope first, so that agent selection can use the correct
+  // universal/non-universal grouping based on the actual scope.
+  const allAgents = getAllAgents();
+  const supportsGlobal = allAgents.some((a) => a.globalSkillsDir);
 
   if (opts.global === undefined && !opts.yes && supportsGlobal) {
     const scope = await p.select({
@@ -396,6 +384,26 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
 
     isGlobal = scope as boolean;
+  }
+
+  let targetAgents = opts.agent
+    ? allAgents.filter((a) => (opts.agent as string[]).includes(a.key))
+    : detectInstalledAgents();
+
+  if (targetAgents.length === 0) {
+    const claude = allAgents.find((a) => a.key === "claude-code");
+    if (claude) targetAgents.push(claude);
+  }
+
+  let mode: "symlink" | "copy" = opts.copy ? "copy" : "symlink";
+
+  if (!opts.yes && !opts.agent) {
+    const selected = await selectAgentsInteractive(isGlobal);
+    if (!selected) {
+      console.log("Cancelled.");
+      return;
+    }
+    targetAgents = allAgents.filter((a) => selected.includes(a.key));
   }
 
   // Only prompt for install mode when there are multiple unique target directories.
@@ -604,32 +612,10 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
 
   let isGlobal = !!opts.global;
 
-  let targetAgents = opts.agent
-    ? getAllAgents().filter((a) => (opts.agent as string[]).includes(a.key))
-    : detectInstalledAgents();
-
-  if (targetAgents.length === 0) {
-    const all = getAllAgents();
-    if (!opts.yes) {
-      info("No agents detected. Installing to Claude Code by default.");
-    }
-    const claude = all.find((a) => a.key === "claude-code");
-    if (claude) targetAgents.push(claude);
-    else targetAgents.push(all[0]);
-  }
-
-  let mode: "symlink" | "copy" = opts.copy ? "copy" : "symlink";
-
-  if (!opts.yes && !opts.agent) {
-    const selected = await selectAgentsInteractive(isGlobal);
-    if (!selected) {
-      console.log("Cancelled.");
-      return;
-    }
-    targetAgents = getAllAgents().filter((a) => selected.includes(a.key));
-  }
-
-  const supportsGlobal = targetAgents.some((a) => a.globalSkillsDir);
+  // Determine scope first, so that agent selection can use the correct
+  // universal/non-universal grouping based on the actual scope.
+  const allAgents = getAllAgents();
+  const supportsGlobal = allAgents.some((a) => a.globalSkillsDir);
 
   if (opts.global === undefined && !opts.yes && supportsGlobal) {
     const scope = await p.select({
@@ -654,6 +640,30 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
     }
 
     isGlobal = scope as boolean;
+  }
+
+  let targetAgents = opts.agent
+    ? allAgents.filter((a) => (opts.agent as string[]).includes(a.key))
+    : detectInstalledAgents();
+
+  if (targetAgents.length === 0) {
+    if (!opts.yes) {
+      info("No agents detected. Installing to Claude Code by default.");
+    }
+    const claude = allAgents.find((a) => a.key === "claude-code");
+    if (claude) targetAgents.push(claude);
+    else targetAgents.push(allAgents[0]);
+  }
+
+  let mode: "symlink" | "copy" = opts.copy ? "copy" : "symlink";
+
+  if (!opts.yes && !opts.agent) {
+    const selected = await selectAgentsInteractive(isGlobal);
+    if (!selected) {
+      console.log("Cancelled.");
+      return;
+    }
+    targetAgents = allAgents.filter((a) => selected.includes(a.key));
   }
 
   // Only prompt for install mode when there are multiple unique target directories.
