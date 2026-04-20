@@ -57,8 +57,13 @@ async function selectAgentsInteractive(isGlobal: boolean): Promise<string[] | nu
 
   // Use scope-aware universal check: an agent is "universal" when its target
   // install dir equals the canonical .agents/skills directory for the given scope.
-  const universalAgents = allAgents.filter((a) => isUniversalForScope(a, isGlobal));
-  const nonUniversalAgents = allAgents.filter((a) => !isUniversalForScope(a, isGlobal));
+  // Exclude agents with showInUniversalList === false from the locked section.
+  const universalAgents = allAgents
+    .filter((a) => isUniversalForScope(a, isGlobal) && a.showInUniversalList !== false)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const nonUniversalAgents = allAgents
+    .filter((a) => !isUniversalForScope(a, isGlobal))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const canonicalLabel = isGlobal ? "Universal (~/.agents/skills)" : "Universal (.agents/skills)";
   const lockedSection = {
@@ -214,7 +219,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
       ns = uniqueResults[0].namespace;
       actualSlug = uniqueResults[0].name;
     } else {
-      spinner.stop();
+      spinner.succeed(`Found ${actualSlug}`);
       const selected = await runInteractiveSearch(client, actualSlug);
       if (!selected) {
         console.log("Cancelled.");
@@ -265,7 +270,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
   } else {
     // Interactive: show version selection
-    spinner.stop();
+    spinner.succeed(`Found ${ns}/${actualSlug}`);
 
     const picked = await p.select({
       message: "Select version",
@@ -492,7 +497,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
   }
 
-  spinner.stop("Installation complete");
+  spinner.succeed("Installation complete");
 
   console.log("");
   const successful = results.filter((r) => r.success);
@@ -756,7 +761,7 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
     }
   }
 
-  spinner.stop("Installation complete");
+  spinner.succeed("Installation complete");
 
   console.log("");
   const successful = results.filter((r) => r.success);
