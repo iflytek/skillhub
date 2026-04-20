@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes, SearchResponse } from "../schema/routes.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { error, dim } from "../utils/logger.js";
 
@@ -12,7 +12,7 @@ export function registerSearch(program: Command) {
     .option("-n, --limit <n>", "Max results", "20")
     .option("--namespace <ns>", "Filter by namespace")
     .action(async (query: string[], opts: { limit: string; namespace?: string }) => {
-      const config = loadConfig();
+      const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 

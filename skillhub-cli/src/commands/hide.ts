@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { success, error } from "../utils/logger.js";
 import { parseSkillName } from "../core/skill-name.js";
 
@@ -27,7 +27,7 @@ export function registerHide(program: Command) {
 
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const detail = await client.get<{ id: number }>(
@@ -67,7 +67,7 @@ export function registerHide(program: Command) {
 
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const detail = await client.get<{ id: number }>(

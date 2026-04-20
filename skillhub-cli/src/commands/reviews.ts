@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { success, error, info, dim } from "../utils/logger.js";
 
 export interface ReviewSubmission {
@@ -24,7 +24,7 @@ export function registerReviews(program: Command) {
     .action(async () => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         const submissions = await client.get<ReviewSubmission[]>("/api/v1/reviews/my-submissions");
         if (!submissions || submissions.length === 0) {

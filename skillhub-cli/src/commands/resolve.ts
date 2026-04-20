@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
 import { parseSkillName } from "../core/skill-name.js";
@@ -51,7 +51,7 @@ export function registerResolve(program: Command) {
     .action(async (slug: string, opts: Record<string, string>) => {
       try {
         const { namespace, slug: skillSlug } = parseSkillName(slug);
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const token = await readToken();
         const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 

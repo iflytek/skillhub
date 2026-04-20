@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes } from "../schema/routes.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { parseSkillName } from "../core/skill-name.js";
 import { info, dim, error } from "../utils/logger.js";
@@ -70,7 +70,7 @@ export function registerInspect(program: Command) {
     .description("View skill metadata without installing")
     .option("--namespace <ns>", "Search in specific namespace (searches all if not specified)")
     .action(async (slug: string, opts: { namespace?: string }) => {
-      const config = loadConfig();
+      const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 

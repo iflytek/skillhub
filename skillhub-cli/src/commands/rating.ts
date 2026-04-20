@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { requireToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
 import { parseSkillName } from "../core/skill-name.js";
@@ -13,7 +13,7 @@ export function registerRating(program: Command) {
       try {
         const { namespace, slug: skillSlug } = parseSkillName(slug);
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const detail = await client.get<{ id: number }>(
@@ -51,7 +51,7 @@ export function registerRate(program: Command) {
       try {
         const { namespace, slug: skillSlug } = parseSkillName(slug);
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const detail = await client.get<{ id: number }>(

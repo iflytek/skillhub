@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { finished } from "node:stream/promises";
 import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes } from "../schema/routes.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { success, error } from "../utils/logger.js";
 import { parseSkillName } from "../core/skill-name.js";
@@ -19,7 +19,7 @@ export function registerDownload(program: Command) {
     .option("--output <dir>", "Output directory")
     .action(async (slug: string, opts: Record<string, string>) => {
       const { namespace, slug: skillSlug } = parseSkillName(slug);
-      const config = loadConfig();
+      const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 

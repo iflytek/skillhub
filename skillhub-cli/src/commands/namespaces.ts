@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes, NamespaceResponse } from "../schema/routes.js";
 import { requireToken } from "../core/auth-token.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { error } from "../utils/logger.js";
 
 export function registerNamespaces(program: Command) {
@@ -12,7 +12,7 @@ export function registerNamespaces(program: Command) {
     .action(async () => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         const namespaces = await client.get<NamespaceResponse[]>(ApiRoutes.meNamespaces);
         const isJson = program.opts().json;

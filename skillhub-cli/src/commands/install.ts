@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWriteStream, createReadStream, existsSync, mkdirSync } from "node:fs";
 import { ApiClient } from "../core/api-client.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { discoverSkills } from "../core/skill-discovery.js";
 import { installSkill } from "../core/installer.js";
@@ -227,9 +227,9 @@ export function registerInstall(program: Command) {
 
       try {
         if (effectiveSource === "registry") {
-          await installFromRegistry(source, opts, spinner);
+          await installFromRegistry(source, opts, spinner, program);
         } else {
-          await installFromGit(source, installSource, effectiveSource, opts, spinner);
+          await installFromGit(source, installSource, effectiveSource, opts, spinner, program);
         }
       } catch (e: any) {
         spinner.fail(e.message);
@@ -238,7 +238,12 @@ export function registerInstall(program: Command) {
     });
 }
 
-async function installFromRegistry(slug: string, opts: Record<string, string | string[] | boolean>, spinner: any) {
+async function installFromRegistry(
+  slug: string,
+  opts: Record<string, string | string[] | boolean>,
+  spinner: any,
+  program: Command
+) {
   let ns = "global";
   let actualSlug = slug;
   let userSpecifiedNamespace = false;
@@ -252,7 +257,7 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
     }
   }
 
-  const config = loadConfig();
+  const config = loadConfigFromProgram(program);
   const token = await readToken();
   const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
@@ -581,7 +586,14 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   await rm(tmpDir, { recursive: true, force: true });
 }
 
-async function installFromGit(skillName: string, source: string, sourceType: SourceType, opts: Record<string, string | string[] | boolean>, spinner: any) {
+async function installFromGit(
+  skillName: string,
+  source: string,
+  sourceType: SourceType,
+  opts: Record<string, string | string[] | boolean>,
+  spinner: any,
+  program: Command
+) {
   let skillsDir: string;
 
   const parsed = parseSource(source);

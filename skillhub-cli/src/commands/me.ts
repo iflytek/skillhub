@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { requireToken } from "../core/auth-token.js";
 import { error, info, dim } from "../utils/logger.js";
 
@@ -33,7 +33,7 @@ export function registerMe(program: Command) {
     .action(async () => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         const resp = await client.get<MeSkillsResponse>("/api/v1/me/skills");
         const skills = resp.items || [];
@@ -63,7 +63,7 @@ export function registerMe(program: Command) {
     .action(async () => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         const resp = await client.get<MeSkillsResponse>("/api/v1/me/stars");
         const skills = resp.items || [];

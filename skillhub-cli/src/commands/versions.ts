@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
 import { readToken } from "../core/auth-token.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { error, info, dim, success } from "../utils/logger.js";
 import { parseSkillName } from "../core/skill-name.js";
 import { searchSkills, runInteractiveSearch } from "../core/interactive-search.js";
@@ -37,7 +37,7 @@ export function registerVersions(program: Command) {
     .action(async (slug: string) => {
       try {
         const { namespace, slug: skillSlug } = parseSkillName(slug);
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const token = await readToken();
         const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 

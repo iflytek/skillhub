@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { ApiRoutes } from "../schema/routes.js";
 import { info, dim } from "../utils/logger.js";
@@ -222,7 +222,7 @@ export function registerExplore(program: Command) {
     .option("-n, --limit <n>", "Max results", "20")
     .option("-s, --sort <sort>", "Sort by: hot, newest, downloads (default: interactive mode)")
     .action(async (query: string | undefined, opts: { limit: string; sort?: string }) => {
-      const config = loadConfig();
+      const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
       const sortMap: Record<string, string> = { hot: "rating", newest: "newest", downloads: "downloads" };

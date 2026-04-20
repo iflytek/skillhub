@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ApiClient } from "../core/api-client.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { requireToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
 
@@ -26,7 +26,7 @@ export function registerNotifications(program: Command) {
     .action(async (opts: { unread?: boolean }) => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         const notifs = await client.get<Notification[]>("/api/v1/notifications");
         const filtered = opts.unread ? notifs.filter((n) => !n.read) : notifs;
@@ -50,7 +50,7 @@ export function registerNotifications(program: Command) {
     .action(async (id: string) => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         await client.put(`/api/v1/notifications/${id}/read`);
         success(`Marked notification ${id} as read`);
@@ -66,7 +66,7 @@ export function registerNotifications(program: Command) {
     .action(async () => {
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
         await client.put("/api/v1/notifications/read-all");
         success("All notifications marked as read");

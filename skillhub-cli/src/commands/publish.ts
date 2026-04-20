@@ -5,7 +5,7 @@ import { FormData } from "undici";
 import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes, PublishResponse } from "../schema/routes.js";
 import { requireToken } from "../core/auth-token.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { success, error, info } from "../utils/logger.js";
 import ora from "ora";
 import semver from "semver";
@@ -49,7 +49,7 @@ export function registerPublish(program: Command) {
 
       try {
         const token = await requireToken();
-        const config = loadConfig();
+        const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
 
         const spinner = ora(`Publishing ${slug}@${version} to ${namespace}`).start();
