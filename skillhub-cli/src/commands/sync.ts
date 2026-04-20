@@ -49,7 +49,8 @@ export function registerSync(program: Command) {
 
         console.log("");
         info(`Found ${skills.length} skill(s):`);
-        for (const skill of skills) {
+        const sortedSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name));
+        for (const skill of sortedSkills) {
           console.log(`  - ${skill.name} (${skill.description})`);
         }
         console.log("");

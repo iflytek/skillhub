@@ -180,15 +180,17 @@ function buildAgentSummary(targetAgents: AgentInfo[], mode: "symlink" | "copy", 
   const universal = targetAgents.filter((a) => isUniversalForScope(a, isGlobal));
   const symlinked = targetAgents.filter((a) => !isUniversalForScope(a, isGlobal));
 
+  const sortNames = (agents: AgentInfo[]) => agents.map((a) => a.name).sort((a, b) => a.localeCompare(b));
+
   if (mode === "symlink") {
     if (universal.length > 0) {
-      lines.push(`  universal: ${universal.map((a) => a.name).join(", ")}`);
+      lines.push(`  universal: ${sortNames(universal).join(", ")}`);
     }
     if (symlinked.length > 0) {
-      lines.push(`  symlink → ${symlinked.map((a) => a.name).join(", ")}`);
+      lines.push(`  symlink → ${sortNames(symlinked).join(", ")}`);
     }
   } else {
-    lines.push(`  copy → ${targetAgents.map((a) => a.name).join(", ")}`);
+    lines.push(`  copy → ${sortNames(targetAgents).join(", ")}`);
   }
 
   return lines;
@@ -397,7 +399,8 @@ async function installFromRegistry(slug: string, opts: Record<string, string | s
   spinner.succeed(`Found ${skills.length} skill(s) in ${ns}/${actualSlug}`);
 
   if (opts.list) {
-    for (const s of skills) {
+    const sorted = [...skills].sort((a, b) => a.name.localeCompare(b.name));
+    for (const s of sorted) {
       info(`${s.name}`);
       dim(`  ${s.description}`);
     }
@@ -630,7 +633,8 @@ async function installFromGit(skillName: string, source: string, sourceType: Sou
   spinner.succeed(`Found ${skills.length} skill(s)`);
 
   if (opts.list) {
-    for (const s of skills) {
+    const sorted = [...skills].sort((a, b) => a.name.localeCompare(b.name));
+    for (const s of sorted) {
       info(`${s.name}`);
       dim(`  ${s.description}`);
     }

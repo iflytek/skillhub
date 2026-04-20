@@ -70,7 +70,7 @@ export function registerCheck(program: Command) {
             name,
             status: "ok",
             source: entry.source,
-            location: installedLocations.join(", "),
+            location: installedLocations.sort((a, b) => a.localeCompare(b)).join(", "),
           });
         } else {
           results.push({
@@ -86,10 +86,17 @@ export function registerCheck(program: Command) {
           results.push({
             name,
             status: "orphaned",
-            location: locations.join(", "),
+            location: locations.sort((a, b) => a.localeCompare(b)).join(", "),
           });
         }
       }
+
+      // Sort results: ok → missing → orphaned, then alphabetically by name
+      results.sort((a, b) => {
+        const order = { ok: 0, missing: 1, orphaned: 2 };
+        const diff = order[a.status] - order[b.status];
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
 
       if (opts.json) {
         console.log(JSON.stringify(results, null, 2));

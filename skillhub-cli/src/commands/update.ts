@@ -26,7 +26,7 @@ export function registerUpdate(program: Command) {
       }
 
       const lockedSkills = await getAllLockedSkills();
-      const allSkillNames = Object.keys(lockedSkills);
+      const allSkillNames = Object.keys(lockedSkills).sort((a, b) => a.localeCompare(b));
 
       if (allSkillNames.length === 0) {
         error("No skills in lock file.");
