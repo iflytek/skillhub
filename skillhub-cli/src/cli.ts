@@ -56,13 +56,19 @@ function buildTopLevelHelp(version: string): string {
   ]));
   sections.push("");
 
-  sections.push(formatSection("Discover", [
+  sections.push(formatSection("Discover & Info", [
     { cmd: "explore", desc: "Browse or search skills from the registry", alias: "find, find-skills, search" },
+    { cmd: "inspect <slug>", desc: "View skill metadata and versions", alias: "info, view" },
+    { cmd: "resolve <slug>", desc: "Resolve the latest version of a skill" },
+    { cmd: "rating <slug>", desc: "View your rating for a skill" },
+    { cmd: "rate <slug> <score>", desc: "Rate a skill (1-5)" },
+    { cmd: "star <slug>", desc: "Star a skill" },
+    { cmd: "report <slug>", desc: "Report a skill for review" },
   ]));
   sections.push("");
 
   sections.push(formatSection("Install & Manage", [
-    { cmd: "install <source>", desc: "Install from registry, git, or local path", alias: "i" },
+    { cmd: "install <skill-name>", desc: "Install from registry, git, or local path", alias: "i" },
     { cmd: "download <slug>", desc: "Download a skill package to local directory" },
     { cmd: "update [slug]", desc: "Update installed skills from their source", alias: "up" },
     { cmd: "uninstall [name]", desc: "Uninstall a skill from local agent", alias: "un" },
@@ -77,17 +83,6 @@ function buildTopLevelHelp(version: string): string {
     { cmd: "sync [path]", desc: "Scan and publish all skills from a directory" },
     { cmd: "delete <slug>", desc: "Delete a skill you own", alias: "del, unpublish" },
     { cmd: "archive <slug>", desc: "Archive a skill you own" },
-    { cmd: "versions <slug>", desc: "List skill versions" },
-  ]));
-  sections.push("");
-
-  sections.push(formatSection("Info & Review", [
-    { cmd: "inspect <slug>", desc: "View skill metadata without installing", alias: "info, view" },
-    { cmd: "resolve <slug>", desc: "Resolve the latest version of a skill" },
-    { cmd: "rating <slug>", desc: "View your rating for a skill" },
-    { cmd: "rate <slug> <score>", desc: "Rate a skill (1-5)" },
-    { cmd: "star <slug>", desc: "Star a skill" },
-    { cmd: "report <slug>", desc: "Report a skill for review" },
   ]));
   sections.push("");
 
@@ -171,7 +166,6 @@ export async function createCli(): Promise<Command> {
     { registerReviews },
     { registerNotifications },
     { registerDelete },
-    { registerVersions },
     { registerReport },
     { registerResolve },
     { registerRating, registerRate },
@@ -200,7 +194,6 @@ export async function createCli(): Promise<Command> {
     import("./commands/reviews.js"),
     import("./commands/notifications.js"),
     import("./commands/delete.js"),
-    import("./commands/versions.js"),
     import("./commands/report.js"),
     import("./commands/resolve.js"),
     import("./commands/rating.js"),
@@ -230,7 +223,6 @@ export async function createCli(): Promise<Command> {
   registerReviews(program);
   registerNotifications(program);
   registerDelete(program);
-  registerVersions(program);
   registerReport(program);
   registerResolve(program);
   registerRating(program);

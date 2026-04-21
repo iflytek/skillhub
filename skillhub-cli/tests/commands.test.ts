@@ -5,7 +5,6 @@ import { registerWhoami } from "../src/commands/whoami.js";
 import { registerLogin } from "../src/commands/login.js";
 import { registerPublish } from "../src/commands/publish.js";
 import { registerMe } from "../src/commands/me.js";
-import { registerVersions } from "../src/commands/versions.js";
 import { registerNotifications } from "../src/commands/notifications.js";
 import { registerReviews } from "../src/commands/reviews.js";
 import { registerNamespaces } from "../src/commands/namespaces.js";
@@ -68,12 +67,6 @@ describe("Command registrations", () => {
     const subNames = cmd!.commands.map((c) => c.name());
     expect(subNames).toContain("skills");
     expect(subNames).toContain("stars");
-  });
-
-  it("registers versions command", () => {
-    const program = new Command();
-    registerVersions(program);
-    expect(getCommandNames(program)).toContain("versions");
   });
 
   it("registers notifications command with subcommands", () => {

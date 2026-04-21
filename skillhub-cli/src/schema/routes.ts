@@ -65,3 +65,21 @@ export interface SkillsListResponse {
   }>;
   nextCursor: string | null;
 }
+
+export interface SkillVersionItem {
+  id: number;
+  version: string;
+  status: string;
+  changelog: string | null;
+  fileCount: number;
+  totalSize: number;
+  publishedAt: string;
+  downloadAvailable: boolean;
+}
+
+export interface VersionsResponse {
+  items: SkillVersionItem[];
+  total: number;
+  page: number;
+  size: number;
+}

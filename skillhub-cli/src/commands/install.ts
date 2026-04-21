@@ -12,11 +12,12 @@ import { getAllAgents, detectInstalledAgents, isUniversalForScope, getAgentTarge
 import { parseSource, getCloneUrl } from "../core/source-parser.js";
 import { addToLock } from "../core/skill-lock.js";
 import { success, error, info, dim } from "../utils/logger.js";
+import chalk from "chalk";
 import unzipper from "unzipper";
 import { multiSelect, sectionMultiSelect } from "../utils/prompts.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import { runInteractiveSearch, searchSkills } from "../core/interactive-search.js";
-import type { SkillVersionItem } from "./versions.js";
+import type { SkillVersionItem } from "../schema/routes.js";
 
 interface SkillTag {
   id: number;
@@ -196,9 +197,56 @@ function buildAgentSummary(targetAgents: AgentInfo[], mode: "symlink" | "copy", 
   return lines;
 }
 
+function buildInstallHelp(cmd: Command): string {
+  const lines: string[] = [];
+
+  lines.push(`${chalk.bold("Usage:")} skillhub install|i [options] ${chalk.cyan("<skill-name>")}`);
+  lines.push("");
+  lines.push("Install skills from registry, git repositories, or local paths");
+  lines.push("");
+
+  lines.push(chalk.bold("Arguments:"));
+  lines.push(`  ${chalk.cyan("skill-name")}                Skill name or namespace/skill-name from registry`);
+  lines.push("");
+
+  lines.push(chalk.bold("Source Options:"));
+  lines.push(`  ${chalk.cyan("-a, --add <source>")}        Install from GitHub or local path (alias for --from)`);
+  lines.push(`  ${chalk.cyan("--from <source>")}           Install from GitHub or local path (alias for -a)`);
+  lines.push("");
+
+  lines.push(chalk.bold("Target Options:"));
+  lines.push(`  ${chalk.cyan("--agent <agents...>")}       Target specific agents`);
+  lines.push(`  ${chalk.cyan("-g, --global")}              Install to global scope`);
+  lines.push("");
+
+  lines.push(chalk.bold("Version Options:"));
+  lines.push(`  ${chalk.cyan("-v, --skill-version <ver>")}  Install specific version (non-interactive)`);
+  lines.push(`  ${chalk.cyan("--tag <tag>")}               Install specific tag (non-interactive, resolves to version)`);
+  lines.push("");
+
+  lines.push(chalk.bold("Mode Options:"));
+  lines.push(`  ${chalk.cyan("--copy")}                    Copy instead of symlink`);
+  lines.push(`  ${chalk.cyan("--list")}                    List available skills without installing`);
+  lines.push("");
+
+  lines.push(chalk.bold("Other Options:"));
+  lines.push(`  ${chalk.cyan("-y, --yes")}                 Skip all prompts`);
+  lines.push(`  ${chalk.cyan("-h, --help")}                Display help for command`);
+  lines.push("");
+
+  lines.push(chalk.bold("Examples:"));
+  lines.push(chalk.dim("  skillhub install vision2group/fork-workflow         Install a skill from registry"));
+  lines.push(chalk.dim("  skillhub install my-skill --from ./local/path       Install from local directory"));
+  lines.push(chalk.dim("  skillhub install my-skill --from github.com/user/repo Install from GitHub"));
+  lines.push(chalk.dim("  skillhub install my-skill -g --yes                  Install globally, skip prompts"));
+  lines.push(chalk.dim("  skillhub install my-skill --tag v1.0.0              Install specific tag"));
+
+  return lines.join("\n");
+}
+
 export function registerInstall(program: Command) {
-  program
-    .command("install <source>")
+  const installCmd = program
+    .command("install <skill-name>")
     .alias("i")
     .description("Install skills from registry, git repositories, or local paths")
     .option("-a, --add <source>", "Install from GitHub or local path (alias for --from)")
@@ -210,7 +258,14 @@ export function registerInstall(program: Command) {
     .option("--list", "List available skills without installing")
     .option("-v, --skill-version <ver>", "Install specific version (non-interactive)")
     .option("--tag <tag>", "Install specific tag (non-interactive, resolves to version)")
-    .action(async (source: string, opts: Record<string, string | string[] | boolean>) => {
+    .configureHelp({ showGlobalOptions: true });
+
+  const originalHelp = installCmd.helpInformation.bind(installCmd);
+  installCmd.helpInformation = () => {
+    return buildInstallHelp(installCmd);
+  };
+
+  installCmd.action(async (source: string, opts: Record<string, string | string[] | boolean>) => {
       const fromSource = (opts.from || opts.add) as string | undefined;
 
       let effectiveSource: SourceType;
@@ -316,10 +371,18 @@ async function installFromRegistry(
 
   // Present version selection
   let selectedVersion: string = "latest";
-  if (opts.yes && opts.skillVersion) {
-    selectedVersion = String(opts.skillVersion);
-  } else if (opts.yes && opts.tag) {
-    // Non-interactive: resolve tag to version
+  if (opts.skillVersion) {
+    selectedVersion = String(opts.skillVersion).replace(/^v/, "");
+    const versionExists = versions.some((v) => v.version === selectedVersion);
+    if (!versionExists) {
+      spinner.fail(`Version not found: ${opts.skillVersion}`);
+      if (versions.length > 0) {
+        info(`Available versions: ${versions.map((v) => v.version).join(", ")}`);
+      }
+      process.exitCode = 1;
+      return;
+    }
+  } else if (opts.tag) {
     for (const [vid, tags] of versionTagsMap) {
       if (tags.includes(opts.tag as string)) {
         const v = versions.find((ver) => ver.id === vid);
@@ -383,6 +446,7 @@ async function installFromRegistry(
     spinner.fail(`Skill not found: ${ns}/${actualSlug}`);
     await rm(tmpDir, { recursive: true, force: true });
     process.exitCode = 1;
+    return;
   }
 
   const fileStream = createWriteStream(zipPath);
