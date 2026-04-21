@@ -221,15 +221,28 @@ export function registerExplore(program: Command) {
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
     .option("-s, --sort <sort>", "Sort by: hot, newest, downloads (default: interactive mode)")
-    .action(async (query: string | undefined, opts: { limit: string; sort?: string }) => {
+    .option("--hot", "Sort by popularity (shorthand for --sort hot)")
+    .option("--newest", "Sort by newest first (shorthand for --sort newest)")
+    .option("--downloads", "Sort by download count (shorthand for --sort downloads)")
+    .action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean }) => {
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
       const sortMap: Record<string, string> = { hot: "rating", newest: "newest", downloads: "downloads" };
-      const apiSort = sortMap[opts.sort || "newest"] || "newest";
+      
+      // Resolve sort priority: explicit --sort > shorthand flags > default
+      let effectiveSort = opts.sort;
+      if (!effectiveSort) {
+        if (opts.hot) effectiveSort = "hot";
+        else if (opts.newest) effectiveSort = "newest";
+        else if (opts.downloads) effectiveSort = "downloads";
+      }
+      const apiSort = sortMap[effectiveSort || "newest"] || "newest";
 
       try {
-        if (!query && !opts.sort) {
+        // Enter interactive mode only if no query AND no sort option (explicit or shorthand)
+        const hasSortOption = opts.sort || opts.hot || opts.newest || opts.downloads;
+        if (!query && !hasSortOption) {
           const selected = await runInteractiveSearch(client, "", apiSort);
           if (!selected) {
             console.log("\nCancelled.");

@@ -58,7 +58,6 @@ function buildTopLevelHelp(version: string): string {
 
   sections.push(formatSection("Discover", [
     { cmd: "explore", desc: "Browse or search skills from the registry", alias: "find, find-skills, search" },
-    { cmd: "search <query>", desc: dim("[Deprecated: use 'explore' instead]") },
   ]));
   sections.push("");
 
@@ -108,12 +107,26 @@ function buildTopLevelHelp(version: string): string {
   ]));
   sections.push("");
 
+  sections.push(formatSection("Configuration", [
+    { cmd: "config list", desc: "Show current registry configuration" },
+    { cmd: "config set <key> <value>", desc: "Set configuration (e.g., registry URL)" },
+    { cmd: "config get <key>", desc: "Get configuration value" },
+    { cmd: "config show-env-instructions", desc: "Show environment variable setup guide" },
+  ]));
+  sections.push("");
+
   sections.push(bold("Examples"));
-  sections.push(dim("  skillhub install vision2group/fork-workflow   Install a skill"));
-  sections.push(dim("  skillhub explore                               Browse available skills"));
-  sections.push(dim("  skillhub publish                               Publish current directory"));
-  sections.push(dim("  skillhub me skills                             List your published skills"));
-  sections.push(dim("  skillhub update --global                       Update all global skills"));
+  sections.push(dim("  skillhub install vision2group/fork-workflow       Install a skill from registry"));
+  sections.push(dim("  skillhub install find-skills --from https://...   Install from GitHub or local path"));
+  sections.push(dim("  skillhub explore                                  Interactive skill search"));
+  sections.push(dim("  skillhub explore --hot                            Browse popular skills"));
+  sections.push(dim("  skillhub config list                              Show current configuration"));
+  sections.push(dim("  skillhub --registry <url> explore                 One-time registry override"));
+  sections.push(dim("  skillhub publish                                  Publish current directory"));
+  sections.push(dim("  skillhub me skills                                List your published skills"));
+  sections.push(dim("  skillhub update                                   Update installed skills"));
+  sections.push("");
+  sections.push(dim("Run 'skillhub <command> --help' for command-specific options."));
   sections.push("");
 
   sections.push(bold("Global Options"));
@@ -133,7 +146,7 @@ export async function createCli(): Promise<Command> {
     .name("skillhub")
     .description("CLI for SkillHub — publish, search, and manage agent skills")
     .version(version)
-    .option("--registry <url>", "Registry API base URL", "http://localhost:8080")
+    .option("--registry <url>", "Registry API base URL")
     .option("--json", "Output results as JSON");
 
   const customHelp = buildTopLevelHelp(version);
@@ -171,6 +184,7 @@ export async function createCli(): Promise<Command> {
     { registerExplore },
     { registerTransfer },
     { registerHide },
+    { registerConfig },
   ] = await Promise.all([
     import("./commands/login.js"),
     import("./commands/logout.js"),
@@ -199,6 +213,7 @@ export async function createCli(): Promise<Command> {
     import("./commands/explore.js"),
     import("./commands/transfer.js"),
     import("./commands/hide.js"),
+    import("./commands/config.js"),
   ]);
 
   registerLogin(program);
@@ -229,6 +244,7 @@ export async function createCli(): Promise<Command> {
   registerExplore(program);
   registerTransfer(program);
   registerHide(program);
+  registerConfig(program);
 
   return program;
 }

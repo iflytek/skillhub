@@ -5,6 +5,7 @@ unbuild.config.ts
 tsconfig.json
 *.test.ts
 src/
+.agents/
 .claude/
 .omc/
 AGENTS.md

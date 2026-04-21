@@ -146,6 +146,14 @@ export class ApiError extends Error {
       detail += "\nRun `skillhub login` to authenticate.";
     }
 
+    // Enhanced error messages for connection issues
+    if (statusCode === 0 || detail.includes("ECONNREFUSED") || detail.includes("ENOTFOUND")) {
+      detail += "\n\n💡 Connection failed. Check your registry configuration:\n";
+      detail += "   - Run 'skillhub config list' to see current configuration\n";
+      detail += "   - Run 'skillhub config show-env-instructions' for setup guide\n";
+      detail += "   - Or use: skillhub --registry <url> <command>";
+    }
+
     super(detail);
   }
 }
