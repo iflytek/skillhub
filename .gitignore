@@ -86,3 +86,7 @@ CLAUDE.md
 
 # Local config file
 .mcp.json
+
+# Local scripts (personal utilities)
+scripts/notify-feishu.sh
+scripts/release-cli.sh
