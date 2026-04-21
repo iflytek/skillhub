@@ -70,7 +70,7 @@ export function registerResolve(program: Command) {
             }
             error(`Version ${specifiedVersion} not found for ${namespace}/${skillSlug}`);
             error(`Please check if the version number is correct.`);
-            process.exit(1);
+            process.exitCode = 1;
           }
 
           const results = await searchSkills(client, skillSlug, 50);
@@ -86,7 +86,7 @@ export function registerResolve(program: Command) {
 
           if (uniqueResults.length === 0) {
             error(`Skill not found: ${skillSlug}`);
-            process.exit(1);
+            process.exitCode = 1;
           }
 
           const resolvePromises = uniqueResults.map(async (r) => ({
@@ -99,7 +99,7 @@ export function registerResolve(program: Command) {
           if (matches.length === 0) {
             error(`Version ${specifiedVersion} not found for ${skillSlug}`);
             error(`Please check if the version number is correct.`);
-            process.exit(1);
+            process.exitCode = 1;
           }
 
           if (matches.length === 1) {
@@ -114,7 +114,7 @@ export function registerResolve(program: Command) {
             console.log(`  ${m.namespace}/${m.name}`);
           }
           dim(`\nUse: resolve <namespace>/<skill> --skill-version ${specifiedVersion}`);
-          process.exit(1);
+          process.exitCode = 1;
         }
 
         // Case 2: No version specified (original behavior)
@@ -133,7 +133,7 @@ export function registerResolve(program: Command) {
 
           if (uniqueResults.length === 0) {
             error(`Skill not found: ${skillSlug}`);
-            process.exit(1);
+            process.exitCode = 1;
           }
 
           if (uniqueResults.length === 1) {
@@ -163,7 +163,7 @@ export function registerResolve(program: Command) {
         printResolveResult(result);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

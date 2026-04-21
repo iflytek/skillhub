@@ -42,7 +42,7 @@ export function registerHide(program: Command) {
         success(`Hidden ${skillSlug}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 
@@ -82,7 +82,7 @@ export function registerHide(program: Command) {
         success(`Unhidden ${skillSlug}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

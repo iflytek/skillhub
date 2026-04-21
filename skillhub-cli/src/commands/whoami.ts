@@ -24,7 +24,7 @@ export function registerWhoami(program: Command) {
         }
       } catch (e: any) {
         error(e.message);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

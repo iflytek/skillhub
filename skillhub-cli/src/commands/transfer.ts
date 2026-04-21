@@ -32,7 +32,7 @@ export function registerTransfer(program: Command) {
         success(`Ownership of ${namespace} transferred to ${newOwnerId}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

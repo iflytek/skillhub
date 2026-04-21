@@ -28,7 +28,7 @@ export function registerLogin(program: Command) {
         success(`Authenticated as ${resp.user.displayName} (@${resp.user.handle})`);
       } catch (e: any) {
         error(`Authentication failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

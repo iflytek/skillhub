@@ -40,7 +40,7 @@ export function registerNotifications(program: Command) {
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 
@@ -56,7 +56,7 @@ export function registerNotifications(program: Command) {
         success(`Marked notification ${id} as read`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 
@@ -72,7 +72,7 @@ export function registerNotifications(program: Command) {
         success("All notifications marked as read");
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

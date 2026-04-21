@@ -22,7 +22,7 @@ export function registerUpdate(program: Command) {
 
       if (!existsSync(lockPath)) {
         error("No skillhub.lock found. Have you installed any skills?");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       const lockedSkills = await getAllLockedSkills();
@@ -30,7 +30,7 @@ export function registerUpdate(program: Command) {
 
       if (allSkillNames.length === 0) {
         error("No skills in lock file.");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       let skillsToUpdate: string[] = [];

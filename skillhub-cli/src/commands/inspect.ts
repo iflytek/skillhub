@@ -94,7 +94,7 @@ export function registerInspect(program: Command) {
 
       if (!namespaces || namespaces.length === 0) {
         error("No namespaces found. You may need to log in.");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       const searchPromises = namespaces.map(async (ns) => {
@@ -116,7 +116,7 @@ export function registerInspect(program: Command) {
         if (namespaces.length > 1) {
           dim(`Tried namespaces: ${namespaces.map((n) => n.slug).join(", ")}`);
         }
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       if (isJson) {

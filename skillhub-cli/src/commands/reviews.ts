@@ -37,7 +37,7 @@ export function registerReviews(program: Command) {
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

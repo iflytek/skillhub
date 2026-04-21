@@ -25,7 +25,7 @@ export function registerPublish(program: Command) {
       const folderStat = await stat(folder).catch(() => null);
       if (!folderStat || !folderStat.isDirectory()) {
         error("Path must be a directory containing SKILL.md");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       const slug = opts.slug || basename(folder);
@@ -40,7 +40,7 @@ export function registerPublish(program: Command) {
       const isValidVersion = semver.valid(version) || /^\d{8}\.\d+$/.test(version);
       if (!isValidVersion) {
         error("--skill-version must be a valid semver (e.g. 1.0.0) or timestamp (e.g. 20260414.123045)");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       const namespace = opts.namespace || "global";
@@ -58,7 +58,7 @@ export function registerPublish(program: Command) {
         const skillMdStat = await stat(skillMdPath).catch(() => null);
         if (!skillMdStat) {
           spinner.fail("SKILL.md not found in directory");
-          process.exit(1);
+          process.exitCode = 1;
         }
 
         const skillMdContent = await readFile(skillMdPath, "utf-8");
@@ -92,7 +92,7 @@ export function registerPublish(program: Command) {
         }
       } catch (e: any) {
         error(`Publish failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

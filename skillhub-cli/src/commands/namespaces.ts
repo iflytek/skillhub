@@ -29,7 +29,7 @@ export function registerNamespaces(program: Command) {
         }
       } catch (e: any) {
         error(`Failed to list namespaces: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

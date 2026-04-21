@@ -59,7 +59,7 @@ export function registerVersions(program: Command) {
 
           if (uniqueResults.length === 0) {
             error(`Skill not found: ${skillSlug}`);
-            process.exit(1);
+            process.exitCode = 1;
           }
 
           if (uniqueResults.length === 1) {
@@ -95,7 +95,7 @@ export function registerVersions(program: Command) {
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

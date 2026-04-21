@@ -33,7 +33,7 @@ export function registerArchive(program: Command) {
         success(`Archived ${skillSlug}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

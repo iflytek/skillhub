@@ -17,7 +17,7 @@ export function registerInit(program: Command) {
       const skillMd = join(dir, "SKILL.md");
       if (existsSync(skillMd)) {
         error("SKILL.md already exists");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       const slug = name || "my-skill";

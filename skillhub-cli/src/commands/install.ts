@@ -233,7 +233,7 @@ export function registerInstall(program: Command) {
         }
       } catch (e: any) {
         spinner.fail(e.message);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }
@@ -277,7 +277,7 @@ async function installFromRegistry(
 
     if (uniqueResults.length === 0) {
       spinner.fail(`Skill not found: ${actualSlug}`);
-      process.exit(1);
+      process.exitCode = 1;
     }
 
     if (uniqueResults.length === 1) {
@@ -373,7 +373,7 @@ async function installFromRegistry(
     if (!location) {
       spinner.fail(`Redirect response has no Location header`);
       await rm(tmpDir, { recursive: true, force: true });
-      process.exit(1);
+      process.exitCode = 1;
     }
           response = await request(location as string, { method: "GET" });
   }
@@ -382,7 +382,7 @@ async function installFromRegistry(
   if (statusCode >= 400) {
     spinner.fail(`Skill not found: ${ns}/${actualSlug}`);
     await rm(tmpDir, { recursive: true, force: true });
-    process.exit(1);
+    process.exitCode = 1;
   }
 
   const fileStream = createWriteStream(zipPath);
@@ -398,7 +398,7 @@ async function installFromRegistry(
   const skills = discoverSkills(extractDir);
   if (skills.length === 0) {
     spinner.fail("No SKILL.md found in package");
-    process.exit(1);
+    process.exitCode = 1;
   }
 
   spinner.succeed(`Found ${skills.length} skill(s) in ${ns}/${actualSlug}`);
@@ -639,7 +639,7 @@ async function installFromGit(
 
   if (skills.length === 0) {
     spinner.fail("No skills found. Ensure the directory contains SKILL.md files.");
-    process.exit(1);
+    process.exitCode = 1;
   }
 
   spinner.succeed(`Found ${skills.length} skill(s)`);
@@ -663,7 +663,7 @@ async function installFromGit(
       if (selectedSkills.length === 0) {
         error(`No matching skills for: ${skillNames.join(", ")}`);
         info("Available: " + skills.map((s) => s.name).join(", "));
-        process.exit(1);
+        process.exitCode = 1;
       }
     }
   } else if (!opts.yes && skills.length > 1) {

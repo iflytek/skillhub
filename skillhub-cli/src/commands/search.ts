@@ -48,7 +48,7 @@ export function registerSearch(program: Command) {
         }
       } catch (e: any) {
         error(`Search failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

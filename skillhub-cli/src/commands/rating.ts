@@ -32,7 +32,7 @@ export function registerRating(program: Command) {
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }
@@ -45,7 +45,7 @@ export function registerRate(program: Command) {
       const score = parseInt(scoreStr, 10);
       if (isNaN(score) || score < 1 || score > 5) {
         error("Score must be between 1 and 5");
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       try {
@@ -65,7 +65,7 @@ export function registerRate(program: Command) {
         success(`Rated ${skillSlug}: ${"★".repeat(score)}${"☆".repeat(5 - score)}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

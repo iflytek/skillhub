@@ -45,7 +45,7 @@ export function registerDownload(program: Command) {
           const location = response.headers.location;
           if (!location) {
             spinner.fail(`Redirect response has no Location header`);
-            process.exit(1);
+            process.exitCode = 1;
           }
           response = await request(location as string, { method: "GET" });
         }
@@ -53,7 +53,7 @@ export function registerDownload(program: Command) {
 
         if (statusCode >= 400) {
           spinner.fail(`Download failed: HTTP ${statusCode}`);
-          process.exit(1);
+          process.exitCode = 1;
         }
 
         const outPath = resolve(outputDir, `${skillSlug}.zip`);
@@ -63,7 +63,7 @@ export function registerDownload(program: Command) {
         spinner.succeed(`Downloaded ${skillSlug} to ${outPath}`);
       } catch (e: any) {
         error(`Download failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

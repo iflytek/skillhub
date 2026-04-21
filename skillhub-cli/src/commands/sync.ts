@@ -31,7 +31,7 @@ export function registerSync(program: Command) {
       
       if (!existsSync(scanPath)) {
         error(`Directory not found: ${scanPath}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
 
       try {
@@ -139,7 +139,7 @@ export function registerSync(program: Command) {
         console.log("");
       } catch (e: any) {
         error(`Sync failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

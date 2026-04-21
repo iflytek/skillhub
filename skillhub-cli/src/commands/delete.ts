@@ -34,7 +34,7 @@ export function registerDelete(program: Command) {
         success(`Deleted ${skillSlug} from ${namespace}`);
       } catch (e: any) {
         error(`Failed: ${e.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }
