@@ -14,6 +14,7 @@ import com.iflytek.skillhub.controller.support.MultipartPackageExtractor;
 import com.iflytek.skillhub.controller.support.ZipPackageExtractor;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -294,11 +295,12 @@ public class ClawHubCompatAppService {
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
         String namespace = determineNamespace(extracted.payload());
+        SkillVisibility visibility = parseVisibility(extracted.payload().visibility());
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 extracted.entries(),
                 principal.userId(),
-                SkillVisibility.PUBLIC,
+                visibility,
                 principal.platformRoles(),
                 confirmWarnings
         );
@@ -309,15 +311,17 @@ public class ClawHubCompatAppService {
 
     public ClawHubPublishResponse publish(MultipartFile file,
                                           String namespace,
+                                          String visibility,
                                           boolean confirmWarnings,
                                           PlatformPrincipal principal,
                                           String clientIp,
                                           String userAgent) throws IOException {
+        SkillVisibility parsedVisibility = parseVisibility(visibility);
         SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
                 namespace,
                 zipPackageExtractor.extract(file),
                 principal.userId(),
-                SkillVisibility.PUBLIC,
+                parsedVisibility,
                 principal.platformRoles(),
                 confirmWarnings
         );
@@ -418,6 +422,21 @@ public class ClawHubCompatAppService {
             return trimmed.substring(1);
         }
         return trimmed;
+    }
+
+    private SkillVisibility parseVisibility(String visibilityStr) {
+        if (visibilityStr == null || visibilityStr.isBlank()) {
+            return SkillVisibility.PUBLIC;
+        }
+        return switch (visibilityStr.toLowerCase()) {
+            case "public" -> SkillVisibility.PUBLIC;
+            case "namespace" -> SkillVisibility.NAMESPACE_ONLY;
+            case "private" -> SkillVisibility.PRIVATE;
+            default -> throw new DomainBadRequestException(
+                "error.skill.publish.invalid.visibility",
+                "Invalid visibility: " + visibilityStr + ". Must be 'public', 'namespace', or 'private'"
+            );
+        };
     }
 
     private void recordCompatPublishAudit(String userId,

@@ -155,12 +155,14 @@ public class ClawHubCompatController {
     @PostMapping("/publish")
     public ClawHubPublishResponse publish(@RequestParam("file") MultipartFile file,
                                           @RequestParam("namespace") String namespace,
+                                          @RequestParam(value = "visibility", required = false) String visibility,
                                           @RequestParam(value = "confirmWarnings", defaultValue = "false") boolean confirmWarnings,
                                           @AuthenticationPrincipal PlatformPrincipal principal,
                                           HttpServletRequest request) throws IOException {
         return clawHubCompatAppService.publish(
                 file,
                 namespace,
+                visibility,
                 confirmWarnings,
                 principal,
                 request.getRemoteAddr(),

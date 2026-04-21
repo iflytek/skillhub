@@ -304,6 +304,99 @@ class ClawHubCompatControllerTest {
                 .andExpect(jsonPath("$.versionId").value("36"));
     }
 
+    @Test
+    void publish_skill_with_namespace_visibility() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 37L);
+        given(skillPublishService.publishFromEntries(
+                eq("global"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.NAMESPACE_ONLY),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(15L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/skills")
+                        .file(skillMdFile())
+                        .param("payload", """
+                                {"slug":"my-skill","displayName":"My Skill","version":"1.0.0","visibility":"namespace","acceptLicenseTerms":true,"tags":["latest"]}
+                                """)
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("15"))
+                .andExpect(jsonPath("$.versionId").value("37"));
+    }
+
+    @Test
+    void publish_skill_with_private_visibility() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 38L);
+        given(skillPublishService.publishFromEntries(
+                eq("global"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.PRIVATE),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(16L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/skills")
+                        .file(skillMdFile())
+                        .param("payload", """
+                                {"slug":"my-skill","displayName":"My Skill","version":"1.0.0","visibility":"private","acceptLicenseTerms":true,"tags":["latest"]}
+                                """)
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("16"))
+                .andExpect(jsonPath("$.versionId").value("38"));
+    }
+
+    @Test
+    void publish_skill_with_invalid_visibility_returns_400() throws Exception {
+        mockMvc.perform(multipart("/api/v1/skills")
+                        .file(skillMdFile())
+                        .param("payload", """
+                                {"slug":"my-skill","displayName":"My Skill","version":"1.0.0","visibility":"invalid","acceptLicenseTerms":true,"tags":["latest"]}
+                                """)
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void publish_via_post_endpoint_with_visibility_parameter() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 39L);
+        MockMultipartFile zipFile = new MockMultipartFile(
+                "file",
+                "skill.zip",
+                "application/zip",
+                "fake-zip-content".getBytes(StandardCharsets.UTF_8)
+        );
+
+        given(skillPublishService.publishFromEntries(
+                eq("test-namespace"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.NAMESPACE_ONLY),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(17L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/publish")
+                        .file(zipFile)
+                        .param("namespace", "test-namespace")
+                        .param("visibility", "namespace")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("17"))
+                .andExpect(jsonPath("$.versionId").value("39"));
+    }
+
     private CompatSkillLookupService.CompatSkillContext legacyCompatContext(String namespaceSlug, String skillSlug) {
         Namespace namespace = new Namespace(namespaceSlug, namespaceSlug, "tester");
         Skill skill = new Skill(1L, skillSlug, "tester", SkillVisibility.PUBLIC);
