@@ -121,11 +121,31 @@ export class ApiClient {
   }
 }
 
+function extractHumanMessage(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) return null;
+
+  const b = body as Record<string, unknown>;
+
+  // Native API: { code, msg, data } — "msg" is authoritative
+  if (typeof b.msg === "string" && b.msg.length > 0) return b.msg;
+  if (typeof b.message === "string" && b.message.length > 0) return b.message;
+  if (typeof b.error === "string" && b.error.length > 0) return b.error;
+
+  return null;
+}
+
 export class ApiError extends Error {
   constructor(
     public statusCode: number,
     public body: unknown,
   ) {
-    super(`API error ${statusCode}: ${JSON.stringify(body)}`);
+    const msg = extractHumanMessage(body);
+    let detail = msg ?? `HTTP ${statusCode}`;
+
+    if (statusCode === 401 || statusCode === 403) {
+      detail += "\nRun `skillhub login` to authenticate.";
+    }
+
+    super(detail);
   }
 }

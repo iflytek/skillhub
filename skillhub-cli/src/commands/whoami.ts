@@ -23,7 +23,7 @@ export function registerWhoami(program: Command) {
           console.log(`Display Name: ${resp.user.displayName}`);
         }
       } catch (e: any) {
-        error(`Not authenticated: ${e.message}`);
+        error(e.message);
         process.exit(1);
       }
     });
