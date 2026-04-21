@@ -138,6 +138,47 @@ export class GitHubClient {
     );
   }
 
+  async listCommitPulls(sha: string): Promise<Array<{ number: number; title: string }>> {
+    return this.request(
+      "GET",
+      `/repos/${this.owner}/${this.repo}/commits/${sha}/pulls`,
+    );
+  }
+
+  async createDraftRelease(
+    tag: string,
+    name: string,
+    body: string,
+  ): Promise<{ id: number; upload_url: string }> {
+    return this.request("POST", `/repos/${this.owner}/${this.repo}/releases`, {
+      tag_name: tag,
+      name,
+      body,
+      draft: true,
+      prerelease: false,
+    });
+  }
+
+  async uploadReleaseAsset(
+    releaseId: number,
+    filename: string,
+    content: string,
+  ): Promise<void> {
+    const uploadUrl = `https://uploads.github.com/repos/${this.owner}/${this.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(filename)}`;
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        ...this.headers(),
+        "Content-Type": "text/markdown",
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      throw await GitHubApiError.fromResponse(response);
+    }
+  }
+
   private async paginate<T>(path: string): Promise<T[]> {
     const collected: T[] = [];
     let nextPath: string | null = path;

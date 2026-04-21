@@ -156,7 +156,8 @@ public class SkillPublishService {
             String sourceVersion,
             String targetVersion,
             String publisherId,
-            Map<Long, NamespaceRole> userNamespaceRoles) {
+            Map<Long, NamespaceRole> userNamespaceRoles,
+            boolean confirmWarnings) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
         assertCanManageLifecycle(skill, publisherId, userNamespaceRoles);
@@ -181,7 +182,7 @@ public class SkillPublishService {
                 publisherId,
                 skill.getVisibility(),
                 Set.of(),
-                false,  // confirmWarnings=false: no warnings to confirm for rerelease
+                confirmWarnings,  // confirmWarnings: honour caller's choice for rerelease
                 false,  // forceAutoPublish=false: respect visibility rules
                 true
         );

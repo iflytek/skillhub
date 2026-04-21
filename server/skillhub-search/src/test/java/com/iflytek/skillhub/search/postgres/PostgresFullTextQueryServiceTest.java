@@ -393,7 +393,7 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
-    void platformWideAccessShouldBypassNamespaceVisibilityRestrictions() {
+    void platformWideAccessShouldNotBypassVisibilityInPortalSearch() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
         Query countQuery = mock(Query.class);
@@ -418,12 +418,12 @@ class PostgresFullTextQueryServiceTest {
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        // Portal search should not include platformWideAccess bypass logic
         assertThat(sqlCaptor.getAllValues().getFirst())
-                .contains("OR (d.visibility = 'NAMESPACE_ONLY' AND :platformWideAccess = TRUE)")
-                .contains("OR (d.visibility = 'PRIVATE' AND :platformWideAccess = TRUE)")
-                .contains("OR :platformWideAccess = TRUE");
-        verify(nativeQuery).setParameter("platformWideAccess", true);
-        verify(countQuery).setParameter("platformWideAccess", true);
+                .doesNotContain("platformWideAccess")
+                .doesNotContain("PRIVATE");
+        verify(nativeQuery, never()).setParameter("platformWideAccess", true);
+        verify(countQuery, never()).setParameter("platformWideAccess", true);
     }
 
     @Test

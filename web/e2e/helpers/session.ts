@@ -10,6 +10,10 @@ export interface TestCredentials {
   username: string
 }
 
+interface RegisterSessionOptions {
+  allowMockSession?: boolean
+}
+
 interface SessionSnapshot {
   username: string
   cookies: Array<{
@@ -160,7 +164,7 @@ async function tryBootstrapMockSession(page: Page, worker: number): Promise<{ us
   return { username: 'local-user', password }
 }
 
-async function registerSessionOnce(page: Page, testInfo?: TestInfo) {
+async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: RegisterSessionOptions) {
   const worker = testInfo?.parallelIndex ?? 0
   const cached = cachedUserByWorker.get(worker)
   const username = usernameForWorker(testInfo)
@@ -175,9 +179,11 @@ async function registerSessionOnce(page: Page, testInfo?: TestInfo) {
     return { username: restored.username, password }
   }
 
-  const mockSession = await tryBootstrapMockSession(page, worker)
-  if (mockSession) {
-    return mockSession
+  if (options?.allowMockSession !== false) {
+    const mockSession = await tryBootstrapMockSession(page, worker)
+    if (mockSession) {
+      return mockSession
+    }
   }
 
   // Prefer the known-good cached account to avoid repeated failed-logins on a fixed username.
@@ -317,12 +323,12 @@ async function createFreshSessionOnce(page: Page, testInfo?: TestInfo) {
   throw new Error(`Failed to create fresh e2e session for worker ${worker}`)
 }
 
-export async function registerSession(page: Page, testInfo?: TestInfo) {
+export async function registerSession(page: Page, testInfo?: TestInfo, options?: RegisterSessionOptions) {
   let lastError: unknown
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      return await registerSessionOnce(page, testInfo)
+      return await registerSessionOnce(page, testInfo, options)
     } catch (error) {
       lastError = error
       if (attempt < 2) {

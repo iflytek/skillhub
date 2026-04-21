@@ -3237,6 +3237,7 @@ export interface components {
         };
         SkillVersionRereleaseRequest: {
             targetVersion: string;
+            confirmWarnings?: boolean;
         };
         SkillReportSubmitRequest: {
             reason?: string;

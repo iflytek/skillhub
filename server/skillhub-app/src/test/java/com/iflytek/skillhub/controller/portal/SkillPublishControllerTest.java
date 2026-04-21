@@ -4,6 +4,9 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+
+import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
+import org.mockito.ArgumentMatchers;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -69,7 +72,7 @@ class SkillPublishControllerTest {
 
         given(skillPublishService.publishFromEntries(
             eq("global"),
-            anyList(),
+            ArgumentMatchers.<List<PackageEntry>>any(),
             eq("usr_1"),
             eq(SkillVisibility.PUBLIC),
             eq(Set.of("SUPER_ADMIN")),
@@ -120,7 +123,7 @@ class SkillPublishControllerTest {
 
         given(skillPublishService.publishFromEntries(
             eq("global"),
-            anyList(),
+            ArgumentMatchers.<List<PackageEntry>>any(),
             eq("usr_1"),
             eq(SkillVisibility.PUBLIC),
             eq(Set.of("SUPER_ADMIN")),

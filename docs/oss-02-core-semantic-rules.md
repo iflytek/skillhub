@@ -589,13 +589,13 @@ private boolean canDownload(SkillVersion version, Skill skill, String currentUse
 
 | 问题 | 严重程度 | 状态 |
 |------|---------|------|
-| 新增 UPLOADED 状态 | 高 | 待实现 |
-| PRIVATE skill 发布逻辑改动 | 高 | 待实现 |
-| 提交审核接口 | 高 | 待实现 |
-| 撤回审核后进入 UPLOADED | 中 | 待实现 |
-| 同名冲突检查补全 | 中 | 待实现 |
-| 管理员可见 UPLOADED skill | 低 | 待实现 |
-| package_name 唯一性检查 | 低 | 可选 |
+| 新增 UPLOADED 状态 | 高 | 已完成 |
+| PRIVATE skill 发布逻辑改动 | 高 | 已完成 |
+| 提交审核接口 | 高 | 已完成 |
+| 撤回审核后进入 UPLOADED | 中 | 已完成 |
+| 同名冲突检查补全 | 中 | 已完成 |
+| 管理员可见 UPLOADED skill | 低 | 已完成 |
+| package_name 唯一性检查 | 低 | 可选（SaaS Adapter 职责） |
 
 ---
 

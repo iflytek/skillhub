@@ -7,6 +7,7 @@
 <div align="center">
 
 [![文档](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
+[![Discord](https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qHYvtDNPHS)
 [![许可证](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![构建](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
@@ -67,7 +68,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 **国内用户（阿里云镜像）：**
 
 ```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up -- --aliyun --public-url https://skillhub.your-company.com --version latest
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
 如果部署遇到问题，请清除现有的运行时目录并重试。
@@ -177,7 +178,7 @@ skillhub/
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 
 # 阿里云镜像（国内推荐）
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up -- --aliyun --public-url https://skillhub.your-company.com --version latest
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
 ### 配置参数说明
@@ -373,6 +374,7 @@ namespace `my-space` 和 skill slug `my-skill`。
 
 - 💬 **社区讨论**：[GitHub Discussions](https://github.com/iflytek/skillhub/discussions)
 - 🐛 **Bug 报告**：[Issues](https://github.com/iflytek/skillhub/issues)
+- 👾 **Discord**：[加入我们的服务器](https://discord.gg/qHYvtDNPHS)
 - 👥 **企业微信群**：
 
   ![企业微信群](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)

@@ -206,8 +206,11 @@ export function useRereleaseSkillVersion() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ namespace, slug, version, targetVersion }: { namespace: string; slug: string; version: string; targetVersion: string }) =>
-      skillLifecycleApi.rereleaseVersion(namespace, slug, version, targetVersion),
+    mutationFn: ({ namespace, slug, version, targetVersion, confirmWarnings }: { namespace: string; slug: string; version: string; targetVersion: string; confirmWarnings?: boolean }) =>
+      skillLifecycleApi.rereleaseVersion(namespace, slug, version, targetVersion, confirmWarnings),
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
       queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })

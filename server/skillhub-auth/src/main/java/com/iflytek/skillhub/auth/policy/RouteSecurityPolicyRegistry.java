@@ -71,10 +71,10 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/*/*", "SUPER_ADMIN"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/id/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/*/*"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/namespaces"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/namespaces/*"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/namespaces"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/namespaces/*"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/namespaces"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/namespaces/*"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/namespaces"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/namespaces/*"),
             RouteAuthorizationPolicy.authenticated(null, "/api/v1/admin/**")
     );
 

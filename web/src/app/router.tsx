@@ -86,22 +86,18 @@ const NamespaceReviewsPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-reviews'),
   'NamespaceReviewsPage',
 )
-const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
-const ReviewsPage = createRoleProtectedRouteComponent(
-  () => import('@/pages/dashboard/reviews'),
-  'ReviewsPage',
-  ['SKILL_ADMIN', 'NAMESPACE_ADMIN', 'USER_ADMIN', 'SUPER_ADMIN'],
+const NamespaceReviewDetailPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/review-detail'),
+  'NamespaceReviewDetailPage',
 )
+const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
+const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
 const ReportsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/reports'),
   'ReportsPage',
   ['SKILL_ADMIN', 'SUPER_ADMIN'],
 )
-const ReviewDetailPage = createRoleProtectedRouteComponent(
-  () => import('@/pages/dashboard/review-detail'),
-  'ReviewDetailPage',
-  ['SKILL_ADMIN', 'NAMESPACE_ADMIN', 'SUPER_ADMIN'],
-)
+const ReviewDetailPage = createLazyRouteComponent(() => import('@/pages/dashboard/review-detail'), 'ReviewDetailPage')
 const PromotionsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/promotions'),
   'PromotionsPage',
@@ -228,7 +224,6 @@ const namespaceRoute = createRoute({
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace/$slug',
-  beforeLoad: requireAuth,
   validateSearch: (search: Record<string, unknown>): { returnTo?: string } => ({
     returnTo: typeof search.returnTo === 'string' && search.returnTo.startsWith('/') ? search.returnTo : undefined,
   }),
@@ -303,6 +298,13 @@ const dashboardReviewDetailRoute = createRoute({
   path: 'dashboard/reviews/$id',
   beforeLoad: requireAuth,
   component: ReviewDetailPage,
+})
+
+const dashboardNamespaceReviewDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/namespaces/$slug/reviews/$id',
+  beforeLoad: requireAuth,
+  component: NamespaceReviewDetailPage,
 })
 
 const dashboardPromotionsRoute = createRoute({
@@ -416,6 +418,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespacesRoute,
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,
+  dashboardNamespaceReviewDetailRoute,
   dashboardGovernanceRoute,
   dashboardReviewsRoute,
   dashboardReportsRoute,

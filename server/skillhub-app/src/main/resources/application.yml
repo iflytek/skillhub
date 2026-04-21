@@ -53,10 +53,29 @@ spring:
           github:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID:placeholder}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:placeholder}
-            scope: read:user,user:email
+            scope:
+              - read:user
+              - user:email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: GitHub
+            authorization-grant-type: authorization_code
+          gitlab:
+            client-id: ${OAUTH2_GITLAB_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_GITLAB_CLIENT_SECRET:placeholder}
+            scope:
+              - read_user
+              - email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
         provider:
           github:
             user-info-uri: https://api.github.com/user
+          gitlab:
+            authorization-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/authorize
+            token-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/token
+            user-info-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/api/v4/user
+            user-name-attribute: username
   servlet:
     multipart:
       max-file-size: 100MB
@@ -189,7 +208,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info
   endpoint:
     health:
       show-details: when-authorized
@@ -198,4 +217,4 @@ management:
       application: skillhub
     export:
       prometheus:
-        enabled: true
+        enabled: false

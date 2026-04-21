@@ -8,6 +8,7 @@
 
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/iflytek/skillhub)
 [![Docs](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
+[![Discord](https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qHYvtDNPHS)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
@@ -95,7 +96,7 @@ The `--public-url` parameter sets the public access URL for your SkillHub instan
 **For users in China (Aliyun mirror):**
 
 ```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up -- --aliyun --public-url https://skillhub.your-company.com --version latest
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
 If deployment runs into problems, clear the existing runtime home and retry.
@@ -195,7 +196,7 @@ Published images target both `linux/amd64` and `linux/arm64`.
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 
 # Aliyun mirror (recommended for users in China)
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up -- --aliyun --public-url https://skillhub.your-company.com --version latest
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
 **Deployment parameters:**
@@ -441,6 +442,7 @@ what you'd like to change.
 
 - 💬 **Community Discussion**: [GitHub Discussions](https://github.com/iflytek/skillhub/discussions)
 - 🐛 **Bug Reports**: [Issues](https://github.com/iflytek/skillhub/issues)
+- 👾 **Discord**: [Join our Server](https://discord.gg/qHYvtDNPHS)
 - 👥 **WeChat Work Group**:
 
   ![WeChat Work Group](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)

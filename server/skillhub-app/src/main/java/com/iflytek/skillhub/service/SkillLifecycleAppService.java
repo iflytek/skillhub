@@ -154,7 +154,8 @@ public class SkillLifecycleAppService {
                 skillVersion.getVersion(),
                 targetVersion,
                 userId,
-                normalizeRoles(userNamespaceRoles)
+                normalizeRoles(userNamespaceRoles),
+                request.confirmWarnings()
         );
         auditLogService.record(
                 userId,

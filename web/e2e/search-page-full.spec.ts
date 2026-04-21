@@ -39,12 +39,11 @@ test.describe('Search Input (Real API)', () => {
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 10_000 })
   })
 
-  // TC_SEARCH_INPUT_003 P0 - empty search guidance
-  test('TC_SEARCH_INPUT_003: empty search shows keyword guidance instead of a default list', async ({ page }) => {
+  // TC_SEARCH_INPUT_003 P0 - empty search shows the default discovery list
+  test('TC_SEARCH_INPUT_003: empty search shows the default discovery list', async ({ page }) => {
     await page.goto(searchUrl(''))
     await expect(page).toHaveURL(/\/search/)
-    await expect(page.getByRole('heading', { name: 'No results found' })).toBeVisible()
-    await expect(page.getByText('Please enter a search keyword')).toBeVisible()
+    await expect(getSearchCards(page).first()).toBeVisible({ timeout: 10_000 })
   })
 
   // TC_SEARCH_INPUT_004 P0 - Enter key triggers search

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -16,6 +17,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.namespace.NamespaceType;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.MemberResponse;
@@ -69,6 +71,39 @@ class NamespacePortalQueryAppServiceTest {
         assertThat(response.get(0).currentUserRole()).isEqualTo(NamespaceRole.OWNER);
         assertThat(response.get(1).slug()).isEqualTo("zeta");
         assertThat(response.get(1).currentUserRole()).isEqualTo(NamespaceRole.ADMIN);
+    }
+
+    @Test
+    void listNamespaces_returnsOnlyCurrentUsersActiveNamespaces() {
+        Namespace teamA = namespace(1L, "team-a");
+        Namespace teamB = namespace(2L, "team-b");
+        Namespace archived = namespace(3L, "archived");
+        archived.setStatus(NamespaceStatus.ARCHIVED);
+
+        when(namespaceRepository.findByIdIn(anyList())).thenReturn(List.of(teamB, archived, teamA));
+
+        var response = service.listNamespaces(
+                PageRequest.of(0, 10),
+                Map.of(
+                        1L, NamespaceRole.MEMBER,
+                        2L, NamespaceRole.ADMIN,
+                        3L, NamespaceRole.OWNER
+                )
+        );
+
+        assertThat(response.items()).hasSize(2);
+        assertThat(response.items().get(0).slug()).isEqualTo("team-a");
+        assertThat(response.items().get(1).slug()).isEqualTo("team-b");
+    }
+
+    @Test
+    void getNamespace_throwsWhenCurrentUserIsNotNamespaceMember() {
+        Namespace namespace = namespace(1L, "team-a");
+        when(namespaceService.getNamespaceBySlugForRead("team-a", "user-1", Map.of()))
+                .thenReturn(namespace);
+
+        assertThatThrownBy(() -> service.getNamespace("team-a", "user-1", Map.of()))
+                .isInstanceOf(DomainForbiddenException.class);
     }
 
     private Namespace namespace(Long id, String slug) {
