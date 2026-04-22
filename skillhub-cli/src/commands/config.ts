@@ -2,7 +2,8 @@ import { Command } from "commander";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { success, error, info, dim } from "../utils/logger.js";
+import { success, error, info } from "../utils/logger.js";
+import chalk from "chalk";
 
 const CONFIG_DIR = join(homedir(), ".skillhub");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
@@ -133,46 +134,60 @@ export function registerConfig(program: Command) {
     .command("show-env-instructions")
     .description("Show how to set SKILLHUB_REGISTRY environment variable")
     .action(() => {
-      info(`${yellow("Environment variable setup for SKILLHUB_REGISTRY:\n")}`);
+      const lines: string[] = [];
 
-      info(`${cyan("🔹 Temporary (current session only):")}\n`);
+      lines.push(yellow("Environment variable setup for SKILLHUB_REGISTRY:"));
+      lines.push("");
 
-      info(`  ${green("Linux/macOS:")}`);
-      info(`    ${cyan(`export SKILLHUB_REGISTRY="http://<skillhub-ip>:<backend-port>"`)}`);
-      info(`    ${dim("# Example: export SKILLHUB_REGISTRY=\"http://192.168.1.100:8080\"")}\n`);
+      lines.push(cyan("🔹 Temporary (current session only):"));
+      lines.push("");
 
-      info(`  ${green("Windows CMD:")}`);
-      info(`    ${cyan(`set SKILLHUB_REGISTRY=http://<skillhub-ip>:<backend-port>`)}`);
-      info(`    ${dim("# Example: set SKILLHUB_REGISTRY=http://192.168.1.100:8080")}\n`);
+      lines.push(`  ${green("Linux/macOS:")}`);
+      lines.push(`    ${cyan('export SKILLHUB_REGISTRY="http://<skillhub-ip>:<backend-port>"')}`);
+      lines.push(`    ${chalk.dim("# Example: export SKILLHUB_REGISTRY=\"http://192.168.1.100:8080\"")}`);
+      lines.push("");
 
-      info(`  ${green("Windows PowerShell:")}`);
-      info(`    ${cyan(`$env:SKILLHUB_REGISTRY="http://<skillhub-ip>:<backend-port>"`)}`);
-      info(`    ${dim("# Example: $env:SKILLHUB_REGISTRY='http://192.168.1.100:8080'")}\n`);
+      lines.push(`  ${green("Windows CMD:")}`);
+      lines.push(`    ${cyan("set SKILLHUB_REGISTRY=http://<skillhub-ip>:<backend-port>")}`);
+      lines.push(`    ${chalk.dim("# Example: set SKILLHUB_REGISTRY=http://192.168.1.100:8080")}`);
+      lines.push("");
 
-      info(`${cyan("🔹 Permanent (survives terminal restart):")}\n`);
+      lines.push(`  ${green("Windows PowerShell:")}`);
+      lines.push(`    ${cyan('$env:SKILLHUB_REGISTRY="http://<skillhub-ip>:<backend-port>"')}`);
+      lines.push(`    ${chalk.dim("# Example: $env:SKILLHUB_REGISTRY='http://192.168.1.100:8080'")}`);
+      lines.push("");
 
-      info(`  ${green("Linux/macOS (~/.bashrc or ~/.zshrc):")}`);
-      info(`    ${cyan(`echo 'export SKILLHUB_REGISTRY="http://<ip>:<port>"' >> ~/.bashrc`)}`);
-      info(`    ${cyan(`source ~/.bashrc`)}`);
-      info(`    ${dim("# Add to ~/.bashrc for bash, ~/.zshrc for zsh")}\n`);
+      lines.push(cyan("🔹 Permanent (survives terminal restart):"));
+      lines.push("");
 
-      info(`  ${green("Windows (User environment variable):")}`);
-      info(`    ${cyan(`setx SKILLHUB_REGISTRY "http://<skillhub-ip>:<backend-port>"`)}`);
-      info(`    ${dim("# Restart terminal after running this command")}\n`);
+      lines.push(`  ${green("Linux/macOS (~/.bashrc or ~/.zshrc):")}`);
+      lines.push(`    ${cyan('echo \'export SKILLHUB_REGISTRY="http://<ip>:<port>"\' >> ~/.bashrc')}`);
+      lines.push(`    ${cyan("source ~/.bashrc")}`);
+      lines.push(`    ${chalk.dim("# Add to ~/.bashrc for bash, ~/.zshrc for zsh")}`);
+      lines.push("");
 
-      info(`  ${green("PowerShell (User profile):")}`);
-      info(`    ${cyan(`[System.Environment]::SetEnvironmentVariable('SKILLHUB_REGISTRY', 'http://<ip>:<port>', 'User')`)}`);
-      info(`    ${dim("# Restart PowerShell after running this command")}\n`);
+      lines.push(`  ${green("Windows (User environment variable):")}`);
+      lines.push(`    ${cyan('setx SKILLHUB_REGISTRY "http://<skillhub-ip>:<backend-port>"')}`);
+      lines.push(`    ${chalk.dim("# Restart terminal after running this command")}`);
+      lines.push("");
 
-      info(`${cyan("📋 Configuration priority (highest to lowest):")}`);
-      info(`    1. ${green("--registry flag")} (one-time, per command)`);
-      info(`    2. ${green("SKILLHUB_REGISTRY")} (environment variable)`);
-      info(`    3. ${green("~/.skillhub/config.json")} (config file)`);
-      info(`    4. ${dim("http://localhost:8080")} (default)\n`);
+      lines.push(`  ${green("PowerShell (User profile):")}`);
+      lines.push(`    ${cyan("[System.Environment]::SetEnvironmentVariable('SKILLHUB_REGISTRY', 'http://<ip>:<port>', 'User')")}`);
+      lines.push(`    ${chalk.dim("# Restart PowerShell after running this command")}`);
+      lines.push("");
 
-      info(`${cyan("💡 Quick examples:")}`);
-      info(`    skillhub config set registry http://192.168.1.100:8080`);
-      info(`    skillhub --registry http://192.168.1.100:8080 explore`);
-      info(`    skillhub config list\n`);
+      lines.push(cyan("📋 Configuration priority (highest to lowest):"));
+      lines.push(`    1. ${green("--registry flag")} (one-time, per command)`);
+      lines.push(`    2. ${green("SKILLHUB_REGISTRY")} (environment variable)`);
+      lines.push(`    3. ${green("~/.skillhub/config.json")} (config file)`);
+      lines.push(`    4. ${chalk.dim("http://localhost:8080")} (default)`);
+      lines.push("");
+
+      lines.push(cyan("💡 Quick examples:"));
+      lines.push(`    skillhub config set http://192.168.1.100:8080`);
+      lines.push(`    skillhub --registry http://192.168.1.100:8080 explore`);
+      lines.push(`    skillhub config list`);
+
+      console.log(lines.join("\n"));
     });
 }
