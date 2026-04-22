@@ -49,6 +49,14 @@ function buildTopLevelHelp(version: string): string {
   sections.push(dim("CLI for SkillHub — publish, search, and manage agent skills"));
   sections.push("");
 
+  sections.push(formatSection("Configuration", [
+    { cmd: "config list", desc: "Show current registry configuration" },
+    { cmd: "config set <key> <value>", desc: "Set configuration (e.g., registry URL)" },
+    { cmd: "config get <key>", desc: "Get configuration value" },
+    { cmd: "config show-env-instructions", desc: "Show environment variable setup guide" },
+  ]));
+  sections.push("");
+
   sections.push(formatSection("Auth", [
     { cmd: "login", desc: "Authenticate with SkillHub registry" },
     { cmd: "logout", desc: "Remove stored authentication token" },
@@ -99,14 +107,6 @@ function buildTopLevelHelp(version: string): string {
     { cmd: "hide <slug>", desc: "Hide a skill (admin only)" },
     { cmd: "unhide <slug>", desc: "Unhide a skill (admin only)" },
     { cmd: "transfer <ns> <user>", desc: "Transfer namespace ownership" },
-  ]));
-  sections.push("");
-
-  sections.push(formatSection("Configuration", [
-    { cmd: "config list", desc: "Show current registry configuration" },
-    { cmd: "config set <key> <value>", desc: "Set configuration (e.g., registry URL)" },
-    { cmd: "config get <key>", desc: "Get configuration value" },
-    { cmd: "config show-env-instructions", desc: "Show environment variable setup guide" },
   ]));
   sections.push("");
 

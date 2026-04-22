@@ -19,7 +19,7 @@ export function registerConfig(program: Command) {
 
   configCmd
     .command("list")
-    .description("List current configuration")
+    .description("List all configuration sources and their values")
     .action(() => {
       const env = process.env.SKILLHUB_REGISTRY;
       let fileConfig: { registry?: string } = {};
@@ -54,54 +54,77 @@ export function registerConfig(program: Command) {
     });
 
   configCmd
-    .command("set <key> <value>")
-    .description("Set a configuration value (stored in ~/.skillhub/config.json)")
-    .action((key: string, value: string) => {
-      if (key === "registry") {
-        if (!existsSync(CONFIG_DIR)) {
-          mkdirSync(CONFIG_DIR, { recursive: true });
-        }
-
-        let config: Record<string, string> = {};
-        if (existsSync(CONFIG_FILE)) {
-          try {
-            config = JSON.parse(readFileSync(CONFIG_FILE, "utf-8"));
-          } catch {
-            // Invalid config file, start fresh
-          }
-        }
-
-        config.registry = value;
-        writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-        success(`Registry set to: ${value}`);
-        info(`Config file: ${CONFIG_FILE}`);
-        info(`\n💡 You can also use environment variable for current session:`);
-        info(`   ` + cyan(`export SKILLHUB_REGISTRY="${value}"`));
-        info(`\n💡 Or use --registry flag for one-time override:`);
-        info(`   ` + cyan(`skillhub --registry ${value} <command>`));
-      } else {
-        error(`Unknown config key: ${key}. Supported keys: registry`);
-        process.exitCode = 1;
+    .command("set <value>")
+    .description("Set registry URL in ~/.skillhub/config.json")
+    .action((value: string) => {
+      if (!existsSync(CONFIG_DIR)) {
+        mkdirSync(CONFIG_DIR, { recursive: true });
       }
+
+      let config: Record<string, string> = {};
+      if (existsSync(CONFIG_FILE)) {
+        try {
+          config = JSON.parse(readFileSync(CONFIG_FILE, "utf-8"));
+        } catch {
+          // Invalid config file, start fresh
+        }
+      }
+
+      config.registry = value;
+      writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+      success(`Registry set to: ${value}`);
+      info(`Config file: ${CONFIG_FILE}`);
     });
 
   configCmd
-    .command("get <key>")
-    .description("Get a configuration value")
-    .action((key: string) => {
-      if (key === "registry") {
-        const value = process.env.SKILLHUB_REGISTRY ||
-          (existsSync(CONFIG_FILE) ? (() => {
+    .command("get")
+    .description("Get registry configuration value")
+    .option("--source <source>", "Source: env, file, or resolved (default)")
+    .action((opts: { source?: string }) => {
+      const source = opts.source || "resolved";
+      const envValue = process.env.SKILLHUB_REGISTRY;
+      const fileValue = existsSync(CONFIG_FILE)
+        ? (() => {
             try {
               return JSON.parse(readFileSync(CONFIG_FILE, "utf-8")).registry;
             } catch {
               return null;
             }
-          })() : null) ||
-          "http://localhost:8080";
+          })()
+        : null;
+
+      if (source === "env") {
+        if (envValue) {
+          success(envValue);
+          dim("Source: environment variable");
+        } else {
+          dim("Environment variable SKILLHUB_REGISTRY is not set");
+          process.exitCode = 1;
+        }
+      } else if (source === "file") {
+        if (fileValue) {
+          success(fileValue);
+          dim("Source: config file");
+        } else {
+          dim("Config file does not have registry set");
+          process.exitCode = 1;
+        }
+      } else if (source === "resolved") {
+        const defaultValue = "http://localhost:8080";
+        const value = envValue || fileValue || defaultValue;
+        const actualSource = envValue
+          ? "environment variable"
+          : fileValue
+            ? "config file"
+            : "default";
+
         success(value);
+        dim(`Source: ${actualSource}`);
+        if (!envValue) {
+          dim(`To override with env var: export SKILLHUB_REGISTRY="${value}"`);
+        }
       } else {
-        error(`Unknown config key: ${key}. Supported keys: registry`);
+        error(`Unknown source: ${source}. Supported sources: env, file, resolved`);
         process.exitCode = 1;
       }
     });
