@@ -5,6 +5,9 @@ import { loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { parseSkillName } from "../core/skill-name.js";
 import { info, dim, error } from "../utils/logger.js";
+import { searchSkills } from "../core/interactive-search.js";
+import * as p from "@clack/prompts";
+import ora from "ora";
 
 interface SkillDetailResponse {
   id: number;
@@ -161,73 +164,74 @@ export function registerInspect(program: Command) {
         }
       }
 
-      if (targetNamespace) {
+      async function displaySkillDetail(ns: string, skillSlug: string) {
         const detail = await client.get<SkillDetailResponse>(
-          `${ApiRoutes.skillDetail.replace("{namespace}", targetNamespace).replace("{slug}", parsedSlug)}`
+          `${ApiRoutes.skillDetail.replace("{namespace}", ns).replace("{slug}", skillSlug)}`
         );
-        const { versions, tags } = await fetchVersionsAndTags(targetNamespace, parsedSlug);
+        const { versions, tags } = await fetchVersionsAndTags(ns, skillSlug);
         if (isJson) {
-          const output = opts.versions ? { ...detail, versions, tags } : detail;
+          const output = opts.details ? { ...detail, versions, tags } : detail;
           console.log(JSON.stringify(output, null, 2));
         } else {
           printSkillDetail(detail, versions, tags);
         }
+      }
+
+      if (targetNamespace) {
+        await displaySkillDetail(targetNamespace, parsedSlug);
         return;
       }
 
-      const namespaces = await client.get<NamespaceInfo[]>(ApiRoutes.meNamespaces);
+      const spinner = ora(`Searching for ${parsedSlug}`).start();
 
-      if (!namespaces || namespaces.length === 0) {
-        error("No namespaces found. You may need to log in.");
+      try {
+        const results = await searchSkills(client, parsedSlug, 50);
+
+        const seen = new Set<string>();
+        const uniqueResults = results.filter(r => {
+          const key = `${r.namespace}/${r.name}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            return true;
+          }
+          return false;
+        });
+
+        if (uniqueResults.length === 0) {
+          spinner.fail(`Skill not found: ${parsedSlug}`);
+          process.exitCode = 1;
+          return;
+        }
+
+        if (uniqueResults.length === 1) {
+          spinner.stop();
+          const ns = uniqueResults[0].namespace;
+          const name = uniqueResults[0].name;
+          await displaySkillDetail(ns, name);
+          return;
+        }
+
+        spinner.succeed(`Found ${uniqueResults.length} matches for ${parsedSlug}`);
+
+        const selected = await p.select({
+          message: "Select skill to inspect",
+          options: uniqueResults.map((r) => ({
+            value: `${r.namespace}/${r.name}`,
+            label: `${r.namespace}/${r.name}`,
+            hint: r.summary ? r.summary.slice(0, 50) : undefined,
+          })),
+        });
+
+        if (p.isCancel(selected)) {
+          console.log("Cancelled.");
+          return;
+        }
+
+        const [selectedNs, selectedName] = (selected as string).split("/", 2);
+        await displaySkillDetail(selectedNs, selectedName);
+      } catch (e: any) {
+        spinner.fail(e.message);
         process.exitCode = 1;
-        return;
-      }
-
-      const searchPromises = namespaces.map(async (ns) => {
-        try {
-          const detail = await client.get<SkillDetailResponse>(
-            `${ApiRoutes.skillDetail.replace("{namespace}", ns.slug).replace("{slug}", parsedSlug)}`
-          );
-          return { found: true, detail, namespace: ns.slug };
-        } catch {
-          return { found: false, detail: null, namespace: ns.slug };
-        }
-      });
-
-      const results = await Promise.all(searchPromises);
-      const matches = results.filter((r) => r.found && r.detail).map((r) => r.detail!);
-
-      if (matches.length === 0) {
-        error(`Skill not found: ${parsedSlug}`);
-        if (namespaces.length > 1) {
-          dim(`Tried namespaces: ${namespaces.map((n) => n.slug).join(", ")}`);
-        }
-        process.exitCode = 1;
-        return;
-      }
-
-      if (isJson) {
-        if (matches.length === 1) {
-          const { versions, tags } = await fetchVersionsAndTags(matches[0].namespace, matches[0].slug);
-          const output = opts.details ? { ...matches[0], versions, tags } : matches[0];
-          console.log(JSON.stringify(output, null, 2));
-        } else {
-          const outputs = await Promise.all(
-            matches.map(async (m) => {
-              const { versions, tags } = await fetchVersionsAndTags(m.namespace, m.slug);
-              return opts.details ? { ...m, versions, tags } : m;
-            })
-          );
-          console.log(JSON.stringify(outputs, null, 2));
-        }
-      } else if (matches.length === 1) {
-        const { versions, tags } = await fetchVersionsAndTags(matches[0].namespace, matches[0].slug);
-        printSkillDetail(matches[0], versions, tags);
-      } else {
-        for (const detail of matches) {
-          const { versions, tags } = await fetchVersionsAndTags(detail.namespace, detail.slug);
-          printInspectHeader(detail, versions, tags);
-        }
       }
     });
 }

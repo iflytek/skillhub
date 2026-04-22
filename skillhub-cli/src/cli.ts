@@ -68,9 +68,13 @@ function buildTopLevelHelp(version: string): string {
     { cmd: "explore", desc: "Browse or search skills from the registry", alias: "find, find-skills, search" },
     { cmd: "inspect <slug>", desc: "View skill metadata and versions", alias: "info, view" },
     { cmd: "resolve <slug>", desc: "Resolve the latest version of a skill" },
+  ]));
+  sections.push("");
+
+  sections.push(formatSection("Social & Reviews", [
+    { cmd: "star <slug>", desc: "Star or unstar a skill" },
     { cmd: "rating <slug>", desc: "View your rating for a skill" },
     { cmd: "rate <slug> <score>", desc: "Rate a skill (1-5)" },
-    { cmd: "star <slug>", desc: "Star a skill" },
     { cmd: "report <slug>", desc: "Report a skill for review" },
   ]));
   sections.push("");

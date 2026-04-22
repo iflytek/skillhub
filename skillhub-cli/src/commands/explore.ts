@@ -265,7 +265,7 @@ export function registerExplore(program: Command) {
             return;
           }
           info(`\nSelected: ${selected}`);
-          dim("Run: skillhub install " + selected);
+          dim("Run: skillhub install " + selected + " for installation");
           dim("Run: skillhub inspect " + selected + " for details");
           return;
         }
