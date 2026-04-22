@@ -59,6 +59,7 @@ export interface SkillsListResponse {
       downloads?: number;
       stars?: number;
     };
+    ratingAvg?: number;
     latestVersion?: {
       version: string;
     };

@@ -83,14 +83,14 @@ export async function searchSkills(
         summary: s.summary,
         installs: s.stats?.downloads || 0,
         stars: s.stats?.stars || 0,
-        rating: 0,
+        rating: s.ratingAvg || 0,
         updatedAt: s.updatedAt || 0,
       };
     });
     if (sort === "downloads") {
       return skills.sort((a, b) => b.installs - a.installs);
-    } else if (sort === "rating") {
-      return skills.sort((a, b) => b.rating - a.rating || b.stars - a.stars);
+    } else if (sort === "stars") {
+      return skills.sort((a, b) => b.stars - a.stars);
     } else {
       return skills.sort((a, b) => b.updatedAt - a.updatedAt);
     }
@@ -125,8 +125,8 @@ export async function searchSkills(
 
   if (sort === "downloads") {
     return skills.sort((a, b) => b.installs - a.installs);
-  } else if (sort === "rating") {
-    return skills.sort((a, b) => b.rating - a.rating || b.stars - a.stars);
+  } else if (sort === "stars") {
+    return skills.sort((a, b) => b.stars - a.stars);
   } else {
     return skills.sort((a, b) => b.updatedAt - a.updatedAt);
   }

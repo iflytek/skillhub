@@ -32,6 +32,7 @@ interface SkillDetail {
   starCount: number;
   downloadCount: number;
   version: string;
+  ratingAvg?: number;
 }
 
 async function fetchSkillDetail(client: ApiClient, namespace: string, name: string): Promise<SkillDetail | null> {
@@ -220,15 +221,21 @@ export function registerExplore(program: Command) {
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
-    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads (default: interactive mode)")
-    .option("--hot", "Sort by popularity (shorthand for --sort hot)")
+    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads, stars (default: interactive mode)")
+    .option("--hot", "Sort by comprehensive popularity (downloads + stars)")
     .option("--newest", "Sort by newest first (shorthand for --sort newest)")
     .option("--downloads", "Sort by download count (shorthand for --sort downloads)")
-    .action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean }) => {
+    .option("--stars", "Sort by star count (shorthand for --sort stars)")
+    .action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean; stars?: boolean }) => {
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
-      const sortMap: Record<string, string> = { hot: "rating", newest: "newest", downloads: "downloads" };
+      const sortMap: Record<string, string> = { 
+        hot: "hot", 
+        newest: "newest", 
+        downloads: "downloads",
+        stars: "stars"
+      };
       
       // Resolve sort priority: explicit --sort > shorthand flags > default
       let effectiveSort = opts.sort;
@@ -236,12 +243,13 @@ export function registerExplore(program: Command) {
         if (opts.hot) effectiveSort = "hot";
         else if (opts.newest) effectiveSort = "newest";
         else if (opts.downloads) effectiveSort = "downloads";
+        else if (opts.stars) effectiveSort = "stars";
       }
       const apiSort = sortMap[effectiveSort || "newest"] || "newest";
 
       try {
         // Enter interactive mode only if no query AND no sort option (explicit or shorthand)
-        const hasSortOption = opts.sort || opts.hot || opts.newest || opts.downloads;
+        const hasSortOption = opts.sort || opts.hot || opts.newest || opts.downloads || opts.stars;
         if (!query && !hasSortOption) {
           const selected = await runInteractiveSearch(client, "", apiSort);
           if (!selected) {
@@ -277,8 +285,9 @@ export function registerExplore(program: Command) {
           const nsBadge = skill.namespace !== "global" ? ` ${YELLOW}[${skill.namespace}]${RESET}` : "";
           const stars = detail?.starCount ? ` ${YELLOW}⭐ ${detail.starCount}${RESET}` : "";
           const downloads = detail?.downloadCount ? ` ${CYAN}↓ ${formatInstalls(detail.downloadCount)}${RESET}` : "";
+          const rating = detail?.ratingAvg ? ` ${GREEN}★ ${detail.ratingAvg.toFixed(1)}${RESET}` : "";
 
-          console.log(`${TEXT}${skill.name}${RESET}${nsBadge}${stars}${downloads}`);
+          console.log(`${TEXT}${skill.name}${RESET}${nsBadge}${stars}${downloads}${rating}`);
           console.log(`${DIM}└ skillhub install ${skill.namespace}/${skill.name}${RESET}`);
           if (skill.summary) {
             console.log(`${DIM}  ${skill.summary.slice(0, 60)}${RESET}`);
