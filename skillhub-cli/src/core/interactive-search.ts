@@ -22,6 +22,9 @@ export interface SearchSkill {
   version?: string;
   summary?: string;
   installs?: number;
+  stars?: number;
+  rating?: number;
+  updatedAt?: number;
 }
 
 interface SkillDetail {
@@ -56,16 +59,39 @@ async function fetchSkillDetail(client: ApiClient, namespace: string, name: stri
   }
 }
 
+function applyClientSort(skills: SearchSkill[], sort: string): SearchSkill[] {
+  switch (sort) {
+    case "downloads":
+      return skills.sort((a, b) => (b.installs || 0) - (a.installs || 0));
+    case "stars":
+      return skills.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+    case "rating":
+      return skills.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    case "hot":
+      return skills.sort((a, b) => {
+        const hotA = (a.installs || 0) * 0.6 + (a.stars || 0) * 0.4;
+        const hotB = (b.installs || 0) * 0.6 + (b.stars || 0) * 0.4;
+        return hotB - hotA;
+      });
+    case "newest":
+    default:
+      return skills.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }
+}
+
 export async function searchSkills(
   client: ApiClient,
   query: string,
   limit: number = 10,
-  sort?: string
+  apiSort: string = "newest",
+  clientSort?: string
 ): Promise<SearchSkill[]> {
+  const needsClientSort = clientSort && clientSort !== apiSort;
+  
   if (!query) {
     const params = new URLSearchParams({ limit: limit.toString() });
-    if (sort && sort !== "newest") {
-      params.set("sort", sort);
+    if (apiSort && apiSort !== "newest") {
+      params.set("sort", apiSort);
     }
     const result = await client.get<SkillsListResponse>(
       `${ApiRoutes.skills}?${params.toString()}`
@@ -87,18 +113,12 @@ export async function searchSkills(
         updatedAt: s.updatedAt || 0,
       };
     });
-    if (sort === "downloads") {
-      return skills.sort((a, b) => b.installs - a.installs);
-    } else if (sort === "stars") {
-      return skills.sort((a, b) => b.stars - a.stars);
-    } else {
-      return skills.sort((a, b) => b.updatedAt - a.updatedAt);
-    }
+    return needsClientSort ? applyClientSort(skills, clientSort) : applyClientSort(skills, apiSort);
   }
 
   const params = new URLSearchParams({ q: query, limit: limit.toString() });
-  if (sort) {
-    params.set("sort", sort);
+  if (apiSort && apiSort !== "newest") {
+    params.set("sort", apiSort);
   }
   const result = await client.get<SearchResponse>(
     `${ApiRoutes.search}?${params.toString()}`
@@ -123,13 +143,7 @@ export async function searchSkills(
     };
   });
 
-  if (sort === "downloads") {
-    return skills.sort((a, b) => b.installs - a.installs);
-  } else if (sort === "stars") {
-    return skills.sort((a, b) => b.stars - a.stars);
-  } else {
-    return skills.sort((a, b) => b.updatedAt - a.updatedAt);
-  }
+  return needsClientSort ? applyClientSort(skills, clientSort) : applyClientSort(skills, apiSort);
 }
 
 export async function runInteractiveSearch(

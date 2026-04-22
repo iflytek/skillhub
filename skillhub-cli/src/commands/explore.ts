@@ -221,20 +221,23 @@ export function registerExplore(program: Command) {
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
-    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads, stars (default: interactive mode)")
+    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads, stars, rating (default: interactive mode)")
     .option("--hot", "Sort by comprehensive popularity (downloads + stars)")
     .option("--newest", "Sort by newest first (shorthand for --sort newest)")
     .option("--downloads", "Sort by download count (shorthand for --sort downloads)")
     .option("--stars", "Sort by star count (shorthand for --sort stars)")
-    .action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean; stars?: boolean }) => {
+    .option("--rating", "Sort by average rating (shorthand for --sort rating)")
+    .action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean; stars?: boolean; rating?: boolean }) => {
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
-      const sortMap: Record<string, string> = { 
-        hot: "hot", 
-        newest: "newest", 
+      
+      // Backend-supported sorts: newest, downloads, rating
+      // Client-side sorts: hot, stars (fetch with newest, then re-sort)
+      const backendSortMap: Record<string, string> = {
+        newest: "newest",
         downloads: "downloads",
-        stars: "stars"
+        rating: "rating"
       };
       
       // Resolve sort priority: explicit --sort > shorthand flags > default
@@ -244,12 +247,17 @@ export function registerExplore(program: Command) {
         else if (opts.newest) effectiveSort = "newest";
         else if (opts.downloads) effectiveSort = "downloads";
         else if (opts.stars) effectiveSort = "stars";
+        else if (opts.rating) effectiveSort = "rating";
       }
-      const apiSort = sortMap[effectiveSort || "newest"] || "newest";
+      
+      // Determine API sort and client-side re-sort
+      const isClientSort = effectiveSort === "hot" || effectiveSort === "stars";
+      const apiSort = isClientSort ? "newest" : (backendSortMap[effectiveSort || "newest"] || "newest");
+      const clientSort = isClientSort ? effectiveSort : undefined;
 
       try {
         // Enter interactive mode only if no query AND no sort option (explicit or shorthand)
-        const hasSortOption = opts.sort || opts.hot || opts.newest || opts.downloads || opts.stars;
+        const hasSortOption = opts.sort || opts.hot || opts.newest || opts.downloads || opts.stars || opts.rating;
         if (!query && !hasSortOption) {
           const selected = await runInteractiveSearch(client, "", apiSort);
           if (!selected) {
@@ -261,7 +269,7 @@ export function registerExplore(program: Command) {
           return;
         }
 
-        const results = await searchSkills(client, query || "", parseInt(opts.limit, 10), apiSort);
+        const results = await searchSkills(client, query || "", parseInt(opts.limit, 10), apiSort, clientSort);
 
         if (results.length === 0) {
           console.log(`${DIM}No skills found${RESET}`);
