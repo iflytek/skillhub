@@ -34,7 +34,15 @@ export function registerReport(program: Command) {
         });
         success(`Report submitted for ${skillSlug}`);
       } catch (e: any) {
-        error(`Failed: ${e.message}`);
+        const status = e.status || e.statusCode;
+        if (status === 404) {
+          error(`Skill not found: ${namespace}/${skillSlug}`);
+          if (!slug.includes("/")) {
+            dim("Tip: Use namespace/skill-name format, e.g., vision2group/docker-build-push");
+          }
+        } else {
+          error(`Failed: ${e.message}`);
+        }
         process.exitCode = 1;
       }
     });

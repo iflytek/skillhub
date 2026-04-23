@@ -3,10 +3,10 @@ import { createWriteStream } from "node:fs";
 import { resolve } from "node:path";
 import { finished } from "node:stream/promises";
 import { ApiClient } from "../core/api-client.js";
-import { ApiRoutes } from "../schema/routes.js";
-import { loadConfig, loadConfigFromProgram } from "../core/config.js";
+import { loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { success, error } from "../utils/logger.js";
+import * as p from "@clack/prompts";
 
 import ora from "ora";
 
@@ -57,8 +57,7 @@ export function registerDownload(program: Command) {
   downloadCmd.helpInformation = () => buildDownloadHelp(downloadCmd);
 
   downloadCmd.action(async (slug: string, opts: Record<string, string>) => {
-      const { parseSkillNamespace } = await import("../core/skill-resolver.js");
-      const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
+      const { resolveSkillNamespace, parseSkillNamespace } = await import("../core/skill-resolver.js");
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
@@ -66,14 +65,90 @@ export function registerDownload(program: Command) {
       const outputDir = opts.output ? resolve(process.cwd(), opts.output) : process.cwd();
 
       try {
+        let namespace: string;
+        let skillSlug: string;
+
+        if (opts.namespace || slug.includes("/")) {
+          const parsed = parseSkillNamespace(slug, opts.namespace);
+          namespace = parsed.namespace;
+          skillSlug = parsed.slug;
+        } else {
+          const spinner = ora(`Searching for ${slug}`).start();
+          try {
+            const resolved = await resolveSkillNamespace(client, slug);
+            namespace = resolved.namespace;
+            skillSlug = resolved.slug;
+            spinner.succeed(`Found ${namespace}/${skillSlug}`);
+          } catch (e: any) {
+            spinner.fail(e.message);
+            process.exitCode = 1;
+            return;
+          }
+        }
+
         const spinner = ora(`Downloading ${skillSlug} from ${namespace}`).start();
 
-        let downloadUrl = `${ApiRoutes.skillDownload.replace("{namespace}", namespace).replace("{slug}", skillSlug)}`;
+        let selectedVersion: string;
         if (opts.skillVersion) {
-          downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/versions/${opts.skillVersion}/download`;
-        } else if (opts.tag) {
-          downloadUrl = `/api/v1/skills/${namespace}/${skillSlug}/tags/${opts.tag}/download`;
+          selectedVersion = opts.skillVersion;
+        } else if (opts.tag && opts.tag !== "latest") {
+          spinner.text = `Resolving tag ${opts.tag}`;
+          try {
+            const tagsResp = await client.get<Array<{ tagName: string; version: string }>>(
+              `/api/v1/skills/${namespace}/${skillSlug}/tags`
+            );
+            const tags = tagsResp || [];
+            const matchedTag = tags.find((t) => t.tagName === opts.tag);
+            if (matchedTag) {
+              selectedVersion = matchedTag.version;
+            } else {
+              spinner.fail(`Tag not found: ${opts.tag}`);
+              process.exitCode = 1;
+              return;
+            }
+          } catch (e: any) {
+            spinner.fail(`Failed to fetch tags: ${e.message}`);
+            process.exitCode = 1;
+            return;
+          }
+        } else {
+          spinner.stop();
+          try {
+            const versionsResp = await client.get<{ items: Array<{ version: string; publishedAt: string }> }>(
+              `/api/v1/skills/${namespace}/${skillSlug}/versions`
+            );
+            const versions = versionsResp.items || [];
+            if (versions.length === 0) {
+              error(`No versions found for ${namespace}/${skillSlug}`);
+              process.exitCode = 1;
+              return;
+            }
+            if (versions.length === 1) {
+              selectedVersion = versions[0].version;
+            } else {
+              const picked = await p.select({
+                message: "Select version to download",
+                options: versions.map((v) => ({
+                  value: v.version,
+                  label: `v${v.version}`,
+                  hint: new Date(v.publishedAt).toLocaleDateString(),
+                })),
+              });
+              if (p.isCancel(picked)) {
+                console.log("Cancelled.");
+                return;
+              }
+              selectedVersion = picked as string;
+            }
+            spinner.start(`Downloading ${skillSlug}@${selectedVersion}`);
+          } catch (e: any) {
+            error(`Failed to fetch versions: ${e.message}`);
+            process.exitCode = 1;
+            return;
+          }
         }
+
+        const downloadUrl = `${config.registry.replace(/\/$/, "")}/api/v1/skills/${namespace}/${skillSlug}/versions/${selectedVersion}/download`;
 
         const { request } = await import("undici");
         const url = new URL(downloadUrl, config.registry);
@@ -86,6 +161,7 @@ export function registerDownload(program: Command) {
           if (!location) {
             spinner.fail(`Redirect response has no Location header`);
             process.exitCode = 1;
+            return;
           }
           response = await request(location as string, { method: "GET" });
         }
@@ -94,6 +170,7 @@ export function registerDownload(program: Command) {
         if (statusCode >= 400) {
           spinner.fail(`Download failed: HTTP ${statusCode}`);
           process.exitCode = 1;
+          return;
         }
 
         const outPath = resolve(outputDir, `${skillSlug}.zip`);
