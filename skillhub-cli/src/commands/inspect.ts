@@ -142,8 +142,8 @@ export function registerInspect(program: Command) {
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--namespace <ns>", "Search in specific namespace (searches all if not specified)")
     .option("--details", "Show all versions with tags")
-    .option("-v, --version <ver>", "Inspect specific version")
-    .action(async (slug: string, opts: { namespace?: string; details?: boolean; version?: string }) => {
+    .option("-v, --skill-version <ver>", "Inspect specific version")
+    .action(async (slug: string, opts: { namespace?: string; details?: boolean; skillVersion?: string }) => {
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
@@ -244,69 +244,69 @@ export function registerInspect(program: Command) {
       }
 
       if (targetNamespace) {
-        if (opts.version) {
-          await displaySkillDetail(targetNamespace, parsedSlug, opts.version);
+      if (opts.skillVersion) {
+        await displaySkillDetail(targetNamespace, parsedSlug, opts.skillVersion);
+      } else {
+        await inspectWithVersionSelection(targetNamespace, parsedSlug);
+      }
+      return;
+    }
+
+    const spinner = ora(`Searching for ${parsedSlug}`).start();
+
+    try {
+      const results = await searchSkills(client, parsedSlug, 50);
+
+      const seen = new Set<string>();
+      const uniqueResults = results.filter(r => {
+        const key = `${r.namespace}/${r.name}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          return true;
+        }
+        return false;
+      });
+
+      if (uniqueResults.length === 0) {
+        spinner.fail(`Skill not found: ${parsedSlug}`);
+        process.exitCode = 1;
+        return;
+      }
+
+      if (uniqueResults.length === 1) {
+        spinner.stop();
+        const ns = uniqueResults[0].namespace;
+        const name = uniqueResults[0].name;
+        if (opts.skillVersion) {
+          await displaySkillDetail(ns, name, opts.skillVersion);
         } else {
-          await inspectWithVersionSelection(targetNamespace, parsedSlug);
+          await inspectWithVersionSelection(ns, name);
         }
         return;
       }
 
-      const spinner = ora(`Searching for ${parsedSlug}`).start();
+      spinner.succeed(`Found ${uniqueResults.length} matches for ${parsedSlug}`);
 
-      try {
-        const results = await searchSkills(client, parsedSlug, 50);
+      const selected = await p.select({
+        message: "Select skill to inspect",
+        options: uniqueResults.map((r) => ({
+          value: `${r.namespace}/${r.name}`,
+          label: `${r.namespace}/${r.name}`,
+          hint: r.summary ? r.summary.slice(0, 50) : undefined,
+        })),
+      });
 
-        const seen = new Set<string>();
-        const uniqueResults = results.filter(r => {
-          const key = `${r.namespace}/${r.name}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            return true;
-          }
-          return false;
-        });
+      if (p.isCancel(selected)) {
+        console.log("Cancelled.");
+        return;
+      }
 
-        if (uniqueResults.length === 0) {
-          spinner.fail(`Skill not found: ${parsedSlug}`);
-          process.exitCode = 1;
-          return;
-        }
-
-        if (uniqueResults.length === 1) {
-          spinner.stop();
-          const ns = uniqueResults[0].namespace;
-          const name = uniqueResults[0].name;
-          if (opts.version) {
-            await displaySkillDetail(ns, name, opts.version);
-          } else {
-            await inspectWithVersionSelection(ns, name);
-          }
-          return;
-        }
-
-        spinner.succeed(`Found ${uniqueResults.length} matches for ${parsedSlug}`);
-
-        const selected = await p.select({
-          message: "Select skill to inspect",
-          options: uniqueResults.map((r) => ({
-            value: `${r.namespace}/${r.name}`,
-            label: `${r.namespace}/${r.name}`,
-            hint: r.summary ? r.summary.slice(0, 50) : undefined,
-          })),
-        });
-
-        if (p.isCancel(selected)) {
-          console.log("Cancelled.");
-          return;
-        }
-
-        const [selectedNs, selectedName] = (selected as string).split("/", 2);
-        if (opts.version) {
-          await displaySkillDetail(selectedNs, selectedName, opts.version);
-        } else {
-          await inspectWithVersionSelection(selectedNs, selectedName);
-        }
+      const [selectedNs, selectedName] = (selected as string).split("/", 2);
+      if (opts.skillVersion) {
+        await displaySkillDetail(selectedNs, selectedName, opts.skillVersion);
+      } else {
+        await inspectWithVersionSelection(selectedNs, selectedName);
+      }
       } catch (e: any) {
         spinner.fail(e.message);
         process.exitCode = 1;
