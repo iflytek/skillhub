@@ -210,8 +210,8 @@ function buildInstallHelp(cmd: Command): string {
   lines.push("");
 
   lines.push(chalk.bold("Source Options:"));
-  lines.push(`  ${chalk.cyan("-a, --add <source>")}        Install from GitHub or local path`);
-  lines.push(`  ${chalk.cyan("--from <source>")}           Alias for --add`);
+  lines.push(`  ${chalk.cyan("--from <source>")}           Install from GitHub or local path`);
+  lines.push(`  ${chalk.cyan("-a, --add <source>")}        Alias for --from`);
   lines.push("");
 
   lines.push(chalk.bold("Target Options:"));
@@ -250,8 +250,8 @@ export function registerInstall(program: Command) {
     .alias("i")
     .description("Install skills from registry, git repositories, or local paths")
     .argument("<skill>", "Skill name or namespace/skill-name from registry")
-    .option("-a, --add <source>", "Install from GitHub or local path")
-    .option("--from <source>", "Alias for --add")
+    .option("--from <source>", "Install from GitHub or local path")
+    .option("-a, --add <source>", "Alias for --from")
     .option("--agent <agents...>", "Target specific agents")
     .option("-g, --global", "Install to global scope")
     .option("-y, --yes", "Skip all prompts")

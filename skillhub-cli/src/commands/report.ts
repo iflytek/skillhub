@@ -4,17 +4,17 @@ import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
 import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { success, error } from "../utils/logger.js";
-import { parseSkillName } from "../core/skill-name.js";
-
 export function registerReport(program: Command) {
   program
     .command("report")
     .description("Report a skill for review")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--reason <reason>", "Report reason")
-    .action(async (slug: string, opts: { reason?: string }) => {
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
+    .action(async (slug: string, opts: { reason?: string; namespace?: string }) => {
       try {
-        const { namespace, slug: skillSlug } = parseSkillName(slug);
+        const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+        const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });

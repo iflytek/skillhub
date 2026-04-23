@@ -3,16 +3,16 @@ import { ApiClient } from "../core/api-client.js";
 import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { requireToken } from "../core/auth-token.js";
 import { success, error, info, dim } from "../utils/logger.js";
-import { parseSkillName } from "../core/skill-name.js";
-
 export function registerRating(program: Command) {
   program
     .command("rating")
     .description("View your rating for a skill")
     .argument("<skill>", "Skill name or namespace/skill-name")
-    .action(async (slug: string) => {
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
+    .action(async (slug: string, opts: { namespace?: string }) => {
       try {
-        const { namespace, slug: skillSlug } = parseSkillName(slug);
+        const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+        const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
@@ -44,7 +44,8 @@ export function registerRate(program: Command) {
     .description("Rate a skill (1-5)")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .argument("<score>", "Rating score (1-5)")
-    .action(async (slug: string, scoreStr: string) => {
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
+    .action(async (slug: string, scoreStr: string, opts: { namespace?: string }) => {
       const score = parseInt(scoreStr, 10);
       if (isNaN(score) || score < 1 || score > 5) {
         error("Score must be between 1 and 5");
@@ -52,7 +53,8 @@ export function registerRate(program: Command) {
       }
 
       try {
-        const { namespace, slug: skillSlug } = parseSkillName(slug);
+        const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+        const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });

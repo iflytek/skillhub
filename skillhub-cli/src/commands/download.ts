@@ -7,19 +7,58 @@ import { ApiRoutes } from "../schema/routes.js";
 import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
 import { success, error } from "../utils/logger.js";
-import { parseSkillName } from "../core/skill-name.js";
+
 import ora from "ora";
 
+function buildDownloadHelp(cmd: Command): string {
+  const lines: string[] = [];
+  const BOLD = "\x1b[1m";
+  const RESET = "\x1b[0m";
+  const CYAN = "\x1b[36m";
+  const DIM = "\x1b[38;5;102m";
+
+  lines.push(`${BOLD}Usage:${RESET} skillhub download [options] <skill>`);
+  lines.push("");
+  lines.push("Download a skill package as a .zip file");
+  lines.push("");
+
+  lines.push(`${BOLD}Arguments:${RESET}`);
+  lines.push(`  ${CYAN}skill${RESET}                      Skill name or namespace/skill-name`);
+  lines.push("");
+
+  lines.push(`${BOLD}Options:${RESET}`);
+  lines.push(`  ${CYAN}-v, --skill-version <ver>${RESET}  Specific version to download`);
+  lines.push(`  ${CYAN}--tag <tag>${RESET}                Tag to download (default: "latest")`);
+  lines.push(`  ${CYAN}--output <dir>${RESET}             Output directory (default: current directory)`);
+  lines.push(`  ${CYAN}--namespace <ns>${RESET}           Override namespace (default: parsed from skill or 'global')`);
+  lines.push(`  ${CYAN}-h, --help${RESET}                 Display help for command`);
+  lines.push("");
+
+  lines.push(`${BOLD}Examples:${RESET}`);
+  lines.push(`${DIM}  skillhub download docker-build-push${RESET}`);
+  lines.push(`${DIM}  skillhub download vision2group/docker-build-push${RESET}`);
+  lines.push(`${DIM}  skillhub download docker-build-push --output ./skills${RESET}`);
+  lines.push(`${DIM}  skillhub download docker-build-push --skill-version 1.0.0${RESET}`);
+  lines.push(`${DIM}  skillhub download docker-build-push --tag v1.0.0${RESET}`);
+
+  return lines.join("\n");
+}
+
 export function registerDownload(program: Command) {
-  program
+  const downloadCmd = program
     .command("download")
-    .description("Download a skill package to local directory")
+    .description("Download a skill package as a .zip file")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-v, --skill-version <ver>", "Specific version")
     .option("--tag <tag>", "Tag to download", "latest")
     .option("--output <dir>", "Output directory")
-    .action(async (slug: string, opts: Record<string, string>) => {
-      const { namespace, slug: skillSlug } = parseSkillName(slug);
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')");
+
+  downloadCmd.helpInformation = () => buildDownloadHelp(downloadCmd);
+
+  downloadCmd.action(async (slug: string, opts: Record<string, string>) => {
+      const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+      const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });

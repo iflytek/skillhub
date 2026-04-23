@@ -3,7 +3,7 @@ import { ApiClient } from "../core/api-client.js";
 import { ApiRoutes } from "../schema/routes.js";
 import { loadConfigFromProgram } from "../core/config.js";
 import { readToken } from "../core/auth-token.js";
-import { parseSkillName } from "../core/skill-name.js";
+
 import { info, dim, error } from "../utils/logger.js";
 import { searchSkills } from "../core/interactive-search.js";
 import * as p from "@clack/prompts";
@@ -149,8 +149,6 @@ export function registerInspect(program: Command) {
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
 
       const isJson = program.opts().json;
-      const { namespace: defaultNs, slug: parsedSlug } = parseSkillName(slug, "");
-      const targetNamespace = opts.namespace || defaultNs;
 
       async function fetchVersionsAndTags(ns: string, skillSlug: string) {
         try {
@@ -169,16 +167,16 @@ export function registerInspect(program: Command) {
           const detail = await client.get<SkillDetailResponse>(
             `${ApiRoutes.skillDetail.replace("{namespace}", ns).replace("{slug}", skillSlug)}`
           );
-          
+
           const { versions, tags } = await fetchVersionsAndTags(ns, skillSlug);
-          
+
           if (version && versions) {
             const selectedVersion = versions.find(v => v.version === version);
             if (selectedVersion) {
               detail.publishedVersion = { version: selectedVersion.version };
             }
           }
-          
+
           if (isJson) {
             const output = opts.details ? { ...detail, versions, tags } : detail;
             console.log(JSON.stringify(output, null, 2));
@@ -200,22 +198,22 @@ export function registerInspect(program: Command) {
 
       async function inspectWithVersionSelection(ns: string, skillSlug: string) {
         const { versions, tags } = await fetchVersionsAndTags(ns, skillSlug);
-        
+
         if (!versions || versions.length === 0) {
           await displaySkillDetail(ns, skillSlug);
           return;
         }
-        
+
         if (opts.details) {
           await displaySkillDetail(ns, skillSlug);
           return;
         }
-        
+
         if (versions.length === 1) {
           await displaySkillDetail(ns, skillSlug);
           return;
         }
-        
+
         const versionTagsMap = new Map<number, string[]>();
         if (tags) {
           for (const tag of tags) {
@@ -225,7 +223,7 @@ export function registerInspect(program: Command) {
             versionTagsMap.get(tag.versionId)!.push(tag.tagName);
           }
         }
-        
+
         const selected = await p.select({
           message: "Select version to inspect",
           options: versions.map((v) => ({
@@ -234,82 +232,22 @@ export function registerInspect(program: Command) {
             hint: versionTagsMap.get(v.id)?.join(", ") || "",
           })),
         });
-        
+
         if (p.isCancel(selected)) {
           console.log("Cancelled.");
           return;
         }
-        
+
         await displaySkillDetail(ns, skillSlug, selected as string);
       }
 
-      if (targetNamespace) {
+      const { resolveSkillNamespace } = await import("../core/skill-resolver.js");
+      const { namespace: targetNamespace, slug: parsedSlug } = await resolveSkillNamespace(client, slug, opts.namespace);
+
       if (opts.skillVersion) {
         await displaySkillDetail(targetNamespace, parsedSlug, opts.skillVersion);
       } else {
         await inspectWithVersionSelection(targetNamespace, parsedSlug);
-      }
-      return;
-    }
-
-    const spinner = ora(`Searching for ${parsedSlug}`).start();
-
-    try {
-      const results = await searchSkills(client, parsedSlug, 50);
-
-      const seen = new Set<string>();
-      const uniqueResults = results.filter(r => {
-        const key = `${r.namespace}/${r.name}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          return true;
-        }
-        return false;
-      });
-
-      if (uniqueResults.length === 0) {
-        spinner.fail(`Skill not found: ${parsedSlug}`);
-        process.exitCode = 1;
-        return;
-      }
-
-      if (uniqueResults.length === 1) {
-        spinner.stop();
-        const ns = uniqueResults[0].namespace;
-        const name = uniqueResults[0].name;
-        if (opts.skillVersion) {
-          await displaySkillDetail(ns, name, opts.skillVersion);
-        } else {
-          await inspectWithVersionSelection(ns, name);
-        }
-        return;
-      }
-
-      spinner.succeed(`Found ${uniqueResults.length} matches for ${parsedSlug}`);
-
-      const selected = await p.select({
-        message: "Select skill to inspect",
-        options: uniqueResults.map((r) => ({
-          value: `${r.namespace}/${r.name}`,
-          label: `${r.namespace}/${r.name}`,
-          hint: r.summary ? r.summary.slice(0, 50) : undefined,
-        })),
-      });
-
-      if (p.isCancel(selected)) {
-        console.log("Cancelled.");
-        return;
-      }
-
-      const [selectedNs, selectedName] = (selected as string).split("/", 2);
-      if (opts.skillVersion) {
-        await displaySkillDetail(selectedNs, selectedName, opts.skillVersion);
-      } else {
-        await inspectWithVersionSelection(selectedNs, selectedName);
-      }
-      } catch (e: any) {
-        spinner.fail(e.message);
-        process.exitCode = 1;
       }
     });
 }

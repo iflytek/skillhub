@@ -49,9 +49,11 @@ export function registerResolve(program: Command) {
     .option("-v, --skill-version <ver>", "Specific version")
     .option("--tag <tag>", "Tag to resolve (default: latest, ignored if --skill-version)")
     .option("--hash <hash>", "Content hash")
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
     .action(async (slug: string, opts: Record<string, string>) => {
       try {
-        const { namespace, slug: skillSlug } = parseSkillName(slug);
+        const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+        const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
         const config = loadConfigFromProgram(program);
         const token = await readToken();
         const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });

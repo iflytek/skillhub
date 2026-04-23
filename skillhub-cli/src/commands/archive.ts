@@ -3,16 +3,16 @@ import { ApiClient } from "../core/api-client.js";
 import { requireToken } from "../core/auth-token.js";
 import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { success, error } from "../utils/logger.js";
-import { parseSkillName } from "../core/skill-name.js";
-
 export function registerArchive(program: Command) {
   program
     .command("archive")
     .description("Archive a skill you own")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
-    .action(async (slug: string, opts: { yes?: boolean }) => {
-      const { namespace, slug: skillSlug } = parseSkillName(slug);
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
+    .action(async (slug: string, opts: { yes?: boolean; namespace?: string }) => {
+      const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+      const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
       if (!opts.yes) {
         const { createInterface } = await import("node:readline");
         const rl = createInterface({ input: process.stdin, output: process.stdout });

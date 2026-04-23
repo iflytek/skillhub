@@ -4,7 +4,7 @@ import { ApiRoutes } from "../schema/routes.js";
 import { requireToken } from "../core/auth-token.js";
 import { loadConfig, loadConfigFromProgram } from "../core/config.js";
 import { success, error } from "../utils/logger.js";
-import { parseSkillName } from "../core/skill-name.js";
+
 
 export function registerStar(program: Command) {
   program
@@ -12,9 +12,11 @@ export function registerStar(program: Command) {
     .description("Star a skill")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--unstar", "Remove star")
-    .action(async (slug: string, opts: { unstar: boolean }) => {
+    .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
+    .action(async (slug: string, opts: { unstar: boolean; namespace?: string }) => {
       try {
-        const { namespace, slug: skillSlug } = parseSkillName(slug);
+        const { parseSkillNamespace } = await import("../core/skill-resolver.js");
+        const { namespace, slug: skillSlug } = parseSkillNamespace(slug, opts.namespace);
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
         const client = new ApiClient({ baseUrl: config.registry, token });
