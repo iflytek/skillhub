@@ -115,7 +115,6 @@ function FileChangeItem({
   changeType: 'added' | 'removed' | 'modified'
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const { t } = useTranslation()
 
   const Icon = changeType === 'added' ? FilePlus : changeType === 'removed' ? FileMinus : FileEdit
   const iconColor = changeType === 'added' ? 'text-emerald-500' : changeType === 'removed' ? 'text-red-500' : 'text-amber-500'
