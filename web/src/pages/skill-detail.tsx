@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
+import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, FilePlus, FileMinus, FileEdit, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
+import { FileDiffViewer } from '@/features/skill/file-diff-viewer'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
@@ -94,6 +95,64 @@ function getPromotionConflictKey(error: ApiError): 'promotion.duplicate_pending'
     return 'promotion.already_promoted'
   }
   return null
+}
+
+function FileChangeItem({
+  namespace,
+  slug,
+  sourceVersion,
+  targetVersion,
+  filePath,
+  fileSize,
+  changeType,
+}: {
+  namespace: string
+  slug: string
+  sourceVersion: string | null
+  targetVersion: string | null
+  filePath: string
+  fileSize: number
+  changeType: 'added' | 'removed' | 'modified'
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const { t } = useTranslation()
+
+  const Icon = changeType === 'added' ? FilePlus : changeType === 'removed' ? FileMinus : FileEdit
+  const iconColor = changeType === 'added' ? 'text-emerald-500' : changeType === 'removed' ? 'text-red-500' : 'text-amber-500'
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 transition-colors cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        <div className="flex items-center space-x-3 overflow-hidden">
+          <Icon className={cn("w-4 h-4 shrink-0", iconColor)} />
+          <span className="font-mono text-sm truncate">{filePath}</span>
+        </div>
+        <div className="flex items-center space-x-4 shrink-0">
+          <span className="text-xs text-muted-foreground">
+            {(fileSize / 1024).toFixed(1)} KB
+          </span>
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+        </div>
+      </button>
+      {isOpen && (
+        <div className="p-3 pt-0 border-t border-border/40">
+          <FileDiffViewer
+            namespace={namespace}
+            slug={slug}
+            sourceVersion={sourceVersion}
+            targetVersion={targetVersion}
+            filePath={filePath}
+            fileSize={fileSize}
+            changeType={changeType}
+            isExpanded={isOpen}
+          />
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function SkillDetailPage() {
@@ -1520,7 +1579,7 @@ export function SkillDetailPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{t('skillDetail.compareDialogTitle')}</DialogTitle>
             <DialogDescription>
@@ -1529,7 +1588,7 @@ export function SkillDetailPage() {
                 : ''}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-5">
+          <div className="space-y-5 overflow-y-auto pr-2">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="rounded-lg border border-border/60 p-3">
                 <div className="text-muted-foreground">{t('skillDetail.compareSourceLabel')}</div>
@@ -1566,21 +1625,77 @@ export function SkillDetailPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="text-sm font-semibold text-foreground">{t('skillDetail.fileChanges')}</div>
+
+              {/* File stats summary */}
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div className="rounded-lg border border-border/60 p-3">
                   <div className="text-muted-foreground">{t('skillDetail.filesAdded')}</div>
-                  <div className="mt-1 font-semibold text-foreground">{fileDiffSummary.added.length}</div>
+                  <div className="mt-1 font-semibold text-emerald-500">{fileDiffSummary.added.length}</div>
                 </div>
                 <div className="rounded-lg border border-border/60 p-3">
                   <div className="text-muted-foreground">{t('skillDetail.filesRemoved')}</div>
-                  <div className="mt-1 font-semibold text-foreground">{fileDiffSummary.removed.length}</div>
+                  <div className="mt-1 font-semibold text-red-500">{fileDiffSummary.removed.length}</div>
                 </div>
                 <div className="rounded-lg border border-border/60 p-3">
                   <div className="text-muted-foreground">{t('skillDetail.filesChanged')}</div>
-                  <div className="mt-1 font-semibold text-foreground">{fileDiffSummary.changed.length}</div>
+                  <div className="mt-1 font-semibold text-amber-500">{fileDiffSummary.changed.length}</div>
                 </div>
+              </div>
+
+              {/* Detailed file list */}
+              <div className="space-y-2 mt-4">
+                {/* Modified files */}
+                {fileDiffSummary.changed.map(path => {
+                  const file = diffSourceFiles?.find(f => f.filePath === path) || diffCompareFiles?.find(f => f.filePath === path)
+                  return (
+                    <FileChangeItem
+                      key={`changed-${path}`}
+                      namespace={qns}
+                      slug={qslug}
+                      sourceVersion={diffSourceVersion}
+                      targetVersion={diffCompareVersion}
+                      filePath={path}
+                      fileSize={file?.fileSize || 0}
+                      changeType="modified"
+                    />
+                  )
+                })}
+
+                {/* Added files */}
+                {fileDiffSummary.added.map(path => {
+                  const file = diffCompareFiles?.find(f => f.filePath === path)
+                  return (
+                    <FileChangeItem
+                      key={`added-${path}`}
+                      namespace={qns}
+                      slug={qslug}
+                      sourceVersion={diffSourceVersion}
+                      targetVersion={diffCompareVersion}
+                      filePath={path}
+                      fileSize={file?.fileSize || 0}
+                      changeType="added"
+                    />
+                  )
+                })}
+
+                {/* Removed files */}
+                {fileDiffSummary.removed.map(path => {
+                  const file = diffSourceFiles?.find(f => f.filePath === path)
+                  return (
+                    <FileChangeItem
+                      key={`removed-${path}`}
+                      namespace={qns}
+                      slug={qslug}
+                      sourceVersion={diffSourceVersion}
+                      targetVersion={diffCompareVersion}
+                      filePath={path}
+                      fileSize={file?.fileSize || 0}
+                      changeType="removed"
+                    />
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -1595,6 +1710,12 @@ export function SkillDetailPage() {
               {t('dialog.close')}
             </Button>
           </DialogFooter>
+          <style dangerouslySetInnerHTML={{__html: `
+            .diff-viewer-container table {
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+              font-size: 12px;
+            }
+          `}} />
         </DialogContent>
       </Dialog>
 
