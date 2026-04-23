@@ -7,8 +7,9 @@ import { parseSkillName } from "../core/skill-name.js";
 
 export function registerArchive(program: Command) {
   program
-    .command("archive <slug>")
+    .command("archive")
     .description("Archive a skill you own")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
     .action(async (slug: string, opts: { yes?: boolean }) => {
       const { namespace, slug: skillSlug } = parseSkillName(slug);

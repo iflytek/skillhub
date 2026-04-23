@@ -7,8 +7,9 @@ import { parseSkillName } from "../core/skill-name.js";
 
 export function registerRating(program: Command) {
   program
-    .command("rating <slug>")
+    .command("rating")
     .description("View your rating for a skill")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .action(async (slug: string) => {
       try {
         const { namespace, slug: skillSlug } = parseSkillName(slug);
@@ -28,7 +29,7 @@ export function registerRating(program: Command) {
           info(`${skillSlug}: ${"★".repeat(rating.score)}${"☆".repeat(5 - rating.score)} (${rating.score}/5)`);
         } else {
           info(`${skillSlug}: Not rated yet`);
-          dim("Use: skillhub rate <slug> <score>");
+          dim("Use: skillhub rate <skill> <score>");
         }
       } catch (e: any) {
         error(`Failed: ${e.message}`);
@@ -39,8 +40,10 @@ export function registerRating(program: Command) {
 
 export function registerRate(program: Command) {
   program
-    .command("rate <slug> <score>")
+    .command("rate")
     .description("Rate a skill (1-5)")
+    .argument("<skill>", "Skill name or namespace/skill-name")
+    .argument("<score>", "Rating score (1-5)")
     .action(async (slug: string, scoreStr: string) => {
       const score = parseInt(scoreStr, 10);
       if (isNaN(score) || score < 1 || score > 5) {

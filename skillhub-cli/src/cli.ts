@@ -30,14 +30,12 @@ interface HelpEntry {
 }
 
 function formatSection(header: string, entries: HelpEntry[]): string {
-  const displayWidth = (e: HelpEntry) => e.cmd.length + (e.alias ? e.alias.length + 3 : 0);
-  const maxW = entries.reduce((max, e) => Math.max(max, displayWidth(e)), 0);
-  const col = Math.max(maxW + 4, 28);
   const lines = [bold(header)];
+
   for (const e of entries) {
     const aliasPart = e.alias ? dim(` (${e.alias})`) : "";
-    const pad = " ".repeat(Math.max(col - displayWidth(e), 2));
-    lines.push(`  ${cyan(e.cmd)}${aliasPart}${pad}${e.desc}`);
+    lines.push(`  ${cyan(e.cmd)}${aliasPart}`);
+    lines.push(`    ${e.desc}`);
   }
   return lines.join("\n");
 }
@@ -51,8 +49,8 @@ function buildTopLevelHelp(version: string): string {
 
   sections.push(formatSection("Configuration", [
     { cmd: "config list", desc: "Show current registry configuration" },
-    { cmd: "config set <key> <value>", desc: "Set configuration (e.g., registry URL)" },
-    { cmd: "config get <key>", desc: "Get configuration value" },
+    { cmd: "config set <value>", desc: "Set registry URL" },
+    { cmd: "config get", desc: "Get current registry configuration" },
     { cmd: "config show-env-instructions", desc: "Show environment variable setup guide" },
   ]));
   sections.push("");
@@ -64,37 +62,37 @@ function buildTopLevelHelp(version: string): string {
   ]));
   sections.push("");
 
-  sections.push(formatSection("Discover & Info", [
+  sections.push(formatSection("Discovery", [
     { cmd: "explore", desc: "Browse or search skills from the registry", alias: "find, find-skills, search" },
-    { cmd: "inspect <slug>", desc: "View skill metadata and versions", alias: "info, view" },
-    { cmd: "resolve <slug>", desc: "Resolve the latest version of a skill" },
-  ]));
-  sections.push("");
-
-  sections.push(formatSection("Social & Reviews", [
-    { cmd: "star <slug>", desc: "Star or unstar a skill" },
-    { cmd: "rating <slug>", desc: "View your rating for a skill" },
-    { cmd: "rate <slug> <score>", desc: "Rate a skill (1-5)" },
-    { cmd: "report <slug>", desc: "Report a skill for review" },
+    { cmd: "inspect <skill>", desc: "View skill metadata and versions", alias: "info, view" },
+    { cmd: "resolve <skill>", desc: "Resolve the latest version of a skill" },
   ]));
   sections.push("");
 
   sections.push(formatSection("Install & Manage", [
-    { cmd: "install <skill-name>", desc: "Install from registry, git, or local path", alias: "i" },
-    { cmd: "download <slug>", desc: "Download a skill package to local directory" },
-    { cmd: "update [slug]", desc: "Update installed skills from their source", alias: "up" },
-    { cmd: "uninstall [name]", desc: "Uninstall a skill from local agent", alias: "un" },
+    { cmd: "install <skill>", desc: "Install from registry, git, or local path", alias: "i" },
+    { cmd: "download <skill>", desc: "Download a skill package to local directory" },
+    { cmd: "update [skill]", desc: "Update installed skills from their source", alias: "up" },
+    { cmd: "uninstall [skill]", desc: "Uninstall a skill from local agent", alias: "un" },
     { cmd: "list", desc: "List installed skills", alias: "ls" },
     { cmd: "check", desc: "Check installed skills against lock file" },
   ]));
   sections.push("");
 
-  sections.push(formatSection("Publish", [
+  sections.push(formatSection("Social", [
+    { cmd: "star <skill>", desc: "Star or unstar a skill" },
+    { cmd: "rating <skill>", desc: "View your rating for a skill" },
+    { cmd: "rate <skill> <score>", desc: "Rate a skill (1-5)" },
+    { cmd: "report <skill>", desc: "Report a skill for review" },
+  ]));
+  sections.push("");
+
+  sections.push(formatSection("Publish & Manage", [
     { cmd: "init [name]", desc: "Create a new SKILL.md template" },
     { cmd: "publish [path]", desc: "Publish a skill to SkillHub registry" },
     { cmd: "sync [path]", desc: "Scan and publish all skills from a directory" },
-    { cmd: "delete <slug>", desc: "Delete a skill you own", alias: "del, unpublish" },
-    { cmd: "archive <slug>", desc: "Archive a skill you own" },
+    { cmd: "delete <skill>", desc: "Delete a skill you own", alias: "del, unpublish" },
+    { cmd: "archive <skill>", desc: "Archive a skill you own" },
   ]));
   sections.push("");
 
@@ -108,8 +106,8 @@ function buildTopLevelHelp(version: string): string {
   sections.push("");
 
   sections.push(formatSection("Admin", [
-    { cmd: "hide <slug>", desc: "Hide a skill (admin only)" },
-    { cmd: "unhide <slug>", desc: "Unhide a skill (admin only)" },
+    { cmd: "hide <skill>", desc: "Hide a skill (admin only)" },
+    { cmd: "unhide <skill>", desc: "Unhide a skill (admin only)" },
     { cmd: "transfer <ns> <user>", desc: "Transfer namespace ownership" },
   ]));
   sections.push("");

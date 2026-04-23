@@ -8,8 +8,9 @@ import { parseSkillName } from "../core/skill-name.js";
 
 export function registerReport(program: Command) {
   program
-    .command("report <slug>")
+    .command("report")
     .description("Report a skill for review")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--reason <reason>", "Report reason")
     .action(async (slug: string, opts: { reason?: string }) => {
       try {

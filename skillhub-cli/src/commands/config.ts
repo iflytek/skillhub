@@ -20,7 +20,7 @@ export function registerConfig(program: Command) {
 
   configCmd
     .command("list")
-    .description("List all configuration sources and their values")
+    .description("Show all config values and their sources")
     .action(() => {
       const env = process.env.SKILLHUB_REGISTRY;
       let fileConfig: { registry?: string } = {};
@@ -56,7 +56,7 @@ export function registerConfig(program: Command) {
 
   configCmd
     .command("set <value>")
-    .description("Set registry URL in ~/.skillhub/config.json")
+    .description("Set registry URL (e.g., https://api.example.com)")
     .action((value: string) => {
       if (!existsSync(CONFIG_DIR)) {
         mkdirSync(CONFIG_DIR, { recursive: true });
@@ -79,7 +79,7 @@ export function registerConfig(program: Command) {
 
   configCmd
     .command("get")
-    .description("Get registry configuration value")
+    .description("Show the current registry URL")
     .option("--source <source>", "Source: env, file, or resolved (default)")
     .action((opts: { source?: string }) => {
       const source = opts.source || "resolved";

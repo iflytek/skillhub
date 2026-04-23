@@ -43,8 +43,9 @@ async function resolveWithVersion(
 
 export function registerResolve(program: Command) {
   program
-    .command("resolve <slug>")
+    .command("resolve")
     .description("Resolve the latest version of a skill")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-v, --skill-version <ver>", "Specific version")
     .option("--tag <tag>", "Tag to resolve (default: latest, ignored if --skill-version)")
     .option("--hash <hash>", "Content hash")

@@ -7,8 +7,9 @@ import { parseSkillName } from "../core/skill-name.js";
 
 export function registerHide(program: Command) {
   const hideCmd = program
-    .command("hide <slug>")
+    .command("hide")
     .description("Hide a skill (admin only)")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
     .action(async (slug: string, opts: { yes?: boolean }) => {
       const { namespace, slug: skillSlug } = parseSkillName(slug);
@@ -47,8 +48,9 @@ export function registerHide(program: Command) {
     });
 
   hideCmd
-    .command("unhide <slug>")
+    .command("unhide")
     .description("Unhide a skill (admin only)")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
     .action(async (slug: string, opts: { yes?: boolean }) => {
       const { namespace, slug: skillSlug } = parseSkillName(slug);

@@ -1,6 +1,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+.nfs*
 
 # Editors / IDEs / local tooling
 .claude/
@@ -14,6 +15,7 @@ Thumbs.db
 *.iml
 *.swp
 *.swo
+*.code-workspace
 
 # Logs
 *.log

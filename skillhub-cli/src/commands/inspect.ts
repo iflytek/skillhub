@@ -137,12 +137,13 @@ function printInspectHeader(detail: SkillDetailResponse, versions?: SkillVersion
 
 export function registerInspect(program: Command) {
   program
-    .command("inspect <slug>")
-    .aliases(["info", "view"])
+    .command("inspect")
     .description("View skill metadata without installing")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--namespace <ns>", "Search in specific namespace (searches all if not specified)")
     .option("--details", "Show all versions with tags")
-    .action(async (slug: string, opts: { namespace?: string; details?: boolean }) => {
+    .option("-v, --version <ver>", "Inspect specific version")
+    .action(async (slug: string, opts: { namespace?: string; details?: boolean; version?: string }) => {
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });
@@ -152,7 +153,6 @@ export function registerInspect(program: Command) {
       const targetNamespace = opts.namespace || defaultNs;
 
       async function fetchVersionsAndTags(ns: string, skillSlug: string) {
-        if (!opts.details) return { versions: undefined, tags: undefined };
         try {
           const [versionsResp, tagsResp] = await Promise.all([
             client.get<VersionsResponse>(`/api/v1/skills/${ns}/${skillSlug}/versions`),
@@ -164,21 +164,91 @@ export function registerInspect(program: Command) {
         }
       }
 
-      async function displaySkillDetail(ns: string, skillSlug: string) {
-        const detail = await client.get<SkillDetailResponse>(
-          `${ApiRoutes.skillDetail.replace("{namespace}", ns).replace("{slug}", skillSlug)}`
-        );
-        const { versions, tags } = await fetchVersionsAndTags(ns, skillSlug);
-        if (isJson) {
-          const output = opts.details ? { ...detail, versions, tags } : detail;
-          console.log(JSON.stringify(output, null, 2));
-        } else {
-          printSkillDetail(detail, versions, tags);
+      async function displaySkillDetail(ns: string, skillSlug: string, version?: string) {
+        try {
+          const detail = await client.get<SkillDetailResponse>(
+            `${ApiRoutes.skillDetail.replace("{namespace}", ns).replace("{slug}", skillSlug)}`
+          );
+          
+          const { versions, tags } = await fetchVersionsAndTags(ns, skillSlug);
+          
+          if (version && versions) {
+            const selectedVersion = versions.find(v => v.version === version);
+            if (selectedVersion) {
+              detail.publishedVersion = { version: selectedVersion.version };
+            }
+          }
+          
+          if (isJson) {
+            const output = opts.details ? { ...detail, versions, tags } : detail;
+            console.log(JSON.stringify(output, null, 2));
+          } else {
+            printSkillDetail(detail, opts.details ? versions : undefined, opts.details ? tags : undefined);
+          }
+        } catch (e: any) {
+          if (e.statusCode === 403) {
+            error(`Access denied: ${ns}/${skillSlug}`);
+            dim("Run 'skillhub login' to authenticate.");
+          } else if (e.statusCode === 404) {
+            error(`Skill not found: ${ns}/${skillSlug}`);
+          } else {
+            error(`Failed to fetch skill details: ${e.message}`);
+          }
+          process.exitCode = 1;
         }
       }
 
+      async function inspectWithVersionSelection(ns: string, skillSlug: string) {
+        const { versions, tags } = await fetchVersionsAndTags(ns, skillSlug);
+        
+        if (!versions || versions.length === 0) {
+          await displaySkillDetail(ns, skillSlug);
+          return;
+        }
+        
+        if (opts.details) {
+          await displaySkillDetail(ns, skillSlug);
+          return;
+        }
+        
+        if (versions.length === 1) {
+          await displaySkillDetail(ns, skillSlug);
+          return;
+        }
+        
+        const versionTagsMap = new Map<number, string[]>();
+        if (tags) {
+          for (const tag of tags) {
+            if (!versionTagsMap.has(tag.versionId)) {
+              versionTagsMap.set(tag.versionId, []);
+            }
+            versionTagsMap.get(tag.versionId)!.push(tag.tagName);
+          }
+        }
+        
+        const selected = await p.select({
+          message: "Select version to inspect",
+          options: versions.map((v) => ({
+            value: v.version,
+            label: `v${v.version}`,
+            hint: versionTagsMap.get(v.id)?.join(", ") || "",
+          })),
+        });
+        
+        if (p.isCancel(selected)) {
+          console.log("Cancelled.");
+          return;
+        }
+        
+        await displaySkillDetail(ns, skillSlug, selected as string);
+      }
+
       if (targetNamespace) {
-        await displaySkillDetail(targetNamespace, parsedSlug);
+        if (opts.version) {
+          await displaySkillDetail(targetNamespace, parsedSlug, opts.version);
+        } else {
+          await inspectWithVersionSelection(targetNamespace, parsedSlug);
+        }
         return;
       }
 
@@ -207,7 +277,11 @@ export function registerInspect(program: Command) {
           spinner.stop();
           const ns = uniqueResults[0].namespace;
           const name = uniqueResults[0].name;
-          await displaySkillDetail(ns, name);
+          if (opts.version) {
+            await displaySkillDetail(ns, name, opts.version);
+          } else {
+            await inspectWithVersionSelection(ns, name);
+          }
           return;
         }
 
@@ -228,7 +302,11 @@ export function registerInspect(program: Command) {
         }
 
         const [selectedNs, selectedName] = (selected as string).split("/", 2);
-        await displaySkillDetail(selectedNs, selectedName);
+        if (opts.version) {
+          await displaySkillDetail(selectedNs, selectedName, opts.version);
+        } else {
+          await inspectWithVersionSelection(selectedNs, selectedName);
+        }
       } catch (e: any) {
         spinner.fail(e.message);
         process.exitCode = 1;

@@ -214,20 +214,60 @@ async function runInteractiveSearch(
   });
 }
 
+function buildExploreHelp(cmd: Command): string {
+  const lines: string[] = [];
+
+  lines.push(`${BOLD}Usage:${RESET} skillhub explore [options] [query]`);
+  lines.push("");
+  lines.push("Browse or search skills from the registry");
+  lines.push("");
+
+  lines.push(`${BOLD}Arguments:${RESET}`);
+  lines.push(`  ${CYAN}[query]${RESET}              Search query for finding skills`);
+  lines.push("");
+
+  lines.push(`${BOLD}Search Options:${RESET}`);
+  lines.push(`  ${CYAN}-n, --limit <n>${RESET}        Max results (default: "20")`);
+  lines.push("");
+
+  lines.push(`${BOLD}Sorting Options:${RESET}`);
+  lines.push(`  ${CYAN}-s, --sort <sort>${RESET}       Sort by: hot, newest, downloads, stars, rating`);
+  lines.push(`  ${CYAN}--hot${RESET}                   Sort by comprehensive popularity (downloads + stars)`);
+  lines.push(`  ${CYAN}--newest${RESET}                Sort by newest first`);
+  lines.push(`  ${CYAN}--downloads${RESET}             Sort by download count`);
+  lines.push(`  ${CYAN}--stars${RESET}                 Sort by star count`);
+  lines.push(`  ${CYAN}--rating${RESET}                Sort by average rating`);
+  lines.push("");
+
+  lines.push(`${BOLD}Other Options:${RESET}`);
+  lines.push(`  ${CYAN}-h, --help${RESET}              Display help for command`);
+  lines.push("");
+
+  lines.push(`${BOLD}Examples:${RESET}`);
+  lines.push(`${DIM}  skillhub explore                                  Interactive skill search${RESET}`);
+  lines.push(`${DIM}  skillhub explore --hot                            Browse popular skills${RESET}`);
+  lines.push(`${DIM}  skillhub explore ai-assistant                     Search for skills${RESET}`);
+  lines.push(`${DIM}  skillhub explore --sort newest --limit 10         Show 10 newest skills${RESET}`);
+
+  return lines.join("\n");
+}
+
 export function registerExplore(program: Command) {
-  program
+  const exploreCmd = program
     .command("explore")
-    .aliases(["find", "find-skills", "search"])
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")
-    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads, stars, rating (default: interactive mode)")
+    .option("-s, --sort <sort>", "Sort by: hot, newest, downloads, stars, rating (browse mode)")
     .option("--hot", "Sort by comprehensive popularity (downloads + stars)")
     .option("--newest", "Sort by newest first (shorthand for --sort newest)")
     .option("--downloads", "Sort by download count (shorthand for --sort downloads)")
     .option("--stars", "Sort by star count (shorthand for --sort stars)")
-    .option("--rating", "Sort by average rating (shorthand for --sort rating)")
-    .action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean; stars?: boolean; rating?: boolean }) => {
+    .option("--rating", "Sort by average rating (shorthand for --sort rating)");
+
+  exploreCmd.helpInformation = () => buildExploreHelp(exploreCmd);
+
+  exploreCmd.action(async (query: string | undefined, opts: { limit: string; sort?: string; hot?: boolean; newest?: boolean; downloads?: boolean; stars?: boolean; rating?: boolean }) => {
       const config = loadConfigFromProgram(program);
       const token = await readToken();
       const client = new ApiClient({ baseUrl: config.registry, token: token || undefined });

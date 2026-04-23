@@ -7,9 +7,9 @@ import { parseSkillName } from "../core/skill-name.js";
 
 export function registerDelete(program: Command) {
   program
-    .command("delete <slug>")
-    .aliases(["del", "unpublish"])
+    .command("delete")
     .description("Delete a skill you own")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
     .action(async (slug: string, opts: { yes?: boolean }) => {
       const { namespace, slug: skillSlug } = parseSkillName(slug);

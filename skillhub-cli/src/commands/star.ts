@@ -8,8 +8,9 @@ import { parseSkillName } from "../core/skill-name.js";
 
 export function registerStar(program: Command) {
   program
-    .command("star <slug>")
+    .command("star")
     .description("Star a skill")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--unstar", "Remove star")
     .action(async (slug: string, opts: { unstar: boolean }) => {
       try {

@@ -28,7 +28,6 @@ export function registerMe(program: Command) {
 
   me
     .command("skills")
-    .alias("ls")
     .description("List your published skills")
     .action(async () => {
       try {

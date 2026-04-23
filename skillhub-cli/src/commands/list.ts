@@ -18,7 +18,6 @@ interface ListOptions {
 export function registerList(program: Command) {
   program
     .command("list")
-    .alias("ls")
     .description("List installed skills")
     .option("-g, --global", "List global skills only")
     .option("-p, --project", "List project skills only")

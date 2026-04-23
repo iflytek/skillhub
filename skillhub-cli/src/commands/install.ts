@@ -200,13 +200,13 @@ function buildAgentSummary(targetAgents: AgentInfo[], mode: "symlink" | "copy", 
 function buildInstallHelp(cmd: Command): string {
   const lines: string[] = [];
 
-  lines.push(`${chalk.bold("Usage:")} skillhub install|i [options] ${chalk.cyan("<skill-name>")}`);
+  lines.push(`${chalk.bold("Usage:")} skillhub install [options] ${chalk.cyan("<skill>")}`);
   lines.push("");
   lines.push("Install skills from registry, git repositories, or local paths");
   lines.push("");
 
   lines.push(chalk.bold("Arguments:"));
-  lines.push(`  ${chalk.cyan("skill-name")}                Skill name or namespace/skill-name from registry`);
+  lines.push(`  ${chalk.cyan("skill")}                     Skill name or namespace/skill-name from registry`);
   lines.push("");
 
   lines.push(chalk.bold("Source Options:"));
@@ -246,9 +246,10 @@ function buildInstallHelp(cmd: Command): string {
 
 export function registerInstall(program: Command) {
   const installCmd = program
-    .command("install <skill-name>")
+    .command("install")
     .alias("i")
     .description("Install skills from registry, git repositories, or local paths")
+    .argument("<skill>", "Skill name or namespace/skill-name from registry")
     .option("-a, --add <source>", "Install from GitHub or local path (alias for --from)")
     .option("--from <source>", "Install from GitHub or local path (alias for -a)")
     .option("--agent <agents...>", "Target specific agents")

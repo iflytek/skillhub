@@ -12,8 +12,7 @@ function getCliCommand(): string {
 
 export function registerUpdate(program: Command) {
   program
-    .command("update [slug]")
-    .alias("up")
+    .command("update [skill]")
     .description("Update installed skills from their source")
     .option("-a, --all", "Update all installed skills")
     .option("-g, --global", "Update global scope skills")

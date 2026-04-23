@@ -15,12 +15,10 @@ export interface Notification {
 export function registerNotifications(program: Command) {
   const cmd = program
     .command("notifications")
-    .alias("notif")
     .description("Manage notifications");
 
   cmd
     .command("list")
-    .alias("ls")
     .description("List notifications")
     .option("--unread", "Show unread only")
     .action(async (opts: { unread?: boolean }) => {

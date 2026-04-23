@@ -12,8 +12,9 @@ import ora from "ora";
 
 export function registerDownload(program: Command) {
   program
-    .command("download <slug>")
+    .command("download")
     .description("Download a skill package to local directory")
+    .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-v, --skill-version <ver>", "Specific version")
     .option("--tag <tag>", "Tag to download", "latest")
     .option("--output <dir>", "Output directory")
