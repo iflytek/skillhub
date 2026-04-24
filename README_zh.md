@@ -203,6 +203,16 @@ kubectl apply -f deploy/k8s/
 helm install skillhub ./deploy/helm
 ```
 
+### K3s 一键部署
+
+针对 K3s 集群，提供了自包含的 quickstart overlay，内置 PostgreSQL、Redis 及全部服务组件，适配 K3s 默认 Traefik Ingress：
+
+```bash
+kubectl apply -k deploy/k3s/overlays/quickstart/
+```
+
+详细说明请参考 [`deploy/k3s/README_zh.md`](./deploy/k3s/README_zh.md)。
+
 ### 环境变量
 
 关键配置选项：
