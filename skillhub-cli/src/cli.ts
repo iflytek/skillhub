@@ -50,7 +50,6 @@ function buildTopLevelHelp(version: string): string {
   sections.push(formatSection("Discovery", [
     { cmd: "explore", desc: "Browse or search skills from the registry", alias: "find, find-skills, search" },
     { cmd: "inspect <skill>", desc: "View skill metadata and versions", alias: "info, view" },
-    { cmd: "resolve <skill>", desc: "Resolve the latest version of a skill" },
   ]));
   sections.push("");
 
@@ -60,7 +59,6 @@ function buildTopLevelHelp(version: string): string {
     { cmd: "update [skill]", desc: "Update installed skills from their source", alias: "up" },
     { cmd: "uninstall [skill]", desc: "Uninstall a skill from local agent", alias: "un" },
     { cmd: "list", desc: "List installed skills", alias: "ls" },
-    { cmd: "check", desc: "Check installed skills against lock file" },
   ]));
   sections.push("");
 
@@ -68,20 +66,15 @@ function buildTopLevelHelp(version: string): string {
     { cmd: "me skills", desc: "List your published skills", alias: "me ls" },
     { cmd: "me stars", desc: "List your starred skills" },
     { cmd: "me namespaces", desc: "List namespaces you have access to" },
+    { cmd: "me submissions", desc: "List your review submissions" },
     { cmd: "rating <skill>", desc: "View your rating for a skill" },
-    { cmd: "reviews", desc: "List your review submissions", alias: "reviews my, reviews submissions" },
   ]));
   sections.push("");
 
-  sections.push(formatSection("Publish & Content", [
-    { cmd: "init [name]", desc: "Create a new SKILL.md template" },
+  sections.push(formatSection("Publish & Manage", [
     { cmd: "publish [path]", desc: "Publish a skill to SkillHub registry" },
     { cmd: "sync [path]", desc: "Scan and publish all skills from a directory" },
     { cmd: "delete <skill>", desc: "Delete a skill you own", alias: "del, unpublish" },
-  ]));
-  sections.push("");
-
-  sections.push(formatSection("Skill Lifecycle", [
     { cmd: "archive <skill>", desc: "Archive a skill you own" },
     { cmd: "hide <skill>", desc: "Hide a skill" },
     { cmd: "unhide <skill>", desc: "Unhide a skill" },

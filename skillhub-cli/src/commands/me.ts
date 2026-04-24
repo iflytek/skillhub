@@ -113,4 +113,27 @@ export function registerMe(program: Command) {
         process.exitCode = 1;
       }
     });
+
+  me
+    .command("submissions")
+    .description("List your review submissions")
+    .action(async () => {
+      try {
+        const token = await requireToken();
+        const config = loadConfigFromProgram(program);
+        const client = new ApiClient({ baseUrl: config.registry, token, debug: program.opts().debug });
+        const submissions = await client.get<{ id: number; skillSlug: string; skillDisplayName: string; namespace: string; version: string; status: string; createdAt: string }[]>("/api/v1/reviews/my-submissions");
+        if (!submissions || submissions.length === 0) {
+          console.log("No review submissions.");
+          return;
+        }
+        for (const r of submissions) {
+          info(`${r.skillDisplayName} (${r.skillSlug})`);
+          dim(`  ${r.namespace} · v${r.version} · ${r.status} · ${r.createdAt}`);
+        }
+      } catch (e: any) {
+        error(`Failed: ${e.message}`);
+        process.exitCode = 1;
+      }
+    });
 }
