@@ -64,9 +64,10 @@ function buildTopLevelHelp(version: string): string {
   ]));
   sections.push("");
 
-  sections.push(formatSection("My Skills", [
+  sections.push(formatSection("My Profile", [
     { cmd: "me skills", desc: "List your published skills", alias: "me ls" },
     { cmd: "me stars", desc: "List your starred skills" },
+    { cmd: "me namespaces", desc: "List namespaces you have access to" },
     { cmd: "rating <skill>", desc: "View your rating for a skill" },
     { cmd: "reviews", desc: "List your review submissions", alias: "reviews my, reviews submissions" },
   ]));
@@ -96,7 +97,6 @@ function buildTopLevelHelp(version: string): string {
 
   sections.push(formatSection("Notifications & Admin", [
     { cmd: "notifications", desc: "Manage notifications", alias: "notif" },
-    { cmd: "namespaces", desc: "List namespaces you have access to" },
     { cmd: "transfer <ns> <user>", desc: "Transfer namespace ownership" },
   ]));
   sections.push("");
@@ -158,7 +158,6 @@ export async function createCli(): Promise<Command> {
     { registerLogout },
     { registerWhoami },
     { registerPublish },
-    { registerNamespaces },
     { registerInstall },
     { registerDownload },
     { registerList },
@@ -186,7 +185,6 @@ export async function createCli(): Promise<Command> {
     import("./commands/logout.js"),
     import("./commands/whoami.js"),
     import("./commands/publish.js"),
-    import("./commands/namespaces.js"),
     import("./commands/install.js"),
     import("./commands/download.js"),
     import("./commands/list.js"),
@@ -215,7 +213,6 @@ export async function createCli(): Promise<Command> {
   registerLogout(program);
   registerWhoami(program);
   registerPublish(program);
-  registerNamespaces(program);
   registerInstall(program);
   registerDownload(program);
   registerList(program);
