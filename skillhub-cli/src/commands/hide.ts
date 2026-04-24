@@ -35,7 +35,7 @@ async function hideSkill(
       `/api/v1/skills/${namespace}/${skillSlug}`
     );
 
-    await client.post(`/api/v1/admin/skills/${detail.id}/${action}`, {
+    await client.post(`/api/v1/skills/${namespace}/${skillSlug}/${action}`, {
       body: JSON.stringify({}),
       headers: { "Content-Type": "application/json" },
     });
@@ -58,7 +58,7 @@ async function hideSkill(
 export function registerHide(program: Command) {
   program
     .command("hide")
-    .description("Hide a skill (admin only)")
+    .description("Hide a skill")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
     .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")
@@ -70,7 +70,7 @@ export function registerHide(program: Command) {
 export function registerUnhide(program: Command) {
   program
     .command("unhide")
-    .description("Unhide a skill (admin only)")
+    .description("Unhide a skill")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
     .option("--namespace <ns>", "Override namespace (default: parsed from skill or 'global')")

@@ -67,6 +67,7 @@ function buildTopLevelHelp(version: string): string {
   sections.push(formatSection("My Skills", [
     { cmd: "me skills", desc: "List your published skills", alias: "me ls" },
     { cmd: "me stars", desc: "List your starred skills" },
+    { cmd: "rating <skill>", desc: "View your rating for a skill" },
     { cmd: "reviews", desc: "List your review submissions", alias: "reviews my, reviews submissions" },
   ]));
   sections.push("");
@@ -76,13 +77,18 @@ function buildTopLevelHelp(version: string): string {
     { cmd: "publish [path]", desc: "Publish a skill to SkillHub registry" },
     { cmd: "sync [path]", desc: "Scan and publish all skills from a directory" },
     { cmd: "delete <skill>", desc: "Delete a skill you own", alias: "del, unpublish" },
+  ]));
+  sections.push("");
+
+  sections.push(formatSection("Skill Lifecycle", [
     { cmd: "archive <skill>", desc: "Archive a skill you own" },
+    { cmd: "hide <skill>", desc: "Hide a skill" },
+    { cmd: "unhide <skill>", desc: "Unhide a skill" },
   ]));
   sections.push("");
 
   sections.push(formatSection("Community", [
     { cmd: "star <skill>", desc: "Star or unstar a skill" },
-    { cmd: "rating <skill>", desc: "View your rating for a skill" },
     { cmd: "rate <skill> <score>", desc: "Rate a skill (1-5)" },
     { cmd: "report <skill>", desc: "Report a skill for review" },
   ]));
@@ -91,8 +97,6 @@ function buildTopLevelHelp(version: string): string {
   sections.push(formatSection("Notifications & Admin", [
     { cmd: "notifications", desc: "Manage notifications", alias: "notif" },
     { cmd: "namespaces", desc: "List namespaces you have access to" },
-    { cmd: "hide <skill>", desc: "Hide a skill (admin only)" },
-    { cmd: "unhide <skill>", desc: "Unhide a skill (admin only)" },
     { cmd: "transfer <ns> <user>", desc: "Transfer namespace ownership" },
   ]));
   sections.push("");
