@@ -13,6 +13,7 @@ import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /**
@@ -182,16 +183,18 @@ public class GovernanceWorkflowAppService {
                                                        AdminSkillActionRequest request,
                                                        String userId,
                                                        Map<Long, NamespaceRole> userNsRoles,
+                                                       Set<String> platformRoles,
                                                        AuditRequestContext auditContext) {
-        return skillLifecycleAppService.archiveSkill(namespace, slug, request, userId, userNsRoles, auditContext);
+        return skillLifecycleAppService.archiveSkill(namespace, slug, request, userId, userNsRoles, platformRoles, auditContext);
     }
 
     public SkillLifecycleMutationResponse unarchiveSkill(String namespace,
                                                          String slug,
                                                          String userId,
                                                          Map<Long, NamespaceRole> userNsRoles,
+                                                         Set<String> platformRoles,
                                                          AuditRequestContext auditContext) {
-        return skillLifecycleAppService.unarchiveSkill(namespace, slug, userId, userNsRoles, auditContext);
+        return skillLifecycleAppService.unarchiveSkill(namespace, slug, userId, userNsRoles, platformRoles, auditContext);
     }
 
     public SkillLifecycleMutationResponse deleteVersion(String namespace,
@@ -199,8 +202,9 @@ public class GovernanceWorkflowAppService {
                                                         String version,
                                                         String userId,
                                                         Map<Long, NamespaceRole> userNsRoles,
+                                                        Set<String> platformRoles,
                                                         AuditRequestContext auditContext) {
-        return skillLifecycleAppService.deleteVersion(namespace, slug, version, userId, userNsRoles, auditContext);
+        return skillLifecycleAppService.deleteVersion(namespace, slug, version, userId, userNsRoles, platformRoles, auditContext);
     }
 
     public SkillLifecycleMutationResponse withdrawReviewVersion(String namespace,
@@ -292,15 +296,17 @@ public class GovernanceWorkflowAppService {
                                                     AdminSkillActionRequest request,
                                                     String userId,
                                                     Map<Long, NamespaceRole> userNsRoles,
+                                                    Set<String> platformRoles,
                                                     AuditRequestContext auditContext) {
-        return skillLifecycleAppService.hideSkill(namespace, slug, request, userId, userNsRoles, auditContext);
+        return skillLifecycleAppService.hideSkill(namespace, slug, request, userId, userNsRoles, platformRoles, auditContext);
     }
 
     public SkillLifecycleMutationResponse unhideSkill(String namespace,
                                                       String slug,
                                                       String userId,
                                                       Map<Long, NamespaceRole> userNsRoles,
+                                                      Set<String> platformRoles,
                                                       AuditRequestContext auditContext) {
-        return skillLifecycleAppService.unhideSkill(namespace, slug, userId, userNsRoles, auditContext);
+        return skillLifecycleAppService.unhideSkill(namespace, slug, userId, userNsRoles, platformRoles, auditContext);
     }
 }

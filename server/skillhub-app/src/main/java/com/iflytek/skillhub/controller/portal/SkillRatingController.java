@@ -1,8 +1,11 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.SkillRatingRequest;
+import com.iflytek.skillhub.dto.SkillRatingStatusResponse;
 import com.iflytek.skillhub.domain.social.SkillRatingService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +28,9 @@ public class SkillRatingController extends BaseApiController {
             @PathVariable Long skillId,
             @Valid @RequestBody SkillRatingRequest request,
             @RequestAttribute("userId") String userId) {
+        if (userId == null) {
+            throw new DomainForbiddenException("error.auth.required");
+        }
         skillRatingService.rate(skillId, userId, request.score());
         return ok("response.success.updated", null);
     }

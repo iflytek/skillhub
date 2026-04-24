@@ -38,10 +38,9 @@ public class AdminSkillController extends BaseApiController {
                                                              @RequestBody(required = false) AdminSkillActionRequest request,
                                                              @AuthenticationPrincipal PlatformPrincipal principal,
                                                              HttpServletRequest httpRequest) {
-        var skill = skillGovernanceService.hideSkill(
+        var skill = skillGovernanceService.hideSkillAsAdmin(
             skillId,
             principal.userId(),
-            java.util.Map.of(),
             httpRequest.getRemoteAddr(),
             httpRequest.getHeader("User-Agent"),
             request != null ? request.reason() : null
@@ -54,10 +53,9 @@ public class AdminSkillController extends BaseApiController {
     public ApiResponse<AdminSkillMutationResponse> unhideSkill(@PathVariable Long skillId,
                                                                @AuthenticationPrincipal PlatformPrincipal principal,
                                                                HttpServletRequest httpRequest) {
-        var skill = skillGovernanceService.unhideSkill(
+        var skill = skillGovernanceService.unhideSkillAsAdmin(
             skillId,
             principal.userId(),
-            java.util.Map.of(),
             httpRequest.getRemoteAddr(),
             httpRequest.getHeader("User-Agent")
         );

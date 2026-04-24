@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.domain.social.SkillStarService;
@@ -22,6 +23,9 @@ public class SkillStarController extends BaseApiController {
     public ApiResponse<Void> starSkill(
             @PathVariable Long skillId,
             @RequestAttribute("userId") String userId) {
+        if (userId == null) {
+            throw new DomainForbiddenException("error.auth.required");
+        }
         skillStarService.star(skillId, userId);
         return ok("response.success.updated", null);
     }
@@ -30,6 +34,9 @@ public class SkillStarController extends BaseApiController {
     public ApiResponse<Void> unstarSkill(
             @PathVariable Long skillId,
             @RequestAttribute("userId") String userId) {
+        if (userId == null) {
+            throw new DomainForbiddenException("error.auth.required");
+        }
         skillStarService.unstar(skillId, userId);
         return ok("response.success.updated", null);
     }

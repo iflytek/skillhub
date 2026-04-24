@@ -17,6 +17,7 @@ import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,12 +61,14 @@ public class SkillLifecycleAppService {
                                                        AdminSkillActionRequest request,
                                                        String userId,
                                                        Map<Long, NamespaceRole> userNamespaceRoles,
+                                                       Set<String> platformRoles,
                                                        AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         Skill archived = skillGovernanceService.archiveSkill(
                 skill.getId(),
                 userId,
                 normalizeRoles(userNamespaceRoles),
+                platformRoles,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
                 request != null ? request.reason() : null
@@ -78,12 +81,14 @@ public class SkillLifecycleAppService {
                                                          String slug,
                                                          String userId,
                                                          Map<Long, NamespaceRole> userNamespaceRoles,
+                                                         Set<String> platformRoles,
                                                          AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         Skill restored = skillGovernanceService.unarchiveSkill(
                 skill.getId(),
                 userId,
                 normalizeRoles(userNamespaceRoles),
+                platformRoles,
                 auditContext.clientIp(),
                 auditContext.userAgent()
         );
@@ -96,6 +101,7 @@ public class SkillLifecycleAppService {
                                                         String version,
                                                         String userId,
                                                         Map<Long, NamespaceRole> userNamespaceRoles,
+                                                        Set<String> platformRoles,
                                                         AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         SkillVersion skillVersion = findVersion(skill.getId(), version);
@@ -104,6 +110,7 @@ public class SkillLifecycleAppService {
                 skillVersion,
                 userId,
                 normalizeRoles(userNamespaceRoles),
+                platformRoles,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
                 namespace
@@ -250,12 +257,14 @@ public class SkillLifecycleAppService {
                                                     AdminSkillActionRequest request,
                                                     String userId,
                                                     Map<Long, NamespaceRole> userNamespaceRoles,
+                                                    Set<String> platformRoles,
                                                     AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         Skill hidden = skillGovernanceService.hideSkill(
                 skill.getId(),
                 userId,
                 normalizeRoles(userNamespaceRoles),
+                platformRoles,
                 auditContext.clientIp(),
                 auditContext.userAgent(),
                 request != null ? request.reason() : null
@@ -268,12 +277,14 @@ public class SkillLifecycleAppService {
                                                       String slug,
                                                       String userId,
                                                       Map<Long, NamespaceRole> userNamespaceRoles,
+                                                      Set<String> platformRoles,
                                                       AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         Skill unhidden = skillGovernanceService.unhideSkill(
                 skill.getId(),
                 userId,
                 normalizeRoles(userNamespaceRoles),
+                platformRoles,
                 auditContext.clientIp(),
                 auditContext.userAgent()
         );

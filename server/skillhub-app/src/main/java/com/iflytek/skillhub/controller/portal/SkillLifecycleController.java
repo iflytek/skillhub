@@ -14,6 +14,7 @@ import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,6 +45,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                     @RequestBody(required = false) AdminSkillActionRequest request,
                                                                     @RequestAttribute("userId") String userId,
                                                                     @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                    @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles,
                                                                     HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.archiveSkill(
@@ -52,6 +54,7 @@ public class SkillLifecycleController extends BaseApiController {
                         request,
                         userId,
                         userNsRoles,
+                        platformRoles,
                         AuditRequestContext.from(httpRequest)));
     }
 
@@ -60,6 +63,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                       @PathVariable String slug,
                                                                       @RequestAttribute("userId") String userId,
                                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                      @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles,
                                                                       HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.unarchiveSkill(
@@ -67,6 +71,7 @@ public class SkillLifecycleController extends BaseApiController {
                         slug,
                         userId,
                         userNsRoles,
+                        platformRoles,
                         AuditRequestContext.from(httpRequest)));
     }
 
@@ -76,6 +81,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                      @PathVariable String version,
                                                                      @RequestAttribute("userId") String userId,
                                                                      @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                     @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles,
                                                                      HttpServletRequest httpRequest) {
         return ok("response.success.deleted",
                 governanceWorkflowAppService.deleteVersion(
@@ -84,6 +90,7 @@ public class SkillLifecycleController extends BaseApiController {
                         version,
                         userId,
                         userNsRoles,
+                        platformRoles,
                         AuditRequestContext.from(httpRequest)));
     }
 
@@ -162,6 +169,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                  @RequestBody(required = false) AdminSkillActionRequest request,
                                                                  @RequestAttribute("userId") String userId,
                                                                  @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                 @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles,
                                                                  HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.hideSkill(
@@ -170,6 +178,7 @@ public class SkillLifecycleController extends BaseApiController {
                         request,
                         userId,
                         userNsRoles,
+                        platformRoles,
                         AuditRequestContext.from(httpRequest)));
     }
 
@@ -178,6 +187,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                    @PathVariable String slug,
                                                                    @RequestAttribute("userId") String userId,
                                                                    @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                   @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles,
                                                                    HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.unhideSkill(
@@ -185,6 +195,7 @@ public class SkillLifecycleController extends BaseApiController {
                         slug,
                         userId,
                         userNsRoles,
+                        platformRoles,
                         AuditRequestContext.from(httpRequest)));
     }
 }
