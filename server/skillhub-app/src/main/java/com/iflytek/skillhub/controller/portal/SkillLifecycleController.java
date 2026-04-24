@@ -141,16 +141,48 @@ public class SkillLifecycleController extends BaseApiController {
 
     @PostMapping("/{namespace}/{slug}/confirm-publish")
     public ApiResponse<SkillLifecycleMutationResponse> confirmPublish(@PathVariable String namespace,
-                                                                       @PathVariable String slug,
-                                                                       @Valid @RequestBody ConfirmPublishRequest request,
-                                                                       @RequestAttribute("userId") String userId,
-                                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
-                                                                       HttpServletRequest httpRequest) {
+                                                                        @PathVariable String slug,
+                                                                        @Valid @RequestBody ConfirmPublishRequest request,
+                                                                        @RequestAttribute("userId") String userId,
+                                                                        @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                        HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.confirmPublish(
                         namespace,
                         slug,
                         request.version(),
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
+    }
+
+    @PostMapping("/{namespace}/{slug}/hide")
+    public ApiResponse<SkillLifecycleMutationResponse> hideSkill(@PathVariable String namespace,
+                                                                 @PathVariable String slug,
+                                                                 @RequestBody(required = false) AdminSkillActionRequest request,
+                                                                 @RequestAttribute("userId") String userId,
+                                                                 @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                 HttpServletRequest httpRequest) {
+        return ok("response.success.updated",
+                governanceWorkflowAppService.hideSkill(
+                        namespace,
+                        slug,
+                        request,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
+    }
+
+    @PostMapping("/{namespace}/{slug}/unhide")
+    public ApiResponse<SkillLifecycleMutationResponse> unhideSkill(@PathVariable String namespace,
+                                                                   @PathVariable String slug,
+                                                                   @RequestAttribute("userId") String userId,
+                                                                   @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                   HttpServletRequest httpRequest) {
+        return ok("response.success.updated",
+                governanceWorkflowAppService.unhideSkill(
+                        namespace,
+                        slug,
                         userId,
                         userNsRoles,
                         AuditRequestContext.from(httpRequest)));

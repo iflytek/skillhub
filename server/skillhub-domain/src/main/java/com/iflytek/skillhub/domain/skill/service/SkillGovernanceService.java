@@ -69,9 +69,15 @@ public class SkillGovernanceService {
     }
 
     @Transactional
-    public Skill hideSkill(Long skillId, String actorUserId, String clientIp, String userAgent, String reason) {
+    public Skill hideSkill(Long skillId,
+                           String actorUserId,
+                           Map<Long, NamespaceRole> userNamespaceRoles,
+                           String clientIp,
+                           String userAgent,
+                           String reason) {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
         skill.setHidden(true);
         skill.setHiddenAt(currentInstant());
         skill.setHiddenBy(actorUserId);
@@ -120,9 +126,14 @@ public class SkillGovernanceService {
     }
 
     @Transactional
-    public Skill unhideSkill(Long skillId, String actorUserId, String clientIp, String userAgent) {
+    public Skill unhideSkill(Long skillId,
+                             String actorUserId,
+                             Map<Long, NamespaceRole> userNamespaceRoles,
+                             String clientIp,
+                             String userAgent) {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
         skill.setHidden(false);
         skill.setHiddenAt(null);
         skill.setHiddenBy(null);

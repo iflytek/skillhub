@@ -273,11 +273,11 @@ public class GovernanceWorkflowAppService {
     }
 
     public SkillLifecycleMutationResponse confirmPublish(String namespace,
-                                                          String slug,
-                                                          String version,
-                                                          String userId,
-                                                          Map<Long, NamespaceRole> userNsRoles,
-                                                          AuditRequestContext auditContext) {
+                                                           String slug,
+                                                           String version,
+                                                           String userId,
+                                                           Map<Long, NamespaceRole> userNsRoles,
+                                                           AuditRequestContext auditContext) {
         return skillLifecycleAppService.confirmPublish(
                 namespace,
                 slug,
@@ -285,5 +285,22 @@ public class GovernanceWorkflowAppService {
                 userId,
                 userNsRoles,
                 auditContext);
+    }
+
+    public SkillLifecycleMutationResponse hideSkill(String namespace,
+                                                    String slug,
+                                                    AdminSkillActionRequest request,
+                                                    String userId,
+                                                    Map<Long, NamespaceRole> userNsRoles,
+                                                    AuditRequestContext auditContext) {
+        return skillLifecycleAppService.hideSkill(namespace, slug, request, userId, userNsRoles, auditContext);
+    }
+
+    public SkillLifecycleMutationResponse unhideSkill(String namespace,
+                                                      String slug,
+                                                      String userId,
+                                                      Map<Long, NamespaceRole> userNsRoles,
+                                                      AuditRequestContext auditContext) {
+        return skillLifecycleAppService.unhideSkill(namespace, slug, userId, userNsRoles, auditContext);
     }
 }

@@ -213,11 +213,11 @@ public class SkillLifecycleAppService {
 
     @Transactional
     public SkillLifecycleMutationResponse confirmPublish(String namespace,
-                                                          String slug,
-                                                          String version,
-                                                          String userId,
-                                                          Map<Long, NamespaceRole> userNamespaceRoles,
-                                                          AuditRequestContext auditContext) {
+                                                           String slug,
+                                                           String version,
+                                                           String userId,
+                                                           Map<Long, NamespaceRole> userNamespaceRoles,
+                                                           AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         SkillVersion skillVersion = findVersion(skill.getId(), version);
         skillReviewSubmitService.confirmPublish(
@@ -242,6 +242,42 @@ public class SkillLifecycleAppService {
                 "CONFIRM_PUBLISH",
                 "PUBLISHED"
         );
+    }
+
+    @Transactional
+    public SkillLifecycleMutationResponse hideSkill(String namespace,
+                                                    String slug,
+                                                    AdminSkillActionRequest request,
+                                                    String userId,
+                                                    Map<Long, NamespaceRole> userNamespaceRoles,
+                                                    AuditRequestContext auditContext) {
+        Skill skill = findSkill(namespace, slug, userId);
+        Skill hidden = skillGovernanceService.hideSkill(
+                skill.getId(),
+                userId,
+                normalizeRoles(userNamespaceRoles),
+                auditContext.clientIp(),
+                auditContext.userAgent(),
+                request != null ? request.reason() : null
+        );
+        return new SkillLifecycleMutationResponse(hidden.getId(), null, "HIDE", hidden.getStatus().name());
+    }
+
+    @Transactional
+    public SkillLifecycleMutationResponse unhideSkill(String namespace,
+                                                      String slug,
+                                                      String userId,
+                                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                                      AuditRequestContext auditContext) {
+        Skill skill = findSkill(namespace, slug, userId);
+        Skill unhidden = skillGovernanceService.unhideSkill(
+                skill.getId(),
+                userId,
+                normalizeRoles(userNamespaceRoles),
+                auditContext.clientIp(),
+                auditContext.userAgent()
+        );
+        return new SkillLifecycleMutationResponse(unhidden.getId(), null, "UNHIDE", unhidden.getStatus().name());
     }
 
     private Skill findSkill(String namespaceSlug, String skillSlug, String currentUserId) {
