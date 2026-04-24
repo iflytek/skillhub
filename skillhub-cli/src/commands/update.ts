@@ -29,6 +29,7 @@ interface UpdateInfo {
 export function registerUpdate(program: Command) {
   program
     .command("update [skill]")
+    .alias("up")
     .description("Update installed skills from their source")
     .option("-a, --all", "Update all installed skills")
     .option("-g, --global", "Update global scope skills")

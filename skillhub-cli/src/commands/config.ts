@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { success, error, info } from "../utils/logger.js";
+import { success, error, info, dim } from "../utils/logger.js";
 import chalk from "chalk";
 
 const CONFIG_DIR = join(homedir(), ".skillhub");

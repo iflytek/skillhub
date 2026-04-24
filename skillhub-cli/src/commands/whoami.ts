@@ -13,7 +13,7 @@ export function registerWhoami(program: Command) {
       try {
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
-        const client = new ApiClient({ baseUrl: config.registry, token });
+        const client = new ApiClient({ baseUrl: config.registry, token, debug: program.opts().debug });
         const resp = await client.get<WhoamiResponse>(ApiRoutes.whoami);
         const isJson = program.opts().json;
         if (isJson) {

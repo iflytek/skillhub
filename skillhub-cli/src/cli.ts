@@ -144,7 +144,8 @@ export async function createCli(): Promise<Command> {
     .description("CLI for SkillHub — publish, search, and manage agent skills")
     .version(version)
     .option("--registry <url>", "Registry API base URL")
-    .option("--json", "Output results as JSON");
+    .option("--json", "Output results as JSON")
+    .option("--debug", "Show debug information for API requests");
 
   const customHelp = buildTopLevelHelp(version);
   const originalHelpInformation = program.helpInformation.bind(program);
@@ -179,7 +180,7 @@ export async function createCli(): Promise<Command> {
     { registerInspect },
     { registerExplore },
     { registerTransfer },
-    { registerHide },
+    { registerHide, registerUnhide },
     { registerConfig },
   ] = await Promise.all([
     import("./commands/login.js"),
@@ -238,6 +239,7 @@ export async function createCli(): Promise<Command> {
   registerExplore(program);
   registerTransfer(program);
   registerHide(program);
+  registerUnhide(program);
   registerConfig(program);
 
   return program;

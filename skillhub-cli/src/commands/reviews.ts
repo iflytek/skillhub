@@ -19,6 +19,7 @@ export function registerReviews(program: Command) {
 
   reviews
     .command("my")
+    .alias("submissions")
     .description("List your review submissions")
     .action(async () => {
       try {

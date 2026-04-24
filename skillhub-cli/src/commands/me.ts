@@ -28,12 +28,13 @@ export function registerMe(program: Command) {
 
   me
     .command("skills")
+    .alias("ls")
     .description("List your published skills")
     .action(async () => {
       try {
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
-        const client = new ApiClient({ baseUrl: config.registry, token });
+        const client = new ApiClient({ baseUrl: config.registry, token, debug: program.opts().debug });
         const resp = await client.get<MeSkillsResponse>("/api/v1/me/skills");
         const skills = resp.items || [];
         const isJson = program.opts().json;
@@ -63,7 +64,7 @@ export function registerMe(program: Command) {
       try {
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
-        const client = new ApiClient({ baseUrl: config.registry, token });
+        const client = new ApiClient({ baseUrl: config.registry, token, debug: program.opts().debug });
         const resp = await client.get<MeSkillsResponse>("/api/v1/me/stars");
         const skills = resp.items || [];
         const isJson = program.opts().json;

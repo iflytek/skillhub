@@ -138,6 +138,7 @@ function printInspectHeader(detail: SkillDetailResponse, versions?: SkillVersion
 export function registerInspect(program: Command) {
   program
     .command("inspect")
+    .aliases(["info", "view"])
     .description("View skill metadata without installing")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("--namespace <ns>", "Search in specific namespace (searches all if not specified)")

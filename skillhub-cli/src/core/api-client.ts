@@ -3,6 +3,7 @@ import { request, FormData as UndiciFormData } from "undici";
 export interface ApiClientOptions {
   baseUrl: string;
   token?: string;
+  debug?: boolean;
 }
 
 interface NativeApiResponse<T> {
@@ -37,13 +38,29 @@ export class ApiClient {
     return data as T;
   }
 
+  private logDebug(method: string, url: string, statusCode?: number, body?: unknown) {
+    if (!this.options.debug) return;
+    const token = this.options.token;
+    const tokenPreview = token ? `${token.substring(0, 20)}...` : "none";
+    console.error(`[DEBUG] ${method} ${url}`);
+    console.error(`[DEBUG] Token: ${tokenPreview}`);
+    if (statusCode !== undefined) {
+      console.error(`[DEBUG] Status: ${statusCode}`);
+    }
+    if (body !== undefined) {
+      console.error(`[DEBUG] Body:`, JSON.stringify(body, null, 2));
+    }
+  }
+
   async get<T>(path: string): Promise<T> {
     const url = new URL(path, this.options.baseUrl);
+    this.logDebug("GET", url.toString());
     const { statusCode, body } = await request(url.toString(), {
       method: "GET",
       headers: this.headers(),
     });
     const data = await body.json();
+    this.logDebug("GET", url.toString(), statusCode, data);
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
@@ -130,6 +147,11 @@ function extractHumanMessage(body: unknown): string | null {
   if (typeof b.msg === "string" && b.msg.length > 0) return b.msg;
   if (typeof b.message === "string" && b.message.length > 0) return b.message;
   if (typeof b.error === "string" && b.error.length > 0) return b.error;
+  if (typeof b.detail === "string" && b.detail.length > 0) return b.detail;
+  if (typeof b.reason === "string" && b.reason.length > 0) return b.reason;
+  if (typeof b.description === "string" && b.description.length > 0) return b.description;
+
+  if (typeof b.data === "string" && b.data.length > 0) return b.data;
 
   return null;
 }
@@ -152,6 +174,14 @@ export class ApiError extends Error {
       detail += "   - Run 'skillhub config list' to see current configuration\n";
       detail += "   - Run 'skillhub config show-env-instructions' for setup guide\n";
       detail += "   - Or use: skillhub --registry <url> <command>";
+    }
+
+    // Enhanced error messages for 403 Forbidden
+    if (statusCode === 403) {
+      detail += "\n\n💡 Access denied. This could mean:\n";
+      detail += "   - Your account doesn't have permission to access this resource\n";
+      detail += "   - Contact your administrator if you believe this is an error\n";
+      detail += "   - Run 'skillhub whoami' to verify your account";
     }
 
     super(detail);

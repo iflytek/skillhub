@@ -255,6 +255,7 @@ function buildExploreHelp(cmd: Command): string {
 export function registerExplore(program: Command) {
   const exploreCmd = program
     .command("explore")
+    .aliases(["find", "find-skills", "search"])
     .description("Browse or search skills from the registry")
     .argument("[query]", "Search query for finding skills")
     .option("-n, --limit <n>", "Max results", "20")

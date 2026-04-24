@@ -13,7 +13,7 @@ export function registerNamespaces(program: Command) {
       try {
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
-        const client = new ApiClient({ baseUrl: config.registry, token });
+        const client = new ApiClient({ baseUrl: config.registry, token, debug: program.opts().debug });
         const namespaces = await client.get<NamespaceResponse[]>(ApiRoutes.meNamespaces);
         const isJson = program.opts().json;
         if (isJson) {

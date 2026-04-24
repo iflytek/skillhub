@@ -6,6 +6,7 @@ import { success, error } from "../utils/logger.js";
 export function registerDelete(program: Command) {
   program
     .command("delete")
+    .aliases(["del", "unpublish"])
     .description("Delete a skill you own")
     .argument("<skill>", "Skill name or namespace/skill-name")
     .option("-y, --yes", "Skip confirmation")
@@ -29,7 +30,7 @@ export function registerDelete(program: Command) {
       try {
         const token = await requireToken();
         const config = loadConfigFromProgram(program);
-        const client = new ApiClient({ baseUrl: config.registry, token });
+        const client = new ApiClient({ baseUrl: config.registry, token, debug: program.opts().debug });
         await client.delete(`/api/v1/skills/${namespace}/${skillSlug}`);
         success(`Deleted ${skillSlug} from ${namespace}`);
       } catch (e: any) {

@@ -15,6 +15,7 @@ export interface Notification {
 export function registerNotifications(program: Command) {
   const cmd = program
     .command("notifications")
+    .alias("notif")
     .description("Manage notifications");
 
   cmd

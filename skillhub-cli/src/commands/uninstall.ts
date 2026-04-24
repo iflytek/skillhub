@@ -111,6 +111,7 @@ function findAgentsWithSkill(skillName: string, scope: "global" | "local", agent
 export function registerUninstall(program: Command) {
   program
     .command("uninstall [skill]")
+    .alias("un")
     .description("Uninstall a skill or all skills from local agent")
     .option("-g, --global", "Uninstall from global scope")
     .option("-a, --agent <agents...>", "Uninstall from specific agents")
