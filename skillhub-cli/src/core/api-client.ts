@@ -3,7 +3,6 @@ import { request, FormData as UndiciFormData } from "undici";
 export interface ApiClientOptions {
   baseUrl: string;
   token?: string;
-  debug?: boolean;
 }
 
 interface NativeApiResponse<T> {
@@ -38,29 +37,13 @@ export class ApiClient {
     return data as T;
   }
 
-  private logDebug(method: string, url: string, statusCode?: number, body?: unknown) {
-    if (!this.options.debug) return;
-    const token = this.options.token;
-    const tokenPreview = token ? `${token.substring(0, 20)}...` : "none";
-    console.error(`[DEBUG] ${method} ${url}`);
-    console.error(`[DEBUG] Token: ${tokenPreview}`);
-    if (statusCode !== undefined) {
-      console.error(`[DEBUG] Status: ${statusCode}`);
-    }
-    if (body !== undefined) {
-      console.error(`[DEBUG] Body:`, JSON.stringify(body, null, 2));
-    }
-  }
-
   async get<T>(path: string): Promise<T> {
     const url = new URL(path, this.options.baseUrl);
-    this.logDebug("GET", url.toString());
     const { statusCode, body } = await request(url.toString(), {
       method: "GET",
       headers: this.headers(),
     });
     const data = await body.json();
-    this.logDebug("GET", url.toString(), statusCode, data);
     if (statusCode >= 400) {
       throw new ApiError(statusCode, data);
     }
