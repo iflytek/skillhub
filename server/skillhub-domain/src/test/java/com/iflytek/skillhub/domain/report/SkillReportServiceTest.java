@@ -134,7 +134,7 @@ class SkillReportServiceTest {
         );
 
         assertThat(saved.getStatus()).isEqualTo(SkillReportStatus.RESOLVED);
-        verify(skillGovernanceService).hideSkill(10L, "admin", java.util.Map.of(), "127.0.0.1", "JUnit", "handled");
+        verify(skillGovernanceService).hideSkillAsAdmin(10L, "admin", "127.0.0.1", "JUnit", "handled");
         verify(governanceNotificationService).notifyUser(
                 eq("user-1"),
                 eq("REPORT"),

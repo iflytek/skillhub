@@ -92,7 +92,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
         given(skillRepository.save(skill)).willReturn(skill);
 
-        Skill result = service.hideSkill(10L, "admin", java.util.Map.of(), "127.0.0.1", "JUnit", "policy");
+        Skill result = service.hideSkill(10L, "admin", java.util.Map.of(), null, "127.0.0.1", "JUnit", "policy");
 
         assertThat(result.isHidden()).isTrue();
         assertThat(result.getHiddenBy()).isEqualTo("admin");
@@ -107,7 +107,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
         given(skillRepository.save(skill)).willReturn(skill);
 
-        Skill result = service.archiveSkill(10L, "owner", Map.of(), "127.0.0.1", "JUnit", "cleanup");
+        Skill result = service.archiveSkill(10L, "owner", Map.of(), null, "127.0.0.1", "JUnit", "cleanup");
 
         assertThat(result.getStatus()).isEqualTo(SkillStatus.ARCHIVED);
         verify(auditLogService).record("owner", "ARCHIVE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", "{\"reason\":\"cleanup\"}");
@@ -122,7 +122,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
         given(skillRepository.save(skill)).willReturn(skill);
 
-        Skill result = service.unarchiveSkill(10L, "owner", Map.of(), "127.0.0.1", "JUnit");
+        Skill result = service.unarchiveSkill(10L, "owner", Map.of(), null, "127.0.0.1", "JUnit");
 
         assertThat(result.getStatus()).isEqualTo(SkillStatus.ACTIVE);
         verify(auditLogService).record("owner", "UNARCHIVE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", null);
@@ -136,7 +136,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
 
         assertThrows(DomainForbiddenException.class,
-                () -> service.archiveSkill(10L, "other", Map.of(1L, NamespaceRole.MEMBER), "127.0.0.1", "JUnit", null));
+                () -> service.archiveSkill(10L, "other", Map.of(1L, NamespaceRole.MEMBER), null, "127.0.0.1", "JUnit", null));
     }
 
     @Test
@@ -216,7 +216,7 @@ class SkillGovernanceServiceTest {
         SkillFile icon = new SkillFile(version.getId(), "icon.png", 20L, "image/png", "sha2", "skills/demo/icon");
         given(skillFileRepository.findByVersionId(version.getId())).willReturn(java.util.List.of(readme, icon));
 
-        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
+        service.deleteVersion(skill, version, "owner", Map.of(), null, "127.0.0.1", "JUnit", "test-ns");
 
         verify(objectStorageService).deleteObjects(argThat(keys ->
                 keys.size() == 3
@@ -246,7 +246,7 @@ class SkillGovernanceServiceTest {
 
         TransactionSynchronizationManager.initSynchronization();
 
-        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
+        service.deleteVersion(skill, version, "owner", Map.of(), null, "127.0.0.1", "JUnit", "test-ns");
 
         verify(objectStorageService, never()).deleteObjects(argThat(keys -> !keys.isEmpty()));
 
@@ -279,7 +279,7 @@ class SkillGovernanceServiceTest {
 
         TransactionSynchronizationManager.initSynchronization();
 
-        service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
+        service.deleteVersion(skill, version, "owner", Map.of(), null, "127.0.0.1", "JUnit", "test-ns");
 
         for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
             synchronization.afterCommit();
@@ -307,7 +307,7 @@ class SkillGovernanceServiceTest {
         version.setStatus(SkillVersionStatus.PUBLISHED);
 
         assertThrows(DomainBadRequestException.class,
-                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns"));
+                () -> service.deleteVersion(skill, version, "owner", Map.of(), null, "127.0.0.1", "JUnit", "test-ns"));
 
         verify(skillVersionRepository, never()).delete(any());
         verify(objectStorageService, never()).deleteObject(any());
@@ -323,7 +323,7 @@ class SkillGovernanceServiceTest {
         given(skillVersionRepository.findBySkillId(1L)).willReturn(java.util.List.of(version));
 
         DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
-                () -> service.deleteVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns"));
+                () -> service.deleteVersion(skill, version, "owner", Map.of(), null, "127.0.0.1", "JUnit", "test-ns"));
         assertThat(ex.messageCode()).isEqualTo("error.skill.version.delete.lastVersion");
 
         verify(skillVersionRepository, never()).delete(any());
@@ -351,7 +351,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.save(skill)).willReturn(skill);
         given(skillFileRepository.findByVersionId(2L)).willReturn(java.util.List.of());
 
-        service.deleteVersion(skill, draftVersion, "owner", Map.of(), "127.0.0.1", "JUnit", "test-ns");
+        service.deleteVersion(skill, draftVersion, "owner", Map.of(), null, "127.0.0.1", "JUnit", "test-ns");
 
         assertThat(skill.getLatestVersionId()).isEqualTo(3L);
         verify(skillRepository).save(skill);

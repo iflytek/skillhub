@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -59,7 +60,7 @@ class SkillLifecycleAppServiceTest {
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
         when(skillSlugResolutionService.resolve(7L, "demo-skill", "owner-1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .thenReturn(skill);
-        when(skillGovernanceService.archiveSkill(eq(11L), eq("owner-1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup")))
+        when(skillGovernanceService.archiveSkill(eq(11L), eq("owner-1"), anyMap(), any(), nullable(String.class), nullable(String.class), eq("cleanup")))
                 .thenReturn(skill);
 
         var response = service.archiveSkill(
@@ -68,12 +69,13 @@ class SkillLifecycleAppServiceTest {
                 new AdminSkillActionRequest("cleanup"),
                 "owner-1",
                 Map.of(7L, NamespaceRole.OWNER),
+                null,
                 new AuditRequestContext("127.0.0.1", "JUnit")
         );
 
         assertThat(response.skillId()).isEqualTo(11L);
         assertThat(response.action()).isEqualTo("ARCHIVE");
         assertThat(response.status()).isEqualTo("ARCHIVED");
-        verify(skillGovernanceService).archiveSkill(11L, "owner-1", Map.of(7L, NamespaceRole.OWNER), "127.0.0.1", "JUnit", "cleanup");
+        verify(skillGovernanceService).archiveSkill(11L, "owner-1", Map.of(7L, NamespaceRole.OWNER), null, "127.0.0.1", "JUnit", "cleanup");
     }
 }

@@ -48,7 +48,7 @@ class AdminSkillControllerTest {
     @Test
     void hideSkill_returnsUpdatedResponse() throws Exception {
         Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
-        given(skillGovernanceService.hideSkill(org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq("admin"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("policy")))
+        given(skillGovernanceService.hideSkillAsAdmin(org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq("admin"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("policy")))
             .willReturn(skill);
 
         PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("SUPER_ADMIN"));
