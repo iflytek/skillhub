@@ -169,6 +169,22 @@ export function registerDownload(program: Command) {
 
         if (statusCode >= 400) {
           spinner.fail(`Download failed: HTTP ${statusCode}`);
+          if (statusCode === 503) {
+            error("\n💡 Service Unavailable (503). This could mean:");
+            error("   - The server is temporarily overloaded or under maintenance");
+            error("   - The storage service is unavailable");
+            error("   - Network connectivity issues");
+            error("\nSuggestions:");
+            error("   - Wait a moment and try again");
+            error("   - Check your internet connection");
+            error("   - Contact your administrator if the problem persists");
+          } else if (statusCode === 404) {
+            error(`\n💡 Skill version not found: ${namespace}/${skillSlug}@${selectedVersion}`);
+            error("   - Try listing available versions: skillhub inspect " + slug);
+          } else if (statusCode === 403) {
+            error("\n💡 Access denied. You may not have permission to download this skill.");
+            error("   - Try: skillhub login");
+          }
           process.exitCode = 1;
           return;
         }
