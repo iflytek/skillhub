@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,15 +38,18 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
     private final UserAccountRepository userRepo;
     private final UserRoleBindingRepository roleBindingRepo;
     private final ApiTokenScopeService apiTokenScopeService;
+    private final com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepo;
 
     public ApiTokenAuthenticationFilter(ApiTokenService apiTokenService,
                                         UserAccountRepository userRepo,
                                         UserRoleBindingRepository roleBindingRepo,
-                                        ApiTokenScopeService apiTokenScopeService) {
+                                        ApiTokenScopeService apiTokenScopeService,
+                                        com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepo) {
         this.apiTokenService = apiTokenService;
         this.userRepo = userRepo;
         this.roleBindingRepo = roleBindingRepo;
         this.apiTokenScopeService = apiTokenScopeService;
+        this.namespaceMemberRepo = namespaceMemberRepo;
     }
 
     @Override
@@ -77,6 +81,13 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
                         .toList());
                     var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(auth);
+                    Map<Long, com.iflytek.skillhub.domain.namespace.NamespaceRole> userNsRoles = 
+                        namespaceMemberRepo.findByUserId(user.getId()).stream()
+                            .collect(Collectors.toMap(
+                                com.iflytek.skillhub.domain.namespace.NamespaceMember::getNamespaceId,
+                                com.iflytek.skillhub.domain.namespace.NamespaceMember::getRole,
+                                (left, right) -> left));
+                    request.setAttribute("userNsRoles", userNsRoles);
                     apiTokenService.touchLastUsed(token);
                 });
             });

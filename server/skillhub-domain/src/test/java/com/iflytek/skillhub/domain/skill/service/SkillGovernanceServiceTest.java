@@ -92,7 +92,7 @@ class SkillGovernanceServiceTest {
         given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
         given(skillRepository.save(skill)).willReturn(skill);
 
-        Skill result = service.hideSkill(10L, "admin", "127.0.0.1", "JUnit", "policy");
+        Skill result = service.hideSkill(10L, "admin", java.util.Map.of(), "127.0.0.1", "JUnit", "policy");
 
         assertThat(result.isHidden()).isTrue();
         assertThat(result.getHiddenBy()).isEqualTo("admin");

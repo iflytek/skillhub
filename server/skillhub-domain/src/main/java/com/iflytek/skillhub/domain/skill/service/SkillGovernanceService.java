@@ -298,7 +298,7 @@ public class SkillGovernanceService {
     private void assertCanManageLifecycle(Skill skill,
                                           String actorUserId,
                                           Map<Long, NamespaceRole> userNamespaceRoles) {
-        NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
+        NamespaceRole namespaceRole = userNamespaceRoles != null ? userNamespaceRoles.get(skill.getNamespaceId()) : null;
         boolean canManage = skill.getOwnerId().equals(actorUserId)
                 || namespaceRole == NamespaceRole.ADMIN
                 || namespaceRole == NamespaceRole.OWNER;

@@ -102,7 +102,7 @@ public class SkillReportService {
                                      String userAgent) {
         SkillReport report = requirePendingReport(reportId);
         if (disposition == SkillReportDisposition.RESOLVE_AND_HIDE) {
-            skillGovernanceService.hideSkill(report.getSkillId(), actorUserId, clientIp, userAgent, comment);
+            skillGovernanceService.hideSkill(report.getSkillId(), actorUserId, java.util.Map.of(), clientIp, userAgent, comment);
         } else if (disposition == SkillReportDisposition.RESOLVE_AND_ARCHIVE) {
             skillGovernanceService.archiveSkillAsAdmin(report.getSkillId(), actorUserId, clientIp, userAgent, comment);
         }

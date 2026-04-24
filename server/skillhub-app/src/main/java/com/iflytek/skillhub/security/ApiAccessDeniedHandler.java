@@ -38,12 +38,15 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
     public void handle(HttpServletRequest request,
                        HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
-        logger.info(
-                "Forbidden API request [requestId={}, method={}, path={}, reason={}]",
+        String userId = request.getAttribute("userId") != null ? request.getAttribute("userId").toString() : "anonymous";
+        logger.warn(
+                "Forbidden API request [requestId={}, method={}, path={}, userId={}, reason={}, message={}]",
                 MDC.get("requestId"),
                 request.getMethod(),
                 sensitiveLogSanitizer.sanitizeRequestTarget(request),
-                accessDeniedException.getClass().getSimpleName()
+                userId,
+                accessDeniedException.getClass().getSimpleName(),
+                accessDeniedException.getMessage()
         );
         ApiResponse<Void> body = apiResponseFactory.error(403, "error.forbidden");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);

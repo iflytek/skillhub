@@ -147,7 +147,7 @@ export class ApiError extends Error {
     const msg = extractHumanMessage(body);
     let detail = msg ?? `HTTP ${statusCode}`;
 
-    if (statusCode === 401 || statusCode === 403) {
+    if (statusCode === 401) {
       detail += "\nRun `skillhub login` to authenticate.";
     }
 

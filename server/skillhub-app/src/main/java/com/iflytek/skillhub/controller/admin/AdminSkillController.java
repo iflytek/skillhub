@@ -41,6 +41,7 @@ public class AdminSkillController extends BaseApiController {
         var skill = skillGovernanceService.hideSkill(
             skillId,
             principal.userId(),
+            java.util.Map.of(),
             httpRequest.getRemoteAddr(),
             httpRequest.getHeader("User-Agent"),
             request != null ? request.reason() : null
@@ -56,6 +57,7 @@ public class AdminSkillController extends BaseApiController {
         var skill = skillGovernanceService.unhideSkill(
             skillId,
             principal.userId(),
+            java.util.Map.of(),
             httpRequest.getRemoteAddr(),
             httpRequest.getHeader("User-Agent")
         );
