@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import { createWriteStream } from "node:fs";
-import { resolve } from "node:path";
+import { createWriteStream, mkdirSync } from "node:fs";
+import { resolve, dirname } from "node:path";
 import { finished } from "node:stream/promises";
 import { ApiClient } from "../core/api-client.js";
 import { loadConfigFromProgram } from "../core/config.js";
@@ -190,6 +190,14 @@ export function registerDownload(program: Command) {
         }
 
         const outPath = resolve(outputDir, `${skillSlug}.zip`);
+        const outDir = dirname(outPath);
+        try {
+          mkdirSync(outDir, { recursive: true });
+        } catch (e: any) {
+          spinner.fail(`Failed to create output directory: ${outDir}`);
+          process.exitCode = 1;
+          return;
+        }
         const fileStream = createWriteStream(outPath);
         await finished(body.pipe(fileStream));
 

@@ -444,7 +444,17 @@ async function installFromRegistry(
   const { statusCode, body } = response;
 
   if (statusCode >= 400) {
-    spinner.fail(`Skill not found: ${ns}/${actualSlug}`);
+    let errorMsg = `Failed to download skill: ${ns}/${actualSlug}`;
+    if (statusCode === 404) {
+      errorMsg = `Skill not found: ${ns}/${actualSlug}`;
+    } else if (statusCode === 403) {
+      errorMsg = `Access denied: ${ns}/${actualSlug}. Check your token permissions.`;
+    } else if (statusCode === 503) {
+      errorMsg = `Service temporarily unavailable. Please try again later.`;
+    } else if (statusCode >= 500) {
+      errorMsg = `Server error (${statusCode}). Please try again later.`;
+    }
+    spinner.fail(errorMsg);
     await rm(tmpDir, { recursive: true, force: true });
     process.exitCode = 1;
     return;
