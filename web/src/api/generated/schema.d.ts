@@ -3351,6 +3351,20 @@ export interface components {
             fileCount?: number;
             /** Format: int64 */
             totalSize?: number;
+            results?: components["schemas"]["PublishResultDetailResponse"][];
+        };
+        PublishResultDetailResponse: {
+            packagePath?: string;
+            /** Format: int64 */
+            skillId?: number;
+            namespace?: string;
+            slug?: string;
+            version?: string;
+            status?: string;
+            /** Format: int32 */
+            fileCount?: number;
+            /** Format: int64 */
+            totalSize?: number;
         };
         ReviewActionRequest: {
             comment?: string;

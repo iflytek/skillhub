@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller.support;
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
+import com.iflytek.skillhub.service.support.SkillPackageArchiveExtractor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 

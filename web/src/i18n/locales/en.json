@@ -1063,7 +1063,7 @@
   },
   "upload": {
     "dropHint": "Drop to upload...",
-    "dragHint": "Drag a ZIP file here, or click to select",
+    "dragHint": "Drag ZIP files here, or click to select",
     "formatHint": "Only .zip format supported"
   },
   "layout": {
@@ -1212,13 +1212,18 @@
       "private": "Private"
     },
     "file": "Skill Package File",
+    "selectedFileCount": "1 file selected",
+    "selectedFilesCount": "{{count}} files selected",
     "removeSelectedFile": "Remove selected file",
+    "removeSelectedFiles": "Remove selected files",
     "publishing": "Publishing...",
     "confirm": "Confirm Publish",
     "success": "Published Successfully",
     "successDescription": "{{skill}} has been submitted for review and will be available after admin approval",
     "publishedTitle": "Published Successfully",
     "publishedDescription": "{{skill}} is now live and available for download",
+    "bulkSuccessTitle": "Batch publish completed",
+    "bulkSuccessDescription": "{{count}} skill packages were published successfully.",
     "pendingReviewTitle": "Submitted for Review",
     "pendingReviewDescription": "{{skill}} has been submitted for review and will be available after admin approval",
     "error": "Publish Failed",

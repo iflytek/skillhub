@@ -4,12 +4,12 @@ import { useDropzone } from 'react-dropzone'
 import { cn } from '@/shared/lib/utils'
 
 interface UploadZoneProps {
-  onFileSelect: (file: File) => void
+  onFileSelect: (files: File[]) => void
   disabled?: boolean
 }
 
 /**
- * Provides the publish page dropzone for uploading one zip package at a time.
+ * Provides the publish page dropzone for uploading zip packages.
  * The component is intentionally stateless so packaging validation can remain in
  * the publish flow that knows the surrounding form and backend constraints.
  */
@@ -18,7 +18,7 @@ export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
-        onFileSelect(acceptedFiles[0])
+        onFileSelect(acceptedFiles)
       }
     },
     [onFileSelect]
@@ -29,7 +29,7 @@ export function UploadZone({ onFileSelect, disabled }: UploadZoneProps) {
     accept: {
       'application/zip': ['.zip'],
     },
-    maxFiles: 1,
+    multiple: true,
     disabled,
   })
 

@@ -2,45 +2,34 @@ package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
-import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
-import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
-import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
-import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PublishResponse;
-import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import com.iflytek.skillhub.service.SkillPublishAppService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Upload endpoints for skill packages.
  *
- * <p>The controller is responsible for archive extraction and request shaping,
- * while the domain service owns all publication validation and state changes.
+ * <p>The controller is responsible for request binding while the app service
+ * orchestrates archive extraction and publication.
  */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillPublishController extends BaseApiController {
 
-    private final SkillPublishService skillPublishService;
-    private final SkillPackageArchiveExtractor skillPackageArchiveExtractor;
-    private final SkillHubMetrics skillHubMetrics;
+    private final SkillPublishAppService skillPublishAppService;
 
-    public SkillPublishController(SkillPublishService skillPublishService,
-                                  SkillPackageArchiveExtractor skillPackageArchiveExtractor,
-                                  ApiResponseFactory responseFactory,
-                                  SkillHubMetrics skillHubMetrics) {
+    public SkillPublishController(SkillPublishAppService skillPublishAppService,
+                                  ApiResponseFactory responseFactory) {
         super(responseFactory);
-        this.skillPublishService = skillPublishService;
-        this.skillPackageArchiveExtractor = skillPackageArchiveExtractor;
-        this.skillHubMetrics = skillHubMetrics;
+        this.skillPublishAppService = skillPublishAppService;
     }
 
     /**
@@ -57,34 +46,14 @@ public class SkillPublishController extends BaseApiController {
             @AuthenticationPrincipal PlatformPrincipal principal) throws IOException {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
-
-        List<PackageEntry> entries;
-        try {
-            entries = skillPackageArchiveExtractor.extract(file);
-        } catch (IllegalArgumentException e) {
-            throw new DomainBadRequestException("error.skill.publish.package.invalid", e.getMessage());
-        }
-
-        SkillPublishService.PublishResult publishResult = skillPublishService.publishFromEntries(
+        PublishResponse response = skillPublishAppService.publish(
                 namespace,
-                entries,
-                principal.userId(),
+                file,
                 skillVisibility,
+                principal.userId(),
                 principal.platformRoles(),
                 confirmWarnings
         );
-
-        PublishResponse response = new PublishResponse(
-                publishResult.skillId(),
-                namespace,
-                publishResult.slug(),
-                publishResult.version().getVersion(),
-                publishResult.version().getStatus().name(),
-                publishResult.version().getFileCount(),
-                publishResult.version().getTotalSize()
-        );
-        skillHubMetrics.incrementSkillPublish(namespace, publishResult.version().getStatus().name());
-
         return ok("response.success.published", response);
     }
 }

@@ -1,4 +1,4 @@
-package com.iflytek.skillhub.controller.support;
+package com.iflytek.skillhub.service.support;
 
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;

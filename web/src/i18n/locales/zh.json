@@ -1064,7 +1064,7 @@
   },
   "upload": {
     "dropHint": "放开以上传文件...",
-    "dragHint": "拖拽 ZIP 文件到此处，或点击选择",
+    "dragHint": "拖拽 ZIP 文件到此处，或点击选择多个文件",
     "formatHint": "仅支持 .zip 格式"
   },
   "layout": {
@@ -1213,13 +1213,18 @@
       "private": "私有"
     },
     "file": "技能包文件",
+    "selectedFileCount": "已选择 1 个文件",
+    "selectedFilesCount": "已选择 {{count}} 个文件",
     "removeSelectedFile": "删除已选文件",
+    "removeSelectedFiles": "删除已选文件",
     "publishing": "发布中...",
     "confirm": "确认发布",
     "success": "发布成功",
     "successDescription": "{{skill}} 已提交审核，等待管理员批准后即可使用",
     "publishedTitle": "发布成功",
     "publishedDescription": "{{skill}} 已发布，现在可以下载使用",
+    "bulkSuccessTitle": "批量发布完成",
+    "bulkSuccessDescription": "{{count}} 个技能包已发布成功。",
     "pendingReviewTitle": "已提交审核",
     "pendingReviewDescription": "{{skill}} 已提交审核，等待管理员批准后即可使用",
     "error": "发布失败",

@@ -285,7 +285,7 @@ export interface PagedResponse<T> {
 }
 
 // Publish
-export interface PublishResult {
+export interface PublishResultItem {
   skillId: number
   namespace: string
   slug: string
@@ -293,6 +293,10 @@ export interface PublishResult {
   status: string
   fileCount: number
   totalSize: number
+}
+
+export type PublishResult = PublishResultItem & {
+  results?: PublishResultItem[]
 }
 
 export interface SkillDeleteResult {
