@@ -16,7 +16,7 @@ export function registerPublish(program: Command) {
     .description("Publish a skill to SkillHub registry")
     .option("--namespace <ns>", "Target namespace (default: global)")
     .option("--slug <slug>", "Skill slug")
-    .option("--skill-version <ver>", "Version (semver)")
+    .option("-v, --skill-version <ver>", "Version (semver)")
     .option("--name <name>", "Display name")
     .option("--changelog <text>", "Changelog text")
     .option("--tag <tags>", "Comma-separated tags (e.g. beta,stable)", "latest")
@@ -29,7 +29,7 @@ export function registerPublish(program: Command) {
       }
 
       const slug = opts.slug || basename(folder);
-      let version = opts["skill-version"] || opts.v;
+      let version = opts["skill-version"] || opts.ver;
       if (!version) {
         const now = new Date();
         const yyyymmdd = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
