@@ -51,6 +51,9 @@ class LocalAuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private LocalAuthFailedService localAuthFailedService;
+
     private LocalAuthService service;
 
     @BeforeEach
@@ -62,7 +65,8 @@ class LocalAuthServiceTest {
             globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
             passwordEncoder,
-            CLOCK
+            CLOCK,
+            localAuthFailedService
         );
     }
 
@@ -122,8 +126,7 @@ class LocalAuthServiceTest {
             .extracting("status")
             .isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        assertThat(credential.getFailedAttempts()).isEqualTo(1);
-        verify(credentialRepository).save(credential);
+        verify(localAuthFailedService).handleFailedLogin(credential.getId());
     }
 
     @Test
@@ -141,7 +144,7 @@ class LocalAuthServiceTest {
             .extracting("status")
             .isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        assertThat(credential.getLockedUntil()).isEqualTo(Instant.now(CLOCK).plusSeconds(15 * 60));
+        verify(localAuthFailedService).handleFailedLogin(credential.getId());
     }
 
     @Test
