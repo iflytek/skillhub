@@ -202,14 +202,14 @@ export function registerUpdate(program: Command) {
       let updated = 0;
       let failed = 0;
 
-      for (const info of skillsToUpdate) {
+      for (const skill of skillsToUpdate) {
         try {
-          info(`Updating ${info.name} from ${info.currentVersion} to ${info.latestVersion}...`);
-          const cmd = `${cliCmd} install ${info.namespace}/${info.slug} --skill-version ${info.latestVersion} ${scope}`.trim();
+          info(`Updating ${skill.name} from ${skill.currentVersion} to ${skill.latestVersion}...`);
+          const cmd = `${cliCmd} install ${skill.namespace}/${skill.slug} --skill-version ${skill.latestVersion} ${scope}`.trim();
           execSync(cmd, { stdio: "inherit" });
           updated++;
         } catch (e: any) {
-          error(`Failed to update ${info.name}: ${e.message}`);
+          error(`Failed to update ${skill.name}: ${e.message}`);
           failed++;
         }
       }
