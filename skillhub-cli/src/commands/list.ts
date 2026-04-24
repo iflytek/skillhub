@@ -1,169 +1,203 @@
 import { Command } from "commander";
-import { existsSync, readdirSync, lstatSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
-import { getAllAgents, isUniversalForScope } from "../core/agent-detector.js";
-import { info, dim } from "../utils/logger.js";
+import { existsSync } from "node:fs";
+import { getAllAgents } from "../core/agent-detector.js";
+import { getSkillLockPath } from "../core/skill-lock.js";
+import { discoverInstalledSkills, filterSkillsByStatus, type DiscoveredSkill } from "../core/skill-status.js";
+import { success, error, info, warn, dim } from "../utils/logger.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
 interface ListOptions {
-  global?: boolean;
-  project?: boolean;
+  scope?: string;
   agent?: string[];
-  all?: boolean;
+  status?: string[];
+  json?: boolean;
+}
+
+export async function listAction(opts: ListOptions) {
+  let scopes: ("local" | "global")[] = [];
+
+  if (opts.scope) {
+    const scopeValue = opts.scope.toLowerCase();
+    if (scopeValue === "all") {
+      scopes = ["local", "global"];
+    } else if (scopeValue === "global") {
+      scopes = ["global"];
+    } else if (scopeValue === "project" || scopeValue === "local") {
+      scopes = ["local"];
+    }
+  } else {
+    const scopeSelection = await p.select({
+      message: "Which scope to list?",
+      options: [
+        { value: "all", label: "All (global + project)" },
+        { value: "global", label: "Global only" },
+        { value: "project", label: "Project only" },
+      ],
+    });
+
+    if (p.isCancel(scopeSelection)) {
+      console.log("Cancelled.");
+      return;
+    }
+
+    if (scopeSelection === "all") {
+      scopes = ["local", "global"];
+    } else if (scopeSelection === "global") {
+      scopes = ["global"];
+    } else {
+      scopes = ["local"];
+    }
+  }
+
+  let targetAgents = opts.agent
+    ? getAllAgents().filter((a) => opts.agent!.includes(a.key))
+    : undefined;
+
+  if (!opts.agent) {
+    const allAgents = getAllAgents();
+    const agentItems = allAgents
+      .map((a) => ({ value: a.key, label: a.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const selected = await searchMultiselect({
+      message: "Which agents to list from?",
+      items: agentItems,
+      required: false,
+    });
+
+    if (selected === cancelSymbol) {
+      console.log("Cancelled.");
+      return;
+    }
+
+    if (selected && selected.length > 0) {
+      targetAgents = allAgents.filter((a) => (selected as string[]).includes(a.key));
+    }
+  }
+
+  let showManaged = false;
+  let showOrphaned = false;
+  let showMissing = false;
+
+  if (opts.status && opts.status.length > 0) {
+    const statusSet = new Set(opts.status.map((s) => s.toLowerCase()));
+    if (statusSet.has("all")) {
+      showManaged = true;
+      showOrphaned = true;
+      showMissing = true;
+    } else {
+      showManaged = statusSet.has("managed");
+      showOrphaned = statusSet.has("orphaned");
+      showMissing = statusSet.has("missing");
+    }
+  } else {
+    const statusSelection = await p.multiselect({
+      message: "Which statuses to show?",
+      options: [
+        { value: "managed", label: "managed", hint: "installed and in lock file" },
+        { value: "orphaned", label: "orphaned", hint: "installed but not in lock file" },
+        { value: "missing", label: "missing", hint: "in lock file but not installed" },
+      ],
+      required: false,
+      initialValues: ["managed", "orphaned"],
+    });
+
+    if (p.isCancel(statusSelection)) {
+      console.log("Cancelled.");
+      return;
+    }
+
+    const selected = statusSelection as string[];
+    showManaged = selected.includes("managed");
+    showOrphaned = selected.includes("orphaned");
+    showMissing = selected.includes("missing");
+  }
+
+  const allSkills = await discoverInstalledSkills(scopes, targetAgents);
+  const filteredSkills = filterSkillsByStatus(allSkills, {
+    managed: showManaged,
+    orphaned: showOrphaned,
+    missing: showMissing,
+  });
+
+  if (opts.json) {
+    console.log(JSON.stringify(filteredSkills, null, 2));
+    return;
+  }
+
+  displaySkillList(filteredSkills, scopes, targetAgents);
 }
 
 export function registerList(program: Command) {
   program
     .command("list")
     .alias("ls")
-    .description("List installed skills")
-    .option("-g, --global", "List global skills only")
-    .option("-p, --project", "List project skills only")
-    .option("-a, --all", "List all skills (both global and project)")
+    .description("List installed skills with status")
+    .option("--scope <scope>", "Scope to list (global, project, all)")
     .option("--agent <agents...>", "Filter by specific agents")
+    .option("--status <status...>", "Filter by status (managed, orphaned, missing, all)")
+    .option("--json", "Output as JSON")
     .action(async (opts: ListOptions) => {
-      let scopeGlobal: boolean | null = null;
-
-      if (opts.global) {
-        scopeGlobal = true;
-      } else if (opts.project) {
-        scopeGlobal = false;
-      } else {
-        const scopeSelection = await p.select({
-          message: "Which scope to list?",
-          options: [
-            { value: "all", label: "All (global + project)" },
-            { value: "global", label: "Global only" },
-            { value: "project", label: "Project only" },
-          ],
-        });
-
-        if (p.isCancel(scopeSelection)) {
-          console.log("Cancelled.");
-          return;
-        }
-
-        if (scopeSelection === "global") {
-          scopeGlobal = true;
-        } else if (scopeSelection === "project") {
-          scopeGlobal = false;
-        }
-      }
-
-      // Determine scope for dynamic universal grouping
-      const isGlobal = scopeGlobal === true;
-      const allAgents = getAllAgents();
-
-      // All agents are selectable - no locked section
-      const selectableItems = allAgents
-        .map((a) => ({
-          value: a.key,
-          label: a.name,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label));
-
-      const agentSelection = await searchMultiselect({
-        message: "Which agents to list from?",
-        items: selectableItems,
-      });
-
-      if (agentSelection === cancelSymbol) {
-        console.log("Cancelled.");
-        return;
-      }
-
-      const selectedAgents = agentSelection as string[];
-      const agents = allAgents.filter((a) => selectedAgents.includes(a.key));
-
-      if (agents.length === 0) {
-        console.log("No agents selected.");
-        return;
-      }
-
-      console.log("");
-
-      // Collect all skill entries grouped by (skillName, path) -> agentNames
-      const skillMap = new Map<string, Map<string, string[]>>();
-      const home = homedir();
-      const cwd = process.cwd();
-
-      for (const agent of agents) {
-        const showProject = scopeGlobal === null || scopeGlobal === false;
-        const showGlobal = scopeGlobal === null || scopeGlobal === true;
-
-        if (showProject) {
-          const projectDir = join(cwd, agent.skillsDir);
-          collectSkills(skillMap, projectDir, agent.name, cwd, true);
-        }
-
-        if (showGlobal && agent.globalSkillsDir) {
-          const globalDir = join(home, agent.globalSkillsDir);
-          collectSkills(skillMap, globalDir, agent.name, home, false);
-        }
-      }
-
-      if (skillMap.size === 0) {
-        dim("No skills installed for selected agents and scope.");
-      } else {
-        // Output grouped by skill, then by path with agent names merged
-        const sortedSkills = [...skillMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-        for (const [skillName, pathGroups] of sortedSkills) {
-          info(`${skillName}`);
-          const sortedPaths = [...pathGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-          for (const [displayPath, agentNames] of sortedPaths) {
-            const sorted = agentNames.sort((a, b) => a.localeCompare(b));
-            const label = sorted.length <= 5
-              ? sorted.join(", ")
-              : sorted.slice(0, 5).join(", ") + ` ${pc.dim(`+${sorted.length - 5}`)}`;
-            dim(`  ${pc.dim("→")} ${label}: ${displayPath}`);
-          }
-        }
-      }
-
-      console.log("");
+      await listAction(opts);
     });
 }
 
-/**
- * Collect skills from a directory into the skillMap.
- * skillMap: skillName -> (displayPath -> agentNames[])
- */
-function collectSkills(
-  skillMap: Map<string, Map<string, string[]>>,
-  dir: string,
-  agentName: string,
-  baseForRelative: string,
-  isProject: boolean,
+function displaySkillList(
+  skills: DiscoveredSkill[],
+  scopes: ("local" | "global")[],
+  targetAgents?: import("../core/agent-detector.js").AgentInfo[]
 ) {
-  if (!existsSync(dir)) return;
-  const skills = getSkillsInDir(dir);
-  for (const skillName of skills) {
-    const displayPath = isProject
-      ? dir.replace(baseForRelative, ".")
-      : dir.replace(baseForRelative, "~");
-    let pathGroups = skillMap.get(skillName);
-    if (!pathGroups) {
-      pathGroups = new Map();
-      skillMap.set(skillName, pathGroups);
-    }
-    const agents = pathGroups.get(displayPath) || [];
-    agents.push(agentName);
-    pathGroups.set(displayPath, agents);
-  }
-}
+  const scopeLabel = scopes.length === 2 ? "all scopes" : `${scopes[0]} scope`;
+  const agentLabel = targetAgents
+    ? ` (${targetAgents.map((a) => a.name).sort((a, b) => a.localeCompare(b)).join(", ")})`
+    : "";
 
-function getSkillsInDir(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((f) => {
-    const full = join(dir, f);
-    try {
-      const stat = lstatSync(full);
-      return stat.isDirectory() && existsSync(join(full, "SKILL.md"));
-    } catch {
-      return false;
+  console.log("");
+  info(`Installed Skills (${scopeLabel})${agentLabel}:`);
+  console.log("");
+
+  if (skills.length === 0) {
+    dim("  No skills found.");
+    console.log("");
+    return;
+  }
+
+  let managed = 0, missing = 0, orphaned = 0;
+
+  for (const skill of skills) {
+    if (skill.status === "managed") {
+      managed++;
+      success(`  ✓ ${skill.name}`);
+      if (skill.source) {
+        dim(`    Source: ${skill.source}`);
+      }
+      for (const loc of skill.locations) {
+        dim(`    → ${loc.agent}: ${loc.path}`);
+      }
+    } else if (skill.status === "missing") {
+      missing++;
+      error(`  ✗ ${skill.name}`);
+      if (skill.source) {
+        dim(`    Source: ${skill.source}`);
+      }
+      dim(`    Status: NOT INSTALLED`);
+    } else if (skill.status === "orphaned") {
+      orphaned++;
+      warn(`  ! ${skill.name}`);
+      for (const loc of skill.locations) {
+        dim(`    → ${loc.agent}: ${loc.path}`);
+      }
+      dim(`    Status: NOT IN LOCK FILE`);
     }
-  }).sort((a, b) => a.localeCompare(b));
+  }
+
+  console.log("");
+  const lockPath = getSkillLockPath();
+  if (existsSync(lockPath)) {
+    dim(`Lock file: ${lockPath}`);
+  }
+  dim(`Summary: ${managed} managed, ${missing} missing, ${orphaned} orphaned`);
+  console.log("");
 }

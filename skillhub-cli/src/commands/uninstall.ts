@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { getAllAgents, isUniversalForScope, type AgentInfo } from "../core/agent-detector.js";
 import { success, info, dim } from "../utils/logger.js";
 import { removeFromLock } from "../core/skill-lock.js";
+import { discoverInstalledSkills as discoverSkillsWithStatus, type DiscoveredSkill } from "../core/skill-status.js";
 import { searchMultiselect, cancelSymbol } from "../utils/search-multiselect.js";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
@@ -82,28 +83,6 @@ function getSkillPath(skillName: string, agent: AgentInfo, scope: "global" | "lo
   return null;
 }
 
-function discoverInstalledSkills(scope: "local" | "global", agent?: AgentInfo): string[] {
-  const skills: string[] = [];
-  const agents = agent ? [agent] : getAllAgents();
-
-  for (const a of agents) {
-    const skillPath = getSkillPath("*", a, scope);
-    if (!skillPath) continue;
-
-    const baseDir = skillPath.replace(/\/[^/]+$/, "");
-    try {
-      for (const entry of readdirSync(baseDir)) {
-        const fullPath = join(baseDir, entry);
-        if (statSync(fullPath).isDirectory() && existsSync(join(fullPath, "SKILL.md"))) {
-          skills.push(entry);
-        }
-      }
-    } catch {}
-  }
-
-  return [...new Set(skills)].sort((a, b) => a.localeCompare(b));
-}
-
 function findAgentsWithSkill(skillName: string, scope: "global" | "local", agents: AgentInfo[]): AgentInfo[] {
   return agents.filter((a) => getSkillPath(skillName, a, scope) !== null);
 }
@@ -147,18 +126,25 @@ export function registerUninstall(program: Command) {
 
       const allAgents = getAllAgents();
       const isGlobal = scope === "global";
+      const searchScopes = scopeAll ? ["local", "global"] : [scope];
+
+      const discoveredSkills = await discoverSkillsWithStatus(searchScopes);
+      const installedSkills = discoveredSkills.filter(
+        (s) => s.status === "managed" || s.status === "orphaned"
+      );
 
       if (opts.all) {
-        const skills = discoverInstalledSkills(scope);
-
-        if (skills.length === 0) {
+        if (installedSkills.length === 0) {
           dim("No skills installed.");
           return;
         }
 
         const selected = await searchMultiselect({
           message: "Select skills to uninstall",
-          items: skills.map((s) => ({ value: s, label: s })),
+          items: installedSkills.map((s) => ({
+            value: s.name,
+            label: s.status === "orphaned" ? `${s.name} [orphaned]` : s.name,
+          })),
           required: true,
         });
 
@@ -170,14 +156,16 @@ export function registerUninstall(program: Command) {
         const selectedSkills = selected as string[];
         const results: { skill: string; agent: string; path: string; ok: boolean }[] = [];
 
-        for (const skill of selectedSkills) {
-          const agentsWithSkill = findAgentsWithSkill(skill, scope, allAgents);
-          for (const agent of agentsWithSkill) {
-            const ok = await uninstallSkill(skill, agent, scope, true);
-            const skillPath = getSkillPath(skill, agent, scope);
-            results.push({ skill, agent: agent.name, path: skillPath || "", ok });
+        for (const skillName of selectedSkills) {
+          for (const searchScope of searchScopes) {
+            const agentsWithSkill = findAgentsWithSkill(skillName, searchScope as "global" | "local", allAgents);
+            for (const agent of agentsWithSkill) {
+              const ok = await uninstallSkill(skillName, agent, searchScope as "global" | "local", true);
+              const skillPath = getSkillPath(skillName, agent, searchScope as "global" | "local");
+              results.push({ skill: skillName, agent: agent.name, path: skillPath || "", ok });
+            }
           }
-          await removeFromLock(skill);
+          await removeFromLock(skillName);
         }
 
         printUninstallResults(results);
@@ -185,16 +173,17 @@ export function registerUninstall(program: Command) {
       }
 
       if (!name) {
-        const skills = discoverInstalledSkills(scope);
-
-        if (skills.length === 0) {
+        if (installedSkills.length === 0) {
           dim("No skills installed.");
           return;
         }
 
         const selected = await searchMultiselect({
           message: "Select skills to uninstall",
-          items: skills.map((s) => ({ value: s, label: s })),
+          items: installedSkills.map((s) => ({
+            value: s.name,
+            label: s.status === "orphaned" ? `${s.name} [orphaned]` : s.name,
+          })),
           required: true,
         });
 
@@ -206,14 +195,16 @@ export function registerUninstall(program: Command) {
         const selectedSkills = selected as string[];
         const results: { skill: string; agent: string; path: string; ok: boolean }[] = [];
 
-        for (const skill of selectedSkills) {
-          const agentsWithSkill = findAgentsWithSkill(skill, scope, allAgents);
-          for (const agent of agentsWithSkill) {
-            const ok = await uninstallSkill(skill, agent, scope, !!opts.yes);
-            const skillPath = getSkillPath(skill, agent, scope);
-            results.push({ skill, agent: agent.name, path: skillPath || "", ok });
+        for (const skillName of selectedSkills) {
+          for (const searchScope of searchScopes) {
+            const agentsWithSkill = findAgentsWithSkill(skillName, searchScope as "global" | "local", allAgents);
+            for (const agent of agentsWithSkill) {
+              const ok = await uninstallSkill(skillName, agent, searchScope as "global" | "local", !!opts.yes);
+              const skillPath = getSkillPath(skillName, agent, searchScope as "global" | "local");
+              results.push({ skill: skillName, agent: agent.name, path: skillPath || "", ok });
+            }
           }
-          await removeFromLock(skill);
+          await removeFromLock(skillName);
         }
 
         printUninstallResults(results);

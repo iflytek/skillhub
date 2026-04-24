@@ -47,21 +47,6 @@ function buildTopLevelHelp(version: string): string {
   sections.push(dim("CLI for SkillHub — publish, search, and manage agent skills"));
   sections.push("");
 
-  sections.push(formatSection("Configuration", [
-    { cmd: "config list", desc: "Show current registry configuration" },
-    { cmd: "config set <value>", desc: "Set registry URL" },
-    { cmd: "config get", desc: "Get current registry configuration" },
-    { cmd: "config show-env-instructions", desc: "Show environment variable setup guide" },
-  ]));
-  sections.push("");
-
-  sections.push(formatSection("Auth", [
-    { cmd: "login", desc: "Authenticate with SkillHub registry" },
-    { cmd: "logout", desc: "Remove stored authentication token" },
-    { cmd: "whoami", desc: "Show current authenticated user" },
-  ]));
-  sections.push("");
-
   sections.push(formatSection("Discovery", [
     { cmd: "explore", desc: "Browse or search skills from the registry", alias: "find, find-skills, search" },
     { cmd: "inspect <skill>", desc: "View skill metadata and versions", alias: "info, view" },
@@ -79,15 +64,14 @@ function buildTopLevelHelp(version: string): string {
   ]));
   sections.push("");
 
-  sections.push(formatSection("Social", [
-    { cmd: "star <skill>", desc: "Star or unstar a skill" },
-    { cmd: "rating <skill>", desc: "View your rating for a skill" },
-    { cmd: "rate <skill> <score>", desc: "Rate a skill (1-5)" },
-    { cmd: "report <skill>", desc: "Report a skill for review" },
+  sections.push(formatSection("My Skills", [
+    { cmd: "me skills", desc: "List your published skills", alias: "me ls" },
+    { cmd: "me stars", desc: "List your starred skills" },
+    { cmd: "reviews", desc: "List your review submissions", alias: "reviews my, reviews submissions" },
   ]));
   sections.push("");
 
-  sections.push(formatSection("Publish & Manage", [
+  sections.push(formatSection("Publish & Content", [
     { cmd: "init [name]", desc: "Create a new SKILL.md template" },
     { cmd: "publish [path]", desc: "Publish a skill to SkillHub registry" },
     { cmd: "sync [path]", desc: "Scan and publish all skills from a directory" },
@@ -96,19 +80,30 @@ function buildTopLevelHelp(version: string): string {
   ]));
   sections.push("");
 
-  sections.push(formatSection("Account", [
-    { cmd: "me skills", desc: "List your published skills", alias: "me ls" },
-    { cmd: "me stars", desc: "List your starred skills" },
-    { cmd: "namespaces", desc: "List namespaces you have access to" },
-    { cmd: "notifications", desc: "Manage notifications", alias: "notif" },
-    { cmd: "reviews my", desc: "List your review submissions", alias: "reviews submissions" },
+  sections.push(formatSection("Community", [
+    { cmd: "star <skill>", desc: "Star or unstar a skill" },
+    { cmd: "rating <skill>", desc: "View your rating for a skill" },
+    { cmd: "rate <skill> <score>", desc: "Rate a skill (1-5)" },
+    { cmd: "report <skill>", desc: "Report a skill for review" },
   ]));
   sections.push("");
 
-  sections.push(formatSection("Admin", [
+  sections.push(formatSection("Notifications & Admin", [
+    { cmd: "notifications", desc: "Manage notifications", alias: "notif" },
+    { cmd: "namespaces", desc: "List namespaces you have access to" },
     { cmd: "hide <skill>", desc: "Hide a skill (admin only)" },
     { cmd: "unhide <skill>", desc: "Unhide a skill (admin only)" },
     { cmd: "transfer <ns> <user>", desc: "Transfer namespace ownership" },
+  ]));
+  sections.push("");
+
+  sections.push(formatSection("Configuration", [
+    { cmd: "config list", desc: "Show current registry configuration" },
+    { cmd: "config set <value>", desc: "Set registry URL" },
+    { cmd: "config get", desc: "Get current registry configuration" },
+    { cmd: "login", desc: "Authenticate with SkillHub registry" },
+    { cmd: "logout", desc: "Remove stored authentication token" },
+    { cmd: "whoami", desc: "Show current authenticated user" },
   ]));
   sections.push("");
 
