@@ -1,4 +1,4 @@
-package com.iflytek.skillhub.controller.support;
+package com.iflytek.skillhub.service.support;
 
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
@@ -80,7 +80,7 @@ public class SkillPackageArchiveExtractor {
      * If all file paths share a single root directory prefix (e.g., "my-skill/xxx"),
      * strip that prefix. Otherwise return entries unchanged.
      */
-    static List<PackageEntry> stripSingleRootDirectory(List<PackageEntry> entries) {
+    public static List<PackageEntry> stripSingleRootDirectory(List<PackageEntry> entries) {
         if (entries.isEmpty()) return entries;
 
         Set<String> rootSegments = new HashSet<>();

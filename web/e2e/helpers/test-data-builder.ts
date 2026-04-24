@@ -156,6 +156,35 @@ function createSkillPackageZipFile(suffix: string, options?: SeedSkillOptions): 
   }
 }
 
+function createSkillCollectionPackageZipFile(
+  suffix: string,
+  packages: SeedSkillOptions[],
+): { filePath: string; cleanup: () => void } {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), 'skillhub-e2e-collection-'))
+  const collectionDir = path.join(tempRoot, `collection-${suffix}`)
+  const zipPath = path.join(tempRoot, `collection-${suffix}.zip`)
+
+  execFileSync('mkdir', ['-p', collectionDir])
+  writeFileSync(path.join(collectionDir, 'README.md'), '# Skill collection\n', 'utf8')
+
+  packages.forEach((options, index) => {
+    const packageDir = path.join(collectionDir, `skill-${index + 1}`)
+    const { readmeHeading, skillMd } = buildSkillPackageContent(`${suffix}_${index}`, options)
+    execFileSync('mkdir', ['-p', packageDir])
+    writeFileSync(path.join(packageDir, 'SKILL.md'), skillMd, 'utf8')
+    writeFileSync(path.join(packageDir, 'README.md'), `# ${readmeHeading}\n`, 'utf8')
+  })
+
+  execFileSync('zip', ['-q', '-r', zipPath, '.'], { cwd: collectionDir })
+
+  return {
+    filePath: zipPath,
+    cleanup: () => {
+      rmSync(tempRoot, { recursive: true, force: true })
+    },
+  }
+}
+
 async function parseEnvelope<T>(response: Awaited<ReturnType<APIRequestContext['fetch']>>): Promise<T> {
   const text = await response.text()
   let parsed: ApiEnvelope<T> | null = null
@@ -515,6 +544,15 @@ export class E2eTestDataBuilder {
   createSkillPackageFile(options?: SeedSkillOptions): string {
     const unique = `${this.suffix}_${Math.random().toString(36).slice(2, 6)}`
     const { filePath, cleanup } = createSkillPackageZipFile(unique, options)
+    this.cleanupTasks.push(async () => {
+      cleanup()
+    })
+    return filePath
+  }
+
+  createSkillCollectionPackageFile(packages: SeedSkillOptions[]): string {
+    const unique = `${this.suffix}_${Math.random().toString(36).slice(2, 6)}`
+    const { filePath, cleanup } = createSkillCollectionPackageZipFile(unique, packages)
     this.cleanupTasks.push(async () => {
       cleanup()
     })

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
+import { getPublishResultItems } from '@/shared/lib/publish-result'
 import { getSkillDetailQueryKey } from './query-keys'
 import { buildSkillSearchUrl } from './skill-query-helpers'
 
@@ -37,10 +38,28 @@ async function getSkillDocumentation(namespace: string, slug: string, version: s
   return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/file?path=${encodeURIComponent(path)}`)
 }
 
-async function publishSkill(params: { namespace: string; file: File; visibility: string; confirmWarnings?: boolean }): Promise<PublishResult> {
+interface PublishSkillParams {
+  namespace: string
+  file?: File
+  files?: File[]
+  visibility: string
+  confirmWarnings?: boolean
+}
+
+function getPublishFiles(params: PublishSkillParams): File[] {
+  if (params.files && params.files.length > 0) {
+    return params.files
+  }
+
+  return params.file ? [params.file] : []
+}
+
+async function publishFiles(params: PublishSkillParams, files: File[]): Promise<PublishResult> {
   const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
   const formData = new FormData()
-  formData.append('file', params.file)
+  for (const file of files) {
+    formData.append('file', file)
+  }
   formData.append('visibility', params.visibility)
   formData.append('confirmWarnings', String(params.confirmWarnings === true))
 
@@ -50,6 +69,29 @@ async function publishSkill(params: { namespace: string; file: File; visibility:
     body: formData,
     timeoutMs: PUBLISH_REQUEST_TIMEOUT_MS,
   })
+}
+
+async function publishSkill(params: PublishSkillParams): Promise<PublishResult> {
+  const files = getPublishFiles(params)
+  const result = await publishFiles(params, files)
+  const resultItems = getPublishResultItems(result)
+
+  if (files.length <= 1 || resultItems.length >= files.length) {
+    return result
+  }
+
+  const remainingResults: PublishResult[] = []
+  for (const file of files.slice(resultItems.length)) {
+    remainingResults.push(await publishFiles(params, [file]))
+  }
+
+  return {
+    ...result,
+    results: [
+      ...resultItems,
+      ...remainingResults.flatMap(getPublishResultItems),
+    ],
+  }
 }
 
 export function useSearchSkills(params: SearchParams) {

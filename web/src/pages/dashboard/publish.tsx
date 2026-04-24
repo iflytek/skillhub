@@ -25,6 +25,7 @@ import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { toast } from '@/shared/lib/toast'
+import { formatPublishResultLabel, getPublishResultItems } from '@/shared/lib/publish-result'
 import { ApiError } from '@/api/client'
 
 const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
@@ -32,7 +33,7 @@ const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
 export function PublishPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [namespaceSlug, setNamespaceSlug] = useState<string>('')
   const [visibility, setVisibility] = useState<string>('PUBLIC')
   const [warningDialogOpen, setWarningDialogOpen] = useState(false)
@@ -46,19 +47,19 @@ export function PublishPage() {
     : t('publish.visibilityOptions.namespaceOnly')
 
   const handleRemoveSelectedFile = () => {
-    setSelectedFile(null)
+    setSelectedFiles([])
     setPrecheckWarnings([])
     setWarningDialogOpen(false)
   }
 
-  const handleFileSelect = (file: File | null) => {
-    setSelectedFile(file)
+  const handleFileSelect = (files: File[]) => {
+    setSelectedFiles(files)
     setPrecheckWarnings([])
     setWarningDialogOpen(false)
   }
 
   const publishSkill = async (confirmWarnings = false) => {
-    if (!selectedFile || !namespaceSlug) {
+    if (selectedFiles.length === 0 || !namespaceSlug) {
       toast.error(t('publish.selectRequired'))
       return
     }
@@ -66,22 +67,28 @@ export function PublishPage() {
     try {
       const result = await publishMutation.mutateAsync({
         namespace: namespaceSlug,
-        file: selectedFile,
+        files: selectedFiles,
         visibility,
         confirmWarnings,
       })
       setPrecheckWarnings([])
       setWarningDialogOpen(false)
-      const skillLabel = `${result.namespace}/${result.slug}@${result.version}`
-      if (result.status === 'PUBLISHED') {
+      const publishResults = getPublishResultItems(result)
+
+      if (publishResults.length > 1) {
+        toast.success(
+          t('publish.bulkSuccessTitle'),
+          t('publish.bulkSuccessDescription', { count: publishResults.length })
+        )
+      } else if (publishResults[0]?.status === 'PUBLISHED') {
         toast.success(
           t('publish.publishedTitle'),
-          t('publish.publishedDescription', { skill: skillLabel })
+          t('publish.publishedDescription', { skill: formatPublishResultLabel(publishResults[0]) })
         )
       } else {
         toast.success(
           t('publish.pendingReviewTitle'),
-          t('publish.pendingReviewDescription', { skill: skillLabel })
+          t('publish.pendingReviewDescription', { skill: publishResults[0] ? formatPublishResultLabel(publishResults[0]) : '' })
         )
       }
       navigate({ to: '/dashboard/skills' })
@@ -189,19 +196,28 @@ export function PublishPage() {
         <div className="space-y-3">
           <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           <UploadZone
-            key={selectedFile ? `${selectedFile.name}-${selectedFile.lastModified}` : 'empty'}
+            key={selectedFiles.map((file) => `${file.name}-${file.lastModified}`).join('|') || 'empty'}
             onFileSelect={handleFileSelect}
             disabled={publishMutation.isPending}
           />
-          {selectedFile && (
+          {selectedFiles.length > 0 && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
-              <div className="min-w-0 text-sm text-muted-foreground flex items-center gap-2">
+              <div className="min-w-0 text-sm text-muted-foreground flex items-start gap-2">
                 <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="truncate">
-                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                </span>
+                <div className="min-w-0 space-y-1">
+                  <p className="font-medium text-foreground">
+                    {selectedFiles.length === 1
+                      ? t('publish.selectedFileCount')
+                      : t('publish.selectedFilesCount', { count: selectedFiles.length })}
+                  </p>
+                  {selectedFiles.map((file) => (
+                    <p key={`${file.name}-${file.lastModified}`} className="truncate">
+                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                    </p>
+                  ))}
+                </div>
               </div>
               <Button
                 type="button"
@@ -210,7 +226,7 @@ export function PublishPage() {
                 onClick={handleRemoveSelectedFile}
                 disabled={publishMutation.isPending}
               >
-                {t('publish.removeSelectedFile')}
+                {selectedFiles.length === 1 ? t('publish.removeSelectedFile') : t('publish.removeSelectedFiles')}
               </Button>
             </div>
           )}
@@ -220,7 +236,7 @@ export function PublishPage() {
           className="w-full text-primary-foreground disabled:text-primary-foreground"
           size="lg"
           onClick={handlePublish}
-          disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
+          disabled={selectedFiles.length === 0 || !namespaceSlug || publishMutation.isPending}
         >
           {publishMutation.isPending ? t('publish.publishing') : t('publish.confirm')}
         </Button>

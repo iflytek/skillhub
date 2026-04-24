@@ -1,12 +1,9 @@
 package com.iflytek.skillhub.controller.portal;
 
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
-import org.mockito.ArgumentMatchers;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -17,11 +14,10 @@ import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
-import com.iflytek.skillhub.domain.skill.SkillVersion;
-import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
-import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
-import com.iflytek.skillhub.metrics.SkillHubMetrics;
+import com.iflytek.skillhub.dto.PublishResponse;
+import com.iflytek.skillhub.dto.PublishResultDetailResponse;
+import com.iflytek.skillhub.service.SkillPublishAppService;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -38,8 +34,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.multipart.MultipartFile;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,7 +47,7 @@ class SkillPublishControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private SkillPublishService skillPublishService;
+    private SkillPublishAppService skillPublishAppService;
 
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
@@ -59,25 +55,16 @@ class SkillPublishControllerTest {
     @MockBean
     private DeviceAuthService deviceAuthService;
 
-    @MockBean
-    private SkillHubMetrics skillHubMetrics;
-
     @Test
     void publish_recordsMetricsAfterSuccess() throws Exception {
-        SkillVersion version = new SkillVersion(12L, "1.0.0", "usr_1");
-        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
-        version.setFileCount(1);
-        version.setTotalSize(128L);
-        ReflectionTestUtils.setField(version, "id", 34L);
-
-        given(skillPublishService.publishFromEntries(
+        given(skillPublishAppService.publish(
             eq("global"),
-            ArgumentMatchers.<List<PackageEntry>>any(),
-            eq("usr_1"),
+            org.mockito.ArgumentMatchers.any(MultipartFile.class),
             eq(SkillVisibility.PUBLIC),
+            eq("usr_1"),
             eq(Set.of("SUPER_ADMIN")),
             eq(false)))
-            .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
+            .willReturn(publishResponse("demo-skill", "PENDING_REVIEW"));
 
         PlatformPrincipal principal = new PlatformPrincipal(
             "usr_1",
@@ -108,27 +95,20 @@ class SkillPublishControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.skillId").value(12))
-            .andExpect(jsonPath("$.data.slug").value("demo-skill"));
-
-        verify(skillHubMetrics).incrementSkillPublish("global", "PENDING_REVIEW");
+            .andExpect(jsonPath("$.data.slug").value("demo-skill"))
+            .andExpect(jsonPath("$.data.results[0].slug").value("demo-skill"));
     }
 
     @Test
     void publish_passesWarningConfirmationFlag() throws Exception {
-        SkillVersion version = new SkillVersion(12L, "1.0.0", "usr_1");
-        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
-        version.setFileCount(1);
-        version.setTotalSize(128L);
-        ReflectionTestUtils.setField(version, "id", 34L);
-
-        given(skillPublishService.publishFromEntries(
+        given(skillPublishAppService.publish(
             eq("global"),
-            ArgumentMatchers.<List<PackageEntry>>any(),
-            eq("usr_1"),
+            org.mockito.ArgumentMatchers.any(MultipartFile.class),
             eq(SkillVisibility.PUBLIC),
+            eq("usr_1"),
             eq(Set.of("SUPER_ADMIN")),
             eq(true)))
-            .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
+            .willReturn(publishResponse("demo-skill", "PENDING_REVIEW"));
 
         PlatformPrincipal principal = new PlatformPrincipal(
             "usr_1",
@@ -159,6 +139,28 @@ class SkillPublishControllerTest {
                 .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0));
+
+        verify(skillPublishAppService).publish(
+                eq("global"),
+                org.mockito.ArgumentMatchers.any(MultipartFile.class),
+                eq(SkillVisibility.PUBLIC),
+                eq("usr_1"),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(true));
+    }
+
+    private PublishResponse publishResponse(String slug, String status) {
+        PublishResultDetailResponse detail = new PublishResultDetailResponse(
+                "",
+                12L,
+                "global",
+                slug,
+                "1.0.0",
+                status,
+                1,
+                128L
+        );
+        return new PublishResponse(12L, "global", slug, "1.0.0", status, 1, 128L, List.of(detail));
     }
 
     private byte[] buildZipBytes() throws Exception {
