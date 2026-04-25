@@ -1,6 +1,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+.nfs*
 
 # Editors / IDEs / local tooling
 .claude/
@@ -14,6 +15,7 @@ Thumbs.db
 *.iml
 *.swp
 *.swo
+*.code-workspace
 
 # Logs
 *.log
@@ -86,3 +88,7 @@ CLAUDE.md
 
 # Local config file
 .mcp.json
+
+# Local scripts (personal utilities)
+scripts/notify-feishu.sh
+scripts/release-cli.sh

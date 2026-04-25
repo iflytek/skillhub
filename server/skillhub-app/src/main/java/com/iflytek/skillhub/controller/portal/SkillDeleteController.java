@@ -32,7 +32,7 @@ public class SkillDeleteController extends BaseApiController {
     }
 
     @DeleteMapping("/id/{skillId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SKILL_ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<SkillDeleteResponse> deleteSkillById(@PathVariable Long skillId,
                                                             @AuthenticationPrincipal PlatformPrincipal principal,
                                                             HttpServletRequest request) {
@@ -50,7 +50,7 @@ public class SkillDeleteController extends BaseApiController {
     }
 
     @DeleteMapping("/{namespace}/{slug}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SKILL_ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<SkillDeleteResponse> deleteSkill(@PathVariable String namespace,
                                                         @PathVariable String slug,
                                                         @RequestParam(required = false) String ownerId,

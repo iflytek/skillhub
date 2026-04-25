@@ -33,12 +33,12 @@ public class AdminSkillController extends BaseApiController {
     }
 
     @PostMapping("/{skillId}/hide")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SKILL_ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<AdminSkillMutationResponse> hideSkill(@PathVariable Long skillId,
                                                              @RequestBody(required = false) AdminSkillActionRequest request,
                                                              @AuthenticationPrincipal PlatformPrincipal principal,
                                                              HttpServletRequest httpRequest) {
-        var skill = skillGovernanceService.hideSkill(
+        var skill = skillGovernanceService.hideSkillAsAdmin(
             skillId,
             principal.userId(),
             httpRequest.getRemoteAddr(),
@@ -49,11 +49,11 @@ public class AdminSkillController extends BaseApiController {
     }
 
     @PostMapping("/{skillId}/unhide")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SKILL_ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<AdminSkillMutationResponse> unhideSkill(@PathVariable Long skillId,
                                                                @AuthenticationPrincipal PlatformPrincipal principal,
                                                                HttpServletRequest httpRequest) {
-        var skill = skillGovernanceService.unhideSkill(
+        var skill = skillGovernanceService.unhideSkillAsAdmin(
             skillId,
             principal.userId(),
             httpRequest.getRemoteAddr(),

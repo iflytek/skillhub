@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -69,15 +70,37 @@ public class SkillGovernanceService {
     }
 
     @Transactional
-    public Skill hideSkill(Long skillId, String actorUserId, String clientIp, String userAgent, String reason) {
+    public Skill hideSkill(Long skillId,
+                           String actorUserId,
+                           Map<Long, NamespaceRole> userNamespaceRoles,
+                           Set<String> platformRoles,
+                           String clientIp,
+                           String userAgent,
+                           String reason) {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
+        return hideSkillInternal(skill, actorUserId, clientIp, userAgent, reason);
+    }
+
+    @Transactional
+    public Skill hideSkillAsAdmin(Long skillId,
+                                  String actorUserId,
+                                  String clientIp,
+                                  String userAgent,
+                                  String reason) {
+        Skill skill = skillRepository.findById(skillId)
+            .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        return hideSkillInternal(skill, actorUserId, clientIp, userAgent, reason);
+    }
+
+    private Skill hideSkillInternal(Skill skill, String actorUserId, String clientIp, String userAgent, String reason) {
         skill.setHidden(true);
         skill.setHiddenAt(currentInstant());
         skill.setHiddenBy(actorUserId);
         skill.setUpdatedBy(actorUserId);
         Skill saved = skillRepository.save(skill);
-        auditLogService.record(actorUserId, "HIDE_SKILL", "SKILL", skillId, null, clientIp, userAgent, jsonReason(reason));
+        auditLogService.record(actorUserId, "HIDE_SKILL", "SKILL", skill.getId(), null, clientIp, userAgent, jsonReason(reason));
         return saved;
     }
 
@@ -85,12 +108,13 @@ public class SkillGovernanceService {
     public Skill archiveSkill(Long skillId,
                               String actorUserId,
                               Map<Long, NamespaceRole> userNamespaceRoles,
+                              Set<String> platformRoles,
                               String clientIp,
                               String userAgent,
                               String reason) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
         return archiveSkillInternal(skill, actorUserId, clientIp, userAgent, reason);
     }
 
@@ -120,15 +144,35 @@ public class SkillGovernanceService {
     }
 
     @Transactional
-    public Skill unhideSkill(Long skillId, String actorUserId, String clientIp, String userAgent) {
+    public Skill unhideSkill(Long skillId,
+                             String actorUserId,
+                             Map<Long, NamespaceRole> userNamespaceRoles,
+                             Set<String> platformRoles,
+                             String clientIp,
+                             String userAgent) {
         Skill skill = skillRepository.findById(skillId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
+        return unhideSkillInternal(skill, actorUserId, clientIp, userAgent);
+    }
+
+    @Transactional
+    public Skill unhideSkillAsAdmin(Long skillId,
+                                    String actorUserId,
+                                    String clientIp,
+                                    String userAgent) {
+        Skill skill = skillRepository.findById(skillId)
+            .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+        return unhideSkillInternal(skill, actorUserId, clientIp, userAgent);
+    }
+
+    private Skill unhideSkillInternal(Skill skill, String actorUserId, String clientIp, String userAgent) {
         skill.setHidden(false);
         skill.setHiddenAt(null);
         skill.setHiddenBy(null);
         skill.setUpdatedBy(actorUserId);
         Skill saved = skillRepository.save(skill);
-        auditLogService.record(actorUserId, "UNHIDE_SKILL", "SKILL", skillId, null, clientIp, userAgent, null);
+        auditLogService.record(actorUserId, "UNHIDE_SKILL", "SKILL", skill.getId(), null, clientIp, userAgent, null);
         return saved;
     }
 
@@ -136,11 +180,12 @@ public class SkillGovernanceService {
     public Skill unarchiveSkill(Long skillId,
                                 String actorUserId,
                                 Map<Long, NamespaceRole> userNamespaceRoles,
+                                Set<String> platformRoles,
                                 String clientIp,
                                 String userAgent) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
 
         SkillStatus previousStatus = skill.getStatus();
         skill.setStatus(SkillStatus.ACTIVE);
@@ -156,10 +201,11 @@ public class SkillGovernanceService {
                               SkillVersion version,
                               String actorUserId,
                               Map<Long, NamespaceRole> userNamespaceRoles,
+                              Set<String> platformRoles,
                               String clientIp,
                               String userAgent,
                               String namespaceSlug) {
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
         if (version.getStatus() != SkillVersionStatus.DRAFT
                 && version.getStatus() != SkillVersionStatus.REJECTED
                 && version.getStatus() != SkillVersionStatus.SCAN_FAILED
@@ -286,8 +332,13 @@ public class SkillGovernanceService {
 
     private void assertCanManageLifecycle(Skill skill,
                                           String actorUserId,
-                                          Map<Long, NamespaceRole> userNamespaceRoles) {
-        NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
+                                          Map<Long, NamespaceRole> userNamespaceRoles,
+                                          Set<String> platformRoles) {
+        if (platformRoles != null &&
+            (platformRoles.contains("SUPER_ADMIN") || platformRoles.contains("SKILL_ADMIN"))) {
+            return;
+        }
+        NamespaceRole namespaceRole = userNamespaceRoles != null ? userNamespaceRoles.get(skill.getNamespaceId()) : null;
         boolean canManage = skill.getOwnerId().equals(actorUserId)
                 || namespaceRole == NamespaceRole.ADMIN
                 || namespaceRole == NamespaceRole.OWNER;

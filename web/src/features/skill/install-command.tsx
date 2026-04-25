@@ -11,7 +11,7 @@ interface InstallCommandProps {
 }
 
 export function buildInstallTarget(namespace: string, slug: string): string {
-  return namespace === 'global' ? slug : `${namespace}--${slug}`
+  return namespace === 'global' ? slug : `${namespace}/${slug}`
 }
 
 export function getBaseUrl(): string {
@@ -30,7 +30,7 @@ export function getBaseUrl(): string {
 
 export function buildInstallCommand(namespace: string, slug: string, baseUrl: string): string {
   const installTarget = buildInstallTarget(namespace, slug)
-  return `npx clawhub install ${installTarget} --registry ${baseUrl}`
+  return `npx motovis-skillhub install ${installTarget} --registry ${baseUrl}`
 }
 
 export function InstallCommand({ namespace, slug }: InstallCommandProps) {

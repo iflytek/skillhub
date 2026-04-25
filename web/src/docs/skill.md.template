@@ -1,13 +1,13 @@
 ---
 name: skillhub-registry
-description: Use this when you need to search, inspect, install, or publish agent skills against a SkillHub registry. SkillHub is a skill registry with a ClawHub-compatible API layer, so prefer the `clawhub` CLI for registry operations instead of making raw HTTP calls.
+description: Use this when you need to search, inspect, install, or publish agent skills against a SkillHub registry. SkillHub is a skill registry with a ClawHub-compatible API layer, so prefer the `skillhub` CLI for registry operations instead of making raw HTTP calls.
 ---
 
 # SkillHub Registry
 
 Use this skill when you need to work with a SkillHub registry: search skills, inspect metadata, install a package, or publish a new version.
 
-> Important: Prefer the `clawhub` CLI for registry workflows. SkillHub exposes a ClawHub-compatible API surface and a discovery endpoint at `/.well-known/clawhub.json`, so the CLI is the safest path for auth, resolution, and download behavior. Only fall back to raw HTTP when debugging the server itself.
+> Important: Prefer the `skillhub` CLI for registry workflows. SkillHub exposes a ClawHub-compatible API surface and a discovery endpoint at `/.well-known/clawhub.json`, so the CLI is the safest path for auth, resolution, and download behavior. Only fall back to raw HTTP when debugging the server itself.
 
 ## What SkillHub Is
 
@@ -16,8 +16,8 @@ SkillHub is an enterprise-oriented skill registry. It stores versioned skill pac
 Key facts:
 
 - Internal coordinates use `@{namespace}/{skill_slug}`.
-- If using the clawhub CLI, the compatible format is `{namespace}--{skill_slug}`.
-- ClawHub-compatible clients use a `{namespace}--{skill_slug}` slug instead.
+- If using the skillhub CLI, the compatible format is `{namespace}--{skill_slug}`.
+- ClawHub-compatible clients use a `{namespace}--{skill_slug}` slug format.
 - `latest` always means the latest published version, never draft or pending review.
 - Public skills in `@global` can be downloaded anonymously.
 - If no namespace is specified, it defaults to `@global`.
@@ -26,23 +26,23 @@ Key facts:
 
 ## Configure The CLI
 
-Point `clawhub` at the SkillHub base URL:
+Point `skillhub` at the SkillHub base URL:
 
 ```bash
-export CLAWHUB_REGISTRY=${SKILLHUB_PUBLIC_BASE_URL}
+export SKILLHUB_REGISTRY=${SKILLHUB_PUBLIC_BASE_URL}
 ```
 
 Alternatively, use the `--registry` parameter every time, for example:
 
 ```bash
-npx clawhub install my-skill --registry ${SKILLHUB_PUBLIC_BASE_URL}
+npx motovis-skillhub install my-skill --registry ${SKILLHUB_PUBLIC_BASE_URL}
 ```
 
 
 If you need authenticated access, provide an API token:
 
 ```bash
-clawhub login --token sk_your_api_token_here
+skillhub login --token sk_your_api_token_here
 ```
 
 Optional local check:
@@ -61,23 +61,23 @@ Expected response:
 
 SkillHub has two naming forms:
 
-| SkillHub coordinate | Canonical slug for `clawhub` |
+| SkillHub coordinate | CLI format |
 |---|---|
 | `@global/my-skill` | `my-skill` |
-| `@team-name/my-skill` | `team-name--my-skill` |
+| `@team-name/my-skill` | `team-name/my-skill` |
 
 Rules:
 
-- `--` is the namespace separator in the compatibility layer.
-- If there is no `--`, the skill is treated as `@global/...`.
+- `/` is the namespace separator in CLI commands.
+- If no namespace is specified, the skill is treated as `@global/...`.
 - `latest` resolves to the latest published version only.
 
 Examples:
 
 ```bash
-npx clawhub install my-skill
-npx clawhub install my-skill@1.2.0
-npx clawhub install team-name--my-skill
+npx motovis-skillhub install my-skill
+npx motovis-skillhub install my-skill@1.2.0
+npx motovis-skillhub install team-name/my-skill
 ```
 
 ## Common Workflows
@@ -85,28 +85,28 @@ npx clawhub install team-name--my-skill
 ### Search
 
 ```bash
-npx clawhub search email
+npx motovis-skillhub search email
 ```
 
 Use an empty query when you want a broad listing:
 
 ```bash
-npx clawhub search ""
+npx motovis-skillhub search ""
 ```
 
 ### Inspect A Skill
 
 ```bash
-npx clawhub info my-skill
-npx clawhub info team-name--my-skill
+npx motovis-skillhub info my-skill
+npx motovis-skillhub info team-name/my-skill
 ```
 
 ### Install
 
 ```bash
-npx clawhub install my-skill
-npx clawhub install my-skill@1.2.0
-npx clawhub install team-name--my-skill
+npx motovis-skillhub install my-skill
+npx motovis-skillhub install my-skill@1.2.0
+npx motovis-skillhub install team-name/my-skill
 ```
 
 ### Publish
@@ -114,7 +114,7 @@ npx clawhub install team-name--my-skill
 Prepare a skill package directory, then publish it:
 
 ```bash
-npx clawhub publish ./my-skill
+npx motovis-skillhub publish ./my-skill
 ```
 
 Publishing requires authentication and sufficient permissions in the target namespace.

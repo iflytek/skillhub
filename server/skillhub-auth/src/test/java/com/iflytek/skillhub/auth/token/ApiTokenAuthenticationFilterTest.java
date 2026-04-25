@@ -34,11 +34,13 @@ class ApiTokenAuthenticationFilterTest {
     private final UserRoleBindingRepository roleBindingRepository = mock(UserRoleBindingRepository.class);
     private final ApiTokenScopeService scopeService =
             new ApiTokenScopeService(new ObjectMapper(), new RouteSecurityPolicyRegistry());
+    private final com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepository = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
     private final ApiTokenAuthenticationFilter filter = new ApiTokenAuthenticationFilter(
         apiTokenService,
         userAccountRepository,
         roleBindingRepository,
-        scopeService
+        scopeService,
+        namespaceMemberRepository
     );
 
     @AfterEach

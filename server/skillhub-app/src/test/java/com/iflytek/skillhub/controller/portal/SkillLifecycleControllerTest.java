@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -88,7 +89,7 @@ class SkillLifecycleControllerTest {
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
         given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .willReturn(skill);
-        given(skillGovernanceService.archiveSkill(eq(1L), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup")))
+        given(skillGovernanceService.archiveSkill(eq(1L), eq("usr_1"), anyMap(), any(), nullable(String.class), nullable(String.class), eq("cleanup")))
                 .willReturn(skillWithStatus(skill, com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/archive")
@@ -116,7 +117,7 @@ class SkillLifecycleControllerTest {
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
         given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .willReturn(skill);
-        given(skillGovernanceService.unarchiveSkill(eq(1L), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class)))
+        given(skillGovernanceService.unarchiveSkill(eq(1L), eq("usr_1"), anyMap(), any(), nullable(String.class), nullable(String.class)))
                 .willReturn(skillWithStatus(skill, com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/unarchive")
@@ -241,7 +242,7 @@ class SkillLifecycleControllerTest {
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
         given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .willReturn(skill);
-        given(skillGovernanceService.archiveSkill(eq(1L), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup")))
+        given(skillGovernanceService.archiveSkill(eq(1L), eq("usr_1"), anyMap(), any(), nullable(String.class), nullable(String.class), eq("cleanup")))
                 .willReturn(skillWithStatus(skill, com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED));
 
         mockMvc.perform(post("/api/web/skills/@global/demo-skill/archive")

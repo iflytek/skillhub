@@ -1,0 +1,15 @@
+tmp/
+tests/
+vitest.config.ts
+unbuild.config.ts
+tsconfig.json
+*.test.ts
+src/
+.agents/
+.claude/
+.omc/
+AGENTS.md
+README.md
+Makefile
+docs/
+scripts/
