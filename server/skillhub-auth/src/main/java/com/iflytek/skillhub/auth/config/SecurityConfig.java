@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.config;
 
 import com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService;
+import com.iflytek.skillhub.auth.oauth.CustomOidcUserService;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
 import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
@@ -51,6 +52,7 @@ public class SecurityConfig {
             "form-action 'self'");
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
     private final SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver;
     private final OAuth2LoginSuccessHandler successHandler;
     private final OAuth2LoginFailureHandler failureHandler;
@@ -62,6 +64,7 @@ public class SecurityConfig {
     private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
+                          CustomOidcUserService customOidcUserService,
                           SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
                           OAuth2LoginSuccessHandler successHandler,
                           OAuth2LoginFailureHandler failureHandler,
@@ -72,6 +75,7 @@ public class SecurityConfig {
                           ObjectProvider<MockAuthFilter> mockAuthFilterProvider,
                           RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
         this.customOAuth2UserService = customOAuth2UserService;
+        this.customOidcUserService = customOidcUserService;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
@@ -112,7 +116,9 @@ public class SecurityConfig {
             })
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequestResolver))
-                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)
+                    .oidcUserService(customOidcUserService))
                 .successHandler(successHandler)
                 .failureHandler(failureHandler)
             )
