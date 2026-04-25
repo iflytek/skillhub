@@ -41,12 +41,12 @@ public class TokenController extends BaseApiController {
             @Valid @RequestBody TokenCreateRequest request) {
         String scopeJson;
         if (request.scopes() == null || request.scopes().isEmpty()) {
-            scopeJson = "[\"skill:read\",\"skill:publish\"]";
+            scopeJson = "[\"skill:read\",\"skill:publish\",\"skill:manage\"]";
         } else {
             try {
                 scopeJson = objectMapper.writeValueAsString(request.scopes());
             } catch (JsonProcessingException e) {
-                scopeJson = "[\"skill:read\",\"skill:publish\"]";
+                scopeJson = "[\"skill:read\",\"skill:publish\",\"skill:manage\"]";
             }
         }
 

@@ -29,7 +29,7 @@ public class DeviceAuthService {
     private static final long PENDING_CODE_TTL_MINUTES = EXPIRES_IN_SECONDS / 60L;
     private static final long USED_CODE_TTL_MINUTES = 1L;
     private static final String CLI_DEVICE_TOKEN_NAME = "CLI Device Flow";
-    private static final String CLI_DEVICE_SCOPE_JSON = "[\"skill:read\",\"skill:publish\"]";
+    private static final String CLI_DEVICE_SCOPE_JSON = "[\"skill:read\",\"skill:publish\",\"skill:manage\"]";
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ApiTokenService apiTokenService;
