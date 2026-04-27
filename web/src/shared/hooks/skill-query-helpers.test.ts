@@ -17,16 +17,16 @@ describe('buildSkillSearchUrl', () => {
     expect(buildSkillSearchUrl({})).toBe('/api/web/skills')
   })
 
-  it('keeps an empty q parameter when the search query is an empty string', () => {
-    expect(buildSkillSearchUrl({ q: '' })).toBe('/api/web/skills?q=')
+  it('omits q when the search query is an empty string', () => {
+    expect(buildSkillSearchUrl({ q: '' })).toBe('/api/web/skills')
   })
 
-  it('normalizes whitespace-only queries to an empty q parameter', () => {
+  it('omits q when the normalized query is empty after trimming', () => {
     expect(buildSkillSearchUrl({
       q: '   ',
       sort: 'relevance',
       page: 0,
-    })).toBe('/api/web/skills?q=&sort=relevance&page=0')
+    })).toBe('/api/web/skills?sort=relevance&page=0')
   })
 })
 
