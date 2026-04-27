@@ -139,6 +139,20 @@ export interface NamespaceCandidateUser {
   status: string
 }
 
+export interface BatchMemberResult {
+  userId: string
+  role: string
+  success: boolean
+  error?: string
+}
+
+export interface BatchMemberResponse {
+  totalCount: number
+  successCount: number
+  failureCount: number
+  results: BatchMemberResult[]
+}
+
 // Skill types
 export interface SkillSummary {
   id: number

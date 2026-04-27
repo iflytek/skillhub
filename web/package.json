@@ -29,6 +29,7 @@
     "lucide-react": "^0.344.0",
     "openapi-fetch": "^0.13.8",
     "react": "^19.0.0",
+    "react-diff-viewer-continued": "^4.2.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^15.0.0",
     "react-i18next": "^16.5.8",

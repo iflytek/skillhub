@@ -9,16 +9,23 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.dto.BatchMemberRequest;
+import com.iflytek.skillhub.dto.BatchMemberResponse;
+import com.iflytek.skillhub.dto.BatchMemberResult;
 import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.MessageResponse;
 import com.iflytek.skillhub.dto.NamespaceLifecycleRequest;
 import com.iflytek.skillhub.dto.NamespaceRequest;
 import com.iflytek.skillhub.dto.NamespaceResponse;
+import com.iflytek.skillhub.dto.MemberRequest;
 import com.iflytek.skillhub.dto.UpdateMemberRoleRequest;
 import com.iflytek.skillhub.exception.ForbiddenException;
 import com.iflytek.skillhub.exception.UnauthorizedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Command-facing namespace application service for portal endpoints.
@@ -142,6 +149,41 @@ public class NamespacePortalCommandAppService {
         );
         UserAccount user = userAccountRepository.findById(memberUserId).orElse(null);
         return MemberResponse.from(member, user);
+    }
+
+    // Intentionally not @Transactional: each addMember runs in its own transaction
+    // so partial success is possible (some members added even if others fail).
+    public BatchMemberResponse batchAddMembers(String slug, List<MemberRequest> members, String operatorUserId) {
+        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Long namespaceId = namespace.getId();
+
+        List<BatchMemberResult> results = new ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+
+        for (MemberRequest req : members) {
+            try {
+                namespaceMemberService.addMember(namespaceId, req.userId(), req.role(), operatorUserId);
+                results.add(BatchMemberResult.success(req.userId(), req.role().name()));
+                successCount++;
+            } catch (Exception e) {
+                String errorCode = mapBatchError(e);
+                results.add(BatchMemberResult.failure(req.userId(), req.role().name(), errorCode));
+                failureCount++;
+            }
+        }
+
+        return new BatchMemberResponse(members.size(), successCount, failureCount, results);
+    }
+
+    private String mapBatchError(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null) return "UNKNOWN_ERROR";
+        if (msg.contains("alreadyExists")) return "ALREADY_MEMBER";
+        if (msg.contains("owner.assignDirect")) return "INVALID_ROLE";
+        if (msg.contains("notFound") || msg.contains("not found")) return "USER_NOT_FOUND";
+        if (msg.contains("immutable") || msg.contains("readonly")) return "NAMESPACE_READONLY";
+        return "UNKNOWN_ERROR";
     }
 
     @Transactional

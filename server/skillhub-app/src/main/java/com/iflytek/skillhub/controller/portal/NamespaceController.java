@@ -5,6 +5,8 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.BatchMemberRequest;
+import com.iflytek.skillhub.dto.BatchMemberResponse;
 import com.iflytek.skillhub.dto.MemberRequest;
 import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.MessageResponse;
@@ -165,6 +167,15 @@ public class NamespaceController extends BaseApiController {
             @RequestAttribute("userId") String userId) {
         return ok("response.success.created",
                 namespacePortalCommandAppService.addMember(slug, request.userId(), request.role(), userId));
+    }
+
+    @PostMapping("/namespaces/{slug}/members/batch")
+    public ApiResponse<BatchMemberResponse> batchAddMembers(
+            @PathVariable String slug,
+            @Valid @RequestBody BatchMemberRequest request,
+            @RequestAttribute("userId") String userId) {
+        return ok("response.success.created",
+                namespacePortalCommandAppService.batchAddMembers(slug, request.members(), userId));
     }
 
     @DeleteMapping("/namespaces/{slug}/members/{userId}")

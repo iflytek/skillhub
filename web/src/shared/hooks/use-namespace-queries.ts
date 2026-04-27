@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole } from '@/api/types'
+import type { Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole, BatchMemberResponse } from '@/api/types'
 import { namespaceApi } from '@/api/client'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
 import { shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
@@ -34,6 +34,10 @@ async function updateNamespaceMemberRole(params: { slug: string; userId: string;
 
 async function removeNamespaceMember(params: { slug: string; userId: string }): Promise<void> {
   return namespaceApi.removeMember(params.slug, params.userId)
+}
+
+async function batchAddNamespaceMembers(params: { slug: string; members: Array<{ userId: string; role: string }> }): Promise<BatchMemberResponse> {
+  return namespaceApi.batchAddMembers(params.slug, params.members)
 }
 
 function invalidateNamespaceQueries(queryClient: ReturnType<typeof useQueryClient>, slug: string) {
@@ -97,6 +101,17 @@ export function useAddNamespaceMember() {
         ['namespaces', variables.slug, 'members'],
         (currentMembers) => appendNamespaceMember(currentMembers, member),
       )
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useBatchAddNamespaceMembers() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: batchAddNamespaceMembers,
+    onSuccess: (_data, variables) => {
       invalidateNamespaceQueries(queryClient, variables.slug)
     },
   })

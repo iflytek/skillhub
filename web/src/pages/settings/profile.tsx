@@ -207,6 +207,11 @@ export function ProfileSettingsPage() {
             </div>
           ) : null}
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium">{t('profile.userId')}</label>
+            <p className="text-sm text-muted-foreground">{user?.userId || '-'}</p>
+          </div>
+
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Dynamic fields */}
             {Object.entries(fieldPolicies).map(([field, policy]) => {

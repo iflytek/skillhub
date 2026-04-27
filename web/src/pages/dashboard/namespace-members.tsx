@@ -3,6 +3,7 @@ import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { AddNamespaceMemberDialog } from '@/features/namespace/add-namespace-member-dialog'
+import { BatchImportMembersDialog } from '@/features/namespace/batch-import-members-dialog'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
@@ -152,11 +153,16 @@ export function NamespaceMembersPage() {
           </Card>
         ) : null}
 
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
           {canManageMembers ? (
-            <AddNamespaceMemberDialog slug={slug}>
-              <Button>{t('members.addMember')}</Button>
-            </AddNamespaceMemberDialog>
+            <>
+              <BatchImportMembersDialog slug={slug}>
+                <Button variant="outline">{t('members.batchImport')}</Button>
+              </BatchImportMembersDialog>
+              <AddNamespaceMemberDialog slug={slug}>
+                <Button>{t('members.addMember')}</Button>
+              </AddNamespaceMemberDialog>
+            </>
           ) : (
             <Button disabled>{t('members.addMember')}</Button>
           )}
