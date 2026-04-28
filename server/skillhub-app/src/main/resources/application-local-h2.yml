@@ -1,0 +1,58 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:file:${LOCAL_H2_FILE_PATH:${user.home}/.skillhub/local-h2/skillhub};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data-local-h2.sql
+  flyway:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+skillhub:
+  storage:
+    provider: local
+    local:
+      base-path: ${LOCAL_H2_STORAGE_BASE_PATH:${user.home}/.skillhub/local-storage}
+  search:
+    engine: h2
+    semantic:
+      enabled: false
+  ratelimit:
+    mode: memory
+  auth:
+    mock:
+      enabled: true
+    device:
+      enabled: false
+    failure-throttle:
+      mode: memory
+  bootstrap:
+    admin:
+      enabled: true
+  security:
+    scanner:
+      enabled: false
+
+logging:
+  level:
+    com.iflytek.skillhub: INFO
+    org.springframework.security: WARN

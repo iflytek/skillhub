@@ -94,7 +94,7 @@ public class SkillLabelAppService {
         );
         afterCommit(() -> labelSearchSyncService.rebuildSkill(skill.getId()));
         recordAudit("SKILL_LABEL_ATTACH", userId, skill.getId(), auditContext, "{\"labelSlug\":\"" + labelSlug + "\"}");
-        return toDtos(List.of(attached)).getFirst();
+        return toDtos(List.of(attached)).get(0);
     }
 
     @Transactional

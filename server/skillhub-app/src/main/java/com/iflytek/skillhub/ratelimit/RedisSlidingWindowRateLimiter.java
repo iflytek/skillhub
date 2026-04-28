@@ -1,7 +1,7 @@
 package com.iflytek.skillhub.ratelimit;
 
 import jakarta.annotation.PostConstruct;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,7 +14,7 @@ import java.util.Collections;
  * Production rate limiter backed by Redis and a Lua script for atomic sliding-window checks.
  */
 @Component
-@Profile("!test")
+@ConditionalOnProperty(prefix = "skillhub.ratelimit", name = "mode", havingValue = "redis", matchIfMissing = true)
 public class RedisSlidingWindowRateLimiter implements RateLimiter {
 
     private final StringRedisTemplate redisTemplate;

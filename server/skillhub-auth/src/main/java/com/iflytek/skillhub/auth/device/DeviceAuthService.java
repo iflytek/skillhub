@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.device;
 
 import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeUnit;
  * polling step can rendezvous without holding server-side session state.
  */
 @Service
+@ConditionalOnProperty(prefix = "skillhub.auth.device", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DeviceAuthService {
 
     private static final String DEVICE_CODE_PREFIX = "device:code:";

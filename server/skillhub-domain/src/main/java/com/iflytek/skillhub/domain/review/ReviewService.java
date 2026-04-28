@@ -195,7 +195,7 @@ public class ReviewService {
         }
 
         int updated = reviewTaskRepository.updateStatusWithVersion(
-                reviewTaskId, ReviewTaskStatus.APPROVED, reviewerId, comment, task.getVersion());
+                reviewTaskId, ReviewTaskStatus.APPROVED, reviewerId, comment, Instant.now(clock), task.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
@@ -272,7 +272,7 @@ public class ReviewService {
         }
 
         int updated = reviewTaskRepository.updateStatusWithVersion(
-                reviewTaskId, ReviewTaskStatus.REJECTED, reviewerId, comment, task.getVersion());
+                reviewTaskId, ReviewTaskStatus.REJECTED, reviewerId, comment, Instant.now(clock), task.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }

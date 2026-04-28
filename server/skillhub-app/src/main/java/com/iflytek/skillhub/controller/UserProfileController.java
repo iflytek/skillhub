@@ -148,31 +148,31 @@ public class UserProfileController extends BaseApiController {
                 httpRequest.getHeader("User-Agent")
         );
 
-        // Refresh session if changes were applied immediately
-        var response = switch (result) {
-            case UpdateProfileResult.Applied() -> {
-                // Rebuild principal with updated displayName and refresh session
-                refreshSession(principal, authentication, changes, httpRequest);
-                yield new UpdateProfileResponse(
-                        ProfileUpdateStatus.APPLIED,
-                        "response.profile.updated"
-                );
-            }
-            case UpdateProfileResult.PendingReview() -> new UpdateProfileResponse(
+        UpdateProfileResponse response;
+        if (result instanceof UpdateProfileResult.Applied) {
+            // Rebuild principal with updated displayName and refresh session
+            refreshSession(principal, authentication, changes, httpRequest);
+            response = new UpdateProfileResponse(
+                    ProfileUpdateStatus.APPLIED,
+                    "response.profile.updated"
+            );
+        } else if (result instanceof UpdateProfileResult.PendingReview) {
+            response = new UpdateProfileResponse(
                     ProfileUpdateStatus.PENDING_REVIEW,
                     "response.profile.pendingReview"
             );
-            case UpdateProfileResult.Mixed(var appliedFields, var pendingFields) -> {
-                // Refresh session with the immediately-applied fields
-                refreshSession(principal, authentication, appliedFields, httpRequest);
-                yield new UpdateProfileResponse(
-                        ProfileUpdateStatus.PARTIALLY_APPLIED,
-                        "response.profile.partiallyApplied",
-                        appliedFields,
-                        pendingFields
-                );
-            }
-        };
+        } else if (result instanceof UpdateProfileResult.Mixed mixedResult) {
+            // Refresh session with the immediately-applied fields
+            refreshSession(principal, authentication, mixedResult.appliedFields(), httpRequest);
+            response = new UpdateProfileResponse(
+                    ProfileUpdateStatus.PARTIALLY_APPLIED,
+                    "response.profile.partiallyApplied",
+                    mixedResult.appliedFields(),
+                    mixedResult.pendingFields()
+            );
+        } else {
+            throw new IllegalStateException("Unknown update profile result: " + result.getClass().getName());
+        }
 
         return ok("response.success.update", response);
     }

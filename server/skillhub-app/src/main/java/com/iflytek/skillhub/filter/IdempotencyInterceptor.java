@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.idempotency.IdempotencyStatus;
 import com.iflytek.skillhub.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -35,11 +36,11 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public IdempotencyInterceptor(StringRedisTemplate redisTemplate,
+    public IdempotencyInterceptor(ObjectProvider<StringRedisTemplate> redisTemplateProvider,
                                   IdempotencyRecordRepository idempotencyRecordRepository,
                                   ObjectMapper objectMapper,
                                   Clock clock) {
-        this.redisTemplate = redisTemplate;
+        this.redisTemplate = redisTemplateProvider.getIfAvailable();
         this.idempotencyRecordRepository = idempotencyRecordRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
@@ -65,7 +66,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         String redisKey = REDIS_KEY_PREFIX + requestId;
         boolean isDuplicate = false;
         try {
-            String cached = redisTemplate.opsForValue().get(redisKey);
+            String cached = redisTemplate != null ? redisTemplate.opsForValue().get(redisKey) : null;
             isDuplicate = "COMPLETED".equals(cached);
         } catch (Exception ignored) {
             // Redis unavailable, fall through to PostgreSQL
@@ -96,7 +97,9 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
 
             // Cache in Redis
             try {
-                redisTemplate.opsForValue().set(redisKey, "PROCESSING", EXPIRY_HOURS, TimeUnit.HOURS);
+                if (redisTemplate != null) {
+                    redisTemplate.opsForValue().set(redisKey, "PROCESSING", EXPIRY_HOURS, TimeUnit.HOURS);
+                }
             } catch (Exception ignored) {
                 // Redis unavailable, PostgreSQL is the source of truth
             }
@@ -130,7 +133,9 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
 
             try {
                 String redisKey = REDIS_KEY_PREFIX + requestId;
-                redisTemplate.opsForValue().set(redisKey, record.getStatus().name(), EXPIRY_HOURS, TimeUnit.HOURS);
+                if (redisTemplate != null) {
+                    redisTemplate.opsForValue().set(redisKey, record.getStatus().name(), EXPIRY_HOURS, TimeUnit.HOURS);
+                }
             } catch (Exception ignored) {
                 // Redis unavailable
             }

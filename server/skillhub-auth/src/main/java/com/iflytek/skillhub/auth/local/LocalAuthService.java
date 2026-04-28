@@ -82,7 +82,7 @@ public class LocalAuthService {
 
         var passwordErrors = passwordPolicyValidator.validate(password);
         if (!passwordErrors.isEmpty()) {
-            throw new AuthFlowException(HttpStatus.BAD_REQUEST, passwordErrors.getFirst());
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, passwordErrors.get(0));
         }
 
         UserAccount user = new UserAccount(
@@ -150,7 +150,7 @@ public class LocalAuthService {
 
         var passwordErrors = passwordPolicyValidator.validate(newPassword);
         if (!passwordErrors.isEmpty()) {
-            throw new AuthFlowException(HttpStatus.BAD_REQUEST, passwordErrors.getFirst());
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, passwordErrors.get(0));
         }
 
         credential.setPasswordHash(passwordEncoder.encode(newPassword));

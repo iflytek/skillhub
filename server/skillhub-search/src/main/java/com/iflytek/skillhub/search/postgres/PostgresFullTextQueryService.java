@@ -12,6 +12,7 @@ import jakarta.persistence.Query;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,7 @@ import java.util.Set;
  * controller-facing query repositories.
  */
 @Service
+@ConditionalOnProperty(prefix = "skillhub.search", name = "engine", havingValue = "postgres", matchIfMissing = true)
 public class PostgresFullTextQueryService implements SearchQueryService {
     private static final int MAX_QUERY_TERMS = 8;
     private static final int SHORT_PREFIX_LENGTH = 2;

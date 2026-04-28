@@ -194,7 +194,7 @@ public class PromotionService {
         }
 
         int updated = promotionRequestRepository.updateStatusWithVersion(
-                promotionId, ReviewTaskStatus.APPROVED, reviewerId, comment, null, request.getVersion());
+                promotionId, ReviewTaskStatus.APPROVED, reviewerId, comment, null, Instant.now(clock), request.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
@@ -306,7 +306,7 @@ public class PromotionService {
         }
 
         int updated = promotionRequestRepository.updateStatusWithVersion(
-                promotionId, ReviewTaskStatus.REJECTED, reviewerId, comment, null, request.getVersion());
+                promotionId, ReviewTaskStatus.REJECTED, reviewerId, comment, null, Instant.now(clock), request.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }

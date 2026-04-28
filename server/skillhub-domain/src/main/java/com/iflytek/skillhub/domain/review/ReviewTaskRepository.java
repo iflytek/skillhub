@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.review;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -18,5 +19,5 @@ public interface ReviewTaskRepository {
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
     void delete(ReviewTask reviewTask);
     int updateStatusWithVersion(Long id, ReviewTaskStatus status, String reviewedBy,
-                               String reviewComment, Integer expectedVersion);
+                               String reviewComment, Instant reviewedAt, Integer expectedVersion);
 }

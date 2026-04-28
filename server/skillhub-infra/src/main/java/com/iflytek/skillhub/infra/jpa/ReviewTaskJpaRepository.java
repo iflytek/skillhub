@@ -3,6 +3,7 @@ package com.iflytek.skillhub.infra.jpa;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,7 +37,7 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
         SET t.status = :status,
             t.reviewedBy = :reviewedBy,
             t.reviewComment = :reviewComment,
-            t.reviewedAt = CURRENT_TIMESTAMP,
+            t.reviewedAt = :reviewedAt,
             t.version = t.version + 1
         WHERE t.id = :id AND t.version = :expectedVersion
     """)
@@ -44,5 +45,6 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
                                @Param("status") ReviewTaskStatus status,
                                @Param("reviewedBy") String reviewedBy,
                                @Param("reviewComment") String reviewComment,
+                               @Param("reviewedAt") Instant reviewedAt,
                                @Param("expectedVersion") Integer expectedVersion);
 }

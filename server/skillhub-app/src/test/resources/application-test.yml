@@ -39,8 +39,14 @@ spring:
 skillhub:
   auth:
     enforce-active-user-check: false
+    device:
+      enabled: false
+    failure-throttle:
+      mode: memory
   access-policy:
     mode: OPEN
+  ratelimit:
+    mode: memory
   security:
     scanner:
       enabled: false

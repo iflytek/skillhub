@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>enzebaba-cloud — 干活进度</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: hsl(240 5% 96%);
+    --fg: hsl(0 0% 13%);
+    --card: hsl(0 0% 100%);
+    --border: hsl(0 0% 88%);
+    --secondary: hsl(240 4% 91%);
+    --muted: hsl(0 0% 45%);
+    --mac-green: hsl(142 71% 45%);
+    --mac-red: hsl(4 90% 58%);
+    --mac-orange: hsl(36 100% 50%);
+    --mac-blue: hsl(211 100% 50%);
+    --mac-purple: hsl(280 68% 60%);
+    --mac-gray: hsl(0 0% 72%);
+    --mac-tint: hsl(211 100% 96%);
+    --glass-bg: hsla(0, 0%, 100%, 0.72);
+    --glass-border: hsla(0, 0%, 100%, 0.5);
+    --glass-shadow: 0 2px 20px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.1);
+    --glass-shadow-lg: 0 8px 40px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.12);
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-mono: 'SF Mono', Menlo, Monaco, 'Cascadia Code', Consolas, monospace;
+  }
+
+  html, body { height: 100%; font-family: var(--font-sans); color: var(--fg); -webkit-font-smoothing: antialiased; }
+
+  body {
+    background:
+      radial-gradient(ellipse at 20% 50%, hsla(211,100%,95%,0.6) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, hsla(280,70%,95%,0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, hsla(142,60%,95%,0.3) 0%, transparent 50%),
+      var(--bg);
+  }
+
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border: 0.5px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  .glass-lg {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    border: 0.5px solid var(--glass-border);
+    box-shadow: var(--glass-shadow-lg);
+  }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .topbar {
+    display: flex; align-items: center; gap: 20px;
+    padding: 12px 20px; margin: 12px 16px 0; border-radius: 12px;
+  }
+  .topbar .title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; flex-shrink: 0; }
+  .topbar .sep { width: 1px; height: 16px; background: var(--border); }
+  .progress-wrap { flex: 1; display: flex; align-items: center; gap: 12px; }
+  .progress-bar { flex: 1; height: 5px; background: var(--secondary); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--mac-blue); border-radius: 99px; transition: width 0.7s ease-out; }
+  .progress-label { font-size: 12px; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .topbar .meta { display: flex; gap: 12px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .main { flex: 1; display: flex; gap: 12px; padding: 12px 16px; overflow: hidden; min-height: 0; }
+  .stories-panel { width: 340px; flex-shrink: 0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .stories-panel .panel-title { padding: 12px 16px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 500; }
+  .stories-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+  .logs-panel { flex: 1; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .logs-panel .panel-title { padding: 12px 16px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 500; }
+  .logs-content { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+
+  .bottombar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 20px; margin: 0 16px 12px; border-radius: 12px;
+  }
+  .phase { display: flex; align-items: center; gap: 8px; }
+  .phase-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .phase-text { font-size: 12px; color: var(--muted); }
+  .clock { font-size: 11px; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* Story Card */
+  .story-card {
+    padding: 12px; margin-bottom: 8px; border-radius: 12px;
+    transition: all 0.2s; cursor: default;
+  }
+  .story-card:hover { background: hsla(0,0%,100%,0.4); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .story-card.active { box-shadow: var(--glass-shadow-lg); border: 0.5px solid var(--glass-border); background: var(--glass-bg); }
+  .story-card.pending { opacity: 0.5; }
+  .story-card .row { display: flex; align-items: flex-start; gap: 10px; }
+  .story-card .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .story-card .info { flex: 1; min-width: 0; }
+  .story-card .header { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .story-card .id { font-size: 11px; font-family: var(--font-mono); color: var(--muted); font-weight: 500; }
+  .story-card .badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 6px; font-weight: 500;
+  }
+  .story-card .retry { font-size: 10px; font-family: var(--font-mono); color: var(--mac-red); }
+  .story-card .card-title { font-size: 13px; line-height: 1.4; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .story-card .notes { margin-top: 4px; font-size: 11px; color: hsla(4,90%,58%,0.8); line-height: 1.4; }
+
+  /* Log section */
+  .log-section { margin-bottom: 12px; border-radius: 12px; overflow: hidden; }
+  .log-header { padding: 8px 16px; font-size: 12px; font-weight: 600; border-bottom: 0.5px solid hsla(0,0%,88%,0.5); }
+  .log-header.latest { color: var(--mac-blue); }
+  .log-body { padding: 12px 16px; font-size: 12px; line-height: 1.7; color: var(--muted); font-family: var(--font-mono); white-space: pre-wrap; word-break: break-word; }
+  .log-body strong { color: var(--fg); font-weight: 600; }
+
+  /* Animations */
+  @keyframes breathe {
+    0%, 100% { opacity: 0.4; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  .breathe { animation: breathe 2s ease-in-out infinite; }
+
+  @keyframes mac-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsla(211,100%,50%,0.3); }
+    50% { box-shadow: 0 0 0 6px hsla(211,100%,50%,0); }
+  }
+  .active-pulse { animation: mac-pulse 2s ease-in-out infinite; }
+
+  @keyframes loading-dots {
+    0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; }
+  }
+  .loading-dots::after { content: ''; animation: loading-dots 1.5s steps(4, end) infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 7px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsla(0,0%,0%,0.15); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsla(0,0%,0%,0.3); }
+
+  @media (max-width: 800px) {
+    .main { flex-direction: column; }
+    .stories-panel { width: 100%; max-height: 40vh; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Top Bar -->
+  <div class="topbar glass">
+    <div class="title">enzebaba-cloud coding 2.0 干活进度</div>
+    <div class="sep"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-label" id="progressLabel">0/0</div>
+    </div>
+    <div class="sep"></div>
+    <div class="meta">
+      <span id="iterInfo">Round 0/0</span>
+      <span id="elapsedInfo">0s</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="stories-panel glass-lg">
+      <div class="panel-title">User Stories</div>
+      <div class="stories-list" id="storyList"></div>
+    </div>
+    <div class="logs-panel glass-lg">
+      <div class="panel-title">Progress Log</div>
+      <div class="logs-content" id="logContent"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottombar glass">
+    <div class="phase">
+      <div class="phase-dot" id="phaseDot" style="background:var(--mac-gray)"></div>
+      <div class="phase-text" id="phaseText">等待启动</div>
+    </div>
+    <div class="clock" id="clock"></div>
+  </div>
+</div>
+
+<script>
+const POLL_MS = 2000;
+
+const PHASE_MAP = {
+  idle:       { label: '等待启动',           color: 'var(--mac-gray)',   animate: false },
+  developing: { label: 'Developer Agent 工作中', color: 'var(--mac-blue)',   animate: true },
+  validating: { label: 'Validator 验证中',    color: 'var(--mac-orange)', animate: true },
+  done:       { label: '全部完成',           color: 'var(--mac-green)',  animate: false },
+  error:      { label: '出现错误',           color: 'var(--mac-red)',    animate: false },
+};
+
+const STATE_CONFIG = {
+  active:  { label: '进行中', dotColor: 'var(--mac-blue)',   badgeBg: 'var(--mac-tint)',          badgeColor: 'var(--mac-blue)' },
+  passed:  { label: '已通过', dotColor: 'var(--mac-green)',  badgeBg: 'hsla(142,60%,95%,1)',      badgeColor: 'var(--mac-green)' },
+  failed:  { label: '未通过', dotColor: 'var(--mac-red)',    badgeBg: 'hsla(4,80%,96%,1)',        badgeColor: 'var(--mac-red)' },
+  blocked: { label: '已阻塞', dotColor: 'var(--mac-orange)', badgeBg: 'hsla(36,80%,95%,1)',      badgeColor: 'var(--mac-orange)' },
+  pending: { label: '待执行', dotColor: 'var(--mac-gray)',   badgeBg: 'transparent',              badgeColor: 'var(--muted)' },
+};
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function fmtElapsed(s) {
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+  return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+}
+
+function getState(story, cur) {
+  if (story.id === cur) return 'active';
+  if (story.blocked) return 'blocked';
+  if (story.passes === true) return 'passed';
+  if (story.passes === false && (story.retryCount > 0 || story.notes)) return 'failed';
+  return 'pending';
+}
+
+function renderStories(stories, cur) {
+  const el = document.getElementById('storyList');
+  el.innerHTML = stories.map(s => {
+    const st = getState(s, cur);
+    const cfg = STATE_CONFIG[st];
+    const isActive = st === 'active';
+    return `<div class="story-card ${st} ${isActive ? 'active-pulse' : ''}">
+      <div class="row">
+        <div class="dot ${isActive ? 'breathe' : ''}" style="background:${cfg.dotColor}"></div>
+        <div class="info">
+          <div class="header">
+            <span class="id">${s.id}</span>
+            <span class="badge" style="background:${cfg.badgeBg};color:${cfg.badgeColor}">${cfg.label}</span>
+            ${s.retryCount > 0 ? `<span class="retry">×${s.retryCount}</span>` : ''}
+          </div>
+          <div class="card-title">${esc(s.title)}</div>
+          ${s.notes ? `<div class="notes">${esc(s.notes)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLogs(logs) {
+  const el = document.getElementById('logContent');
+  if (!logs.trim()) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-style:italic">暂无日志</div>'; return; }
+  const secs = logs.split(/(?=^## )/m).filter(s => s.trim());
+  el.innerHTML = secs.map((sec, i) => {
+    const isLatest = i === secs.length - 1;
+    const lines = sec.split('\n');
+    const header = lines[0].replace(/^## /, '').trim();
+    const body = lines.slice(1).join('\n').trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    return `<div class="log-section ${isLatest ? 'glass-lg' : 'glass'}">
+      <div class="log-header ${isLatest ? 'latest' : ''}">${esc(header)}</div>
+      <div class="log-body">${body}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderProgress(stories) {
+  const passed = stories.filter(s => s.passes === true).length;
+  const total = stories.length;
+  document.getElementById('progressFill').style.width = (total ? Math.round(passed/total*100) : 0) + '%';
+  document.getElementById('progressLabel').textContent = passed + '/' + total;
+}
+
+function renderPhase(rt) {
+  const cfg = PHASE_MAP[rt.phase] || PHASE_MAP.idle;
+  const dot = document.getElementById('phaseDot');
+  const text = document.getElementById('phaseText');
+  dot.style.background = cfg.color;
+  dot.className = 'phase-dot' + (cfg.animate ? ' breathe' : '');
+  let label = cfg.label;
+  if (cfg.animate) {
+    const storyPart = rt.current_story ? ` · ${rt.current_story}` : '';
+    label += storyPart + ` · Round ${rt.iteration}`;
+    label += '<span class="loading-dots"></span>';
+  }
+  text.innerHTML = label;
+  document.getElementById('iterInfo').textContent = `Round ${rt.iteration}/${rt.max_iterations}`;
+  document.getElementById('elapsedInfo').textContent = fmtElapsed(rt.elapsed);
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('zh-CN');
+}
+
+// ─── Data fetch (works with dashboard.py backend, or uses embedded fallback) ───
+let useFallback = false;
+
+const FALLBACK = {
+  runtime: { iteration: 12, max_iterations: 50, phase: 'developing', current_story: 'US-003', elapsed: 340 },
+  project: '简易笔记系统',
+  stories: [
+    { id:'US-001', title:'初始化项目结构与静态导出配置', passes:true, notes:'', retryCount:0, blocked:false },
+    { id:'US-002', title:'定义 Note 数据类型与示例数据预加载', passes:true, notes:'', retryCount:0, blocked:false },
+    { id:'US-003', title:'笔记列表组件（左侧栏）', passes:false, notes:'列表项点击事件未正确绑定', retryCount:2, blocked:false },
+    { id:'US-004', title:'笔记详情展示（右侧区域）', passes:false, notes:'', retryCount:0, blocked:false },
+    { id:'US-005', title:'新建笔记功能', passes:false, notes:'', retryCount:0, blocked:false },
+    { id:'US-006', title:'编辑笔记（实时保存）', passes:false, notes:'', retryCount:0, blocked:false },
+    { id:'US-007', title:'删除笔记功能', passes:false, notes:'', retryCount:0, blocked:true },
+    { id:'US-008', title:'笔记搜索过滤', passes:false, notes:'', retryCount:0, blocked:false },
+    { id:'US-009', title:'数据重置按钮', passes:false, notes:'', retryCount:0, blocked:false },
+  ],
+  logs: `## Codebase Patterns\n- Next.js 16 + App Router + Tailwind CSS v4\n- 静态导出：next.config.mjs 中设置 output: 'export'\n- 页面文件位于 app/ 目录\n\n## 2026-03-29 23:30 - US-001\n- 搭建了 Next.js 16 (App Router) 项目骨架\n- 配置了 Tailwind CSS v4（使用 @tailwindcss/postcss 插件）\n- next.config.mjs 中设置 output: 'export' 启用静态导出\n- 实现了两栏布局：左侧固定宽度 320px 列表区 + 右侧弹性内容区\n- TypeScript 类型检查通过，next build 成功生成 out/ 静态产物\n- **未来迭代的学习：**\n  - Tailwind CSS v4 不使用传统的 tailwind.config.js\n  - PostCSS 配置使用 "@tailwindcss/postcss" 插件名\n\n## 2026-03-29 23:45 - US-002\n- 定义了 Note 接口类型\n- 创建了示例数据文件，包含 2 条示例笔记\n- 将 page.tsx 改为 "use client" 客户端组件\n- 应用初始化后默认选中第一条示例笔记\n- TypeScript 类型检查和 next build 均通过\n- **未来迭代的学习：**\n  - page.tsx 需要 "use client" 指令才能使用 React hooks\n  - 类型定义放在 app/types.ts，示例数据放在 app/sample-data.ts`
+};
+
+async function poll() {
+  let data;
+  if (!useFallback) {
+    try {
+      const res = await fetch('/api/state');
+      data = await res.json();
+    } catch (e) {
+      useFallback = true;
+      data = FALLBACK;
+    }
+  } else {
+    data = FALLBACK;
+    data.runtime.elapsed++;
+  }
+  renderStories(data.stories, data.runtime.current_story);
+  renderProgress(data.stories);
+  renderLogs(data.logs);
+  renderPhase(data.runtime);
+}
+
+setInterval(poll, POLL_MS);
+poll();
+</script>
+</body>
+</html>

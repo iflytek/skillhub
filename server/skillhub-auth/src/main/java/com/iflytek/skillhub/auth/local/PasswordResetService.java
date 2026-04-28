@@ -139,7 +139,7 @@ public class PasswordResetService {
 
         var passwordErrors = passwordPolicyValidator.validate(newPassword);
         if (!passwordErrors.isEmpty()) {
-            throw new AuthFlowException(HttpStatus.BAD_REQUEST, passwordErrors.getFirst());
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, passwordErrors.get(0));
         }
 
         LocalCredential credential = credentialRepository.findByUserId(user.getId())

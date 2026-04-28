@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.review;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -16,5 +17,5 @@ public interface PromotionRequestRepository {
     Page<PromotionRequest> findByStatus(ReviewTaskStatus status, Pageable pageable);
     void deleteBySourceSkillIdOrTargetSkillId(Long sourceSkillId, Long targetSkillId);
     int updateStatusWithVersion(Long id, ReviewTaskStatus status, String reviewedBy,
-                               String reviewComment, Long targetSkillId, Integer expectedVersion);
+                               String reviewComment, Long targetSkillId, Instant reviewedAt, Integer expectedVersion);
 }

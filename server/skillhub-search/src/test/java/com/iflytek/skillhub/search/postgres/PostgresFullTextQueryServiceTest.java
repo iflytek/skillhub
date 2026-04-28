@@ -51,8 +51,8 @@ class PostgresFullTextQueryServiceTest {
         verify(countQuery).setParameter("tsQuery", "ai:*");
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("to_tsvector('simple', coalesce(title, '')) @@ to_tsquery('simple', :tsQuery)");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("LOWER(title) LIKE :titleLike");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("to_tsvector('simple', coalesce(title, '')) @@ to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("LOWER(title) LIKE :titleLike");
     }
 
     @Test
@@ -109,8 +109,8 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("search_vector @@ to_tsquery('simple', :tsQuery)");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(d.search_vector, to_tsquery('simple', :tsQuery))");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("search_vector @@ to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("ts_rank_cd(d.search_vector, to_tsquery('simple', :tsQuery))");
     }
 
     @Test
@@ -139,8 +139,8 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("ts_rank_cd(to_tsvector('simple', coalesce(title, '')), to_tsquery('simple', :tsQuery))");
-        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("ORDER BY ORDER BY");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("ts_rank_cd(to_tsvector('simple', coalesce(title, '')), to_tsquery('simple', :tsQuery))");
+        assertThat(sqlCaptor.getAllValues().get(0)).doesNotContain("ORDER BY ORDER BY");
     }
 
     @Test
@@ -169,8 +169,8 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("d.search_vector @@ to_tsquery('simple', :tsQuery)");
-        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("ts_rank_cd(to_tsvector('simple', coalesce(title, '')), to_tsquery('simple', :tsQuery))");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("d.search_vector @@ to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().get(0)).doesNotContain("ts_rank_cd(to_tsvector('simple', coalesce(title, '')), to_tsquery('simple', :tsQuery))");
     }
 
     @Test
@@ -258,8 +258,8 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain("to_tsquery('simple', :tsQuery)");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("LOWER(title) LIKE :titleLike");
+        assertThat(sqlCaptor.getAllValues().get(0)).doesNotContain("to_tsquery('simple', :tsQuery)");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("LOWER(title) LIKE :titleLike");
     }
 
     @Test
@@ -289,8 +289,8 @@ class PostgresFullTextQueryServiceTest {
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("JOIN label_definition ld ON ld.id = sl.label_id");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE LOWER(ld.slug) IN :labelSlugs");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("JOIN label_definition ld ON ld.id = sl.label_id");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("WHERE LOWER(ld.slug) IN :labelSlugs");
         verify(nativeQuery).setParameter("labelSlugs", List.of("code-generation", "official"));
         verify(countQuery).setParameter("labelSlugs", List.of("code-generation", "official"));
     }
@@ -325,7 +325,7 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst())
+        assertThat(sqlCaptor.getAllValues().get(0))
                 .contains("JOIN skill s ON s.id = d.skill_id")
                 .contains("JOIN namespace n ON n.id = d.namespace_id")
                 .contains("AND s.hidden = FALSE")
@@ -359,7 +359,7 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst())
+        assertThat(sqlCaptor.getAllValues().get(0))
                 .contains("ORDER BY s.updated_at DESC, d.skill_id DESC");
     }
 
@@ -389,7 +389,7 @@ class PostgresFullTextQueryServiceTest {
 
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("OR d.namespace_id IN :memberNamespaceIds");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("OR d.namespace_id IN :memberNamespaceIds");
     }
 
     @Test
@@ -447,7 +447,7 @@ class PostgresFullTextQueryServiceTest {
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         // Portal search should not include platformWideAccess bypass logic
-        assertThat(sqlCaptor.getAllValues().getFirst())
+        assertThat(sqlCaptor.getAllValues().get(0))
                 .doesNotContain("platformWideAccess")
                 .doesNotContain("PRIVATE");
         verify(nativeQuery, never()).setParameter("platformWideAccess", true);
@@ -481,7 +481,7 @@ class PostgresFullTextQueryServiceTest {
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).doesNotContain(payload);
+        assertThat(sqlCaptor.getAllValues().get(0)).doesNotContain(payload);
         verify(nativeQuery).setParameter("titleLike", "%" + payload.toLowerCase() + "%");
         verify(countQuery).setParameter("titleLike", "%" + payload.toLowerCase() + "%");
     }
@@ -513,7 +513,7 @@ class PostgresFullTextQueryServiceTest {
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst())
+        assertThat(sqlCaptor.getAllValues().get(0))
                 .doesNotContain(payload)
                 .contains("ORDER BY s.updated_at DESC, d.skill_id DESC");
     }
@@ -637,7 +637,7 @@ class PostgresFullTextQueryServiceTest {
         verify(countQuery).setParameter("labelSlugs", List.of("official", "code-generation"));
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("JOIN label_definition ld ON ld.id = sl.label_id");
-        assertThat(sqlCaptor.getAllValues().getFirst()).contains("WHERE LOWER(ld.slug) IN :labelSlugs");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("JOIN label_definition ld ON ld.id = sl.label_id");
+        assertThat(sqlCaptor.getAllValues().get(0)).contains("WHERE LOWER(ld.slug) IN :labelSlugs");
     }
 }

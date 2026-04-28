@@ -3,6 +3,7 @@ package com.iflytek.skillhub.infra.jpa;
 import com.iflytek.skillhub.domain.review.PromotionRequest;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,7 +35,7 @@ public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRe
             p.reviewedBy = :reviewedBy,
             p.reviewComment = :reviewComment,
             p.targetSkillId = :targetSkillId,
-            p.reviewedAt = CURRENT_TIMESTAMP,
+            p.reviewedAt = :reviewedAt,
             p.version = p.version + 1
         WHERE p.id = :id AND p.version = :expectedVersion
     """)
@@ -43,5 +44,6 @@ public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRe
                                @Param("reviewedBy") String reviewedBy,
                                @Param("reviewComment") String reviewComment,
                                @Param("targetSkillId") Long targetSkillId,
+                               @Param("reviewedAt") Instant reviewedAt,
                                @Param("expectedVersion") Integer expectedVersion);
 }

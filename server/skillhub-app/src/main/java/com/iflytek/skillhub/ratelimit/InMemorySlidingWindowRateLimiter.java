@@ -1,6 +1,6 @@
 package com.iflytek.skillhub.ratelimit;
 
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Deque;
@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * Test-profile rate limiter that keeps sliding-window counters in memory.
  */
 @Component
-@Profile("test")
+@ConditionalOnProperty(prefix = "skillhub.ratelimit", name = "mode", havingValue = "memory")
 public class InMemorySlidingWindowRateLimiter implements RateLimiter {
 
     private final ConcurrentHashMap<String, Deque<Long>> requests = new ConcurrentHashMap<>();
