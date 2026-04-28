@@ -73,16 +73,5 @@ __pycache__/
 # Git worktrees
 .worktrees/
 
-# Superpowers (AI planning artifacts)
-.superpowers/
-docs/prds/
-docs/requirements/
-docs/review/
-docs/superpowers/
-
-# Local workspace metadata
-AGENTS.md
-CLAUDE.md
-
 # Local config file
 .mcp.json

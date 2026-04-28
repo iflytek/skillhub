@@ -11,10 +11,10 @@
 
 相关文档：
 
-- [03-authentication-design.md](/Users/xudongsun/github/skillhub/docs/03-authentication-design.md)
-- [06-api-design.md](/Users/xudongsun/github/skillhub/docs/06-api-design.md)
-- [08-frontend-architecture.md](/Users/xudongsun/github/skillhub/docs/08-frontend-architecture.md)
-- [11-auth-extensibility-and-private-sso.md](/Users/xudongsun/github/skillhub/docs/11-auth-extensibility-and-private-sso.md)
+- [03-authentication-design.md](./03-authentication-design.md)
+- [06-api-design.md](./06-api-design.md)
+- [08-frontend-architecture.md](./08-frontend-architecture.md)
+- [11-auth-extensibility-and-private-sso.md](./11-auth-extensibility-and-private-sso.md)
 
 ## 2. 当前上下文与已确认约束
 
@@ -415,7 +415,7 @@ skillhub:
 
 如果后续由 AI 继续在私有仓库上完成接入，建议严格遵守以下执行规则：
 
-- 先读 [11-auth-extensibility-and-private-sso.md](/Users/xudongsun/github/skillhub/docs/11-auth-extensibility-and-private-sso.md) 和本文档
+- 先读 [11-auth-extensibility-and-private-sso.md](./11-auth-extensibility-and-private-sso.md) 和本文档
 - 不要重构现有公共认证主链路，除非发现明确 bug
 - 私有 SSO 的具体实现优先写成 provider、authenticator、client、identity service
 - 不要复制 `PlatformSessionService` 逻辑

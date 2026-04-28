@@ -24,7 +24,7 @@ description: 为代理建立代码库理解
 
 优先阅读并建立文档优先级：
 - `AGENTS.md`、`CLAUDE.md`、`README.md`
-- `docs/` 下的主入口文档、PRD、验收、设计或归档文档
+- `docs/`、`design/` 下的主入口文档、PRD、验收、设计或归档文档
 - 根目录及主要子目录下的 README 文件
 - 与当前项目相关的架构说明、接口说明、运行说明
 

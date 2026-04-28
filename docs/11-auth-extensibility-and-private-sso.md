@@ -145,4 +145,4 @@ public interface DirectAuthProvider {
 
 更详细的私有 SSO 接入步骤、最佳实践、测试矩阵和给后续 coding agent 的执行约束，见：
 
-- [12-private-sso-integration-playbook.md](/Users/xudongsun/github/skillhub/docs/12-private-sso-integration-playbook.md)
+- [12-private-sso-integration-playbook.md](./12-private-sso-integration-playbook.md)

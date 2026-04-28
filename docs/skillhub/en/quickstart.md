@@ -83,7 +83,7 @@ If `make dev-all` fails to start the backend, common causes include:
 
 2. **Java version mismatch**
 
-   SkillHub requires Java 21+:
+   SkillHub requires Java 17+:
    ```bash
    java -version
    ```

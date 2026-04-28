@@ -105,7 +105,7 @@
 
 **配置文件**: `server/` (Maven 多模块项目)
 
-**技术栈**: Spring Boot 3.2.3 + Java 21
+**技术栈**: Spring Boot 3.2.3 + Java 17
 
 ### 2.1 模块结构
 
@@ -297,7 +297,7 @@ skillhub-parent
 | 前端构建 | Vite 6 | 快速开发体验 |
 | 前端样式 | Tailwind CSS 3 | 原子化 CSS |
 | 后端框架 | Spring Boot 3.2 | Java 主流框架 |
-| 编程语言 | Java 21 | LTS 版本 |
+| 编程语言 | Java 17 | LTS 版本 |
 | 数据库 | PostgreSQL 16 | 关系型数据库 |
 | 缓存 | Redis 7 | KV 存储 |
 | 对象存储 | MinIO | S3 兼容 |

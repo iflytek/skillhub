@@ -24,7 +24,7 @@ SkillHub solves this problem. It provides a **private, controllable, and easy-to
 | Layer | Technology | Description |
 |-------|------------|-------------|
 | **Frontend** | React 19 + Vite + TanStack Router | Modern SPA with Chinese/English language support |
-| **Backend** | Java 21 + Spring Boot 3.2 | Enterprise-grade REST API |
+| **Backend** | Java 17 + Spring Boot 3.2 | Enterprise-grade REST API |
 | **Database** | PostgreSQL 16 | Full-text search, Flyway auto-migration |
 | **Cache** | Redis 7 | Session management, hot data caching |
 | **Storage** | MinIO / S3 | Skill package file storage, supports local and cloud |

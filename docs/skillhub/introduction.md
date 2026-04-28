@@ -24,7 +24,7 @@ SkillHub 解决了这个问题。它提供了一个**私有、可控、易用**�
 | 层级 | 技术 | 说明 |
 |------|------|------|
 | **前端** | React 19 + Vite + TanStack Router | 现代化 SPA，支持中英文切换 |
-| **后端** | Java 21 + Spring Boot 3.2 | 企业级 REST API |
+| **后端** | Java 17 + Spring Boot 3.2 | 企业级 REST API |
 | **数据库** | PostgreSQL 16 | 全文搜索、Flyway 自动迁移 |
 | **缓存** | Redis 7 | 会话管理、热点缓存 |
 | **存储** | MinIO / S3 | 技能包文件存储，支持本地和云端 |

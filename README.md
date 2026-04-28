@@ -12,7 +12,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
-[![Java](https://img.shields.io/badge/java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Java](https://img.shields.io/badge/java-17-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/17/)
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 
 </div>
@@ -353,7 +353,7 @@ Run it against a local backend:
                            │
                     ┌──────▼──────┐
                     │ Spring Boot │  Auth · RBAC · Core Services
-                    │   (Java 21) │  OAuth2 · API Tokens · Audit
+                    │   (Java 17) │  OAuth2 · API Tokens · Audit
                     └──────┬──────┘
                            │
               ┌────────────┼────────────┐
@@ -364,7 +364,7 @@ Run it against a local backend:
        └──────────┘  └──────────┘  └─────────┘
 ```
 
-**Backend (Spring Boot 3.2.3, Java 21):**
+**Backend (Spring Boot 3.2.3, Java 17):**
 - Multi-module Maven project with clean architecture
 - Modules: app, domain, auth, search, storage, infra
 - PostgreSQL 16 with Flyway migrations

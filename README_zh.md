@@ -11,7 +11,7 @@
 [![许可证](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![构建](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
-[![Java](https://img.shields.io/badge/java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Java](https://img.shields.io/badge/java-17-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/17/)
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 
 </div>
@@ -111,7 +111,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 ### 前置要求
 
-- Java 21+
+- Java 17+
 - Node.js 20+
 - Docker & Docker Compose
 - Make
@@ -270,7 +270,7 @@ SkillHub 采用清晰的分层架构：
 ## 技术栈
 
 ### 后端
-- **语言**：Java 21
+- **语言**：Java 17
 - **框架**：Spring Boot 3.2.3
 - **数据库**：PostgreSQL 16 + Flyway 迁移
 - **缓存**：Redis 7

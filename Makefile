@@ -79,7 +79,7 @@ dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端�
 			echo "  1. Maven dependency download failed (network timeout)"; \
 			echo "     -> Configure mirror in ~/.m2/settings.xml"; \
 			echo "     -> See: https://maven.aliyun.com/mvn/guide"; \
-			echo "  2. Java version mismatch (requires Java 21+)"; \
+			echo "  2. Java version mismatch (requires Java 17+)"; \
 			echo "     -> Run: java -version"; \
 			echo "  3. Port 8080 already in use"; \
 			echo "     -> Run: lsof -i :8080"; \

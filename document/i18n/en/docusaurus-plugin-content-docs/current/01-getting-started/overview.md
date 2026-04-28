@@ -38,7 +38,7 @@ SkillHub is an enterprise-grade AI skill registry platform for publishing, disco
 ## Tech Stack
 
 ### Backend
-- **Java 21** - Runtime
+- **Java 17** - Runtime
 - **Spring Boot 3.2.3** - Application framework
 - **PostgreSQL 16.x** - Primary database + full-text search
 - **Redis 7.x** - Cache and session storage

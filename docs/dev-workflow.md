@@ -5,7 +5,7 @@ This document describes the recommended workflow for developing SkillHub locally
 ## Prerequisites
 
 - Docker Desktop (for dependency services and staging)
-- Java 21 (for running the backend locally)
+- Java 17 (for running the backend locally)
 - Node.js 22 + pnpm (for running the frontend locally)
 - `gh` CLI (for creating pull requests): https://cli.github.com/
 

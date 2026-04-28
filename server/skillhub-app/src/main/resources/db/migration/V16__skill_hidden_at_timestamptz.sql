@@ -1,2 +1,0 @@
-ALTER TABLE skill
-    ALTER COLUMN hidden_at TYPE TIMESTAMPTZ USING hidden_at AT TIME ZONE 'UTC';

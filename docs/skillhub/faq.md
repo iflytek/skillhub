@@ -181,11 +181,11 @@ cp server/.mvn/settings.xml ~/.m2/settings.xml
 
 **症状**：`Unsupported class file major version` 或 `java.lang.NoSuchMethodError`
 
-**解决方案**：安装 Java 21+
+**解决方案**：安装 Java 17+
 
 ```bash
 # macOS
-brew install openjdk@21
+brew install openjdk@17
 
 # 验证版本
 java -version

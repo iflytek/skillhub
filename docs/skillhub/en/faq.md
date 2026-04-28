@@ -181,11 +181,11 @@ Reference: [Aliyun Maven Mirror Configuration Guide](https://maven.aliyun.com/mv
 
 **Symptoms**: `Unsupported class file major version` or `java.lang.NoSuchMethodError`
 
-**Solution**: Install Java 21+
+**Solution**: Install Java 17+
 
 ```bash
 # macOS
-brew install openjdk@21
+brew install openjdk@17
 
 # Verify version
 java -version

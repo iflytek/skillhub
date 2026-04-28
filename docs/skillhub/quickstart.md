@@ -83,7 +83,7 @@ make dev-all
 
 2. **Java 版本不匹配**
 
-   SkillHub 要求 Java 21+：
+   SkillHub 要求 Java 17+：
    ```bash
    java -version
    ```
