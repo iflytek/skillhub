@@ -132,7 +132,7 @@
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Keep runtime-mode switching in configuration/assembly layers, not scattered in business logic.",
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
@@ -149,8 +149,8 @@
         "Tests pass"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": "This story is about the UASS feature scope, not a whole-repo 100% campaign.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },

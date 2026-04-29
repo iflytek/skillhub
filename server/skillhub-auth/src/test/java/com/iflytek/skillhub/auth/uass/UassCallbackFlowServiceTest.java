@@ -235,7 +235,7 @@ class UassCallbackFlowServiceTest {
                 uassIdentityService,
                 new PlatformSessionService(),
                 new UassSessionContextService(),
-                URI.create("http://localhost:3000/")
+                "http://localhost:3000"
         );
         MockHttpServletRequest request = callbackRequest();
 
@@ -253,6 +253,128 @@ class UassCallbackFlowServiceTest {
         String redirectTo = serviceWithPublicBase.completeLogin("auth-code", "state-1", CALLBACK_URI, request);
 
         assertThat(redirectTo).isEqualTo("http://localhost:3000/dashboard/reviews?tab=pending#panel");
+    }
+
+    @Test
+    void completeLogin_blankPublicBaseUrlKeepsRelativeReturnToUntouched() {
+        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
+                bindingRepo,
+                userRepo,
+                roleBindingRepo,
+                globalNamespaceMembershipService
+        ));
+        UassCallbackFlowService serviceWithBlankPublicBase = new UassCallbackFlowService(
+                uassClientFacade,
+                uassLoginStateService,
+                uassIdentityService,
+                new PlatformSessionService(),
+                new UassSessionContextService(),
+                "   "
+        );
+        MockHttpServletRequest request = callbackRequest();
+
+        when(uassLoginStateService.consumeForCallback("state-1"))
+                .thenReturn(Optional.of(new UassLoginState("/dashboard", java.time.Instant.now(), "uass", null)));
+        when(uassClientFacade.validateLogin("auth-code", "state-1", CALLBACK_URI))
+                .thenReturn(loginContext("U1009"));
+        when(uassClientFacade.loadUserProfile(any()))
+                .thenReturn(userProfile("U1009", "Blank Base", "blank@example.com", Map.of()));
+        when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1009"))
+                .thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        String redirectTo = serviceWithBlankPublicBase.completeLogin("auth-code", "state-1", CALLBACK_URI, request);
+
+        assertThat(redirectTo).isEqualTo("/dashboard");
+    }
+
+    @Test
+    void completeLogin_rejectsMissingLoginState() {
+        MockHttpServletRequest request = callbackRequest();
+        when(uassLoginStateService.consumeForCallback("state-1")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.completeLogin("auth-code", "state-1", CALLBACK_URI, request))
+                .isInstanceOf(com.iflytek.skillhub.auth.exception.AuthFlowException.class);
+
+        verify(uassClientFacade, never()).validateLogin(any(), any(), any());
+    }
+
+    @Test
+    void completeLogin_invalidatesEstablishedSessionWhenUassContextBindingFails() {
+        UassSessionContextService failingSessionContext = new UassSessionContextService() {
+            @Override
+            public void bind(UassLoginContext loginContext, jakarta.servlet.http.HttpServletRequest request) {
+                super.bind(loginContext, request);
+                throw new IllegalStateException("bind failed");
+            }
+        };
+        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
+                bindingRepo,
+                userRepo,
+                roleBindingRepo,
+                globalNamespaceMembershipService
+        ));
+        UassCallbackFlowService serviceWithFailingBind = new UassCallbackFlowService(
+                uassClientFacade,
+                uassLoginStateService,
+                uassIdentityService,
+                new PlatformSessionService(),
+                failingSessionContext,
+                (URI) null
+        );
+        MockHttpServletRequest request = callbackRequest();
+
+        when(uassLoginStateService.consumeForCallback("state-1"))
+                .thenReturn(Optional.of(new UassLoginState("/dashboard", java.time.Instant.now(), "uass", null)));
+        when(uassClientFacade.validateLogin("auth-code", "state-1", CALLBACK_URI))
+                .thenReturn(loginContext("U1007"));
+        when(uassClientFacade.loadUserProfile(any()))
+                .thenReturn(userProfile("U1007", "Broken Bind", "bind@example.com", Map.of()));
+        when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1007"))
+                .thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        assertThatThrownBy(() -> serviceWithFailingBind.completeLogin("auth-code", "state-1", CALLBACK_URI, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("bind failed");
+
+        assertThat(request.getSession(false)).isNull();
+    }
+
+    @Test
+    void completeLogin_keepsAbsoluteReturnToUnchanged() {
+        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
+                bindingRepo,
+                userRepo,
+                roleBindingRepo,
+                globalNamespaceMembershipService
+        ));
+        UassCallbackFlowService serviceWithPublicBase = new UassCallbackFlowService(
+                uassClientFacade,
+                uassLoginStateService,
+                uassIdentityService,
+                new PlatformSessionService(),
+                new UassSessionContextService(),
+                "http://localhost:3000"
+        );
+        MockHttpServletRequest request = callbackRequest();
+
+        when(uassLoginStateService.consumeForCallback("state-1"))
+                .thenReturn(Optional.of(new UassLoginState("https://portal.example.com/dashboard", java.time.Instant.now(), "uass", null)));
+        when(uassClientFacade.validateLogin("auth-code", "state-1", CALLBACK_URI))
+                .thenReturn(loginContext("U1008"));
+        when(uassClientFacade.loadUserProfile(any()))
+                .thenReturn(userProfile("U1008", "Portal User", "portal@example.com", Map.of()));
+        when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1008"))
+                .thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        String redirectTo = serviceWithPublicBase.completeLogin("auth-code", "state-1", CALLBACK_URI, request);
+
+        assertThat(redirectTo).isEqualTo("https://portal.example.com/dashboard");
     }
 
     private static MockHttpServletRequest callbackRequest() {

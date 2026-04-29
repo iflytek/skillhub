@@ -44,6 +44,21 @@ class MockUassGatewayTest {
     }
 
     @Test
+    void validateLogin_defaultsUserCodeWhenLoginCodeIsBlank() {
+        MockUassGateway gateway = new MockUassGateway(mockProperties("mock://self"));
+
+        UassValidatedLogin login = gateway.validateLogin(new UassLoginValidationRequest(
+                " ",
+                "state-1",
+                URI.create("http://localhost/api/v1/auth/uass/callback")
+        ));
+
+        assertThat(login.userCode()).isEqualTo(MockUassGateway.DEFAULT_USER_CODE);
+        assertThat(gateway.checkLoginStatus(new UassSessionDescriptor("user", null, null, null, null))).isTrue();
+        gateway.logout(new UassSessionDescriptor("user", null, null, null, null));
+    }
+
+    @Test
     void operationsFailFastWhenNoGatewayImplementationIsConfigured() {
         MockUassGateway gateway = new MockUassGateway(mockProperties("https://uass.example.com"));
 
@@ -51,6 +66,9 @@ class MockUassGatewayTest {
                 "state-1",
                 URI.create("http://localhost/api/v1/auth/uass/callback")
         )))
+                .isInstanceOf(UassClientException.class)
+                .hasMessageContaining("No UASS gateway implementation configured");
+        assertThatThrownBy(() -> gateway.checkLoginStatus(new UassSessionDescriptor("user", null, null, null, null)))
                 .isInstanceOf(UassClientException.class)
                 .hasMessageContaining("No UASS gateway implementation configured");
     }

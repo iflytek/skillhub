@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- Feature-scope JaCoCo gates that aggregate multiple backend modules should be bound to the leaf app module that depends on them (for example `skillhub-app`), not the reactor parent; otherwise Maven can run `verify`/report generation before child-module test data exists and resolve helper scripts from the wrong base directory.
 - 当某个功能同时支持 HA 和单机回退模式时，把“基础设施可用性探测 + bean 选择 + 非 HA 日志信号”集中放在 `@Configuration`/装配层；不要把 redis/local/auto 判断散落到 service 业务逻辑中。
 - 在这个仓库里，如果 `@SpringBootTest` 通过 property 打开某个条件式认证 provider，记得同时为对应 provider-specific controller 依赖补 `@MockBean`；否则上下文会先因为条件 controller 缺依赖而启动失败，连目标 controller 的目录测试都跑不到。
 - 对需要“本地 Session 为真源、上游状态检查/登出为可选补充”的企业登录接入，优先把 provider-specific login context 序列化进 servlet session，再由专门 flow service 统一做 status/logout；不要把 access token 或远端调用逻辑塞进 `PlatformPrincipal`。
@@ -35,6 +36,35 @@
 - 仓库当前缺少 `server/.mvn/wrapper`，`make test-backend-app` 会直接失败；本轮改用系统 Maven 执行 `mvn -f server/pom.xml -pl skillhub-auth -am test` 完成同等校验。
 - 有用的上下文
 - `skillhub-auth` 现有模式倾向于用小 record 表达外部身份数据，例如 `OAuthClaims`；UASS facade 延续这个结构更容易复用后续用户映射与 session 编排。
+---
+## 2026-04-30 05:30 - US-008
+- 为 UASS feature-scope Java 覆盖率补齐了遗漏分支测试，并新增 `JaCoCo report-aggregate + check-feature-jacoco.sh` 的构建门禁，确保 feature 范围类只要出现 `line_missed` 就会让 `skillhub-app` 的 `verify` 失败。
+- 将最初挂在父 `pom` 的覆盖率 gate 下沉到 `skillhub-app`，修正了 reactor 执行时序和脚本路径问题；最终 `mvn -f server/pom.xml -pl skillhub-app -am -DskipITs -Dsurefire.failIfNoSpecifiedTests=false verify`、`make test-frontend`、`make typecheck-web`、`make lint-web` 全部通过。
+- 更改的文件
+- `server/pom.xml`
+- `server/skillhub-app/pom.xml`
+- `scripts/check-feature-jacoco.sh`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/service/AuthMethodCatalogTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistryTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/MockUassGatewayTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassClientFacadeTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassGatewayConfigurationTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassLoginStateServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassSessionFlowServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfigurationTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/store/LocalUassLoginStateStoreTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/store/RedisUassLoginStateStoreTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/store/UassLoginStateTest.java`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对 feature-scope 覆盖率 story，先看 aggregate `jacoco.csv`/`*.java.html` 精确定位未覆盖分支，再只补对应测试，比重新实现或把 gate 扩到整仓更稳。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - `jacoco:report-aggregate` 和自定义 exec gate 如果挂在 `server/pom.xml`，Maven 会先执行父模块 `verify`，既拿不到子模块执行数据，也会把脚本路径解析到 `server/`；需要改挂到 `skillhub-app` 这类聚合叶子模块。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 本次覆盖率门禁读取 `server/skillhub-app/target/site/jacoco-aggregate/jacoco.csv`，源码级缺口可直接查看同目录下对应 `*.java.html` 的 source view。
 ---
 ## 2026-04-30 02:08 - US-004
 - 按 validator 第二次失败原因最小修复了跨源验证场景下的会话恢复：前端 API client 在 runtime-config 把 `apiBaseUrl` 指向绝对后端地址时，统一为 `fetch` 和 `openapi-fetch` 请求补上 `credentials: 'include'`，避免 UASS callback 建立的 Session 在回到前端 host 后被 `/api/v1/auth/me` 丢失。

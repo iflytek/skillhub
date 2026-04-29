@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class UassSessionFlowServiceTest {
 
@@ -70,6 +71,29 @@ class UassSessionFlowServiceTest {
     }
 
     @Test
+    void status_returnsLoggedOutWhenAuthenticationMissing() {
+        UassSessionFlowService.UassSessionStatus status = service.status(null, new MockHttpServletRequest());
+
+        assertThat(status.authenticated()).isFalse();
+        assertThat(status.provider()).isNull();
+        assertThat(status.remoteAuthenticated()).isNull();
+    }
+
+    @Test
+    void status_ignoresAuthenticatedPrincipalsOutsidePlatformPrincipal() {
+        MockHttpServletRequest request = requestWithBoundSession();
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken("plain-user", null, java.util.List.of());
+
+        UassSessionFlowService.UassSessionStatus status = service.status(authentication, request);
+
+        assertThat(status.authenticated()).isFalse();
+        assertThat(status.provider()).isNull();
+        assertThat(status.remoteAuthenticated()).isNull();
+        verify(uassClientFacade, never()).checkLoginStatus(loginContext());
+    }
+
+    @Test
     void logout_attemptsRemoteLogoutAndAlwaysClearsLocalState() {
         MockHttpServletRequest request = requestWithBoundSession();
         MockHttpSession session = (MockHttpSession) request.getSession(false);
@@ -80,6 +104,18 @@ class UassSessionFlowServiceTest {
         verify(uassLoginStateService).clearFailedCallback("state-1");
         assertThat(session.isInvalid()).isTrue();
         assertThat(uassSessionContextService.load(request)).isEmpty();
+    }
+
+    @Test
+    void logout_withoutBoundContextStillClearsSecurityState() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        SecurityContextHolder.getContext().setAuthentication(authentication("uass"));
+
+        service.logout(request);
+
+        verify(uassClientFacade, never()).logout(loginContext());
+        verify(uassLoginStateService, never()).clearFailedCallback("state-1");
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test

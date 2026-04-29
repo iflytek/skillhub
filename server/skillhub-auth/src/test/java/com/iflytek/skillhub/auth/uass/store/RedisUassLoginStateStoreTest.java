@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.uass.store;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -73,6 +74,38 @@ class RedisUassLoginStateStoreTest {
         assertThat(store.find("state-1")).isEmpty();
 
         verify(redisTemplate).delete("uass:state:state-1");
+    }
+
+    @Test
+    void find_returnsEmptyWhenNoValueExists() {
+        RedisTemplate<String, Object> redisTemplate = redisTemplate();
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("uass:state:state-1")).thenReturn(null);
+        RedisUassLoginStateStore store = new RedisUassLoginStateStore(redisTemplate, Duration.ofMinutes(5));
+
+        assertThat(store.find("state-1")).isEmpty();
+    }
+
+    @Test
+    void constructorAndMethods_rejectInvalidInputs() {
+        RedisTemplate<String, Object> redisTemplate = redisTemplate();
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        assertThatThrownBy(() -> new RedisUassLoginStateStore(redisTemplate, Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("ttl must be positive");
+
+        RedisUassLoginStateStore store = new RedisUassLoginStateStore(redisTemplate, Duration.ofMinutes(5));
+        assertThatThrownBy(() -> store.save(" ", loginState()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("state must not be blank");
+        assertThatThrownBy(() -> store.save("state-1", null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("loginState must not be null");
     }
 
     @SuppressWarnings("unchecked")

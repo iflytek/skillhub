@@ -4,9 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.springframework.http.HttpMethod;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 class RouteSecurityPolicyRegistryTest {
 
@@ -117,12 +118,53 @@ class RouteSecurityPolicyRegistryTest {
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));
+        assertFalse(registry.shouldIgnoreCsrf(null, null));
         assertFalse(registry.shouldIgnoreCsrf("/ui/settings", null));
     }
 
     @Test
     void shouldProjectRequestContext_onlyForApiRoutes() {
         assertTrue(registry.shouldProjectRequestContext("/api/web/namespaces/team-a"));
+        assertFalse(registry.shouldProjectRequestContext(null));
         assertFalse(registry.shouldProjectRequestContext("/assets/index.css"));
+    }
+
+    @Test
+    void authorizeApiToken_allowsNonApiPathsAndRejectsUnsupportedApiEndpoints() {
+        var nonApiDecision = registry.authorizeApiToken("GET", "/login", Set.of());
+        var unsupportedDecision = registry.authorizeApiToken("PATCH", "/api/v1/unknown", Set.of("token:manage"));
+
+        assertTrue(nonApiDecision.allowed());
+        assertFalse(unsupportedDecision.allowed());
+        assertEquals("API token cannot access endpoint: /api/v1/unknown", unsupportedDecision.message());
+    }
+
+    @Test
+    void authorizeApiToken_treatsNullMethodAsUnsupportedForMethodScopedPolicy() {
+        var decision = registry.authorizeApiToken(null, "/api/v1/whoami", Set.of("token:manage"));
+
+        assertFalse(decision.allowed());
+        assertEquals("API token cannot access endpoint: /api/v1/whoami", decision.message());
+    }
+
+    @Test
+    void routeAuthorizationPolicy_buildsMatchersForMethodSpecificAndMethodAgnosticRules() {
+        var methodAgnostic = RouteSecurityPolicyRegistry.RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/me")
+                .toRequestMatcher();
+        var methodSpecific = RouteSecurityPolicyRegistry.RouteAuthorizationPolicy.roles(
+                HttpMethod.POST,
+                "/api/v1/auth/uass/logout",
+                "SUPER_ADMIN"
+        ).toRequestMatcher();
+        MockHttpServletRequest postRequest = new MockHttpServletRequest("POST", "/api/v1/auth/uass/logout");
+        MockHttpServletRequest getRequest = new MockHttpServletRequest("GET", "/api/v1/auth/uass/logout");
+        MockHttpServletRequest authMeRequest = new MockHttpServletRequest("GET", "/api/v1/auth/me");
+        postRequest.setServletPath("/api/v1/auth/uass/logout");
+        getRequest.setServletPath("/api/v1/auth/uass/logout");
+        authMeRequest.setServletPath("/api/v1/auth/me");
+
+        assertTrue(methodAgnostic.matches(authMeRequest));
+        assertTrue(methodSpecific.matches(postRequest));
+        assertFalse(methodSpecific.matches(getRequest));
     }
 }

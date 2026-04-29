@@ -42,6 +42,15 @@ class UassStateStoreConfigurationTest {
     }
 
     @Test
+    void disabledFeature_usesLocalStoreWithoutRequiringRedis() {
+        contextRunner
+                .withUserConfiguration(AvailableRedisTemplateTestConfig.class)
+                .withPropertyValues("skillhub.auth.uass.enabled=false")
+                .run(context -> assertThat(context.getBean(UassLoginStateStore.class))
+                        .isInstanceOf(LocalUassLoginStateStore.class));
+    }
+
+    @Test
     void autoMode_usesRedisStoreWhenRedisTemplateIsAvailable() {
         contextRunner
                 .withUserConfiguration(AvailableRedisTemplateTestConfig.class)
@@ -66,6 +75,20 @@ class UassStateStoreConfigurationTest {
 
         assertThat(output).contains("LOCAL mode")
                 .contains("Redis is unavailable");
+    }
+
+    @Test
+    void autoMode_fallsBackToLocalStoreWhenConnectionFactoryIsMissing(CapturedOutput output) {
+        contextRunner
+                .withUserConfiguration(MissingConnectionFactoryRedisTemplateTestConfig.class)
+                .withPropertyValues(
+                        "skillhub.auth.uass.enabled=true",
+                        "skillhub.auth.uass.cache-mode=auto"
+                )
+                .run(context -> assertThat(context.getBean(UassLoginStateStore.class))
+                        .isInstanceOf(LocalUassLoginStateStore.class));
+
+        assertThat(output).contains("LOCAL mode");
     }
 
     @Test
@@ -154,6 +177,15 @@ class UassStateStoreConfigurationTest {
             when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
             when(connectionFactory.getConnection()).thenThrow(new RedisConnectionFailureException("redis down"));
             return redisTemplate;
+        }
+    }
+
+    @Configuration
+    static class MissingConnectionFactoryRedisTemplateTestConfig {
+
+        @Bean
+        RedisTemplate<String, Object> redisTemplate() {
+            return mock(RedisTemplate.class);
         }
     }
 }

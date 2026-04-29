@@ -155,4 +155,26 @@ class AuthMethodCatalogTest {
                 "/api/v1/auth/uass/redirect?returnTo=%2Fdashboard%2Fpublish"
             ));
     }
+
+    @Test
+    void listMethodsShouldUseBareUassRedirectWhenReturnToIsMissing() {
+        AuthMethodCatalog catalog = new AuthMethodCatalog(
+            new OAuth2ClientProperties(),
+            new DirectAuthProperties(),
+            new AuthSessionBootstrapProperties(),
+            enabledUassProperties(),
+            List.of(),
+            List.of()
+        );
+
+        assertThat(catalog.listMethods(null))
+            .extracting(method -> method.id(), method -> method.actionUrl())
+            .contains(tuple("uass-enterprise", "/api/v1/auth/uass/redirect"));
+    }
+
+    private static UassProperties enabledUassProperties() {
+        UassProperties properties = new UassProperties();
+        properties.setEnabled(true);
+        return properties;
+    }
 }

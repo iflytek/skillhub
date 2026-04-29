@@ -51,6 +51,18 @@ class UassClientFacadeTest {
     }
 
     @Test
+    void buildLoginUrl_rethrowsUassClientException() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.buildLoginUrl(any())).thenThrow(new UassClientException("buildLoginUrl", "upstream rejected"));
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        assertThatThrownBy(() -> facade.buildLoginUrl("state-1", CALLBACK_URI))
+                .isInstanceOf(UassClientException.class)
+                .hasMessage("upstream rejected")
+                .hasNoCause();
+    }
+
+    @Test
     void validateLogin_mapsGatewayResponseToInternalContext() {
         UassGateway gateway = mock(UassGateway.class);
         Instant expiresAt = Instant.parse("2026-04-29T10:15:30Z");
@@ -82,6 +94,19 @@ class UassClientFacadeTest {
     }
 
     @Test
+    void validateLogin_normalizesNullAttributesToEmptyMap() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.validateLogin(any())).thenReturn(
+                new UassValidatedLogin("uass-user-1", "access-token", null, null, null)
+        );
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        UassLoginContext context = facade.validateLogin("auth-code", "state-1", CALLBACK_URI);
+
+        assertThat(context.attributes()).isEmpty();
+    }
+
+    @Test
     void validateLogin_rejectsMissingUserCode() {
         UassGateway gateway = mock(UassGateway.class);
         when(gateway.validateLogin(any())).thenReturn(
@@ -94,6 +119,17 @@ class UassClientFacadeTest {
                 .hasMessage("Failed to validate UASS login")
                 .satisfies(exception ->
                         assertThat(((UassClientException) exception).getOperation()).isEqualTo("validateLogin"));
+    }
+
+    @Test
+    void validateLogin_rejectsMissingGatewayResult() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.validateLogin(any())).thenReturn(null);
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        assertThatThrownBy(() -> facade.validateLogin("auth-code", "state-1", CALLBACK_URI))
+                .isInstanceOf(UassClientException.class)
+                .hasMessage("UASS login validation returned no result");
     }
 
     @Test
@@ -110,6 +146,18 @@ class UassClientFacadeTest {
         assertThat(sessionCaptor.getValue().userCode()).isEqualTo("uass-user-1");
         assertThat(sessionCaptor.getValue().accessToken()).isEqualTo("access-token");
         assertThat(loggedIn).isTrue();
+    }
+
+    @Test
+    void checkLoginStatus_wrapsGatewayFailure() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.checkLoginStatus(any())).thenThrow(new IllegalStateException("status down"));
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        assertThatThrownBy(() -> facade.checkLoginStatus(loginContext()))
+                .isInstanceOf(UassClientException.class)
+                .hasMessage("Failed to check UASS login status")
+                .hasCauseInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -138,6 +186,30 @@ class UassClientFacadeTest {
     }
 
     @Test
+    void loadUserProfile_normalizesNullAttributesToEmptyMap() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.loadUserProfile(any())).thenReturn(
+                new UassRemoteUserProfile("uass-user-1", "Alice", null, null, null, null)
+        );
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        UassUserProfile profile = facade.loadUserProfile(loginContext());
+
+        assertThat(profile.attributes()).isEmpty();
+    }
+
+    @Test
+    void loadUserProfile_rejectsMissingGatewayResult() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.loadUserProfile(any())).thenReturn(null);
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        assertThatThrownBy(() -> facade.loadUserProfile(loginContext()))
+                .isInstanceOf(UassClientException.class)
+                .hasMessage("UASS user profile lookup returned no result");
+    }
+
+    @Test
     void loadUserProfile_rejectsMissingUserCode() {
         UassGateway gateway = mock(UassGateway.class);
         when(gateway.loadUserProfile(any())).thenReturn(
@@ -153,6 +225,28 @@ class UassClientFacadeTest {
     }
 
     @Test
+    void loadUserProfile_rethrowsUassClientException() {
+        UassGateway gateway = mock(UassGateway.class);
+        when(gateway.loadUserProfile(any())).thenThrow(new UassClientException("loadUserProfile", "denied"));
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        assertThatThrownBy(() -> facade.loadUserProfile(loginContext()))
+                .isInstanceOf(UassClientException.class)
+                .hasMessage("denied")
+                .hasNoCause();
+    }
+
+    @Test
+    void logout_delegatesToGateway() {
+        UassGateway gateway = mock(UassGateway.class);
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        facade.logout(loginContext());
+
+        verify(gateway).logout(any());
+    }
+
+    @Test
     void logout_wrapsGatewayFailure() {
         UassGateway gateway = mock(UassGateway.class);
         doThrow(new IllegalStateException("upstream unavailable")).when(gateway).logout(any());
@@ -164,6 +258,29 @@ class UassClientFacadeTest {
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .satisfies(exception ->
                         assertThat(((UassClientException) exception).getOperation()).isEqualTo("logout"));
+    }
+
+    @Test
+    void constructorAndMethodsRejectMissingRequiredArguments() {
+        assertThatThrownBy(() -> new UassClientFacade(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("gateway must not be null");
+
+        UassGateway gateway = mock(UassGateway.class);
+        UassClientFacade facade = new UassClientFacade(gateway);
+
+        assertThatThrownBy(() -> facade.validateLogin(null, "state-1", CALLBACK_URI))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("loginCode must not be blank");
+        assertThatThrownBy(() -> facade.buildLoginUrl(" ", CALLBACK_URI))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("state must not be blank");
+        assertThatThrownBy(() -> facade.buildLoginUrl("state-1", null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("callbackUri must not be null");
+        assertThatThrownBy(() -> facade.checkLoginStatus(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("loginContext must not be null");
     }
 
     private static UassLoginContext loginContext() {

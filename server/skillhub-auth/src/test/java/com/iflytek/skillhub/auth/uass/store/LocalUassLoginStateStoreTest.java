@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.uass.store;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -55,6 +56,46 @@ class LocalUassLoginStateStoreTest {
         assertThat(store.stateCount()).isEqualTo(1);
         assertThat(store.find("state-1")).isEmpty();
         assertThat(store.find("state-2")).isPresent();
+    }
+
+    @Test
+    void consume_returnsEmptyAfterStateExpires() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-04-29T15:00:00Z"));
+        LocalUassLoginStateStore store = new LocalUassLoginStateStore(Duration.ofMinutes(5), clock);
+        store.save("state-1", loginState(clock.instant(), "/expired"));
+
+        clock.advance(Duration.ofMinutes(6));
+
+        assertThat(store.consume("state-1")).isEmpty();
+    }
+
+    @Test
+    void delete_removesStoredState() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-04-29T15:00:00Z"));
+        LocalUassLoginStateStore store = new LocalUassLoginStateStore(Duration.ofMinutes(5), clock);
+        store.save("state-1", loginState(clock.instant(), "/dashboard"));
+
+        store.delete("state-1");
+
+        assertThat(store.find("state-1")).isEmpty();
+    }
+
+    @Test
+    void constructorAndSave_rejectInvalidInputs() {
+        assertThatThrownBy(() -> new LocalUassLoginStateStore(Duration.ZERO, Clock.systemUTC()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("ttl must be positive");
+        assertThatThrownBy(() -> new LocalUassLoginStateStore(Duration.ofMinutes(1), null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("clock must not be null");
+
+        LocalUassLoginStateStore store = new LocalUassLoginStateStore(Duration.ofMinutes(5), Clock.systemUTC());
+        assertThatThrownBy(() -> store.save(" ", loginState(Instant.now(), "/dashboard")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("state must not be blank");
+        assertThatThrownBy(() -> store.save("state-1", null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("loginState must not be null");
     }
 
     private static UassLoginState loginState(Instant createdAt, String returnTo) {

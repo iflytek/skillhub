@@ -73,6 +73,16 @@ class UassLoginStateServiceTest {
     }
 
     @Test
+    void consumeForCallback_rejectsBlankState() {
+        UassLoginStateStore store = mock(UassLoginStateStore.class);
+        UassLoginStateService service = new UassLoginStateService(store);
+
+        assertThatThrownBy(() -> service.consumeForCallback(" "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("state must not be blank");
+    }
+
+    @Test
     void clearFailedCallback_deletesTrimmedState() {
         UassLoginStateStore store = mock(UassLoginStateStore.class);
         UassLoginStateService service = new UassLoginStateService(store, CLOCK, () -> "state-1");
