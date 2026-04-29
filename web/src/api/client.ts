@@ -406,8 +406,9 @@ export const authApi = {
     })
   },
 
-  async logout(): Promise<void> {
-    const response = await fetch('/api/v1/auth/logout', {
+  async logout(provider?: string): Promise<void> {
+    const logoutPath = provider === 'uass' ? '/api/v1/auth/uass/logout' : '/api/v1/auth/logout'
+    const response = await fetch(buildApiUrl(logoutPath), {
       method: 'POST',
       ...withCredentials(),
       headers: withCsrf(),

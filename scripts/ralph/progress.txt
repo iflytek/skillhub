@@ -1,6 +1,7 @@
 ## Codebase Patterns
 - 对需要“本地 Session 为真源、上游状态检查/登出为可选补充”的企业登录接入，优先把 provider-specific login context 序列化进 servlet session，再由专门 flow service 统一做 status/logout；不要把 access token 或远端调用逻辑塞进 `PlatformPrincipal`。
 - 当浏览器以独立前端 origin 访问 SkillHub，而 runtime-config 又把 `apiBaseUrl` 指向绝对后端地址时，除了 `fetch` 要带 `credentials: 'include'` 之外，所有后端下发的相对认证跳转 URL 也必须先经前端 `buildApiUrl`/等价 helper 归一化到后端 origin；否则真实浏览器会把 `/api/v1/auth/...` 导向静态前端站点自身。
+- 跨源认证链路里的非跳转 POST（例如 logout）也必须走 `buildApiUrl`/runtime `apiBaseUrl`，不能继续保留裸 `/api/...` 相对路径；否则浏览器会绕过后端真实 endpoint，导致本地 Session 和上游登录态无法同步清理。
 - 认证相关跨源验证在这个代码库里应由 Spring Security 的集中式 CORS 配置兜底，并从 `skillhub.public.base-url` 推导允许 origin；不要把 CORS 规则散落到各个 controller 或单独的业务 endpoint 上。
 - New auth-provider integrations should normalize upstream provider payloads into small internal DTO/record types inside `skillhub-auth`, so application services never depend on provider-specific contracts.
 - When running Maven from `server/pom.xml` with `-pl ... -am -Dtest=...`, add `-Dsurefire.failIfNoSpecifiedTests=false` so upstream modules without matching tests do not fail the build.
@@ -238,8 +239,27 @@
 - **未来迭代的学习：**
   - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
   - 如果企业登录后续还要支持 remote introspection / single logout，最稳妥的是把 provider-specific session snapshot 作为独立 session attribute 保存，再由 flow service 读取；`PlatformPrincipal` 继续只承载本地鉴权快照。
-  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+- 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
   - 这个环境里的 `agent-browser` 需要 `--no-sandbox` 才能启动，但即使加上后 CDP 导航也可能超时；浏览器验收要准备好回退到仓库自带的 Playwright + 系统 Chrome 路径。
   - 有用的上下文（例如，"评估面板在 component X 中"）
   - 本地静态前端 `127.0.0.1:3001` 当前读取的是 `web/dist/runtime-config.js`，而不是仓库根下的 `.validator/web-runtime-config.js`；需要切换后端端口时，别只改 validator 文件。
+---
+## 2026-04-30 04:16 - US-005
+- 按 validator 失败原因最小修复了前端登出入口：`authApi.logout` 现在会根据 provider 选择 `/api/v1/auth/uass/logout` 或旧 `/api/v1/auth/logout`，并统一通过 `buildApiUrl` 命中 runtime `apiBaseUrl` 下的真实后端。
+- 调整用户菜单登出后的浏览器行为为“清缓存后回访当前受保护路径”，让现有路由守卫稳定把浏览器送回 `/login?returnTo=...`，避免再硬跳 `/` 掩盖未清理的登录态。
+- 补了前端单测覆盖 UASS/非 UASS 两条 logout 路径，并在 `3001 -> 39000` 的跨源本地环境用浏览器验证：点击 `Logout` 实际请求 `POST http://localhost:39000/api/v1/auth/uass/logout` 返回 `204`，随后页面回到 `http://127.0.0.1:3001/login?returnTo=%2Fdashboard`；同一浏览器会话读取 `http://localhost:39000/api/v1/auth/uass/status` 返回 `authenticated=false`。
+- 运行了 `make test-frontend`、`make typecheck-web`、`make lint-web`、`make build-frontend`，全部通过。
+- 更改的文件
+- `web/src/api/client.ts`
+- `web/src/api/client.test.ts`
+- `web/src/shared/components/user-menu.tsx`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对独立前端 origin 的认证回归，不能只验证登录 redirect；像 logout 这类 POST 编排也要经过同一套 `buildApiUrl + credentials` 路径，才能真正覆盖真实浏览器行为。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - `make build-frontend` 会把 `web/dist/runtime-config.js` 重置成默认空配置；如果要继续用静态 `dist` 做跨源浏览器验证，需要在验证前恢复目标 `apiBaseUrl/appBaseUrl`。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 这次用户菜单登出链路的关键点在 `web/src/shared/components/user-menu.tsx -> authApi.logout -> buildApiUrl`，并不是 UASS controller/service 本身；后续再遇到“后端 endpoint 已有但浏览器没命中”的问题，应先从前端 runtime URL 归一化排查。
 ---

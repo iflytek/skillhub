@@ -173,6 +173,50 @@ describe('authApi', () => {
       }),
     )
   })
+
+  it('uses the UASS logout endpoint on the runtime API origin for enterprise sessions', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: { cookie: 'XSRF-TOKEN=test-token' } satisfies Pick<Document, 'cookie'>,
+    })
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 204,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await authApi.logout('uass')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/v1/auth/uass/logout',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    )
+  })
+
+  it('keeps the legacy logout endpoint for non-UASS sessions', async () => {
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: { cookie: '' } satisfies Pick<Document, 'cookie'>,
+    })
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 204,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await authApi.logout()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/auth/logout',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+  })
 })
 
 describe('getDirectAuthRuntimeConfig', () => {

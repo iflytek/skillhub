@@ -72,15 +72,17 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   }, [])
 
   const handleLogout = async () => {
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`
     try {
-      await authApi.logout()
+      await authApi.logout(user.oauthProvider)
     } catch (error) {
       console.error('Logout failed:', error)
     } finally {
-      // Always clear cache and redirect, even if API call fails
+      // Always clear cache and revisit the protected route so route guards
+      // re-establish the logged-out browser state, even if the API call fails.
       clearSessionScopedQueries(queryClient)
       queryClient.setQueryData(['auth', 'me'], null)
-      window.location.href = '/'
+      window.location.href = returnTo
     }
   }
 
