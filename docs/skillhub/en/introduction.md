@@ -1,42 +1,38 @@
 # Introduction
 
-SkillHub is a self-hosted Agent Skill registry built for the enterprise.
+SkillHub is an enterprise self-hosted Agent Skill registry for publishing, discovering, governing, and reusing skill packages in one place.
 
-In the age of AI Agents, every team accumulates its own skill packages (Skills). But these packages are scattered everywhere: some on developers' local machines, some in Git repositories, and some buried in internal documentation. Team members struggle to discover each other's work, let alone reuse existing capabilities.
+In many teams, skill packages are scattered across local folders, Git repositories, and internal docs. That usually means:
 
-SkillHub solves this problem. It provides a **private, controllable, and easy-to-use** skill package registry, allowing teams to manage Agent Skills just like using npm or PyPI.
+- people struggle to discover existing work
+- it is hard to tell which version is usable and trustworthy
+- permissions and governance stay inconsistent
+
+SkillHub is designed to pull those concerns into a private, controllable, and auditable platform.
 
 ![Architecture Diagram](/diagrams/architecture.png)
 
 ## Core Value
 
-- **Publish in 3 minutes**: From local development to global distribution with a single command
-- **Enterprise-grade permissions**: Namespace-based RBAC with team collaboration and review workflows
-- **Full lifecycle**: Version management, tag system, review workflows, and archiving mechanisms
-- **Ready out of the box**: Start the full environment with a single curl command
-- **Security scanning**: Built-in Skill Scanner for automatic security risk detection
-- **Data sovereignty**: Fully self-hosted — all data stays within your firewall
+- Private deployment with strong data sovereignty
+- Namespace + RBAC collaboration model
+- Full lifecycle from publishing to review and scanning
+- Both Web and CLI entry points
 
-## Tech Stack
+## Technology Baseline
 
-![Tech Stack Diagram](/diagrams/tech-stack.png)
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19 + Vite |
+| Backend | Java 17 + Spring Boot 3.2 |
+| Database | PostgreSQL 16 |
+| Cache | Redis 7 |
+| Storage | MinIO / S3 |
+| Deployment | Docker Compose / Kubernetes |
 
-| Layer | Technology | Description |
-|-------|------------|-------------|
-| **Frontend** | React 19 + Vite + TanStack Router | Modern SPA with Chinese/English language support |
-| **Backend** | Java 17 + Spring Boot 3.2 | Enterprise-grade REST API |
-| **Database** | PostgreSQL 16 | Full-text search, Flyway auto-migration |
-| **Cache** | Redis 7 | Session management, hot data caching |
-| **Storage** | MinIO / S3 | Skill package file storage, supports local and cloud |
-| **Deployment** | Docker Compose / K8s | One-click startup, supports self-hosting |
+## Next Steps
 
-## Feature Overview
-
-| Feature | Description |
-|---------|-------------|
-| [Skill Publishing & Version Management](/en/guide/skill-publish) | One-click skill package publishing with semantic versioning |
-| [Skill Search & Discovery](/en/guide/skill-discovery) | Full-text search, smart filtering, permission-aware |
-| [Namespace & Team Management](/en/guide/namespace) | Namespace-based RBAC permission system |
-| [Review & Governance](/en/guide/review) | Multi-level review workflows, reporting system |
-| [Security Scanning](/en/guide/scanner) | Built-in Skill Scanner with multi-engine security analysis |
-| [User Interaction & Social](/en/guide/social) | Starring, ratings, notification system |
+- [Quick Start](/en/quickstart)
+- [Skill Publishing & Versioning](/en/guide/skill-publish)
+- [Skill Search & Discovery](/en/guide/skill-discovery)
+- [Namespace & Team Management](/en/guide/namespace)

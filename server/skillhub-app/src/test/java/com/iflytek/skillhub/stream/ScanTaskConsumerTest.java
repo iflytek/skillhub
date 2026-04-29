@@ -493,7 +493,7 @@ class ScanTaskConsumerTest {
 
         @Override
         public int updateStatusWithVersion(Long id, ReviewTaskStatus status, String reviewedBy,
-                                           String reviewComment, Integer expectedVersion) {
+                                           String reviewComment, java.time.Instant reviewedAt, Integer expectedVersion) {
             throw unsupported();
         }
     }

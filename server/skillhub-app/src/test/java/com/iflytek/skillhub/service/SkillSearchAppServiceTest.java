@@ -102,7 +102,7 @@ class SkillSearchAppServiceTest {
         SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 1, null, null);
 
         assertEquals(1, response.items().size());
-        assertEquals("visible-skill", response.items().getFirst().slug());
+        assertEquals("visible-skill", response.items().get(0).slug());
         assertEquals(1, response.total());
         verify(searchQueryService, times(1)).search(any());
     }
@@ -151,7 +151,7 @@ class SkillSearchAppServiceTest {
         SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 20, "user-9", Map.of());
 
         assertEquals(1, response.items().size());
-        assertEquals("visible-skill", response.items().getFirst().slug());
+        assertEquals("visible-skill", response.items().get(0).slug());
         assertEquals(1, response.total());
     }
 

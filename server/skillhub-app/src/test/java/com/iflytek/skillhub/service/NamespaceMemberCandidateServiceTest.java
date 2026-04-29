@@ -67,7 +67,7 @@ class NamespaceMemberCandidateServiceTest {
         List<NamespaceCandidateUserResponse> result = service.searchCandidates("team-a", "ali", "owner-1", 10);
 
         assertEquals(1, result.size());
-        assertEquals("user-2", result.getFirst().userId());
+        assertEquals("user-2", result.get(0).userId());
         verify(namespaceService).assertAdminOrOwner(1L, "owner-1");
     }
 

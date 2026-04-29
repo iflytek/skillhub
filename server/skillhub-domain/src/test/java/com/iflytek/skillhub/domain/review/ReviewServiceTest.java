@@ -243,7 +243,7 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(eq(task), eq(REVIEWER_ID), eq(ns.getType()), anyMap(), anySet()))
                     .thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(
-                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", task.getVersion()))
+                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", Instant.now(CLOCK), task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
@@ -283,7 +283,7 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(eq(task), eq(REVIEWER_ID), eq(ns.getType()), anyMap(), anySet()))
                     .thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(
-                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", task.getVersion()))
+                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", Instant.now(CLOCK), task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
@@ -307,7 +307,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
             when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
@@ -335,7 +335,7 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(eq(task), eq(REVIEWER_ID), eq(ns.getType()), anyMap(), anySet()))
                     .thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(
-                    REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Needs work", task.getVersion()))
+                    REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Needs work", Instant.now(CLOCK), task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
@@ -379,7 +379,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
             when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
@@ -406,7 +406,7 @@ class ReviewServiceTest {
             assertThrows(DomainBadRequestException.class,
                     () -> reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
                             Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of()));
-            verify(reviewTaskRepository, never()).updateStatusWithVersion(any(), any(), any(), any(), any());
+            verify(reviewTaskRepository, never()).updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any());
         }
 
         @Test
@@ -419,7 +419,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
             when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
@@ -468,7 +468,7 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(eq(task), eq(USER_ID), eq(ns.getType()), anyMap(), eq(Set.of("SUPER_ADMIN"))))
                     .thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(
-                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, USER_ID, "self approved", task.getVersion()))
+                    REVIEW_TASK_ID, ReviewTaskStatus.APPROVED, USER_ID, "self approved", Instant.now(CLOCK), task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
@@ -504,6 +504,7 @@ class ReviewServiceTest {
                     ReviewTaskStatus.APPROVED,
                     USER_ID,
                     "self approved as namespace admin",
+                    Instant.now(CLOCK),
                     task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
@@ -532,7 +533,7 @@ class ReviewServiceTest {
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(0);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(0);
 
             assertThrows(ConcurrentModificationException.class,
                     () -> reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
@@ -555,7 +556,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
             when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill, otherSkill));
@@ -579,7 +580,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(1);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
@@ -629,7 +630,7 @@ class ReviewServiceTest {
             when(permissionChecker.canReview(eq(task), eq(USER_ID), eq(ns.getType()), anyMap(), eq(Set.of("SUPER_ADMIN"))))
                     .thenReturn(true);
             when(reviewTaskRepository.updateStatusWithVersion(
-                    REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, USER_ID, "self rejected", task.getVersion()))
+                    REVIEW_TASK_ID, ReviewTaskStatus.REJECTED, USER_ID, "self rejected", Instant.now(CLOCK), task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
             when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
@@ -662,6 +663,7 @@ class ReviewServiceTest {
                     ReviewTaskStatus.REJECTED,
                     USER_ID,
                     "self rejected as namespace admin",
+                    Instant.now(CLOCK),
                     task.getVersion()))
                     .thenReturn(1);
             when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(sv));
@@ -686,7 +688,7 @@ class ReviewServiceTest {
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
             when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(ns));
             when(permissionChecker.canReview(any(), any(), any(), anyMap(), anySet())).thenReturn(true);
-            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any())).thenReturn(0);
+            when(reviewTaskRepository.updateStatusWithVersion(any(), any(), any(), any(), any(Instant.class), any())).thenReturn(0);
 
             assertThrows(ConcurrentModificationException.class,
                     () -> reviewService.rejectReview(REVIEW_TASK_ID, REVIEWER_ID, "no",

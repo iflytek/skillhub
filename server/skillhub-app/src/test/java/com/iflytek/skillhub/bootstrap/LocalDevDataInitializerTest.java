@@ -2,6 +2,8 @@ package com.iflytek.skillhub.bootstrap;
 
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
+import com.iflytek.skillhub.auth.local.LocalCredential;
+import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.Namespace;
@@ -18,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -34,8 +37,10 @@ class LocalDevDataInitializerTest {
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private NamespaceMemberRepository namespaceMemberRepository;
+    @Mock private LocalCredentialRepository localCredentialRepository;
     @Mock private RoleRepository roleRepository;
     @Mock private UserRoleBindingRepository userRoleBindingRepository;
+    @Mock private PasswordEncoder passwordEncoder;
 
     private LocalDevDataInitializer initializer;
 
@@ -45,8 +50,10 @@ class LocalDevDataInitializerTest {
                 userAccountRepository,
                 namespaceRepository,
                 namespaceMemberRepository,
+                localCredentialRepository,
                 roleRepository,
-                userRoleBindingRepository
+                userRoleBindingRepository,
+                passwordEncoder
         );
     }
 
@@ -63,10 +70,20 @@ class LocalDevDataInitializerTest {
         when(userAccountRepository.findById(LocalDevDataInitializer.LOCAL_ADMIN_ID)).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
+        when(namespaceRepository.save(any(Namespace.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(anyLong(), any())).thenReturn(Optional.empty());
         when(namespaceMemberRepository.save(any(NamespaceMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
+        when(roleRepository.findByCode(anyString())).thenAnswer(invocation -> {
+            String code = invocation.getArgument(0, String.class);
+            Role role = new Role();
+            setField(role, "id", 1L);
+            setField(role, "code", code);
+            return Optional.of(role);
+        });
         when(userRoleBindingRepository.findByUserId(LocalDevDataInitializer.LOCAL_ADMIN_ID)).thenReturn(List.of());
+        when(localCredentialRepository.findByUserId(anyString())).thenReturn(Optional.empty());
+        when(localCredentialRepository.save(any(LocalCredential.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
 

@@ -370,7 +370,7 @@ class PromotionServiceTest {
                     .thenReturn(Optional.of(request), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(request, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
-                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, request.getVersion()))
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, Instant.now(CLOCK), request.getVersion()))
                     .thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
@@ -391,7 +391,7 @@ class PromotionServiceTest {
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(request));
             when(permissionChecker.canReviewPromotion(request, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
-                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "no", null, request.getVersion()))
+                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "no", null, Instant.now(CLOCK), request.getVersion()))
                     .thenReturn(1);
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(request));
 
@@ -416,7 +416,7 @@ class PromotionServiceTest {
                     .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
-                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", null, pr.getVersion()))
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", null, Instant.now(CLOCK), pr.getVersion()))
                     .thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
@@ -521,7 +521,7 @@ class PromotionServiceTest {
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
-                    any(), any(), any(), any(), any(), any())).thenReturn(0);
+                    any(), any(), any(), any(), any(), any(Instant.class), any())).thenReturn(0);
 
             assertThrows(ConcurrentModificationException.class,
                     () -> promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "ok", Set.of("SKILL_ADMIN")));
@@ -538,7 +538,7 @@ class PromotionServiceTest {
                     .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
-                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, pr.getVersion()))
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, Instant.now(CLOCK), pr.getVersion()))
                     .thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
@@ -561,7 +561,7 @@ class PromotionServiceTest {
             when(promotionRequestRepository.findById(PROMOTION_ID))
                     .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
-            when(promotionRequestRepository.updateStatusWithVersion(any(), any(), any(), any(), any(), any())).thenReturn(1);
+            when(promotionRequestRepository.updateStatusWithVersion(any(), any(), any(), any(), any(), any(Instant.class), any())).thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
             when(skillRepository.save(any(Skill.class))).thenAnswer(inv -> {
@@ -597,7 +597,7 @@ class PromotionServiceTest {
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
-                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion()))
+                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, Instant.now(CLOCK), pr.getVersion()))
                     .thenReturn(1);
             PromotionRequest result = promotionService.rejectPromotion(
                     PROMOTION_ID, REVIEWER_ID, "Not ready", Set.of("SKILL_ADMIN"));
@@ -608,7 +608,7 @@ class PromotionServiceTest {
             assertEquals("Not ready", result.getReviewComment());
             assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             verify(promotionRequestRepository).updateStatusWithVersion(
-                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion());
+                    PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, Instant.now(CLOCK), pr.getVersion());
             verify(eventPublisher, never()).publishEvent(any());
         }
 
@@ -645,7 +645,7 @@ class PromotionServiceTest {
             PromotionRequest pr = createPendingPromotion();
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
-            when(promotionRequestRepository.updateStatusWithVersion(any(), any(), any(), any(), any(), any()))
+            when(promotionRequestRepository.updateStatusWithVersion(any(), any(), any(), any(), any(), any(Instant.class), any()))
                     .thenReturn(0);
 
             assertThrows(ConcurrentModificationException.class,

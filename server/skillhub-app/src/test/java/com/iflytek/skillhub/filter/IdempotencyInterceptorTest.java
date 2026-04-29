@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -37,6 +38,9 @@ class IdempotencyInterceptorTest {
     private StringRedisTemplate redisTemplate;
 
     @Mock
+    private ObjectProvider<StringRedisTemplate> redisTemplateProvider;
+
+    @Mock
     private ValueOperations<String, String> valueOperations;
 
     @Mock
@@ -53,7 +57,8 @@ class IdempotencyInterceptorTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
-        interceptor = new IdempotencyInterceptor(redisTemplate, idempotencyRecordRepository, objectMapper, clock);
+        when(redisTemplateProvider.getIfAvailable()).thenReturn(redisTemplate);
+        interceptor = new IdempotencyInterceptor(redisTemplateProvider, idempotencyRecordRepository, objectMapper, clock);
     }
 
     @Test

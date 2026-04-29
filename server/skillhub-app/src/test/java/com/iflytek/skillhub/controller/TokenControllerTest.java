@@ -226,7 +226,7 @@ class TokenControllerTest {
                 PageRequest.of(0, 10),
                 1
         );
-        var token = tokenPage.getContent().getFirst();
+        var token = tokenPage.getContent().get(0);
         org.springframework.test.util.ReflectionTestUtils.setField(token, "id", 7L);
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.Instant.parse("2026-03-14T10:00:00Z"));
         token.setExpiresAt(java.time.Instant.parse("2026-05-01T09:30:00Z"));

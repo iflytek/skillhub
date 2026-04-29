@@ -85,7 +85,8 @@ class BootstrapAdminInitializerTest {
 
         ArgumentCaptor<UserAccount> userCaptor = ArgumentCaptor.forClass(UserAccount.class);
         verify(userAccountRepository, atLeastOnce()).save(userCaptor.capture());
-        UserAccount savedUser = userCaptor.getAllValues().getLast();
+        List<UserAccount> savedUsers = userCaptor.getAllValues();
+        UserAccount savedUser = savedUsers.get(savedUsers.size() - 1);
         assertEquals("docker-admin", savedUser.getId());
         assertEquals("Admin", savedUser.getDisplayName());
         assertEquals("admin@skillhub.local", savedUser.getEmail());
