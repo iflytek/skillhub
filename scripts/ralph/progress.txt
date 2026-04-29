@@ -1,0 +1,23 @@
+## Codebase Patterns
+- New auth-provider integrations should normalize upstream provider payloads into small internal DTO/record types inside `skillhub-auth`, so application services never depend on provider-specific contracts.
+- When running Maven from `server/pom.xml` with `-pl ... -am -Dtest=...`, add `-Dsurefire.failIfNoSpecifiedTests=false` so upstream modules without matching tests do not fail the build.
+
+## 2026-04-29 23:29 - US-001
+- 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
+- 为登录 URL 构建、登录校验、状态检查、用户信息查询和登出补齐成功/失败单测，并确保 facade 异常信息不泄露敏感 callback/state 值。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassClientFacade.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassClientException.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassLoginContext.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassUserProfile.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassClientFacadeTest.java`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+- 发现的 patterns
+- UASS 这一类企业登录接入适合先把“平台 DTO + facade + 单测”打稳，再在后续 story 里接编排服务、state store 和 controller，避免 jar 细节扩散到 app 层。
+- 遇到的陷阱
+- 仓库当前缺少 `server/.mvn/wrapper`，`make test-backend-app` 会直接失败；本轮改用系统 Maven 执行 `mvn -f server/pom.xml -pl skillhub-auth -am test` 完成同等校验。
+- 有用的上下文
+- `skillhub-auth` 现有模式倾向于用小 record 表达外部身份数据，例如 `OAuthClaims`；UASS facade 延续这个结构更容易复用后续用户映射与 session 编排。
+---
