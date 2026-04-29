@@ -916,6 +916,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/namespaces/{slug}/members/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["batchAddMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["batchAddMembers_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/namespaces/{slug}/members": {
         parameters: {
             query?: never;
@@ -1156,22 +1188,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/device/authorize": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["authorizeDevice"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/session/bootstrap": {
         parameters: {
             query?: never;
@@ -1278,38 +1294,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["directLogin"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/device/token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["pollToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/device/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["requestDeviceCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2804,6 +2788,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/uass/redirect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["redirect"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/uass/login-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["loginUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/uass/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/providers": {
         parameters: {
             query?: never;
@@ -3429,10 +3461,37 @@ export interface components {
             /** Format: int64 */
             targetNamespaceId?: number;
         };
+        BatchMemberRequest: {
+            members: components["schemas"]["MemberRequest"][];
+        };
         MemberRequest: {
             userId: string;
             /** @enum {string} */
             role: "OWNER" | "ADMIN" | "MEMBER";
+        };
+        ApiResponseBatchMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["BatchMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        BatchMemberResponse: {
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            successCount?: number;
+            /** Format: int32 */
+            failureCount?: number;
+            results?: components["schemas"]["BatchMemberResult"][];
+        };
+        BatchMemberResult: {
+            userId?: string;
+            role?: string;
+            success?: boolean;
+            error?: string;
         };
         NamespaceLifecycleRequest: {
             reason?: string;
@@ -3495,21 +3554,6 @@ export interface components {
         ClawHubDeleteResponse: {
             ok?: boolean;
         };
-        AuthorizeRequest: {
-            userCode?: string;
-        };
-        ApiResponseMessageResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["MessageResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        MessageResponse: {
-            message?: string;
-        };
         SessionBootstrapRequest: {
             provider: string;
         };
@@ -3555,41 +3599,6 @@ export interface components {
             provider: string;
             username: string;
             password: string;
-        };
-        TokenRequest: {
-            deviceCode?: string;
-        };
-        ApiResponseDeviceTokenResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["DeviceTokenResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        DeviceTokenResponse: {
-            accessToken?: string;
-            tokenType?: string;
-            error?: string;
-        };
-        ApiResponseDeviceCodeResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["DeviceCodeResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        DeviceCodeResponse: {
-            deviceCode?: string;
-            userCode?: string;
-            verificationUri?: string;
-            /** Format: int32 */
-            expiresIn?: number;
-            /** Format: int32 */
-            interval?: number;
         };
         AdminSkillMutationResponse: {
             /** Format: int64 */
@@ -3642,6 +3651,18 @@ export interface components {
             /** Format: int64 */
             mergeRequestId: number;
             verificationToken: string;
+        };
+        ApiResponseMessageResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["MessageResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        MessageResponse: {
+            message?: string;
         };
         MergeInitiateRequest: {
             secondaryIdentifier: string;
@@ -4399,6 +4420,18 @@ export interface components {
         ClawHubResolveResponse: {
             match?: components["schemas"]["VersionInfo"];
             latestVersion?: components["schemas"]["VersionInfo"];
+        };
+        ApiResponseUassLoginUrlResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["UassLoginUrlResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        UassLoginUrlResponse: {
+            loginUrl?: string;
         };
         ApiResponseListAuthProviderResponse: {
             /** Format: int32 */
@@ -6457,6 +6490,58 @@ export interface operations {
             };
         };
     };
+    batchAddMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseBatchMemberResponse"];
+                };
+            };
+        };
+    };
+    batchAddMembers_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseBatchMemberResponse"];
+                };
+            };
+        };
+    };
     listMembers: {
         parameters: {
             query: {
@@ -6988,30 +7073,6 @@ export interface operations {
             };
         };
     };
-    authorizeDevice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AuthorizeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
     bootstrapSession: {
         parameters: {
             query?: never;
@@ -7176,50 +7237,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
-                };
-            };
-        };
-    };
-    pollToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TokenRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDeviceTokenResponse"];
-                };
-            };
-        };
-    };
-    requestDeviceCode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDeviceCodeResponse"];
                 };
             };
         };
@@ -9532,6 +9549,70 @@ export interface operations {
             path: {
                 canonicalSlug: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    redirect: {
+        parameters: {
+            query?: {
+                returnTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    loginUrl: {
+        parameters: {
+            query?: {
+                returnTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUassLoginUrlResponse"];
+                };
+            };
+        };
+    };
+    callback: {
+        parameters: {
+            query: {
+                code?: string;
+                loginCode?: string;
+                state: string;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

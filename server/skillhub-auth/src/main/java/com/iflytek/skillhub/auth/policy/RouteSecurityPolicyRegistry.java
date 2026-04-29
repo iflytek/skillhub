@@ -27,6 +27,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/direct/login"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/local/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/device/**"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/login-url"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/redirect"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/callback"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),

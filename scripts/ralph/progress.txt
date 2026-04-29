@@ -6,6 +6,7 @@
 - Browser login flows here should reuse `OAuthLoginRedirectSupport` for `returnTo` sanitization and default target handling, instead of duplicating redirect validation rules in each auth provider.
 - New enterprise auth providers should map a stable upstream identifier into `IdentityBinding.subject` and delegate local user creation through `IdentityBindingService`, rather than introducing fallback matching by display name or email.
 - Spring beans in this codebase that keep an extra test-only constructor should mark the production constructor explicitly (for example with `@Autowired`), otherwise enabling the bean can fail with `No default constructor found`.
+- Conditional auth endpoints that depend on provider beans need a local/mock provider implementation for runtime/OpenAPI verification; otherwise code can compile and tests can pass while the real app still exposes 404s for the new routes.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -108,4 +109,31 @@
 - `UassLoginStateService` 这类带测试辅助构造器的 Spring bean，如果没有显式标注注入构造器，默认 profile 下可能一直没暴露，直到启用真实 feature bean 才在运行时炸出 `No default constructor found`。
 - 有用的上下文
 - 当前 callback endpoint 只在 `skillhub.auth.uass.enabled=true` 且上下文里存在 `UassClientFacade` bean 时装配；后续接入真实 UASS gateway 时，需要保留这个条件式装配边界，避免未接完 provider 时把半成品 endpoint 暴露出去。
+---
+## 2026-04-30 00:50 - US-004
+- 实现了 `UassLoginInitiationService`、`/api/v1/auth/uass/login-url` 和 `/api/v1/auth/uass/redirect`，让 UASS 浏览器登录能在 callback 前生成 state、保存 `returnTo` 并发起上游跳转；同时把匿名路由放行扩展到新的登录入口。
+- 补了 `UassGatewayConfiguration` 和 `MockUassGateway`，使 `skillhub.auth.uass.enabled=true` 的真实应用上下文能装配 `UassClientFacade`，并支持用 `skillhub.auth.uass.base-url=mock://self` 做本地 OpenAPI 与浏览器闭环验证。
+- 重新生成了 `web/src/api/generated/schema.d.ts`，确认 OpenAPI 中已包含 `/api/v1/auth/uass/login-url`、`/redirect`、`/callback`；并用 `agent-browser` 验证 direct redirect 最终落到 `/dashboard` 且浏览器获得新的 `JSESSIONID`。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-auth -am -Dtest=MockUassGatewayTest,UassLoginInitiationServiceTest,RouteSecurityPolicyRegistryTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=UassAuthControllerTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests install`、`make typecheck-web`、`make lint-web`。`make test-backend-app` 仍因缺失 `server/.mvn/wrapper/maven-wrapper.properties` 失败，`make generate-api` 仍会误打到外部占用的 `localhost:8080`，因此本轮改用运行在 `39000` 端口的本地 fat jar 生成 schema。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassLoginInitiationService.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassGatewayConfiguration.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/MockUassGateway.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistry.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassLoginInitiationServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/MockUassGatewayTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistryTest.java`
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/UassAuthController.java`
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/dto/UassLoginUrlResponse.java`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/UassAuthControllerTest.java`
+- `web/src/api/generated/schema.d.ts`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对这类条件装配的认证入口，单元测试不足以证明路由真的存在；至少要在真实 Spring Boot 进程里验证一次 OpenAPI 或实际 HTTP 路径。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - `make generate-api` 固定打 `localhost:8080`，而当前工作机上这个端口可能被别的项目占用；如果遇到这种环境冲突，需要先在替代端口跑 fat jar，再用 `pnpm exec openapi-typescript http://localhost:<port>/v3/api-docs` 生成。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - `local-h2` profile 下直接跑 fat jar 比 `spring-boot:run` 更稳定；后者会带上 DevTools restart classloader，可能把本仓库里某些 repository 代理问题提前放大。
 ---

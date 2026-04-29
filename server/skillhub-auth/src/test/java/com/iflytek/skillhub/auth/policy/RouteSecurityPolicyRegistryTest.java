@@ -84,6 +84,21 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_shouldPermitAnonymousUassLoginInitiationEndpoints() {
+        boolean loginUrlMatched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/auth/uass/login-url".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+        boolean redirectMatched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/auth/uass/redirect".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+
+        assertTrue(loginUrlMatched);
+        assertTrue(redirectMatched);
+    }
+
+    @Test
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));

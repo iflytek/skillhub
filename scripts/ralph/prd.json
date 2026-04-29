@@ -74,8 +74,8 @@
         "Tests pass"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "This is the main auth story. Keep browser auth model session-based.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
