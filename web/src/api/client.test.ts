@@ -35,6 +35,7 @@ vi.mock('@/shared/lib/api-error', () => ({
 
 import {
   WEB_API_PREFIX,
+  authApi,
   buildApiUrl,
   fetchText,
   getDirectAuthRuntimeConfig,
@@ -111,6 +112,51 @@ describe('fetchText', () => {
       'https://api.example.com/skill_hub/api/v1/auth/me',
       expect.objectContaining({
         headers: expect.any(Headers),
+      }),
+    )
+  })
+
+  it('includes credentials when an absolute runtime api base URL is configured', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => 'ok',
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchText('/api/v1/auth/me')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/v1/auth/me',
+      expect.objectContaining({
+        credentials: 'include',
+      }),
+    )
+  })
+})
+
+describe('authApi', () => {
+  it('includes credentials for auth method discovery when using an absolute api base URL', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: [],
+        timestamp: '2026-04-30T00:00:00Z',
+        requestId: 'req-1',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await authApi.getMethods('/dashboard')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/v1/auth/methods?returnTo=%2Fdashboard',
+      expect.objectContaining({
+        credentials: 'include',
       }),
     )
   })

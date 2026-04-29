@@ -82,6 +82,11 @@ function getApiBaseUrl(): string {
   return getRuntimeConfig().apiBaseUrl ?? ''
 }
 
+function shouldIncludeCredentials(): boolean {
+  const baseUrl = getApiBaseUrl().trim()
+  return baseUrl.length > 0
+}
+
 function parseBooleanFlag(value: string | undefined): boolean {
   if (!value) {
     return false
@@ -89,7 +94,12 @@ function parseBooleanFlag(value: string | undefined): boolean {
   return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
 }
 
-const client = createClient<paths>({ baseUrl: getApiBaseUrl() })
+const fetchWithRuntimeCredentials: typeof fetch = (input, init?) => fetch(input, withCredentials(init))
+
+const client = createClient<paths>({
+  baseUrl: getApiBaseUrl(),
+  fetch: fetchWithRuntimeCredentials,
+})
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)
@@ -103,6 +113,16 @@ function withRequestHeaders(headers?: HeadersInit): Headers {
     merged.set('Accept-Language', language)
   }
   return merged
+}
+
+function withCredentials(init?: RequestInit): RequestInit {
+  if (!shouldIncludeCredentials()) {
+    return init ?? {}
+  }
+  return {
+    ...init,
+    credentials: init?.credentials ?? 'include',
+  }
 }
 
 function withCsrf(headers?: HeadersInit): HeadersInit {
@@ -208,6 +228,7 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
   let response: Response
   try {
     response = await fetch(withBaseUrl(input), {
+      ...withCredentials(init),
       ...init,
       signal,
       headers: withRequestHeaders(init?.headers),
@@ -241,6 +262,7 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
 
 export async function fetchText(input: RequestInfo | URL, init?: RequestInit): Promise<string> {
   const response = await fetch(withBaseUrl(input), {
+    ...withCredentials(init),
     ...init,
     headers: withRequestHeaders(init?.headers),
   })
@@ -380,6 +402,7 @@ export const authApi = {
   async logout(): Promise<void> {
     const response = await fetch('/api/v1/auth/logout', {
       method: 'POST',
+      ...withCredentials(),
       headers: withCsrf(),
     })
     if (response.status !== 200 && response.status !== 204) {

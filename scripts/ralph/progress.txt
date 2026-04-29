@@ -9,6 +9,7 @@
 - Conditional auth endpoints that depend on provider beans need a local/mock provider implementation for runtime/OpenAPI verification; otherwise code can compile and tests can pass while the real app still exposes 404s for the new routes.
 - Browser callback flows that may terminate on front-end-only routes should resolve relative `returnTo` values against `skillhub.public.base-url`; otherwise back-end direct-hit verification can create a valid session but still strand the browser on a dead server path.
 - For local browser verification here, the most reliable setup is `java -jar server/skillhub-app/target/skillhub-app-0.1.0.jar --server.port=<alt>` plus a lightweight static proxy on `3000`; `spring-boot:run` can still trip DevTools/repository classloader issues and Vite's fixed `/api` proxy can hide port-mismatch bugs.
+- When browser runtime config points `apiBaseUrl` at an absolute origin, front-end `fetch` and generated API clients must opt into `credentials: 'include'`; otherwise session-establishing redirects can succeed while follow-up `/api/v1/auth/me` calls silently lose the login cookie.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -28,6 +29,24 @@
 - 仓库当前缺少 `server/.mvn/wrapper`，`make test-backend-app` 会直接失败；本轮改用系统 Maven 执行 `mvn -f server/pom.xml -pl skillhub-auth -am test` 完成同等校验。
 - 有用的上下文
 - `skillhub-auth` 现有模式倾向于用小 record 表达外部身份数据，例如 `OAuthClaims`；UASS facade 延续这个结构更容易复用后续用户映射与 session 编排。
+---
+## 2026-04-30 02:08 - US-004
+- 按 validator 第二次失败原因最小修复了跨源验证场景下的会话恢复：前端 API client 在 runtime-config 把 `apiBaseUrl` 指向绝对后端地址时，统一为 `fetch` 和 `openapi-fetch` 请求补上 `credentials: 'include'`，避免 UASS callback 建立的 Session 在回到前端 host 后被 `/api/v1/auth/me` 丢失。
+- 为绝对 `apiBaseUrl` 场景补了 `web/src/api/client.test.ts` 单测，覆盖普通 `fetchText` 和认证方法发现请求都会携带浏览器凭据。
+- 运行了 `make test-frontend`、`make typecheck-web`、`make lint-web`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=UassAuthControllerTest,AuthMethodCatalogTest -Dsurefire.failIfNoSpecifiedTests=false test`，全部通过。
+- 使用 `agent-browser` 在受控本地环境验证了 `http://localhost:3001/login?returnTo=%2Fdashboard -> Continue with Enterprise SSO -> mock callback -> /dashboard`；页面稳定停留在 dashboard，显示已登录的 `UASS Mock User`，刷新后仍保持登录态。
+- 更改的文件
+- `web/src/api/client.ts`
+- `web/src/api/client.test.ts`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 如果浏览器验证需要把前端 host 与后端 host 分开，除了 cookie/SameSite 之外，还要先核对前端 API 层是否显式开启了 credentialed requests；只修 callback 跳转目标不足以保证最终留在已登录页面。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - `openapi-fetch` 默认不会继承你手写 `fetchJson` 里的凭据策略；只修普通 `fetch` 路径会让 `/api/v1/auth/methods` 这类 generated client 请求和后续 session 行为继续不一致。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 这次最稳定的本地复现实验是 `39000` 后端 fat jar + `3001` 静态前端代理；它能复现 validator 提到的跨 host 登录链路，同时不会被 Vite 固定代理规则掩盖 cookie 问题。
 ---
 ## 2026-04-29 23:42 - US-002
 - 实现了 `UassProperties`、`UassLoginStateStore` 抽象、Redis/本地双实现，以及按 `cacheMode` 装配的 `UassStateStoreConfiguration`，把 `uass:state:{state}` TTL 存储能力限定在 auth 模块内。
