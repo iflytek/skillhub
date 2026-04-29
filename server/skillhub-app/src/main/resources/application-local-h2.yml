@@ -18,7 +18,7 @@ spring:
   sql:
     init:
       mode: always
-      data-locations: classpath:data-local-h2.sql
+      data-locations: classpath:sql/data-local-h2.sql
   flyway:
     enabled: false
   autoconfigure:

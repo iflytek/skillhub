@@ -30,7 +30,7 @@ spring:
     time-zone: UTC
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:sql/migration
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/skillhub}
     username: ${SPRING_DATASOURCE_USERNAME:skillhub}

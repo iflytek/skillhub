@@ -256,6 +256,6 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 Flyway 仍是唯一 schema 变更入口：
 
-- 路径：`server/skillhub-app/src/main/resources/db/migration/`
+- 路径：`server/skillhub-app/src/main/resources/sql/migration/`
 - 命名：`V{version}__{description}.sql`
 - 启动策略：应用容器启动时自动执行迁移

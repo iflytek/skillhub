@@ -14,5 +14,4 @@ COMMIT;
 
 -- After executing this file, restart the application with Flyway enabled.
 -- Flyway will recreate the schema from:
---   classpath:db/migration/V1__init_schema.sql
-
+--   classpath:sql/migration/V1__init_schema.sql

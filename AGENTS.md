@@ -186,7 +186,7 @@ make test-backend-app
 | `server/pom.xml` | 后端模块边界与 Java 编译配置 |
 | `server/skillhub-app/src/main/resources/application.yml` | 标准运行模式配置 |
 | `server/skillhub-app/src/main/resources/application-local-h2.yml` | 轻量本地模式配置 |
-| `server/skillhub-app/src/main/resources/db/README.md` | Flyway 收敛与迁移归档说明 |
+| `server/skillhub-app/src/main/resources/sql/README.md` | Flyway 收敛与 SQL 布局说明 |
 | `web/package.json` | 前端脚本与依赖 |
 | `web/src/app/router.tsx` | 前端路由总表 |
 | `web/src/bootstrap.ts` | 前端运行时配置注入入口 |
@@ -208,5 +208,5 @@ make test-backend-app
 
 - 本地开发按 `docs/dev-workflow.md` 使用 Java 17，并与 `server/pom.xml` 保持一致。
 - 不要在 `server/` 下直接运行 `./mvnw -pl skillhub-app clean test`；使用 `-am` 或 `make test-backend-app`，避免落到过期本地 Maven 产物。
-- 新库初始化只走 `server/skillhub-app/src/main/resources/db/migration/V1__init_schema.sql`；历史迁移文件已归档到 `db/migration-archive/`，不要再把新迁移放回归档目录。
+- 新库初始化只走 `server/skillhub-app/src/main/resources/sql/migration/V1__init_schema.sql`；旧的拆分迁移文件已删除，不再保留归档目录。
 - 当前仓库正在做文档治理和 Flyway 迁移收敛；改动相关文件时，先确认你修改的是“当前入口文档”还是“归档材料”。

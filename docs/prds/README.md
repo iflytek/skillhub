@@ -7,6 +7,16 @@
 
 ## 当前仍在 PRD 区的文档
 
+### 认证与质量联合交付
+- [uass-session-auth-and-java-coverage-v1.0-prd.md](./uass-session-auth-and-java-coverage-v1.0-prd.md)
+- [uass-session-auth-and-java-coverage-v1.0-task-breakdown.md](./uass-session-auth-and-java-coverage-v1.0-task-breakdown.md)
+
+保留原因：
+- 企业内部 UASS 认证尚未接入，仍属于明确的规划与实现前设计阶段。
+- 团队计划在同一个 feature 中同时完成认证接入与 Java 质量门禁收敛，因此使用统一 PRD 管理功能范围和测试要求。
+- 该方案同时覆盖私有 jar 适配、Session 建立、Redis / 本地缓存双模式、高可用边界，以及本次 feature 相关 Java 代码 100% 行覆盖率门禁。
+- task breakdown 文档用于将统一 PRD 进一步拆解成可执行任务，便于在同一个 feature 分阶段实施。
+
 ### 本地开发与运行时
 - [local-dev-runtime/database-pluggable-local-runtime-v1.0-prd.md](./local-dev-runtime/database-pluggable-local-runtime-v1.0-prd.md)
 
@@ -14,6 +24,12 @@
 - 该文档讨论的是“数据库可插拔本地运行时”的长期演进方向。
 - 其中关于未来 `local-mysql` / 更完整数据库抽象的目标尚未完全落地。
 - 因此仍归类为 PRD，而不是已实现设计。
+
+### 测试与质量支持资料
+- [java-unit-line-coverage-inventory.md](./java-unit-line-coverage-inventory.md)
+
+保留原因：
+- inventory 文档用于固定当前低覆盖率范围，便于统一 feature 在实现过程中随时核对整改范围。
 
 ## 整理原则
 

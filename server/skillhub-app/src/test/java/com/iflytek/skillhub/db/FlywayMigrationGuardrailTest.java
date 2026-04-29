@@ -76,7 +76,7 @@ class FlywayMigrationGuardrailTest {
         Path root = repoRoot()
                 .resolve("server")
                 .resolve("skillhub-app")
-                .resolve("src/main/resources/db/migration");
+                .resolve("src/main/resources/sql/migration");
         try (var stream = Files.list(root)) {
             return stream
                     .filter(path -> path.getFileName().toString().endsWith(".sql"))

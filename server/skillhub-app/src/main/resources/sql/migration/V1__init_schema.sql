@@ -1,6 +1,5 @@
 -- Consolidated Flyway initialization script
 -- Generated from historical migrations V1..V39.
--- The archived per-version migration files are kept under db/migration-archive for reference only.
 
 
 -- -----------------------------------------------------------------------------

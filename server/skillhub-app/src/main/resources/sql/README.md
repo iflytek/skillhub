@@ -1,16 +1,10 @@
-# Database SQL Layout
+# SQL Layout
 
 ## Active Flyway migration entry
 
 - `migration/V1__init_schema.sql`
 
 This is the consolidated initialization script used by Flyway for a fresh schema.
-
-## Archived historical migrations
-
-- `migration-archive/`
-
-These files are preserved for history and troubleshooting, but are no longer scanned by Flyway.
 
 ## Destructive reset helper
 
@@ -25,5 +19,4 @@ Typical flow:
 2. Start the application with Flyway enabled.
 3. Flyway applies `migration/V1__init_schema.sql` to rebuild the schema from scratch.
 
-This helper is intentionally outside `db/migration` so it is never executed automatically.
-
+This helper is intentionally outside `sql/migration` so it is never executed automatically.

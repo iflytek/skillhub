@@ -1,0 +1,178 @@
+{
+  "project": "SkillHub",
+  "branchName": "ralph/uass-session-auth-and-java-coverage",
+  "description": "为 SkillHub 接入企业内部 UASS 回跳登录，采用本地 Session 作为浏览器主登录态，兼容 Redis 高可用与单机本地状态存储，并将本次 feature 相关 Java 生产代码行覆盖率提升到 100%。",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "新增 UASS 适配层",
+      "description": "作为开发者，我需要一个独立的 UASS 适配层，以便 SkillHub 只依赖统一接口而不直接耦合企业内部 jar 的实现细节。",
+      "acceptanceCriteria": [
+        "Add UassClientFacade in the auth module to wrap login URL building, login validation, status check, user profile lookup, and logout",
+        "Keep the internal UASS jar dependency isolated to the auth module or a dedicated integration package",
+        "Do not expose raw jar types from UassClientFacade to application services",
+        "Add unit tests for successful and failure branches of the facade",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Use the merged PRD as the source of truth. Avoid leaking sensitive callback data to logs.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-002",
+      "title": "新增 UASS 配置与状态存储抽象",
+      "description": "作为开发者，我需要统一的 UASS 配置和 state 存储抽象，以便同一套登录流程可以同时支持 Redis 高可用模式和单机本地模式。",
+      "acceptanceCriteria": [
+        "Add UassProperties with enabled, baseUrl, clientId, clientSecret, callbackPath, stateTtl, and cacheMode configuration fields",
+        "Add UassLoginStateStore abstraction with Redis and Local implementations",
+        "Persist login state under uass:state:{state} in Redis mode and an in-memory TTL store in local mode",
+        "Consume or delete stored state after callback success or failure",
+        "Add unit tests for Redis and Local state store implementations, including TTL expiry and cleanup",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "This story covers state storage only; do not design token lifecycle management.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-003",
+      "title": "基于 user_code 的本地用户查找与自动创建",
+      "description": "作为平台管理员，我希望统一登录平台返回的 user_code 成为本地用户匹配主键，以便首次登录时自动建档，后续登录时稳定命中同一用户。",
+      "acceptanceCriteria": [
+        "Map the UASS user identity so that subject is derived from user_code",
+        "On callback, look up the local user or identity binding by user_code before establishing the SkillHub session",
+        "If no local user exists for user_code, create a new local user from the returned UASS profile and continue the same login flow",
+        "Fail the login flow cleanly if user_code is missing or local user creation fails, without leaving a partial session behind",
+        "Add unit tests for existing-user, first-login auto-create, disabled-user, pending-user, missing-user_code, and create-failure branches",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Reuse IdentityBindingService patterns where possible. Do not match by display name or email nickname.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-004",
+      "title": "实现 UASS 登录回调并建立 SkillHub Session",
+      "description": "作为企业用户，我希望从 UASS 统一登录页回跳后自动进入 SkillHub 已登录状态，以便无需二次登录即可访问平台。",
+      "acceptanceCriteria": [
+        "Add endpoints for GET /api/v1/auth/uass/login-url, GET /api/v1/auth/uass/redirect, and GET /api/v1/auth/uass/callback",
+        "Generate a state value before redirecting to UASS and store returnTo context for callback recovery",
+        "Validate callback state and UASS login result before creating the SkillHub session",
+        "After successful callback, establish the local SkillHub session through PlatformSessionService and redirect to the expected returnTo path",
+        "If callback validation fails, do not create a session and return a clear failure outcome",
+        "Use agent-browser to open /login, trigger enterprise login entry, verify the redirect starts, and verify the callback success path returns to the intended page in a controllable local/test setup",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "This is the main auth story. Keep browser auth model session-based.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-005",
+      "title": "实现登录状态检查与统一登出",
+      "description": "作为企业用户和前端调用方，我希望系统能检查当前登录状态并支持统一登出，以便后续访问行为清晰且安全。",
+      "acceptanceCriteria": [
+        "Add GET /api/v1/auth/uass/status and POST /api/v1/auth/uass/logout",
+        "Return login status based on the local SkillHub session by default",
+        "If the UASS jar supports remote post-login status checks, keep that check optional and do not make it the primary source of truth",
+        "On logout, attempt UASS logout first, then always clear local Session and stored login state even if remote logout fails",
+        "Use agent-browser to verify that an authenticated browser session is redirected back to login after logout and protected navigation requires login again",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Do not introduce token refresh or token lifecycle semantics into status handling.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-006",
+      "title": "接入安全路由与前端登录入口",
+      "description": "作为用户，我希望新的企业登录入口自然出现在现有登录页中，并遵守现有的路由放行与鉴权规则。",
+      "acceptanceCriteria": [
+        "Permit anonymous access to /api/v1/auth/uass/login-url, /api/v1/auth/uass/redirect, /api/v1/auth/uass/callback, and /api/v1/auth/uass/status in RouteSecurityPolicyRegistry",
+        "Require authentication for /api/v1/auth/uass/logout",
+        "Add an enterprise login entry to web/src/pages/login.tsx without breaking existing password and OAuth flows",
+        "Preserve returnTo behavior when initiating enterprise login from the login page",
+        "Use agent-browser to open /login and confirm the enterprise login entry is visible and does not break the existing password/OAuth tabs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Follow existing AuthController and login-page patterns.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-007",
+      "title": "支持 Redis 与本地双运行模式",
+      "description": "作为运维和测试人员，我希望同一套 UASS 登录能力既能支撑生产高可用部署，也能在无 Redis 的单机测试环境中运行。",
+      "acceptanceCriteria": [
+        "Support cacheMode=redis, local, and auto for UASS login state storage",
+        "In Redis mode, state storage must work across backend replicas without relying on sticky sessions",
+        "In local mode, the login flow must still complete successfully in a single-node environment without Redis",
+        "Emit a clear runtime log or equivalent signal when running in non-HA local state mode",
+        "Add unit and integration tests that cover redis/local/auto behavior and Redis-unavailable fallback",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Keep runtime-mode switching in configuration/assembly layers, not scattered in business logic.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-008",
+      "title": "补齐 UASS feature 范围 Java 覆盖率到 100%",
+      "description": "作为维护者，我希望本次 UASS feature 相关 Java 生产代码全部达到 100% line coverage，以便认证主链路改造具有充分的回归保护。",
+      "acceptanceCriteria": [
+        "Generate a JaCoCo line coverage baseline for all newly added and materially modified Java production classes in this feature",
+        "Bring line_missed to 0 for the feature-scope Java production classes, including config, facade, state store, service, controller, mapper, and modified auth/session helper classes",
+        "Add or update tests for PlatformSessionService, AuthContextFilter, and RouteSecurityPolicyRegistry if they gain new behavior for this feature",
+        "Add a build gate so the feature-scope Java coverage requirement fails the build when not satisfied",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This story is about the UASS feature scope, not a whole-repo 100% campaign.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-009",
+      "title": "完成浏览器闭环与最终验证",
+      "description": "作为交付负责人，我希望在最终合并前验证完整浏览器闭环和关键构建命令，以便确认功能、质量门禁和运行模式都已达标。",
+      "acceptanceCriteria": [
+        "Use agent-browser to verify the browser flow: open /login, trigger enterprise login entry, complete or simulate callback success in the intended environment, land on the protected target page, refresh, and confirm the user remains logged in",
+        "Use agent-browser to verify logout returns the browser to a logged-out state and protected navigation requires login again",
+        "Run make test-backend-app successfully",
+        "Run make test-frontend successfully",
+        "Run make typecheck-web successfully",
+        "Run make lint-web successfully",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "This is the final integration validation story that closes the shared feature branch work.",
+      "retryCount": 0,
+      "blocked": false
+    }
+  ]
+}

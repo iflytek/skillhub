@@ -131,7 +131,7 @@ class _Handler(BaseHTTPRequestHandler):
         pass
 
 
-def start(port: int = 7333, max_iterations: int = 100, open_browser: bool = True, host: str = "127.0.0.1") -> None:
+def start(port: int = 7334, max_iterations: int = 100, open_browser: bool = True, host: str = "127.0.0.1") -> None:
     with _state_lock:
         _state["started_at"] = time.time()
         _state["max_iterations"] = max_iterations
