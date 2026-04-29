@@ -131,7 +131,7 @@
         "Tests pass"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Keep runtime-mode switching in configuration/assembly layers, not scattered in business logic.",
       "retryCount": 0,
       "blocked": false

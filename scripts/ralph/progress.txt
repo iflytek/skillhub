@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 当某个功能同时支持 HA 和单机回退模式时，把“基础设施可用性探测 + bean 选择 + 非 HA 日志信号”集中放在 `@Configuration`/装配层；不要把 redis/local/auto 判断散落到 service 业务逻辑中。
 - 在这个仓库里，如果 `@SpringBootTest` 通过 property 打开某个条件式认证 provider，记得同时为对应 provider-specific controller 依赖补 `@MockBean`；否则上下文会先因为条件 controller 缺依赖而启动失败，连目标 controller 的目录测试都跑不到。
 - 对需要“本地 Session 为真源、上游状态检查/登出为可选补充”的企业登录接入，优先把 provider-specific login context 序列化进 servlet session，再由专门 flow service 统一做 status/logout；不要把 access token 或远端调用逻辑塞进 `PlatformPrincipal`。
 - 当浏览器以独立前端 origin 访问 SkillHub，而 runtime-config 又把 `apiBaseUrl` 指向绝对后端地址时，除了 `fetch` 要带 `credentials: 'include'` 之外，所有后端下发的相对认证跳转 URL 也必须先经前端 `buildApiUrl`/等价 helper 归一化到后端 origin；否则真实浏览器会把 `/api/v1/auth/...` 导向静态前端站点自身。
@@ -281,4 +282,21 @@
   - 只在 `AuthMethodCatalogTest` 打开 UASS 不够；一旦把 `skillhub.auth.uass.enabled=true` 带进 `@SpringBootTest`，`UassAuthController` 也会进入上下文，需要一并补齐相关 `@MockBean`。
   - 有用的上下文（例如，"评估面板在 component X 中"）
   - 当前 `127.0.0.1:3001` 前端运行时配置默认会打到 `http://localhost:39000`；做登录页真实浏览器回归时，只要在 `39000` 起一个启用 `SKILLHUB_AUTH_UASS_ENABLED=true` 且 `SKILLHUB_AUTH_UASS_BASE_URL=mock://self` 的本地后端，就能直接复用这套页面。
+---
+## 2026-04-30 04:57 - US-007
+- 将 `redis/local/auto` 运行模式选择、Redis 可用性探测和非 HA 本地模式日志信号全部收口到 `UassStateStoreConfiguration`，让 UASS 业务服务继续只依赖统一的 `UassLoginStateStore`。
+- 为 `cache-mode=redis` 补了 fail-fast 行为；为 `cache-mode=auto` 补了“无 `RedisTemplate`”和“Redis 连接不可用”两种回退到本地 TTL store 的路径，并在本地模式下输出明确的非 HA 警告日志。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-auth -am test`、`make typecheck-web`、`make lint-web`，全部通过；本轮无 UI 变更，未使用浏览器工具。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfiguration.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfigurationTest.java`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对可选基础设施依赖的运行模式切换，最小且可验证的实现是让配置层直接探测依赖可用性，再产出统一 store bean；业务层不需要知道当前是 Redis 还是本地 TTL。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - 只判断 `RedisTemplate` bean 是否存在还不够；在这个仓库的 `auto` 模式下，还要覆盖“bean 存在但底层 Redis 连不上”的场景，否则运行模式会看似是 HA，实际第一次写 state 才暴露故障。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - `UassStateStoreConfigurationTest` 现在已经覆盖 `redis/local/auto` 三种模式、连接失败回退和本地模式日志，可作为后续认证类运行模式装配的直接模板。
 ---
