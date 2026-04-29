@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 这个仓库的后端标准入口依赖完整的 Maven Wrapper 元数据；如果要保证 `make test-backend-app` / `make build` 这类 Makefile 命令可用，除了 `server/mvnw` 之外还必须保留 `server/.mvn/wrapper/maven-wrapper.properties`。
 - Feature-scope JaCoCo gates that aggregate multiple backend modules should be bound to the leaf app module that depends on them (for example `skillhub-app`), not the reactor parent; otherwise Maven can run `verify`/report generation before child-module test data exists and resolve helper scripts from the wrong base directory.
 - 当某个功能同时支持 HA 和单机回退模式时，把“基础设施可用性探测 + bean 选择 + 非 HA 日志信号”集中放在 `@Configuration`/装配层；不要把 redis/local/auto 判断散落到 service 业务逻辑中。
 - 在这个仓库里，如果 `@SpringBootTest` 通过 property 打开某个条件式认证 provider，记得同时为对应 provider-specific controller 依赖补 `@MockBean`；否则上下文会先因为条件 controller 缺依赖而启动失败，连目标 controller 的目录测试都跑不到。
@@ -329,4 +330,19 @@
   - 只判断 `RedisTemplate` bean 是否存在还不够；在这个仓库的 `auto` 模式下，还要覆盖“bean 存在但底层 Redis 连不上”的场景，否则运行模式会看似是 HA，实际第一次写 state 才暴露故障。
   - 有用的上下文（例如，"评估面板在 component X 中"）
   - `UassStateStoreConfigurationTest` 现在已经覆盖 `redis/local/auto` 三种模式、连接失败回退和本地模式日志，可作为后续认证类运行模式装配的直接模板。
+---
+## 2026-04-30 05:47 - US-009
+- 完成了最终浏览器闭环与集成门禁验证：在 `127.0.0.1:3001 -> localhost:39000` 的跨源本地环境下，使用 `agent-browser` 验证了 `login -> Continue with Enterprise SSO -> callback -> /dashboard -> refresh -> logout -> protected route redirects to /login` 整条链路，并保存了验证截图。
+- 修复了最终验收里阻断 `make test-backend-app` 的仓库级问题：补回 `server/.mvn/wrapper/maven-wrapper.properties`，让标准 `./mvnw` / Makefile 入口重新可执行；随后重新跑通 `make test-backend-app`、`make test-frontend`、`make typecheck-web`、`make lint-web`。
+- 更改的文件
+- `server/.mvn/wrapper/maven-wrapper.properties`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对这类最终验收 story，必须优先用仓库声明的顶层入口命令回归一遍；模块级命令全绿并不代表 `make test-backend-app` 这种 CI/开发入口没有因为 wrapper、脚本路径或环境元数据缺失而失效。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - `agent-browser wait --url` 在这个环境里对已完成的跳转有时会直接超时，即使当前 URL 和网络请求已经证明页面到位；遇到这种情况要改用 `get url`、`snapshot` 和请求日志交叉确认，而不是误判登录链路失败。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 这次最省事的最终验收环境仍然是现成的 `web/dist` 静态站点 `127.0.0.1:3001` 加本地 `local-h2` fat jar `39000`，再配 `SKILLHUB_AUTH_UASS_ENABLED=true` 和 `SKILLHUB_AUTH_UASS_BASE_URL=mock://self`；不需要再额外起 Vite 或 Redis。
 ---
