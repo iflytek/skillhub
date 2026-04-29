@@ -8,13 +8,20 @@ import com.iflytek.skillhub.auth.mock.MockAuthFilter;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.token.ApiTokenAuthenticationFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenScopeFilter;
+import java.net.URI;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -29,6 +36,9 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Central Spring Security configuration for browser sessions, API tokens, and
@@ -60,6 +70,7 @@ public class SecurityConfig {
     private final AccessDeniedHandler apiAccessDeniedHandler;
     private final ObjectProvider<MockAuthFilter> mockAuthFilterProvider;
     private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
+    private final String publicBaseUrl;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
                           SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
@@ -70,7 +81,8 @@ public class SecurityConfig {
                           AuthenticationEntryPoint apiAuthenticationEntryPoint,
                           AccessDeniedHandler apiAccessDeniedHandler,
                           ObjectProvider<MockAuthFilter> mockAuthFilterProvider,
-                          RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
+                          RouteSecurityPolicyRegistry routeSecurityPolicyRegistry,
+                          @Value("${skillhub.public.base-url:}") String publicBaseUrl) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
@@ -81,6 +93,7 @@ public class SecurityConfig {
         this.apiAccessDeniedHandler = apiAccessDeniedHandler;
         this.mockAuthFilterProvider = mockAuthFilterProvider;
         this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
+        this.publicBaseUrl = publicBaseUrl;
     }
 
     /**
@@ -101,6 +114,7 @@ public class SecurityConfig {
         };
 
         http
+            .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(csrfHandler)
@@ -161,6 +175,27 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowCredentials(true);
+        configuration.setAllowedOrigins(resolveAllowedOrigins(publicBaseUrl));
+        configuration.setAllowedMethods(List.of(
+                HttpMethod.GET.name(),
+                HttpMethod.POST.name(),
+                HttpMethod.PUT.name(),
+                HttpMethod.PATCH.name(),
+                HttpMethod.DELETE.name(),
+                HttpMethod.OPTIONS.name()
+        ));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Location", "X-Request-Id"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        return source;
+    }
+
     private void configureRoutePolicies(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
         for (RouteSecurityPolicyRegistry.RouteAuthorizationPolicy policy : routeSecurityPolicyRegistry.authorizationPolicies()) {
             switch (policy.accessLevel()) {
@@ -169,5 +204,39 @@ public class SecurityConfig {
                 case ROLE_PROTECTED -> auth.requestMatchers(policy.toRequestMatcher()).hasAnyRole(policy.roles());
             }
         }
+    }
+
+    private static List<String> resolveAllowedOrigins(String publicBaseUrl) {
+        Set<String> origins = new LinkedHashSet<>();
+        String normalized = publicBaseUrl == null ? "" : publicBaseUrl.trim();
+        if (!normalized.isEmpty()) {
+            try {
+                URI publicUri = URI.create(normalized);
+                String scheme = publicUri.getScheme();
+                String host = publicUri.getHost();
+                int port = publicUri.getPort();
+                if (scheme != null && host != null) {
+                    origins.add(originOf(scheme, host, port));
+                    if (isLoopbackHost(host)) {
+                        origins.add(originOf(scheme, "localhost", port));
+                        origins.add(originOf(scheme, "127.0.0.1", port));
+                    }
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Leave the allow-list empty if the public base URL is invalid.
+            }
+        }
+        return List.copyOf(origins);
+    }
+
+    private static boolean isLoopbackHost(String host) {
+        return "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "::1".equals(host);
+    }
+
+    private static String originOf(String scheme, String host, int port) {
+        if (port < 0) {
+            return scheme + "://" + host;
+        }
+        return scheme + "://" + host + ":" + port;
     }
 }

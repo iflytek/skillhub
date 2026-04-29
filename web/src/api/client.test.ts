@@ -36,6 +36,7 @@ vi.mock('@/shared/lib/api-error', () => ({
 import {
   WEB_API_PREFIX,
   authApi,
+  buildAuthRedirectUrl,
   buildApiUrl,
   fetchText,
   getDirectAuthRuntimeConfig,
@@ -94,6 +95,18 @@ describe('buildApiUrl', () => {
     window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: '/skill_hub' }
     const url = buildApiUrl('/api/v1/auth/me')
     expect(url).toBe('/skill_hub/api/v1/auth/me')
+  })
+})
+
+describe('buildAuthRedirectUrl', () => {
+  it('leaves absolute URLs unchanged', () => {
+    expect(buildAuthRedirectUrl('https://auth.example.com/login')).toBe('https://auth.example.com/login')
+  })
+
+  it('rewrites relative auth entry URLs through the runtime api base URL', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    expect(buildAuthRedirectUrl('/api/v1/auth/uass/redirect?returnTo=%2Fdashboard'))
+      .toBe('https://api.example.com/api/v1/auth/uass/redirect?returnTo=%2Fdashboard')
   })
 })
 

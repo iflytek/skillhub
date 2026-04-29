@@ -288,6 +288,13 @@ export function buildApiUrl(path: string): string {
   return prependApiBaseUrl(baseUrl, path)
 }
 
+export function buildAuthRedirectUrl(url: string): string {
+  if (!url.startsWith('/')) {
+    return url
+  }
+  return buildApiUrl(url)
+}
+
 function prependApiBaseUrl(baseUrl: string, path: string): string {
   const normalizedBaseUrl = trimTrailingSlash(baseUrl)
   const normalizedPath = path.startsWith('/') ? path : `/${path}`

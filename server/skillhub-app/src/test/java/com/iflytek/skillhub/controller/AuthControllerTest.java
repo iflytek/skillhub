@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
+    "skillhub.public.base-url=http://localhost:3001",
     "spring.security.oauth2.client.registration.github.client-name=GitHub",
     "spring.security.oauth2.client.registration.gitee.client-id=placeholder",
     "spring.security.oauth2.client.registration.gitee.client-secret=placeholder",
@@ -173,6 +174,17 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
             .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
                 .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
+    }
+
+    @Test
+    void methodsShouldAllowCrossOriginRequestsFromConfiguredFrontendOrigin() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/methods")
+                        .param("returnTo", "/dashboard")
+                        .header("Origin", "http://127.0.0.1:3001"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:3001"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"))
+                .andExpect(jsonPath("$.code").value(0));
     }
 
     @Test

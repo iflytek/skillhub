@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
-import { getDirectAuthRuntimeConfig } from '@/api/client'
+import { buildAuthRedirectUrl, getDirectAuthRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
@@ -107,7 +107,7 @@ export function LoginPage() {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    window.location.href = enterpriseMethod.actionUrl
+                    window.location.href = buildAuthRedirectUrl(enterpriseMethod.actionUrl)
                   }}
                 >
                   {t('login.enterpriseRedirectAction', {

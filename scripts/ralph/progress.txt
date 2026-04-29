@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- 当浏览器以独立前端 origin 访问 SkillHub，而 runtime-config 又把 `apiBaseUrl` 指向绝对后端地址时，除了 `fetch` 要带 `credentials: 'include'` 之外，所有后端下发的相对认证跳转 URL 也必须先经前端 `buildApiUrl`/等价 helper 归一化到后端 origin；否则真实浏览器会把 `/api/v1/auth/...` 导向静态前端站点自身。
+- 认证相关跨源验证在这个代码库里应由 Spring Security 的集中式 CORS 配置兜底，并从 `skillhub.public.base-url` 推导允许 origin；不要把 CORS 规则散落到各个 controller 或单独的业务 endpoint 上。
 - New auth-provider integrations should normalize upstream provider payloads into small internal DTO/record types inside `skillhub-auth`, so application services never depend on provider-specific contracts.
 - When running Maven from `server/pom.xml` with `-pl ... -am -Dtest=...`, add `-Dsurefire.failIfNoSpecifiedTests=false` so upstream modules without matching tests do not fail the build.
 - Optional Redis-backed auth helpers in this codebase should choose Redis vs local fallback in a dedicated `@Configuration` bean via `ObjectProvider<RedisTemplate<...>>`, not by scattering cache-mode branches through services.
@@ -182,5 +184,26 @@
   - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
   - 浏览器工具默认同源访问 `/api`，如果本地前端不是经 Nginx/Vite 代理启动，runtime-config 里把 `apiBaseUrl` 改成绝对地址后还要注意 cookie/SameSite 行为，否则 callback 成功不一定代表同源页面能读到已登录态。
   - 有用的上下文（例如，"评估面板在 component X 中"）
-  - 这次 validator 失败点横跨 `AuthMethodCatalog -> /api/v1/auth/methods -> web/src/pages/login.tsx -> UassCallbackFlowService`，后续处理 UASS 状态/登出 story 时，这条链路仍然是最值得优先回归的闭环。
+- 这次 validator 失败点横跨 `AuthMethodCatalog -> /api/v1/auth/methods -> web/src/pages/login.tsx -> UassCallbackFlowService`，后续处理 UASS 状态/登出 story 时，这条链路仍然是最值得优先回归的闭环。
+---
+## 2026-04-30 02:45 - US-004
+- 按 validator 第三次失败的真实浏览器场景完成最小修复：为 `/api/**` 启用了基于 `skillhub.public.base-url` 的集中式 CORS 放行，并把登录页/ OAuth 按钮消费到的相对认证 `actionUrl` 统一改为走 runtime `apiBaseUrl` 归一化，避免独立前端 origin 把 `/api/v1/auth/uass/redirect` 误打到静态前端站点自身。
+- 为跨源 `GET /api/v1/auth/methods` 补了后端 MockMvc 断言，为相对认证跳转 URL 补了前端单测；重新验证后，`http://127.0.0.1:3001/login?returnTo=%2Fdashboard` 能显示 `Continue with Enterprise SSO`，点击后经 `http://localhost:39000/api/v1/auth/uass/redirect` 和 callback 回到 `http://localhost:3001/dashboard`，页面显示 `UASS Mock User`，刷新后仍保持登录态。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=AuthControllerTest,UassAuthControllerTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests install`、`make test-frontend`、`make typecheck-web`、`make lint-web`，全部通过。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/config/SecurityConfig.java`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/AuthControllerTest.java`
+- `web/src/api/client.ts`
+- `web/src/api/client.test.ts`
+- `web/src/features/auth/login-button.tsx`
+- `web/src/pages/login.tsx`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对独立前端 origin 的浏览器验收，不要只检查后端 `/api/v1/auth/methods` 是否返回了 enterprise method；还要核对浏览器是否真的被允许跨源读取该响应，以及按钮点击后的相对 `actionUrl` 是否会被重写到后端 origin。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - 本地用静态 `dist` 做浏览器验证时，重新 `build-frontend` 会把 `runtime-config.js` 恢复成仓库默认值；如果要复现跨源场景，记得在验证服务层覆盖运行时配置，否则浏览器会悄悄退回同源 `/api` 路径。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 这次真正的问题链路是 `SecurityConfig CORS -> authApi.getMethods -> login.tsx enterprise button -> buildAuthRedirectUrl`；`login.tsx` 本身的渲染条件并没有错，问题出在真实浏览器跨源读响应和点击跳转时的 origin 处理。
 ---

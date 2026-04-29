@@ -1,3 +1,4 @@
+import { buildAuthRedirectUrl } from '@/api/client'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { useAuthMethods } from './use-auth-methods'
@@ -48,7 +49,7 @@ export function LoginButton({ returnTo }: LoginButtonProps) {
           className="w-full h-12 text-base"
           variant="outline"
           onClick={() => {
-            window.location.href = provider.actionUrl
+            window.location.href = buildAuthRedirectUrl(provider.actionUrl)
           }}
         >
           <OAuthIcon provider={provider.provider} />
@@ -58,4 +59,3 @@ export function LoginButton({ returnTo }: LoginButtonProps) {
     </div>
   )
 }
-
