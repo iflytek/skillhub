@@ -1,12 +1,14 @@
 package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
 import com.iflytek.skillhub.auth.direct.DirectAuthProvider;
 import com.iflytek.skillhub.auth.direct.DirectAuthRequest;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.uass.UassProperties;
 import com.iflytek.skillhub.config.AuthSessionBootstrapProperties;
 import com.iflytek.skillhub.config.DirectAuthProperties;
 import java.util.List;
@@ -62,6 +64,7 @@ class AuthMethodCatalogTest {
             oauthProperties,
             directAuthProperties,
             bootstrapProperties,
+            new UassProperties(),
             List.of(directProvider),
             List.of(bootstrapProvider)
         );
@@ -111,6 +114,7 @@ class AuthMethodCatalogTest {
             oauthProperties,
             directAuthProperties,
             bootstrapProperties,
+            new UassProperties(),
             List.of(directProvider),
             List.of(bootstrapProvider)
         );
@@ -121,5 +125,34 @@ class AuthMethodCatalogTest {
                 "direct-private-sso:private-sso",
                 "bootstrap-private-sso:private-sso"
             );
+    }
+
+    @Test
+    void listMethodsShouldAdvertiseUassRedirectWhenFeatureIsEnabled() {
+        OAuth2ClientProperties oauthProperties = new OAuth2ClientProperties();
+        DirectAuthProperties directAuthProperties = new DirectAuthProperties();
+        AuthSessionBootstrapProperties bootstrapProperties = new AuthSessionBootstrapProperties();
+        UassProperties uassProperties = new UassProperties();
+        uassProperties.setEnabled(true);
+
+        AuthMethodCatalog catalog = new AuthMethodCatalog(
+            oauthProperties,
+            directAuthProperties,
+            bootstrapProperties,
+            uassProperties,
+            List.of(),
+            List.of()
+        );
+
+        assertThat(catalog.listMethods("/dashboard/publish"))
+            .extracting(method -> method.id(), method -> method.methodType(), method -> method.provider(),
+                method -> method.displayName(), method -> method.actionUrl())
+            .contains(tuple(
+                "uass-enterprise",
+                "UASS_REDIRECT",
+                "uass",
+                "Enterprise SSO",
+                "/api/v1/auth/uass/redirect?returnTo=%2Fdashboard%2Fpublish"
+            ));
     }
 }

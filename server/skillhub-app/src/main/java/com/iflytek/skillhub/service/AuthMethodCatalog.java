@@ -3,6 +3,7 @@ package com.iflytek.skillhub.service;
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
 import com.iflytek.skillhub.auth.direct.DirectAuthProvider;
 import com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport;
+import com.iflytek.skillhub.auth.uass.UassProperties;
 import com.iflytek.skillhub.config.AuthSessionBootstrapProperties;
 import com.iflytek.skillhub.config.DirectAuthProperties;
 import com.iflytek.skillhub.dto.AuthMethodResponse;
@@ -25,17 +26,20 @@ public class AuthMethodCatalog {
     private final OAuth2ClientProperties oAuth2ClientProperties;
     private final DirectAuthProperties directAuthProperties;
     private final AuthSessionBootstrapProperties sessionBootstrapProperties;
+    private final UassProperties uassProperties;
     private final List<DirectAuthProvider> directAuthProviders;
     private final List<PassiveSessionAuthenticator> passiveSessionAuthenticators;
 
     public AuthMethodCatalog(OAuth2ClientProperties oAuth2ClientProperties,
                              DirectAuthProperties directAuthProperties,
                              AuthSessionBootstrapProperties sessionBootstrapProperties,
+                             UassProperties uassProperties,
                              List<DirectAuthProvider> directAuthProviders,
                              List<PassiveSessionAuthenticator> passiveSessionAuthenticators) {
         this.oAuth2ClientProperties = oAuth2ClientProperties;
         this.directAuthProperties = directAuthProperties;
         this.sessionBootstrapProperties = sessionBootstrapProperties;
+        this.uassProperties = uassProperties;
         this.directAuthProviders = directAuthProviders;
         this.passiveSessionAuthenticators = passiveSessionAuthenticators;
     }
@@ -65,6 +69,16 @@ public class AuthMethodCatalog {
             "Local Account",
             "/api/v1/auth/local/login"
         ));
+
+        if (uassProperties.isEnabled()) {
+            methods.add(new AuthMethodResponse(
+                "uass-enterprise",
+                "UASS_REDIRECT",
+                "uass",
+                "Enterprise SSO",
+                buildUassRedirectUrl(sanitizedReturnTo)
+            ));
+        }
 
         oAuth2ClientProperties.getRegistration().entrySet().stream()
             .sorted(Comparator.comparing(entry -> entry.getKey()))
@@ -107,6 +121,14 @@ public class AuthMethodCatalog {
 
     private String buildAuthorizationUrl(String registrationId, String returnTo) {
         String baseUrl = "/oauth2/authorization/" + registrationId;
+        if (returnTo == null) {
+            return baseUrl;
+        }
+        return baseUrl + "?returnTo=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
+    }
+
+    private String buildUassRedirectUrl(String returnTo) {
+        String baseUrl = "/api/v1/auth/uass/redirect";
         if (returnTo == null) {
             return baseUrl;
         }

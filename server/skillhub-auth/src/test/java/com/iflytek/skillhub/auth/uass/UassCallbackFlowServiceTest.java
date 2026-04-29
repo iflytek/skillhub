@@ -67,7 +67,8 @@ class UassCallbackFlowServiceTest {
                 uassClientFacade,
                 uassLoginStateService,
                 uassIdentityService,
-                new PlatformSessionService()
+                new PlatformSessionService(),
+                (URI) null
         );
     }
 
@@ -216,6 +217,39 @@ class UassCallbackFlowServiceTest {
 
         verify(bindingRepo, never()).save(any(IdentityBinding.class));
         assertThat(request.getSession(false)).isNull();
+    }
+
+    @Test
+    void completeLogin_usesConfiguredPublicBaseUrlForRelativeReturnTo() {
+        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
+                bindingRepo,
+                userRepo,
+                roleBindingRepo,
+                globalNamespaceMembershipService
+        ));
+        UassCallbackFlowService serviceWithPublicBase = new UassCallbackFlowService(
+                uassClientFacade,
+                uassLoginStateService,
+                uassIdentityService,
+                new PlatformSessionService(),
+                URI.create("http://localhost:3000/")
+        );
+        MockHttpServletRequest request = callbackRequest();
+
+        when(uassLoginStateService.consumeForCallback("state-1"))
+                .thenReturn(Optional.of(new UassLoginState("/dashboard/reviews?tab=pending#panel", java.time.Instant.now(), "uass", null)));
+        when(uassClientFacade.validateLogin("auth-code", "state-1", CALLBACK_URI))
+                .thenReturn(loginContext("U1006"));
+        when(uassClientFacade.loadUserProfile(any()))
+                .thenReturn(userProfile("U1006", "Browser User", "browser@example.com", Map.of()));
+        when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1006"))
+                .thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        String redirectTo = serviceWithPublicBase.completeLogin("auth-code", "state-1", CALLBACK_URI, request);
+
+        assertThat(redirectTo).isEqualTo("http://localhost:3000/dashboard/reviews?tab=pending#panel");
     }
 
     private static MockHttpServletRequest callbackRequest() {

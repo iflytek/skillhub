@@ -7,6 +7,8 @@
 - New enterprise auth providers should map a stable upstream identifier into `IdentityBinding.subject` and delegate local user creation through `IdentityBindingService`, rather than introducing fallback matching by display name or email.
 - Spring beans in this codebase that keep an extra test-only constructor should mark the production constructor explicitly (for example with `@Autowired`), otherwise enabling the bean can fail with `No default constructor found`.
 - Conditional auth endpoints that depend on provider beans need a local/mock provider implementation for runtime/OpenAPI verification; otherwise code can compile and tests can pass while the real app still exposes 404s for the new routes.
+- Browser callback flows that may terminate on front-end-only routes should resolve relative `returnTo` values against `skillhub.public.base-url`; otherwise back-end direct-hit verification can create a valid session but still strand the browser on a dead server path.
+- For local browser verification here, the most reliable setup is `java -jar server/skillhub-app/target/skillhub-app-0.1.0.jar --server.port=<alt>` plus a lightweight static proxy on `3000`; `spring-boot:run` can still trip DevTools/repository classloader issues and Vite's fixed `/api` proxy can hide port-mismatch bugs.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -134,6 +136,32 @@
   - 对这类条件装配的认证入口，单元测试不足以证明路由真的存在；至少要在真实 Spring Boot 进程里验证一次 OpenAPI 或实际 HTTP 路径。
   - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
   - `make generate-api` 固定打 `localhost:8080`，而当前工作机上这个端口可能被别的项目占用；如果遇到这种环境冲突，需要先在替代端口跑 fat jar，再用 `pnpm exec openapi-typescript http://localhost:<port>/v3/api-docs` 生成。
+- 有用的上下文（例如，"评估面板在 component X 中"）
+- `local-h2` profile 下直接跑 fat jar 比 `spring-boot:run` 更稳定；后者会带上 DevTools restart classloader，可能把本仓库里某些 repository 代理问题提前放大。
+---
+## 2026-04-30 01:28 - US-004
+- 按 validator 的失败原因最小修复了 UASS 浏览器入口与最终跳转：后端把 `uass-enterprise` 纳入 `/api/v1/auth/methods`，登录页在原有 Password/OAuth 结构外显式渲染企业登录按钮；callback 成功后会把相对 `returnTo` 解析到 `skillhub.public.base-url`，避免浏览器落回后端自身不可访问的 `/dashboard`。
+- 补齐 `AuthMethodCatalog`、`UassCallbackFlowService` 和 `login.tsx` 的测试，并为 `local` / `local-h2` 默认配置补上 `skillhub.public.base-url=http://localhost:3000`，让本地验证环境与生产语义一致。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=UassCallbackFlowServiceTest,UassLoginInitiationServiceTest,UassAuthControllerTest,AuthMethodCatalogTest,AuthControllerTest -Dsurefire.failIfNoSpecifiedTests=false test`、`make test-frontend`、`make typecheck-web`、`make lint-web`，全部通过。
+- 使用 `agent-browser` 完成浏览器闭环验证：`http://localhost:3000/login` 现在可见 `Continue with Enterprise SSO`；点击后经过 `/api/v1/auth/uass/redirect` 和 mock callback 最终落到 `http://localhost:3000/dashboard`，页面显示已登录的 `UASS Mock User`；直接访问 `http://localhost:39000/api/v1/auth/uass/redirect?returnTo=%2Fdashboard` 也能回到前端 dashboard。
+- 更改的文件
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/service/AuthMethodCatalog.java`
+- `server/skillhub-app/src/main/resources/application-local.yml`
+- `server/skillhub-app/src/main/resources/application-local-h2.yml`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/service/AuthMethodCatalogTest.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowService.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowServiceTest.java`
+- `web/src/pages/login.tsx`
+- `web/src/pages/login.test.tsx`
+- `web/src/i18n/locales/en.json`
+- `web/src/i18n/locales/zh.json`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 登录页这类动态认证入口优先从 `/api/v1/auth/methods` 衍生 UI，而不是在前端单独硬编码 feature flag；这样 controller、OpenAPI 和页面展示会天然保持一致。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - 浏览器工具默认同源访问 `/api`，如果本地前端不是经 Nginx/Vite 代理启动，runtime-config 里把 `apiBaseUrl` 改成绝对地址后还要注意 cookie/SameSite 行为，否则 callback 成功不一定代表同源页面能读到已登录态。
   - 有用的上下文（例如，"评估面板在 component X 中"）
-  - `local-h2` profile 下直接跑 fat jar 比 `spring-boot:run` 更稳定；后者会带上 DevTools restart classloader，可能把本仓库里某些 repository 代理问题提前放大。
+  - 这次 validator 失败点横跨 `AuthMethodCatalog -> /api/v1/auth/methods -> web/src/pages/login.tsx -> UassCallbackFlowService`，后续处理 UASS 状态/登出 story 时，这条链路仍然是最值得优先回归的闭环。
 ---

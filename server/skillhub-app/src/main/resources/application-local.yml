@@ -24,6 +24,8 @@ spring:
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
 
 skillhub:
+  public:
+    base-url: http://localhost:3000
   auth:
     mock:
       enabled: true

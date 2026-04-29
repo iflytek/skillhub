@@ -37,6 +37,7 @@ export function LoginPage() {
       method.methodType === 'DIRECT_PASSWORD' && method.provider === directAuthConfig.provider)
     : undefined
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
+  const enterpriseMethod = authMethods?.find((method) => method.methodType === 'UASS_REDIRECT')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -87,6 +88,34 @@ export function LoginPage() {
               methodDisplayName={bootstrapMethod?.displayName}
               onAuthenticated={() => navigate({ to: returnTo })}
             />
+
+            {enterpriseMethod ? (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {enterpriseMethod.displayName || t('login.enterpriseSsoTitle')}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('login.enterpriseRedirectHint', {
+                      name: enterpriseMethod.displayName || t('login.enterpriseSsoTitle'),
+                    })}
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full"
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    window.location.href = enterpriseMethod.actionUrl
+                  }}
+                >
+                  {t('login.enterpriseRedirectAction', {
+                    name: enterpriseMethod.displayName || t('login.enterpriseSsoTitle'),
+                  })}
+                </Button>
+              </div>
+            ) : null}
 
             <Tabs defaultValue="password" className="space-y-6">
               <TabsList className="grid w-full grid-cols-2">

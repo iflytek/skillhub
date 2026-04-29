@@ -28,6 +28,8 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
 skillhub:
+  public:
+    base-url: http://localhost:3000
   storage:
     provider: local
     local:
