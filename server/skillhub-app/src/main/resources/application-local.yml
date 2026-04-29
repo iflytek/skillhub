@@ -23,6 +23,13 @@ spring:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID:local-placeholder}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
 
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: none
+        secure: true
+
 skillhub:
   public:
     base-url: http://localhost:3000

@@ -30,6 +30,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/login-url"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/redirect"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/callback"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/status"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.POST, "/api/v1/auth/uass/logout"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),
             RouteAuthorizationPolicy.permitAll(null, "/v3/api-docs/**"),

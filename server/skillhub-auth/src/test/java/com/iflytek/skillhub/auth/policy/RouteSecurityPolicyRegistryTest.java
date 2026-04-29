@@ -99,6 +99,21 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_shouldExposeUassStatusAndProtectLogout() {
+        boolean statusMatched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/auth/uass/status".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+        boolean logoutMatched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.POST
+                        && "/api/v1/auth/uass/logout".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED);
+
+        assertTrue(statusMatched);
+        assertTrue(logoutMatched);
+    }
+
+    @Test
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));

@@ -1188,6 +1188,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/uass/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/session/bootstrap": {
         parameters: {
             query?: never;
@@ -2780,6 +2796,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["downloadByPath"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/uass/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4420,6 +4452,20 @@ export interface components {
         ClawHubResolveResponse: {
             match?: components["schemas"]["VersionInfo"];
             latestVersion?: components["schemas"]["VersionInfo"];
+        };
+        ApiResponseUassLoginStatusResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["UassLoginStatusResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        UassLoginStatusResponse: {
+            authenticated?: boolean;
+            provider?: string;
+            remoteAuthenticated?: boolean;
         };
         ApiResponseUassLoginUrlResponse: {
             /** Format: int32 */
@@ -7073,6 +7119,24 @@ export interface operations {
             };
         };
     };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     bootstrapSession: {
         parameters: {
             query?: never;
@@ -9559,6 +9623,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUassLoginStatusResponse"];
+                };
             };
         };
     };

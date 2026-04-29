@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 对需要“本地 Session 为真源、上游状态检查/登出为可选补充”的企业登录接入，优先把 provider-specific login context 序列化进 servlet session，再由专门 flow service 统一做 status/logout；不要把 access token 或远端调用逻辑塞进 `PlatformPrincipal`。
 - 当浏览器以独立前端 origin 访问 SkillHub，而 runtime-config 又把 `apiBaseUrl` 指向绝对后端地址时，除了 `fetch` 要带 `credentials: 'include'` 之外，所有后端下发的相对认证跳转 URL 也必须先经前端 `buildApiUrl`/等价 helper 归一化到后端 origin；否则真实浏览器会把 `/api/v1/auth/...` 导向静态前端站点自身。
 - 认证相关跨源验证在这个代码库里应由 Spring Security 的集中式 CORS 配置兜底，并从 `skillhub.public.base-url` 推导允许 origin；不要把 CORS 规则散落到各个 controller 或单独的业务 endpoint 上。
 - New auth-provider integrations should normalize upstream provider payloads into small internal DTO/record types inside `skillhub-auth`, so application services never depend on provider-specific contracts.
@@ -205,5 +206,40 @@
   - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
   - 本地用静态 `dist` 做浏览器验证时，重新 `build-frontend` 会把 `runtime-config.js` 恢复成仓库默认值；如果要复现跨源场景，记得在验证服务层覆盖运行时配置，否则浏览器会悄悄退回同源 `/api` 路径。
   - 有用的上下文（例如，"评估面板在 component X 中"）
-  - 这次真正的问题链路是 `SecurityConfig CORS -> authApi.getMethods -> login.tsx enterprise button -> buildAuthRedirectUrl`；`login.tsx` 本身的渲染条件并没有错，问题出在真实浏览器跨源读响应和点击跳转时的 origin 处理。
+- 这次真正的问题链路是 `SecurityConfig CORS -> authApi.getMethods -> login.tsx enterprise button -> buildAuthRedirectUrl`；`login.tsx` 本身的渲染条件并没有错，问题出在真实浏览器跨源读响应和点击跳转时的 origin 处理。
+---
+## 2026-04-30 03:50 - US-005
+- 实现了 `GET /api/v1/auth/uass/status` 和 `POST /api/v1/auth/uass/logout`，让 UASS 登录态默认以本地 SkillHub Session 为准，并在有可用上游上下文时可选补充远端状态检查。
+- 在 callback 成功后把可序列化的 UASS session snapshot 写入 servlet session，登出时先尝试远端 UASS logout，再无条件清理本地 session、security context 和遗留 state key。
+- 同步更新了 UASS 路由鉴权、OpenAPI schema，并保留了现有跨源 cookie 配置修复以支撑真实浏览器登出回归。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=UassSessionContextServiceTest,UassSessionFlowServiceTest,UassCallbackFlowServiceTest,RouteSecurityPolicyRegistryTest,UassAuthControllerTest -Dsurefire.failIfNoSpecifiedTests=false test`、`make test-frontend`、`make typecheck-web`、`make lint-web`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`，全部通过。
+- 使用浏览器自动化验证了 `http://127.0.0.1:3001/login?returnTo=%2Fdashboard -> Continue with Enterprise SSO -> /dashboard -> POST /api/v1/auth/uass/logout -> /dashboard` 会回到 `http://127.0.0.1:3001/login?returnTo=%2Fdashboard`；`/api/v1/auth/uass/logout` 返回 `204`，受保护路由重新要求登录。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassSessionSnapshot.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassSessionContextService.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassSessionFlowService.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowService.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistry.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassSessionContextServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassSessionFlowServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistryTest.java`
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/UassAuthController.java`
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/dto/UassLoginStatusResponse.java`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/UassAuthControllerTest.java`
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/config/SessionCookieConfiguration.java`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/config/SessionCookieConfigurationTest.java`
+- `server/skillhub-app/src/main/resources/application-local.yml`
+- `server/skillhub-app/src/main/resources/application-local-h2.yml`
+- `server/skillhub-app/src/test/resources/application-test.yml`
+- `web/src/api/generated/schema.d.ts`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 如果企业登录后续还要支持 remote introspection / single logout，最稳妥的是把 provider-specific session snapshot 作为独立 session attribute 保存，再由 flow service 读取；`PlatformPrincipal` 继续只承载本地鉴权快照。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - 这个环境里的 `agent-browser` 需要 `--no-sandbox` 才能启动，但即使加上后 CDP 导航也可能超时；浏览器验收要准备好回退到仓库自带的 Playwright + 系统 Chrome 路径。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 本地静态前端 `127.0.0.1:3001` 当前读取的是 `web/dist/runtime-config.js`，而不是仓库根下的 `.validator/web-runtime-config.js`；需要切换后端端口时，别只改 validator 文件。
 ---

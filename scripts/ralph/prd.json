@@ -76,7 +76,7 @@
       "priority": 4,
       "passes": true,
       "notes": "",
-      "retryCount": 3,
+      "retryCount": 0,
       "blocked": false
     },
     {
@@ -93,8 +93,8 @@
         "Tests pass"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "Do not introduce token refresh or token lifecycle semantics into status handling.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },

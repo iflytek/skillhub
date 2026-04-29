@@ -28,6 +28,7 @@ public class UassCallbackFlowService {
     private final UassLoginStateService uassLoginStateService;
     private final UassIdentityService uassIdentityService;
     private final PlatformSessionService platformSessionService;
+    private final UassSessionContextService uassSessionContextService;
     private final URI publicBaseUri;
 
     @Autowired
@@ -35,19 +36,29 @@ public class UassCallbackFlowService {
                                    UassLoginStateService uassLoginStateService,
                                    UassIdentityService uassIdentityService,
                                    PlatformSessionService platformSessionService,
+                                   UassSessionContextService uassSessionContextService,
                                    @Value("${skillhub.public.base-url:}") String publicBaseUrl) {
-        this(uassClientFacade, uassLoginStateService, uassIdentityService, platformSessionService, normalizePublicBaseUri(publicBaseUrl));
+        this(
+                uassClientFacade,
+                uassLoginStateService,
+                uassIdentityService,
+                platformSessionService,
+                uassSessionContextService,
+                normalizePublicBaseUri(publicBaseUrl)
+        );
     }
 
     UassCallbackFlowService(UassClientFacade uassClientFacade,
                             UassLoginStateService uassLoginStateService,
                             UassIdentityService uassIdentityService,
                             PlatformSessionService platformSessionService,
+                            UassSessionContextService uassSessionContextService,
                             URI publicBaseUri) {
         this.uassClientFacade = uassClientFacade;
         this.uassLoginStateService = uassLoginStateService;
         this.uassIdentityService = uassIdentityService;
         this.platformSessionService = platformSessionService;
+        this.uassSessionContextService = uassSessionContextService;
         this.publicBaseUri = publicBaseUri;
     }
 
@@ -64,6 +75,7 @@ public class UassCallbackFlowService {
                     uassIdentityService.resolvePrincipal(loginContext, userProfile),
                     request
             );
+            uassSessionContextService.bind(loginContext, request);
         } catch (RuntimeException exception) {
             clearPartialSession(request);
             throw exception;

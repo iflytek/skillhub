@@ -36,6 +36,13 @@ spring:
           github:
             user-info-uri: https://api.github.com/user
 
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: none
+        secure: true
+
 skillhub:
   auth:
     enforce-active-user-check: false

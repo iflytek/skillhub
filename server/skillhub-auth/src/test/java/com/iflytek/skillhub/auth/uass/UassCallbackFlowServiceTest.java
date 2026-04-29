@@ -68,6 +68,7 @@ class UassCallbackFlowServiceTest {
                 uassLoginStateService,
                 uassIdentityService,
                 new PlatformSessionService(),
+                new UassSessionContextService(),
                 (URI) null
         );
     }
@@ -98,6 +99,7 @@ class UassCallbackFlowServiceTest {
         assertThat(user.getAvatarUrl()).isEqualTo("https://avatar.test/a.png");
         assertThat(request.getSession(false)).isNotNull();
         assertThat(request.getSession(false).getAttribute("platformPrincipal")).isNotNull();
+        assertThat(request.getSession(false).getAttribute(UassSessionContextService.SESSION_ATTRIBUTE)).isNotNull();
         assertThat(request.getSession(false)
                 .getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNotNull();
     }
@@ -232,6 +234,7 @@ class UassCallbackFlowServiceTest {
                 uassLoginStateService,
                 uassIdentityService,
                 new PlatformSessionService(),
+                new UassSessionContextService(),
                 URI.create("http://localhost:3000/")
         );
         MockHttpServletRequest request = callbackRequest();

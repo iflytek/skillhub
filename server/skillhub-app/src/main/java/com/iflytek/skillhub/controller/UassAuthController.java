@@ -2,9 +2,11 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.uass.UassCallbackFlowService;
 import com.iflytek.skillhub.auth.uass.UassLoginInitiationService;
+import com.iflytek.skillhub.auth.uass.UassSessionFlowService;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.UassLoginUrlResponse;
+import com.iflytek.skillhub.dto.UassLoginStatusResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -12,8 +14,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,13 +33,16 @@ public class UassAuthController extends BaseApiController {
 
     private final UassLoginInitiationService uassLoginInitiationService;
     private final UassCallbackFlowService uassCallbackFlowService;
+    private final UassSessionFlowService uassSessionFlowService;
 
     public UassAuthController(ApiResponseFactory responseFactory,
                               UassLoginInitiationService uassLoginInitiationService,
-                              UassCallbackFlowService uassCallbackFlowService) {
+                              UassCallbackFlowService uassCallbackFlowService,
+                              UassSessionFlowService uassSessionFlowService) {
         super(responseFactory);
         this.uassLoginInitiationService = uassLoginInitiationService;
         this.uassCallbackFlowService = uassCallbackFlowService;
+        this.uassSessionFlowService = uassSessionFlowService;
     }
 
     @GetMapping("/login-url")
@@ -76,5 +83,25 @@ public class UassAuthController extends BaseApiController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, redirectTo)
                 .build();
+    }
+
+    @GetMapping("/status")
+    public ApiResponse<UassLoginStatusResponse> status(Authentication authentication,
+                                                       HttpServletRequest request) {
+        UassSessionFlowService.UassSessionStatus sessionStatus = uassSessionFlowService.status(authentication, request);
+        return ok(
+                "response.success.read",
+                new UassLoginStatusResponse(
+                        sessionStatus.authenticated(),
+                        sessionStatus.provider(),
+                        sessionStatus.remoteAuthenticated()
+                )
+        );
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        uassSessionFlowService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }
