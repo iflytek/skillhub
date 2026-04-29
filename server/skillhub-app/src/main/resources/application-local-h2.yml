@@ -41,6 +41,8 @@ skillhub:
   auth:
     mock:
       enabled: true
+    uass:
+      cache-mode: local
     device:
       enabled: false
     failure-throttle:

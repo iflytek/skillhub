@@ -98,6 +98,14 @@ skillhub:
       enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}
     direct:
       enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
+    uass:
+      enabled: ${SKILLHUB_AUTH_UASS_ENABLED:false}
+      base-url: ${SKILLHUB_AUTH_UASS_BASE_URL:}
+      client-id: ${SKILLHUB_AUTH_UASS_CLIENT_ID:}
+      client-secret: ${SKILLHUB_AUTH_UASS_CLIENT_SECRET:}
+      callback-path: ${SKILLHUB_AUTH_UASS_CALLBACK_PATH:/api/v1/auth/uass/callback}
+      state-ttl: ${SKILLHUB_AUTH_UASS_STATE_TTL:PT10M}
+      cache-mode: ${SKILLHUB_AUTH_UASS_CACHE_MODE:auto}
     session-bootstrap:
       enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
     password-reset:

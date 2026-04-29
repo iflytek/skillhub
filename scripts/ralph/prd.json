@@ -17,7 +17,7 @@
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Use the merged PRD as the source of truth. Avoid leaking sensitive callback data to logs.",
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
@@ -35,7 +35,7 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "This story covers state storage only; do not design token lifecycle management.",
       "retryCount": 0,
       "blocked": false

@@ -1,6 +1,8 @@
 ## Codebase Patterns
 - New auth-provider integrations should normalize upstream provider payloads into small internal DTO/record types inside `skillhub-auth`, so application services never depend on provider-specific contracts.
 - When running Maven from `server/pom.xml` with `-pl ... -am -Dtest=...`, add `-Dsurefire.failIfNoSpecifiedTests=false` so upstream modules without matching tests do not fail the build.
+- Optional Redis-backed auth helpers in this codebase should choose Redis vs local fallback in a dedicated `@Configuration` bean via `ObjectProvider<RedisTemplate<...>>`, not by scattering cache-mode branches through services.
+- Configuration-only behavior here is usually validated with lightweight `Binder` or `ApplicationContextRunner` tests instead of full `@SpringBootTest` contexts.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -20,4 +22,30 @@
 - 仓库当前缺少 `server/.mvn/wrapper`，`make test-backend-app` 会直接失败；本轮改用系统 Maven 执行 `mvn -f server/pom.xml -pl skillhub-auth -am test` 完成同等校验。
 - 有用的上下文
 - `skillhub-auth` 现有模式倾向于用小 record 表达外部身份数据，例如 `OAuthClaims`；UASS facade 延续这个结构更容易复用后续用户映射与 session 编排。
+---
+## 2026-04-29 23:42 - US-002
+- 实现了 `UassProperties`、`UassLoginStateStore` 抽象、Redis/本地双实现，以及按 `cacheMode` 装配的 `UassStateStoreConfiguration`，把 `uass:state:{state}` TTL 存储能力限定在 auth 模块内。
+- 为配置绑定、装配分支、Redis key/TTL、本地过期与清理补齐单测，并在 `application.yml` / `application-local-h2.yml` 中补上 UASS 默认配置与单机本地模式覆盖。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassProperties.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfiguration.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/store/UassLoginState.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/store/UassLoginStateStore.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/store/RedisUassLoginStateStore.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/store/LocalUassLoginStateStore.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassPropertiesBindingTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfigurationTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/store/RedisUassLoginStateStoreTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/store/LocalUassLoginStateStoreTest.java`
+- `server/skillhub-app/src/main/resources/application.yml`
+- `server/skillhub-app/src/main/resources/application-local-h2.yml`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+- 发现的 patterns
+- `skillhub-auth` 这类可选中间件依赖适合用“properties + store interface + configuration selector”的三层结构，后续回调编排服务只依赖 `UassLoginStateStore` 即可。
+- 遇到的陷阱
+- `ApplicationContextRunner` 下如果要测试 `@ConfigurationProperties` 绑定，不能直接把属性类当普通配置塞进去；需要配合 `@EnableConfigurationProperties(...)` 模拟真实启动装配。
+- 有用的上下文
+- `application-local-h2.yml` 已经关闭 Redis 自动配置，因此把 `skillhub.auth.uass.cache-mode` 设为 `local` 可以让单机联调路径更显式，也避免后续 story 误判运行模式来源。
 ---
