@@ -4,6 +4,7 @@
 - Optional Redis-backed auth helpers in this codebase should choose Redis vs local fallback in a dedicated `@Configuration` bean via `ObjectProvider<RedisTemplate<...>>`, not by scattering cache-mode branches through services.
 - Configuration-only behavior here is usually validated with lightweight `Binder` or `ApplicationContextRunner` tests instead of full `@SpringBootTest` contexts.
 - Browser login flows here should reuse `OAuthLoginRedirectSupport` for `returnTo` sanitization and default target handling, instead of duplicating redirect validation rules in each auth provider.
+- New enterprise auth providers should map a stable upstream identifier into `IdentityBinding.subject` and delegate local user creation through `IdentityBindingService`, rather than introducing fallback matching by display name or email.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -65,4 +66,22 @@
 - `make typecheck-web` 不会自动安装依赖；新环境里要先跑 `make web-deps`，否则会因为缺少 `tsc` 等前端二进制而误判 story 失败。
 - 有用的上下文
 - 现在 `UassLoginStateStore` 已经有明确的上层接入点 `UassLoginStateService`，后续 `UassAuthService`/controller 实现 callback 时应直接接这个服务，而不是自己拼 `UassLoginState` 或直接操作 store。
+---
+## 2026-04-30 00:02 - US-003
+- 实现了 `UassIdentityService`，把 UASS 的 `user_code` 映射为 `uass` provider 下的稳定 subject，并复用 `IdentityBindingService` 完成本地用户查找、首次自动建档和角色快照生成。
+- 补齐了已有用户、首次自动创建、禁用用户、待审批用户、缺失 `user_code`、建档失败六个分支测试，确认不会回退到 display name 或 email 匹配。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-auth -am -Dtest=UassIdentityServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-auth -am test`、`make typecheck-web`、`make lint-web`，全部通过。
+- 本轮无 UI 变更，未使用浏览器工具；浏览器闭环留给后续 callback/login 页面相关 story 验证。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassIdentityService.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassIdentityServiceTest.java`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 当新的企业登录源已经有稳定主键时，最小改法是先在 provider-specific service 里映射成 `OAuthClaims` 风格数据，再把本地建档委托给现有 `IdentityBindingService`。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - `IdentityBindingService` 会把 `providerLogin` 同时用于用户 display name 和初始 binding loginName；如果后续 UASS 需要区分“展示名”和“上游登录名”，要在复用前先扩展这层模型。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - `UassLoginContext` 和 `UassUserProfile` 现在都能提供 `user_code`，后续 callback 编排建议优先吃 `UassIdentityService.resolvePrincipal(...)`，避免 controller 自己决定取哪个字段。
 ---
