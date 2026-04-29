@@ -3,6 +3,7 @@
 - When running Maven from `server/pom.xml` with `-pl ... -am -Dtest=...`, add `-Dsurefire.failIfNoSpecifiedTests=false` so upstream modules without matching tests do not fail the build.
 - Optional Redis-backed auth helpers in this codebase should choose Redis vs local fallback in a dedicated `@Configuration` bean via `ObjectProvider<RedisTemplate<...>>`, not by scattering cache-mode branches through services.
 - Configuration-only behavior here is usually validated with lightweight `Binder` or `ApplicationContextRunner` tests instead of full `@SpringBootTest` contexts.
+- Browser login flows here should reuse `OAuthLoginRedirectSupport` for `returnTo` sanitization and default target handling, instead of duplicating redirect validation rules in each auth provider.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -48,4 +49,20 @@
 - `ApplicationContextRunner` 下如果要测试 `@ConfigurationProperties` 绑定，不能直接把属性类当普通配置塞进去；需要配合 `@EnableConfigurationProperties(...)` 模拟真实启动装配。
 - 有用的上下文
 - `application-local-h2.yml` 已经关闭 Redis 自动配置，因此把 `skillhub.auth.uass.cache-mode` 设为 `local` 可以让单机联调路径更显式，也避免后续 story 误判运行模式来源。
+---
+## 2026-04-29 23:52 - US-002
+- 实现了 `UassLoginStateService`，把 UASS 登录前 state/returnTo 写入、callback 成功消费、callback 失败清理提升到 store 之外的生产服务层，并复用了现有 OAuth `returnTo` 安全规则。
+- 补齐了 `UassLoginStateService` 单测，并安装前端依赖后重新跑通 `make typecheck-web` / `make lint-web`，修复上次验证里 `tsc: not found` 的环境问题。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassLoginStateService.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassLoginStateServiceTest.java`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+- 发现的 patterns
+- UASS 这类浏览器登录新入口可以直接复用 `OAuthLoginRedirectSupport` 的 `returnTo` 过滤和默认跳转语义，避免不同 provider 对开放重定向边界处理不一致。
+- 遇到的陷阱
+- `make typecheck-web` 不会自动安装依赖；新环境里要先跑 `make web-deps`，否则会因为缺少 `tsc` 等前端二进制而误判 story 失败。
+- 有用的上下文
+- 现在 `UassLoginStateStore` 已经有明确的上层接入点 `UassLoginStateService`，后续 `UassAuthService`/controller 实现 callback 时应直接接这个服务，而不是自己拼 `UassLoginState` 或直接操作 store。
 ---

@@ -36,8 +36,8 @@
       ],
       "priority": 2,
       "passes": true,
-      "notes": "This story covers state storage only; do not design token lifecycle management.",
-      "retryCount": 0,
+      "notes": "",
+      "retryCount": 1,
       "blocked": false
     },
     {
