@@ -101,7 +101,11 @@ make parallel-sync
 make dev-all
 ```
 
-See [13-parallel-workflow.md](./13-parallel-workflow.md) for the full workflow, responsibilities, merge rules, and recovery guidance.
+Additional rules:
+
+- Never let two agents write to the same checkout at the same time.
+- Reserve `make dev-all` and browser verification for the integration worktree only.
+- Run `make parallel-sync` before final verification whenever agent branches have diverged.
 
 ## Stage 2: Staging Regression (pre-PR validation)
 

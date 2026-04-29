@@ -71,7 +71,6 @@ skillhub/
 ├── web/           # React/Vite 前端
 ├── docs/          # 当前有效的设计/架构/流程文档入口
 ├── design/        # 对当前代码仍有解释价值的设计材料与已实现 PRD 归档
-├── document/      # Docusaurus 文档站
 ├── scanner/       # 本地 scanner Docker 构建上下文与说明
 ├── scripts/       # 辅助脚本
 └── .agents/       # 代理命令与模板
@@ -181,6 +180,7 @@ make test-backend-app
 | `README.md` | 项目总览、运行方式、发布/runtime 说明 |
 | `Makefile` | 本仓库统一命令入口 |
 | `docs/README.md` | 当前有效文档索引 |
+| `design/README.md` | 设计文档总索引与目录规则 |
 | `docs/dev-workflow.md` | 本地开发到 staging/PR 的推荐流程 |
 | `docs/e2e.md` | 前端 E2E 真实请求规范 |
 | `server/pom.xml` | 后端模块边界与 Java 编译配置 |
@@ -200,7 +200,8 @@ make test-backend-app
 | 搜索架构 | `docs/04-search-architecture.md` |
 | 前端架构 | `docs/08-frontend-architecture.md` |
 | 技能生命周期 | `docs/14-skill-lifecycle.md` |
-| 文档治理 | `design/documentation-governance.md` |
+| 设计索引 | `design/README.md` |
+| 文档治理 | `design/governance/documentation-governance.md` |
 | 已实现 PRD 归档 | `design/implemented/README.md` |
 
 ## 备注

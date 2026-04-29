@@ -344,7 +344,7 @@ namespace `my-space` 和 skill slug `my-skill`。
 
 > 💡 **提示**：上述命令不仅适用于 OpenClaw，通过指定安装目录（`--dir`），也可适用于其他的 CLI Coding Agent 或 Agent 助手。例如：`npx clawhub --dir ~/.claude/skills install my-skill`
 
-📖 **[完整 OpenClaw 集成指南 →](./docs/openclaw-integration.md)**
+📖 **[CLI 兼容 API 说明 →](./docs/06-api-design.md)**
 
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 

@@ -75,8 +75,8 @@
 
 #### 1. Spring Session
 当前配置：
-- [application.yml](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/resources/application.yml#L45)
-- [PlatformSessionService.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/session/PlatformSessionService.java#L67)
+- [application.yml](../../../server/skillhub-app/src/main/resources/application.yml#L45)
+- [PlatformSessionService.java](../../../server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/session/PlatformSessionService.java#L67)
 
 结论：
 - 在单机本地联调场景中，不需要分布式 session。
@@ -88,11 +88,11 @@
 
 #### 2. API Rate Limit
 当前 Redis 限流实现：
-- [RedisSlidingWindowRateLimiter.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/ratelimit/RedisSlidingWindowRateLimiter.java#L16)
-- [WebMvcRateLimitConfig.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/config/WebMvcRateLimitConfig.java#L22)
+- [RedisSlidingWindowRateLimiter.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/ratelimit/RedisSlidingWindowRateLimiter.java#L16)
+- [WebMvcRateLimitConfig.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/config/WebMvcRateLimitConfig.java#L22)
 
 现有可复用内存实现：
-- [InMemorySlidingWindowRateLimiter.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/ratelimit/InMemorySlidingWindowRateLimiter.java#L11)
+- [InMemorySlidingWindowRateLimiter.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/ratelimit/InMemorySlidingWindowRateLimiter.java#L11)
 
 结论：
 - `local-h2` 中可以将 Redis 限流切换为内存限流。
@@ -103,7 +103,7 @@
 
 #### 3. Auth Failure Throttle
 当前实现：
-- [AuthFailureThrottleService.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/security/AuthFailureThrottleService.java#L14)
+- [AuthFailureThrottleService.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/security/AuthFailureThrottleService.java#L14)
 
 结论：
 - 本地联调不是安全压测环境。
@@ -113,9 +113,9 @@
 
 #### 4. 扫描任务流 / Redisson Stream
 相关代码：
-- [RedisStreamConfig.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/config/RedisStreamConfig.java#L17)
-- [RedissonScanTaskProducer.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/stream/RedissonScanTaskProducer.java#L16)
-- [AbstractStreamConsumer.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/stream/AbstractStreamConsumer.java#L28)
+- [RedisStreamConfig.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/config/RedisStreamConfig.java#L17)
+- [RedissonScanTaskProducer.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/stream/RedissonScanTaskProducer.java#L16)
+- [AbstractStreamConsumer.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/stream/AbstractStreamConsumer.java#L28)
 
 结论：
 - 安全扫描异步流不是轻量本地联调必需。
@@ -123,7 +123,7 @@
 
 #### 5. Device Auth
 相关代码：
-- [DeviceAuthService.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/device/DeviceAuthService.java#L20)
+- [DeviceAuthService.java](../../../server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/device/DeviceAuthService.java#L20)
 
 结论：
 - 如果 `local-h2` 目标是前后端页面和普通 API 联调，CLI device auth 可暂不支持。
@@ -134,7 +134,7 @@
 
 #### 6. Idempotency Redis Fast-path
 相关代码：
-- [IdempotencyInterceptor.java](/Users/robin-mac/ai-code/jk-code/skillhub/server/skillhub-app/src/main/java/com/iflytek/skillhub/filter/IdempotencyInterceptor.java#L23)
+- [IdempotencyInterceptor.java](../../../server/skillhub-app/src/main/java/com/iflytek/skillhub/filter/IdempotencyInterceptor.java#L23)
 
 结论：
 - Redis 在这里是 fast-path，不是唯一真相源。

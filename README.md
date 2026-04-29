@@ -410,7 +410,7 @@ namespace `my-space` plus skill slug `my-skill`.
 
 > 💡 **Tip**: The above commands are not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory (`--dir`). For example: `npx clawhub --dir ~/.claude/skills install my-skill`
 
-📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
+📖 **[CLI Compatibility API →](./docs/06-api-design.md)**
 
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
