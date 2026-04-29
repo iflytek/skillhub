@@ -74,6 +74,16 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_shouldPermitAnonymousUassCallback() {
+        boolean matched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/auth/uass/callback".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+
+        assertTrue(matched);
+    }
+
+    @Test
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));

@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -18,6 +19,7 @@ public class UassLoginStateService {
     private final Clock clock;
     private final Supplier<String> stateGenerator;
 
+    @Autowired
     public UassLoginStateService(UassLoginStateStore loginStateStore) {
         this(loginStateStore, Clock.systemUTC(), () -> UUID.randomUUID().toString());
     }

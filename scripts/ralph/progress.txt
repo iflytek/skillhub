@@ -5,6 +5,7 @@
 - Configuration-only behavior here is usually validated with lightweight `Binder` or `ApplicationContextRunner` tests instead of full `@SpringBootTest` contexts.
 - Browser login flows here should reuse `OAuthLoginRedirectSupport` for `returnTo` sanitization and default target handling, instead of duplicating redirect validation rules in each auth provider.
 - New enterprise auth providers should map a stable upstream identifier into `IdentityBinding.subject` and delegate local user creation through `IdentityBindingService`, rather than introducing fallback matching by display name or email.
+- Spring beans in this codebase that keep an extra test-only constructor should mark the production constructor explicitly (for example with `@Autowired`), otherwise enabling the bean can fail with `No default constructor found`.
 
 ## 2026-04-29 23:29 - US-001
 - 实现了 `UassClientFacade`、内部登录上下文与用户画像 DTO，并通过内部 gateway 抽象把未来私有 UASS jar 接入点限制在 auth 模块内。
@@ -84,4 +85,27 @@
   - `IdentityBindingService` 会把 `providerLogin` 同时用于用户 display name 和初始 binding loginName；如果后续 UASS 需要区分“展示名”和“上游登录名”，要在复用前先扩展这层模型。
   - 有用的上下文（例如，"评估面板在 component X 中"）
   - `UassLoginContext` 和 `UassUserProfile` 现在都能提供 `user_code`，后续 callback 编排建议优先吃 `UassIdentityService.resolvePrincipal(...)`，避免 controller 自己决定取哪个字段。
+---
+## 2026-04-30 00:20 - US-003
+- 实现了 `UassCallbackFlowService` 和 `UassAuthController`，把 UASS callback 的 state 消费、上游登录校验、用户画像加载、本地用户解析/自动建档和 `PlatformSessionService` 建 session 串成实际生产链路。
+- 补齐 callback 链路测试，验证已有用户、首次自动建档、禁用用户、待审批用户、缺失 `user_code`、建档失败都按预期处理，且失败时不会留下部分 Session；同时补了匿名 callback 路由策略测试与 controller 重定向测试。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-auth -am -Dtest=UassCallbackFlowServiceTest,RouteSecurityPolicyRegistryTest,UassLoginStateServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=UassAuthControllerTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`make typecheck-web`、`make lint-web`，全部通过。
+- 本轮无 UI 变更，未使用浏览器工具；浏览器闭环留给后续 UASS 登录入口 story 验证。
+- 更改的文件
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowService.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/UassLoginStateService.java`
+- `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistry.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassCallbackFlowServiceTest.java`
+- `server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistryTest.java`
+- `server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/UassAuthController.java`
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/UassAuthControllerTest.java`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+- 发现的 patterns
+- UASS 这类浏览器回调链路适合把“state 消费 + facade 校验 + identity 解析 + session 建立”收口到单个 flow service，再让 controller 只负责 query 参数映射和 302 响应。
+- 遇到的陷阱
+- `UassLoginStateService` 这类带测试辅助构造器的 Spring bean，如果没有显式标注注入构造器，默认 profile 下可能一直没暴露，直到启用真实 feature bean 才在运行时炸出 `No default constructor found`。
+- 有用的上下文
+- 当前 callback endpoint 只在 `skillhub.auth.uass.enabled=true` 且上下文里存在 `UassClientFacade` bean 时装配；后续接入真实 UASS gateway 时，需要保留这个条件式装配边界，避免未接完 provider 时把半成品 endpoint 暴露出去。
 ---
