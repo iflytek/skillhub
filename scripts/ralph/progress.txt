@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 在这个仓库里，如果 `@SpringBootTest` 通过 property 打开某个条件式认证 provider，记得同时为对应 provider-specific controller 依赖补 `@MockBean`；否则上下文会先因为条件 controller 缺依赖而启动失败，连目标 controller 的目录测试都跑不到。
 - 对需要“本地 Session 为真源、上游状态检查/登出为可选补充”的企业登录接入，优先把 provider-specific login context 序列化进 servlet session，再由专门 flow service 统一做 status/logout；不要把 access token 或远端调用逻辑塞进 `PlatformPrincipal`。
 - 当浏览器以独立前端 origin 访问 SkillHub，而 runtime-config 又把 `apiBaseUrl` 指向绝对后端地址时，除了 `fetch` 要带 `credentials: 'include'` 之外，所有后端下发的相对认证跳转 URL 也必须先经前端 `buildApiUrl`/等价 helper 归一化到后端 origin；否则真实浏览器会把 `/api/v1/auth/...` 导向静态前端站点自身。
 - 跨源认证链路里的非跳转 POST（例如 logout）也必须走 `buildApiUrl`/runtime `apiBaseUrl`，不能继续保留裸 `/api/...` 相对路径；否则浏览器会绕过后端真实 endpoint，导致本地 Session 和上游登录态无法同步清理。
@@ -262,4 +263,22 @@
   - `make build-frontend` 会把 `web/dist/runtime-config.js` 重置成默认空配置；如果要继续用静态 `dist` 做跨源浏览器验证，需要在验证前恢复目标 `apiBaseUrl/appBaseUrl`。
   - 有用的上下文（例如，"评估面板在 component X 中"）
   - 这次用户菜单登出链路的关键点在 `web/src/shared/components/user-menu.tsx -> authApi.logout -> buildApiUrl`，并不是 UASS controller/service 本身；后续再遇到“后端 endpoint 已有但浏览器没命中”的问题，应先从前端 runtime URL 归一化排查。
+---
+## 2026-04-30 04:39 - US-006
+- 按现有 `AuthController`/登录页模式补强了 UASS 企业入口的回归覆盖：后端目录测试现在显式断言 `uass-enterprise` 会出现在 `/api/v1/auth/methods`，并保留 `returnTo` 到 `/api/v1/auth/uass/redirect`。
+- 登录页测试现在验证 enterprise 入口与既有 `Password`/`OAuth` 标签共存，并确认页面会把 `/login` 的 `returnTo` 继续传给 `useAuthMethods`，避免后续改动破坏已有入口。
+- 运行了 `make test-frontend`、`make typecheck-web`、`make lint-web`，以及 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=AuthControllerTest,UassAuthControllerTest,AuthMethodCatalogTest,RouteSecurityPolicyRegistryTest -Dsurefire.failIfNoSpecifiedTests=false test`，全部通过；`make test-backend-app` 仍因仓库缺少 `server/.mvn/wrapper/maven-wrapper.properties` 无法直接使用。
+- 使用 `agent-browser` 在 `http://127.0.0.1:3001/login?returnTo=%2Fdashboard` 做真实浏览器验证：页面显示 `Continue with Enterprise SSO`，切到 `OAuth` 可见 `Login with GitHub/GitLab`，切回 `Password` 后用户名/密码表单仍正常可见。
+- 更改的文件
+- `server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/AuthControllerTest.java`
+- `web/src/pages/login.test.tsx`
+- `scripts/ralph/prd.json`
+- `scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns（例如，"这个 codebase 使用 X 来做 Y"）
+  - 对认证目录这类后端到前端的桥接点，优先在 `AuthControllerTest` 锁定 `/api/v1/auth/methods` 的输出，再在页面测试锁定 UI 共存关系；这样既符合现有模式，也能最小成本防止 enterprise 入口和旧入口互相覆盖。
+  - 遇到的陷阱（例如，"更改 W 时不要忘记更新 Z"）
+  - 只在 `AuthMethodCatalogTest` 打开 UASS 不够；一旦把 `skillhub.auth.uass.enabled=true` 带进 `@SpringBootTest`，`UassAuthController` 也会进入上下文，需要一并补齐相关 `@MockBean`。
+  - 有用的上下文（例如，"评估面板在 component X 中"）
+  - 当前 `127.0.0.1:3001` 前端运行时配置默认会打到 `http://localhost:39000`；做登录页真实浏览器回归时，只要在 `39000` 起一个启用 `SKILLHUB_AUTH_UASS_ENABLED=true` 且 `SKILLHUB_AUTH_UASS_BASE_URL=mock://self` 的本地后端，就能直接复用这套页面。
 ---

@@ -2,6 +2,9 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.auth.uass.UassCallbackFlowService;
+import com.iflytek.skillhub.auth.uass.UassLoginInitiationService;
+import com.iflytek.skillhub.auth.uass.UassSessionFlowService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
@@ -35,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "skillhub.public.base-url=http://localhost:3001",
+    "skillhub.auth.uass.enabled=true",
     "spring.security.oauth2.client.registration.github.client-name=GitHub",
     "spring.security.oauth2.client.registration.gitee.client-id=placeholder",
     "spring.security.oauth2.client.registration.gitee.client-secret=placeholder",
@@ -64,6 +68,15 @@ class AuthControllerTest {
 
     @MockBean
     private UserRoleBindingRepository userRoleBindingRepository;
+
+    @MockBean
+    private UassLoginInitiationService uassLoginInitiationService;
+
+    @MockBean
+    private UassCallbackFlowService uassCallbackFlowService;
+
+    @MockBean
+    private UassSessionFlowService uassSessionFlowService;
 
     @Test
     void meShouldReturnUnauthorizedForAnonymousRequest() throws Exception {
@@ -170,8 +183,11 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/v1/auth/methods").param("returnTo", "/dashboard/publish"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "oauth-github", "oauth-gitee")))
+            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "uass-enterprise", "oauth-github", "oauth-gitee")))
             .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
+            .andExpect(jsonPath("$.data[?(@.id=='uass-enterprise')].methodType").value(hasItems("UASS_REDIRECT")))
+            .andExpect(jsonPath("$.data[?(@.id=='uass-enterprise')].actionUrl")
+                .value(hasItems("/api/v1/auth/uass/redirect?returnTo=%2Fdashboard%2Fpublish")))
             .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
                 .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
     }

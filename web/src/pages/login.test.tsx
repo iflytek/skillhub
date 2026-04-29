@@ -2,12 +2,13 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthMethod } from '@/api/types'
 
-const useAuthMethodsMock = vi.fn<() => { data: AuthMethod[] }>(() => ({ data: [] }))
+const useAuthMethodsMock = vi.fn<(returnTo?: string) => { data: AuthMethod[] }>(() => ({ data: [] }))
+const useSearchMock = vi.fn(() => ({ returnTo: '' }))
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useNavigate: () => vi.fn(),
-  useSearch: () => ({ returnTo: '' }),
+  useSearch: () => useSearchMock(),
 }))
 
 vi.mock('react-i18next', async () => {
@@ -39,7 +40,7 @@ vi.mock('@/features/auth/session-bootstrap-entry', () => ({
 }))
 
 vi.mock('@/features/auth/use-auth-methods', () => ({
-  useAuthMethods: () => useAuthMethodsMock(),
+  useAuthMethods: (returnTo?: string) => useAuthMethodsMock(returnTo),
 }))
 
 vi.mock('@/features/auth/use-password-login', () => ({
@@ -72,6 +73,8 @@ describe('LoginPage', () => {
   beforeEach(() => {
     useAuthMethodsMock.mockReset()
     useAuthMethodsMock.mockReturnValue({ data: [] })
+    useSearchMock.mockReset()
+    useSearchMock.mockReturnValue({ returnTo: '' })
   })
 
   it('exports a named component function', () => {
@@ -87,6 +90,7 @@ describe('LoginPage', () => {
   })
 
   it('renders the enterprise redirect entry when UASS login is available', () => {
+    useSearchMock.mockReturnValue({ returnTo: '/dashboard' })
     useAuthMethodsMock.mockReturnValue({
       data: [{
         id: 'uass-enterprise',
@@ -102,5 +106,8 @@ describe('LoginPage', () => {
     expect(html).toContain('Enterprise SSO')
     expect(html).toContain('login.enterpriseRedirectHint')
     expect(html).toContain('login.enterpriseRedirectAction')
+    expect(html).toContain('login.tabPassword')
+    expect(html).toContain('login.tabOAuth')
+    expect(useAuthMethodsMock).toHaveBeenCalledWith('/dashboard')
   })
 })

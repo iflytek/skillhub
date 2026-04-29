@@ -95,7 +95,7 @@
       "priority": 5,
       "passes": true,
       "notes": "",
-      "retryCount": 1,
+      "retryCount": 0,
       "blocked": false
     },
     {
@@ -112,8 +112,8 @@
         "Tests pass"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Follow existing AuthController and login-page patterns.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
