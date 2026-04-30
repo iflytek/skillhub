@@ -1,8 +1,6 @@
 package com.iflytek.skillhub.auth.uass;
 
 import java.net.URI;
-import java.time.Instant;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -136,64 +134,5 @@ public class UassClientFacade {
 
     private static UassClientException failure(String operation, String message, RuntimeException cause) {
         return new UassClientException(operation, message, cause);
-    }
-}
-
-interface UassGateway {
-
-    String buildLoginUrl(UassLoginUrlRequest request);
-
-    UassValidatedLogin validateLogin(UassLoginValidationRequest request);
-
-    boolean checkLoginStatus(UassSessionDescriptor session);
-
-    UassRemoteUserProfile loadUserProfile(UassSessionDescriptor session);
-
-    void logout(UassSessionDescriptor session);
-}
-
-record UassLoginUrlRequest(String state, URI callbackUri) {
-}
-
-record UassLoginValidationRequest(String loginCode, String state, URI callbackUri) {
-}
-
-record UassValidatedLogin(
-        String userCode,
-        String accessToken,
-        String refreshToken,
-        Instant accessTokenExpiresAt,
-        Map<String, String> attributes
-) {
-
-    UassValidatedLogin {
-        attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
-    }
-}
-
-record UassSessionDescriptor(
-        String userCode,
-        String accessToken,
-        String refreshToken,
-        Instant accessTokenExpiresAt,
-        Map<String, String> attributes
-) {
-
-    UassSessionDescriptor {
-        attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
-    }
-}
-
-record UassRemoteUserProfile(
-        String userCode,
-        String displayName,
-        String email,
-        String mobile,
-        String employeeNumber,
-        Map<String, String> attributes
-) {
-
-    UassRemoteUserProfile {
-        attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
     }
 }

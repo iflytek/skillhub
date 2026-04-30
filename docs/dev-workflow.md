@@ -58,6 +58,21 @@ To disable it for local source startup, set the environment variable
 For container or release environments, set the same value in `.env.release`
 or the Compose environment.
 
+### Local UASS configuration
+
+If you are integrating the enterprise UASS login flow locally, prefer editing
+the Spring profile YAML files instead of exporting variables for every shell
+session:
+
+- `server/skillhub-app/src/main/resources/application-local.yml`
+- `server/skillhub-app/src/main/resources/application-local-h2.yml`
+
+Both profiles now include a `skillhub.auth.uass` template. Set
+`enabled: true` and keep `base-url: mock://self` to verify the browser flow
+without a real provider. When switching to the enterprise gateway, replace the
+`base-url`, `client-id`, and `client-secret`, and provide a custom
+`UassGateway` bean in the backend.
+
 ### Useful commands
 
 | Command                          | Description                      |

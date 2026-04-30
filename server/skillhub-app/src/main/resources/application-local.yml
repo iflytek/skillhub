@@ -36,10 +36,20 @@ skillhub:
   auth:
     mock:
       enabled: true
-  notification:
-    cleanup:
-      read-retention-days: 30
-      unread-retention-days: 90
+    uass:
+      enabled: false
+      # Use mock://self to verify the UASS browser flow locally without the
+      # enterprise gateway implementation. Replace with the real UASS endpoint
+      # after providing a custom UassGateway bean.
+      base-url: mock://self
+      client-id: your-client-id
+      client-secret: your-client-secret
+      callback-path: /api/v1/auth/uass/callback
+      cache-mode: redis
+    notification:
+      cleanup:
+        read-retention-days: 30
+        unread-retention-days: 90
   security:
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}

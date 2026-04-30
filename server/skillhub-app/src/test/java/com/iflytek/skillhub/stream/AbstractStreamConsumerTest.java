@@ -114,12 +114,75 @@ class AbstractStreamConsumerTest {
         assertThat(AbstractStreamConsumer.isConsumerGroupAlreadyExists(wrapped)).isTrue();
     }
 
+    @Test
+    void handleMessage_acknowledgesNullPayloadWithoutProcessing() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        NullPayloadConsumer consumer = new NullPayloadConsumer(stream);
+        StreamMessageId messageId = new StreamMessageId(8, 0);
+
+        consumer.handleMessage(messageId, Map.of());
+
+        verify(stream).ack("scan-group", messageId);
+        assertThat(consumer.processed).isFalse();
+    }
+
+    @Test
+    void handleMessage_marksFailedAfterMaxRetries() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        TestConsumer consumer = new TestConsumer(stream);
+        consumer.fail = true;
+
+        consumer.handleMessage(new StreamMessageId(9, 0), Map.of("payload", "boom", "retryCount", "3"));
+
+        assertThat(consumer.failedError).contains("Test failed (retried 3 times): boom");
+        assertThat(consumer.retryCount).isZero();
+    }
+
+    @Test
+    void reclaimPendingMessages_returnsImmediatelyWhenDisabled() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        TestConsumer consumer = new TestConsumer(stream, false);
+
+        consumer.reclaimPendingMessages();
+
+        verify(stream, times(0)).autoClaim(anyString(), anyString(), anyLong(), eq(java.util.concurrent.TimeUnit.MILLISECONDS), any(), anyInt());
+    }
+
+    @Test
+    void parseRetryCount_returnsZeroForInvalidValue() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        TestConsumer consumer = new TestConsumer(stream);
+
+        assertThat(consumer.parseRetryCount(Map.of("retryCount", "nope"))).isZero();
+    }
+
+    @Test
+    void truncateError_limitsLengthToFiveHundredCharacters() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        TestConsumer consumer = new TestConsumer(stream);
+
+        String truncated = consumer.truncateError("x".repeat(600));
+
+        assertThat(truncated).hasSize(500);
+    }
+
     private static class TestConsumer extends AbstractStreamConsumer<String> {
         private final RStream<String, String> stream;
         private boolean fail;
+        private String failedError;
+        private int retryCount;
 
         private TestConsumer(RStream<String, String> stream) {
-            super(mock(RedissonClient.class), "scan-stream", "scan-group", true, Duration.ofMinutes(2), 20, Duration.ofSeconds(30));
+            this(stream, true);
+        }
+
+        private TestConsumer(RStream<String, String> stream, boolean reclaimEnabled) {
+            super(mock(RedissonClient.class), "scan-stream", "scan-group", reclaimEnabled, Duration.ofMinutes(2), 20, Duration.ofSeconds(30));
             this.stream = stream;
         }
 
@@ -165,10 +228,12 @@ class AbstractStreamConsumerTest {
 
         @Override
         protected void markFailed(String payload, String error) {
+            this.failedError = error;
         }
 
         @Override
         protected void retryMessage(String payload, int retryCount) {
+            this.retryCount = retryCount;
         }
     }
 
@@ -183,6 +248,24 @@ class AbstractStreamConsumerTest {
         protected RStream<String, String> createStream() {
             streamCreationCount.incrementAndGet();
             return super.createStream();
+        }
+    }
+
+    private static final class NullPayloadConsumer extends TestConsumer {
+        private boolean processed;
+
+        private NullPayloadConsumer(RStream<String, String> stream) {
+            super(stream);
+        }
+
+        @Override
+        protected String parsePayload(String messageId, Map<String, String> data) {
+            return null;
+        }
+
+        @Override
+        protected void processBusiness(String payload) {
+            processed = true;
         }
     }
 }
