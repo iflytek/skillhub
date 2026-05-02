@@ -45,6 +45,7 @@ class AdminUserAppServiceTest {
     @Test
     void listUsers_returnsPagedUsersFromRepository() {
         UserAccount user = user("user-1", "alice", "alice@example.com", UserStatus.ACTIVE);
+        user.setUssId("uass-alice");
         PageRequest pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
         when(adminUserSearchRepository.search("ali", UserStatus.ACTIVE, pageable))
                 .thenReturn(new PageImpl<>(List.of(user), pageable, 1));
@@ -55,8 +56,8 @@ class AdminUserAppServiceTest {
 
         assertThat(response.total()).isEqualTo(1);
         assertThat(response.items()).hasSize(1);
-        assertThat(response.items().get(0)).extracting("id", "username", "email", "status")
-                .containsExactly("user-1", "alice", "alice@example.com", "ACTIVE");
+        assertThat(response.items().get(0)).extracting("id", "username", "ussId", "email", "status")
+                .containsExactly("user-1", "alice", "uass-alice", "alice@example.com", "ACTIVE");
         assertThat(response.items().get(0)).extracting("platformRoles")
                 .isEqualTo(List.of("AUDITOR"));
     }

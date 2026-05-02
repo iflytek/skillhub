@@ -11,7 +11,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -22,9 +24,12 @@ import java.util.regex.Pattern;
 @RequestMapping({"/api/web/skills"})
 public class SkillSearchController extends BaseApiController {
     private static final Pattern NON_NEGATIVE_INTEGER = Pattern.compile("\\d+");
+    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "downloads", "rating", "relevance");
     private static final String DEFAULT_SORT = "newest";
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
+    private static final int MAX_PAGE = 10_000;
 
     private final SkillSearchAppService skillSearchAppService;
 
@@ -42,9 +47,9 @@ public class SkillSearchController extends BaseApiController {
             @RequestParam(name = "label", required = false) java.util.List<String> labels,
             @Parameter(schema = @Schema(defaultValue = DEFAULT_SORT))
             @RequestParam(required = false) String sort,
-            @Parameter(schema = @Schema(type = "integer", defaultValue = "0", minimum = "0"))
+            @Parameter(schema = @Schema(type = "integer", defaultValue = "0", minimum = "0", maximum = "" + MAX_PAGE))
             @RequestParam(required = false) String page,
-            @Parameter(schema = @Schema(type = "integer", defaultValue = "20", minimum = "1"))
+            @Parameter(schema = @Schema(type = "integer", defaultValue = "20", minimum = "1", maximum = "" + MAX_SIZE))
             @RequestParam(required = false) String size,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
@@ -53,8 +58,8 @@ public class SkillSearchController extends BaseApiController {
                 q,
                 namespace,
                 normalizeSort(sort),
-                parseNonNegativeInt(page, DEFAULT_PAGE),
-                parsePositiveInt(size, DEFAULT_SIZE),
+                parseNonNegativeInt(page, DEFAULT_PAGE, MAX_PAGE),
+                parsePositiveInt(size, DEFAULT_SIZE, MAX_SIZE),
                 labels,
                 userId,
                 userNsRoles
@@ -67,10 +72,11 @@ public class SkillSearchController extends BaseApiController {
         if (sort == null || sort.isBlank()) {
             return DEFAULT_SORT;
         }
-        return sort.trim();
+        String normalized = sort.trim().toLowerCase(Locale.ROOT);
+        return ALLOWED_SORTS.contains(normalized) ? normalized : DEFAULT_SORT;
     }
 
-    private int parseNonNegativeInt(String rawValue, int defaultValue) {
+    private int parseNonNegativeInt(String rawValue, int defaultValue, int maxValue) {
         if (rawValue == null || rawValue.isBlank()) {
             return defaultValue;
         }
@@ -79,14 +85,14 @@ public class SkillSearchController extends BaseApiController {
             return defaultValue;
         }
         try {
-            return Integer.parseInt(normalized);
+            return Math.min(Integer.parseInt(normalized), maxValue);
         } catch (NumberFormatException ex) {
             return defaultValue;
         }
     }
 
-    private int parsePositiveInt(String rawValue, int defaultValue) {
-        int parsed = parseNonNegativeInt(rawValue, defaultValue);
+    private int parsePositiveInt(String rawValue, int defaultValue, int maxValue) {
+        int parsed = parseNonNegativeInt(rawValue, defaultValue, maxValue);
         return parsed > 0 ? parsed : defaultValue;
     }
 }

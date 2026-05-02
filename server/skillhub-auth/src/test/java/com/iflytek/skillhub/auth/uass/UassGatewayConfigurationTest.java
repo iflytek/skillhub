@@ -11,8 +11,9 @@ class UassGatewayConfigurationTest {
     @Test
     void uassGateway_defaultsToMockGateway() {
         UassProperties properties = new UassProperties();
+        MockUassLoginCoordinator coordinator = org.mockito.Mockito.mock(MockUassLoginCoordinator.class);
 
-        UassGateway gateway = configuration.uassGateway(properties);
+        UassGateway gateway = configuration.uassGateway(properties, coordinator);
 
         assertThat(gateway).isInstanceOf(MockUassGateway.class);
     }

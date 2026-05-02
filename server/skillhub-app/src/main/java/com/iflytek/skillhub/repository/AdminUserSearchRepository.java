@@ -73,6 +73,7 @@ public class AdminUserSearchRepository {
             String normalized = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
             predicates.add(builder.or(
                     builder.like(builder.lower(root.get("id")), normalized),
+                    builder.like(builder.lower(builder.coalesce(root.get("ussId"), "")), normalized),
                     builder.like(builder.lower(root.get("displayName")), normalized),
                     builder.like(builder.lower(root.get("email")), normalized)
             ));

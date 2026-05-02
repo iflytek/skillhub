@@ -104,8 +104,12 @@ skillhub:
       client-id: ${SKILLHUB_AUTH_UASS_CLIENT_ID:}
       client-secret: ${SKILLHUB_AUTH_UASS_CLIENT_SECRET:}
       callback-path: ${SKILLHUB_AUTH_UASS_CALLBACK_PATH:/api/v1/auth/uass/callback}
+      mock-login-base-url: ${SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL:}
       state-ttl: ${SKILLHUB_AUTH_UASS_STATE_TTL:PT10M}
       cache-mode: ${SKILLHUB_AUTH_UASS_CACHE_MODE:auto}
+      # Bootstrap-only UASS admin assignments. These are only applied when a
+      # brand new platform user is created from the matching ussId.
+      admin-users: []
     session-bootstrap:
       enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
     password-reset:
@@ -170,6 +174,33 @@ skillhub:
   device-auth:
     verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/cli/auth}
   security:
+    route-policy:
+      # Optional environment-specific overlay rules.
+      # Keep platform default policies in code and use these lists only for
+      # additive overrides when a deployment needs extra routes.
+      #
+      # UASS browser-login routes live here because enterprise SSO enablement is
+      # deployment-specific, while the core platform policy catalog stays audited
+      # in code.
+      extra-permit-all:
+        - method: GET
+          pattern: /api/v1/auth/uass
+        - method: GET
+          pattern: /api/v1/auth/uass/login-url
+        - method: GET
+          pattern: /api/v1/auth/uass/redirect
+        - method: GET
+          pattern: /api/v1/auth/uass/callback
+        - method: GET
+          pattern: /api/v1/auth/uass/status
+        - method: POST
+          pattern: /api/v1/auth/uass/mock/login
+        - method: POST
+          pattern: /api/v1/auth/uass/mock/login-form
+      extra-authenticated:
+        - method: POST
+          pattern: /api/v1/auth/uass/logout
+      extra-role-protected: []
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
       base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}

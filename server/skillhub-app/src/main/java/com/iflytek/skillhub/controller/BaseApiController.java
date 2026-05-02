@@ -17,4 +17,8 @@ public abstract class BaseApiController {
     protected <T> ApiResponse<T> ok(String messageCode, T data, Object... args) {
         return responseFactory.ok(messageCode, data, args);
     }
+
+    protected ApiResponse<Void> error(int code, String messageCode, Object... args) {
+        return responseFactory.error(code, messageCode, args);
+    }
 }

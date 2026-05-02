@@ -68,10 +68,46 @@ function filterStarredSkills(skills: SkillSummary[], query: string): SkillSummar
   )
 }
 
-function sortStarredSkills(skills: SkillSummary[], sort: string): SkillSummary[] {
+function scoreTextMatch(value: string | undefined, query: string, exactScore: number, prefixScore: number, containsScore: number) {
+  if (!value) {
+    return 0
+  }
+  const normalized = value.toLowerCase()
+  if (normalized === query) {
+    return exactScore
+  }
+  if (normalized.startsWith(query)) {
+    return prefixScore
+  }
+  if (normalized.includes(query)) {
+    return containsScore
+  }
+  return 0
+}
+
+function computeStarredRelevanceScore(skill: SkillSummary, query: string) {
+  return (
+    scoreTextMatch(skill.displayName, query, 400, 300, 200)
+    + scoreTextMatch(skill.slug, query, 220, 160, 120)
+    + scoreTextMatch(skill.namespace, query, 140, 100, 60)
+    + scoreTextMatch(skill.summary, query, 80, 50, 20)
+  )
+}
+
+function sortStarredSkills(skills: SkillSummary[], sort: string, query: string): SkillSummary[] {
   const sorted = [...skills]
   if (sort === 'downloads') {
     return sorted.sort((left, right) => right.downloadCount - left.downloadCount)
+  }
+  if (sort === 'relevance' && query.trim()) {
+    const normalizedQuery = query.trim().toLowerCase()
+    return sorted.sort((left, right) => {
+      const scoreDifference = computeStarredRelevanceScore(right, normalizedQuery) - computeStarredRelevanceScore(left, normalizedQuery)
+      if (scoreDifference !== 0) {
+        return scoreDifference
+      }
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+    })
   }
   if (sort === 'newest' || sort === 'relevance') {
     return sorted.sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
@@ -190,7 +226,7 @@ export function SearchPage() {
   }
 
   const filteredStarredSkills = starredOnly
-    ? sortStarredSkills(filterStarredSkills(starredSkills ?? [], q), sort)
+    ? sortStarredSkills(filterStarredSkills(starredSkills ?? [], q), sort, q)
     : []
   const starredPageItems = starredOnly
     ? filteredStarredSkills.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)

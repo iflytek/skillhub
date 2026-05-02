@@ -11,8 +11,8 @@ public class UassGatewayConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    UassGateway uassGateway(UassProperties uassProperties) {
-        return new MockUassGateway(uassProperties);
+    UassGateway uassGateway(UassProperties uassProperties, MockUassLoginCoordinator mockUassLoginCoordinator) {
+        return new MockUassGateway(uassProperties, mockUassLoginCoordinator);
     }
 
     @Bean

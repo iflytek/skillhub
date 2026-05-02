@@ -2,6 +2,13 @@ import type { SearchParams } from '@/api/types'
 import { WEB_API_PREFIX } from '@/api/client'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
+function normalizePage(page: number | undefined) {
+  if (page === undefined || !Number.isFinite(page)) {
+    return undefined
+  }
+  return Math.min(Math.max(Math.trunc(page), 0), 10000)
+}
+
 export function buildSkillSearchUrl(params: SearchParams) {
   const queryParams = new URLSearchParams()
   const normalizedQuery = normalizeSearchQuery(params.q ?? '')
@@ -23,8 +30,9 @@ export function buildSkillSearchUrl(params: SearchParams) {
     queryParams.append('sort', params.sort)
   }
 
-  if (params.page !== undefined) {
-    queryParams.append('page', String(params.page))
+  const normalizedPage = normalizePage(params.page)
+  if (normalizedPage !== undefined) {
+    queryParams.append('page', String(normalizedPage))
   }
 
   if (params.size !== undefined) {

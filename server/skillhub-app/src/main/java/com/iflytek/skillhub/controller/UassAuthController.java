@@ -58,6 +58,17 @@ public class UassAuthController extends BaseApiController {
         );
     }
 
+    @GetMapping
+    public ResponseEntity<Void> login(@RequestParam(name = "returnTo", required = false) String returnTo,
+                                      HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, uassLoginInitiationService.buildLoginUrl(
+                        returnTo,
+                        URI.create(request.getRequestURL().toString())
+                ))
+                .build();
+    }
+
     @GetMapping("/redirect")
     public ResponseEntity<Void> redirect(@RequestParam(name = "returnTo", required = false) String returnTo,
                                          HttpServletRequest request) {
@@ -104,4 +115,5 @@ public class UassAuthController extends BaseApiController {
         uassSessionFlowService.logout(request);
         return ResponseEntity.noContent().build();
     }
+
 }

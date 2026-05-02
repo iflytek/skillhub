@@ -105,8 +105,8 @@ describe('buildAuthRedirectUrl', () => {
 
   it('rewrites relative auth entry URLs through the runtime api base URL', () => {
     window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
-    expect(buildAuthRedirectUrl('/api/v1/auth/uass/redirect?returnTo=%2Fdashboard'))
-      .toBe('https://api.example.com/api/v1/auth/uass/redirect?returnTo=%2Fdashboard')
+    expect(buildAuthRedirectUrl('/api/v1/auth/uass?returnTo=%2Fdashboard'))
+      .toBe('https://api.example.com/api/v1/auth/uass?returnTo=%2Fdashboard')
   })
 })
 

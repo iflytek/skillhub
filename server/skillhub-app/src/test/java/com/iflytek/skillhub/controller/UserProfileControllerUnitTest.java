@@ -83,6 +83,7 @@ class UserProfileControllerUnitTest {
                 Set.of("USER")
         );
         UserAccount user = new UserAccount("user-1", "ApprovedName", "user@example.com", "https://example.com/avatar.png");
+        user.setUssId("uass-001");
         ProfileChangeRequest request = new ProfileChangeRequest(
                 "user-1",
                 "{\"displayName\":\"LatestPendingName\",\"avatarUrl\":\"https://example.com/new-avatar.png\"}",
@@ -102,6 +103,7 @@ class UserProfileControllerUnitTest {
 
         assertThat(response.data().displayName()).isEqualTo("LatestPendingName");
         assertThat(response.data().avatarUrl()).isEqualTo("https://example.com/new-avatar.png");
+        assertThat(response.data().ussId()).isEqualTo("uass-001");
         assertThat(response.data().pendingChanges()).isNotNull();
         assertThat(response.data().pendingChanges().status()).isEqualTo("PENDING");
         assertThat(response.data().pendingChanges().changes()).containsEntry("displayName", "LatestPendingName");
@@ -118,6 +120,7 @@ class UserProfileControllerUnitTest {
                 Set.of("USER")
         );
         UserAccount user = new UserAccount("user-1", "ApprovedName", "user@example.com", "https://example.com/avatar.png");
+        user.setUssId("uass-001");
         ProfileChangeRequest request = new ProfileChangeRequest(
                 "user-1",
                 "{\"displayName\":\"RejectedName\"}",
@@ -138,6 +141,7 @@ class UserProfileControllerUnitTest {
 
         assertThat(response.data().displayName()).isEqualTo("ApprovedName");
         assertThat(response.data().avatarUrl()).isEqualTo("https://example.com/avatar.png");
+        assertThat(response.data().ussId()).isEqualTo("uass-001");
         assertThat(response.data().pendingChanges()).isNotNull();
         assertThat(response.data().pendingChanges().status()).isEqualTo("REJECTED");
     }

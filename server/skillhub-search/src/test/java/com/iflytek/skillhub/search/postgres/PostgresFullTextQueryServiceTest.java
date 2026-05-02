@@ -230,7 +230,7 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
-    void numericKeywordsShouldFallbackToTitleLikeSearchWithoutTsQuery() {
+    void numericKeywordsShouldFallbackToPortableLikeSearchWithoutTsQuery() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
         Query countQuery = mock(Query.class);
@@ -259,7 +259,11 @@ class PostgresFullTextQueryServiceTest {
         var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
         assertThat(sqlCaptor.getAllValues().get(0)).doesNotContain("to_tsquery('simple', :tsQuery)");
-        assertThat(sqlCaptor.getAllValues().get(0)).contains("LOWER(title) LIKE :titleLike");
+        assertThat(sqlCaptor.getAllValues().get(0))
+                .contains("LOWER(title) LIKE :titleLike")
+                .contains("LOWER(COALESCE(d.summary, '')) LIKE :titleLike")
+                .contains("LOWER(COALESCE(d.keywords, '')) LIKE :titleLike")
+                .contains("LOWER(COALESCE(d.search_text, '')) LIKE :titleLike");
     }
 
     @Test

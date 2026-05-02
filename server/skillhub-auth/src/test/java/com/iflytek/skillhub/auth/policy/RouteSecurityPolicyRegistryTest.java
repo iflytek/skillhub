@@ -76,7 +76,7 @@ class RouteSecurityPolicyRegistryTest {
 
     @Test
     void authorizationPolicies_shouldPermitAnonymousUassCallback() {
-        boolean matched = registry.authorizationPolicies().stream()
+        boolean matched = registryWithUassOverlay().authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.GET
                         && "/api/v1/auth/uass/callback".equals(policy.pattern())
                         && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
@@ -86,32 +86,69 @@ class RouteSecurityPolicyRegistryTest {
 
     @Test
     void authorizationPolicies_shouldPermitAnonymousUassLoginInitiationEndpoints() {
-        boolean loginUrlMatched = registry.authorizationPolicies().stream()
+        RouteSecurityPolicyRegistry configuredRegistry = registryWithUassOverlay();
+        boolean loginMatched = configuredRegistry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/auth/uass".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+        boolean loginUrlMatched = configuredRegistry.authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.GET
                         && "/api/v1/auth/uass/login-url".equals(policy.pattern())
                         && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
-        boolean redirectMatched = registry.authorizationPolicies().stream()
+        boolean redirectMatched = configuredRegistry.authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.GET
                         && "/api/v1/auth/uass/redirect".equals(policy.pattern())
                         && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
 
+        assertTrue(loginMatched);
         assertTrue(loginUrlMatched);
         assertTrue(redirectMatched);
     }
 
     @Test
     void authorizationPolicies_shouldExposeUassStatusAndProtectLogout() {
-        boolean statusMatched = registry.authorizationPolicies().stream()
+        RouteSecurityPolicyRegistry configuredRegistry = registryWithUassOverlay();
+        boolean statusMatched = configuredRegistry.authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.GET
                         && "/api/v1/auth/uass/status".equals(policy.pattern())
                         && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
-        boolean logoutMatched = registry.authorizationPolicies().stream()
+        boolean logoutMatched = configuredRegistry.authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.POST
                         && "/api/v1/auth/uass/logout".equals(policy.pattern())
                         && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED);
 
         assertTrue(statusMatched);
         assertTrue(logoutMatched);
+    }
+
+    @Test
+    void authorizationPolicies_shouldAppendYamlOverlayRules() {
+        RoutePolicyProperties properties = new RoutePolicyProperties();
+        RoutePolicyProperties.RouteRule permitAll = new RoutePolicyProperties.RouteRule();
+        permitAll.setMethod(HttpMethod.GET);
+        permitAll.setPattern("/api/v1/custom/public");
+        properties.setExtraPermitAll(java.util.List.of(permitAll));
+
+        RoutePolicyProperties.RoleProtectedRouteRule roleProtected = new RoutePolicyProperties.RoleProtectedRouteRule();
+        roleProtected.setMethod(HttpMethod.POST);
+        roleProtected.setPattern("/api/v1/custom/admin");
+        roleProtected.setRoles(java.util.List.of("SUPER_ADMIN"));
+        properties.setExtraRoleProtected(java.util.List.of(roleProtected));
+
+        RouteSecurityPolicyRegistry configuredRegistry = new RouteSecurityPolicyRegistry(properties);
+
+        boolean publicMatched = configuredRegistry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/custom/public".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+        boolean adminMatched = configuredRegistry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.POST
+                        && "/api/v1/custom/admin".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.ROLE_PROTECTED
+                        && Set.of(policy.roles()).contains("SUPER_ADMIN"));
+
+        assertTrue(publicMatched);
+        assertTrue(adminMatched);
     }
 
     @Test
@@ -166,5 +203,37 @@ class RouteSecurityPolicyRegistryTest {
         assertTrue(methodAgnostic.matches(authMeRequest));
         assertTrue(methodSpecific.matches(postRequest));
         assertFalse(methodSpecific.matches(getRequest));
+    }
+
+    private static RouteSecurityPolicyRegistry registryWithUassOverlay() {
+        RoutePolicyProperties properties = new RoutePolicyProperties();
+
+        RoutePolicyProperties.RouteRule login = new RoutePolicyProperties.RouteRule();
+        login.setMethod(HttpMethod.GET);
+        login.setPattern("/api/v1/auth/uass");
+
+        RoutePolicyProperties.RouteRule loginUrl = new RoutePolicyProperties.RouteRule();
+        loginUrl.setMethod(HttpMethod.GET);
+        loginUrl.setPattern("/api/v1/auth/uass/login-url");
+
+        RoutePolicyProperties.RouteRule redirect = new RoutePolicyProperties.RouteRule();
+        redirect.setMethod(HttpMethod.GET);
+        redirect.setPattern("/api/v1/auth/uass/redirect");
+
+        RoutePolicyProperties.RouteRule callback = new RoutePolicyProperties.RouteRule();
+        callback.setMethod(HttpMethod.GET);
+        callback.setPattern("/api/v1/auth/uass/callback");
+
+        RoutePolicyProperties.RouteRule status = new RoutePolicyProperties.RouteRule();
+        status.setMethod(HttpMethod.GET);
+        status.setPattern("/api/v1/auth/uass/status");
+
+        RoutePolicyProperties.RouteRule logout = new RoutePolicyProperties.RouteRule();
+        logout.setMethod(HttpMethod.POST);
+        logout.setPattern("/api/v1/auth/uass/logout");
+
+        properties.setExtraPermitAll(java.util.List.of(login, loginUrl, redirect, callback, status));
+        properties.setExtraAuthenticated(java.util.List.of(logout));
+        return new RouteSecurityPolicyRegistry(properties);
     }
 }

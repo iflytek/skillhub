@@ -61,11 +61,33 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
   }
 }
 
+function normalizeSkillSearchSort(sort: unknown): string {
+  if (sort === 'relevance' || sort === 'downloads' || sort === 'rating' || sort === 'newest') {
+    return sort
+  }
+  return 'newest'
+}
+
+function normalizeSkillSearchPage(page: unknown): number {
+  const numericPage = typeof page === 'string' || typeof page === 'number'
+    ? Number(page)
+    : 0
+  if (!Number.isFinite(numericPage)) {
+    return 0
+  }
+  const safePage = Math.trunc(numericPage)
+  if (safePage < 0) {
+    return 0
+  }
+  return Math.min(safePage, 10000)
+}
+
 const LandingPage = createLazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
 const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
 const RegisterPage = createLazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
 const ResetPasswordPage = createLazyRouteComponent(() => import('@/pages/reset-password'), 'ResetPasswordPage')
+const MockUassPage = createLazyRouteComponent(() => import('@/pages/mock-uass'), 'MockUassPage')
 const PrivacyPolicyPage = createLazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
 const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
 const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
@@ -187,6 +209,16 @@ const resetPasswordRoute = createRoute({
   component: ResetPasswordPage,
 })
 
+const mockUassRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'mock-uass',
+  validateSearch: (search: Record<string, unknown>) => ({
+    state: typeof search.state === 'string' ? search.state : '',
+    callbackUrl: typeof search.callbackUrl === 'string' ? search.callbackUrl : '',
+  }),
+  component: MockUassPage,
+})
+
 const privacyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'privacy',
@@ -201,8 +233,8 @@ const searchRoute = createRoute({
     return {
       q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
       label: typeof search.label === 'string' && search.label ? search.label : undefined,
-      sort: (search.sort as string) || 'newest',
-      page: Number(search.page) || 0,
+      sort: normalizeSkillSearchSort(search.sort),
+      page: normalizeSkillSearchPage(search.page),
       starredOnly: search.starredOnly === true || search.starredOnly === 'true',
     }
   },
@@ -411,6 +443,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
   resetPasswordRoute,
+  mockUassRoute,
   privacyRoute,
   searchRoute,
   termsRoute,

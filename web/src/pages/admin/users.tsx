@@ -213,6 +213,7 @@ export function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('adminUsers.colUsername')}</TableHead>
+                  <TableHead>{t('adminUsers.colUssId')}</TableHead>
                   <TableHead>{t('adminUsers.colEmail')}</TableHead>
                   <TableHead>{t('adminUsers.colStatus')}</TableHead>
                   <TableHead>{t('adminUsers.colRole')}</TableHead>
@@ -224,6 +225,7 @@ export function AdminUsersPage() {
                 {data.items.map((user) => (
                   <TableRow key={user.userId}>
                     <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.ussId || '-'}</TableCell>
                     <TableCell>{user.email || '-'}</TableCell>
                     <TableCell>
                       <span

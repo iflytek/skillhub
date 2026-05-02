@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
 const useSearchMock = vi.fn()
+const useMyStarsMock = vi.fn()
 const buttonRecords: Array<{ label: string; variant?: string | null; onClick?: (() => void) | undefined }> = []
 const paginationProps: Array<{ onPageChange: (page: number) => void }> = []
 
@@ -38,7 +39,7 @@ vi.mock('@/features/search/search-bar', () => ({
 }))
 
 vi.mock('@/features/skill/skill-card', () => ({
-  SkillCard: () => <div>skill-card</div>,
+  SkillCard: ({ skill }: { skill: { displayName: string } }) => <div>{`skill-card:${skill.displayName}`}</div>,
 }))
 
 vi.mock('@/shared/components/skeleton-loader', () => ({
@@ -98,11 +99,7 @@ vi.mock('@/shared/hooks/use-label-queries', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-user-queries', () => ({
-  useMyStars: () => ({
-    data: [],
-    isLoading: false,
-    isFetching: false,
-  }),
+  useMyStars: () => useMyStarsMock(),
 }))
 
 import { SearchPage } from './search'
@@ -134,6 +131,11 @@ describe('SearchPage', () => {
         page: 1,
         size: 12,
       },
+      isLoading: false,
+      isFetching: false,
+    })
+    useMyStarsMock.mockReturnValue({
+      data: [],
       isLoading: false,
       isFetching: false,
     })
@@ -258,5 +260,37 @@ describe('SearchPage', () => {
     expect(html).toContain('empty-state')
     expect(html).toContain('search.noResults')
     expect(html).not.toContain('search.enterKeyword')
+  })
+
+  it('sorts starred-only results by local relevance when requested', () => {
+    useSearchMock.mockReturnValue({
+      q: 'agent',
+      label: '',
+      sort: 'relevance',
+      page: 0,
+      starredOnly: true,
+    })
+    useSearchSkillsMock.mockReturnValue({
+      data: {
+        items: [],
+        total: 0,
+        page: 0,
+        size: 12,
+      },
+      isLoading: false,
+      isFetching: false,
+    })
+    useMyStarsMock.mockReturnValue({
+      data: [
+        { id: 1, displayName: 'Toolkit', summary: 'agent helper', namespace: 'global', slug: 'toolkit', downloadCount: 1, starCount: 1, ratingCount: 0, updatedAt: '2026-03-20T00:00:00Z', canSubmitPromotion: false },
+        { id: 2, displayName: 'Agent Studio', summary: 'builder', namespace: 'global', slug: 'studio', downloadCount: 1, starCount: 1, ratingCount: 0, updatedAt: '2026-03-18T00:00:00Z', canSubmitPromotion: false },
+      ],
+      isLoading: false,
+      isFetching: false,
+    })
+
+    const html = renderToStaticMarkup(<SearchPage />)
+
+    expect(html.indexOf('skill-card:Agent Studio')).toBeLessThan(html.indexOf('skill-card:Toolkit'))
   })
 })

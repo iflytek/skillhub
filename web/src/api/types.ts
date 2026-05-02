@@ -4,6 +4,7 @@ export type User = Omit<components['schemas']['AuthMeResponse'], 'userId' | 'dis
   userId: string
   displayName: string
   email?: string
+  ussId?: string
   avatarUrl?: string
   oauthProvider?: string
   platformRoles: string[]
@@ -422,6 +423,7 @@ export interface GovernanceNotification {
 export interface AdminUser {
   userId: string
   username: string
+  ussId?: string
   email?: string
   platformRoles: string[]
   status: string

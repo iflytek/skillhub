@@ -12,6 +12,7 @@ import com.iflytek.skillhub.auth.identity.IdentityBindingService;
 import com.iflytek.skillhub.auth.oauth.AccountDisabledException;
 import com.iflytek.skillhub.auth.oauth.AccountPendingException;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
+import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.auth.uass.store.UassLoginState;
@@ -51,18 +52,24 @@ class UassCallbackFlowServiceTest {
     private UserRoleBindingRepository roleBindingRepo;
 
     @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
     private GlobalNamespaceMembershipService globalNamespaceMembershipService;
 
     private UassCallbackFlowService service;
 
     @BeforeEach
     void setUp() {
-        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
-                bindingRepo,
-                userRepo,
-                roleBindingRepo,
-                globalNamespaceMembershipService
-        ));
+        UassIdentityService uassIdentityService = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, new UassProperties())
+        );
         service = new UassCallbackFlowService(
                 uassClientFacade,
                 uassLoginStateService,
@@ -223,12 +230,15 @@ class UassCallbackFlowServiceTest {
 
     @Test
     void completeLogin_usesConfiguredPublicBaseUrlForRelativeReturnTo() {
-        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
-                bindingRepo,
-                userRepo,
-                roleBindingRepo,
-                globalNamespaceMembershipService
-        ));
+        UassIdentityService uassIdentityService = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, new UassProperties())
+        );
         UassCallbackFlowService serviceWithPublicBase = new UassCallbackFlowService(
                 uassClientFacade,
                 uassLoginStateService,
@@ -257,12 +267,15 @@ class UassCallbackFlowServiceTest {
 
     @Test
     void completeLogin_blankPublicBaseUrlKeepsRelativeReturnToUntouched() {
-        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
-                bindingRepo,
-                userRepo,
-                roleBindingRepo,
-                globalNamespaceMembershipService
-        ));
+        UassIdentityService uassIdentityService = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, new UassProperties())
+        );
         UassCallbackFlowService serviceWithBlankPublicBase = new UassCallbackFlowService(
                 uassClientFacade,
                 uassLoginStateService,
@@ -309,12 +322,15 @@ class UassCallbackFlowServiceTest {
                 throw new IllegalStateException("bind failed");
             }
         };
-        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
-                bindingRepo,
-                userRepo,
-                roleBindingRepo,
-                globalNamespaceMembershipService
-        ));
+        UassIdentityService uassIdentityService = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, new UassProperties())
+        );
         UassCallbackFlowService serviceWithFailingBind = new UassCallbackFlowService(
                 uassClientFacade,
                 uassLoginStateService,
@@ -345,12 +361,15 @@ class UassCallbackFlowServiceTest {
 
     @Test
     void completeLogin_keepsAbsoluteReturnToUnchanged() {
-        UassIdentityService uassIdentityService = new UassIdentityService(new IdentityBindingService(
-                bindingRepo,
-                userRepo,
-                roleBindingRepo,
-                globalNamespaceMembershipService
-        ));
+        UassIdentityService uassIdentityService = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, new UassProperties())
+        );
         UassCallbackFlowService serviceWithPublicBase = new UassCallbackFlowService(
                 uassClientFacade,
                 uassLoginStateService,

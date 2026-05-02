@@ -27,6 +27,7 @@ public interface UserAccountJpaRepository
             :keyword IS NULL
             OR lower(u.displayName) LIKE lower(concat('%', :keyword, '%'))
             OR lower(coalesce(u.email, '')) LIKE lower(concat('%', :keyword, '%'))
+            OR lower(coalesce(u.ussId, '')) LIKE lower(concat('%', :keyword, '%'))
             OR lower(u.id) LIKE lower(concat('%', :keyword, '%'))
           )
         """)

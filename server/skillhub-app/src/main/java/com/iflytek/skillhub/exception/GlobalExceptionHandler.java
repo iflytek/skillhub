@@ -18,10 +18,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Translates application, domain, auth, and infrastructure exceptions into the platform's JSON API
@@ -79,6 +81,21 @@ public class GlobalExceptionHandler {
         logHandledException(HttpStatus.BAD_REQUEST, "error.badRequest", request);
         return ResponseEntity.badRequest().body(
                 apiResponseFactory.error(400, "error.badRequest"));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
+                                                                    HttpServletRequest request) {
+        logHandledException(HttpStatus.METHOD_NOT_ALLOWED, "error.methodNotAllowed", request);
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(
+                apiResponseFactory.error(405, "error.methodNotAllowed"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(NoResourceFoundException ex, HttpServletRequest request) {
+        logHandledException(HttpStatus.NOT_FOUND, "error.notFound", request);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                apiResponseFactory.error(404, "error.notFound"));
     }
 
     @ExceptionHandler(SecurityException.class)

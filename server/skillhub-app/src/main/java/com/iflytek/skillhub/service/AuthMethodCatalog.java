@@ -76,7 +76,7 @@ public class AuthMethodCatalog {
                 "UASS_REDIRECT",
                 "uass",
                 "Enterprise SSO",
-                buildUassRedirectUrl(sanitizedReturnTo)
+                buildUassLoginUrl(sanitizedReturnTo)
             ));
         }
 
@@ -127,8 +127,8 @@ public class AuthMethodCatalog {
         return baseUrl + "?returnTo=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
     }
 
-    private String buildUassRedirectUrl(String returnTo) {
-        String baseUrl = "/api/v1/auth/uass/redirect";
+    private String buildUassLoginUrl(String returnTo) {
+        String baseUrl = "/api/v1/auth/uass";
         if (returnTo == null) {
             return baseUrl;
         }

@@ -28,6 +28,18 @@ describe('buildSkillSearchUrl', () => {
       page: 0,
     })).toBe('/api/web/skills?q=&sort=relevance&page=0')
   })
+
+  it('clamps invalid page values to a safe non-negative range', () => {
+    expect(buildSkillSearchUrl({
+      q: 'agent',
+      page: -3,
+    })).toBe('/api/web/skills?q=agent&page=0')
+
+    expect(buildSkillSearchUrl({
+      q: 'agent',
+      page: 999999999,
+    })).toBe('/api/web/skills?q=agent&page=10000')
+  })
 })
 
 describe('shouldEnableNamespaceMemberCandidates', () => {

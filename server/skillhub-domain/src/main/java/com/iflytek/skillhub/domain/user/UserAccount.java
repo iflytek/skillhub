@@ -20,6 +20,9 @@ public class UserAccount {
     @Column(name = "avatar_url", length = 512)
     private String avatarUrl;
 
+    @Column(name = "uss_id", length = 128, unique = true)
+    private String ussId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private UserStatus status = UserStatus.ACTIVE;
@@ -61,6 +64,8 @@ public class UserAccount {
     public void setEmail(String email) { this.email = email; }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public String getUssId() { return ussId; }
+    public void setUssId(String ussId) { this.ussId = ussId; }
     public UserStatus getStatus() { return status; }
     public void setStatus(UserStatus status) { this.status = status; }
     public String getMergedToUserId() { return mergedToUserId; }

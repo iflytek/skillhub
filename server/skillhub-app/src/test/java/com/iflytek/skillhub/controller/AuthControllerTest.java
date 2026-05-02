@@ -187,7 +187,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
             .andExpect(jsonPath("$.data[?(@.id=='uass-enterprise')].methodType").value(hasItems("UASS_REDIRECT")))
             .andExpect(jsonPath("$.data[?(@.id=='uass-enterprise')].actionUrl")
-                .value(hasItems("/api/v1/auth/uass/redirect?returnTo=%2Fdashboard%2Fpublish")))
+                .value(hasItems("/api/v1/auth/uass?returnTo=%2Fdashboard%2Fpublish")))
             .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
                 .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
     }

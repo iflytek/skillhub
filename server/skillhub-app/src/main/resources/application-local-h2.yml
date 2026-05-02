@@ -51,7 +51,7 @@ skillhub:
     mock:
       enabled: true
     uass:
-      enabled: false
+      enabled: true
       # Use mock://self to verify the UASS browser flow locally without the
       # enterprise gateway implementation. Replace with the real UASS endpoint
       # after providing a custom UassGateway bean.
@@ -59,7 +59,16 @@ skillhub:
       client-id: your-client-id
       client-secret: your-client-secret
       callback-path: /api/v1/auth/uass/callback
+      # Optional dedicated host for the local mock third-party authorization page.
+      # Example: http://localhost:3001
+      mock-login-base-url: ${SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL:http://localhost:3001}
       cache-mode: local
+      # Pre-register rollout administrators for first-time UASS sign-in.
+      # Example:
+      admin-users:
+         - ussId: uass-admin-001
+           roles:
+             - USER_ADMIN
     device:
       enabled: false
     failure-throttle:

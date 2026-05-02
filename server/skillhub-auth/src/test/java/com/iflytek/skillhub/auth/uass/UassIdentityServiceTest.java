@@ -8,12 +8,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.auth.entity.IdentityBinding;
+import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.identity.IdentityBindingService;
 import com.iflytek.skillhub.auth.oauth.AccountDisabledException;
 import com.iflytek.skillhub.auth.oauth.AccountPendingException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
+import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -43,18 +45,24 @@ class UassIdentityServiceTest {
     private UserRoleBindingRepository roleBindingRepo;
 
     @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
     private GlobalNamespaceMembershipService globalNamespaceMembershipService;
 
     private UassIdentityService service;
 
     @BeforeEach
     void setUp() {
-        service = new UassIdentityService(new IdentityBindingService(
-                bindingRepo,
-                userRepo,
-                roleBindingRepo,
-                globalNamespaceMembershipService
-        ));
+        service = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, new UassProperties())
+        );
     }
 
     @Test
@@ -86,6 +94,7 @@ class UassIdentityServiceTest {
     void resolvePrincipal_firstLoginAutoCreatesActiveUserAndBinding() {
         when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1002"))
                 .thenReturn(Optional.empty());
+        when(userRepo.findByUssId("U1002")).thenReturn(Optional.empty());
         when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
 
@@ -102,9 +111,69 @@ class UassIdentityServiceTest {
         assertThat(userCaptor.getValue().getDisplayName()).isEqualTo("New Hire");
         assertThat(userCaptor.getValue().getEmail()).isEqualTo("new.hire@example.com");
         assertThat(userCaptor.getValue().getAvatarUrl()).isEqualTo("https://avatar.test/new.png");
+        assertThat(userCaptor.getValue().getUssId()).isEqualTo("U1002");
         assertThat(bindingCaptor.getValue().getProviderCode()).isEqualTo(UassIdentityService.PROVIDER_CODE);
         assertThat(bindingCaptor.getValue().getSubject()).isEqualTo("U1002");
         assertThat(principal.platformRoles()).containsExactly("USER");
+    }
+
+    @Test
+    void resolvePrincipal_newUserGetsConfiguredBootstrapAdminRoles() {
+        UassProperties properties = new UassProperties();
+        UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
+        adminUser.setUssId("U2001");
+        adminUser.setRoles(List.of("USER_ADMIN", "AUDITOR"));
+        properties.setAdminUsers(List.of(adminUser));
+        service = new UassIdentityService(
+                new IdentityBindingService(
+                        bindingRepo,
+                        userRepo,
+                        roleBindingRepo,
+                        globalNamespaceMembershipService
+                ),
+                new UassBootstrapAdminRoleService(roleBindingRepo, roleRepository, properties)
+        );
+
+        when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U2001"))
+                .thenReturn(Optional.empty());
+        when(userRepo.findByUssId("U2001")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+        when(roleRepository.findByCode("USER_ADMIN")).thenReturn(Optional.of(role("USER_ADMIN")));
+        when(roleRepository.findByCode("AUDITOR")).thenReturn(Optional.of(role("AUDITOR")));
+
+        PlatformPrincipal principal = service.resolvePrincipal(
+                loginContext("U2001"),
+                userProfile("U2001", "Bootstrap Admin", "admin@example.com", Map.of())
+        );
+
+        verify(roleBindingRepo, org.mockito.Mockito.times(2)).save(any());
+        assertThat(principal.platformRoles()).contains("USER_ADMIN", "AUDITOR");
+    }
+
+    @Test
+    void resolvePrincipal_existingUserMatchedByUssIdReusesAccountAndCreatesBinding() {
+        UserAccount user = new UserAccount("usr_9", "Old Name", "old@example.com", null);
+        user.setUssId("U1009");
+
+        when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1009"))
+                .thenReturn(Optional.empty());
+        when(userRepo.findByUssId("U1009")).thenReturn(Optional.of(user));
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId("usr_9")).thenReturn(List.of());
+
+        PlatformPrincipal principal = service.resolvePrincipal(
+                loginContext("U1009"),
+                userProfile("U1009", "Updated Name", "updated@example.com", Map.of())
+        );
+
+        ArgumentCaptor<IdentityBinding> bindingCaptor = ArgumentCaptor.forClass(IdentityBinding.class);
+        verify(bindingRepo).save(bindingCaptor.capture());
+        verify(globalNamespaceMembershipService, never()).ensureMember(any());
+        assertThat(user.getDisplayName()).isEqualTo("Updated Name");
+        assertThat(user.getEmail()).isEqualTo("updated@example.com");
+        assertThat(bindingCaptor.getValue().getUserId()).isEqualTo("usr_9");
+        assertThat(principal.userId()).isEqualTo("usr_9");
     }
 
     @Test
@@ -155,6 +224,7 @@ class UassIdentityServiceTest {
     void resolvePrincipal_createFailureDoesNotLeaveBindingBehind() {
         when(bindingRepo.findByProviderCodeAndSubject(UassIdentityService.PROVIDER_CODE, "U1005"))
                 .thenReturn(Optional.empty());
+        when(userRepo.findByUssId("U1005")).thenReturn(Optional.empty());
         when(userRepo.save(any(UserAccount.class))).thenThrow(new IllegalStateException("save failed"));
 
         assertThatThrownBy(() -> service.resolvePrincipal(
@@ -191,5 +261,12 @@ class UassIdentityServiceTest {
                 null,
                 attributes
         );
+    }
+
+    private static Role role(String code) {
+        Role role = new Role();
+        org.springframework.test.util.ReflectionTestUtils.setField(role, "code", code);
+        org.springframework.test.util.ReflectionTestUtils.setField(role, "name", code);
+        return role;
     }
 }

@@ -10,11 +10,13 @@ import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Resolves external OAuth identities to platform users, creating or updating
@@ -40,30 +42,36 @@ public class IdentityBindingService {
 
     @Transactional
     public PlatformPrincipal bindOrCreate(OAuthClaims claims, UserStatus initialStatus) {
+        return bindOrCreateResult(claims, initialStatus).principal();
+    }
+
+    @Transactional
+    public BindOrCreateResult bindOrCreateResult(OAuthClaims claims, UserStatus initialStatus) {
         IdentityBinding binding = bindingRepo
             .findByProviderCodeAndSubject(claims.provider(), claims.subject())
             .orElse(null);
 
+        boolean newlyCreated = false;
         UserAccount user;
         if (binding != null) {
             user = userRepo.findById(binding.getUserId())
                 .orElseThrow(() -> new IllegalStateException("User not found for binding"));
-            user.setDisplayName(claims.providerLogin());
-            if (claims.email() != null) user.setEmail(claims.email());
-            if (claims.extra().get("avatar_url") != null) {
-                user.setAvatarUrl((String) claims.extra().get("avatar_url"));
-            }
+            refreshUserFromClaims(user, claims);
             user = userRepo.save(user);
         } else {
-            user = new UserAccount(
-                "usr_" + UUID.randomUUID(),
-                claims.providerLogin(),
-                claims.email(),
-                (String) claims.extra().get("avatar_url")
-            );
-            user.setStatus(initialStatus);
+            boolean[] createdNewUser = {false};
+            user = resolveExistingUser(claims)
+                .map(existingUser -> {
+                    refreshUserFromClaims(existingUser, claims);
+                    return existingUser;
+                })
+                .orElseGet(() -> {
+                    createdNewUser[0] = true;
+                    return newUserFromClaims(claims, initialStatus);
+                });
+            newlyCreated = createdNewUser[0];
             user = userRepo.save(user);
-            if (initialStatus == UserStatus.ACTIVE) {
+            if (newlyCreated && initialStatus == UserStatus.ACTIVE) {
                 globalNamespaceMembershipService.ensureMember(user.getId());
             }
 
@@ -83,10 +91,11 @@ public class IdentityBindingService {
             .collect(Collectors.toSet());
         roles = PlatformRoleDefaults.withDefaultUserRole(roles);
 
-        return new PlatformPrincipal(
+        PlatformPrincipal principal = new PlatformPrincipal(
             user.getId(), user.getDisplayName(), user.getEmail(),
             user.getAvatarUrl(), claims.provider(), roles
         );
+        return new BindOrCreateResult(principal, newlyCreated);
     }
 
     @Transactional
@@ -103,16 +112,57 @@ public class IdentityBindingService {
             throw new com.iflytek.skillhub.auth.oauth.AccountPendingException();
         }
 
-        UserAccount user = new UserAccount(
-            "usr_" + UUID.randomUUID(),
-            claims.providerLogin(),
-            claims.email(),
-            (String) claims.extra().get("avatar_url")
-        );
-        user.setStatus(UserStatus.PENDING);
+        UserAccount user = newUserFromClaims(claims, UserStatus.PENDING);
         user = userRepo.save(user);
 
         IdentityBinding binding = new IdentityBinding(user.getId(), claims.provider(), claims.subject(), claims.providerLogin());
         bindingRepo.save(binding);
+    }
+
+    private Optional<UserAccount> resolveExistingUser(OAuthClaims claims) {
+        String ussId = normalizeOptional(extraValue(claims.extra(), "uss_id"));
+        if (!"uass".equalsIgnoreCase(claims.provider()) || ussId == null) {
+            return Optional.empty();
+        }
+        return userRepo.findByUssId(ussId);
+    }
+
+    private UserAccount newUserFromClaims(OAuthClaims claims, UserStatus initialStatus) {
+        UserAccount user = new UserAccount(
+            "usr_" + UUID.randomUUID(),
+            claims.providerLogin(),
+            claims.email(),
+            extraValue(claims.extra(), "avatar_url")
+        );
+        user.setStatus(initialStatus);
+        user.setUssId(normalizeOptional(extraValue(claims.extra(), "uss_id")));
+        return user;
+    }
+
+    private void refreshUserFromClaims(UserAccount user, OAuthClaims claims) {
+        user.setDisplayName(claims.providerLogin());
+        if (claims.email() != null) {
+            user.setEmail(claims.email());
+        }
+        String avatarUrl = extraValue(claims.extra(), "avatar_url");
+        if (avatarUrl != null) {
+            user.setAvatarUrl(avatarUrl);
+        }
+        String ussId = normalizeOptional(extraValue(claims.extra(), "uss_id"));
+        if (ussId != null) {
+            user.setUssId(ussId);
+        }
+    }
+
+    private static String extraValue(Map<String, Object> extra, String key) {
+        Object value = extra.get(key);
+        return value instanceof String stringValue && !stringValue.isBlank() ? stringValue : null;
+    }
+
+    private static String normalizeOptional(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public record BindOrCreateResult(PlatformPrincipal principal, boolean newlyCreated) {
     }
 }

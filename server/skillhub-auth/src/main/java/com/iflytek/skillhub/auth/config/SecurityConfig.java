@@ -71,6 +71,7 @@ public class SecurityConfig {
     private final ObjectProvider<MockAuthFilter> mockAuthFilterProvider;
     private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
     private final String publicBaseUrl;
+    private final String uassMockLoginBaseUrl;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
                           SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
@@ -82,7 +83,8 @@ public class SecurityConfig {
                           AccessDeniedHandler apiAccessDeniedHandler,
                           ObjectProvider<MockAuthFilter> mockAuthFilterProvider,
                           RouteSecurityPolicyRegistry routeSecurityPolicyRegistry,
-                          @Value("${skillhub.public.base-url:}") String publicBaseUrl) {
+                          @Value("${skillhub.public.base-url:}") String publicBaseUrl,
+                          @Value("${skillhub.auth.uass.mock-login-base-url:}") String uassMockLoginBaseUrl) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
@@ -94,6 +96,7 @@ public class SecurityConfig {
         this.mockAuthFilterProvider = mockAuthFilterProvider;
         this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
         this.publicBaseUrl = publicBaseUrl;
+        this.uassMockLoginBaseUrl = uassMockLoginBaseUrl;
     }
 
     /**
@@ -179,7 +182,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOrigins(resolveAllowedOrigins(publicBaseUrl));
+        configuration.setAllowedOrigins(resolveAllowedOrigins(publicBaseUrl, uassMockLoginBaseUrl));
         configuration.setAllowedMethods(List.of(
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
@@ -206,10 +209,13 @@ public class SecurityConfig {
         }
     }
 
-    private static List<String> resolveAllowedOrigins(String publicBaseUrl) {
+    private static List<String> resolveAllowedOrigins(String... baseUrls) {
         Set<String> origins = new LinkedHashSet<>();
-        String normalized = publicBaseUrl == null ? "" : publicBaseUrl.trim();
-        if (!normalized.isEmpty()) {
+        for (String baseUrl : baseUrls) {
+            String normalized = baseUrl == null ? "" : baseUrl.trim();
+            if (normalized.isEmpty()) {
+                continue;
+            }
             try {
                 URI publicUri = URI.create(normalized);
                 String scheme = publicUri.getScheme();

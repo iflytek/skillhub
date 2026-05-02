@@ -8,6 +8,7 @@ public record AuthMeResponse(
         String userId,
         String displayName,
         String email,
+        String ussId,
         String avatarUrl,
         String oauthProvider,
         Set<String> platformRoles
@@ -17,6 +18,19 @@ public record AuthMeResponse(
                 principal.userId(),
                 principal.displayName(),
                 principal.email() != null ? principal.email() : "",
+                null,
+                principal.avatarUrl() != null ? principal.avatarUrl() : "",
+                principal.oauthProvider(),
+                principal.platformRoles()
+        );
+    }
+
+    public static AuthMeResponse from(PlatformPrincipal principal, com.iflytek.skillhub.domain.user.UserAccount user) {
+        return new AuthMeResponse(
+                principal.userId(),
+                principal.displayName(),
+                principal.email() != null ? principal.email() : "",
+                user.getUssId(),
                 principal.avatarUrl() != null ? principal.avatarUrl() : "",
                 principal.oauthProvider(),
                 principal.platformRoles()

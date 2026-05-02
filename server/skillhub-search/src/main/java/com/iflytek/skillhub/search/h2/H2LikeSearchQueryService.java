@@ -111,7 +111,9 @@ public class H2LikeSearchQueryService implements SearchQueryService {
         }
 
         Query countQuery = entityManager.createQuery(countSql, Long.class);
-        bindSharedParameters(countQuery, query, memberNamespaceIds, normalizedKeyword, useRelevanceOrdering);
+        // The count query strips ORDER BY, so it must not bind relevance-only
+        // ranking parameters that no longer exist in the JPQL.
+        bindSharedParameters(countQuery, query, memberNamespaceIds, normalizedKeyword, false);
         long total = (Long) countQuery.getSingleResult();
 
         return new SearchResult(skillIds, total, query.page(), query.size());

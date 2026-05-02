@@ -6,6 +6,7 @@ import java.util.List;
 public record AdminUserSummaryResponse(
         String id,
         String username,
+        String ussId,
         String email,
         String status,
         List<String> platformRoles,

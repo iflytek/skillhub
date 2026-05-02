@@ -1,7 +1,10 @@
 package com.iflytek.skillhub.auth.policy;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -15,7 +18,7 @@ import org.springframework.util.AntPathMatcher;
 @Component
 public class RouteSecurityPolicyRegistry {
 
-    private static final List<RouteAuthorizationPolicy> AUTHORIZATION_POLICIES = List.of(
+    private static final List<RouteAuthorizationPolicy> DEFAULT_AUTHORIZATION_POLICIES = List.of(
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/health"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/search"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/resolve/**"),
@@ -27,11 +30,6 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/direct/login"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/local/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/device/**"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/login-url"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/redirect"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/callback"),
-            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/auth/uass/status"),
-            RouteAuthorizationPolicy.authenticated(HttpMethod.POST, "/api/v1/auth/uass/logout"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),
             RouteAuthorizationPolicy.permitAll(null, "/v3/api-docs/**"),
@@ -115,10 +113,30 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/publish", "skill:publish")
     );
 
+    private final RoutePolicyProperties routePolicyProperties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
+    public RouteSecurityPolicyRegistry() {
+        this(new RoutePolicyProperties());
+    }
+
+    @Autowired
+    public RouteSecurityPolicyRegistry(RoutePolicyProperties routePolicyProperties) {
+        this.routePolicyProperties = Objects.requireNonNull(routePolicyProperties, "routePolicyProperties must not be null");
+    }
+
     public List<RouteAuthorizationPolicy> authorizationPolicies() {
-        return AUTHORIZATION_POLICIES;
+        List<RouteAuthorizationPolicy> policies = new ArrayList<>(DEFAULT_AUTHORIZATION_POLICIES);
+        routePolicyProperties.getExtraPermitAll().stream()
+                .map(RouteSecurityPolicyRegistry::toPermitAllPolicy)
+                .forEach(policies::add);
+        routePolicyProperties.getExtraAuthenticated().stream()
+                .map(RouteSecurityPolicyRegistry::toAuthenticatedPolicy)
+                .forEach(policies::add);
+        routePolicyProperties.getExtraRoleProtected().stream()
+                .map(RouteSecurityPolicyRegistry::toRoleProtectedPolicy)
+                .forEach(policies::add);
+        return List.copyOf(policies);
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {
@@ -155,6 +173,33 @@ public class RouteSecurityPolicyRegistry {
 
     private boolean isApiPath(String path) {
         return shouldProjectRequestContext(path);
+    }
+
+    private static RouteAuthorizationPolicy toPermitAllPolicy(RoutePolicyProperties.RouteRule rule) {
+        return RouteAuthorizationPolicy.permitAll(rule.getMethod(), requirePattern(rule.getPattern()));
+    }
+
+    private static RouteAuthorizationPolicy toAuthenticatedPolicy(RoutePolicyProperties.RouteRule rule) {
+        return RouteAuthorizationPolicy.authenticated(rule.getMethod(), requirePattern(rule.getPattern()));
+    }
+
+    private static RouteAuthorizationPolicy toRoleProtectedPolicy(RoutePolicyProperties.RoleProtectedRouteRule rule) {
+        List<String> roles = rule.getRoles();
+        if (roles.isEmpty()) {
+            throw new IllegalStateException("skillhub.security.route-policy.extra-role-protected roles must not be empty");
+        }
+        return RouteAuthorizationPolicy.roles(
+                rule.getMethod(),
+                requirePattern(rule.getPattern()),
+                roles.toArray(String[]::new)
+        );
+    }
+
+    private static String requirePattern(String pattern) {
+        if (pattern == null || pattern.isBlank()) {
+            throw new IllegalStateException("skillhub.security.route-policy rule pattern must not be blank");
+        }
+        return pattern.trim();
     }
 
     public record ApiTokenAuthorizationDecision(boolean allowed, String requiredScope, String message) {

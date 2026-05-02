@@ -124,6 +124,28 @@ class SkillSearchControllerTest {
     }
 
     @Test
+    void searchShouldNormalizeUnsupportedSortAndClampOversizedPagination() throws Exception {
+        when(skillSearchAppService.search(
+                eq(null),
+                eq(null),
+                eq("newest"),
+                eq(10_000),
+                eq(100),
+                eq(null),
+                any(),
+                any()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 10_000, 100));
+
+                mockMvc.perform(get("/api/web/skills")
+                        .param("sort", "weird-sort")
+                        .param("page", "999999999")
+                        .param("size", "999"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(10_000))
+                .andExpect(jsonPath("$.data.size").value(100));
+    }
+
+    @Test
     void searchShouldFallbackToDefaultsForInvalidPagination() throws Exception {
         when(skillSearchAppService.search(
                 eq(null),

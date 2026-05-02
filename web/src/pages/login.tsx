@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
-import { buildAuthRedirectUrl, getDirectAuthRuntimeConfig } from '@/api/client'
+import { authApi, buildAuthRedirectUrl, getDirectAuthRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
@@ -26,6 +26,7 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [checkingEnterpriseSession, setCheckingEnterpriseSession] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const { data: authMethods } = useAuthMethods(search.returnTo)
@@ -62,6 +63,27 @@ export function LoginPage() {
     } catch {
       // mutation state drives the error UI
     }
+  }
+
+  async function handleEnterpriseLogin() {
+    if (!enterpriseMethod || checkingEnterpriseSession) {
+      return
+    }
+
+    setCheckingEnterpriseSession(true)
+    try {
+      const currentUser = await authApi.getMeWithTimeout(1500)
+      if (currentUser) {
+        await navigate({ to: returnTo })
+        return
+      }
+    } catch {
+      // Fall through to enterprise redirect when the session check cannot complete.
+    } finally {
+      setCheckingEnterpriseSession(false)
+    }
+
+    window.location.href = buildAuthRedirectUrl(enterpriseMethod.actionUrl)
   }
 
   return (
@@ -106,9 +128,8 @@ export function LoginPage() {
                   className="w-full"
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    window.location.href = buildAuthRedirectUrl(enterpriseMethod.actionUrl)
-                  }}
+                  disabled={checkingEnterpriseSession}
+                  onClick={handleEnterpriseLogin}
                 >
                   {t('login.enterpriseRedirectAction', {
                     name: enterpriseMethod.displayName || t('login.enterpriseSsoTitle'),

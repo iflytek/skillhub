@@ -55,4 +55,37 @@ class H2LikeSearchQueryServiceTest {
         verify(resultQuery, never()).setParameter("titleExact", "ppt");
         verify(resultQuery, never()).setParameter("titlePrefix", "ppt%");
     }
+
+    @Test
+    void search_shouldNotBindRelevanceOnlyParametersToCountQuery() {
+        EntityManager entityManager = mock(EntityManager.class);
+        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
+        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+
+        when(entityManager.createQuery(anyString(), eq(Long.class)))
+                .thenReturn(resultQuery, countQuery);
+        when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
+        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
+        when(resultQuery.setMaxResults(12)).thenReturn(resultQuery);
+        when(resultQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        H2LikeSearchQueryService service = new H2LikeSearchQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "ppt",
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of(), false),
+                "relevance",
+                0,
+                12,
+                List.of()
+        ));
+
+        verify(resultQuery).setParameter("titleExact", "ppt");
+        verify(resultQuery).setParameter("titlePrefix", "ppt%");
+        verify(countQuery, never()).setParameter("titleExact", "ppt");
+        verify(countQuery, never()).setParameter("titlePrefix", "ppt%");
+    }
 }

@@ -77,6 +77,7 @@ class UserManagementControllerTest {
                         List.of(new AdminUserSummaryResponse(
                                 "user-1",
                                 "alice",
+                                "uass-alice",
                                 "alice@example.com",
                                 "ACTIVE",
                                 List.of("AUDITOR"),
@@ -91,6 +92,7 @@ class UserManagementControllerTest {
             .andExpect(jsonPath("$.data.items").isArray())
             .andExpect(jsonPath("$.data.total").value(1))
             .andExpect(jsonPath("$.data.items[0].id").value("user-1"))
+            .andExpect(jsonPath("$.data.items[0].ussId").value("uass-alice"))
             .andExpect(jsonPath("$.data.items[0].email").value("alice@example.com"))
             .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-03-13T09:00:00Z"))
             .andExpect(jsonPath("$.data.items[0].platformRoles[0]").value("AUDITOR"));

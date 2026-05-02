@@ -34,6 +34,12 @@
         <dependency>
             <groupId>com.iflytek.skillhub</groupId>
             <artifactId>skillhub-domain</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.iflytek.skillhub</groupId>

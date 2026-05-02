@@ -103,6 +103,7 @@ public class UserProfileController extends BaseApiController {
                 displayName,
                 avatarUrl,
                 user.getEmail(),
+                user.getUssId(),
                 pendingChanges,
                 fieldPolicies
         );

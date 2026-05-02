@@ -69,6 +69,7 @@ public class AdminUserAppService {
                 .map(user -> new AdminUserSummaryResponse(
                         user.getId(),
                         user.getDisplayName(),
+                        user.getUssId(),
                         user.getEmail(),
                         user.getStatus().name(),
                         rolesByUserId.getOrDefault(user.getId(), List.of()),

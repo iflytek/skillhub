@@ -56,7 +56,7 @@ class SecurityConfigTest {
 
     @Test
     void passwordEncoder_hashesAndMatchesValues() {
-        SecurityConfig config = newConfig("https://skillhub.example.com");
+        SecurityConfig config = newConfig("https://skillhub.example.com", "");
 
         PasswordEncoder encoder = config.passwordEncoder();
         String encoded = encoder.encode("secret");
@@ -67,7 +67,7 @@ class SecurityConfigTest {
 
     @Test
     void corsConfigurationSource_includesLoopbackAliasesForLoopbackPublicBaseUrl() {
-        SecurityConfig config = newConfig("http://127.0.0.1:3001");
+        SecurityConfig config = newConfig("http://127.0.0.1:3001", "");
 
         CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
 
@@ -82,7 +82,7 @@ class SecurityConfigTest {
 
     @Test
     void corsConfigurationSource_usesOriginWithoutPortWhenPublicBaseUrlHasNoPort() {
-        SecurityConfig config = newConfig("https://skillhub.example.com/app");
+        SecurityConfig config = newConfig("https://skillhub.example.com/app", "");
 
         CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
 
@@ -91,7 +91,7 @@ class SecurityConfigTest {
 
     @Test
     void corsConfigurationSource_returnsEmptyOriginListForInvalidBaseUrl() {
-        SecurityConfig config = newConfig("://bad");
+        SecurityConfig config = newConfig("://bad", "");
 
         CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
 
@@ -100,14 +100,29 @@ class SecurityConfigTest {
 
     @Test
     void corsConfigurationSource_onlyAppliesToApiRoutes() {
-        SecurityConfig config = newConfig("https://skillhub.example.com");
+        SecurityConfig config = newConfig("https://skillhub.example.com", "");
 
         CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/web/test");
 
         assertThat(cors).isNull();
     }
 
-    private SecurityConfig newConfig(String publicBaseUrl) {
+    @Test
+    void corsConfigurationSource_includesConfiguredMockLoginOrigin() {
+        SecurityConfig config = newConfig("http://localhost:3000", "http://localhost:3001/mock-uass");
+
+        CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
+
+        assertThat(cors.getAllowedOrigins())
+                .containsExactlyInAnyOrder(
+                        "http://localhost:3000",
+                        "http://127.0.0.1:3000",
+                        "http://localhost:3001",
+                        "http://127.0.0.1:3001"
+                );
+    }
+
+    private SecurityConfig newConfig(String publicBaseUrl, String uassMockLoginBaseUrl) {
         return new SecurityConfig(
                 customOAuth2UserService,
                 authorizationRequestResolver,
@@ -119,7 +134,8 @@ class SecurityConfigTest {
                 apiAccessDeniedHandler,
                 mockAuthFilterProvider,
                 routeSecurityPolicyRegistry,
-                publicBaseUrl
+                publicBaseUrl,
+                uassMockLoginBaseUrl
         );
     }
 

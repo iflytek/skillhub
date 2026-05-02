@@ -308,9 +308,11 @@ function trimTrailingSlash(value: string): string {
   return value
 }
 
-export async function getCurrentUser(): Promise<User | null> {
+async function getCurrentUserInternal(timeoutMs?: number): Promise<User | null> {
   try {
-    const user = await fetchJson<User>('/api/v1/auth/me')
+    const user = await fetchJson<User>('/api/v1/auth/me', {
+      timeoutMs,
+    })
     return {
       ...user,
       userId: user.userId ?? '',
@@ -325,8 +327,13 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 }
 
+export async function getCurrentUser(): Promise<User | null> {
+  return getCurrentUserInternal()
+}
+
 export const authApi = {
   getMe: getCurrentUser,
+  getMeWithTimeout: (timeoutMs?: number) => getCurrentUserInternal(timeoutMs),
 
   async getProviders(returnTo?: string): Promise<OAuthProvider[]> {
     const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
@@ -1094,6 +1101,7 @@ export const adminApi = {
       items: Array<{
         id: string
         username: string
+        ussId?: string
         email?: string
         platformRoles?: string[]
         status: string
@@ -1112,6 +1120,7 @@ export const adminApi = {
         .map((user) => ({
           userId: user.id,
           username: user.username,
+          ussId: user.ussId,
           email: user.email,
           platformRoles: user.platformRoles ?? [],
           status: user.status,

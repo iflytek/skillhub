@@ -1,10 +1,12 @@
 # SQL Layout
 
-## Active Flyway migration entry
+## Active Flyway migration entries
 
 - `migration/V1__init_schema.sql`
+- later incremental migrations such as `migration/V2__*.sql`
 
-This is the consolidated initialization script used by Flyway for a fresh schema.
+`V1__init_schema.sql` is the consolidated base initialization script. Newer
+schema changes can be appended as normal incremental Flyway migrations.
 
 ## Destructive reset helper
 

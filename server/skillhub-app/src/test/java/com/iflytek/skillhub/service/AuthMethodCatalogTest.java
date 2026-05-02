@@ -152,7 +152,7 @@ class AuthMethodCatalogTest {
                 "UASS_REDIRECT",
                 "uass",
                 "Enterprise SSO",
-                "/api/v1/auth/uass/redirect?returnTo=%2Fdashboard%2Fpublish"
+                "/api/v1/auth/uass?returnTo=%2Fdashboard%2Fpublish"
             ));
     }
 
@@ -169,7 +169,7 @@ class AuthMethodCatalogTest {
 
         assertThat(catalog.listMethods(null))
             .extracting(method -> method.id(), method -> method.actionUrl())
-            .contains(tuple("uass-enterprise", "/api/v1/auth/uass/redirect"));
+            .contains(tuple("uass-enterprise", "/api/v1/auth/uass"));
     }
 
     private static UassProperties enabledUassProperties() {

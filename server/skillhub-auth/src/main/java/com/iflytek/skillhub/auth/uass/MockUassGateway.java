@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.auth.uass;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
@@ -15,19 +16,25 @@ class MockUassGateway implements UassGateway {
 
     static final String MOCK_BASE_URL = "mock://self";
     static final String DEFAULT_USER_CODE = "uass-mock-user";
+    static final String MOCK_LOGIN_PATH = "/mock-uass";
 
     private final UassProperties uassProperties;
+    private final MockUassLoginCoordinator mockUassLoginCoordinator;
 
-    MockUassGateway(UassProperties uassProperties) {
+    MockUassGateway(UassProperties uassProperties, MockUassLoginCoordinator mockUassLoginCoordinator) {
         this.uassProperties = Objects.requireNonNull(uassProperties, "uassProperties must not be null");
+        this.mockUassLoginCoordinator = Objects.requireNonNull(mockUassLoginCoordinator, "mockUassLoginCoordinator must not be null");
     }
 
     @Override
     public String buildLoginUrl(UassLoginUrlRequest request) {
         assertMockMode("buildLoginUrl");
-        return UriComponentsBuilder.fromUri(request.callbackUri())
-                .queryParam("loginCode", DEFAULT_USER_CODE)
+        return UriComponentsBuilder.fromUri(resolveMockLoginBaseUri(request.callbackUri()))
+                .replacePath(resolveMockLoginPath(resolveMockLoginBaseUri(request.callbackUri()).getPath()))
+                .replaceQuery(null)
+                .fragment(null)
                 .queryParam("state", request.state())
+                .queryParam("callbackUrl", request.callbackUri())
                 .build(true)
                 .toUriString();
     }
@@ -35,14 +42,8 @@ class MockUassGateway implements UassGateway {
     @Override
     public UassValidatedLogin validateLogin(UassLoginValidationRequest request) {
         assertMockMode("validateLogin");
-        String userCode = StringUtils.hasText(request.loginCode()) ? request.loginCode().trim() : DEFAULT_USER_CODE;
-        return new UassValidatedLogin(
-                userCode,
-                "mock-access-token-" + userCode,
-                null,
-                Instant.now().plusSeconds(300),
-                Map.of("mode", "mock")
-        );
+        String loginCode = StringUtils.hasText(request.loginCode()) ? request.loginCode().trim() : DEFAULT_USER_CODE;
+        return mockUassLoginCoordinator.validateLogin(loginCode);
     }
 
     @Override
@@ -54,15 +55,7 @@ class MockUassGateway implements UassGateway {
     @Override
     public UassRemoteUserProfile loadUserProfile(UassSessionDescriptor session) {
         assertMockMode("loadUserProfile");
-        String userCode = StringUtils.hasText(session.userCode()) ? session.userCode().trim() : DEFAULT_USER_CODE;
-        return new UassRemoteUserProfile(
-                userCode,
-                "UASS Mock User",
-                userCode + "@skillhub.local",
-                null,
-                userCode,
-                Map.of("mode", "mock")
-        );
+        return mockUassLoginCoordinator.loadUserProfile(session);
     }
 
     @Override
@@ -78,5 +71,23 @@ class MockUassGateway implements UassGateway {
                 operation,
                 "No UASS gateway implementation configured; provide a UassGateway bean or set skillhub.auth.uass.base-url=mock://self for local verification"
         );
+    }
+
+    private String resolveMockLoginPath(String callbackPath) {
+        String configuredCallbackPath = uassProperties.getCallbackPath();
+        if (StringUtils.hasText(callbackPath)
+                && StringUtils.hasText(configuredCallbackPath)
+                && callbackPath.endsWith(configuredCallbackPath)) {
+            String prefix = callbackPath.substring(0, callbackPath.length() - configuredCallbackPath.length());
+            return prefix + MOCK_LOGIN_PATH;
+        }
+        return MOCK_LOGIN_PATH;
+    }
+
+    private URI resolveMockLoginBaseUri(URI callbackUri) {
+        if (StringUtils.hasText(uassProperties.getMockLoginBaseUrl())) {
+            return URI.create(uassProperties.getMockLoginBaseUrl());
+        }
+        return callbackUri;
     }
 }

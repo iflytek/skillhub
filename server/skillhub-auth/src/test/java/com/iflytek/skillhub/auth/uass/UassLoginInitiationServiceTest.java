@@ -27,7 +27,7 @@ class UassLoginInitiationServiceTest {
     void setUp() {
         UassProperties properties = new UassProperties();
         properties.setCallbackPath("/api/v1/auth/uass/callback");
-        service = new UassLoginInitiationService(uassClientFacade, uassLoginStateService, properties);
+        service = new UassLoginInitiationService(uassClientFacade, uassLoginStateService, properties, (URI) null);
     }
 
     @Test
@@ -55,5 +55,28 @@ class UassLoginInitiationServiceTest {
                 .hasMessageContaining("boom");
 
         verify(uassLoginStateService).clearFailedCallback("state-2");
+    }
+
+    @Test
+    void buildLoginUrl_prefersConfiguredPublicBaseUrlForCallback() {
+        UassProperties properties = new UassProperties();
+        properties.setCallbackPath("/api/v1/auth/uass/callback");
+        UassLoginInitiationService configuredService = new UassLoginInitiationService(
+                uassClientFacade,
+                uassLoginStateService,
+                properties,
+                URI.create("https://public.skillhub.example.com/")
+        );
+
+        when(uassLoginStateService.startLogin("/dashboard/publish", null)).thenReturn("state-3");
+        when(uassClientFacade.buildLoginUrl("state-3", URI.create("https://public.skillhub.example.com/api/v1/auth/uass/callback")))
+                .thenReturn("https://uass.example.com/login?state=state-3");
+
+        String loginUrl = configuredService.buildLoginUrl(
+                "/dashboard/publish",
+                URI.create("http://127.0.0.1:8080/api/v1/auth/uass")
+        );
+
+        assertThat(loginUrl).isEqualTo("https://uass.example.com/login?state=state-3");
     }
 }

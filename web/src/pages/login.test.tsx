@@ -28,6 +28,10 @@ vi.mock('lucide-react', () => ({
 }))
 
 vi.mock('@/api/client', () => ({
+  authApi: {
+    getMe: vi.fn(),
+  },
+  buildAuthRedirectUrl: (url: string) => url,
   getDirectAuthRuntimeConfig: () => ({ enabled: false }),
 }))
 
@@ -97,7 +101,7 @@ describe('LoginPage', () => {
         methodType: 'UASS_REDIRECT',
         provider: 'uass',
         displayName: 'Enterprise SSO',
-        actionUrl: '/api/v1/auth/uass/redirect?returnTo=%2Fdashboard',
+        actionUrl: '/api/v1/auth/uass?returnTo=%2Fdashboard',
       }],
     })
 

@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpSession;
 import java.net.URI;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,7 +20,6 @@ import org.springframework.util.StringUtils;
  */
 @Service
 @ConditionalOnProperty(prefix = "skillhub.auth.uass", name = "enabled", havingValue = "true")
-@ConditionalOnBean(UassClientFacade.class)
 public class UassCallbackFlowService {
 
     private final UassClientFacade uassClientFacade;

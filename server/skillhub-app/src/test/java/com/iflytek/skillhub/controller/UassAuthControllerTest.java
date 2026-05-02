@@ -64,6 +64,19 @@ class UassAuthControllerTest {
     }
 
     @Test
+    void loginInitiatesLoginAndRespondsWithProviderLocation() throws Exception {
+        given(uassLoginInitiationService.buildLoginUrl(
+                "/dashboard/publish",
+                URI.create("http://localhost/api/v1/auth/uass")))
+                .willReturn("https://uass.example.com/login?state=state-0");
+
+        mockMvc.perform(get("/api/v1/auth/uass")
+                        .param("returnTo", "/dashboard/publish"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "https://uass.example.com/login?state=state-0"));
+    }
+
+    @Test
     void redirectInitiatesLoginAndRespondsWithProviderLocation() throws Exception {
         given(uassLoginInitiationService.buildLoginUrl(
                 "/dashboard/publish",

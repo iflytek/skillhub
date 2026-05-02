@@ -488,6 +488,24 @@ export class E2eTestDataBuilder {
     )
   }
 
+  async starSkill(skillId: number, cleanup = true): Promise<void> {
+    await parseEnvelope<void>(
+      await this.request.put(`/api/web/skills/${skillId}/star`),
+    )
+
+    if (cleanup) {
+      this.cleanupTasks.push(async () => {
+        await this.request.delete(`/api/web/skills/${skillId}/star`)
+      })
+    }
+  }
+
+  async unstarSkill(skillId: number): Promise<void> {
+    await parseEnvelope<void>(
+      await this.request.delete(`/api/web/skills/${skillId}/star`),
+    )
+  }
+
   async publishSkill(namespaceSlug: string, options?: SeedSkillOptions): Promise<SeededSkill> {
     const unique = `${this.suffix}_${Math.random().toString(36).slice(2, 6)}`
     const zipBuffer = buildSkillPackageZipBuffer(unique, options)

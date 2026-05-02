@@ -152,7 +152,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 }
                 sql.append(" OR ");
             }
-            sql.append(TITLE_SQL).append(" LIKE :titleLike");
+            sql.append(TITLE_SQL).append(" LIKE :titleLike ");
+            sql.append("OR LOWER(COALESCE(d.summary, '')) LIKE :titleLike ");
+            sql.append("OR LOWER(COALESCE(d.keywords, '')) LIKE :titleLike ");
+            sql.append("OR LOWER(COALESCE(d.search_text, '')) LIKE :titleLike");
             sql.append(") ");
         }
 
