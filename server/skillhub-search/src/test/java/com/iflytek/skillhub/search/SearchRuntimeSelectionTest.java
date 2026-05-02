@@ -10,6 +10,8 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.h2.H2LikeSearchQueryService;
+import com.iflytek.skillhub.search.mysql.MysqlNoopSearchIndexService;
+import com.iflytek.skillhub.search.mysql.MysqlNoopSearchRebuildService;
 import com.iflytek.skillhub.search.mysql.MysqlLikeSearchQueryService;
 import com.iflytek.skillhub.search.postgres.PostgresFullTextIndexService;
 import com.iflytek.skillhub.search.postgres.PostgresFullTextQueryService;
@@ -29,6 +31,8 @@ class SearchRuntimeSelectionTest {
                     TestConfig.class,
                     H2LikeSearchQueryService.class,
                     MysqlLikeSearchQueryService.class,
+                    MysqlNoopSearchIndexService.class,
+                    MysqlNoopSearchRebuildService.class,
                     JpaSearchIndexService.class,
                     JpaSearchRebuildService.class,
                     PostgresFullTextQueryService.class,
@@ -56,8 +60,14 @@ class SearchRuntimeSelectionTest {
                 .withPropertyValues("skillhub.search.engine=mysql")
                 .run(context -> {
                     assertThat(context).hasSingleBean(MysqlLikeSearchQueryService.class);
+                    assertThat(context).hasSingleBean(MysqlNoopSearchIndexService.class);
+                    assertThat(context).hasSingleBean(MysqlNoopSearchRebuildService.class);
                     assertThat(context).doesNotHaveBean(H2LikeSearchQueryService.class);
+                    assertThat(context).doesNotHaveBean(JpaSearchIndexService.class);
+                    assertThat(context).doesNotHaveBean(JpaSearchRebuildService.class);
                     assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
+                    assertThat(context).doesNotHaveBean(PostgresFullTextIndexService.class);
+                    assertThat(context).doesNotHaveBean(PostgresSearchRebuildService.class);
                 });
     }
 

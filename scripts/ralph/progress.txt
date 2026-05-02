@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 当 `skillhub.search.engine` 新增方言值时，`SearchQueryService`、`SearchIndexService`、`SearchRebuildService` 三类 bean 需要一起覆盖该条件装配；只补 query provider 会让常规事件监听和同步服务在启动期注入失败。
 - mysql-like 排序 story 可以直接与 h2-like provider 对齐：`downloads`/`rating`/`newest` 走 JPQL 属性排序，`relevance` 只在存在关键词时启用 `CASE + titleExact/titlePrefix/titleLike`，并且 count query 必须禁绑 relevance-only 参数。
 - mysql-like 搜索 provider 逐步补行为时，关键词 story 可以直接复用 h2-like 的 `normalizeKeyword + LIKE` 结构，只绑定 `titleLike` 这类当前 SQL 真正使用到的参数，避免 count query 因残留排序参数而失配。
 - 迁移中的新搜索 provider 如果要按 story 逐步补行为，优先先让 SQL/JPQL 只覆盖当前 story 的过滤边界，并把关键词、排序、分页留在后续 story；这样可以复用现有 provider 契约而不把多个 acceptance criteria 混在一次提交里。
@@ -163,4 +164,14 @@
   - 发现的 patterns：mysql-like provider 的排序协议可以直接镜像 h2-like provider，这样前端 `sort` 契约和 `SearchQueryService` 接口都不需要再扩展。
   - 遇到的陷阱：仓库中未找到指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件；后续迭代如果还依赖这些上下文，需要先确认实际路径，避免在不存在的需求文档上卡住。
   - 有用的上下文：这次没有 UI 改动，因此无需浏览器验证；搜索 HTTP 分页元数据已经由 `SkillSearchAppService.SearchResponse` 和现有 `SkillSearchControllerTest` 契约覆盖，排序/分页 story 只需要保证 provider 产出正确的 `SearchResult`。
+---
+## 2026-05-03 05:10 - US-001
+- 为 `skillhub.search.engine=mysql` 补齐了过渡期 `SearchIndexService` 与 `SearchRebuildService` 装配，新增 `MysqlNoopSearchIndexService`、`MysqlNoopSearchRebuildService`，修复 `LabelSearchSyncService` 等常规启动链路因缺失 bean 而启动失败的问题。
+- 扩展 `SearchRuntimeSelectionTest` 验证 mysql runtime 同时装配 mysql query/no-op index/no-op rebuild，并新增 `MysqlNoopSearchServicesTest` 覆盖安全调用边界；随后运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SearchRuntimeSelectionTest,MysqlNoopSearchServicesTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`。
+- 复用了现有 `tiger-mysql`（`127.0.0.1:33306`）创建临时库 `skillhub_validator_us001`，以 `SPRING_PROFILES_ACTIVE=local-mysql`、`SKILLHUB_SEARCH_ENGINE=mysql` 启动 `server/skillhub-app/target/skillhub-app-0.1.0.jar`，验证 `http://127.0.0.1:19080/actuator/health` 返回 `{\"status\":\"UP\"}`，且 `GET /api/web/skills?page=0&size=12` 返回 `200` 与 `{\"page\":0,\"size\":12}` 元数据。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlNoopSearchIndexService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlNoopSearchRebuildService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/SearchRuntimeSelectionTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlNoopSearchServicesTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：运行时验证可直接复用 `tiger-mysql` 和临时数据库做 `local-mysql + SKILLHUB_SEARCH_ENGINE=mysql` 的真实 HTTP 冒烟，不需要重启已有本地 MySQL 服务。
+  - 遇到的陷阱：如果只验证 `SearchQueryService` 的装配，`LabelSearchSyncService`、`SearchIndexEventListener`、`SkillDeleteAppService` 这类直接依赖 index/rebuild 接口的 bean 仍会在应用启动期失败。
+  - 有用的上下文：当前 mysql runtime 的 index/rebuild 只是过渡 no-op，实现 Lucene 或真实 MySQL 索引前，后续 story 应继续沿用 `search.mysql` package 和条件装配边界扩展，而不是回退到 PostgreSQL bean。
 ---
