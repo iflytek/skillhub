@@ -34,6 +34,7 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
     public SearchResult search(SearchQuery query) {
         String normalizedKeyword = normalizeKeyword(query.keyword());
         boolean hasKeyword = normalizedKeyword != null;
+        boolean useRelevanceOrdering = "relevance".equals(query.sortBy()) && hasKeyword;
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
@@ -78,10 +79,24 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
             sql.append(") ");
         }
 
-        sql.append("ORDER BY s.updatedAt DESC, d.skillId DESC ");
+        if ("downloads".equals(query.sortBy())) {
+            sql.append("ORDER BY s.downloadCount DESC, s.updatedAt DESC, d.skillId DESC ");
+        } else if ("rating".equals(query.sortBy())) {
+            sql.append("ORDER BY s.ratingAvg DESC, s.updatedAt DESC, d.skillId DESC ");
+        } else if ("newest".equals(query.sortBy())) {
+            sql.append("ORDER BY s.updatedAt DESC, d.skillId DESC ");
+        } else if (useRelevanceOrdering) {
+            sql.append("ORDER BY CASE ");
+            sql.append("WHEN LOWER(COALESCE(d.title, '')) = :titleExact THEN 4 ");
+            sql.append("WHEN LOWER(COALESCE(d.title, '')) LIKE :titlePrefix THEN 3 ");
+            sql.append("WHEN LOWER(COALESCE(d.title, '')) LIKE :titleLike THEN 2 ");
+            sql.append("ELSE 1 END DESC, s.updatedAt DESC, d.skillId DESC ");
+        } else {
+            sql.append("ORDER BY s.updatedAt DESC, d.skillId DESC ");
+        }
 
         Query resultQuery = entityManager.createQuery(sql.toString(), Long.class);
-        bindParameters(resultQuery, query, memberNamespaceIds, normalizedKeyword);
+        bindParameters(resultQuery, query, memberNamespaceIds, normalizedKeyword, useRelevanceOrdering);
         resultQuery.setFirstResult(query.page() * query.size());
         resultQuery.setMaxResults(query.size());
 
@@ -95,7 +110,7 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
         }
 
         Query countQuery = entityManager.createQuery(countSql, Long.class);
-        bindParameters(countQuery, query, memberNamespaceIds, normalizedKeyword);
+        bindParameters(countQuery, query, memberNamespaceIds, normalizedKeyword, false);
         long total = (Long) countQuery.getSingleResult();
 
         return new SearchResult(skillIds, total, query.page(), query.size());
@@ -108,7 +123,8 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
     private void bindParameters(Query query,
                                 SearchQuery searchQuery,
                                 Set<Long> memberNamespaceIds,
-                                String normalizedKeyword) {
+                                String normalizedKeyword,
+                                boolean useRelevanceOrdering) {
         if (searchQuery.visibilityScope().userId() != null) {
             query.setParameter("memberNamespaceIds", memberNamespaceIds);
         }
@@ -122,6 +138,10 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
         }
         if (normalizedKeyword != null) {
             query.setParameter("titleLike", "%" + normalizedKeyword + "%");
+            if (useRelevanceOrdering) {
+                query.setParameter("titleExact", normalizedKeyword);
+                query.setParameter("titlePrefix", normalizedKeyword + "%");
+            }
         }
     }
 

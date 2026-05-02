@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- mysql-like 排序 story 可以直接与 h2-like provider 对齐：`downloads`/`rating`/`newest` 走 JPQL 属性排序，`relevance` 只在存在关键词时启用 `CASE + titleExact/titlePrefix/titleLike`，并且 count query 必须禁绑 relevance-only 参数。
 - mysql-like 搜索 provider 逐步补行为时，关键词 story 可以直接复用 h2-like 的 `normalizeKeyword + LIKE` 结构，只绑定 `titleLike` 这类当前 SQL 真正使用到的参数，避免 count query 因残留排序参数而失配。
 - 迁移中的新搜索 provider 如果要按 story 逐步补行为，优先先让 SQL/JPQL 只覆盖当前 story 的过滤边界，并把关键词、排序、分页留在后续 story；这样可以复用现有 provider 契约而不把多个 acceptance criteria 混在一次提交里。
 - 对于存 JSON 文本但领域层以 `String` 处理的字段，不要在 Hibernate 上继续使用 `@JdbcTypeCode(SqlTypes.JSON)`；它会把整段 JSON 当作字符串再次编码，`String` 字段应直接按普通文本列持久化。
@@ -153,4 +154,13 @@
   - 发现的 patterns：关键词行为如果只要求 deterministic LIKE，可先把归一化逻辑封装在 provider 内并与 H2 fallback 保持一致，排序参数留给下一 story，能减少一次提交里的耦合面。
   - 遇到的陷阱：count query 会剥掉 `ORDER BY`，因此不要为了后续 relevance 排序提前绑定 `titleExact`、`titlePrefix` 这类当前 SQL 不使用的参数，否则容易在后续改造时引入多余断言或参数不匹配。
   - 有用的上下文：当前 mysql-like provider 已覆盖过滤 + 关键词匹配，`US-012` 可以直接在同一个类里追加 `downloads`、`rating`、`relevance/newest` 与分页边界测试，不需要再改应用层契约。
+---
+## 2026-05-03 04:42 - US-012
+- 在 `MysqlLikeSearchQueryService` 中补齐了 mysql-like 的排序和分页：支持 `downloads`、`rating`、`newest` 和有关键词时的 `relevance` 排序，并继续使用 `page * size` / `size` 驱动 JPQL 分页。
+- 扩展 `MysqlLikeSearchQueryServiceTest`，覆盖下载量排序、评分排序、relevance 排序参数绑定，以及分页 offset/maxResults 断言；随后运行了搜索定向测试、前端 `typecheck`/`lint` 与全量后端测试。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：mysql-like provider 的排序协议可以直接镜像 h2-like provider，这样前端 `sort` 契约和 `SearchQueryService` 接口都不需要再扩展。
+  - 遇到的陷阱：仓库中未找到指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件；后续迭代如果还依赖这些上下文，需要先确认实际路径，避免在不存在的需求文档上卡住。
+  - 有用的上下文：这次没有 UI 改动，因此无需浏览器验证；搜索 HTTP 分页元数据已经由 `SkillSearchAppService.SearchResponse` 和现有 `SkillSearchControllerTest` 契约覆盖，排序/分页 story 只需要保证 provider 产出正确的 `SearchResult`。
 ---
