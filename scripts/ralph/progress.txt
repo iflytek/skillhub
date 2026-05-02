@@ -206,3 +206,13 @@
   - 遇到的陷阱：真实 `local-mysql` 冒烟如果并行发登录和后续请求，会因为 cookie jar 竞态得到伪 401；这类 curl 验证要串行执行。
   - 有用的上下文：删除链路会同步读 `skill_report`，发布成功后的异步通知会访问 `notification_preference`/`notification`，所以即使 publish 主请求返回 200，也要继续看日志并补做 delete smoke，避免把异步缺表漏到后续 story。
 ---
+## 2026-05-03 07:08 - US-015
+- 确认并收口了 MySQL 过渡期的 no-op 重建 story：沿用分支中已存在的 `MysqlNoopSearchRebuildService`，并通过装配与安全调用测试重新验证 mysql runtime 下的 `SearchRebuildService` 边界稳定。
+- 将 `scripts/ralph/prd.json` 中的 `US-015` 标记为通过；本轮未改动业务实现代码，只对 Ralph 状态文件做正式收尾。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SearchRuntimeSelectionTest,MysqlNoopSearchServicesTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：对于这类“过渡 no-op service” story，若实现与装配测试已经在分支中落地，后续迭代可以先复核 bean 选择和空操作契约，再决定是否需要补代码。
+  - 遇到的陷阱：`prd.json` 里的 story 状态可能落后于实际代码和测试状态，开始实现前先比对当前分支实现与最近进度，避免重复开发。
+  - 有用的上下文：`MysqlNoopSearchServicesTest` 已同时覆盖 no-op index 与 no-op rebuild 的安全调用，`SearchRuntimeSelectionTest` 则负责验证 mysql runtime 的 rebuild bean 选择；这两处就是后续 Lucene 替换前的主要回归守卫。
+---
