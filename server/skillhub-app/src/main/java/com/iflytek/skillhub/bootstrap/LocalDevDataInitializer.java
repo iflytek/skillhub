@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Seeds predictable users, memberships, and admin roles for the local development profile.
  */
 @Component
-@Profile({"local", "local-h2"})
+@Profile({"local", "local-h2", "local-mysql"})
 public class LocalDevDataInitializer implements ApplicationRunner {
 
     public static final String LOCAL_USER_ID = "local-user";
