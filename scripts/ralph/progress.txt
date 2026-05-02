@@ -1,5 +1,6 @@
 ## Codebase Patterns
 - Backend runtime database driver and Flyway database support are both wired in `server/skillhub-app/pom.xml`; switching the main relational runtime starts there.
+- Flyway core and database-specific support module versions must stay aligned in the parent Maven dependency graph; mixing Spring Boot managed `flyway-core` with a manually pinned newer plugin can compile but will fail at runtime during migration bootstrap.
 - This repo currently lacks the root `Makefile` referenced by `AGENTS.md`, so branch work may need to fall back to direct `mvn -f server/pom.xml ...` and `pnpm` commands for verification.
 - Local runtime profiles that should boot without Redis must explicitly exclude Spring Session and Redis auto-configuration, then set rate limit, auth throttle, and UASS cache to in-memory/local modes in the profile YAML.
 - Search runtime selection is currently driven by `skillhub.search.engine`; any non-PostgreSQL local profile must override the base `postgres` default or Spring will still wire the PostgreSQL search bean through `matchIfMissing = true`.
@@ -45,4 +46,14 @@
   - 发现的 patterns：为特定 profile 新增一条 SQL 方言独立的 Flyway 目录，比在同一套迁移里堆条件分支更容易控制阶段性迁移。
   - 遇到的陷阱：如果 `local-mysql` 仍保留 `hibernate.ddl-auto=validate`，会在后续 `jsonb` 实体还未迁移完成前提前阻塞启动。
   - 有用的上下文：当前 `local-mysql` 的 MySQL 初始化脚本只覆盖本地空库首启与种子账号所需的最小表集，后续 story 需要继续扩展为完整 MySQL 运行时 schema。
+---
+## 2026-05-03 00:52 - US-003
+- 统一了父 `pom` 中的 Flyway 版本管理，修复 `flyway-core` 9.x 与 `flyway-mysql` 10.x 混用导致的 MySQL 空库首启 `AbstractMethodError`；同时补齐 `local-mysql` 最小 schema 中启动即访问的 `idempotency_record` 与 `skill_storage_delete_compensation` 表。
+- 调整了 `LocalDevDataInitializer` 创建 `global` namespace 时的 `created_by`，改为已存在的本地管理员账号，消除 MySQL 外键约束下的空库首启失败；并通过真实 MySQL 8 空库验证 `GET /actuator/health` 返回 `UP`。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest,FlywayMigrationGuardrailTest,LocalMysqlSchemaMigrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`，并在 `jdbc:mysql://127.0.0.1:33306/skillhub_us003_verify` 上实际启动 `local-mysql`，验证 `http://127.0.0.1:19080/actuator/health` 返回 `{"status":"UP"}`。
+- 更改的文件：`server/pom.xml`、`server/skillhub-app/pom.xml`、`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializer.java`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：运行时方言迁移除了 schema 本身，还要覆盖启动后立即触发的定时任务/补偿表，否则应用会在 `Started` 之后很快因后台访问缺表而失稳。
+  - 遇到的陷阱：本地 seed 数据里像 `"system"` 这种在 PostgreSQL/H2 宽松路径下没暴露的问题，在 MySQL 真外键约束下会直接阻塞空库首启。
+  - 有用的上下文：当前验证可直接复用宿主机上的 `tiger-mysql` 容器 `127.0.0.1:33306`，用临时数据库做 `local-mysql` 空库启动检查，无需每次新起 MySQL 服务。
 ---

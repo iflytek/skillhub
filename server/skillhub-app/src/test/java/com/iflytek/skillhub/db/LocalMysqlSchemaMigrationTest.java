@@ -19,6 +19,8 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE local_credential");
         assertThat(sql).contains("CREATE TABLE user_role_binding");
         assertThat(sql).contains("CREATE TABLE namespace_member");
+        assertThat(sql).contains("CREATE TABLE idempotency_record");
+        assertThat(sql).contains("CREATE TABLE skill_storage_delete_compensation");
 
         assertThat(sql).doesNotContain("BIGSERIAL");
         assertThat(sql).doesNotContain("JSONB");

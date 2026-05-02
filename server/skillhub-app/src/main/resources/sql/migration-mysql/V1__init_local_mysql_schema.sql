@@ -76,3 +76,33 @@ CREATE TABLE namespace_member (
     CONSTRAINT fk_namespace_member_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id),
     CONSTRAINT fk_namespace_member_user_id FOREIGN KEY (user_id) REFERENCES user_account(id)
 );
+
+CREATE TABLE idempotency_record (
+    request_id VARCHAR(255) PRIMARY KEY,
+    resource_type VARCHAR(100),
+    resource_id BIGINT,
+    status VARCHAR(20) NOT NULL,
+    response_status_code INT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_idempotency_record_expires_at ON idempotency_record(expires_at);
+CREATE INDEX idx_idempotency_record_status_created ON idempotency_record(status, created_at);
+
+CREATE TABLE skill_storage_delete_compensation (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT,
+    namespace VARCHAR(128) NOT NULL,
+    slug VARCHAR(128) NOT NULL,
+    storage_keys_json TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    attempt_count INT NOT NULL DEFAULT 0,
+    last_error TEXT,
+    last_attempt_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_skill_storage_delete_comp_status_created
+    ON skill_storage_delete_compensation (status, created_at);

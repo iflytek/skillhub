@@ -116,7 +116,7 @@ public class LocalDevDataInitializer implements ApplicationRunner {
                     return namespaceRepository.save(existing);
                 })
                 .orElseGet(() -> {
-                    Namespace namespace = new Namespace("global", "Global", "system");
+                    Namespace namespace = new Namespace("global", "Global", LOCAL_ADMIN_ID);
                     namespace.setType(NamespaceType.GLOBAL);
                     namespace.setDescription("Platform-level public namespace");
                     namespace.setStatus(com.iflytek.skillhub.domain.namespace.NamespaceStatus.ACTIVE);
