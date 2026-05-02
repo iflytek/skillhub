@@ -1,5 +1,6 @@
 ## Codebase Patterns
 - 对于存 JSON 文本但领域层以 `String` 处理的字段，不要在 Hibernate 上继续使用 `@JdbcTypeCode(SqlTypes.JSON)`；它会把整段 JSON 当作字符串再次编码，`String` 字段应直接按普通文本列持久化。
+- 为 MySQL 过渡期补真实持久化验证时，优先用 Testcontainers 拉起受控 MySQL，并让测试走 `migration-mysql` + `ddl-auto=none`；如果直接让 Hibernate 在全量实体上 `create-drop`，仓库里尚未迁完的 PostgreSQL 专属映射会污染验证结果。
 - MySQL 过渡期如果扩展了运行时实体映射，记得同步更新 `server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql` 和 `LocalMysqlSchemaMigrationTest`，否则空库启动路径会和 H2 测试路径漂移。
 - 新增 Spring slice/integration 测试如果依赖仓库现成的 `application-test.yml`，要显式加 `@ActiveProfiles("test")`；`@DataJpaTest` 这类测试如果还需要保留该 profile 的 H2 datasource 初始化参数，再加 `@AutoConfigureTestDatabase(replace = NONE)`。
 - Backend runtime database driver and Flyway database support are both wired in `server/skillhub-app/pom.xml`; switching the main relational runtime starts there.
@@ -80,4 +81,13 @@
   - 发现的 patterns：domain 层里这类“字段内容是 JSON，但领域模型直接以 `String` 透传”的场景，跨方言迁移时应优先保留文本存储语义，而不是继续使用数据库原生 JSON 类型。
   - 遇到的陷阱：只修改 JPA 注解还不够，`local-mysql` 的空库初始化脚本如果缺少对应表或仍保留旧列类型，会让 MySQL 首启路径和 H2 测试结果不一致。
   - 有用的上下文：`SkillVersionJsonPersistenceTest` 复用了 `UserAccount -> Namespace -> Skill -> SkillVersion` 的最小持久化链路，后续若继续验证 domain 实体方言兼容性，可以沿用这套测试搭建方式。
+---
+## 2026-05-03 02:23 - US-001
+- 为 `skillhub-app` 增加了 Testcontainers MySQL 测试依赖，并新增 `SkillVersionMysqlPersistenceTest`，在受控 MySQL 8 容器里通过 `migration-mysql` 初始化 schema，真实验证 `SkillVersion` JSON 文本字段的插入与回读。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SkillVersionMysqlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-app/pom.xml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/skill/SkillVersionMysqlPersistenceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：针对 MySQL 过渡期的真实持久化验证，优先让测试复用 `migration-mysql` 初始化路径，这样验证结果与 `local-mysql` 运行时更一致。
+  - 遇到的陷阱：如果在 MySQL 容器测试里直接使用 `ddl-auto=create-drop`，Hibernate 会尝试处理全量实体，仓库中其他尚未迁离 PostgreSQL 方言的映射会让无关 story 的验证先失败。
+  - 有用的上下文：`SkillVersionMysqlPersistenceTest` 复用了现有 `UserAccount -> Namespace -> Skill -> SkillVersion` 的最小持久化链路，只把数据源切到 Testcontainers MySQL，因此后续其他 MySQL 兼容性 story 也可以沿用这套结构。
 ---
