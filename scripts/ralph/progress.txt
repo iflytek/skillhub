@@ -12,6 +12,7 @@
 - Local bootstrap on an empty database depends on `ApplicationRunner` ordering; if one runner requires seeded roles or the global namespace, make the order explicit with `@Order`.
 - 迁移 PostgreSQL `ON CONFLICT` 写路径时，优先把 Spring Data interface 保持为基础 CRUD/定向 `UPDATE`，再用 `@Primary` adapter 组合成 `UPDATE -> conditional INSERT -> retry UPDATE` 的方言中立 upsert，避免把数据库特定语法塞进 repository 注解。
 - 如果一个搜索 provider 只在特定方言下合法，查询、索引写入和 rebuild 三类 bean 都必须一起受同一 `@ConditionalOnProperty` 开关约束；只隔离 query bean 不足以阻止非目标 runtime 误装配 PostgreSQL-only 组件。
+- 迁移中的新搜索 provider 可以先用“独立 package + `@ConditionalOnProperty` + 最小装配测试”建立方言边界；如果后续行为 story 尚未落地，先不要抢跑接入索引/rebuild provider，以免跨 story 扩大改动面。
 
 ## 2026-05-02 23:30 - US-001
 - 将 `server/skillhub-app/pom.xml` 的运行时 JDBC 驱动从 PostgreSQL 切换为 MySQL 8，并将 Flyway 数据库支持从 PostgreSQL 插件切换为 MySQL 插件。
@@ -122,4 +123,14 @@
   - 发现的 patterns：搜索 provider 切换不只影响 query service，任何依赖 `SearchIndexService` / `SearchRebuildService` 的生命周期流都要一起受 provider 条件控制。
   - 遇到的陷阱：如果共享逻辑仍挂在 `search.postgres` 命名或 bean 上，虽然功能可复用，但会模糊“哪些实现仍属 PostgreSQL-only”的治理边界，不利于迁移期清理。
   - 有用的上下文：`SearchRuntimeSelectionTest` 用 `ApplicationContextRunner` 显式注册候选 bean，再用属性切换验证装配结果；后续做 `mysql-like` / `local-file-index` provider 切换时可以沿用这套测试模式。
+---
+## 2026-05-03 03:45 - US-009
+- 新增 `MysqlLikeSearchQueryService` 作为 `skillhub.search.engine=mysql` 下的独立查询 provider 骨架，放入单独的 `search.mysql` package，明确与 PostgreSQL FTS 术语和实现解耦。
+- 扩展 `SearchRuntimeSelectionTest`，验证 MySQL search engine 只装配 `MysqlLikeSearchQueryService`，且不会误装配 H2 或 PostgreSQL query bean；同时新增 `MysqlLikeSearchQueryServiceTest` 覆盖最小构造边界与“过渡骨架尚未实现行为”的显式异常契约。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SearchRuntimeSelectionTest,MysqlLikeSearchQueryServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/package-info.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/SearchRuntimeSelectionTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：新增方言 provider 的第一步可以先把 bean 边界和 package 命名拉清，再由后续 story 逐步填充过滤、关键词、排序和分页行为。
+  - 遇到的陷阱：当前 `JpaSearchIndexService` / `JpaSearchRebuildService` 仍只在 `h2` engine 下装配，因此 `mysql` provider 的运行时选择测试不能提前断言索引或 rebuild bean，否则会越过本 story 范围。
+  - 有用的上下文：`MysqlLikeSearchQueryService` 目前故意抛出 `UnsupportedOperationException`，后续 `US-010` 到 `US-012` 应在该类内增量实现真实查询逻辑，而不是重新建一套 provider。
 ---

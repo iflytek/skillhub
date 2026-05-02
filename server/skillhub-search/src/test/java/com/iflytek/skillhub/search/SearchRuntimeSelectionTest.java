@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.h2.H2LikeSearchQueryService;
+import com.iflytek.skillhub.search.mysql.MysqlLikeSearchQueryService;
 import com.iflytek.skillhub.search.postgres.PostgresFullTextIndexService;
 import com.iflytek.skillhub.search.postgres.PostgresFullTextQueryService;
 import com.iflytek.skillhub.search.postgres.PostgresSearchRebuildService;
@@ -27,6 +28,7 @@ class SearchRuntimeSelectionTest {
             .withUserConfiguration(
                     TestConfig.class,
                     H2LikeSearchQueryService.class,
+                    MysqlLikeSearchQueryService.class,
                     JpaSearchIndexService.class,
                     JpaSearchRebuildService.class,
                     PostgresFullTextQueryService.class,
@@ -45,6 +47,17 @@ class SearchRuntimeSelectionTest {
                     assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
                     assertThat(context).doesNotHaveBean(PostgresFullTextIndexService.class);
                     assertThat(context).doesNotHaveBean(PostgresSearchRebuildService.class);
+                });
+    }
+
+    @Test
+    void mysqlSearchEngine_instantiatesMysqlLikeQueryServiceWithoutPostgresOnlyQueryBean() {
+        contextRunner
+                .withPropertyValues("skillhub.search.engine=mysql")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(MysqlLikeSearchQueryService.class);
+                    assertThat(context).doesNotHaveBean(H2LikeSearchQueryService.class);
+                    assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
                 });
     }
 
