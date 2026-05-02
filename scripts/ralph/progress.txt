@@ -1,0 +1,13 @@
+## Codebase Patterns
+- Backend runtime database driver and Flyway database support are both wired in `server/skillhub-app/pom.xml`; switching the main relational runtime starts there.
+- This repo currently lacks the root `Makefile` referenced by `AGENTS.md`, so branch work may need to fall back to direct `mvn -f server/pom.xml ...` and `pnpm` commands for verification.
+
+## 2026-05-02 23:30 - US-001
+- 将 `server/skillhub-app/pom.xml` 的运行时 JDBC 驱动从 PostgreSQL 切换为 MySQL 8，并将 Flyway 数据库支持从 PostgreSQL 插件切换为 MySQL 插件。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test` 和 `pnpm typecheck`，确认构建、测试与前端类型检查通过。
+- 更改的文件：`server/skillhub-app/pom.xml`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：运行时数据库迁移的第一落点是 `skillhub-app` 模块，而不是各个 domain/auth/search 子模块的 `pom.xml`。
+  - 遇到的陷阱：仓库根目录当前没有 `Makefile`，也没有根级 `./mvnw`，需要改用系统 `mvn` 且显式指定 `server/pom.xml`。
+  - 有用的上下文：当前 PostgreSQL profile 和 PostgreSQL SQL 仍存在于资源文件与 search 实现中，后续 stories 需要继续清理，但这次依赖替换本身已可独立通过全量后端测试。
+---
