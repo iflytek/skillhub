@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type Browser, type TestInfo } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 import { getSearchCards } from './helpers/search-seed'
 import { createFreshSession, loginWithCredentials } from './helpers/session'
