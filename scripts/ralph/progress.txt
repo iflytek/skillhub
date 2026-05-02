@@ -10,6 +10,7 @@
 - Search runtime selection is currently driven by `skillhub.search.engine`; any non-PostgreSQL local profile must override the base `postgres` default or Spring will still wire the PostgreSQL search bean through `matchIfMissing = true`.
 - When one runtime needs a different SQL dialect, give it a separate Flyway migration directory and validate version continuity per directory rather than enforcing one global version sequence.
 - Local bootstrap on an empty database depends on `ApplicationRunner` ordering; if one runner requires seeded roles or the global namespace, make the order explicit with `@Order`.
+- 迁移 PostgreSQL `ON CONFLICT` 写路径时，优先把 Spring Data interface 保持为基础 CRUD/定向 `UPDATE`，再用 `@Primary` adapter 组合成 `UPDATE -> conditional INSERT -> retry UPDATE` 的方言中立 upsert，避免把数据库特定语法塞进 repository 注解。
 
 ## 2026-05-02 23:30 - US-001
 - 将 `server/skillhub-app/pom.xml` 的运行时 JDBC 驱动从 PostgreSQL 切换为 MySQL 8，并将 Flyway 数据库支持从 PostgreSQL 插件切换为 MySQL 插件。
@@ -100,4 +101,14 @@
   - 发现的 patterns：审计/治理链路里凡是领域对象直接把 JSON 当 `String` 透传的字段，跨数据库时也应保持 `TEXT` 语义，避免数据库方言差异和 Hibernate 二次编码。
   - 遇到的陷阱：某些仓库接口会同时继承 Spring Data `findById` 并在领域接口里重复声明同签名方法，测试里直接调 repository 可能触发编译期二义性，必要时改用 `EntityManager.find(...)` 更稳妥。
   - 有用的上下文：`LocalMysqlSchemaMigrationTest` 现在已经覆盖 auth、skill、audit/profile change 三组最小表集；后续扩展 MySQL 空库启动路径时，应继续把新增运行时关键表纳入这里的静态断言。
+---
+## 2026-05-03 03:03 - US-007
+- 将 `SkillVersionStats` 下载计数写路径从 PostgreSQL 专属 `ON CONFLICT` 改为方言中立实现：保留 Spring Data 仓库上的定向 `UPDATE`/条件 `INSERT`，并新增 `JpaSkillVersionStatsRepositoryAdapter` 组合成 `UPDATE -> conditional INSERT -> retry UPDATE` 的 upsert 流程。
+- 扩展 `local-mysql` 最小初始化 schema，补齐 `skill_version_stats` 表，并新增 `SkillVersionStatsMysqlPersistenceTest` 用 Testcontainers MySQL 真实验证首次写入与再次递增都能成功。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SkillVersionStatsMysqlPersistenceTest,LocalMysqlSchemaMigrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillVersionStats.java`、`server/skillhub-infra/src/main/java/com/iflytek/skillhub/infra/jpa/SkillVersionStatsJpaRepository.java`、`server/skillhub-infra/src/main/java/com/iflytek/skillhub/infra/jpa/JpaSkillVersionStatsRepositoryAdapter.java`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/skill/SkillVersionStatsMysqlPersistenceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：对单主键统计表做跨方言 upsert 时，可优先用“先 `UPDATE`、再 `INSERT ... WHERE NOT EXISTS`、最后兜底再 `UPDATE`”的三步策略，避免依赖 `ON CONFLICT` / `ON DUPLICATE KEY`。
+  - 遇到的陷阱：`PESSIMISTIC_WRITE` 在当前 Hibernate/MySQL 方言组合下可能生成 `FOR NO KEY UPDATE`，这对 MySQL 8 不成立；这类锁语义最好先用真实 Testcontainers MySQL 验证。
+  - 有用的上下文：`SkillVersionStats` 的领域仓库现在通过 `@Primary` adapter 暴露给下载链路，后续若还有 PostgreSQL 专属写 SQL，优先沿用这一层做隔离，不要把方言逻辑继续堆进 Spring Data interface。
 ---

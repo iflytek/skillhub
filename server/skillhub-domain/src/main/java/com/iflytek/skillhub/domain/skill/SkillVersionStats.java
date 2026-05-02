@@ -59,4 +59,8 @@ public class SkillVersionStats {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+    public void incrementDownloadCount() {
+        downloadCount = downloadCount == null ? 1L : downloadCount + 1L;
+    }
 }

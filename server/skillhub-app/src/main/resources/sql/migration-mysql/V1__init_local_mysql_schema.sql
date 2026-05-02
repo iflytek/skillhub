@@ -201,6 +201,16 @@ ALTER TABLE skill
     ADD CONSTRAINT fk_skill_latest_version
         FOREIGN KEY (latest_version_id) REFERENCES skill_version(id);
 
+CREATE TABLE skill_version_stats (
+    skill_version_id BIGINT NOT NULL PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    download_count BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_skill_version_stats_skill_id (skill_id),
+    CONSTRAINT fk_skill_version_stats_skill_version_id FOREIGN KEY (skill_version_id) REFERENCES skill_version(id),
+    CONSTRAINT fk_skill_version_stats_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id)
+);
+
 CREATE TABLE profile_change_request (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(128) NOT NULL,

@@ -1,8 +1,6 @@
 package com.iflytek.skillhub.infra.jpa;
 
 import com.iflytek.skillhub.domain.skill.SkillVersionStats;
-import com.iflytek.skillhub.domain.skill.SkillVersionStatsRepository;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,32 +9,39 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * JPA-backed repository for per-version statistics, including atomic download counter increments.
+ * Spring Data repository for persisted per-version statistics rows.
  */
 @Repository
-public interface SkillVersionStatsJpaRepository extends JpaRepository<SkillVersionStats, Long>, SkillVersionStatsRepository {
+public interface SkillVersionStatsJpaRepository extends JpaRepository<SkillVersionStats, Long> {
 
-    @Override
-    default Optional<SkillVersionStats> findBySkillVersionId(Long skillVersionId) {
-        return findById(skillVersionId);
-    }
+    @Modifying
+    @Transactional
+    @Query(
+            """
+            UPDATE SkillVersionStats s
+            SET s.downloadCount = s.downloadCount + 1,
+                s.updatedAt = CURRENT_TIMESTAMP
+            WHERE s.skillVersionId = :skillVersionId
+            """
+    )
+    int incrementExistingDownloadCount(@Param("skillVersionId") Long skillVersionId);
 
-    @Override
     @Modifying
     @Transactional
     @Query(
             value = """
                     INSERT INTO skill_version_stats (skill_version_id, skill_id, download_count, updated_at)
-                    VALUES (:skillVersionId, :skillId, 1, CURRENT_TIMESTAMP)
-                    ON CONFLICT (skill_version_id)
-                    DO UPDATE SET download_count = skill_version_stats.download_count + 1,
-                                  updated_at = CURRENT_TIMESTAMP
+                    SELECT :skillVersionId, :skillId, 1, CURRENT_TIMESTAMP
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM skill_version_stats
+                        WHERE skill_version_id = :skillVersionId
+                    )
                     """,
             nativeQuery = true
     )
-    void incrementDownloadCount(@Param("skillVersionId") Long skillVersionId, @Param("skillId") Long skillId);
+    int insertInitialDownloadCount(@Param("skillVersionId") Long skillVersionId, @Param("skillId") Long skillId);
 
-    @Override
     @Modifying
     @Transactional
     @Query("DELETE FROM SkillVersionStats s WHERE s.skillId = :skillId")

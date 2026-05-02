@@ -25,6 +25,7 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE skill_storage_delete_compensation");
         assertThat(sql).contains("CREATE TABLE skill");
         assertThat(sql).contains("CREATE TABLE skill_version");
+        assertThat(sql).contains("CREATE TABLE skill_version_stats");
         assertThat(sql).contains("CREATE TABLE profile_change_request");
         assertThat(sql).contains("CREATE TABLE audit_log");
         assertThat(sql).contains("CREATE TABLE security_audit");
