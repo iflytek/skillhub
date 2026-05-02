@@ -9,8 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -46,8 +44,7 @@ public class SecurityAudit {
     @Column(name = "findings_count", nullable = false)
     private Integer findingsCount = 0;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "findings", columnDefinition = "jsonb")
+    @Column(name = "findings", columnDefinition = "TEXT")
     private String findings;
 
     @Column(name = "scan_duration_seconds")

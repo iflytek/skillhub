@@ -91,3 +91,13 @@
   - 遇到的陷阱：如果在 MySQL 容器测试里直接使用 `ddl-auto=create-drop`，Hibernate 会尝试处理全量实体，仓库中其他尚未迁离 PostgreSQL 方言的映射会让无关 story 的验证先失败。
   - 有用的上下文：`SkillVersionMysqlPersistenceTest` 复用了现有 `UserAccount -> Namespace -> Skill -> SkillVersion` 的最小持久化链路，只把数据源切到 Testcontainers MySQL，因此后续其他 MySQL 兼容性 story 也可以沿用这套结构。
 ---
+## 2026-05-03 02:36 - US-006
+- 移除了 `SecurityAudit.findings`、`ProfileChangeRequest.changes/oldValues`、`AuditLog.detailJson` 上对 PostgreSQL `jsonb` / Hibernate JSON 类型的运行时硬依赖，统一改为按纯文本列持久化。
+- 扩展 `local-mysql` 最小初始化 schema，补齐 `security_audit`、`profile_change_request`、`audit_log` 三张表，并将相关 JSON 内容列定义为 `TEXT`；同时新增 `AuditAndInfraJsonPersistenceTest` 覆盖 H2 下的审计与资料变更 JSON 文本读写回归。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=AuditAndInfraJsonPersistenceTest,LocalMysqlSchemaMigrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/security/SecurityAudit.java`、`server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/user/ProfileChangeRequest.java`、`server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/audit/AuditLog.java`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/audit/AuditAndInfraJsonPersistenceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：审计/治理链路里凡是领域对象直接把 JSON 当 `String` 透传的字段，跨数据库时也应保持 `TEXT` 语义，避免数据库方言差异和 Hibernate 二次编码。
+  - 遇到的陷阱：某些仓库接口会同时继承 Spring Data `findById` 并在领域接口里重复声明同签名方法，测试里直接调 repository 可能触发编译期二义性，必要时改用 `EntityManager.find(...)` 更稳妥。
+  - 有用的上下文：`LocalMysqlSchemaMigrationTest` 现在已经覆盖 auth、skill、audit/profile change 三组最小表集；后续扩展 MySQL 空库启动路径时，应继续把新增运行时关键表纳入这里的静态断言。
+---

@@ -200,3 +200,55 @@ CREATE TABLE skill_version (
 ALTER TABLE skill
     ADD CONSTRAINT fk_skill_latest_version
         FOREIGN KEY (latest_version_id) REFERENCES skill_version(id);
+
+CREATE TABLE profile_change_request (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
+    changes TEXT NOT NULL,
+    old_values TEXT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    machine_result VARCHAR(32) NULL,
+    machine_reason TEXT NULL,
+    reviewer_id VARCHAR(128) NULL,
+    review_comment TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    KEY idx_profile_change_request_user_status (user_id, status),
+    KEY idx_profile_change_request_status_created (status, created_at),
+    CONSTRAINT fk_profile_change_request_user_id FOREIGN KEY (user_id) REFERENCES user_account(id)
+);
+
+CREATE TABLE audit_log (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    actor_user_id VARCHAR(128) NULL,
+    action VARCHAR(64) NOT NULL,
+    target_type VARCHAR(64) NULL,
+    target_id BIGINT NULL,
+    request_id VARCHAR(64) NULL,
+    client_ip VARCHAR(64) NULL,
+    user_agent VARCHAR(512) NULL,
+    detail_json TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_audit_log_actor_user_id (actor_user_id),
+    KEY idx_audit_log_action_created_at (action, created_at)
+);
+
+CREATE TABLE security_audit (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_version_id BIGINT NOT NULL,
+    scan_id VARCHAR(100) NULL,
+    scanner_type VARCHAR(50) NOT NULL,
+    verdict VARCHAR(20) NOT NULL,
+    is_safe BOOLEAN NOT NULL,
+    max_severity VARCHAR(20) NULL,
+    findings_count INT NOT NULL DEFAULT 0,
+    findings TEXT NULL,
+    scan_duration_seconds DOUBLE NULL,
+    scanned_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE KEY uk_security_audit_scan_id (scan_id),
+    KEY idx_security_audit_skill_version_created (skill_version_id, created_at),
+    KEY idx_security_audit_skill_version_scanner_deleted (skill_version_id, scanner_type, deleted_at),
+    CONSTRAINT fk_security_audit_skill_version_id FOREIGN KEY (skill_version_id) REFERENCES skill_version(id)
+);

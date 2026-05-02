@@ -1,8 +1,6 @@
 package com.iflytek.skillhub.domain.user;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 /**
@@ -33,13 +31,11 @@ public class ProfileChangeRequest {
     private String userId;
 
     /** Requested changes as JSON, e.g. {"displayName": "new name"}. */
-    @Column(nullable = false)
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String changes;
 
     /** Snapshot of previous values before this change, e.g. {"displayName": "old name"}. */
-    @Column(name = "old_values")
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "old_values", columnDefinition = "TEXT")
     private String oldValues;
 
     /** Current status in the review lifecycle. */

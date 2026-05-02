@@ -25,8 +25,15 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE skill_storage_delete_compensation");
         assertThat(sql).contains("CREATE TABLE skill");
         assertThat(sql).contains("CREATE TABLE skill_version");
+        assertThat(sql).contains("CREATE TABLE profile_change_request");
+        assertThat(sql).contains("CREATE TABLE audit_log");
+        assertThat(sql).contains("CREATE TABLE security_audit");
         assertThat(sql).contains("parsed_metadata_json TEXT");
         assertThat(sql).contains("manifest_json TEXT");
+        assertThat(sql).contains("changes TEXT");
+        assertThat(sql).contains("old_values TEXT");
+        assertThat(sql).contains("detail_json TEXT");
+        assertThat(sql).contains("findings TEXT");
 
         assertThat(sql).doesNotContain("BIGSERIAL");
         assertThat(sql).doesNotContain("JSONB");
