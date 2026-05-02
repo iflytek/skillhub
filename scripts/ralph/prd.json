@@ -1,175 +1,620 @@
 {
   "project": "SkillHub",
-  "branchName": "ralph/uass-session-auth-and-java-coverage",
-  "description": "为 SkillHub 接入企业内部 UASS 回跳登录，采用本地 Session 作为浏览器主登录态，兼容 Redis 高可用与单机本地状态存储，并将本次 feature 相关 Java 生产代码行覆盖率提升到 100%。",
+  "branchName": "ralph/mysql8-runtime-and-local-file-index",
+  "description": "将 SkillHub 的主运行时从 PostgreSQL 迁移到 MySQL 8，保留 H2 作为测试数据库，按顺序完成 mysql-like 过渡搜索、Redis 运行时状态收敛、嵌入式 Apache Lucene 本地文件索引接入，并在全部功能完成后先做全量端到端验证，再补齐 Java 后台单元测试和 100% 行覆盖率。",
   "userStories": [
     {
       "id": "US-001",
-      "title": "新增 UASS 适配层",
-      "description": "作为开发者，我需要一个独立的 UASS 适配层，以便 SkillHub 只依赖统一接口而不直接耦合企业内部 jar 的实现细节。",
+      "title": "新增 MySQL 8 运行时依赖",
+      "description": "作为后端维护者，我需要把 MySQL 8 驱动接入主运行时，以便开始替换 PostgreSQL。",
       "acceptanceCriteria": [
-        "Add UassClientFacade in the auth module to wrap login URL building, login validation, status check, user profile lookup, and logout",
-        "Keep the internal UASS jar dependency isolated to the auth module or a dedicated integration package",
-        "Do not expose raw jar types from UassClientFacade to application services",
-        "Add unit tests for successful and failure branches of the facade",
+        "Add the MySQL 8 JDBC dependency to the backend runtime modules that currently require a relational database driver",
+        "The backend build no longer requires the PostgreSQL driver to compile or package the MySQL migration branch",
+        "Running `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package` succeeds after the dependency change",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-002",
-      "title": "新增 UASS 配置与状态存储抽象",
-      "description": "作为开发者，我需要统一的 UASS 配置和 state 存储抽象，以便同一套登录流程可以同时支持 Redis 高可用模式和单机本地模式。",
+      "title": "新增 local-mysql 运行 profile 文件",
+      "description": "作为开发者，我需要一个独立的 MySQL 8 本地运行 profile，以便不再依赖 PostgreSQL 启动应用。",
       "acceptanceCriteria": [
-        "Add UassProperties with enabled, baseUrl, clientId, clientSecret, callbackPath, stateTtl, and cacheMode configuration fields",
-        "Add UassLoginStateStore abstraction with Redis and Local implementations",
-        "Persist login state under uass:state:{state} in Redis mode and an in-memory TTL store in local mode",
-        "Consume or delete stored state after callback success or failure",
-        "Add unit tests for Redis and Local state store implementations, including TTL expiry and cleanup",
+        "Add a dedicated local MySQL runtime profile file such as application-local-mysql.yml",
+        "The profile configures MySQL 8 datasource properties, local file storage, and memory-backed runtime state for phase 1",
+        "The profile does not require PostgreSQL settings to be present",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-003",
-      "title": "基于 user_code 的本地用户查找与自动创建",
-      "description": "作为平台管理员，我希望统一登录平台返回的 user_code 成为本地用户匹配主键，以便首次登录时自动建档，后续登录时稳定命中同一用户。",
+      "title": "让 MySQL 8 profile 能从空库启动",
+      "description": "作为后端维护者，我需要 MySQL 8 profile 能从空数据库完成 schema 初始化，以便形成可重复的本地启动路径。",
       "acceptanceCriteria": [
-        "Map the UASS user identity so that subject is derived from user_code",
-        "On callback, look up the local user or identity binding by user_code before establishing the SkillHub session",
-        "If no local user exists for user_code, create a new local user from the returned UASS profile and continue the same login flow",
-        "Fail the login flow cleanly if user_code is missing or local user creation fails, without leaving a partial session behind",
-        "Add unit tests for existing-user, first-login auto-create, disabled-user, pending-user, missing-user_code, and create-failure branches",
+        "Configure Flyway or the chosen MySQL-only schema initialization path for the MySQL runtime profile",
+        "The MySQL runtime starts from an empty MySQL 8 database without executing PostgreSQL-specific migration statements",
+        "A health check such as GET /actuator/health returns UP after first startup on an empty MySQL 8 database",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-004",
-      "title": "实现 UASS 登录回调并建立 SkillHub Session",
-      "description": "作为企业用户，我希望从 UASS 统一登录页回跳后自动进入 SkillHub 已登录状态，以便无需二次登录即可访问平台。",
+      "title": "移除 auth 模块的 jsonb 运行时硬依赖",
+      "description": "作为开发者，我需要让 auth 模块中的 JSON 字段映射兼容 MySQL 8，以便认证链路可在 MySQL 下运行。",
       "acceptanceCriteria": [
-        "Add endpoints for GET /api/v1/auth/uass/login-url, GET /api/v1/auth/uass/redirect, and GET /api/v1/auth/uass/callback",
-        "Generate a state value before redirecting to UASS and store returnTo context for callback recovery",
-        "Validate callback state and UASS login result before creating the SkillHub session",
-        "After successful callback, establish the local SkillHub session through PlatformSessionService and redirect to the expected returnTo path",
-        "If callback validation fails, do not create a session and return a clear failure outcome",
-        "Use agent-browser to open /login, trigger enterprise login entry, verify the redirect starts, and verify the callback success path returns to the intended page in a controllable local/test setup",
+        "Replace PostgreSQL-specific jsonb runtime column definitions in auth module entities with a MySQL 8 compatible mapping strategy",
+        "Auth-related entity persistence works under the MySQL runtime without schema or SQL errors",
+        "H2-based tests continue to pass after the auth JSON mapping change",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-005",
-      "title": "实现登录状态检查与统一登出",
-      "description": "作为企业用户和前端调用方，我希望系统能检查当前登录状态并支持统一登出，以便后续访问行为清晰且安全。",
+      "title": "移除 domain 模块的 jsonb 运行时硬依赖",
+      "description": "作为开发者，我需要让 domain 模块中的 JSON 字段映射兼容 MySQL 8，以便技能主模型可在 MySQL 下运行。",
       "acceptanceCriteria": [
-        "Add GET /api/v1/auth/uass/status and POST /api/v1/auth/uass/logout",
-        "Return login status based on the local SkillHub session by default",
-        "If the UASS jar supports remote post-login status checks, keep that check optional and do not make it the primary source of truth",
-        "On logout, attempt UASS logout first, then always clear local Session and stored login state even if remote logout fails",
-        "Use agent-browser to verify that an authenticated browser session is redirected back to login after logout and protected navigation requires login again",
+        "Replace PostgreSQL-specific jsonb runtime column definitions in domain entities such as SkillVersion with a MySQL 8 compatible mapping strategy",
+        "Skill version persistence works under the MySQL runtime without schema or SQL errors",
+        "H2-based tests continue to pass after the domain JSON mapping change",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 5,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-006",
-      "title": "接入安全路由与前端登录入口",
-      "description": "作为用户，我希望新的企业登录入口自然出现在现有登录页中，并遵守现有的路由放行与鉴权规则。",
+      "title": "移除 audit 与 infra 的 jsonb 运行时硬依赖",
+      "description": "作为开发者，我需要让审计与基础设施层的 JSON 字段映射兼容 MySQL 8，以便主运行时不再依赖 PostgreSQL 类型。",
       "acceptanceCriteria": [
-        "Permit anonymous access to /api/v1/auth/uass/login-url, /api/v1/auth/uass/redirect, /api/v1/auth/uass/callback, and /api/v1/auth/uass/status in RouteSecurityPolicyRegistry",
-        "Require authentication for /api/v1/auth/uass/logout",
-        "Add an enterprise login entry to web/src/pages/login.tsx without breaking existing password and OAuth flows",
-        "Preserve returnTo behavior when initiating enterprise login from the login page",
-        "Use agent-browser to open /login and confirm the enterprise login entry is visible and does not break the existing password/OAuth tabs",
+        "Replace PostgreSQL-specific jsonb runtime column definitions in audit or infra entities with a MySQL 8 compatible mapping strategy",
+        "The MySQL runtime can start and persist audit-related data without schema errors caused by jsonb",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 6,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-007",
-      "title": "支持 Redis 与本地双运行模式",
-      "description": "作为运维和测试人员，我希望同一套 UASS 登录能力既能支撑生产高可用部署，也能在无 Redis 的单机测试环境中运行。",
+      "title": "替换下载计数等 PostgreSQL 专属 upsert SQL",
+      "description": "作为开发者，我需要去掉 ON CONFLICT 这类 PostgreSQL 专属 SQL，以便 MySQL 8 主链路可运行。",
       "acceptanceCriteria": [
-        "Support cacheMode=redis, local, and auto for UASS login state storage",
-        "In Redis mode, state storage must work across backend replicas without relying on sticky sessions",
-        "In local mode, the login flow must still complete successfully in a single-node environment without Redis",
-        "Emit a clear runtime log or equivalent signal when running in non-HA local state mode",
-        "Add unit and integration tests that cover redis/local/auto behavior and Redis-unavailable fallback",
+        "Replace or isolate PostgreSQL-specific upsert SQL in runtime-critical repositories such as skill version stats updates",
+        "The MySQL runtime can execute the affected write path without SQL syntax errors",
+        "Repository-level tests prove the new write behavior is correct for the chosen MySQL strategy",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 7,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-008",
-      "title": "补齐 UASS feature 范围 Java 覆盖率到 100%",
-      "description": "作为维护者，我希望本次 UASS feature 相关 Java 生产代码全部达到 100% line coverage，以便认证主链路改造具有充分的回归保护。",
+      "title": "隔离残余 PostgreSQL 专属运行时 SQL",
+      "description": "作为维护者，我需要把剩余 PostgreSQL 专属 SQL 约束在非默认实现中，以便 MySQL 主路径不再误用它们。",
       "acceptanceCriteria": [
-        "Generate a JaCoCo line coverage baseline for all newly added and materially modified Java production classes in this feature",
-        "Bring line_missed to 0 for the feature-scope Java production classes, including config, facade, state store, service, controller, mapper, and modified auth/session helper classes",
-        "Add or update tests for PlatformSessionService, AuthContextFilter, and RouteSecurityPolicyRegistry if they gain new behavior for this feature",
-        "Add a build gate so the feature-scope Java coverage requirement fails the build when not satisfied",
+        "Audit remaining PostgreSQL-specific runtime SQL and isolate any unavoidable PostgreSQL logic behind non-default implementations",
+        "The default MySQL runtime profile does not instantiate PostgreSQL-only repository or search implementations",
+        "Document which PostgreSQL-only pieces remain temporarily isolated after this story completes",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 8,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
       "id": "US-009",
-      "title": "完成浏览器闭环与最终验证",
-      "description": "作为交付负责人，我希望在最终合并前验证完整浏览器闭环和关键构建命令，以便确认功能、质量门禁和运行模式都已达标。",
+      "title": "实现 mysql-like 查询服务的基础结构",
+      "description": "作为开发者，我需要新增 MysqlLikeQueryService 的基础骨架，以便 MySQL 下有独立的搜索实现。",
       "acceptanceCriteria": [
-        "Use agent-browser to verify the browser flow: open /login, trigger enterprise login entry, complete or simulate callback success in the intended environment, land on the protected target page, refresh, and confirm the user remains logged in",
-        "Use agent-browser to verify logout returns the browser to a logged-out state and protected navigation requires login again",
-        "Run make test-backend-app successfully",
-        "Run make test-frontend successfully",
-        "Run make typecheck-web successfully",
-        "Run make lint-web successfully",
+        "Add a MysqlLikeQueryService that implements SearchQueryService and is wired only for the MySQL runtime path",
+        "The class structure is independent from PostgreSQL FTS-specific SQL and terminology",
+        "Basic construction and bean wiring tests pass for the MySQL search query service",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 9,
-      "passes": true,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-010",
+      "title": "实现 mysql-like 的过滤条件",
+      "description": "作为开发者，我需要让 mysql-like 搜索支持命名空间、标签和可见性过滤，以便行为对齐现有搜索入口。",
+      "acceptanceCriteria": [
+        "MysqlLikeQueryService filters by namespace, label filters, and SearchVisibilityScope consistently with the existing search contract",
+        "Anonymous and authenticated visibility rules behave correctly under mysql-like search",
+        "Add targeted tests for namespace, label, and visibility filtering behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-011",
+      "title": "实现 mysql-like 的关键词匹配",
+      "description": "作为开发者，我需要让 mysql-like 搜索支持 title、summary、keywords、searchText 的关键词匹配，以便搜索入口可用。",
+      "acceptanceCriteria": [
+        "MysqlLikeQueryService matches keyword queries against title, summary, keywords, and searchText using a deterministic LIKE-based strategy",
+        "Empty query and whitespace-only query paths behave consistently with the search page contract",
+        "Add targeted tests for keyword matching and empty-query behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-012",
+      "title": "实现 mysql-like 的排序和分页",
+      "description": "作为开发者，我需要让 mysql-like 搜索支持现有排序和分页协议，以便前端无需改动主搜索流程。",
+      "acceptanceCriteria": [
+        "MysqlLikeQueryService supports the required sort modes for the migration stage and honors page/size parameters safely",
+        "Search pagination behaves correctly under MySQL for page boundaries and non-empty result sets",
+        "The search HTTP endpoint returns 200 with correct page and size metadata under the MySQL runtime",
+        "Add targeted tests for sorting and pagination behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-013",
+      "title": "通过配置切换 h2-like 与 mysql-like provider",
+      "description": "作为维护者，我需要让 H2 测试继续走 h2-like，而 MySQL 运行时走 mysql-like，以便测试与运行时分层清晰。",
+      "acceptanceCriteria": [
+        "Add explicit search provider configuration that selects h2-like or mysql-like without changing application services",
+        "H2-backed tests still resolve the H2 search provider automatically",
+        "The MySQL runtime resolves mysql-like automatically or through explicit config",
+        "Document the provider switch in runtime config comments or docs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-014",
+      "title": "为 MySQL 过渡阶段提供 Noop 索引实现",
+      "description": "作为开发者，我需要在 Lucene 落地前保留稳定的 SearchIndexService 边界，以便 MySQL 主链路先运行起来。",
+      "acceptanceCriteria": [
+        "Add a no-op transitional SearchIndexService implementation for the MySQL runtime path",
+        "Lifecycle flows that trigger index writes do not fail under the MySQL transitional runtime",
+        "Add tests for no-op index provider wiring and safe invocation behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-015",
+      "title": "为 MySQL 过渡阶段提供 Noop 重建实现",
+      "description": "作为开发者，我需要在 Lucene 落地前保留稳定的 SearchRebuildService 边界，以便管理与事件逻辑不再强绑 PostgreSQL。",
+      "acceptanceCriteria": [
+        "Add a no-op transitional SearchRebuildService implementation for the MySQL runtime path",
+        "Admin or event-triggered rebuild paths do not fail under the MySQL transitional runtime",
+        "Add tests for no-op rebuild provider wiring and safe invocation behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-016",
+      "title": "验证 MySQL 8 + 本地缓存 + mysql-like 运行态",
+      "description": "作为交付负责人，我希望确认第一阶段运行态稳定，以便在接 Redis 前就完成 PostgreSQL 退出主链路。",
+      "acceptanceCriteria": [
+        "The backend starts with MySQL 8 and memory-backed runtime state without PostgreSQL",
+        "Login, user profile, namespace creation, and at least one basic skill CRUD flow succeed in the MySQL + memory runtime",
+        "The search endpoint returns results under mysql-like search when searchable test data exists",
+        "Use agent-browser to open /login, authenticate, create or inspect a namespace, open /search, and confirm the MySQL + memory runtime works end-to-end",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-017",
+      "title": "增加 memory 与 Redis 运行时状态 provider 切换",
+      "description": "作为维护者，我需要让 memory 与 Redis 状态实现可配置切换，以便阶段二上线后仍能回退到阶段一路线。",
+      "acceptanceCriteria": [
+        "Add an explicit runtime state provider configuration switch for memory and Redis",
+        "Session, rate limit, auth throttle, and UASS state wiring follow the selected runtime state provider",
+        "The memory provider remains available after Redis support is added",
+        "Switching providers does not require changing controller or application service code",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-018",
+      "title": "将 Session 切换到 Redis",
+      "description": "作为运维人员，我需要让 Session 存储切换到 Redis，以便支撑多实例访问时的登录态稳定性。",
+      "acceptanceCriteria": [
+        "The MySQL runtime can establish and restore authenticated sessions using Redis-backed session storage",
+        "Restarting the backend without clearing Redis preserves expected session behavior",
+        "The memory-backed session path still exists as a configurable fallback for the previous stage",
+        "Add tests or focused verification proving the Redis session path is active under the Redis runtime profile",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-019",
+      "title": "将限流切换到 Redis",
+      "description": "作为运维人员，我需要让限流在 Redis 下运行，以便多实例环境下行为一致。",
+      "acceptanceCriteria": [
+        "Rate limiting uses Redis in the Redis runtime stage",
+        "The memory-backed rate limiting implementation remains available as the previous-stage fallback",
+        "Add focused verification for Redis-backed rate limiting selection",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-020",
+      "title": "将认证节流切换到 Redis",
+      "description": "作为运维人员，我需要让认证失败节流在 Redis 下运行，以便多实例环境下行为一致。",
+      "acceptanceCriteria": [
+        "Authentication failure throttling uses Redis in the Redis runtime stage",
+        "The memory-backed auth throttle implementation remains available as the previous-stage fallback",
+        "Add focused verification for Redis-backed auth throttle selection",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-021",
+      "title": "将 UASS state store 切换到 Redis",
+      "description": "作为运维人员，我需要让 UASS 登录状态存储在 Redis 下运行，以便多实例环境下行为一致。",
+      "acceptanceCriteria": [
+        "UASS login state storage uses Redis in the Redis runtime stage",
+        "The memory-backed UASS state implementation remains available as the previous-stage fallback",
+        "Add focused verification for Redis-backed UASS state selection",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-022",
+      "title": "验证 MySQL 8 + Redis + mysql-like 运行态",
+      "description": "作为交付负责人，我希望确认第二阶段在真实浏览器和真实后端下稳定，以便再继续引入 Lucene。",
+      "acceptanceCriteria": [
+        "The backend starts with MySQL 8 and Redis-enabled runtime state without PostgreSQL",
+        "Login, user profile, namespace creation, at least one skill CRUD flow, search, and logout all work under the MySQL + Redis + mysql-like runtime",
+        "Switching config back to the MySQL + memory + mysql-like route is still possible after Redis support lands",
+        "Use agent-browser to verify authenticated navigation, CRUD flow, search results, and logout under the Redis-backed runtime",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-023",
+      "title": "定义 Lucene 索引配置与目录策略",
+      "description": "作为平台维护者，我需要明确嵌入式 Lucene 的 provider 配置和索引目录策略，以便后续实现稳定。",
+      "acceptanceCriteria": [
+        "Define configuration for selecting the local-file-index provider",
+        "Define configuration for the embedded Lucene index directory location",
+        "Document the lifecycle of the Lucene index directory for startup, rebuild, and cleanup scenarios",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-024",
+      "title": "定义 Lucene 文档模型与更新触发器",
+      "description": "作为平台维护者，我需要明确 Lucene 文档字段和索引更新触发器，以便 Query、Index、Rebuild 的实现一致。",
+      "acceptanceCriteria": [
+        "Document the Lucene document fields required for search, filtering, sorting, and hydrate integration",
+        "Document the update triggers for publish, archive, delete, and rebuild operations",
+        "Document the rollback path between mysql-like and local-file-index providers",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-025",
+      "title": "实现 LocalFileIndexService 写入与删除",
+      "description": "作为开发者，我需要让 Lucene 索引具备增量写入和删除能力，以便搜索后端不再依赖数据库。",
+      "acceptanceCriteria": [
+        "Implement an embedded Lucene index writer service for add, update, and remove operations",
+        "Publish, archive, and delete flows update the Lucene index without breaking the MySQL runtime",
+        "Add tests for index write and remove behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-026",
+      "title": "实现 LocalFileIndexRebuildService 全量重建",
+      "description": "作为开发者，我需要让 Lucene 索引支持全量重建，以便从空目录恢复搜索数据。",
+      "acceptanceCriteria": [
+        "Implement full rebuild from authoritative database state into an empty or cleared Lucene index directory",
+        "A full rebuild restores searchable documents for existing skills under the MySQL runtime",
+        "Add tests for full rebuild behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-027",
+      "title": "实现 LocalFileIndexRebuildService 范围重建",
+      "description": "作为开发者，我需要让 Lucene 索引支持按 namespace 或 skill 重建，以便后续增量维护和修复更高效。",
+      "acceptanceCriteria": [
+        "Implement scoped rebuild by namespace and by skill for the Lucene rebuild service",
+        "Scoped rebuild updates only the targeted search documents and leaves unrelated documents intact",
+        "Add tests for namespace-scoped and skill-scoped rebuild behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-028",
+      "title": "实现 LocalFileIndexQueryService 关键词检索",
+      "description": "作为用户，我希望 Lucene 后端支持关键词检索，以便搜索入口在最终阶段可用。",
+      "acceptanceCriteria": [
+        "Implement keyword query behavior in LocalFileIndexQueryService using the defined Lucene document model",
+        "The query service returns result identifiers compatible with the existing hydrate path",
+        "Add tests for keyword search behavior under Lucene",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-029",
+      "title": "实现 LocalFileIndexQueryService 过滤、排序和分页",
+      "description": "作为用户，我希望 Lucene 后端支持现有搜索页所需的过滤、排序和分页，以便前端无需重写主搜索交互。",
+      "acceptanceCriteria": [
+        "Implement filtering, sorting, and pagination behavior in LocalFileIndexQueryService for the final runtime stage",
+        "Lucene-backed search results follow the existing search contract for page and size metadata",
+        "Add tests for filtering, sorting, and pagination under Lucene",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-030",
+      "title": "切换默认搜索 provider 到 local-file-index",
+      "description": "作为维护者，我需要把 Lucene 设为最终默认搜索后端，同时保留 mysql-like 作为显式回退路径。",
+      "acceptanceCriteria": [
+        "The runtime can switch between mysql-like and local-file-index through configuration without changing business-layer code",
+        "Set local-file-index as the default search provider for the final runtime stage while keeping mysql-like as an explicit fallback",
+        "Use agent-browser to open /search in the Lucene-backed runtime, perform a search, switch sort tabs, and verify results load without database-specific errors",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-031",
+      "title": "全量端到端验证认证与基础用户域",
+      "description": "作为交付负责人，我希望先验证登录、用户资料和基础导航链路，以便确认迁移后的认证和用户域稳定。",
+      "acceptanceCriteria": [
+        "Use agent-browser to verify login, session restoration after refresh, user profile access, and logout in the selected final runtime",
+        "Allow backend code fixes during this validation until the entire auth and user flow passes",
+        "Record an explicit pass result for the auth and user feature area",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-032",
+      "title": "全量端到端验证命名空间与技能主链路",
+      "description": "作为交付负责人，我希望验证命名空间、技能基础 CRUD 和相关页面链路，以便确认主业务域在迁移后稳定。",
+      "acceptanceCriteria": [
+        "Use agent-browser to verify namespace creation or inspection, at least one skill publish/edit/delete or equivalent CRUD path, and related protected navigation",
+        "Allow backend code fixes during this validation until the entire namespace and skill flow passes",
+        "Record an explicit pass result for the namespace and skill feature area",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-033",
+      "title": "全量端到端验证搜索与管理后台",
+      "description": "作为交付负责人，我希望验证搜索、管理后台和启用中的认证扩展主链路，以便确认最终功能面全部通过。",
+      "acceptanceCriteria": [
+        "Use agent-browser to verify search, provider switching behavior where applicable, admin page access, and enabled auth-related entry flows in the selected final runtime",
+        "Allow backend code fixes during this validation until all targeted functional flows pass",
+        "Record a final validation result showing every targeted functional area has passed end-to-end verification",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-034",
+      "title": "补齐 app 与 auth 模块的 Java 单元测试覆盖率",
+      "description": "作为维护者，我希望在全量 E2E 通过后先补齐 app 和 auth 模块的后台单元测试，以便开始覆盖率收口。",
+      "acceptanceCriteria": [
+        "Start Java backend unit test hardening only after all end-to-end validation stories have passed",
+        "Add or update unit tests for newly added and materially changed app and auth production classes in this migration",
+        "Generate a fresh JaCoCo report and bring line_missed to 0 for the targeted app and auth scope",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-035",
+      "title": "补齐 search 与 infra 模块的 Java 单元测试覆盖率",
+      "description": "作为维护者，我希望在 app/auth 收口后继续补齐 search 和 infra 模块的后台单元测试，以便完成迁移范围覆盖率目标。",
+      "acceptanceCriteria": [
+        "Add or update unit tests for newly added and materially changed search and infra production classes in this migration",
+        "Generate a fresh JaCoCo report and bring line_missed to 0 for the targeted search and infra scope",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-036",
+      "title": "完成最终 Java 覆盖率门禁验证",
+      "description": "作为维护者，我希望在所有功能和单元测试补齐后完成最终的 Java 覆盖率门禁验证，以便确保迁移范围代码行覆盖率达到 100%。",
+      "acceptanceCriteria": [
+        "Run the final backend coverage workflow for the migration scope after all feature and unit-test stories are complete",
+        "The final JaCoCo report shows line_missed = 0 for the targeted migration-scope Java production classes",
+        "The final backend coverage gate passes without manual overrides",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 36,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false

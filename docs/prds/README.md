@@ -19,10 +19,13 @@
 
 ### 本地开发与运行时
 - [local-dev-runtime/database-pluggable-local-runtime-v1.0-prd.md](./local-dev-runtime/database-pluggable-local-runtime-v1.0-prd.md)
+- [local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-prd.md](./local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-prd.md)
+- [local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-task-breakdown.md](./local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-task-breakdown.md)
 
 保留原因：
 - 该文档讨论的是“数据库可插拔本地运行时”的长期演进方向。
-- 其中关于未来 `local-mysql` / 更完整数据库抽象的目标尚未完全落地。
+- 其中关于未来 `MySQL 8 + Redis + local-file-index` 的目标尚未完全落地。
+- v1.1 是当前推荐推进版本；v1.0 保留作为 `local-h2` 过渡阶段的历史背景。
 - 因此仍归类为 PRD，而不是已实现设计。
 
 ### 测试与质量支持资料
