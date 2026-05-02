@@ -75,6 +75,23 @@
 - 不替换现有 `/api/v1/auth/local/login`
 - 不替换现有 OAuth 登录
 
+### 3.4 已落地的重定向式参考实现
+
+除 direct auth / bootstrap 兼容层之外，开源版当前还已经落地了一条 `uass` 参考链路，可作为后续私有跳转式 SSO 的实现参照：
+
+- 主入口：`GET /api/v1/auth/uass?returnTo=...`
+- 回调：`GET /api/v1/auth/uass/callback`
+- 本地 mock 第三方页：`/mock-uass`
+- 本地 mock 提交接口：`POST /api/v1/auth/uass/mock/login`
+
+这条链路当前验证了以下结论：
+
+- 外部身份可以先完成回跳校验，再统一走 `PlatformSessionService` 建立本地 Session
+- 企业稳定唯一 ID 可以直接在本地落库；当前实现使用 `user_account.uss_id`
+- 首次登录时可按企业唯一 ID 自动建号，并在同一次 callback 中完成登录
+- 首次登录管理员预置可以放在 YAML 配置中，但必须只对“新建用户”生效，后续角色调整仍以数据库为准
+- 第三方页可以独立部署在单独前端实例，只要后端 CORS 和 callbackUrl 策略一致
+
 ### 3.3 前端兼容层
 
 当前开源版前端已经支持通过运行时配置开启兼容入口：
@@ -214,6 +231,7 @@ public interface PrivateSsoIdentityService {
 
 - 自动创建出的用户默认应是 `ACTIVE`
 - 不要尝试和现有本地账号或 OAuth 账号按 email 合并
+- 如私有 SSO 有类似 `ussId` 的稳定字符串标识，建议同时冗余写入本地用户表的显式字段，便于后台检索、审计和投产期管理员预置
 
 #### 步骤 4：实现 `DirectAuthProvider`
 

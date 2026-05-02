@@ -58,7 +58,7 @@
 4. SkillHub 后端部署为多副本时，Session 与 UASS 登录过程中的 `state` 都必须放入共享存储。
 5. 单机测试场景允许不接 Redis，但该模式不提供跨节点高可用保证。
 6. Java 单测 100% line coverage 的目标仅针对生产代码，不包含前端 TypeScript 覆盖率。
-7. UASS 回调会返回可用于企业用户唯一识别的 `user_code`。
+7. UASS 回调会返回可用于企业用户唯一识别的稳定字符串标识；当前实现落地为 `ussId`。
 
 ## 5. User Stories
 
@@ -77,8 +77,8 @@
 
 **Acceptance Criteria:**
 - [ ] 新增 UASS 登录入口和回调入口。
-- [ ] UASS 回调成功后，SkillHub 服务端先使用返回的 `user_code` 查询本地用户。
-- [ ] 当本地不存在该 `user_code` 对应用户时，系统根据 UASS 返回的用户信息创建新用户。
+- [ ] UASS 回调成功后，SkillHub 服务端先使用返回的 `ussId` 查询本地用户。
+- [ ] 当本地不存在该 `ussId` 对应用户时，系统根据 UASS 返回的用户信息创建新用户。
 - [ ] 新建用户完成后继续执行同一次登录流程，而不是要求用户再次登录。
 - [ ] 登录成功后通过现有 Session 机制建立 SkillHub 本地登录态。
 - [ ] 登录成功后重定向回预期页面，而不是停留在中间跳转页。
@@ -139,10 +139,10 @@
 
 **Acceptance Criteria:**
 - [ ] UASS 用户能够映射到本地 `user_account` 与 `identity_binding` 体系。
-- [ ] 本地用户主匹配键使用统一登录平台返回的 `user_code`。
+- [ ] 本地用户主匹配键使用统一登录平台返回的 `ussId`。
 - [ ] 首次登录用户可按既有准入策略创建或绑定本地用户。
 - [ ] 本地权限、命名空间角色、审计日志能力不需要单独为 UASS 重做一套模型。
-- [ ] 用户唯一标识使用 `user_code` 或以 `user_code` 为核心的企业稳定唯一 ID，而不是临时登录名。
+- [ ] 用户唯一标识使用 `ussId` 或以 `ussId` 为核心的企业稳定唯一 ID，而不是临时登录名。
 - [ ] 用户映射相关 Java 生产代码 line coverage 达到 100%。
 
 ### US-009: 建立覆盖率基线与门禁
@@ -162,8 +162,8 @@
 - FR-4: 系统必须将 UASS 登录过程中的 `state` 与必要回跳上下文写入统一存储抽象，而不是直接写死在 Redis 实现中。
 - FR-5: 系统必须以 SkillHub 本地 Session 作为浏览器后续请求的唯一登录态事实来源。
 - FR-6: 系统必须通过企业稳定唯一用户标识完成本地用户绑定或创建。
-- FR-6.1: 系统必须优先使用统一登录平台返回的 `user_code` 查询本地用户。
-- FR-6.2: 当本地不存在该 `user_code` 对应用户时，系统必须使用回传的用户信息创建新用户。
+- FR-6.1: 系统必须优先使用统一登录平台返回的 `ussId` 查询本地用户。
+- FR-6.2: 当本地不存在该 `ussId` 对应用户时，系统必须使用回传的用户信息创建新用户。
 - FR-6.3: 新用户创建成功后，系统必须在同一次登录流程中继续完成本地 Session 建立。
 - FR-7: 系统必须支持在多副本部署下跨节点恢复用户登录态。
 - FR-8: 系统必须在用户登出时清理本地 Session 与登录中间态存储。
@@ -179,24 +179,39 @@
 
 建议新增以下平台接口：
 
+- `GET /api/v1/auth/uass`
 - `GET /api/v1/auth/uass/login-url`
 - `GET /api/v1/auth/uass/redirect`
 - `GET /api/v1/auth/uass/callback`
 - `GET /api/v1/auth/uass/status`
 - `POST /api/v1/auth/uass/logout`
+- `POST /api/v1/auth/uass/mock/login`（仅本地模拟第三方页面时启用）
 
 建议职责：
 
-1. `login-url`
-   - 返回前端可跳转的 UASS 登录地址。
-2. `redirect`
+1. `uass`
+   - 当前主入口，负责生成 `state`、保存回跳上下文并直接 302 到 UASS 登录页。
+2. `login-url`
+   - 兼容保留接口，返回前端可跳转的 UASS 登录地址。
+3. `redirect`
    - 服务端直接 302 跳转到 UASS 登录页。
-3. `callback`
+4. `callback`
    - 登录校验、查询用户信息、建立本地 Session、写入缓存、跳回目标页面。
-4. `status`
+5. `status`
    - 检查当前 SkillHub Session 和 UASS 缓存是否仍有效。
-5. `logout`
+6. `logout`
    - 调 UASS 登出并清理 SkillHub 本地状态。
+7. `mock/login`
+   - 本地模拟第三方登录页时接收 `state/callbackUrl/ussId` 等输入并生成 callback 跳转地址。
+
+### 7.1 当前实现增补（2026-05-02）
+
+- 本地开发模式下支持 `skillhub.auth.uass.base-url=mock://self`，并可通过 `skillhub.auth.uass.mock-login-base-url=http://localhost:3001` 将第三方登录页独立跑在单独前端实例。
+- 当前本地模拟第三方页面路由为 `/mock-uass`，由独立前端实例承载，提交后跳回 `/api/v1/auth/uass/callback`。
+- UASS 用户落库时会写入 `user_account.uss_id`，并以 `ussId` 作为本地去重与复用主键；同一 `ussId` 重复登录不会新建用户。
+- `/api/v1/auth/me` 与 `/api/v1/user/profile` 当前都会返回 `ussId`，以便前端和管理端可见该企业标识。
+- 新增 `skillhub.auth.uass.admin-users[]` 配置，允许按 `ussId` 为“首次登录的新用户”预置管理员角色；后续角色调整以数据库中的 `user_role_binding` 为准。
+- Spring Security 路由放行策略当前通过 YAML overlay 配置 UASS 路由，而不是继续把所有部署差异硬编码在 `RouteSecurityPolicyRegistry` 中。
 
 ## 8. State Store Design
 
@@ -277,9 +292,9 @@
 
 ### 10.4 用户匹配边界
 
-- 用户查找的第一关键字必须是 `user_code`。
+- 用户查找的第一关键字必须是 `ussId`。
 - 不允许只按显示名、邮箱昵称或临时登录名匹配用户。
-- 如需与现有 `IdentityBindingService` 复用，应确保 `subject` 等价映射到 `user_code`。
+- 如需与现有 `IdentityBindingService` 复用，应确保 `subject` 等价映射到 `ussId`。
 
 ### 10.5 前端改动范围
 
@@ -297,7 +312,7 @@
 - 现有 SkillHub Session 已支持 Redis 共享存储，可继续复用。
 - 单机测试模式下允许不依赖 Redis，会话回落为本地 Session。
 - UASS 用户应继续映射为平台本地 `PlatformPrincipal` 和本地用户实体。
-- UASS 用户查找应先命中 `user_code` 绑定，再决定是否创建用户。
+- UASS 用户查找应先命中 `ussId` 绑定，再决定是否创建用户。
 - 回调接口必须处理重放、过期 state、回调失败和用户信息查询失败。
 - 登出流程应具备“远端失败但本地仍强制清理”的兜底能力。
 - 需要在路由策略中为新增 UASS 登录入口配置 `permitAll` 或 `authenticated` 规则。
@@ -328,7 +343,7 @@
 ## 14. Open Questions
 
 1. UASS 是否提供稳定唯一用户标识字段，可直接作为本地 `subject`？
-   当前默认答案：使用 `user_code`。
+   当前默认答案：使用 `ussId`。
 2. UASS jar 所谓“登录状态检查”是只用于 callback 校验，还是支持登录后任意时刻远端校验？
 3. UASS 登录状态检查接口的耗时和限流约束是什么？
 4. UASS 登出是否必须前端浏览器参与跳转，还是服务端可直接完成？

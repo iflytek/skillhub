@@ -20,6 +20,14 @@
 - 每个任务完成时，必须同步补齐单测；不允许“功能先完成、测试后补”。
 - 本 feature 范围内新增和重度修改的 Java 生产代码，最终要求 `line missed = 0`。
 
+## 2.1 当前实现增补（2026-05-02）
+
+- 主登录入口当前落地为 `GET /api/v1/auth/uass?returnTo=...`，`/login-url` 与 `/redirect` 保留为兼容入口。
+- 本地联调支持独立第三方模拟页：`/mock-uass`，由 `mock-login-base-url` 指向单独前端实例。
+- 用户映射当前以 `ussId` 为本地去重主键，并同步落库到 `user_account.uss_id`。
+- 管理员预置配置当前落地为 `skillhub.auth.uass.admin-users[]`，仅在首次创建本地用户时应用，后续角色调整继续走数据库与管理后台。
+- UASS 路由放行策略已改为 YAML overlay 驱动，减少 `RouteSecurityPolicyRegistry` 中的部署差异硬编码。
+
 ## 3. Delivery Phases
 
 ### Phase A: 基础接入与抽象
@@ -50,7 +58,7 @@
 **Implementation Notes**
 - 在 `skillhub-auth` 模块引入内部 jar 依赖。
 - 增加 `skillhub.auth.uass.*` 配置项。
-- 明确 `enabled`、`base-url`、`client-id`、`client-secret`、`callback-path`、`state-ttl`、`cache-mode`。
+- 明确 `enabled`、`base-url`、`client-id`、`client-secret`、`callback-path`、`state-ttl`、`cache-mode`、`mock-login-base-url`、`admin-users`。
 
 **Acceptance**
 - [ ] 应用启动时能成功绑定 `UassProperties`
@@ -117,10 +125,10 @@
 - 将 UASS 用户映射为统一身份对象
 - 建议使用：
   - `provider = "uass"`
-  - `subject = user_code`
+  - `subject = ussId`
   - `providerLogin = 登录名/工号`
   - `email = 公司邮箱`
-- 登录回调后先按 `user_code` 查本地用户 / 绑定
+- 登录回调后先按 `ussId` 查本地用户 / 绑定
 - 查不到则根据 UASS 返回信息创建用户
 - 创建成功后继续本地登录流程，不中断登录闭环
 
@@ -145,7 +153,7 @@
 - 保存 `state -> returnTo`
 - callback 时校验 `state`
 - 调用 `UassClientFacade` 完成登录校验和用户信息查询
-- 使用 `user_code` 查询本地用户；不存在则创建用户
+- 使用 `ussId` 查询本地用户；不存在则创建用户
 - 建立 SkillHub Session
 - 消费或清理 `UASS login state store`
 
@@ -164,11 +172,13 @@
 - `server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/UassAuthController.java`
 
 **Required Endpoints**
+- `GET /api/v1/auth/uass`
 - `GET /api/v1/auth/uass/login-url`
 - `GET /api/v1/auth/uass/redirect`
 - `GET /api/v1/auth/uass/callback`
 - `GET /api/v1/auth/uass/status`
 - `POST /api/v1/auth/uass/logout`
+- `POST /api/v1/auth/uass/mock/login`（本地模拟第三方页使用）
 
 **Acceptance**
 - [ ] 所有接口返回或跳转行为符合 PRD
@@ -184,12 +194,15 @@
 
 **Implementation Notes**
 - `permitAll`：
+  - `/api/v1/auth/uass`
   - `/api/v1/auth/uass/login-url`
   - `/api/v1/auth/uass/redirect`
   - `/api/v1/auth/uass/callback`
   - `/api/v1/auth/uass/status`
+  - `/api/v1/auth/uass/mock/login`
 - `authenticated`：
   - `/api/v1/auth/uass/logout`
+- 当前实现通过 YAML overlay 驱动上述放行规则，核心策略目录仍保留在代码内。
 
 **Acceptance**
 - [ ] 未登录用户能进入登录入口与 callback
@@ -207,8 +220,9 @@
 
 **Implementation Notes**
 - 新增“企业登录”按钮
-- 点击后走 `/api/v1/auth/uass/redirect` 或先拉 `login-url`
+- 点击后优先走 `/api/v1/auth/uass?returnTo=...`
 - 登录成功后回到 `returnTo`
+- 本地联调时可跳到独立实例上的 `/mock-uass` 页面，手动录入 `ussId`、用户名、手机和邮箱后再回跳。
 
 **Acceptance**
 - [ ] 登录页展示企业登录入口

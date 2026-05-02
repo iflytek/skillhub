@@ -43,12 +43,14 @@
 4. 技能搜索入口可用，支持基础关键词匹配。
 5. 与 Redis 现有本地依赖兼容，尽量不改动其他基础设施依赖。
 6. 与现有 `local` PostgreSQL 模式并存，开发者可通过 profile 或命令切换。
+7. 在无 Redis 的前提下，允许本地联调企业跳转式登录闭环，例如 `mock://self` 模式下的 UASS 模拟登录页。
 
 ### `local-h2` 模式允许降级
 1. 技能搜索相关性排序不再依赖 `ts_rank_cd`。
 2. 中文分词、短词前缀、复杂多关键词检索精度下降。
 3. 搜索索引维护、全文检索向量列、GIN/tsvector 能力关闭。
 4. 少量与 PostgreSQL 强绑定的边角 SQL 可在 H2 模式中走替代逻辑。
+5. `relevance` 在 H2 下仍是降级实现，但当前已保证与 PostgreSQL 在 `title/summary/keywords/search_text` 这些基础字段上的回退匹配范围一致。
 
 ### 明确不支持
 1. PostgreSQL 全文检索完全等价行为。
@@ -139,6 +141,13 @@
 - 对于 H2 模式命中的仓储：
   - 优先用 JPA/Java 逻辑替代
   - 或新增 H2 条件实现
+
+## 当前实现增补（2026-05-02）
+
+- `application-local-h2.yml` 当前已内置 `skillhub.auth.uass` 模板，默认可通过 `base-url=mock://self` 走本地模拟登录闭环。
+- `skillhub.auth.uass.mock-login-base-url` 当前支持把第三方模拟页独立跑在 `http://localhost:3001`，便于前后端跳转联调。
+- H2 搜索当前除了修复 `relevance` 计数查询异常外，也补齐了 `title/summary/keywords/searchText` 的统一回退匹配，避免本地模式与 PostgreSQL 在基础关键词场景下差异过大。
+- 搜索接口当前在控制器层统一收紧了分页边界：`size <= 100`、`page <= 10000`，本地模式与 PostgreSQL 模式保持一致。
 
 ## 影响范围
 
@@ -234,4 +243,3 @@
 ### 为什么仍然选择引入 `local-h2`
 - 当前目标是“轻量启动”和“联调效率”，而不是“生产等价”
 - 在接受搜索降级与关闭 Flyway 的前提下，H2 是成本最低的轻量方案
-

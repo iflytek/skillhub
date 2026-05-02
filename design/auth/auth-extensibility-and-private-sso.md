@@ -98,14 +98,21 @@ public interface DirectAuthProvider {
 
 - 新增 `PassiveSessionAuthenticator` SPI
 - 新增 `DirectAuthProvider` SPI
+- 新增一条重定向式企业 SSO 参考实现（`uass`）
 - 新增统一会话建立服务 `PlatformSessionService`
 - 新增 `POST /api/v1/auth/session/bootstrap` 协议
 - 新增 `POST /api/v1/auth/direct/login` 协议
+- 新增 `GET /api/v1/auth/uass` 与 `GET /api/v1/auth/uass/callback` 登录闭环
+- 新增本地第三方模拟登录页能力：`/mock-uass` + `/api/v1/auth/uass/mock/login`
 - 新增 `skillhub.auth.direct.enabled` 开关，默认关闭
 - 新增 `skillhub.auth.session-bootstrap.enabled` 开关，默认关闭
+- 新增 `skillhub.auth.uass.mock-login-base-url`，允许本地将第三方页独立跑在单独 Web 实例
+- 新增 `skillhub.auth.uass.admin-users[]`，允许按 `ussId` 预置首次登录管理员
 - 前端新增基于运行时配置的账号密码兼容接入层
 - 前端新增基于运行时配置的被动会话兼容入口
 - 前端新增显式按钮和可选自动尝试逻辑，默认都不启用
+- 新增 `user_account.uss_id` 落库，并在 `/api/v1/auth/me`、`/api/v1/user/profile` 返回 `ussId`
+- UASS 部署差异路由当前通过 YAML overlay 注入，不再继续扩散硬编码路由白名单
 - 增加 controller 集成测试，验证：
   - 默认关闭时不会影响现有系统
   - 启用并提供 authenticator 时可以建立 skillhub Session
@@ -134,6 +141,13 @@ public interface DirectAuthProvider {
 5. 私有版提供 `PassiveSessionAuthenticator` 实现
 6. 前端设置 bootstrap provider 和开关
 7. 登录页显示兼容入口，或在配置允许时自动尝试一次 bootstrap
+
+### 4.1 关于 `uass` 参考实现的定位
+
+- `uass` 不是对私有 SSO 接入策略的替代，而是开源版已经落地的一条“重定向式企业 SSO”参考链路。
+- 它证明了统一 Session 建立、外部身份映射、回跳状态存储和本地 mock 第三方页这套组合是可工作的。
+- 后续私有仓库如果接的是企业跳转型 SSO，可直接复用这条链路的边界与装配方式，只替换 provider/client 实现。
+- 当前 `uass` 用户在本地侧以 `ussId` 作为稳定唯一主键；如果私有 SSO 也有等价字段，应保持同样的设计约束。
 
 ## 5. 后续建议
 
