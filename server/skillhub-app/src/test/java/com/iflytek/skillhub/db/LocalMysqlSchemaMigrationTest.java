@@ -23,6 +23,10 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE namespace_member");
         assertThat(sql).contains("CREATE TABLE idempotency_record");
         assertThat(sql).contains("CREATE TABLE skill_storage_delete_compensation");
+        assertThat(sql).contains("CREATE TABLE skill");
+        assertThat(sql).contains("CREATE TABLE skill_version");
+        assertThat(sql).contains("parsed_metadata_json TEXT");
+        assertThat(sql).contains("manifest_json TEXT");
 
         assertThat(sql).doesNotContain("BIGSERIAL");
         assertThat(sql).doesNotContain("JSONB");

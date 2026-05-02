@@ -3,8 +3,6 @@ package com.iflytek.skillhub.domain.skill;
 import jakarta.persistence.*;
 import java.time.Clock;
 import java.time.Instant;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "skill_version")
@@ -27,12 +25,10 @@ public class SkillVersion {
     @Column(columnDefinition = "TEXT")
     private String changelog;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "parsed_metadata_json", columnDefinition = "jsonb")
+    @Column(name = "parsed_metadata_json", columnDefinition = "TEXT")
     private String parsedMetadataJson;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "manifest_json", columnDefinition = "jsonb")
+    @Column(name = "manifest_json", columnDefinition = "TEXT")
     private String manifestJson;
 
     @Enumerated(EnumType.STRING)

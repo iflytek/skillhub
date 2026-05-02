@@ -1,5 +1,6 @@
 ## Codebase Patterns
 - 对于存 JSON 文本但领域层以 `String` 处理的字段，不要在 Hibernate 上继续使用 `@JdbcTypeCode(SqlTypes.JSON)`；它会把整段 JSON 当作字符串再次编码，`String` 字段应直接按普通文本列持久化。
+- MySQL 过渡期如果扩展了运行时实体映射，记得同步更新 `server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql` 和 `LocalMysqlSchemaMigrationTest`，否则空库启动路径会和 H2 测试路径漂移。
 - 新增 Spring slice/integration 测试如果依赖仓库现成的 `application-test.yml`，要显式加 `@ActiveProfiles("test")`；`@DataJpaTest` 这类测试如果还需要保留该 profile 的 H2 datasource 初始化参数，再加 `@AutoConfigureTestDatabase(replace = NONE)`。
 - Backend runtime database driver and Flyway database support are both wired in `server/skillhub-app/pom.xml`; switching the main relational runtime starts there.
 - Flyway core and database-specific support module versions must stay aligned in the parent Maven dependency graph; mixing Spring Boot managed `flyway-core` with a manually pinned newer plugin can compile but will fail at runtime during migration bootstrap.
@@ -69,4 +70,14 @@
   - 发现的 patterns：auth 这类“服务层自己解析 JSON 字符串”的字段，跨数据库迁移时更稳妥的策略是保留文本语义，而不是继续依赖数据库原生 JSON 类型。
   - 遇到的陷阱：`@DataJpaTest` 默认会替换 datasource；如果测试依赖 `application-test.yml` 里的 H2 URL 初始化参数或禁 Flyway 配置，必须显式锁定 `test` profile 和原始测试数据源。
   - 有用的上下文：用户指令中提到的 `tasks/prd-aiba-agent-gateway.md` 在当前仓库不存在，这次实现只能以 `scripts/ralph/prd.json` 和代码现状为准。
+---
+## 2026-05-03 02:04 - US-005
+- 将 `SkillVersion.parsedMetadataJson` 与 `manifestJson` 从 Hibernate JSON/jsonb 映射切换为普通 `TEXT` 列，移除 domain 模块对 PostgreSQL `jsonb` 的运行时硬依赖。
+- 扩展 `local-mysql` 最小初始化 schema，补齐 `skill` 与 `skill_version` 表，并把 `parsed_metadata_json`、`manifest_json` 声明为 `TEXT`；同时新增 H2 持久化测试验证 JSON 文本不会被二次编码。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SkillVersionJsonPersistenceTest,LocalMysqlSchemaMigrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillVersion.java`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/skill/SkillVersionJsonPersistenceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：domain 层里这类“字段内容是 JSON，但领域模型直接以 `String` 透传”的场景，跨方言迁移时应优先保留文本存储语义，而不是继续使用数据库原生 JSON 类型。
+  - 遇到的陷阱：只修改 JPA 注解还不够，`local-mysql` 的空库初始化脚本如果缺少对应表或仍保留旧列类型，会让 MySQL 首启路径和 H2 测试结果不一致。
+  - 有用的上下文：`SkillVersionJsonPersistenceTest` 复用了 `UserAccount -> Namespace -> Skill -> SkillVersion` 的最小持久化链路，后续若继续验证 domain 实体方言兼容性，可以沿用这套测试搭建方式。
 ---

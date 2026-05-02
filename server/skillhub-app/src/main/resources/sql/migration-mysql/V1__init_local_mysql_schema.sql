@@ -139,3 +139,64 @@ CREATE TABLE skill_storage_delete_compensation (
 
 CREATE INDEX idx_skill_storage_delete_comp_status_created
     ON skill_storage_delete_compensation (status, created_at);
+
+CREATE TABLE skill (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    namespace_id BIGINT NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    display_name VARCHAR(200),
+    summary TEXT,
+    owner_id VARCHAR(128) NOT NULL,
+    source_skill_id BIGINT,
+    visibility VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    latest_version_id BIGINT,
+    download_count BIGINT NOT NULL DEFAULT 0,
+    hidden BOOLEAN NOT NULL DEFAULT FALSE,
+    hidden_at TIMESTAMP NULL,
+    hidden_by VARCHAR(128),
+    star_count INT NOT NULL DEFAULT 0,
+    rating_avg DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+    rating_count INT NOT NULL DEFAULT 0,
+    created_by VARCHAR(128),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(128),
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_namespace_slug (namespace_id, slug),
+    KEY idx_skill_namespace_status (namespace_id, status),
+    CONSTRAINT fk_skill_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id),
+    CONSTRAINT fk_skill_owner_id FOREIGN KEY (owner_id) REFERENCES user_account(id),
+    CONSTRAINT fk_skill_created_by FOREIGN KEY (created_by) REFERENCES user_account(id),
+    CONSTRAINT fk_skill_updated_by FOREIGN KEY (updated_by) REFERENCES user_account(id),
+    CONSTRAINT fk_skill_hidden_by FOREIGN KEY (hidden_by) REFERENCES user_account(id)
+);
+
+CREATE TABLE skill_version (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    version VARCHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'DRAFT',
+    changelog TEXT,
+    parsed_metadata_json TEXT NULL,
+    manifest_json TEXT NULL,
+    requested_visibility VARCHAR(20),
+    file_count INT NOT NULL DEFAULT 0,
+    total_size BIGINT NOT NULL DEFAULT 0,
+    published_at TIMESTAMP NULL,
+    bundle_ready BOOLEAN NOT NULL DEFAULT FALSE,
+    download_ready BOOLEAN NOT NULL DEFAULT FALSE,
+    yanked_at TIMESTAMP NULL,
+    yanked_by VARCHAR(128),
+    yank_reason TEXT,
+    created_by VARCHAR(128) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_version_skill_version (skill_id, version),
+    KEY idx_skill_version_skill_status (skill_id, status),
+    CONSTRAINT fk_skill_version_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_skill_version_created_by FOREIGN KEY (created_by) REFERENCES user_account(id),
+    CONSTRAINT fk_skill_version_yanked_by FOREIGN KEY (yanked_by) REFERENCES user_account(id)
+);
+
+ALTER TABLE skill
+    ADD CONSTRAINT fk_skill_latest_version
+        FOREIGN KEY (latest_version_id) REFERENCES skill_version(id);
