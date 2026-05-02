@@ -185,3 +185,13 @@
   - 遇到的陷阱：`local-mysql` 之前复用 `h2` 作为搜索回退时，表面上能跑，但会掩盖 MySQL 运行时和测试数据库之间的边界。
   - 有用的上下文：当前 `skillhub.search.engine=mysql` 只负责 `MysqlLikeSearchQueryService` + no-op 索引/rebuild 的过渡链路，`local-h2` 仍保留自己的 `h2-like` 路径。
 ---
+## 2026-05-03 05:51 - US-014
+- 确认并收口了 MySQL 过渡期的 no-op 索引 story：沿用已在分支中的 `MysqlNoopSearchIndexService`，并通过 `SearchRuntimeSelectionTest` 与 `MysqlNoopSearchServicesTest` 重新验证 mysql runtime 装配和安全调用边界。
+- 将 `scripts/ralph/prd.json` 中的 `US-014` 标记为通过，并补记本轮进度；本轮未改动业务实现代码，只对 story 状态做正式收尾。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=SearchRuntimeSelectionTest,MysqlNoopSearchServicesTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：如果某个过渡实现同时覆盖 runtime bean wiring 和 no-op 行为，后续拆 story 时可以让同一组装配测试兼顾 provider 选择与“安全空操作”契约，避免重复造测试夹具。
+  - 遇到的陷阱：Ralph 历史进度里可能出现“代码已在 earlier commit，但 PRD story 尚未标记通过”的错位；开始新一轮前要先比对 `prd.json` 与最近提交，避免重复实现。
+  - 有用的上下文：仓库里没有指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件，这轮仍无法补充额外需求上下文；后续 story 如果依赖这些材料，需要先确认实际路径。
+---
