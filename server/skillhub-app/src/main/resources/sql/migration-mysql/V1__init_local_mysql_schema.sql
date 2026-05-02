@@ -211,6 +211,27 @@ CREATE TABLE skill_version_stats (
     CONSTRAINT fk_skill_version_stats_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id)
 );
 
+CREATE TABLE skill_search_document (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    namespace_id BIGINT NOT NULL,
+    namespace_slug VARCHAR(64) NOT NULL,
+    owner_id VARCHAR(128) NOT NULL,
+    title VARCHAR(512) NULL,
+    summary TEXT NULL,
+    keywords TEXT NULL,
+    search_text TEXT NULL,
+    semantic_vector TEXT NULL,
+    visibility VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_search_document_skill_id (skill_id),
+    KEY idx_skill_search_document_namespace_id (namespace_id),
+    KEY idx_skill_search_document_visibility_status (visibility, status),
+    CONSTRAINT fk_skill_search_document_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_skill_search_document_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id)
+);
+
 CREATE TABLE profile_change_request (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(128) NOT NULL,

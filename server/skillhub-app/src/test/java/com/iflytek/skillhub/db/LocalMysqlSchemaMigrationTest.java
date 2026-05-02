@@ -26,9 +26,11 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE skill");
         assertThat(sql).contains("CREATE TABLE skill_version");
         assertThat(sql).contains("CREATE TABLE skill_version_stats");
+        assertThat(sql).contains("CREATE TABLE skill_search_document");
         assertThat(sql).contains("CREATE TABLE profile_change_request");
         assertThat(sql).contains("CREATE TABLE audit_log");
         assertThat(sql).contains("CREATE TABLE security_audit");
+        assertThat(sql).contains("semantic_vector TEXT");
         assertThat(sql).contains("parsed_metadata_json TEXT");
         assertThat(sql).contains("manifest_json TEXT");
         assertThat(sql).contains("changes TEXT");

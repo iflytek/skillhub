@@ -1,0 +1,104 @@
+package com.iflytek.skillhub.search;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.iflytek.skillhub.domain.label.LabelDefinitionRepository;
+import com.iflytek.skillhub.domain.label.LabelTranslationRepository;
+import com.iflytek.skillhub.domain.label.SkillLabelRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.h2.H2LikeSearchQueryService;
+import com.iflytek.skillhub.search.postgres.PostgresFullTextIndexService;
+import com.iflytek.skillhub.search.postgres.PostgresFullTextQueryService;
+import com.iflytek.skillhub.search.postgres.PostgresSearchRebuildService;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import static org.mockito.Mockito.mock;
+
+class SearchRuntimeSelectionTest {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(
+                    TestConfig.class,
+                    H2LikeSearchQueryService.class,
+                    JpaSearchIndexService.class,
+                    JpaSearchRebuildService.class,
+                    PostgresFullTextQueryService.class,
+                    PostgresFullTextIndexService.class,
+                    PostgresSearchRebuildService.class
+            );
+
+    @Test
+    void h2SearchEngine_doesNotInstantiatePostgresOnlySearchBeans() {
+        contextRunner
+                .withPropertyValues("skillhub.search.engine=h2")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(H2LikeSearchQueryService.class);
+                    assertThat(context).hasSingleBean(JpaSearchIndexService.class);
+                    assertThat(context).hasSingleBean(JpaSearchRebuildService.class);
+                    assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
+                    assertThat(context).doesNotHaveBean(PostgresFullTextIndexService.class);
+                    assertThat(context).doesNotHaveBean(PostgresSearchRebuildService.class);
+                });
+    }
+
+    @Configuration
+    static class TestConfig {
+
+        @Bean
+        EntityManager entityManager() {
+            return mock(EntityManager.class);
+        }
+
+        @Bean
+        SkillSearchDocumentJpaRepository skillSearchDocumentJpaRepository() {
+            return mock(SkillSearchDocumentJpaRepository.class);
+        }
+
+        @Bean
+        SkillRepository skillRepository() {
+            return mock(SkillRepository.class);
+        }
+
+        @Bean
+        NamespaceRepository namespaceRepository() {
+            return mock(NamespaceRepository.class);
+        }
+
+        @Bean
+        SkillVersionRepository skillVersionRepository() {
+            return mock(SkillVersionRepository.class);
+        }
+
+        @Bean
+        LabelDefinitionRepository labelDefinitionRepository() {
+            return mock(LabelDefinitionRepository.class);
+        }
+
+        @Bean
+        LabelTranslationRepository labelTranslationRepository() {
+            return mock(LabelTranslationRepository.class);
+        }
+
+        @Bean
+        SkillLabelRepository skillLabelRepository() {
+            return mock(SkillLabelRepository.class);
+        }
+
+        @Bean
+        SearchEmbeddingService searchEmbeddingService() {
+            return mock(SearchEmbeddingService.class);
+        }
+
+        @Bean
+        SearchTextTokenizer searchTextTokenizer() {
+            return new SearchTextTokenizer();
+        }
+    }
+}

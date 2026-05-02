@@ -119,6 +119,15 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 - relevance 排序下，对全文候选集追加语义向量重排
 - 语义向量不可用时自动降级为现有全文相关度排序
 
+### 5.4 当前迁移期 provider 隔离
+
+- `skillhub.search.engine=postgres` 时，运行时会装配 `search.postgres` 下的 PostgreSQL FTS 查询、索引写入与重建实现。
+- `skillhub.search.engine=h2` 时，只装配 `H2LikeSearchQueryService` 与共享的 JPA 搜索文档索引/重建实现，不再实例化任何 `search.postgres.*` bean。
+- 当前仍暂时保留但已限制在 PostgreSQL provider 下的遗留实现：
+  - `PostgresFullTextQueryService`
+  - `PostgresFullTextIndexService`
+  - `PostgresSearchRebuildService`
+
 ### 5.3 SPI 演进策略
 
 一期 SPI 接口（`SearchIndexService` / `SearchQueryService`）的入参是 `SkillSearchDocument`（skill 粒度）。二期切换到 ES 时：
