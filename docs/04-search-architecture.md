@@ -123,6 +123,7 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 
 - `skillhub.search.engine=postgres` 时，运行时会装配 `search.postgres` 下的 PostgreSQL FTS 查询、索引写入与重建实现。
 - `skillhub.search.engine=h2` 时，只装配 `H2LikeSearchQueryService` 与共享的 JPA 搜索文档索引/重建实现，不再实例化任何 `search.postgres.*` bean。
+- `skillhub.search.engine=mysql` 时，只装配 `MysqlLikeSearchQueryService` 与过渡期的 MySQL no-op index/rebuild 实现；`local-mysql` profile 通过该值显式选择 mysql-like provider，而 `local-h2` 继续选择 h2-like provider。
 - 当前仍暂时保留但已限制在 PostgreSQL provider 下的遗留实现：
   - `PostgresFullTextQueryService`
   - `PostgresFullTextIndexService`

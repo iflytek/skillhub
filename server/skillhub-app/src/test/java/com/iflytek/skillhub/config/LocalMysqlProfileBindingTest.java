@@ -32,7 +32,7 @@ class LocalMysqlProfileBindingTest {
         assertEquals("true", environment.getProperty("spring.flyway.enabled"));
         assertEquals("classpath:sql/migration-mysql", environment.getProperty("spring.flyway.locations"));
         assertEquals("local", environment.getProperty("skillhub.storage.provider"));
-        assertEquals("h2", environment.getProperty("skillhub.search.engine"));
+        assertEquals("mysql", environment.getProperty("skillhub.search.engine"));
         assertEquals(
                 System.getProperty("user.home") + "/.skillhub/local-mysql/storage",
                 environment.getProperty("skillhub.storage.local.base-path")

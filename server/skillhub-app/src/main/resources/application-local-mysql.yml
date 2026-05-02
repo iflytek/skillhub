@@ -38,7 +38,8 @@ skillhub:
     local:
       base-path: ${LOCAL_MYSQL_STORAGE_BASE_PATH:${user.home}/.skillhub/local-mysql/storage}
   search:
-    engine: h2
+    # MySQL runtime uses the mysql-like query provider; local-h2 keeps the h2-like fallback.
+    engine: mysql
   ratelimit:
     mode: memory
   auth:
