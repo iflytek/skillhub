@@ -8,6 +8,7 @@ import com.iflytek.skillhub.search.SearchResult;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,8 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
 
     @Override
     public SearchResult search(SearchQuery query) {
+        String normalizedKeyword = normalizeKeyword(query.keyword());
+        boolean hasKeyword = normalizedKeyword != null;
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
@@ -66,10 +69,19 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
             sql.append(") ");
         }
 
+        if (hasKeyword) {
+            sql.append("AND (");
+            sql.append("LOWER(COALESCE(d.title, '')) LIKE :titleLike ");
+            sql.append("OR LOWER(COALESCE(d.summary, '')) LIKE :titleLike ");
+            sql.append("OR LOWER(COALESCE(d.keywords, '')) LIKE :titleLike ");
+            sql.append("OR LOWER(COALESCE(d.searchText, '')) LIKE :titleLike");
+            sql.append(") ");
+        }
+
         sql.append("ORDER BY s.updatedAt DESC, d.skillId DESC ");
 
         Query resultQuery = entityManager.createQuery(sql.toString(), Long.class);
-        bindParameters(resultQuery, query, memberNamespaceIds);
+        bindParameters(resultQuery, query, memberNamespaceIds, normalizedKeyword);
         resultQuery.setFirstResult(query.page() * query.size());
         resultQuery.setMaxResults(query.size());
 
@@ -83,7 +95,7 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
         }
 
         Query countQuery = entityManager.createQuery(countSql, Long.class);
-        bindParameters(countQuery, query, memberNamespaceIds);
+        bindParameters(countQuery, query, memberNamespaceIds, normalizedKeyword);
         long total = (Long) countQuery.getSingleResult();
 
         return new SearchResult(skillIds, total, query.page(), query.size());
@@ -93,7 +105,10 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
         return entityManager;
     }
 
-    private void bindParameters(Query query, SearchQuery searchQuery, Set<Long> memberNamespaceIds) {
+    private void bindParameters(Query query,
+                                SearchQuery searchQuery,
+                                Set<Long> memberNamespaceIds,
+                                String normalizedKeyword) {
         if (searchQuery.visibilityScope().userId() != null) {
             query.setParameter("memberNamespaceIds", memberNamespaceIds);
         }
@@ -105,5 +120,15 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
         if (searchQuery.labelSlugs() != null && !searchQuery.labelSlugs().isEmpty()) {
             query.setParameter("labelSlugs", searchQuery.labelSlugs());
         }
+        if (normalizedKeyword != null) {
+            query.setParameter("titleLike", "%" + normalizedKeyword + "%");
+        }
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim().toLowerCase(Locale.ROOT);
     }
 }

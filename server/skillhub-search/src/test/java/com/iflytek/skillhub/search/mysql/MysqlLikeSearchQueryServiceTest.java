@@ -95,4 +95,79 @@ class MysqlLikeSearchQueryServiceTest {
         verify(resultQuery).setParameter("skillStatusActive", com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE);
         verify(resultQuery).setParameter("namespaceStatusArchived", com.iflytek.skillhub.domain.namespace.NamespaceStatus.ARCHIVED);
     }
+
+    @Test
+    void search_shouldMatchKeywordAgainstTitleSummaryKeywordsAndSearchText() {
+        EntityManager entityManager = mock(EntityManager.class);
+        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
+        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+
+        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
+        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
+        when(resultQuery.setMaxResults(12)).thenReturn(resultQuery);
+        when(resultQuery.getResultList()).thenReturn(List.of(9L));
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(1L);
+
+        MysqlLikeSearchQueryService service = new MysqlLikeSearchQueryService(entityManager);
+
+        SearchResult result = service.search(new SearchQuery(
+                "  PPT  ",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "newest",
+                0,
+                12,
+                List.of()
+        ));
+
+        assertThat(result.skillIds()).containsExactly(9L);
+        assertThat(result.total()).isEqualTo(1L);
+
+        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
+        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.title, '')) LIKE :titleLike");
+        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.summary, '')) LIKE :titleLike");
+        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.keywords, '')) LIKE :titleLike");
+        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.searchText, '')) LIKE :titleLike");
+        verify(resultQuery).setParameter("titleLike", "%ppt%");
+        verify(countQuery).setParameter("titleLike", "%ppt%");
+    }
+
+    @Test
+    void search_shouldTreatWhitespaceOnlyKeywordAsEmptyQuery() {
+        EntityManager entityManager = mock(EntityManager.class);
+        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
+        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+
+        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
+        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
+        when(resultQuery.setMaxResults(12)).thenReturn(resultQuery);
+        when(resultQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        MysqlLikeSearchQueryService service = new MysqlLikeSearchQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "   ",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "newest",
+                0,
+                12,
+                List.of()
+        ));
+
+        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
+        assertThat(queryCaptor.getAllValues().get(0)).doesNotContain("LOWER(COALESCE(d.title, '')) LIKE :titleLike");
+        assertThat(queryCaptor.getAllValues().get(0)).doesNotContain("LOWER(COALESCE(d.searchText, '')) LIKE :titleLike");
+        verify(resultQuery, never()).setParameter("titleLike", "% %");
+        verify(resultQuery, never()).setParameter("titleLike", "%%");
+        verify(countQuery, never()).setParameter("titleLike", "% %");
+        verify(countQuery, never()).setParameter("titleLike", "%%");
+    }
 }
