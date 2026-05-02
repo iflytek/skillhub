@@ -1,5 +1,6 @@
 ## Codebase Patterns
 - 当 `skillhub.search.engine` 新增方言值时，`SearchQueryService`、`SearchIndexService`、`SearchRebuildService` 三类 bean 需要一起覆盖该条件装配；只补 query provider 会让常规事件监听和同步服务在启动期注入失败。
+- MySQL 过渡期扩展 `migration-mysql` 时，除了请求主链路直接写入的表，还要同步覆盖发布后异步通知和删除清理会访问的表；否则 `local-mysql` 真实 smoke 可能在 `publish`/`delete` 后半段才暴露缺表。
 - mysql-like 排序 story 可以直接与 h2-like provider 对齐：`downloads`/`rating`/`newest` 走 JPQL 属性排序，`relevance` 只在存在关键词时启用 `CASE + titleExact/titlePrefix/titleLike`，并且 count query 必须禁绑 relevance-only 参数。
 - mysql-like 搜索 provider 逐步补行为时，关键词 story 可以直接复用 h2-like 的 `normalizeKeyword + LIKE` 结构，只绑定 `titleLike` 这类当前 SQL 真正使用到的参数，避免 count query 因残留排序参数而失配。
 - 迁移中的新搜索 provider 如果要按 story 逐步补行为，优先先让 SQL/JPQL 只覆盖当前 story 的过滤边界，并把关键词、排序、分页留在后续 story；这样可以复用现有 provider 契约而不把多个 acceptance criteria 混在一次提交里。
@@ -194,4 +195,14 @@
   - 发现的 patterns：如果某个过渡实现同时覆盖 runtime bean wiring 和 no-op 行为，后续拆 story 时可以让同一组装配测试兼顾 provider 选择与“安全空操作”契约，避免重复造测试夹具。
   - 遇到的陷阱：Ralph 历史进度里可能出现“代码已在 earlier commit，但 PRD story 尚未标记通过”的错位；开始新一轮前要先比对 `prd.json` 与最近提交，避免重复实现。
   - 有用的上下文：仓库里没有指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件，这轮仍无法补充额外需求上下文；后续 story 如果依赖这些材料，需要先确认实际路径。
+---
+## 2026-05-03 06:32 - US-014
+- 扩展 `migration-mysql` 初始化 schema，补齐 `skill_file`、`skill_tag`、`review_task`、`promotion_request`、`skill_star`、`skill_rating`、`skill_report`、`notification_preference` 等 MySQL 过渡 runtime 在 publish/delete 链路会访问的表，并新增 `SkillFileMysqlPersistenceTest` 验证 `skill_file` 在 MySQL 下的真实持久化。
+- 复用了现有 `tiger-mysql`（`127.0.0.1:33306`）创建临时库 `skillhub_validator_us014`，以 `SPRING_PROFILES_ACTIVE=local-mysql`、`SKILLHUB_SEARCH_ENGINE=mysql` 启动最新 jar，确认 `GET /actuator/health` 返回 `{\"status\":\"UP\"}`，并串行验证 `admin / ChangeMe!2026` 登录、`POST /api/v1/skills/global/publish` 和 `DELETE /api/web/skills/id/1` 都返回成功。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlSchemaMigrationTest,SkillFileMysqlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/skill/SkillFileMysqlPersistenceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：MySQL 过渡 schema 的回归测试除了文本守卫外，最好再补一条针对真实运行时实体的 Testcontainers 持久化测试，这样能更快暴露“空库 migration 和 JPA 映射漂移”。
+  - 遇到的陷阱：真实 `local-mysql` 冒烟如果并行发登录和后续请求，会因为 cookie jar 竞态得到伪 401；这类 curl 验证要串行执行。
+  - 有用的上下文：删除链路会同步读 `skill_report`，发布成功后的异步通知会访问 `notification_preference`/`notification`，所以即使 publish 主请求返回 200，也要继续看日志并补做 delete smoke，避免把异步缺表漏到后续 story。
 ---

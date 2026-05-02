@@ -238,8 +238,8 @@
       ],
       "priority": 14,
       "passes": true,
-      "notes": "",
-      "retryCount": 0,
+      "notes": "[验证失败 - 第1次] 2026-05-03 06:03\n- 失败项1：真实 `local-mysql` runtime 虽然可以启动并通过 `GET /actuator/health` 返回 `UP`，但使用本地种子账号 `admin / ChangeMe!2026` 登录后，请求 `POST /api/v1/skills/global/publish` 返回 `500`，未能证明 MySQL 过渡 runtime 下的技能生命周期链路稳定可用。\n- 失败项2：运行日志显示根因是 `Table 'skillhub_validator_us014.skill_file' doesn't exist`，异常发生在 `SkillPublishService.publishFromEntriesInternal` 持久化 `skill_file` 时；这说明当前 MySQL 运行时 schema 仍无法支撑实际生命周期请求，因此验收标准“Lifecycle flows that trigger index writes do not fail under the MySQL transitional runtime” 未满足。\n- 建议修复方向：补齐 `server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql` 与当前运行时实体映射的一致性，至少确保 `skill_file` 等发布链路必需表存在，再重新做 `local-mysql` 下的真实 publish/delete 或 archive/delete 验证。",
+      "retryCount": 1,
       "blocked": false
     },
     {

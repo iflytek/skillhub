@@ -201,6 +201,36 @@ ALTER TABLE skill
     ADD CONSTRAINT fk_skill_latest_version
         FOREIGN KEY (latest_version_id) REFERENCES skill_version(id);
 
+CREATE TABLE skill_file (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    version_id BIGINT NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size BIGINT NOT NULL,
+    content_type VARCHAR(100) NULL,
+    sha256 VARCHAR(64) NULL,
+    storage_key VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_file_version_path (version_id, file_path),
+    KEY idx_skill_file_version_id (version_id),
+    CONSTRAINT fk_skill_file_version_id FOREIGN KEY (version_id) REFERENCES skill_version(id)
+);
+
+CREATE TABLE skill_tag (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    tag_name VARCHAR(50) NOT NULL,
+    version_id BIGINT NULL,
+    created_by VARCHAR(128) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_tag_skill_tag_name (skill_id, tag_name),
+    KEY idx_skill_tag_skill_id (skill_id),
+    KEY idx_skill_tag_version_id (version_id),
+    CONSTRAINT fk_skill_tag_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_skill_tag_version_id FOREIGN KEY (version_id) REFERENCES skill_version(id),
+    CONSTRAINT fk_skill_tag_created_by FOREIGN KEY (created_by) REFERENCES user_account(id)
+);
+
 CREATE TABLE skill_version_stats (
     skill_version_id BIGINT NOT NULL PRIMARY KEY,
     skill_id BIGINT NOT NULL,
@@ -230,6 +260,103 @@ CREATE TABLE skill_search_document (
     KEY idx_skill_search_document_visibility_status (visibility, status),
     CONSTRAINT fk_skill_search_document_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
     CONSTRAINT fk_skill_search_document_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id)
+);
+
+CREATE TABLE review_task (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_version_id BIGINT NOT NULL,
+    namespace_id BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    version INT NOT NULL DEFAULT 1,
+    submitted_by VARCHAR(128) NOT NULL,
+    reviewed_by VARCHAR(128) NULL,
+    review_comment TEXT NULL,
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    KEY idx_review_task_namespace_status (namespace_id, status),
+    KEY idx_review_task_submitted_by_status (submitted_by, status),
+    UNIQUE KEY uk_review_task_version_status (skill_version_id, status),
+    CONSTRAINT fk_review_task_skill_version_id FOREIGN KEY (skill_version_id) REFERENCES skill_version(id),
+    CONSTRAINT fk_review_task_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id),
+    CONSTRAINT fk_review_task_submitted_by FOREIGN KEY (submitted_by) REFERENCES user_account(id),
+    CONSTRAINT fk_review_task_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES user_account(id)
+);
+
+CREATE TABLE promotion_request (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    source_skill_id BIGINT NOT NULL,
+    source_version_id BIGINT NOT NULL,
+    target_namespace_id BIGINT NOT NULL,
+    target_skill_id BIGINT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    version INT NOT NULL DEFAULT 1,
+    submitted_by VARCHAR(128) NOT NULL,
+    reviewed_by VARCHAR(128) NULL,
+    review_comment TEXT NULL,
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    KEY idx_promotion_request_source_skill (source_skill_id),
+    KEY idx_promotion_request_status (status),
+    UNIQUE KEY uk_promotion_request_version_status (source_version_id, status),
+    CONSTRAINT fk_promotion_request_source_skill_id FOREIGN KEY (source_skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_promotion_request_source_version_id FOREIGN KEY (source_version_id) REFERENCES skill_version(id),
+    CONSTRAINT fk_promotion_request_target_namespace_id FOREIGN KEY (target_namespace_id) REFERENCES namespace(id),
+    CONSTRAINT fk_promotion_request_target_skill_id FOREIGN KEY (target_skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_promotion_request_submitted_by FOREIGN KEY (submitted_by) REFERENCES user_account(id),
+    CONSTRAINT fk_promotion_request_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES user_account(id)
+);
+
+CREATE TABLE skill_star (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_star_skill_user (skill_id, user_id),
+    KEY idx_skill_star_user_id (user_id),
+    KEY idx_skill_star_skill_id (skill_id),
+    CONSTRAINT fk_skill_star_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_skill_star_user_id FOREIGN KEY (user_id) REFERENCES user_account(id)
+);
+
+CREATE TABLE skill_rating (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
+    score SMALLINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_rating_skill_user (skill_id, user_id),
+    KEY idx_skill_rating_skill_id (skill_id),
+    CONSTRAINT fk_skill_rating_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_skill_rating_user_id FOREIGN KEY (user_id) REFERENCES user_account(id),
+    CONSTRAINT chk_skill_rating_score CHECK (score >= 1 AND score <= 5)
+);
+
+CREATE TABLE skill_report (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    namespace_id BIGINT NOT NULL,
+    reporter_id VARCHAR(128) NOT NULL,
+    reason VARCHAR(200) NOT NULL,
+    details TEXT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    handled_by VARCHAR(128) NULL,
+    handle_comment TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    handled_at TIMESTAMP NULL,
+    KEY idx_skill_report_status_created_at (status, created_at),
+    KEY idx_skill_report_skill_id (skill_id),
+    CONSTRAINT fk_skill_report_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
+    CONSTRAINT fk_skill_report_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id)
+);
+
+CREATE TABLE notification_preference (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
+    category VARCHAR(32) NOT NULL,
+    channel VARCHAR(32) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE KEY uk_notification_preference_user_category_channel (user_id, category, channel)
 );
 
 CREATE TABLE profile_change_request (
