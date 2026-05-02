@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- 对于存 JSON 文本但领域层以 `String` 处理的字段，不要在 Hibernate 上继续使用 `@JdbcTypeCode(SqlTypes.JSON)`；它会把整段 JSON 当作字符串再次编码，`String` 字段应直接按普通文本列持久化。
+- 新增 Spring slice/integration 测试如果依赖仓库现成的 `application-test.yml`，要显式加 `@ActiveProfiles("test")`；`@DataJpaTest` 这类测试如果还需要保留该 profile 的 H2 datasource 初始化参数，再加 `@AutoConfigureTestDatabase(replace = NONE)`。
 - Backend runtime database driver and Flyway database support are both wired in `server/skillhub-app/pom.xml`; switching the main relational runtime starts there.
 - Flyway core and database-specific support module versions must stay aligned in the parent Maven dependency graph; mixing Spring Boot managed `flyway-core` with a manually pinned newer plugin can compile but will fail at runtime during migration bootstrap.
 - This repo currently lacks the root `Makefile` referenced by `AGENTS.md`, so branch work may need to fall back to direct `mvn -f server/pom.xml ...` and `pnpm` commands for verification.
@@ -56,4 +58,15 @@
   - 发现的 patterns：运行时方言迁移除了 schema 本身，还要覆盖启动后立即触发的定时任务/补偿表，否则应用会在 `Started` 之后很快因后台访问缺表而失稳。
   - 遇到的陷阱：本地 seed 数据里像 `"system"` 这种在 PostgreSQL/H2 宽松路径下没暴露的问题，在 MySQL 真外键约束下会直接阻塞空库首启。
   - 有用的上下文：当前验证可直接复用宿主机上的 `tiger-mysql` 容器 `127.0.0.1:33306`，用临时数据库做 `local-mysql` 空库启动检查，无需每次新起 MySQL 服务。
+---
+## 2026-05-03 01:12 - US-004
+- 移除了 auth 模块 `ApiToken.scopeJson` 与 `IdentityBinding.extraJson` 对 PostgreSQL `jsonb` 和 Hibernate JSON 类型的运行时硬依赖，改为按原始 JSON 文本持久化，避免 MySQL 方言报错和 `String` 字段被二次 JSON 编码。
+- 扩展了 `local-mysql` 最小初始化 schema，补齐 `identity_binding` 与 `api_token` 表，并将对应列定义为 `TEXT`，确保认证链路在 MySQL 过渡 runtime 下具备可持久化的表结构。
+- 新增 `AuthJsonPersistenceTest` 验证 H2 测试环境下 auth JSON 文本字段可正确读写，并扩展 `LocalMysqlSchemaMigrationTest` 断言 MySQL 初始化脚本已经覆盖 auth 基础表。
+- 运行了 `pnpm --dir web typecheck`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`，以及针对性回归 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=AuthJsonPersistenceTest,LocalMysqlSchemaMigrationTest -Dsurefire.failIfNoSpecifiedTests=false test`，确认通过。
+- 更改的文件：`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/entity/ApiToken.java`、`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/entity/IdentityBinding.java`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/auth/AuthJsonPersistenceTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：auth 这类“服务层自己解析 JSON 字符串”的字段，跨数据库迁移时更稳妥的策略是保留文本语义，而不是继续依赖数据库原生 JSON 类型。
+  - 遇到的陷阱：`@DataJpaTest` 默认会替换 datasource；如果测试依赖 `application-test.yml` 里的 H2 URL 初始化参数或禁 Flyway 配置，必须显式锁定 `test` profile 和原始测试数据源。
+  - 有用的上下文：用户指令中提到的 `tasks/prd-aiba-agent-gateway.md` 在当前仓库不存在，这次实现只能以 `scripts/ralph/prd.json` 和代码现状为准。
 ---

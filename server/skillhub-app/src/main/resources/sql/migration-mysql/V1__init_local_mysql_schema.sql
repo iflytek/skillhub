@@ -52,6 +52,39 @@ CREATE TABLE local_credential (
     CONSTRAINT fk_local_credential_user_id FOREIGN KEY (user_id) REFERENCES user_account(id)
 );
 
+CREATE TABLE identity_binding (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
+    provider_code VARCHAR(64) NOT NULL,
+    subject VARCHAR(256) NOT NULL,
+    login_name VARCHAR(128),
+    extra_json TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_identity_binding_provider_subject (provider_code, subject),
+    KEY idx_identity_binding_user_id (user_id),
+    CONSTRAINT fk_identity_binding_user_id FOREIGN KEY (user_id) REFERENCES user_account(id)
+);
+
+CREATE TABLE api_token (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    subject_type VARCHAR(32) NOT NULL DEFAULT 'USER',
+    subject_id VARCHAR(128) NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
+    name VARCHAR(64) NOT NULL,
+    token_prefix VARCHAR(16) NOT NULL,
+    token_hash VARCHAR(64) NOT NULL,
+    scope_json TEXT NOT NULL,
+    expires_at TIMESTAMP NULL,
+    last_used_at TIMESTAMP NULL,
+    revoked_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_api_token_token_hash (token_hash),
+    KEY idx_api_token_user_id (user_id),
+    KEY idx_api_token_hash (token_hash),
+    CONSTRAINT fk_api_token_user_id FOREIGN KEY (user_id) REFERENCES user_account(id)
+);
+
 CREATE TABLE user_role_binding (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(128) NOT NULL,

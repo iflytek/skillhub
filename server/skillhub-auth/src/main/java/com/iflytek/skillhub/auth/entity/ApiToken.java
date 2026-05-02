@@ -3,8 +3,6 @@ package com.iflytek.skillhub.auth.entity;
 import jakarta.persistence.*;
 import java.time.Clock;
 import java.time.Instant;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "api_token")
@@ -31,8 +29,7 @@ public class ApiToken {
     @Column(name = "token_hash", nullable = false, unique = true, length = 64)
     private String tokenHash;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "scope_json", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "scope_json", nullable = false)
     private String scopeJson;
 
     @Column(name = "expires_at")

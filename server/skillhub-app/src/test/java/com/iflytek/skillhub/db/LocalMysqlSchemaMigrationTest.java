@@ -17,6 +17,8 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE role");
         assertThat(sql).contains("CREATE TABLE namespace");
         assertThat(sql).contains("CREATE TABLE local_credential");
+        assertThat(sql).contains("CREATE TABLE identity_binding");
+        assertThat(sql).contains("CREATE TABLE api_token");
         assertThat(sql).contains("CREATE TABLE user_role_binding");
         assertThat(sql).contains("CREATE TABLE namespace_member");
         assertThat(sql).contains("CREATE TABLE idempotency_record");
