@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 迁移中的新搜索 provider 如果要按 story 逐步补行为，优先先让 SQL/JPQL 只覆盖当前 story 的过滤边界，并把关键词、排序、分页留在后续 story；这样可以复用现有 provider 契约而不把多个 acceptance criteria 混在一次提交里。
 - 对于存 JSON 文本但领域层以 `String` 处理的字段，不要在 Hibernate 上继续使用 `@JdbcTypeCode(SqlTypes.JSON)`；它会把整段 JSON 当作字符串再次编码，`String` 字段应直接按普通文本列持久化。
 - 为 MySQL 过渡期补真实持久化验证时，优先用 Testcontainers 拉起受控 MySQL，并让测试走 `migration-mysql` + `ddl-auto=none`；如果直接让 Hibernate 在全量实体上 `create-drop`，仓库里尚未迁完的 PostgreSQL 专属映射会污染验证结果。
 - MySQL 过渡期如果扩展了运行时实体映射，记得同步更新 `server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql` 和 `LocalMysqlSchemaMigrationTest`，否则空库启动路径会和 H2 测试路径漂移。
@@ -133,4 +134,13 @@
   - 发现的 patterns：新增方言 provider 的第一步可以先把 bean 边界和 package 命名拉清，再由后续 story 逐步填充过滤、关键词、排序和分页行为。
   - 遇到的陷阱：当前 `JpaSearchIndexService` / `JpaSearchRebuildService` 仍只在 `h2` engine 下装配，因此 `mysql` provider 的运行时选择测试不能提前断言索引或 rebuild bean，否则会越过本 story 范围。
   - 有用的上下文：`MysqlLikeSearchQueryService` 目前故意抛出 `UnsupportedOperationException`，后续 `US-010` 到 `US-012` 应在该类内增量实现真实查询逻辑，而不是重新建一套 provider。
+---
+## 2026-05-03 04:09 - US-010
+- 在 `MysqlLikeSearchQueryService` 中实现了 mysql-like 过滤层：复用现有搜索契约，补齐可见性、命名空间、标签、状态与归档 namespace 过滤，并保留默认 `updatedAt` 排序作为当前 story 的安全收口。
+- 用新的 `MysqlLikeSearchQueryServiceTest` 验证了 namespace / label / visibility 条件和 count 查询参数绑定；同时复跑 `SearchRuntimeSelectionTest`、前端 typecheck/lint 与全量后端测试，确认没有破坏现有搜索入口。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：search provider 的增量迁移可以直接沿用 H2 fallback 的 JPQL 结构做方言中立过滤，再按后续 story 分层补关键词和排序逻辑。
+  - 遇到的陷阱：如果在“只做过滤”的 story 里同时接入关键词匹配或 relevance 参数，测试很容易把 count query 的参数绑定、排序语义和后续 acceptance criteria 混在一起，导致回归面扩大。
+  - 有用的上下文：`MysqlLikeSearchQueryService` 现在已经能处理无关键词搜索和结构化过滤，后续 `US-011` / `US-012` 应直接在这个类和对应测试里继续增量扩展。
 ---
