@@ -8,7 +8,7 @@ spring:
     password: ${LOCAL_MYSQL_DATASOURCE_PASSWORD:skillhub_dev}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     database-platform: org.hibernate.dialect.MySQLDialect
     show-sql: true
     properties:
@@ -16,6 +16,7 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
   flyway:
     enabled: true
+    locations: classpath:sql/migration-mysql
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration

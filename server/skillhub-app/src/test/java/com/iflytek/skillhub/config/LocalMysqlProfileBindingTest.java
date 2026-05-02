@@ -28,7 +28,9 @@ class LocalMysqlProfileBindingTest {
         );
         assertEquals("com.mysql.cj.jdbc.Driver", environment.getProperty("spring.datasource.driver-class-name"));
         assertEquals("org.hibernate.dialect.MySQLDialect", environment.getProperty("spring.jpa.database-platform"));
+        assertEquals("none", environment.getProperty("spring.jpa.hibernate.ddl-auto"));
         assertEquals("true", environment.getProperty("spring.flyway.enabled"));
+        assertEquals("classpath:sql/migration-mysql", environment.getProperty("spring.flyway.locations"));
         assertEquals("local", environment.getProperty("skillhub.storage.provider"));
         assertEquals("h2", environment.getProperty("skillhub.search.engine"));
         assertEquals(

@@ -3,6 +3,8 @@
 - This repo currently lacks the root `Makefile` referenced by `AGENTS.md`, so branch work may need to fall back to direct `mvn -f server/pom.xml ...` and `pnpm` commands for verification.
 - Local runtime profiles that should boot without Redis must explicitly exclude Spring Session and Redis auto-configuration, then set rate limit, auth throttle, and UASS cache to in-memory/local modes in the profile YAML.
 - Search runtime selection is currently driven by `skillhub.search.engine`; any non-PostgreSQL local profile must override the base `postgres` default or Spring will still wire the PostgreSQL search bean through `matchIfMissing = true`.
+- When one runtime needs a different SQL dialect, give it a separate Flyway migration directory and validate version continuity per directory rather than enforcing one global version sequence.
+- Local bootstrap on an empty database depends on `ApplicationRunner` ordering; if one runner requires seeded roles or the global namespace, make the order explicit with `@Order`.
 
 ## 2026-05-02 23:30 - US-001
 - 将 `server/skillhub-app/pom.xml` 的运行时 JDBC 驱动从 PostgreSQL 切换为 MySQL 8，并将 Flyway 数据库支持从 PostgreSQL 插件切换为 MySQL 插件。
@@ -32,4 +34,15 @@
   - 发现的 patterns：本地 MySQL 迁移阶段即使暂时复用 `h2` fallback 搜索，也必须在 profile 层显式切断 `postgres` 默认装配，否则运行时依赖不会真正退出。
   - 遇到的陷阱：前端 lint 配置使用 `--max-warnings 0`，任何现有 warning 都会阻塞这类后端 story 的最终提交，需要在提交前一并清理。
   - 有用的上下文：`LocalMysqlProfileBindingTest` 通过手动叠加 `application-local-mysql.yml` 和 `application.yml` 来验证 profile 覆盖，适合给这类“必须覆盖基础默认值”的配置加回归断言。
+---
+## 2026-05-03 00:25 - US-003
+- 为 `local-mysql` profile 切换到独立的 MySQL Flyway 初始化路径，新增最小可启动 schema 脚本，确保空库首启不再执行 PostgreSQL 专属 migration。
+- 将 `local-mysql` 的 `ddl-auto` 调整为 `none`，并显式固定本地种子数据与 bootstrap admin 两个 `ApplicationRunner` 的执行顺序，避免空库首启时依赖顺序漂移。
+- 为 MySQL 本地初始化补充回归测试：覆盖 profile 绑定、MySQL schema 静态校验，以及按 migration 目录分别校验 Flyway 版本命名与连续性。
+- 运行了 `pnpm --dir web typecheck`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest,FlywayMigrationGuardrailTest,LocalMysqlSchemaMigrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializer.java`、`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/BootstrapAdminInitializer.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/FlywayMigrationGuardrailTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：为特定 profile 新增一条 SQL 方言独立的 Flyway 目录，比在同一套迁移里堆条件分支更容易控制阶段性迁移。
+  - 遇到的陷阱：如果 `local-mysql` 仍保留 `hibernate.ddl-auto=validate`，会在后续 `jsonb` 实体还未迁移完成前提前阻塞启动。
+  - 有用的上下文：当前 `local-mysql` 的 MySQL 初始化脚本只覆盖本地空库首启与种子账号所需的最小表集，后续 story 需要继续扩展为完整 MySQL 运行时 schema。
 ---

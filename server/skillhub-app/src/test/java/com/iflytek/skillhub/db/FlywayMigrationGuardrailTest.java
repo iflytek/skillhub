@@ -21,40 +21,44 @@ class FlywayMigrationGuardrailTest {
 
     @Test
     void versionedMigrations_mustUseUniqueVersions() throws IOException {
-        Map<Integer, List<String>> versions = new LinkedHashMap<>();
+        List<String> duplicates = new ArrayList<>();
 
-        for (Path file : migrationFiles()) {
-            Matcher matcher = VERSIONED_MIGRATION_PATTERN.matcher(file.getFileName().toString());
-            if (!matcher.matches()) {
-                continue;
+        for (Path directory : migrationDirectories()) {
+            Map<Integer, List<String>> versions = new LinkedHashMap<>();
+            for (Path file : migrationFiles(directory)) {
+                Matcher matcher = VERSIONED_MIGRATION_PATTERN.matcher(file.getFileName().toString());
+                if (!matcher.matches()) {
+                    continue;
+                }
+                int version = Integer.parseInt(matcher.group("version"));
+                versions.computeIfAbsent(version, ignored -> new ArrayList<>())
+                        .add(relativeToRepo(file));
             }
-            int version = Integer.parseInt(matcher.group("version"));
-            versions.computeIfAbsent(version, ignored -> new ArrayList<>())
-                    .add(relativeToRepo(file));
+            duplicates.addAll(versions.entrySet().stream()
+                    .filter(entry -> entry.getValue().size() > 1)
+                    .map(entry -> relativeToRepo(directory) + ": V" + entry.getKey() + " -> " + entry.getValue())
+                    .toList());
         }
-
-        List<String> duplicates = versions.entrySet().stream()
-                .filter(entry -> entry.getValue().size() > 1)
-                .map(entry -> "V" + entry.getKey() + " -> " + entry.getValue())
-                .toList();
 
         assertThat(duplicates).isEmpty();
     }
 
     @Test
     void versionedMigrations_mustRemainContiguous() throws IOException {
-        List<Integer> versions = migrationFiles().stream()
-                .map(path -> VERSIONED_MIGRATION_PATTERN.matcher(path.getFileName().toString()))
-                .filter(Matcher::matches)
-                .map(matcher -> Integer.parseInt(matcher.group("version")))
-                .sorted()
-                .toList();
-
         List<String> gaps = new ArrayList<>();
-        for (int expected = 1; expected <= versions.size(); expected++) {
-            int actual = versions.get(expected - 1);
-            if (actual != expected) {
-                gaps.add("expected V" + expected + " but found V" + actual);
+        for (Path directory : migrationDirectories()) {
+            List<Integer> versions = migrationFiles(directory).stream()
+                    .map(path -> VERSIONED_MIGRATION_PATTERN.matcher(path.getFileName().toString()))
+                    .filter(Matcher::matches)
+                    .map(matcher -> Integer.parseInt(matcher.group("version")))
+                    .sorted()
+                    .toList();
+
+            for (int expected = 1; expected <= versions.size(); expected++) {
+                int actual = versions.get(expected - 1);
+                if (actual != expected) {
+                    gaps.add(relativeToRepo(directory) + ": expected V" + expected + " but found V" + actual);
+                }
             }
         }
 
@@ -63,21 +67,37 @@ class FlywayMigrationGuardrailTest {
 
     @Test
     void migrationFiles_mustMatchFlywayVersionedNaming() throws IOException {
-        List<String> invalidFiles = migrationFiles().stream()
-                .map(path -> path.getFileName().toString())
-                .filter(name -> !VERSIONED_MIGRATION_PATTERN.matcher(name).matches())
-                .sorted()
-                .toList();
+        List<String> invalidFiles = new ArrayList<>();
+        for (Path directory : migrationDirectories()) {
+            invalidFiles.addAll(migrationFiles(directory).stream()
+                    .map(path -> path.getFileName().toString())
+                    .filter(name -> !VERSIONED_MIGRATION_PATTERN.matcher(name).matches())
+                    .sorted()
+                    .map(name -> relativeToRepo(directory) + "/" + name)
+                    .toList());
+        }
 
         assertThat(invalidFiles).isEmpty();
     }
 
-    private List<Path> migrationFiles() throws IOException {
-        Path root = repoRoot()
-                .resolve("server")
-                .resolve("skillhub-app")
-                .resolve("src/main/resources/sql/migration");
-        try (var stream = Files.list(root)) {
+    private List<Path> migrationDirectories() {
+        return List.of(
+                repoRoot()
+                        .resolve("server")
+                        .resolve("skillhub-app")
+                        .resolve("src/main/resources/sql/migration"),
+                repoRoot()
+                        .resolve("server")
+                        .resolve("skillhub-app")
+                        .resolve("src/main/resources/sql/migration-mysql")
+        );
+    }
+
+    private List<Path> migrationFiles(Path directory) throws IOException {
+        if (!Files.isDirectory(directory)) {
+            return List.of();
+        }
+        try (var stream = Files.list(directory)) {
             return stream
                     .filter(path -> path.getFileName().toString().endsWith(".sql"))
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))
