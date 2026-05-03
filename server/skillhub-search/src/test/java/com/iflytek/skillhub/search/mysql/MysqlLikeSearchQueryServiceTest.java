@@ -259,4 +259,33 @@ class MysqlLikeSearchQueryServiceTest {
         verify(countQuery, never()).setParameter("titleExact", "agent");
         verify(countQuery, never()).setParameter("titlePrefix", "agent%");
     }
+
+    @Test
+    void search_shouldFallBackToNewestWhenSortIsUnsupported() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
+        when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
+        when(resultQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        MysqlLikeSearchQueryService service = new MysqlLikeSearchQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                null,
+                null,
+                SearchVisibilityScope.anonymous(),
+                "random-sort",
+                0,
+                10,
+                List.of()
+        ));
+
+        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
+        assertThat(queryCaptor.getAllValues().get(0)).contains("ORDER BY s.updated_at DESC, d.skill_id DESC");
+    }
 }

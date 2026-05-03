@@ -79,8 +79,8 @@ public class LocalFileIndexService implements SearchIndexService {
 
     private void withIndexWriter(IndexWriterAction action) {
         try {
-            Files.createDirectories(indexDirectory);
-            try (Directory directory = FSDirectory.open(indexDirectory);
+            ensureIndexDirectory(indexDirectory);
+            try (Directory directory = openDirectory(indexDirectory);
                  IndexWriter writer = new IndexWriter(directory, newIndexWriterConfig())) {
                 action.accept(writer);
                 writer.commit();
@@ -88,6 +88,14 @@ public class LocalFileIndexService implements SearchIndexService {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to update local file index at " + indexDirectory, e);
         }
+    }
+
+    protected void ensureIndexDirectory(Path directory) throws IOException {
+        Files.createDirectories(directory);
+    }
+
+    protected Directory openDirectory(Path directory) throws IOException {
+        return FSDirectory.open(directory);
     }
 
     private IndexWriterConfig newIndexWriterConfig() {

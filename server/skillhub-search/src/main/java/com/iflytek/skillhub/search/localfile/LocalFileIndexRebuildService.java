@@ -104,7 +104,7 @@ public class LocalFileIndexRebuildService extends AbstractJpaSearchRebuildServic
         if (Files.notExists(indexDirectory)) {
             return Set.of();
         }
-        try (Directory directory = FSDirectory.open(indexDirectory)) {
+        try (Directory directory = openDirectory(indexDirectory)) {
             if (!DirectoryReader.indexExists(directory)) {
                 return Set.of();
             }
@@ -130,11 +130,11 @@ public class LocalFileIndexRebuildService extends AbstractJpaSearchRebuildServic
         if (Files.notExists(indexDirectory)) {
             return;
         }
-        try (var paths = Files.walk(indexDirectory)) {
+        try (var paths = walkIndexDirectory(indexDirectory)) {
             paths.sorted(Comparator.reverseOrder())
                     .forEach(path -> {
                         try {
-                            Files.deleteIfExists(path);
+                            deletePath(path);
                         } catch (IOException ex) {
                             throw new IllegalStateException(
                                     "Failed to reset local file index at " + indexDirectory,
@@ -145,5 +145,17 @@ public class LocalFileIndexRebuildService extends AbstractJpaSearchRebuildServic
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to reset local file index at " + indexDirectory, ex);
         }
+    }
+
+    protected Directory openDirectory(Path directory) throws IOException {
+        return FSDirectory.open(directory);
+    }
+
+    protected java.util.stream.Stream<Path> walkIndexDirectory(Path directory) throws IOException {
+        return Files.walk(directory);
+    }
+
+    protected void deletePath(Path path) throws IOException {
+        Files.deleteIfExists(path);
     }
 }

@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -323,6 +324,210 @@ class PostgresSearchRebuildServiceTest {
         assertThat(document.keywords()).contains("workflow");
         assertThat(document.keywords()).contains("Code Generation");
         assertThat(document.keywords()).contains("代码生成");
+    }
+
+    @Test
+    void rebuildBySkill_shouldDoNothingWhenSkillDoesNotExistOrNamespaceMissing() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skillWithoutNamespace = new Skill(7L, "smart-agent", "owner-1", SkillVisibility.PUBLIC);
+        setField(skillWithoutNamespace, "id", 2L);
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.empty());
+        when(skillRepository.findById(2L)).thenReturn(Optional.of(skillWithoutNamespace));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.empty());
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildBySkill(1L);
+        service.rebuildBySkill(2L);
+
+        verify(searchIndexService, never()).index(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void rebuildByNamespace_shouldOnlyRebuildActiveSkills() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill activeSkill = new Skill(7L, "alpha", "owner-1", SkillVisibility.PUBLIC);
+        setField(activeSkill, "id", 10L);
+        activeSkill.setSummary("searchable");
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+
+        when(skillRepository.findByNamespaceIdAndStatus(7L, com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE))
+                .thenReturn(List.of(activeSkill));
+        when(skillRepository.findById(10L)).thenReturn(Optional.of(activeSkill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildByNamespace(7L);
+
+        verify(searchIndexService).index(org.mockito.ArgumentMatchers.any(SkillSearchDocument.class));
+    }
+
+    @Test
+    void rebuildAll_shouldSkipInactiveSkillsAndHandleMetadataEdgeCases() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        LabelDefinitionRepository labelDefinitionRepository = mock(LabelDefinitionRepository.class);
+        LabelTranslationRepository labelTranslationRepository = mock(LabelTranslationRepository.class);
+        SkillLabelRepository skillLabelRepository = mock(SkillLabelRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill activeSkill = new Skill(7L, "smart-agent", "owner-1", SkillVisibility.PUBLIC);
+        setField(activeSkill, "id", 1L);
+        activeSkill.setLatestVersionId(100L);
+        activeSkill.setDisplayName(null);
+        activeSkill.setSummary("  ");
+        activeSkill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE);
+
+        Skill archivedSkill = new Skill(7L, "archived-agent", "owner-1", SkillVisibility.PUBLIC);
+        setField(archivedSkill, "id", 2L);
+        archivedSkill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED);
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+        namespace.setStatus(com.iflytek.skillhub.domain.namespace.NamespaceStatus.FROZEN);
+
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        version.setParsedMetadataJson("""
+                {
+                  "frontmatter": [
+                    "not-a-map"
+                  ]
+                }
+                """);
+
+        LabelDefinition blankLabel = new LabelDefinition("  ", LabelType.RECOMMENDED, true, 1, "admin");
+        setField(blankLabel, "id", 10L);
+        LabelDefinition mixedCaseLabel = new LabelDefinition(" Official ", LabelType.RECOMMENDED, true, 2, "admin");
+        setField(mixedCaseLabel, "id", 11L);
+
+        when(skillRepository.findAll()).thenReturn(List.of(activeSkill, archivedSkill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(100L)).thenReturn(Optional.of(version));
+        when(skillLabelRepository.findBySkillId(1L)).thenReturn(List.of(
+                new SkillLabel(1L, 10L, "admin"),
+                new SkillLabel(1L, 11L, "admin")
+        ));
+        when(labelDefinitionRepository.findByIdIn(List.of(10L, 11L))).thenReturn(List.of(blankLabel, mixedCaseLabel));
+        when(labelTranslationRepository.findByLabelIdIn(List.of(10L, 11L))).thenReturn(List.of(
+                new LabelTranslation(11L, "en", "  "),
+                new LabelTranslation(99L, "en", "ignored"),
+                new LabelTranslation(11L, "zh", null)
+        ));
+
+        PostgresSearchRebuildService service = new PostgresSearchRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                labelDefinitionRepository,
+                labelTranslationRepository,
+                skillLabelRepository,
+                searchIndexService,
+                new SearchTextTokenizer()
+        );
+
+        service.rebuildAll();
+
+        ArgumentCaptor<List<SkillSearchDocument>> documentsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(searchIndexService).batchIndex(documentsCaptor.capture());
+        assertThat(documentsCaptor.getValue()).hasSize(1);
+        SkillSearchDocument document = documentsCaptor.getValue().get(0);
+        assertThat(document.title()).isEqualTo("smart-agent");
+        assertThat(document.searchText()).contains("smart-agent");
+        assertThat(document.searchText()).doesNotContain("not-a-map");
+        assertThat(document.keywords()).doesNotContain("ignored");
+        assertThat(document.labelSlugs()).containsExactly("official");
+        assertThat(document.namespaceStatus()).isEqualTo("FROZEN");
+    }
+
+    @Test
+    void rebuildBySkill_shouldIgnoreBlankMetadataAndMissingLatestVersion() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill blankMetadataSkill = new Skill(7L, "alpha", "owner-1", SkillVisibility.PUBLIC);
+        setField(blankMetadataSkill, "id", 1L);
+        blankMetadataSkill.setLatestVersionId(100L);
+        blankMetadataSkill.setSummary("Alpha summary");
+
+        Skill noVersionSkill = new Skill(7L, "beta", "owner-1", SkillVisibility.PUBLIC);
+        setField(noVersionSkill, "id", 2L);
+        noVersionSkill.setSummary("Beta summary");
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        version.setParsedMetadataJson("   ");
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(blankMetadataSkill));
+        when(skillRepository.findById(2L)).thenReturn(Optional.of(noVersionSkill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(100L)).thenReturn(Optional.of(version));
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildBySkill(1L);
+        service.rebuildBySkill(2L);
+
+        ArgumentCaptor<SkillSearchDocument> captor = ArgumentCaptor.forClass(SkillSearchDocument.class);
+        verify(searchIndexService, org.mockito.Mockito.times(2)).index(captor.capture());
+        assertThat(captor.getAllValues()).extracting(SkillSearchDocument::searchText)
+                .allSatisfy(text -> assertThat(text).doesNotContain("frontmatter"));
+    }
+
+    @Test
+    void rebuildBySkill_shouldCoverPostgresConstructorWithoutLabelRepositories() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "alpha", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+        skill.setSummary("summary");
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+
+        PostgresSearchRebuildService service = new PostgresSearchRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService,
+                new SearchTextTokenizer()
+        );
+
+        service.rebuildBySkill(1L);
+
+        verify(searchIndexService).index(org.mockito.ArgumentMatchers.any(SkillSearchDocument.class));
     }
 
     private PostgresSearchRebuildService newService(SkillRepository skillRepository,

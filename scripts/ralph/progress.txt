@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 对 Lucene / filesystem 分支做覆盖率收口时，优先给生产类增加最小的 `protected` seam（如 `openDirectory`、`walkIndexDirectory`、`analyze`）并在测试里 override，通常比堆真实 IO 场景更稳定，也更容易精确打到异常和空结果分支。
 - 遇到 feature-scoped JaCoCo gate 时，优先直接查看 `target/site/jacoco-aggregate/*/*.java.html` 的 `nc`/`pc` 行，而不是盲补测试；源码高亮能最快定位缺的是默认分支、异常分支，还是构造器 helper。
 - 认证/用户域的浏览器验收如果现成 Playwright `registerSession` 夹具超时，先在真实浏览器上下文里直接核对 `/api/v1/auth/me`、受保护路由和 logout 结果，先区分产品缺陷与测试夹具波动，再决定是否需要改代码。
 - 做最终态浏览器验收前，先确认前端代理目标端口真的有当前分支的 SkillHub 后端在监听；旧的 Vite 进程如果仍指向失效的 `SKILLHUB_API_PROXY_TARGET`，会把所有 `/api` 请求伪装成前端 500，结论不可信。
@@ -258,6 +259,15 @@
   - 有用的上下文：仓库里没有指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件，这轮仍无法补充额外需求上下文；后续 story 如果依赖这些材料，需要先确认实际路径。
 ---
 ## 2026-05-03 06:32 - US-014
+## 2026-05-04 00:00 - US-035
+- 为迁移范围内的 `search` / `infra` 生产类补齐单测覆盖：新增 `JpaSkillVersionStatsRepositoryAdapterTest`、`LocalFileIndexRebuildServiceTest`、`AbstractJpaSearchRebuildServiceCoverageTest`，并扩展 local-file、mysql-like、postgres rebuild/index 相关测试，覆盖空结果、异常分支、元数据边界、构造器分支和 no-op / fallback 路径。
+- 对 `LocalFileIndexQueryService`、`LocalFileIndexRebuildService`、`LocalFileIndexService` 增加最小测试 seam，使测试可以稳定命中 Lucene 目录打开、walk/delete、token analyze 等异常与边界分支；随后重新生成 aggregate JaCoCo，确认迁移范围目标类全部 `line_missed=0`。
+- 更改的文件：`server/skillhub-infra/src/test/java/com/iflytek/skillhub/infra/jpa/JpaSkillVersionStatsRepositoryAdapterTest.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexQueryService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexRebuildService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexQueryServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexRebuildServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/postgres/AbstractJpaSearchRebuildServiceCoverageTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/postgres/PostgresFullTextIndexServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/postgres/PostgresSearchRebuildServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：迁移范围 coverage 收口时，先用 `git diff main...HEAD -- server/skillhub-search/src/main server/skillhub-infra/src/main` 锁定真正的目标生产类，再用 aggregate `jacoco.csv` 过滤这些类，能避免把整个模块历史欠账误算进 story。
+  - 遇到的陷阱：`server/skillhub-app/target/site/jacoco-aggregate/jacoco.csv` 的 `GROUP` 列是 `skillhub-app/skillhub-search` 这类前缀，不是单独的模块名；按错列筛选会误判 coverage 结果。
+  - 有用的上下文：这轮 `US-035` 通过信号应以分支相对 `main` 的迁移生产类为准；当前这些目标类已经在最新 aggregate 报告中全部 `line_missed=0`，下一轮 `US-036` 可以直接复用同一套 `verify + csv 过滤` 流程做最终门禁确认。
+---
 - 扩展 `migration-mysql` 初始化 schema，补齐 `skill_file`、`skill_tag`、`review_task`、`promotion_request`、`skill_star`、`skill_rating`、`skill_report`、`notification_preference` 等 MySQL 过渡 runtime 在 publish/delete 链路会访问的表，并新增 `SkillFileMysqlPersistenceTest` 验证 `skill_file` 在 MySQL 下的真实持久化。
 - 复用了现有 `tiger-mysql`（`127.0.0.1:33306`）创建临时库 `skillhub_validator_us014`，以 `SPRING_PROFILES_ACTIVE=local-mysql`、`SKILLHUB_SEARCH_ENGINE=mysql` 启动最新 jar，确认 `GET /actuator/health` 返回 `{\"status\":\"UP\"}`，并串行验证 `admin / ChangeMe!2026` 登录、`POST /api/v1/skills/global/publish` 和 `DELETE /api/web/skills/id/1` 都返回成功。
 - 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlSchemaMigrationTest,SkillFileMysqlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。

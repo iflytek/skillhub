@@ -63,7 +63,7 @@ public class LocalFileIndexQueryService implements SearchQueryService {
             return emptyResult(query);
         }
 
-        try (Directory directory = FSDirectory.open(indexDirectory)) {
+        try (Directory directory = openDirectory(indexDirectory)) {
             if (!DirectoryReader.indexExists(directory)) {
                 return emptyResult(query);
             }
@@ -87,6 +87,10 @@ public class LocalFileIndexQueryService implements SearchQueryService {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to query local file index at " + indexDirectory, e);
         }
+    }
+
+    protected Directory openDirectory(Path directory) throws IOException {
+        return FSDirectory.open(directory);
     }
 
     private List<Long> collectPageSkillIds(
@@ -253,7 +257,7 @@ public class LocalFileIndexQueryService implements SearchQueryService {
         return labelSlug.trim().toLowerCase(Locale.ROOT);
     }
 
-    private List<String> analyze(String keyword) throws IOException {
+    protected List<String> analyze(String keyword) throws IOException {
         List<String> terms = new ArrayList<>();
         try (var tokenStream = analyzer.tokenStream(LocalFileIndexService.FIELD_SEARCH_TEXT, new StringReader(keyword))) {
             CharTermAttribute termAttribute = tokenStream.addAttribute(CharTermAttribute.class);

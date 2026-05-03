@@ -1,12 +1,15 @@
 package com.iflytek.skillhub.search.localfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
 import com.iflytek.skillhub.search.SkillSearchDocument;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -198,6 +201,185 @@ class LocalFileIndexQueryServiceTest {
 
         assertThat(result.skillIds()).isEmpty();
         assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void search_shouldReturnEmptyResultForFreshButUnindexedDirectory() throws Exception {
+        Path freshDir = tempDir.resolve("fresh-index");
+        Files.createDirectories(freshDir);
+        LocalFileIndexQueryService queryService = new LocalFileIndexQueryService(freshDir);
+
+        SearchResult result = queryService.search(new SearchQuery(
+                "agent",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "relevance",
+                0,
+                12,
+                List.of()
+        ));
+
+        assertThat(result.skillIds()).isEmpty();
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void search_shouldReturnTotalButNoHitsWhenOffsetExceedsResultSetOrPageSizeZero() {
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        LocalFileIndexQueryService queryService = new LocalFileIndexQueryService(tempDir);
+        indexService.batchIndex(List.of(
+                document(1L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                        "Alpha", "First", "tools", "alpha workflows", List.of("a"), 1L, 1.0D, 100L),
+                document(2L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                        "Beta", "Second", "tools", "beta workflows", List.of("a"), 2L, 2.0D, 200L)
+        ));
+
+        SearchResult overflowPage = queryService.search(new SearchQuery(
+                null,
+                null,
+                SearchVisibilityScope.anonymous(),
+                "newest",
+                3,
+                2,
+                List.of()
+        ));
+        SearchResult zeroSize = queryService.search(new SearchQuery(
+                null,
+                null,
+                SearchVisibilityScope.anonymous(),
+                "newest",
+                0,
+                0,
+                List.of()
+        ));
+
+        assertThat(overflowPage.skillIds()).isEmpty();
+        assertThat(overflowPage.total()).isEqualTo(2L);
+        assertThat(zeroSize.skillIds()).isEmpty();
+        assertThat(zeroSize.total()).isEqualTo(2L);
+    }
+
+    @Test
+    void search_shouldHideNamespaceOnlyResultsWhenAuthenticatedUserHasNoMemberNamespaces() {
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        LocalFileIndexQueryService queryService = new LocalFileIndexQueryService(tempDir);
+        indexService.index(document(1L, 20L, "team-ai", "NAMESPACE_ONLY", "ACTIVE", "ACTIVE", false,
+                "Team Agent", "Member only", "agent", "team search", List.of("official"), 1L, 1.0D, 100L));
+
+        SearchResult result = queryService.search(new SearchQuery(
+                "agent",
+                null,
+                new SearchVisibilityScope("user-1", Set.of(), Set.of(), false),
+                "relevance",
+                0,
+                10,
+                List.of()
+        ));
+
+        assertThat(result.skillIds()).isEmpty();
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void search_shouldIgnoreBlankLabelFiltersAndDefaultNullSortToNewest() {
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        LocalFileIndexQueryService queryService = new LocalFileIndexQueryService(tempDir);
+        indexService.batchIndex(List.of(
+                document(1L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                        "Older", "Older", "tools", "older", List.of("official"), 1L, 1.0D, 100L),
+                document(2L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                        "Newer", "Newer", "tools", "newer", List.of("beta"), 1L, 1.0D, 200L)
+        ));
+
+        SearchResult result = queryService.search(new SearchQuery(
+                null,
+                null,
+                SearchVisibilityScope.anonymous(),
+                null,
+                0,
+                10,
+                Arrays.asList(" ", null)
+        ));
+
+        assertThat(result.skillIds()).containsExactly(2L, 1L);
+        assertThat(result.total()).isEqualTo(2L);
+    }
+
+    @Test
+    void search_shouldWrapDirectoryIoFailures() {
+        LocalFileIndexQueryService failingService = new LocalFileIndexQueryService(tempDir) {
+            @Override
+            protected org.apache.lucene.store.Directory openDirectory(Path directory) throws java.io.IOException {
+                throw new java.io.IOException("boom");
+            }
+        };
+
+        assertThatThrownBy(() -> failingService.search(new SearchQuery(
+                "agent",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "relevance",
+                0,
+                10,
+                List.of()
+        ))).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to query local file index");
+    }
+
+    @Test
+    void search_shouldWrapAnalyzerFailures() {
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        indexService.index(document(1L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                "Agent", "Summary", "keywords", "search", List.of(), 1L, 1.0D, 1L));
+
+        LocalFileIndexQueryService failingService = new LocalFileIndexQueryService(tempDir) {
+            @Override
+            protected List<String> analyze(String keyword) throws java.io.IOException {
+                throw new java.io.IOException("tokenizer down");
+            }
+        };
+
+        assertThatThrownBy(() -> failingService.search(new SearchQuery(
+                "agent",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "relevance",
+                0,
+                10,
+                List.of()
+        ))).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to tokenize local file index keyword query");
+    }
+
+    @Test
+    void search_shouldTreatAnalyzerWithoutTermsAsMatchAll() {
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        indexService.batchIndex(List.of(
+                document(1L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                        "Alpha", "First", "tools", "alpha workflows", List.of("a"), 1L, 1.0D, 100L),
+                document(2L, 10L, "global", "PUBLIC", "ACTIVE", "ACTIVE", false,
+                        "Beta", "Second", "tools", "beta workflows", List.of("b"), 2L, 2.0D, 200L)
+        ));
+
+        LocalFileIndexQueryService queryService = new LocalFileIndexQueryService(tempDir) {
+            @Override
+            protected List<String> analyze(String keyword) {
+                return List.of();
+            }
+        };
+
+        SearchResult result = queryService.search(new SearchQuery(
+                "agent",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "newest",
+                0,
+                10,
+                List.of()
+        ));
+
+        assertThat(result.skillIds()).containsExactly(2L, 1L);
+        assertThat(result.total()).isEqualTo(2L);
     }
 
     private SkillSearchDocument document(

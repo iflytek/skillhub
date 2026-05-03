@@ -1,9 +1,11 @@
 package com.iflytek.skillhub.search.localfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -50,6 +52,67 @@ class LocalFileIndexServiceTest {
         assertThat(hitCount("2")).isEqualTo(1);
     }
 
+    @Test
+    void batchIndexAndRemoveShouldIgnoreEmptyInputsAndNormalizeLabels() throws Exception {
+        LocalFileIndexService service = new LocalFileIndexService(tempDir);
+
+        service.batchIndex(null);
+        service.batchIndex(List.of());
+        service.remove(null);
+        service.index(new SkillSearchDocument(
+                9L,
+                10L,
+                null,
+                null,
+                "Title",
+                null,
+                null,
+                null,
+                null,
+                "PUBLIC",
+                "ACTIVE",
+                Arrays.asList(" Official ", null, " ", "beta"),
+                0L,
+                0D,
+                0L,
+                "ACTIVE",
+                false
+        ));
+
+        assertThat(docCount()).isEqualTo(1);
+        assertThat(storedField("9", "namespaceSlug")).isNull();
+        assertThat(storedField("9", "ownerId")).isNull();
+        assertThat(hitCountByLabel("official")).isEqualTo(1);
+        assertThat(hitCountByLabel("beta")).isEqualTo(1);
+    }
+
+    @Test
+    void indexShouldRejectNullDocument() {
+        LocalFileIndexService service = new LocalFileIndexService(tempDir);
+
+        assertThatThrownBy(() -> service.index(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("document");
+    }
+
+    @Test
+    void indexShouldWrapIndexWriterIoFailures() {
+        LocalFileIndexService service = new LocalFileIndexService(tempDir) {
+            @Override
+            protected void ensureIndexDirectory(Path directory) {
+            }
+
+            @Override
+            protected Directory openDirectory(Path directory) throws java.io.IOException {
+                throw new java.io.IOException("boom");
+            }
+        };
+
+        assertThatThrownBy(() -> service.index(document(1L, "Title", "keywords")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to update local file index");
+    }
+
     private SkillSearchDocument document(Long skillId, String title, String keywords) {
         return new SkillSearchDocument(
                 skillId,
@@ -94,6 +157,14 @@ class LocalFileIndexServiceTest {
         try (Directory directory = FSDirectory.open(tempDir);
              IndexReader reader = DirectoryReader.open(directory)) {
             return reader.numDocs();
+        }
+    }
+
+    private long hitCountByLabel(String labelSlug) throws Exception {
+        try (Directory directory = FSDirectory.open(tempDir);
+             IndexReader reader = DirectoryReader.open(directory)) {
+            IndexSearcher searcher = new IndexSearcher(reader);
+            return searcher.search(new TermQuery(new Term("labelSlug", labelSlug)), 10).totalHits.value;
         }
     }
 }
