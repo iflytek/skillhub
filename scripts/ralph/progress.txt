@@ -287,3 +287,14 @@
   - 遇到的陷阱：`AuthFailureThrottleService` 的 memory fallback 测试必须用同一个 identifier 触发 8 次失败；只打 IP 不一定会命中阈值。
   - 有用的上下文：`local-mysql` 现在只剩 Redis-backed runtime-state 的默认路线上还保留 `auth failure throttle`，后续 `US-021` 可以沿用同类 selection test 模式。
 ---
+## 2026-05-03 12:08 - US-021
+- 去掉了 `local-mysql` profile 中残留的 `skillhub.auth.uass.cache-mode: local` 覆盖，让 UASS state store 和 session / ratelimit / auth throttle 一样完全由统一的 runtime-state provider 派生。
+- 修正了共享 `RedisTemplate<String, Object>` 的序列化配置：为 Redis runtime 启用带类型信息的 Jackson typing，确保 `UassLoginState` 这类 final value object 在 Redis 中可以真实 round-trip，而不是写入后读回空值或反序列化失败。
+- 新增 `RedisUassStateRuntimeSelectionTest`，用真实 Redis Testcontainer 验证 `redis` provider 下会装配 `RedisUassLoginStateStore` 并跨 context 正常 `save/find/consume`；同时保留 `memory` provider 的 `LocalUassLoginStateStore` fallback 验证。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-auth -am -Dtest=RedisUassLoginStateStoreTest,UassStateStoreConfigurationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=RedisUassStateRuntimeSelectionTest,LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/config/RedisTemplateConfig.java`、`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RedisUassStateRuntimeSelectionTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：凡是通过 `RedisTemplate<String, Object>` 持久化到 Redis 的跨模块状态对象，如果值类型可能是 final class / record，就不能只依赖默认 `GenericJackson2JsonRedisSerializer(objectMapper)`；需要在 Redis 专用 `ObjectMapper` 上显式启用类型信息。
+  - 遇到的陷阱：`ApplicationContextRunner` 里做 Redis runtime 验证时，如果 memory fallback 和 redis path 共用同一测试配置，带 `@Value("${spring.data.redis.*}")` 的连接工厂 bean 会在 memory case 提前炸掉；最好拆成 base runner + redis-specific runner。
+  - 有用的上下文：`UassStateStoreConfiguration` 的 `cacheMode=redis` 会在启动期主动 ping Redis 并 fail fast，所以 focused verification 不只是断言 bean 类型，还要验证真实连接和一次完整的 state round-trip。
+---

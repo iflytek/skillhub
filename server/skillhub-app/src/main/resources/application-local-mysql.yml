@@ -56,7 +56,6 @@ skillhub:
       # Optional dedicated host for the local mock third-party authorization page.
       # Example: http://localhost:3001
       mock-login-base-url: ${SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL:http://localhost:3001}
-      cache-mode: local
       # Pre-register rollout administrators for first-time UASS sign-in.
       # Example:
       admin-users:
