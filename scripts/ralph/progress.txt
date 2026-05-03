@@ -28,6 +28,7 @@
 - Local bootstrap on an empty database depends on `ApplicationRunner` ordering; if one runner requires seeded roles or the global namespace, make the order explicit with `@Order`.
 - 迁移 PostgreSQL `ON CONFLICT` 写路径时，优先把 Spring Data interface 保持为基础 CRUD/定向 `UPDATE`，再用 `@Primary` adapter 组合成 `UPDATE -> conditional INSERT -> retry UPDATE` 的方言中立 upsert，避免把数据库特定语法塞进 repository 注解。
 - 如果一个搜索 provider 只在特定方言下合法，查询、索引写入和 rebuild 三类 bean 都必须一起受同一 `@ConditionalOnProperty` 开关约束；只隔离 query bean 不足以阻止非目标 runtime 误装配 PostgreSQL-only 组件。
+- 搜索 runtime 选择测试不能只设 `skillhub.search.engine=mysql`；凡是要验证 provider 级分流（如 `mysql-like` vs `local-file-index`），都必须显式设置 `skillhub.search.provider`，否则测试覆盖不到真正的 index/rebuild 装配边界。
 - 迁移中的新搜索 provider 可以先用“独立 package + `@ConditionalOnProperty` + 最小装配测试”建立方言边界；如果后续行为 story 尚未落地，先不要抢跑接入索引/rebuild provider，以免跨 story 扩大改动面。
 - `local-mysql` profile 这类运行时切换，最好在 profile YAML 和配置绑定测试里同时显式断言搜索 provider 值；这样可以把“本地运行时”和“测试数据库”分层切开，避免 profile 仍回落到 `h2-like` 的默认路径。
 - 阶段切换时，profile 默认值可以直接设成下一阶段的 provider，再用环境变量保留上一阶段 fallback；绑定测试要同时覆盖默认值和回退值，避免配置迁移只改了一半。
@@ -343,4 +344,14 @@
   - 发现的 patterns：Lucene 增量写入最好直接围绕 `skillId` term 做 upsert / delete，这样和上层删除与重建事件能保持同一主键协议。
   - 遇到的陷阱：`FSDirectory` 不是“目录存在即能写”，路径必须先创建；否则空目录首写会在初始化阶段就失败。
   - 有用的上下文：`LocalFileIndexService` 现在只负责写删边界，查询和重建还会在后续 story 里单独接入。
+---
+## 2026-05-03 15:46 - US-025
+- 补齐了 `local-file-index` 的 runtime wiring：新增 `LocalFileIndexRebuildService`，并把 `MysqlNoopSearchIndexService` / `MysqlNoopSearchRebuildService` 收口到 `skillhub.search.provider=mysql-like`，让 `skillhub.search.provider=local-file-index` 真正切到 Lucene 写入/重建链路。
+- 新增 `LocalFileIndexLifecycleIntegrationTest`，用真实 `SearchIndexEventListener`、`SkillDeleteAppService` 和 Lucene 目录验证 `publish` / `archive` / `delete` 会进入索引写删路径；同时更新 `SearchRuntimeSelectionTest` 和 `MysqlLikeSearchRuntimeIntegrationTest` 锁定 provider 选择边界。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=MysqlLikeSearchRuntimeIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexRebuildService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlNoopSearchIndexService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlNoopSearchRebuildService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/SearchRuntimeSelectionTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/service/LocalFileIndexLifecycleIntegrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/MysqlLikeSearchRuntimeIntegrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：provider 切换类 story 最好同时补“bean selection test + 主链路 integration test”，前者锁装配，后者锁真实事件是否进入目标实现。
+  - 遇到的陷阱：如果测试仍只依赖 `skillhub.search.engine=mysql`，就会误把 `mysql-like` 当成默认路径，导致 `local-file-index` 的 index/rebuild wiring 根本没被覆盖到。
+  - 有用的上下文：`SearchIndexEventListener` 的 publish 事件依赖 `SearchRebuildService`，而 archive/delete 分别落到 `SearchIndexService.remove`；所以 Lucene 接入不能只补 writer，还要把 rebuild provider 一起切过去。
 ---

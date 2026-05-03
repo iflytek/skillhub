@@ -5,10 +5,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
- * Transitional no-op rebuild service for the MySQL runtime path.
+ * Transitional no-op rebuild service for the mysql-like search provider.
  */
 @Service
-@ConditionalOnProperty(prefix = "skillhub.search", name = "engine", havingValue = "mysql")
+@ConditionalOnProperty(prefix = "skillhub.search", name = "provider", havingValue = "mysql-like")
 public class MysqlNoopSearchRebuildService implements SearchRebuildService {
 
     @Override

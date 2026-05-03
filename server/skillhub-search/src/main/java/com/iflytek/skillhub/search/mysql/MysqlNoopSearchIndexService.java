@@ -7,10 +7,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
- * Transitional no-op index writer for the MySQL runtime path.
+ * Transitional no-op index writer for the mysql-like search provider.
  */
 @Service
-@ConditionalOnProperty(prefix = "skillhub.search", name = "engine", havingValue = "mysql")
+@ConditionalOnProperty(prefix = "skillhub.search", name = "provider", havingValue = "mysql-like")
 public class MysqlNoopSearchIndexService implements SearchIndexService {
 
     @Override

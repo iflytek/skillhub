@@ -47,6 +47,7 @@ import org.springframework.test.web.servlet.MockMvc;
                 "spring.flyway.enabled=true",
                 "spring.flyway.locations=classpath:sql/migration-mysql",
                 "skillhub.search.engine=mysql",
+                "skillhub.search.provider=mysql-like",
                 "skillhub.ratelimit.mode=memory",
                 "skillhub.auth.failure-throttle.mode=memory",
                 "skillhub.auth.device.enabled=false",
