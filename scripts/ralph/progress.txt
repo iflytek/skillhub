@@ -1,6 +1,7 @@
 ## Codebase Patterns
 - 为新搜索 provider 定义文档模型时，优先固定 `SearchResult` 只返回 `skillIds + pagination metadata`，hydrate 继续留在应用层；像 `labelSlugs` 这类额外过滤如果要下沉到索引，必须显式增加索引字段，不要依赖隐式 join。
 - local-file-index 的增量写入应以 `skillId` 作为 Lucene term 键，统一用 `updateDocument` 做幂等 upsert、`deleteDocuments` 做删除；打开 `FSDirectory` 之前先 `Files.createDirectories(...)`，否则空目录首写会失败。
+- local-file-index 的 `rebuildAll()` 必须先清空整个索引目录再按权威数据重建；只有 `rebuildByNamespace()` / `rebuildBySkill()` 这类 scoped rebuild 才应保留未命中的文档。
 - 当运行时 provider 已统一派生默认值时，profile YAML 不要再保留旧阶段的叶子覆盖；验证 Redis 路径时优先补一个真实容器的 selection test，断言环境值和可观察行为都切到目标实现。
 - 如果一组运行时状态能力（session、rate limit、auth throttle、UASS state）需要一起切换，不要在每个 profile 里分别维护散落的 mode；优先收敛到一个 `skillhub.runtime.state.provider` 开关，再由集中映射层派生具体属性。
 - 如果 app 级别的 Redis state 需要独立模板，优先给它单独的 bean 名称（例如 `skillhubRedisTemplate`）并通过 `@Qualifier` 注入，避免和 Spring 默认 `redisTemplate` 发生冲突。
@@ -364,4 +365,14 @@
   - 发现的 patterns：验证本地 MySQL 迁移 story 时，最好同时保留一条 Redis-backed 和一条 `SKILLHUB_RUNTIME_STATE_PROVIDER=memory` 的真实 health smoke，这样能把“下一阶段默认值”和“上一阶段回退路径”一起锁住。
   - 遇到的陷阱：Playwright/浏览器 smoke 很容易被页面 DOM 结构或跳转时序卡住；当后端日志和数据库都已经证明请求成功时，优先把 smoke 断言改成验证稳定的用户可见结果，而不是强依赖瞬时自动跳转。
   - 有用的上下文：`local-mysql` 新实例上，skill detail 主接口 `GET /api/web/skills/{namespace}/{slug}` 已能稳定返回 200；这轮 validator notes 中的 500/Access Denied 已不再出现，剩余不稳定点主要在 smoke 脚本对删除后页面行为的等待条件。
+---
+## 2026-05-03 17:23 - US-026
+- 实现了 `LocalFileIndexRebuildService.rebuildAll()` 的真正全量重建语义：执行前先清空 Lucene 索引目录，再按权威 skill 数据重新写入活动文档，避免旧 skill 文档在全量 rebuild 后残留。
+- 扩展 `LocalFileIndexLifecycleIntegrationTest`，先写入旧文档、再切换权威数据集执行第二次 `rebuildAll()`，验证 stale 文档会被移除且新文档能重新建索引。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalFileIndexLifecycleIntegrationTest,SearchRuntimeSelectionTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，全部通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexRebuildService.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/service/LocalFileIndexLifecycleIntegrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：Lucene 的全量 rebuild 需要先 reset 目录级状态，否则只靠 `batchIndex` 会保留权威数据源里已经消失的旧文档。
+  - 遇到的陷阱：如果 integration test 只验证“重建后存在目标文档”，会漏掉 stale 文档残留问题；需要显式跑两次 rebuild 并断言旧 `skillId` 已经搜不到。
+  - 有用的上下文：`LocalFileIndexRebuildService` 当前只把“清空目录”用于 `rebuildAll()`；按 namespace / skill 的 scoped rebuild 还留给后续 `US-027` 实现。
 ---

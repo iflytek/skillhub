@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.event.SkillStatusChangedEvent;
@@ -87,7 +88,8 @@ class LocalFileIndexLifecycleIntegrationTest {
                 labelTranslationRepository,
                 skillLabelRepository,
                 indexService,
-                new SearchTextTokenizer()
+                new SearchTextTokenizer(),
+                tempDir
         );
         SearchIndexEventListener listener = new SearchIndexEventListener(rebuildService, indexService);
         SkillDeleteAppService deleteAppService = new SkillDeleteAppService(
@@ -118,6 +120,87 @@ class LocalFileIndexLifecycleIntegrationTest {
         verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "deleter-1", "127.0.0.1", "JUnit");
     }
 
+    @Test
+    void rebuildAllShouldResetLuceneDirectoryBeforeReindexingActiveSkills() throws Exception {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        LabelDefinitionRepository labelDefinitionRepository = mock(LabelDefinitionRepository.class);
+        LabelTranslationRepository labelTranslationRepository = mock(LabelTranslationRepository.class);
+        SkillLabelRepository skillLabelRepository = mock(SkillLabelRepository.class);
+
+        when(labelDefinitionRepository.findByIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(List.of());
+        when(labelTranslationRepository.findByLabelIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(List.of());
+        when(skillLabelRepository.findBySkillId(org.mockito.ArgumentMatchers.anyLong())).thenReturn(List.of());
+
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        LocalFileIndexRebuildService rebuildService = new LocalFileIndexRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                labelDefinitionRepository,
+                labelTranslationRepository,
+                skillLabelRepository,
+                indexService,
+                new SearchTextTokenizer(),
+                tempDir
+        );
+
+        Skill staleSkill = skill(1L, 10L, "legacy-agent", "Legacy Agent", "Deprecated skill", 101L);
+        Namespace namespace = namespace(10L, "global");
+        SkillVersion staleVersion = version(101L, "legacy");
+
+        when(skillRepository.findAll()).thenReturn(List.of(staleSkill));
+        when(namespaceRepository.findById(10L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(101L)).thenReturn(Optional.of(staleVersion));
+
+        rebuildService.rebuildAll();
+        assertThat(docCount()).isEqualTo(1);
+        assertThat(hitCount("1")).isEqualTo(1);
+
+        Skill freshSkill = skill(2L, 10L, "fresh-agent", "Fresh Agent", "Current skill", 202L);
+        SkillVersion freshVersion = version(202L, "fresh");
+        reset(skillRepository, skillVersionRepository);
+        when(skillRepository.findAll()).thenReturn(List.of(freshSkill));
+        when(skillVersionRepository.findById(202L)).thenReturn(Optional.of(freshVersion));
+        when(namespaceRepository.findById(10L)).thenReturn(Optional.of(namespace));
+
+        rebuildService.rebuildAll();
+
+        assertThat(docCount()).isEqualTo(1);
+        assertThat(hitCount("1")).isZero();
+        assertThat(hitCount("2")).isEqualTo(1);
+        assertThat(storedField("2", "title")).isEqualTo("Fresh Agent");
+    }
+
+    private Skill skill(Long id, Long namespaceId, String slug, String displayName, String summary, Long latestVersionId) {
+        Skill skill = new Skill(namespaceId, slug, "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", id);
+        skill.setDisplayName(displayName);
+        skill.setSummary(summary);
+        skill.setLatestVersionId(latestVersionId);
+        return skill;
+    }
+
+    private Namespace namespace(Long id, String slug) {
+        Namespace namespace = new Namespace(slug, "Global", "system");
+        setField(namespace, "id", id);
+        return namespace;
+    }
+
+    private SkillVersion version(Long id, String keyword) {
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        setField(version, "id", id);
+        version.setParsedMetadataJson("""
+                {
+                  "frontmatter": {
+                    "keywords": ["%s"]
+                  }
+                }
+                """.formatted(keyword));
+        return version;
+    }
+
     private long docCount() throws Exception {
         try (Directory directory = FSDirectory.open(tempDir);
              IndexReader reader = DirectoryReader.open(directory)) {
@@ -134,6 +217,15 @@ class LocalFileIndexLifecycleIntegrationTest {
                     .doc;
             Document document = reader.storedFields().document(docId);
             return document.get(fieldName);
+        }
+    }
+
+    private long hitCount(String skillId) throws Exception {
+        try (Directory directory = FSDirectory.open(tempDir);
+             IndexReader reader = DirectoryReader.open(directory)) {
+            IndexSearcher searcher = new IndexSearcher(reader);
+            return searcher.search(new TermQuery(new org.apache.lucene.index.Term("skillId", skillId)), 10)
+                    .totalHits.value;
         }
     }
 
