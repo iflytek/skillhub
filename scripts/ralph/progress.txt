@@ -419,3 +419,12 @@
   - 遇到的陷阱：仓库当前依赖里没有 `lucene-queryparser`，实现查询时要优先复用 `lucene-core` + analyzer 可用的 API，例如先分词再手工拼 `BooleanQuery`。
   - 有用的上下文：本轮没有 UI 改动，因此未做浏览器验证；`SearchRuntimeSelectionTest` 现在已经覆盖 `local-file-index` 查询 bean 的真实装配边界，后续 `US-029/US-030` 可以直接在这套夹具上扩展。
 ---
+## 2026-05-03 19:44 - US-030
+- 将 `local-mysql` 的 search provider 默认值切到 `local-file-index`，并把 `mysql-like` 保留为显式回退；同时更新 `LocalMysqlProfileBindingTest` 与 `docs/04-search-architecture.md` 里的阶段说明。
+- 让 `LocalDevDataInitializer` 在种本地搜索 fixture 时同步写入 `SearchIndexService`，避免 Lucene 默认路径首次启动出现空索引。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`docs/04-search-architecture.md`、`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializer.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializerTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：如果某个 runtime 默认从 mysql-like 切到 local-file-index，启动期 seed 逻辑必须同步写索引，不然浏览器 smoke 会出现“API 有数据、搜索页空结果”的假失败。
+  - 遇到的陷阱：旧的 19080/3000 进程会掩盖当前分支结果，做浏览器验证前要明确复用或隔离新端口。
+  - 有用的上下文：local-file-index 默认路径在本轮已经可通过真实浏览器搜到 `mysql-runtime-fixture`，并且切到 `downloads` 排序后仍能稳定返回结果。
+---

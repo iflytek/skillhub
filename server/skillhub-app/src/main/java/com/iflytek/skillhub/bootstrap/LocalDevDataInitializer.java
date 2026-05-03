@@ -23,6 +23,9 @@ import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.SearchIndexService;
+import com.iflytek.skillhub.search.SkillSearchDocument;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -58,6 +61,7 @@ public class LocalDevDataInitializer implements ApplicationRunner {
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillSearchDocumentJpaRepository skillSearchDocumentJpaRepository;
+    private final SearchIndexService searchIndexService;
     private final PasswordEncoder passwordEncoder;
 
     public LocalDevDataInitializer(UserAccountRepository userAccountRepository,
@@ -69,6 +73,7 @@ public class LocalDevDataInitializer implements ApplicationRunner {
                                    SkillRepository skillRepository,
                                    SkillVersionRepository skillVersionRepository,
                                    SkillSearchDocumentJpaRepository skillSearchDocumentJpaRepository,
+                                   SearchIndexService searchIndexService,
                                    PasswordEncoder passwordEncoder) {
         this.userAccountRepository = userAccountRepository;
         this.namespaceRepository = namespaceRepository;
@@ -79,6 +84,7 @@ public class LocalDevDataInitializer implements ApplicationRunner {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillSearchDocumentJpaRepository = skillSearchDocumentJpaRepository;
+        this.searchIndexService = searchIndexService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -171,6 +177,26 @@ public class LocalDevDataInitializer implements ApplicationRunner {
         document.setStatus("ACTIVE");
         skillSearchDocumentJpaRepository.save(document);
         skillSearchDocumentJpaRepository.flush();
+
+        searchIndexService.index(new SkillSearchDocument(
+                persistedSkill.getId(),
+                globalNamespace.getId(),
+                globalNamespace.getSlug(),
+                LOCAL_ADMIN_ID,
+                persistedSkill.getDisplayName(),
+                persistedSkill.getSummary(),
+                "mysql,fixture,search,mysql-runtime-fixture",
+                "mysql-runtime-fixture mysql runtime fixture searchable local dev seeded skill",
+                "",
+                "PUBLIC",
+                "ACTIVE",
+                List.of(),
+                0L,
+                0D,
+                version.getPublishedAt() == null ? 0L : version.getPublishedAt().toEpochMilli(),
+                globalNamespace.getStatus().name(),
+                false
+        ));
     }
 
     private UserAccount ensureUser(String userId, String displayName, String email) {

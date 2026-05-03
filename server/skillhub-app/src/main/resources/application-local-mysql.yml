@@ -32,9 +32,9 @@ skillhub:
     local:
       base-path: ${LOCAL_MYSQL_STORAGE_BASE_PATH:${user.home}/.skillhub/local-mysql/storage}
   search:
-    # MySQL runtime uses the mysql-like query provider; local-h2 keeps the h2-like fallback.
+    # Phase-three local MySQL runs with Lucene by default while keeping mysql-like as the explicit fallback.
     engine: mysql
-    provider: ${SKILLHUB_SEARCH_PROVIDER:mysql-like}
+    provider: ${SKILLHUB_SEARCH_PROVIDER:local-file-index}
     local-file-index:
       # Phase-three Lucene builds use a dedicated writable directory under the
       # local MySQL runtime home so the index can be rebuilt or cleared without

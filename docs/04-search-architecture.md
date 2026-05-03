@@ -123,7 +123,7 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 
 - `skillhub.search.engine=postgres` 时，运行时会装配 `search.postgres` 下的 PostgreSQL FTS 查询、索引写入与重建实现。
 - `skillhub.search.engine=h2` 时，只装配 `H2LikeSearchQueryService` 与共享的 JPA 搜索文档索引/重建实现，不再实例化任何 `search.postgres.*` bean。
-- `skillhub.search.engine=mysql` 时，只装配 `MysqlLikeSearchQueryService` 与过渡期的 MySQL no-op index/rebuild 实现；`local-mysql` profile 通过该值显式选择 mysql-like provider，而 `local-h2` 继续选择 h2-like provider。
+- `skillhub.search.engine=mysql` 时，由 `skillhub.search.provider` 在 `local-file-index` 与 `mysql-like` 之间切换最终实现；`local-mysql` profile 默认走 `local-file-index`，保留 `mysql-like` 作为显式回退路径，而 `local-h2` 继续选择 h2-like provider。
 - 当前仍暂时保留但已限制在 PostgreSQL provider 下的遗留实现：
   - `PostgresFullTextQueryService`
   - `PostgresFullTextIndexService`
@@ -134,9 +134,9 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 - 对外搜索 provider 配置统一收敛为 `skillhub.search.provider`：
   - `postgres-fts`：迁移期遗留，仅当前默认 `application.yml` 使用
   - `h2-like`：`local-h2` 测试/轻量联调
-  - `mysql-like`：`local-mysql` 第二阶段默认值
-  - `local-file-index`：第三阶段 Lucene provider
-- 当前 bean 装配仍由 `skillhub.search.engine` 控制；`skillhub.search.provider` 在本阶段先作为稳定运行时配置契约落地，等 `LocalFileIndexQueryService` / `LocalFileIndexService` / `LocalFileIndexRebuildService` 实现后，再将装配切换到该 provider 维度。
+  - `mysql-like`：`local-file-index` 不可用时的显式回退值
+  - `local-file-index`：第三阶段 Lucene provider，也是 `local-mysql` 当前默认值
+- 当前 bean 装配由 `skillhub.search.engine=mysql` 搭配 `skillhub.search.provider=mysql-like|local-file-index` 控制；`local-file-index` 负责 query/index/rebuild 三类 bean 的最终默认装配。
 - `local-file-index` 采用嵌入式 Lucene，和应用进程同生命周期运行，不引入独立搜索 daemon。
 - 嵌入式 Lucene 索引目录使用 `skillhub.search.local-file-index.directory`：
   - `application.yml` 默认值：`${user.home}/.skillhub/search-index`

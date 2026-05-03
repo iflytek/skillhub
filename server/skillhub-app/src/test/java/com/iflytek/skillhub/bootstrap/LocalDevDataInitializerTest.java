@@ -19,6 +19,8 @@ import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.SearchIndexService;
+import com.iflytek.skillhub.search.SkillSearchDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -49,6 +51,7 @@ class LocalDevDataInitializerTest {
     @Mock private SkillRepository skillRepository;
     @Mock private SkillVersionRepository skillVersionRepository;
     @Mock private SkillSearchDocumentJpaRepository skillSearchDocumentJpaRepository;
+    @Mock private SearchIndexService searchIndexService;
     @Mock private PasswordEncoder passwordEncoder;
 
     private LocalDevDataInitializer initializer;
@@ -65,6 +68,7 @@ class LocalDevDataInitializerTest {
                 skillRepository,
                 skillVersionRepository,
                 skillSearchDocumentJpaRepository,
+                searchIndexService,
                 passwordEncoder
         );
     }
@@ -138,6 +142,7 @@ class LocalDevDataInitializerTest {
         verify(skillRepository, atLeastOnce()).save(any(Skill.class));
         verify(skillVersionRepository).save(any(SkillVersion.class));
         verify(skillSearchDocumentJpaRepository).save(any(SkillSearchDocumentEntity.class));
+        verify(searchIndexService).index(any(SkillSearchDocument.class));
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

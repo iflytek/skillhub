@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class LocalMysqlProfileBindingTest {
 
     @Test
-    void localMysqlProfile_usesMysqlDatasourceAndRedisBackedRuntimeDefaults() throws IOException {
+    void localMysqlProfile_usesMysqlDatasourceRedisRuntimeAndLocalFileIndexDefaults() throws IOException {
         ConfigurableEnvironment environment = loadEnvironment(
                 List.of("application-local-mysql.yml", "application.yml"),
                 Map.of()
@@ -37,7 +37,7 @@ class LocalMysqlProfileBindingTest {
         assertEquals("classpath:sql/migration-mysql", environment.getProperty("spring.flyway.locations"));
         assertEquals("local", environment.getProperty("skillhub.storage.provider"));
         assertEquals("mysql", environment.getProperty("skillhub.search.engine"));
-        assertEquals("mysql-like", environment.getProperty("skillhub.search.provider"));
+        assertEquals("local-file-index", environment.getProperty("skillhub.search.provider"));
         assertEquals("redis", environment.getProperty("skillhub.runtime.state.provider"));
         assertEquals(
                 System.getProperty("user.home") + "/.skillhub/local-mysql/storage",
@@ -86,11 +86,11 @@ class LocalMysqlProfileBindingTest {
     }
 
     @Test
-    void localMysqlProfile_canSwitchSearchProviderAndDirectoryForPhaseThree() throws IOException {
+    void localMysqlProfile_canFallbackToMysqlLikeSearchProvider() throws IOException {
         ConfigurableEnvironment environment = loadEnvironment(
                 List.of("application-local-mysql.yml", "application.yml"),
                 Map.of(
-                        "SKILLHUB_SEARCH_PROVIDER", "local-file-index",
+                        "SKILLHUB_SEARCH_PROVIDER", "mysql-like",
                         "SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY", "/tmp/skillhub-lucene"
                 )
         );
@@ -100,7 +100,7 @@ class LocalMysqlProfileBindingTest {
                 .orElseThrow(() -> new AssertionError("skillhub.search properties should bind"));
 
         assertEquals("mysql", environment.getProperty("skillhub.search.engine"));
-        assertEquals("local-file-index", properties.getProvider());
+        assertEquals("mysql-like", properties.getProvider());
         assertEquals(Path.of("/tmp/skillhub-lucene"), properties.getLocalFileIndex().getDirectory());
     }
 
