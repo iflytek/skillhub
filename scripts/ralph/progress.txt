@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- local-file-index 如果要新增过滤或排序能力，必须同步升级 `SkillSearchDocument`、Lucene writer 和 rebuild 来源；只改 `LocalFileIndexQueryService` 会因为索引里缺字段而得到“查询代码支持了，但文档模型没跟上”的假完成。
 - 当 `skillhub.search.provider` 从 `mysql-like` 切到 `local-file-index` 时，查询、索引写入和 rebuild 三类 bean 都要一起跟随 provider 条件切换；否则运行时会出现“Lucene 已写入，但查询仍走 mysql-like”的假切换。
 - 复现本地运行态或浏览器回归前，先重建当前分支的 `skillhub-app` 可执行 jar，并确认目标端口确实是 SkillHub 进程；陈旧 `target` 产物或端口占用会制造与当前代码无关的假故障。
 - 为新搜索 provider 定义文档模型时，优先固定 `SearchResult` 只返回 `skillIds + pagination metadata`，hydrate 继续留在应用层；像 `labelSlugs` 这类额外过滤如果要下沉到索引，必须显式增加索引字段，不要依赖隐式 join。
@@ -45,6 +46,16 @@
   - 发现的 patterns：app 级别的 Redis state 最好用专用 bean 名称 + `@Qualifier` 固化边界，测试和运行时都更稳。
   - 遇到的陷阱：浏览器 smoke 里直接点登录表单不一定最稳，复用 `page.context().request` 先建立会话，再去验证受保护路由和 logout，成功率更高。
   - 有用的上下文：`local-mysql` 现在已经能用 `tiger-mysql`/`tiger-redis` 在空库上启动，搜索页的稳定命中目标是 `mysql-runtime-fixture`。
+---
+## 2026-05-03 19:19 - US-029
+- 为 `LocalFileIndexQueryService` 补齐了 Lucene 侧的过滤、排序和分页：支持 namespace / label / visibility / active-status 过滤，支持 `downloads`、`rating`、`newest` 与关键词 `relevance` 排序，并继续返回 `skillIds + page/size/total` 元数据以复用现有 hydrate 链路。
+- 同步扩展了 `SkillSearchDocument` 与 Lucene writer/rebuild 来源，把 `labelSlugs`、下载量、评分、更新时间、namespace 状态和 hidden 标记一并写入索引，避免 local-file-index 查询再依赖数据库 join。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-search -am -Dtest=LocalFileIndexQueryServiceTest,LocalFileIndexServiceTest,SearchRuntimeSelectionTest,PostgresFullTextIndexServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/SkillSearchDocument.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/AbstractJpaSearchIndexService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/AbstractJpaSearchRebuildService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexQueryServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：Lucene provider 的查询能力一旦涉及结构化过滤或排序，就要先把所需字段显式写入 `SkillSearchDocument`，再由 writer/rebuild 统一落盘；否则 query 层只能退回数据库 join，破坏 provider 边界。
+  - 遇到的陷阱：`relevance` 在 whitespace keyword 或未知 sort 值下应回落到 `newest`，否则 Lucene 会按相关度对 `MatchAllDocsQuery` 给出不稳定顺序，分页测试很容易抖动。
+  - 有用的上下文：`LocalFileIndexQueryServiceTest` 现在已经覆盖 namespace、label、visibility、`downloads` / `rating` / `newest` 与分页边界，后续 `US-030` 可以直接复用这套夹具验证默认 provider 切换。
 ---
 
 ## 2026-05-02 23:30 - US-001

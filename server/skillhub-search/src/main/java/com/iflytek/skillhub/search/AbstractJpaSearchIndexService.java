@@ -100,7 +100,13 @@ public abstract class AbstractJpaSearchIndexService implements SearchIndexServic
                 document.searchText(),
                 document.semanticVector(),
                 truncate(document.visibility(), VISIBILITY_MAX_LENGTH),
-                truncate(document.status(), STATUS_MAX_LENGTH)
+                truncate(document.status(), STATUS_MAX_LENGTH),
+                document.labelSlugs(),
+                document.downloadCount(),
+                document.ratingAvg(),
+                document.updatedAtEpochMillis(),
+                truncate(document.namespaceStatus(), STATUS_MAX_LENGTH),
+                document.hidden()
         );
     }
 

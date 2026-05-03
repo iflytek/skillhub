@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.label.LabelDefinition;
 import com.iflytek.skillhub.domain.label.LabelDefinitionRepository;
 import com.iflytek.skillhub.domain.label.LabelTranslation;
 import com.iflytek.skillhub.domain.label.LabelTranslationRepository;
+import com.iflytek.skillhub.domain.label.SkillLabel;
 import com.iflytek.skillhub.domain.label.SkillLabelRepository;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -24,6 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * Shared search rebuild logic that hydrates the denormalized JPA search document table.
@@ -265,6 +267,7 @@ public abstract class AbstractJpaSearchRebuildService implements SearchRebuildSe
 
         Namespace namespace = namespaceOpt.get();
         SearchIndexPayload payload = buildSearchPayload(skill);
+        List<String> labelSlugs = resolveLabelSlugs(skill.getId());
 
         return Optional.of(new SkillSearchDocument(
                 skill.getId(),
@@ -277,8 +280,36 @@ public abstract class AbstractJpaSearchRebuildService implements SearchRebuildSe
                 payload.searchText(),
                 null,
                 skill.getVisibility().name(),
-                skill.getStatus().name()
+                skill.getStatus().name(),
+                labelSlugs,
+                skill.getDownloadCount() != null ? skill.getDownloadCount() : 0L,
+                skill.getRatingAvg() != null ? skill.getRatingAvg().doubleValue() : 0D,
+                skill.getUpdatedAt() != null ? skill.getUpdatedAt().toEpochMilli() : 0L,
+                namespace.getStatus().name(),
+                skill.isHidden()
         ));
+    }
+
+    private List<String> resolveLabelSlugs(Long skillId) {
+        if (skillLabelRepository == null || labelDefinitionRepository == null) {
+            return List.of();
+        }
+        List<SkillLabel> skillLabels = skillLabelRepository.findBySkillId(skillId);
+        if (skillLabels.isEmpty()) {
+            return List.of();
+        }
+        List<Long> labelIds = skillLabels.stream()
+                .map(SkillLabel::getLabelId)
+                .distinct()
+                .toList();
+        return labelDefinitionRepository.findByIdIn(labelIds).stream()
+                .map(LabelDefinition::getSlug)
+                .filter(Objects::nonNull)
+                .map(slug -> slug.trim().toLowerCase(Locale.ROOT))
+                .filter(slug -> !slug.isBlank())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     private record SearchIndexPayload(String keywords, String searchText) {

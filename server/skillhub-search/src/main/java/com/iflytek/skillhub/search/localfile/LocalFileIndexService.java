@@ -6,11 +6,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.DoubleDocValuesField;
+import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.LongPoint;
+import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
@@ -94,6 +98,7 @@ public class LocalFileIndexService implements SearchIndexService {
     private Document toLuceneDocument(SkillSearchDocument document) {
         Document luceneDocument = new Document();
         luceneDocument.add(new StringField(FIELD_SKILL_ID, String.valueOf(document.skillId()), Field.Store.YES));
+        addSortableLongField(luceneDocument, FIELD_SKILL_ID_SORT, document.skillId());
         luceneDocument.add(new LongPoint(FIELD_NAMESPACE_ID, document.namespaceId()));
         luceneDocument.add(new StoredField(FIELD_NAMESPACE_ID, document.namespaceId()));
         addStoredStringField(luceneDocument, FIELD_NAMESPACE_SLUG, document.namespaceSlug());
@@ -105,6 +110,15 @@ public class LocalFileIndexService implements SearchIndexService {
         addStoredStringField(luceneDocument, FIELD_SEMANTIC_VECTOR, document.semanticVector());
         addStoredStringField(luceneDocument, FIELD_VISIBILITY, document.visibility());
         addStoredStringField(luceneDocument, FIELD_STATUS, document.status());
+        addStoredStringField(luceneDocument, FIELD_NAMESPACE_STATUS, document.namespaceStatus());
+        addStoredBooleanField(luceneDocument, FIELD_HIDDEN, document.hidden());
+        addStoredLongField(luceneDocument, FIELD_DOWNLOAD_COUNT, document.downloadCount());
+        addStoredDoubleField(luceneDocument, FIELD_RATING_AVG, document.ratingAvg());
+        addStoredLongField(luceneDocument, FIELD_UPDATED_AT_EPOCH_MILLIS, document.updatedAtEpochMillis());
+        addSortableLongField(luceneDocument, FIELD_DOWNLOAD_COUNT_SORT, document.downloadCount());
+        addSortableDoubleField(luceneDocument, FIELD_RATING_AVG_SORT, document.ratingAvg());
+        addSortableLongField(luceneDocument, FIELD_UPDATED_AT_EPOCH_MILLIS_SORT, document.updatedAtEpochMillis());
+        addLabelFields(luceneDocument, document.labelSlugs());
         return luceneDocument;
     }
 
@@ -114,9 +128,48 @@ public class LocalFileIndexService implements SearchIndexService {
         }
     }
 
+    private void addStoredBooleanField(Document document, String fieldName, boolean value) {
+        document.add(new StringField(fieldName, Boolean.toString(value), Field.Store.YES));
+    }
+
+    private void addStoredLongField(Document document, String fieldName, long value) {
+        document.add(new LongPoint(fieldName, value));
+        document.add(new StoredField(fieldName, value));
+    }
+
+    private void addStoredDoubleField(Document document, String fieldName, double value) {
+        document.add(new DoublePoint(fieldName, value));
+        document.add(new StoredField(fieldName, value));
+    }
+
+    private void addSortableLongField(Document document, String fieldName, long value) {
+        document.add(new NumericDocValuesField(fieldName, value));
+        document.add(new StoredField(fieldName, value));
+    }
+
+    private void addSortableDoubleField(Document document, String fieldName, double value) {
+        document.add(new DoubleDocValuesField(fieldName, value));
+        document.add(new StoredField(fieldName, value));
+    }
+
     private void addStoredTextField(Document document, String fieldName, String value) {
         if (value != null) {
             document.add(new TextField(fieldName, value, Field.Store.YES));
+        }
+    }
+
+    private void addLabelFields(Document document, List<String> labelSlugs) {
+        if (labelSlugs == null || labelSlugs.isEmpty()) {
+            return;
+        }
+        for (String labelSlug : labelSlugs) {
+            if (labelSlug == null) {
+                continue;
+            }
+            String normalized = labelSlug.trim().toLowerCase(Locale.ROOT);
+            if (!normalized.isBlank()) {
+                document.add(new StringField(FIELD_LABEL_SLUG, normalized, Field.Store.YES));
+            }
         }
     }
 
@@ -127,6 +180,7 @@ public class LocalFileIndexService implements SearchIndexService {
 
     static final String FIELD_SKILL_ID = "skillId";
     static final String FIELD_NAMESPACE_ID = "namespaceId";
+    static final String FIELD_SKILL_ID_SORT = "skillIdSort";
     static final String FIELD_NAMESPACE_SLUG = "namespaceSlug";
     static final String FIELD_OWNER_ID = "ownerId";
     static final String FIELD_TITLE = "title";
@@ -136,4 +190,13 @@ public class LocalFileIndexService implements SearchIndexService {
     static final String FIELD_SEMANTIC_VECTOR = "semanticVector";
     static final String FIELD_VISIBILITY = "visibility";
     static final String FIELD_STATUS = "status";
+    static final String FIELD_LABEL_SLUG = "labelSlug";
+    static final String FIELD_DOWNLOAD_COUNT = "downloadCount";
+    static final String FIELD_DOWNLOAD_COUNT_SORT = "downloadCountSort";
+    static final String FIELD_RATING_AVG = "ratingAvg";
+    static final String FIELD_RATING_AVG_SORT = "ratingAvgSort";
+    static final String FIELD_UPDATED_AT_EPOCH_MILLIS = "updatedAtEpochMillis";
+    static final String FIELD_UPDATED_AT_EPOCH_MILLIS_SORT = "updatedAtEpochMillisSort";
+    static final String FIELD_NAMESPACE_STATUS = "namespaceStatus";
+    static final String FIELD_HIDDEN = "hidden";
 }

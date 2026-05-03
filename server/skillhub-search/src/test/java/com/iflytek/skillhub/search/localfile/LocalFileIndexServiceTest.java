@@ -62,7 +62,13 @@ class LocalFileIndexServiceTest {
                 "search text",
                 null,
                 "PUBLIC",
-                "ACTIVE"
+                "ACTIVE",
+                List.of("official"),
+                3L,
+                4.5D,
+                123L,
+                "ACTIVE",
+                false
         );
     }
 
