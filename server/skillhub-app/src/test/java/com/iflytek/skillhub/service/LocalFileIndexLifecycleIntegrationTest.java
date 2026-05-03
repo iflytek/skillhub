@@ -173,6 +173,148 @@ class LocalFileIndexLifecycleIntegrationTest {
         assertThat(storedField("2", "title")).isEqualTo("Fresh Agent");
     }
 
+    @Test
+    void rebuildByNamespaceShouldRefreshOnlyTargetNamespaceDocuments() throws Exception {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        LabelDefinitionRepository labelDefinitionRepository = mock(LabelDefinitionRepository.class);
+        LabelTranslationRepository labelTranslationRepository = mock(LabelTranslationRepository.class);
+        SkillLabelRepository skillLabelRepository = mock(SkillLabelRepository.class);
+
+        when(labelDefinitionRepository.findByIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(List.of());
+        when(labelTranslationRepository.findByLabelIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(List.of());
+        when(skillLabelRepository.findBySkillId(org.mockito.ArgumentMatchers.anyLong())).thenReturn(List.of());
+
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        LocalFileIndexRebuildService rebuildService = new LocalFileIndexRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                labelDefinitionRepository,
+                labelTranslationRepository,
+                skillLabelRepository,
+                indexService,
+                new SearchTextTokenizer(),
+                tempDir
+        );
+
+        Namespace globalNamespace = namespace(10L, "global");
+        Namespace teamNamespace = namespace(20L, "team-ai");
+        Skill globalSkill = skill(1L, 10L, "global-agent", "Global Agent", "Updated global skill", 101L);
+        Skill teamSkill = skill(2L, 20L, "team-agent", "Team Agent", "Unrelated team skill", 202L);
+        SkillVersion globalVersion = version(101L, "global");
+        SkillVersion teamVersion = version(202L, "team");
+
+        when(namespaceRepository.findById(10L)).thenReturn(Optional.of(globalNamespace));
+        when(namespaceRepository.findById(20L)).thenReturn(Optional.of(teamNamespace));
+        when(skillVersionRepository.findById(101L)).thenReturn(Optional.of(globalVersion));
+        when(skillVersionRepository.findById(202L)).thenReturn(Optional.of(teamVersion));
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(globalSkill));
+        when(skillRepository.findById(2L)).thenReturn(Optional.of(teamSkill));
+
+        rebuildService.rebuildBySkill(1L);
+        rebuildService.rebuildBySkill(2L);
+
+        assertThat(docCount()).isEqualTo(2);
+        assertThat(storedField("1", "title")).isEqualTo("Global Agent");
+        assertThat(storedField("2", "title")).isEqualTo("Team Agent");
+
+        Skill renamedGlobalSkill = skill(1L, 10L, "global-agent", "Global Agent v2", "Retitled global skill", 303L);
+        SkillVersion renamedGlobalVersion = version(303L, "retitled");
+
+        reset(skillRepository, skillVersionRepository);
+        when(skillRepository.findByNamespaceIdAndStatus(10L, SkillStatus.ACTIVE)).thenReturn(List.of(renamedGlobalSkill));
+        when(namespaceRepository.findById(10L)).thenReturn(Optional.of(globalNamespace));
+        when(namespaceRepository.findById(20L)).thenReturn(Optional.of(teamNamespace));
+        when(skillVersionRepository.findById(303L)).thenReturn(Optional.of(renamedGlobalVersion));
+        when(skillVersionRepository.findById(202L)).thenReturn(Optional.of(teamVersion));
+
+        rebuildService.rebuildByNamespace(10L);
+
+        assertThat(docCount()).isEqualTo(2);
+        assertThat(storedField("1", "title")).isEqualTo("Global Agent v2");
+        assertThat(storedField("2", "title")).isEqualTo("Team Agent");
+
+        reset(skillRepository);
+        when(skillRepository.findByNamespaceIdAndStatus(10L, SkillStatus.ACTIVE)).thenReturn(List.of());
+
+        rebuildService.rebuildByNamespace(10L);
+
+        assertThat(docCount()).isEqualTo(1);
+        assertThat(hitCount("1")).isZero();
+        assertThat(hitCount("2")).isEqualTo(1);
+        assertThat(storedField("2", "title")).isEqualTo("Team Agent");
+    }
+
+    @Test
+    void rebuildBySkillShouldReplaceOrRemoveOnlyTargetSkillDocument() throws Exception {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        LabelDefinitionRepository labelDefinitionRepository = mock(LabelDefinitionRepository.class);
+        LabelTranslationRepository labelTranslationRepository = mock(LabelTranslationRepository.class);
+        SkillLabelRepository skillLabelRepository = mock(SkillLabelRepository.class);
+
+        when(labelDefinitionRepository.findByIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(List.of());
+        when(labelTranslationRepository.findByLabelIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(List.of());
+        when(skillLabelRepository.findBySkillId(org.mockito.ArgumentMatchers.anyLong())).thenReturn(List.of());
+
+        LocalFileIndexService indexService = new LocalFileIndexService(tempDir);
+        LocalFileIndexRebuildService rebuildService = new LocalFileIndexRebuildService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                labelDefinitionRepository,
+                labelTranslationRepository,
+                skillLabelRepository,
+                indexService,
+                new SearchTextTokenizer(),
+                tempDir
+        );
+
+        Namespace namespace = namespace(10L, "global");
+        Skill targetSkill = skill(1L, 10L, "smart-agent", "Smart Agent", "Original title", 101L);
+        Skill otherSkill = skill(2L, 10L, "helper-agent", "Helper Agent", "Other title", 202L);
+        SkillVersion targetVersion = version(101L, "original");
+        SkillVersion otherVersion = version(202L, "other");
+
+        when(namespaceRepository.findById(10L)).thenReturn(Optional.of(namespace));
+        when(skillVersionRepository.findById(101L)).thenReturn(Optional.of(targetVersion));
+        when(skillVersionRepository.findById(202L)).thenReturn(Optional.of(otherVersion));
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(targetSkill));
+        when(skillRepository.findById(2L)).thenReturn(Optional.of(otherSkill));
+
+        rebuildService.rebuildBySkill(1L);
+        rebuildService.rebuildBySkill(2L);
+
+        assertThat(docCount()).isEqualTo(2);
+        assertThat(storedField("1", "title")).isEqualTo("Smart Agent");
+        assertThat(storedField("2", "title")).isEqualTo("Helper Agent");
+
+        Skill updatedTargetSkill = skill(1L, 10L, "smart-agent", "Smart Agent v2", "Updated title", 303L);
+        SkillVersion updatedTargetVersion = version(303L, "updated");
+
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(updatedTargetSkill));
+        when(skillVersionRepository.findById(303L)).thenReturn(Optional.of(updatedTargetVersion));
+
+        rebuildService.rebuildBySkill(1L);
+
+        assertThat(docCount()).isEqualTo(2);
+        assertThat(storedField("1", "title")).isEqualTo("Smart Agent v2");
+        assertThat(storedField("2", "title")).isEqualTo("Helper Agent");
+
+        Skill archivedTargetSkill = skill(1L, 10L, "smart-agent", "Smart Agent v2", "Updated title", 303L);
+        archivedTargetSkill.setStatus(SkillStatus.ARCHIVED);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(archivedTargetSkill));
+
+        rebuildService.rebuildBySkill(1L);
+
+        assertThat(docCount()).isEqualTo(1);
+        assertThat(hitCount("1")).isZero();
+        assertThat(hitCount("2")).isEqualTo(1);
+    }
+
     private Skill skill(Long id, Long namespaceId, String slug, String displayName, String summary, Long latestVersionId) {
         Skill skill = new Skill(namespaceId, slug, "owner-1", SkillVisibility.PUBLIC);
         setField(skill, "id", id);

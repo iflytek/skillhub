@@ -75,7 +75,7 @@ public abstract class AbstractJpaSearchRebuildService implements SearchRebuildSe
 
     @Override
     public void rebuildByNamespace(Long namespaceId) {
-        List<Skill> skills = skillRepository.findByNamespaceIdAndStatus(namespaceId, SkillStatus.ACTIVE);
+        List<Skill> skills = findActiveSkillsByNamespace(namespaceId);
 
         for (Skill skill : skills) {
             rebuildBySkill(skill.getId());
@@ -84,12 +84,28 @@ public abstract class AbstractJpaSearchRebuildService implements SearchRebuildSe
 
     @Override
     public void rebuildBySkill(Long skillId) {
-        Optional<Skill> skillOpt = skillRepository.findById(skillId);
+        Optional<Skill> skillOpt = findSkillById(skillId);
         if (skillOpt.isEmpty()) {
             return;
         }
 
         toDocument(skillOpt.get()).ifPresent(searchIndexService::index);
+    }
+
+    protected final List<Skill> findActiveSkillsByNamespace(Long namespaceId) {
+        return skillRepository.findByNamespaceIdAndStatus(namespaceId, SkillStatus.ACTIVE);
+    }
+
+    protected final Optional<Skill> findSkillById(Long skillId) {
+        return skillRepository.findById(skillId);
+    }
+
+    protected final void indexDocument(SkillSearchDocument document) {
+        searchIndexService.index(document);
+    }
+
+    protected final void removeDocument(Long skillId) {
+        searchIndexService.remove(skillId);
     }
 
     private SearchIndexPayload buildSearchPayload(Skill skill) {
@@ -241,7 +257,7 @@ public abstract class AbstractJpaSearchRebuildService implements SearchRebuildSe
         }
     }
 
-    private Optional<SkillSearchDocument> toDocument(Skill skill) {
+    protected final Optional<SkillSearchDocument> toDocument(Skill skill) {
         Optional<Namespace> namespaceOpt = namespaceRepository.findById(skill.getNamespaceId());
         if (namespaceOpt.isEmpty()) {
             return Optional.empty();

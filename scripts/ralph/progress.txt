@@ -258,6 +258,16 @@
 - 去掉 `application-local-mysql.yml` 对 session cookie 的 `same-site: none` / `secure: true` 覆盖，让 `local-mysql` 浏览器运行态回落到基线的 `lax` + `false`，修复本地 HTTP 下无法建立登录态的问题。
 - 更新 `LocalMysqlProfileBindingTest`，显式断言 `local-mysql` profile 的 session cookie 默认值，避免后续再把浏览器不可用的 secure-cookie 配置带回本地 profile。
 - 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test` 和 `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`，确认通过。
+## 2026-05-03 18:28 - US-027
+- 为 `LocalFileIndexRebuildService` 补齐 Lucene 范围重建语义：`rebuildByNamespace()` 现在会只重写目标 namespace 下仍然活跃的 skill 文档，并删除该 namespace 中已失效的旧文档；`rebuildBySkill()` 则会在目标 skill 不存在、非 `ACTIVE` 或无法生成搜索文档时定向删除旧索引文档。
+- 扩展 `LocalFileIndexLifecycleIntegrationTest`，新增 namespace-scope 与 skill-scope 两组真实 Lucene 目录测试，验证范围重建只影响目标文档、不会误删其他 namespace/skill 的索引记录。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalFileIndexLifecycleIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/AbstractJpaSearchRebuildService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexRebuildService.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/service/LocalFileIndexLifecycleIntegrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：Lucene 的 scoped rebuild 需要把“目标范围内现有索引文档”和“权威数据源仍应存在的文档”做差集，只有这样才能既保留无关文档，又清掉目标范围里的脏数据。
+  - 遇到的陷阱：如果沿用共享 `rebuildBySkill()` 的“只要能查到 skill 就重新 index”语义，已归档或 namespace 缺失导致不可建档的 skill 会在范围重建时留下陈旧文档。
+  - 有用的上下文：`LocalFileIndexLifecycleIntegrationTest` 现在已经覆盖 `rebuildAll()`、`rebuildByNamespace()` 和 `rebuildBySkill()` 三种 Lucene 重建路径；后续做 `LocalFileIndexQueryService` 时可以直接复用这里的临时目录夹具做端到端索引准备。
+---
 - 复用了现有 `tiger-mysql`（`127.0.0.1:33306`）与 `agent-browser`：以 `SPRING_PROFILES_ACTIVE=local-mysql`、`SKILLHUB_SEARCH_ENGINE=mysql` 启动临时库 `skillhub_us002_browser`，验证 `GET /actuator/health -> {\"status\":\"UP\"}`；随后在浏览器中打开 `http://127.0.0.1:3000/login`，确认会发出 `POST /api/v1/auth/local/login`，并成功跳转到 `http://127.0.0.1:3000/dashboard`，同时拿到 `JSESSIONID` 与 `XSRF-TOKEN` cookie。
 - 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
 - **未来迭代的学习：**
