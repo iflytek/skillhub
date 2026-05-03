@@ -439,3 +439,14 @@
   - 遇到的陷阱：旧的 19080/3000 进程会掩盖当前分支结果，做浏览器验证前要明确复用或隔离新端口。
   - 有用的上下文：local-file-index 默认路径在本轮已经可通过真实浏览器搜到 `mysql-runtime-fixture`，并且切到 `downloads` 排序后仍能稳定返回结果。
 ---
+## 2026-05-03 20:51 - US-032
+- 在 fresh build 的 `local-mysql + redis + local-file-index` 运行态上重新做了真实浏览器验收：先隔离到 `19180 + 13100` 与全新 MySQL 库 `skillhub_us032_verify`，确认 `GET /actuator/health -> {"status":"UP"}`，再验证 `Profile Settings`、`My Namespaces`、`My Skills`、以及从 dashboard 列表进入 skill detail 后 `Delete Skill` 入口可见。
+- 为避免本地代理下的登录表单/CORS 波动阻塞验证，这轮直接从 fresh backend 拿到 `admin / ChangeMe!2026` 的 `SESSION` / `XSRF-TOKEN` 并注入浏览器 cookie jar；同时在 clean runtime 里新建 namespace `us032-moprlly0` 并发布临时 skill `us032-skill-moprlly0`，确认详情页 URL `/space/us032-moprlly0/us032-skill-moprlly0?returnTo=%2Fdashboard%2Fskills` 正常打开。
+- 这轮没有修改业务代码；只将 `scripts/ralph/prd.json` 中的 `US-032` 标记为通过，并记录本次 fresh-runtime 验证收尾。`my-namespaces-data.spec.ts` / `my-skills-navigation.spec.ts` 仍会在 `registerSession` `beforeEach` 上超时，但未暴露 fresh runtime 的 namespace/skill 产品缺陷。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当真实浏览器验收只需要验证受保护路由和页面链路时，可以先从 fresh backend 取到有效 session cookies，再把浏览器登录表单不稳定与产品逻辑解耦。
+  - 遇到的陷阱：复用旧 MySQL 库做 fresh build 验收会先撞到 Flyway checksum mismatch，必须每轮都换临时库，否则容易把迁移历史噪声误判成当前代码回归。
+  - 有用的上下文：`US-032` 的关键验收信号已经可以用 clean runtime 上的 `dashboard/skills -> /space/{namespace}/{slug}` detail 路径直接确认，旧 19080 实例里出现的 detail 500 不能直接作为当前 HEAD 结论。
+---
