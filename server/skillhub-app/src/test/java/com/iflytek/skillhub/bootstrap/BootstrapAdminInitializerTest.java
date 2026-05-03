@@ -180,6 +180,41 @@ class BootstrapAdminInitializerTest {
     }
 
     @Test
+    void shouldRefreshExistingUserAndSkipDuplicateRoleAndMembershipWrites() throws Exception {
+        bootstrapAdminProperties.setEnabled(true);
+        Namespace global = new Namespace("global", "Global", "system");
+        setField(global, "id", 1L);
+
+        Role superAdminRole = new Role();
+        setField(superAdminRole, "id", 1L);
+        setField(superAdminRole, "code", "SUPER_ADMIN");
+
+        UserAccount existingUser = new UserAccount("docker-admin", "Stale Admin", "stale-admin@example.com", null);
+        NamespaceMember existingMembership = new NamespaceMember(1L, "docker-admin", NamespaceRole.OWNER);
+
+        when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.empty());
+        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.of(existingUser));
+        when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(passwordEncoder.encode("ChangeMe!2026")).thenReturn("encoded-password");
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
+        when(userRoleBindingRepository.findByUserId("docker-admin"))
+                .thenReturn(List.of(new UserRoleBinding("docker-admin", superAdminRole)));
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin"))
+                .thenReturn(Optional.of(existingMembership));
+
+        initializer.run(new DefaultApplicationArguments(new String[0]));
+
+        assertEquals("Admin", existingUser.getDisplayName());
+        assertEquals("admin@skillhub.local", existingUser.getEmail());
+
+        verify(userAccountRepository).save(existingUser);
+        verify(localCredentialRepository).save(any(LocalCredential.class));
+        verify(userRoleBindingRepository, never()).save(any(UserRoleBinding.class));
+        verify(namespaceMemberRepository, never()).save(any(NamespaceMember.class));
+    }
+
+    @Test
     void shouldSkipWhenBootstrapAdminIsDisabled() {
         bootstrapAdminProperties.setEnabled(false);
 

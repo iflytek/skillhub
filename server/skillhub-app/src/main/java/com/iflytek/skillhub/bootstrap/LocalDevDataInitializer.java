@@ -25,6 +25,7 @@ import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SkillSearchDocument;
+import java.lang.reflect.Field;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * Seeds predictable users, memberships, and admin roles for the local development profile.
@@ -269,21 +272,16 @@ public class LocalDevDataInitializer implements ApplicationRunner {
     }
 
     private void trySetRole(Role role, String code, String name, String description) {
-        try {
-            java.lang.reflect.Field codeField = Role.class.getDeclaredField("code");
-            java.lang.reflect.Field nameField = Role.class.getDeclaredField("name");
-            java.lang.reflect.Field descriptionField = Role.class.getDeclaredField("description");
-            java.lang.reflect.Field systemField = Role.class.getDeclaredField("system");
-            codeField.setAccessible(true);
-            nameField.setAccessible(true);
-            descriptionField.setAccessible(true);
-            systemField.setAccessible(true);
-            codeField.set(role, code);
-            nameField.set(role, name);
-            descriptionField.set(role, description);
-            systemField.set(role, true);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to initialize system role: " + code, e);
-        }
+        setRoleField(role, "code", code);
+        setRoleField(role, "name", name);
+        setRoleField(role, "description", description);
+        setRoleField(role, "system", true);
+    }
+
+    private void setRoleField(Role role, String fieldName, Object value) {
+        Field field = ReflectionUtils.findField(Role.class, fieldName);
+        Assert.state(field != null, () -> "Failed to initialize system role field: " + fieldName);
+        ReflectionUtils.makeAccessible(field);
+        ReflectionUtils.setField(field, role, value);
     }
 }

@@ -17,12 +17,13 @@ public interface SkillVersionStatsJpaRepository extends JpaRepository<SkillVersi
     @Modifying
     @Transactional
     @Query(
-            """
-            UPDATE SkillVersionStats s
-            SET s.downloadCount = s.downloadCount + 1,
-                s.updatedAt = CURRENT_TIMESTAMP
-            WHERE s.skillVersionId = :skillVersionId
-            """
+            value = """
+                    UPDATE skill_version_stats
+                    SET download_count = download_count + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE skill_version_id = :skillVersionId
+                    """,
+            nativeQuery = true
     )
     int incrementExistingDownloadCount(@Param("skillVersionId") Long skillVersionId);
 

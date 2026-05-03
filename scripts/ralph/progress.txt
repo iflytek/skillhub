@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 如果 validator 需要核对 `server/<module>/target/site/jacoco/jacoco.csv` 这类模块级 JaCoCo 报告，`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs` 之后还要补一次 `jacoco:report`；否则 aggregate gate 虽然是 fresh 的，模块级 csv/html 可能仍停留在旧值。
 - `skillhub-app` 的 `jacoco:report-aggregate` 只会输出依赖模块（`skillhub-domain`、`skillhub-auth`、`skillhub-infra`、`skillhub-search`、`skillhub-notification`）的类级行统计；app 自模块类和部分 interface/repository 不会出现在 aggregate `jacoco.csv`，验证它们时要结合现有 feature gate 或模块级报告，不要把 `UNMATCHED` 直接误判成漏测。
 - 对 JPA entity 做覆盖率收口时，优先在同 package 的轻量单测里直接调用 `protected` 构造器和 `@PrePersist` / `@PreUpdate` lifecycle 方法；通常不需要拉起 JPA 或数据库就能把字段映射类的剩余行收干。
 - 对 Lucene / filesystem 分支做覆盖率收口时，优先给生产类增加最小的 `protected` seam（如 `openDirectory`、`walkIndexDirectory`、`analyze`）并在测试里 override，通常比堆真实 IO 场景更稳定，也更容易精确打到异常和空结果分支。
@@ -510,4 +511,13 @@
   - 发现的 patterns：对纯 entity / record 型生产类做 coverage 收口时，package 内白盒单测配合最小反射赋值，通常能最快命中 lifecycle、getter/setter 和 defensive null 分支。
   - 遇到的陷阱：`git diff main...HEAD` 过滤出来的迁移类里，会混入 aggregate `jacoco.csv` 本来不产出 row 的 app 自模块类和 interface/repository；最终核对时要区分“真实 `line_missed`”和“报告口径不包含”的 `UNMATCHED`。
   - 有用的上下文：这轮 final check 的有效信号是 `mvn ... verify -DskipITs` 成功，加上 aggregate 里已匹配到的迁移类全部 `line_missed=0`；当前 `UNMATCHED` 只剩 app 自模块类与无类级行统计的 repository/interface。
+---
+## 2026-05-04 01:17 - US-036
+- 为 `LocalDevDataInitializer` 和 `BootstrapAdminInitializer` 补了覆盖剩余分支的单测，覆盖本地 seeded 用户/namespace/搜索 fixture 的“已存在数据”路径、bootstrap admin 的“已有用户但无 credential”路径，并把 `LocalDevDataInitializer` 的 role 反射赋值改成 `ReflectionUtils` + `Assert.state`，去掉无法命中的 catch 分支。
+- 为 `SkillVersionStatsJpaRepository` 新增最小 JPA slice 测试，并把 `incrementExistingDownloadCount` 收敛成 MySQL/H2 都能验证的 native SQL；随后运行 `mvn -f server/pom.xml -pl skillhub-app,skillhub-infra -am -Dtest=LocalDevDataInitializerTest,BootstrapAdminInitializerTest,SkillVersionStatsJpaRepositoryTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs`、`mvn -f server/pom.xml -pl skillhub-app,skillhub-infra -am jacoco:report -DskipTests`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过，且 fresh module JaCoCo 中 `LocalDevDataInitializer` / `BootstrapAdminInitializer` 已到 `LINE_MISSED=0`，`SkillVersionStatsJpaRepository` 不再留下未覆盖行。
+- 更改的文件：`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializer.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializerTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/bootstrap/BootstrapAdminInitializerTest.java`、`server/skillhub-infra/src/main/java/com/iflytek/skillhub/infra/jpa/SkillVersionStatsJpaRepository.java`、`server/skillhub-infra/src/test/java/com/iflytek/skillhub/infra/jpa/SkillVersionStatsJpaRepositoryTest.java`、`server/skillhub-infra/pom.xml`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当 coverage 目标落在 `ApplicationRunner` 这类 bootstrap 代码上时，优先用 mock 驱动“新建”和“已存在”两条主路径，通常一次就能吃掉大部分 helper 分支。
+  - 遇到的陷阱：只看 `verify` 的 aggregate gate 不足以回答模块级 `jacoco.csv` 是否 fresh；如果 validator 点名了具体 module report，记得再显式生成一次 `jacoco:report`。
+  - 有用的上下文：`SkillVersionStatsJpaRepository` 的 `CURRENT_TIMESTAMP` 更新在 H2 上会触发 `Instant` 类型校验问题，改成 native SQL 后 MySQL/H2 的持久化验证都能共用同一条查询。
 ---
