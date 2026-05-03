@@ -450,3 +450,13 @@
   - 遇到的陷阱：复用旧 MySQL 库做 fresh build 验收会先撞到 Flyway checksum mismatch，必须每轮都换临时库，否则容易把迁移历史噪声误判成当前代码回归。
   - 有用的上下文：`US-032` 的关键验收信号已经可以用 clean runtime 上的 `dashboard/skills -> /space/{namespace}/{slug}` detail 路径直接确认，旧 19080 实例里出现的 detail 500 不能直接作为当前 HEAD 结论。
 ---
+## 2026-05-03 21:26 - US-032
+- 重新核对了 `US-032` 的失败 note，对照 fresh build 的 `local-mysql + redis + local-file-index` 运行态 (`127.0.0.1:19081` + `127.0.0.1:3002`) 做了二次验证；在新库 `skillhub_validator_us032` 中创建 namespace `us032-1777814248` 并发布 `us032-skill-1777814248` 后，`GET /api/web/skills/us032-1777814248/us032-skill-1777814248` 返回 `200`，未复现 note 中的 `500`。
+- 同时复核了真实页面链路对应的后端请求：fresh runtime 下 `GET /api/web/me/skills`、`GET /api/web/skills/{namespace}/{slug}`、`GET /api/web/skills/{namespace}/{slug}/versions`、`GET /api/web/skills/{namespace}/{slug}/versions/1.0.0/files` 都返回 `200`，说明当前 HEAD 的 namespace-owned skill detail 主链路是通的。
+- 这轮没有修改业务实现；只把 `scripts/ralph/prd.json` 里的 `US-032` 从误回退的失败状态收口回通过状态。
+- 更改的文件：`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当 validator note 指向的是旧端口上的运行态故障时，先用 fresh build + 新库 + 新端口重验对应接口，区分“陈旧进程问题”和“当前 HEAD 回归”。
+  - 遇到的陷阱：本机 `agent-browser` 当前默认 Chrome 会因 sandbox 限制启动失败；如果后续 story 还要复用它，需要显式处理 `--no-sandbox` 或改走 Playwright。
+  - 有用的上下文：当前 clean runtime 里 skill detail 接口已经稳定返回 `200`；若后续继续补真正的浏览器删除验收，更值得优先排查的是前端登录/runtime config 或 CSRF 行为，而不是 detail 查询服务。
+---
