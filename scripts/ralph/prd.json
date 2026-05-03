@@ -377,7 +377,7 @@
         "Tests pass"
       ],
       "priority": 22,
-      "passes": false,
+      "passes": true,
       "notes": "",
       "retryCount": 0,
       "blocked": false
@@ -394,7 +394,7 @@
         "Tests pass"
       ],
       "priority": 23,
-      "passes": false,
+      "passes": true,
       "notes": "",
       "retryCount": 0,
       "blocked": false

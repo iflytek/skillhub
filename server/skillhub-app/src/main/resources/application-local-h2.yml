@@ -50,6 +50,9 @@ skillhub:
       base-path: ${LOCAL_H2_STORAGE_BASE_PATH:${user.home}/.skillhub/local-storage}
   search:
     engine: h2
+    provider: ${SKILLHUB_SEARCH_PROVIDER:h2-like}
+    local-file-index:
+      directory: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:${user.home}/.skillhub/local-h2/search-index}
     semantic:
       enabled: false
   ratelimit:

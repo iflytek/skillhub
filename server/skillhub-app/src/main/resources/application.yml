@@ -143,6 +143,9 @@ skillhub:
     max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
   search:
     engine: postgres
+    provider: ${SKILLHUB_SEARCH_PROVIDER:postgres-fts}
+    local-file-index:
+      directory: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:${user.home}/.skillhub/search-index}
     rebuild-on-startup: false
     semantic:
       enabled: true

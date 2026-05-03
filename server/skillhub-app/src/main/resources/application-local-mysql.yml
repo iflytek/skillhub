@@ -17,13 +17,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:sql/migration-mysql
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-  session:
-    store-type: none
 
 skillhub:
   runtime:
@@ -41,11 +34,17 @@ skillhub:
   search:
     # MySQL runtime uses the mysql-like query provider; local-h2 keeps the h2-like fallback.
     engine: mysql
+    provider: ${SKILLHUB_SEARCH_PROVIDER:mysql-like}
+    local-file-index:
+      # Phase-three Lucene builds use a dedicated writable directory under the
+      # local MySQL runtime home so the index can be rebuilt or cleared without
+      # touching uploaded skill package storage.
+      directory: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:${user.home}/.skillhub/local-mysql/search-index}
   auth:
     mock:
       enabled: true
     uass:
-      enabled: true
+      enabled: false
       # Use mock://self to verify the UASS browser flow locally without the
       # enterprise gateway implementation. Replace with the real UASS endpoint
       # after providing a custom UassGateway bean.

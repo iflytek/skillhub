@@ -1,6 +1,8 @@
 ## Codebase Patterns
 - 当运行时 provider 已统一派生默认值时，profile YAML 不要再保留旧阶段的叶子覆盖；验证 Redis 路径时优先补一个真实容器的 selection test，断言环境值和可观察行为都切到目标实现。
 - 如果一组运行时状态能力（session、rate limit、auth throttle、UASS state）需要一起切换，不要在每个 profile 里分别维护散落的 mode；优先收敛到一个 `skillhub.runtime.state.provider` 开关，再由集中映射层派生具体属性。
+- 如果 app 级别的 Redis state 需要独立模板，优先给它单独的 bean 名称（例如 `skillhubRedisTemplate`）并通过 `@Qualifier` 注入，避免和 Spring 默认 `redisTemplate` 发生冲突。
+- 分阶段迁移 provider 时，可以先落地未来态的外部配置键和绑定测试，再保留现有 bean 装配条件不变；这样能先稳定运行时契约，再把实现切换拆到后续 story。
 - 当 runtime-state provider 已经统一派生默认值时，profile YAML 里不要继续保留旧阶段的叶子覆盖；每完成一个 story 就把对应的硬编码默认删掉，避免配置来源互相打架。
 - Redis-backed runtime selection 最好用 `ApplicationContextRunner` + disposable Redis container 做 focused verification，同时断言 bean selection 和最小行为。
 - `local` / `local-h2` / `local-mysql` 这类本地浏览器运行 profile 不要覆盖成 `server.servlet.session.cookie.same-site=none` + `secure=true`；在 `http://localhost` 下这会让 session cookie 无法建立，浏览器登录 smoke 会卡在 `/login`。
@@ -27,6 +29,17 @@
 - 迁移中的新搜索 provider 可以先用“独立 package + `@ConditionalOnProperty` + 最小装配测试”建立方言边界；如果后续行为 story 尚未落地，先不要抢跑接入索引/rebuild provider，以免跨 story 扩大改动面。
 - `local-mysql` profile 这类运行时切换，最好在 profile YAML 和配置绑定测试里同时显式断言搜索 provider 值；这样可以把“本地运行时”和“测试数据库”分层切开，避免 profile 仍回落到 `h2-like` 的默认路径。
 - 阶段切换时，profile 默认值可以直接设成下一阶段的 provider，再用环境变量保留上一阶段 fallback；绑定测试要同时覆盖默认值和回退值，避免配置迁移只改了一半。
+
+## 2026-05-03 14:12 - US-022
+- 验证了 `local-mysql` 的 MySQL 8 + Redis + mysql-like 运行态：用临时 MySQL 数据库和 `tiger-redis` 启动后端，浏览器里完成登录、个人资料、命名空间、技能发布/删除、搜索命中和退出登录的完整链路。
+- 还补了一个 `RuntimeStateEnvironmentPostProcessorTest` 夹具修正，确保 Redis-backed UASS runtime 在测试里使用 `skillhubRedisTemplate`，避免和默认 `redisTemplate` 冲突。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest,RuntimeStateEnvironmentPostProcessorTest,RedisUassStateRuntimeSelectionTest,UassStateStoreConfigurationTest,RedisTemplateConfigTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，并用 `agent-browser` 在 `http://127.0.0.1:3000` 上完成真实浏览器验证。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RuntimeStateEnvironmentPostProcessorTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/LocalMysqlSchemaMigrationTest.java`、`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/config/RedisTemplateConfig.java`、`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfiguration.java`、`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/store/RedisUassLoginStateStore.java`、`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/uass/store/UassLoginState.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/config/UassStateStoreConfigurationTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/config/RedisTemplateConfigTest.java`、`server/skillhub-app/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor`、`server/skillhub-infra/src/main/java/com/iflytek/skillhub/infra/jpa/SkillStorageDeletionCompensationJpaRepository.java`、`web/e2e/local-mysql-runtime-smoke.spec.ts`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：app 级别的 Redis state 最好用专用 bean 名称 + `@Qualifier` 固化边界，测试和运行时都更稳。
+  - 遇到的陷阱：浏览器 smoke 里直接点登录表单不一定最稳，复用 `page.context().request` 先建立会话，再去验证受保护路由和 logout，成功率更高。
+  - 有用的上下文：`local-mysql` 现在已经能用 `tiger-mysql`/`tiger-redis` 在空库上启动，搜索页的稳定命中目标是 `mysql-runtime-fixture`。
+---
 
 ## 2026-05-02 23:30 - US-001
 - 将 `server/skillhub-app/pom.xml` 的运行时 JDBC 驱动从 PostgreSQL 切换为 MySQL 8，并将 Flyway 数据库支持从 PostgreSQL 插件切换为 MySQL 插件。
@@ -297,4 +310,15 @@
   - 发现的 patterns：凡是通过 `RedisTemplate<String, Object>` 持久化到 Redis 的跨模块状态对象，如果值类型可能是 final class / record，就不能只依赖默认 `GenericJackson2JsonRedisSerializer(objectMapper)`；需要在 Redis 专用 `ObjectMapper` 上显式启用类型信息。
   - 遇到的陷阱：`ApplicationContextRunner` 里做 Redis runtime 验证时，如果 memory fallback 和 redis path 共用同一测试配置，带 `@Value("${spring.data.redis.*}")` 的连接工厂 bean 会在 memory case 提前炸掉；最好拆成 base runner + redis-specific runner。
   - 有用的上下文：`UassStateStoreConfiguration` 的 `cacheMode=redis` 会在启动期主动 ping Redis 并 fail fast，所以 focused verification 不只是断言 bean 类型，还要验证真实连接和一次完整的 state round-trip。
+---
+## 2026-05-03 14:30 - US-023
+- 为 phase 3 预先定义了 `skillhub.search.provider` 和 `skillhub.search.local-file-index.directory` 配置契约，在 `application.yml`、`application-local-h2.yml`、`application-local-mysql.yml` 中补齐默认值，并新增 `SearchRuntimeProperties` 作为绑定入口。
+- 扩展 `LocalMysqlProfileBindingTest` 和 `SearchRuntimeSelectionTest`，分别锁定 local-file-index provider/目录绑定，以及“当前 bean 仍由 `skillhub.search.engine` 决定、provider 配置先只承载运行时契约”的迁移边界。
+- 在 `docs/04-search-architecture.md` 中补充了 Lucene 本地目录的生命周期策略：启动时可创建空目录，`rebuildAll()` 可重建整目录，范围重建只改受影响文档，损坏恢复通过删目录后全量 rebuild，且索引目录必须与本地存储目录分离。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest,SearchRuntimeSelectionTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/java/com/iflytek/skillhub/config/SearchRuntimeProperties.java`、`server/skillhub-app/src/main/resources/application.yml`、`server/skillhub-app/src/main/resources/application-local-h2.yml`、`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/SearchRuntimeSelectionTest.java`、`docs/04-search-architecture.md`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：Lucene 这类后续 provider 落地前，可以先把 profile 默认值、properties binding 和架构文档对齐，后续实现 story 只需要专注于 query/index/rebuild 行为本身。
+  - 遇到的陷阱：如果未来态的 `provider` 配置和当前装配仍依赖的 `engine` 配置同时存在，一定要在测试里显式锁住“provider 尚未接管 bean 选择”的过渡语义，否则后续改装配时很容易误以为已经切换完成。
+  - 有用的上下文：`local-mysql` 的 phase 3 Lucene 目录已约定为 `${user.home}/.skillhub/local-mysql/search-index`，后续 `US-024` 到 `US-030` 可以直接沿用该目录和 `SearchRuntimeProperties` 扩展实现。
 ---

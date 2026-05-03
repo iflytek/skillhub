@@ -129,6 +129,26 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
   - `PostgresFullTextIndexService`
   - `PostgresSearchRebuildService`
 
+### 5.5 Phase 3 local-file-index 配置约定
+
+- 对外搜索 provider 配置统一收敛为 `skillhub.search.provider`：
+  - `postgres-fts`：迁移期遗留，仅当前默认 `application.yml` 使用
+  - `h2-like`：`local-h2` 测试/轻量联调
+  - `mysql-like`：`local-mysql` 第二阶段默认值
+  - `local-file-index`：第三阶段 Lucene provider
+- 当前 bean 装配仍由 `skillhub.search.engine` 控制；`skillhub.search.provider` 在本阶段先作为稳定运行时配置契约落地，等 `LocalFileIndexQueryService` / `LocalFileIndexService` / `LocalFileIndexRebuildService` 实现后，再将装配切换到该 provider 维度。
+- 嵌入式 Lucene 索引目录使用 `skillhub.search.local-file-index.directory`：
+  - `application.yml` 默认值：`${user.home}/.skillhub/search-index`
+  - `local-mysql` 默认值：`${user.home}/.skillhub/local-mysql/search-index`
+  - `local-h2` 默认值：`${user.home}/.skillhub/local-h2/search-index`
+- 目录策略：
+  - 索引目录必须与 `skillhub.storage.local.base-path` 分离，避免清空索引时误删上传包内容。
+  - 目录应位于单节点本地可写路径；当前不把多实例共享文件系统当作前提。
+  - 目录不存在时允许启动期创建；空目录应被视为“需要 rebuild”的合法状态。
+  - `rebuildAll()` 可以先清空并重建整个索引目录；`rebuildByNamespace()` / `rebuildBySkill()` 只允许重写受影响文档，不应直接删除整个目录。
+  - 如果索引损坏或需要手工恢复，推荐删除该目录后执行全量 rebuild；业务主库 MySQL 仍是权威数据源。
+  - 应用关闭或 skill 删除不自动清理整个目录；只有显式 rebuild/reset 操作才允许重置目录级状态。
+
 ### 5.3 SPI 演进策略
 
 一期 SPI 接口（`SearchIndexService` / `SearchQueryService`）的入参是 `SkillSearchDocument`（skill 粒度）。二期切换到 ES 时：

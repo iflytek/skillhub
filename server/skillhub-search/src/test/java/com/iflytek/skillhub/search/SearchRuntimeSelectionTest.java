@@ -71,6 +71,22 @@ class SearchRuntimeSelectionTest {
                 });
     }
 
+    @Test
+    void searchProviderPropertyAloneDoesNotChangeCurrentEngineBasedBeanSelection() {
+        contextRunner
+                .withPropertyValues(
+                        "skillhub.search.engine=mysql",
+                        "skillhub.search.provider=local-file-index"
+                )
+                .run(context -> {
+                    assertThat(context).hasSingleBean(MysqlLikeSearchQueryService.class);
+                    assertThat(context).hasSingleBean(MysqlNoopSearchIndexService.class);
+                    assertThat(context).hasSingleBean(MysqlNoopSearchRebuildService.class);
+                    assertThat(context).doesNotHaveBean(H2LikeSearchQueryService.class);
+                    assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
+                });
+    }
+
     @Configuration
     static class TestConfig {
 
