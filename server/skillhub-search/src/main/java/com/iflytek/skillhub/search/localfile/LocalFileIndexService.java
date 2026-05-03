@@ -30,18 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @ConditionalOnProperty(prefix = "skillhub.search", name = "provider", havingValue = "local-file-index")
 public class LocalFileIndexService implements SearchIndexService {
-    private static final String FIELD_SKILL_ID = "skillId";
-    private static final String FIELD_NAMESPACE_ID = "namespaceId";
-    private static final String FIELD_NAMESPACE_SLUG = "namespaceSlug";
-    private static final String FIELD_OWNER_ID = "ownerId";
-    private static final String FIELD_TITLE = "title";
-    private static final String FIELD_SUMMARY = "summary";
-    private static final String FIELD_KEYWORDS = "keywords";
-    private static final String FIELD_SEARCH_TEXT = "searchText";
-    private static final String FIELD_SEMANTIC_VECTOR = "semanticVector";
-    private static final String FIELD_VISIBILITY = "visibility";
-    private static final String FIELD_STATUS = "status";
-
     private final Path indexDirectory;
 
     public LocalFileIndexService(
@@ -136,4 +124,16 @@ public class LocalFileIndexService implements SearchIndexService {
     private interface IndexWriterAction {
         void accept(IndexWriter writer) throws IOException;
     }
+
+    static final String FIELD_SKILL_ID = "skillId";
+    static final String FIELD_NAMESPACE_ID = "namespaceId";
+    static final String FIELD_NAMESPACE_SLUG = "namespaceSlug";
+    static final String FIELD_OWNER_ID = "ownerId";
+    static final String FIELD_TITLE = "title";
+    static final String FIELD_SUMMARY = "summary";
+    static final String FIELD_KEYWORDS = "keywords";
+    static final String FIELD_SEARCH_TEXT = "searchText";
+    static final String FIELD_SEMANTIC_VECTOR = "semanticVector";
+    static final String FIELD_VISIBILITY = "visibility";
+    static final String FIELD_STATUS = "status";
 }

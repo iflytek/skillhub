@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  * matching, ordering, and paging behavior.
  */
 @Service
-@ConditionalOnProperty(prefix = "skillhub.search", name = "engine", havingValue = "mysql")
+@ConditionalOnProperty(prefix = "skillhub.search", name = "provider", havingValue = "mysql-like")
 public class MysqlLikeSearchQueryService implements SearchQueryService {
 
     private final EntityManager entityManager;

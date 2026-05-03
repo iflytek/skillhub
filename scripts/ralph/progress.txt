@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 当 `skillhub.search.provider` 从 `mysql-like` 切到 `local-file-index` 时，查询、索引写入和 rebuild 三类 bean 都要一起跟随 provider 条件切换；否则运行时会出现“Lucene 已写入，但查询仍走 mysql-like”的假切换。
 - 复现本地运行态或浏览器回归前，先重建当前分支的 `skillhub-app` 可执行 jar，并确认目标端口确实是 SkillHub 进程；陈旧 `target` 产物或端口占用会制造与当前代码无关的假故障。
 - 为新搜索 provider 定义文档模型时，优先固定 `SearchResult` 只返回 `skillIds + pagination metadata`，hydrate 继续留在应用层；像 `labelSlugs` 这类额外过滤如果要下沉到索引，必须显式增加索引字段，不要依赖隐式 join。
 - local-file-index 的增量写入应以 `skillId` 作为 Lucene term 键，统一用 `updateDocument` 做幂等 upsert、`deleteDocuments` 做删除；打开 `FSDirectory` 之前先 `Files.createDirectories(...)`，否则空目录首写会失败。
@@ -396,4 +397,14 @@
   - 发现的 patterns：如果 Ralph 状态文件落后于代码，优先用 fresh build + 真实浏览器 smoke 验证当前 HEAD，而不是直接依据历史 validator notes 继续补实现。
   - 遇到的陷阱：本机常有其他项目占用 `8080`/`18080` 一类端口；不先确认端口归属，就可能把别的服务当成 SkillHub 来排查。
   - 有用的上下文：`e2e/local-mysql-runtime-smoke.spec.ts`、`e2e/publish-flow-ui.spec.ts` 和 `e2e/my-skills-navigation.spec.ts` 这三条用例已经覆盖了这次 notes 对应的 publish、detail 和 delete 主链路。
+---
+## 2026-05-03 18:53 - US-028
+- 新增 `LocalFileIndexQueryService`，用 Lucene `StandardAnalyzer` + 多字段 `BooleanQuery` 实现 `title`、`summary`、`keywords`、`searchText` 的关键词检索，并保持返回值仍是 `skillIds + pagination metadata`，继续复用现有 hydrate 链路。
+- 将查询侧装配从 `skillhub.search.engine=mysql` 收口到 `skillhub.search.provider=mysql-like|local-file-index`，让 `skillhub.search.provider=local-file-index` 真正切到 Lucene query/index/rebuild 全链路；同时保留 `US-029` 之前的最小行为边界，不提前实现结构化过滤和排序。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-search -am -Dtest=SearchRuntimeSelectionTest,LocalFileIndexQueryServiceTest,LocalFileIndexServiceTest,MysqlLikeSearchQueryServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，全部通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexQueryService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/SearchRuntimeSelectionTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexQueryServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：Lucene 关键词 story 可以先把 provider 切换和 `skillId` 返回契约锁住，再把 namespace/visibility/label 过滤与排序分页留给后续 story，这样更容易保持单次提交聚焦。
+  - 遇到的陷阱：仓库当前依赖里没有 `lucene-queryparser`，实现查询时要优先复用 `lucene-core` + analyzer 可用的 API，例如先分词再手工拼 `BooleanQuery`。
+  - 有用的上下文：本轮没有 UI 改动，因此未做浏览器验证；`SearchRuntimeSelectionTest` 现在已经覆盖 `local-file-index` 查询 bean 的真实装配边界，后续 `US-029/US-030` 可以直接在这套夹具上扩展。
 ---
