@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 复现本地运行态或浏览器回归前，先重建当前分支的 `skillhub-app` 可执行 jar，并确认目标端口确实是 SkillHub 进程；陈旧 `target` 产物或端口占用会制造与当前代码无关的假故障。
 - 为新搜索 provider 定义文档模型时，优先固定 `SearchResult` 只返回 `skillIds + pagination metadata`，hydrate 继续留在应用层；像 `labelSlugs` 这类额外过滤如果要下沉到索引，必须显式增加索引字段，不要依赖隐式 join。
 - local-file-index 的增量写入应以 `skillId` 作为 Lucene term 键，统一用 `updateDocument` 做幂等 upsert、`deleteDocuments` 做删除；打开 `FSDirectory` 之前先 `Files.createDirectories(...)`，否则空目录首写会失败。
 - local-file-index 的 `rebuildAll()` 必须先清空整个索引目录再按权威数据重建；只有 `rebuildByNamespace()` / `rebuildBySkill()` 这类 scoped rebuild 才应保留未命中的文档。
@@ -375,4 +376,14 @@
   - 发现的 patterns：Lucene 的全量 rebuild 需要先 reset 目录级状态，否则只靠 `batchIndex` 会保留权威数据源里已经消失的旧文档。
   - 遇到的陷阱：如果 integration test 只验证“重建后存在目标文档”，会漏掉 stale 文档残留问题；需要显式跑两次 rebuild 并断言旧 `skillId` 已经搜不到。
   - 有用的上下文：`LocalFileIndexRebuildService` 当前只把“清空目录”用于 `rebuildAll()`；按 namespace / skill 的 scoped rebuild 还留给后续 `US-027` 实现。
+---
+## 2026-05-03 17:56 - US-003
+- 复核并确认 `US-003` 的 validator notes 已被当前分支实现消化：在 fresh build 的 `local-mysql + Redis` 运行态下，重新执行本地 MySQL smoke、发布页 UI 发布、以及 “My Skills -> 详情页” 导航，未再复现 publish 500 或 skill detail `Access Denied`。
+- 这轮没有新增业务代码；只将 `scripts/ralph/prd.json` 中的 `US-003` 标记为通过，并记录本次验证收尾。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`PLAYWRIGHT_WEB_PORT=13100 SKILLHUB_API_PROXY_TARGET=http://127.0.0.1:19180 pnpm --dir web exec playwright test e2e/local-mysql-runtime-smoke.spec.ts --project chromium`、`PLAYWRIGHT_WEB_PORT=13100 SKILLHUB_API_PROXY_TARGET=http://127.0.0.1:19180 pnpm --dir web exec playwright test e2e/publish-flow-ui.spec.ts e2e/my-skills-navigation.spec.ts --project chromium`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，全部通过。
+- 更改的文件：`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：如果 Ralph 状态文件落后于代码，优先用 fresh build + 真实浏览器 smoke 验证当前 HEAD，而不是直接依据历史 validator notes 继续补实现。
+  - 遇到的陷阱：本机常有其他项目占用 `8080`/`18080` 一类端口；不先确认端口归属，就可能把别的服务当成 SkillHub 来排查。
+  - 有用的上下文：`e2e/local-mysql-runtime-smoke.spec.ts`、`e2e/publish-flow-ui.spec.ts` 和 `e2e/my-skills-navigation.spec.ts` 这三条用例已经覆盖了这次 notes 对应的 publish、detail 和 delete 主链路。
 ---
