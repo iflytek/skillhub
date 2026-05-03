@@ -137,6 +137,7 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
   - `mysql-like`：`local-mysql` 第二阶段默认值
   - `local-file-index`：第三阶段 Lucene provider
 - 当前 bean 装配仍由 `skillhub.search.engine` 控制；`skillhub.search.provider` 在本阶段先作为稳定运行时配置契约落地，等 `LocalFileIndexQueryService` / `LocalFileIndexService` / `LocalFileIndexRebuildService` 实现后，再将装配切换到该 provider 维度。
+- `local-file-index` 采用嵌入式 Lucene，和应用进程同生命周期运行，不引入独立搜索 daemon。
 - 嵌入式 Lucene 索引目录使用 `skillhub.search.local-file-index.directory`：
   - `application.yml` 默认值：`${user.home}/.skillhub/search-index`
   - `local-mysql` 默认值：`${user.home}/.skillhub/local-mysql/search-index`
@@ -148,6 +149,22 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
   - `rebuildAll()` 可以先清空并重建整个索引目录；`rebuildByNamespace()` / `rebuildBySkill()` 只允许重写受影响文档，不应直接删除整个目录。
   - 如果索引损坏或需要手工恢复，推荐删除该目录后执行全量 rebuild；业务主库 MySQL 仍是权威数据源。
   - 应用关闭或 skill 删除不自动清理整个目录；只有显式 rebuild/reset 操作才允许重置目录级状态。
+- 文档模型约定：
+  - 仍以 skill 为粒度建档，一条 Lucene 文档对应一个 skill，`skillId` 作为稳定主键。
+  - 搜索、过滤、排序与 hydrate 所需的核心字段包括 `skillId`、`namespaceId`、`namespaceSlug`、`ownerId`、`title`、`summary`、`keywords`、`searchText`、`semanticVector`、`visibility`、`status`。
+  - `title`、`summary`、`keywords`、`searchText` 负责关键词召回；`namespaceId` / `namespaceSlug` 负责 namespace 过滤；`ownerId`、`visibility`、`status` 负责 ACL 与生命周期过滤；`semanticVector` 仅用于相关度重排，不影响基础可用性。
+  - 搜索结果仍返回 `skillIds + pagination metadata`，hydrate 继续走现有 skill 读取链路，Lucene 不直接承担 UI 投影。
+  - `labelSlugs` 仍属于查询契约的一部分；如果后续需要把标签过滤下沉到 Lucene 索引层，应显式增加可检索的标签字段，而不是依赖隐式 join。
+- 更新触发器约定：
+  - `publish` / `PENDING_REVIEW -> PUBLISHED`：按最新已发布版本重建该 skill 的文档内容。
+  - `archive` / `restore` / 可见性变化：保持文档主键不变，只更新 `status`、`visibility` 等生命周期字段。
+  - `delete` / `PUBLISHED -> YANKED`：如果不存在任何已发布版本，则删除该 skill 的 Lucene 文档；如果仍存在已发布版本，则回写最新已发布版本对应的文档。
+  - `rebuildAll()`：从 MySQL 权威数据源全量重建索引目录。
+  - `rebuildByNamespace()` / `rebuildBySkill()`：只重建命中的范围，不影响其他 namespace 或 skill。
+- 回退路径约定：
+  - 运行时通过 `skillhub.search.provider=mysql-like|local-file-index` 切换最终搜索后端。
+  - `mysql-like` 是 `local-file-index` 的显式回退方案；如果 Lucene 目录损坏、索引格式变更或本地文件系统不可写，优先切回 `mysql-like`，再执行重建或清理。
+  - 回退不要求切回 PostgreSQL；MySQL 仍是搜索文档的权威数据源。
 
 ### 5.3 SPI 演进策略
 
