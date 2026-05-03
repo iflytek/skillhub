@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const webPort = process.env.PLAYWRIGHT_WEB_PORT ?? '3000'
+const webBaseUrl = `http://localhost:${webPort}`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -9,7 +12,7 @@ export default defineConfig({
   workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 1),
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: webBaseUrl,
     trace: 'on-first-retry',
     screenshot: 'on',
   },
@@ -20,8 +23,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort',
-    url: 'http://localhost:3000',
+    command: `pnpm exec vite --host 127.0.0.1 --port ${webPort} --strictPort`,
+    url: webBaseUrl,
     reuseExistingServer: true,
     timeout: 120000,
   },

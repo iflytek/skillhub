@@ -2,6 +2,8 @@
 - 当 `skillhub.search.engine` 新增方言值时，`SearchQueryService`、`SearchIndexService`、`SearchRebuildService` 三类 bean 需要一起覆盖该条件装配；只补 query provider 会让常规事件监听和同步服务在启动期注入失败。
 - MySQL 过渡期扩展 `migration-mysql` 时，除了请求主链路直接写入的表，还要同步覆盖发布后异步通知和删除清理会访问的表；否则 `local-mysql` 真实 smoke 可能在 `publish`/`delete` 后半段才暴露缺表。
 - mysql-like 排序 story 可以直接与 h2-like provider 对齐：`downloads`/`rating`/`newest` 走 JPQL 属性排序，`relevance` 只在存在关键词时启用 `CASE + titleExact/titlePrefix/titleLike`，并且 count query 必须禁绑 relevance-only 参数。
+- 本地运行态 smoke 最好在 `LocalDevDataInitializer` 里种一个确定性的可搜索 fixture，这样 `/search` 验证不需要依赖异步索引或额外的手工数据准备。
+- Playwright 本地 smoke 如果要复用已启动的前后端，`PLAYWRIGHT_WEB_PORT` 和 `SKILLHUB_API_PROXY_TARGET` 都应可配置；这样同一条用例可以在手工浏览器和自动化跑法之间切换。
 - mysql-like 搜索 provider 逐步补行为时，关键词 story 可以直接复用 h2-like 的 `normalizeKeyword + LIKE` 结构，只绑定 `titleLike` 这类当前 SQL 真正使用到的参数，避免 count query 因残留排序参数而失配。
 - 迁移中的新搜索 provider 如果要按 story 逐步补行为，优先先让 SQL/JPQL 只覆盖当前 story 的过滤边界，并把关键词、排序、分页留在后续 story；这样可以复用现有 provider 契约而不把多个 acceptance criteria 混在一次提交里。
 - 对于存 JSON 文本但领域层以 `String` 处理的字段，不要在 Hibernate 上继续使用 `@JdbcTypeCode(SqlTypes.JSON)`；它会把整段 JSON 当作字符串再次编码，`String` 字段应直接按普通文本列持久化。
@@ -162,9 +164,9 @@
 - 扩展 `MysqlLikeSearchQueryServiceTest`，覆盖下载量排序、评分排序、relevance 排序参数绑定，以及分页 offset/maxResults 断言；随后运行了搜索定向测试、前端 `typecheck`/`lint` 与全量后端测试。
 - 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
 - **未来迭代的学习：**
-  - 发现的 patterns：mysql-like provider 的排序协议可以直接镜像 h2-like provider，这样前端 `sort` 契约和 `SearchQueryService` 接口都不需要再扩展。
-  - 遇到的陷阱：仓库中未找到指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件；后续迭代如果还依赖这些上下文，需要先确认实际路径，避免在不存在的需求文档上卡住。
-  - 有用的上下文：这次没有 UI 改动，因此无需浏览器验证；搜索 HTTP 分页元数据已经由 `SkillSearchAppService.SearchResponse` 和现有 `SkillSearchControllerTest` 契约覆盖，排序/分页 story 只需要保证 provider 产出正确的 `SearchResult`。
+- 发现的 patterns：mysql-like provider 的排序协议可以直接镜像 h2-like provider，这样前端 `sort` 契约和 `SearchQueryService` 接口都不需要再扩展。
+- 遇到的陷阱：仓库中未找到指令提到的 `tasks/prd-aiba-agent-gateway.md` 或“补充说明信息”文件；后续迭代如果还依赖这些上下文，需要先确认实际路径，避免在不存在的需求文档上卡住。
+- 有用的上下文：这次没有 UI 改动，因此无需浏览器验证；搜索 HTTP 分页元数据已经由 `SkillSearchAppService.SearchResponse` 和现有 `SkillSearchControllerTest` 契约覆盖，排序/分页 story 只需要保证 provider 产出正确的 `SearchResult`。
 ---
 ## 2026-05-03 05:10 - US-001
 - 为 `skillhub.search.engine=mysql` 补齐了过渡期 `SearchIndexService` 与 `SearchRebuildService` 装配，新增 `MysqlNoopSearchIndexService`、`MysqlNoopSearchRebuildService`，修复 `LabelSearchSyncService` 等常规启动链路因缺失 bean 而启动失败的问题。
@@ -215,4 +217,13 @@
   - 发现的 patterns：对于这类“过渡 no-op service” story，若实现与装配测试已经在分支中落地，后续迭代可以先复核 bean 选择和空操作契约，再决定是否需要补代码。
   - 遇到的陷阱：`prd.json` 里的 story 状态可能落后于实际代码和测试状态，开始实现前先比对当前分支实现与最近进度，避免重复开发。
   - 有用的上下文：`MysqlNoopSearchServicesTest` 已同时覆盖 no-op index 与 no-op rebuild 的安全调用，`SearchRuntimeSelectionTest` 则负责验证 mysql runtime 的 rebuild bean 选择；这两处就是后续 Lucene 替换前的主要回归守卫。
+---
+## 2026-05-03 09:03 - US-016
+- 为 `local-mysql` 运行态补了一个确定性的可搜索 fixture，并新增 `MysqlLikeSearchRuntimeIntegrationTest` 与 `web/e2e/local-mysql-runtime-smoke.spec.ts`，串起登录、profile、namespace、publish 和搜索的真实验证链路。
+- 用 `agent-browser` 实际打开 `/login`、`/settings/profile`、`/dashboard/namespaces` 和 `/search`，确认本地 MySQL + memory + mysql-like 运行态可用；同时跑通 Playwright smoke、前端 `typecheck`/`lint` 和全量后端测试。
+- 更改的文件：`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializer.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializerTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/MysqlLikeSearchRuntimeIntegrationTest.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/mysql/MysqlLikeSearchQueryServiceTest.java`、`web/e2e/helpers/test-data-builder.ts`、`web/e2e/local-mysql-runtime-smoke.spec.ts`、`web/playwright.config.ts`、`web/vite.config.ts`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：本地运行态验证最好同时覆盖 API 级集成测试和浏览器 smoke，这样能把 seed 数据、登录态和页面渲染问题一次性串起来。
+  - 遇到的陷阱：浏览器手工登录即使 API 返回 200，也要再确认前端代理和 cookie 共享是否真的生效；这次是直接在浏览器上下文里复用同一登录请求后才成功继续下去。
+  - 有用的上下文：`local-mysql` 下的 `global` namespace 和搜索 fixture 都是稳定锚点，适合后续 Redis 切换或 Lucene 接入时继续复用做 smoke 数据。
 ---

@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+const apiProxyTarget = process.env.SKILLHUB_API_PROXY_TARGET || 'http://localhost:8080'
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -20,11 +22,11 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
       '/oauth2': {
-        target: 'http://localhost:8080',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },

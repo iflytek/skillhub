@@ -11,8 +11,14 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
+import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -40,6 +46,9 @@ class LocalDevDataInitializerTest {
     @Mock private LocalCredentialRepository localCredentialRepository;
     @Mock private RoleRepository roleRepository;
     @Mock private UserRoleBindingRepository userRoleBindingRepository;
+    @Mock private SkillRepository skillRepository;
+    @Mock private SkillVersionRepository skillVersionRepository;
+    @Mock private SkillSearchDocumentJpaRepository skillSearchDocumentJpaRepository;
     @Mock private PasswordEncoder passwordEncoder;
 
     private LocalDevDataInitializer initializer;
@@ -53,6 +62,9 @@ class LocalDevDataInitializerTest {
                 localCredentialRepository,
                 roleRepository,
                 userRoleBindingRepository,
+                skillRepository,
+                skillVersionRepository,
+                skillSearchDocumentJpaRepository,
                 passwordEncoder
         );
     }
@@ -83,6 +95,24 @@ class LocalDevDataInitializerTest {
         when(userRoleBindingRepository.findByUserId(LocalDevDataInitializer.LOCAL_ADMIN_ID)).thenReturn(List.of());
         when(localCredentialRepository.findByUserId(anyString())).thenReturn(Optional.empty());
         when(localCredentialRepository.save(any(LocalCredential.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(skillRepository.findByNamespaceIdAndSlug(anyLong(), anyString())).thenReturn(List.of());
+        when(skillRepository.save(any(Skill.class))).thenAnswer(invocation -> {
+            Skill skill = invocation.getArgument(0);
+            if (skill.getId() == null) {
+                setField(skill, "id", 101L);
+            }
+            return skill;
+        });
+        when(skillVersionRepository.findBySkillIdAndVersion(anyLong(), anyString())).thenReturn(Optional.empty());
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion version = invocation.getArgument(0);
+            if (version.getId() == null) {
+                setField(version, "id", 201L);
+            }
+            return version;
+        });
+        when(skillSearchDocumentJpaRepository.findBySkillId(anyLong())).thenReturn(Optional.empty());
+        when(skillSearchDocumentJpaRepository.save(any(SkillSearchDocumentEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
@@ -105,6 +135,9 @@ class LocalDevDataInitializerTest {
         verify(userRoleBindingRepository).save(roleBindingCaptor.capture());
         assertEquals(LocalDevDataInitializer.LOCAL_ADMIN_ID, roleBindingCaptor.getValue().getUserId());
         assertEquals("SUPER_ADMIN", roleBindingCaptor.getValue().getRole().getCode());
+        verify(skillRepository, atLeastOnce()).save(any(Skill.class));
+        verify(skillVersionRepository).save(any(SkillVersion.class));
+        verify(skillSearchDocumentJpaRepository).save(any(SkillSearchDocumentEntity.class));
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

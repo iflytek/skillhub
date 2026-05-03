@@ -12,7 +12,7 @@ import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
+import jakarta.persistence.Query;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -23,13 +23,11 @@ class MysqlLikeSearchQueryServiceTest {
     @Test
     void search_shouldApplyNamespaceLabelAndVisibilityFilters() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(20)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(20)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of(11L, 10L));
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(2L);
@@ -50,15 +48,17 @@ class MysqlLikeSearchQueryServiceTest {
         assertThat(result.total()).isEqualTo(2L);
 
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
-        assertThat(queryCaptor.getAllValues().get(0)).contains("d.namespaceId = :namespaceId");
-        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(ld.slug) IN :labelSlugs");
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
+        assertThat(queryCaptor.getAllValues().get(0)).contains("d.namespace_id = :namespaceId");
+        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(ld.slug) IN (:labelSlugs)");
         assertThat(queryCaptor.getAllValues().get(0)).contains("d.visibility = 'PUBLIC'");
-        assertThat(queryCaptor.getAllValues().get(0)).contains("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespaceId IN :memberNamespaceIds)");
+        assertThat(queryCaptor.getAllValues().get(0)).contains("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespace_id IN (:memberNamespaceIds))");
 
         verify(resultQuery).setParameter("namespaceId", 7L);
         verify(resultQuery).setParameter("memberNamespaceIds", Set.of(7L));
         verify(resultQuery).setParameter("labelSlugs", List.of("official", "code-generation"));
+        verify(resultQuery).setParameter("limit", 20);
+        verify(resultQuery).setParameter("offset", 20);
         verify(countQuery).setParameter("namespaceId", 7L);
         verify(countQuery).setParameter("memberNamespaceIds", Set.of(7L));
         verify(countQuery).setParameter("labelSlugs", List.of("official", "code-generation"));
@@ -67,13 +67,11 @@ class MysqlLikeSearchQueryServiceTest {
     @Test
     void search_shouldNotBindMemberNamespacesForAnonymousUsers() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(12)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of());
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(0L);
@@ -99,13 +97,11 @@ class MysqlLikeSearchQueryServiceTest {
     @Test
     void search_shouldMatchKeywordAgainstTitleSummaryKeywordsAndSearchText() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(12)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of(9L));
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(1L);
@@ -126,11 +122,11 @@ class MysqlLikeSearchQueryServiceTest {
         assertThat(result.total()).isEqualTo(1L);
 
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
         assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.title, '')) LIKE :titleLike");
         assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.summary, '')) LIKE :titleLike");
         assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.keywords, '')) LIKE :titleLike");
-        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.searchText, '')) LIKE :titleLike");
+        assertThat(queryCaptor.getAllValues().get(0)).contains("LOWER(COALESCE(d.search_text, '')) LIKE :titleLike");
         verify(resultQuery).setParameter("titleLike", "%ppt%");
         verify(countQuery).setParameter("titleLike", "%ppt%");
     }
@@ -138,13 +134,11 @@ class MysqlLikeSearchQueryServiceTest {
     @Test
     void search_shouldTreatWhitespaceOnlyKeywordAsEmptyQuery() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(12)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of());
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(0L);
@@ -162,9 +156,9 @@ class MysqlLikeSearchQueryServiceTest {
         ));
 
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
         assertThat(queryCaptor.getAllValues().get(0)).doesNotContain("LOWER(COALESCE(d.title, '')) LIKE :titleLike");
-        assertThat(queryCaptor.getAllValues().get(0)).doesNotContain("LOWER(COALESCE(d.searchText, '')) LIKE :titleLike");
+        assertThat(queryCaptor.getAllValues().get(0)).doesNotContain("LOWER(COALESCE(d.search_text, '')) LIKE :titleLike");
         verify(resultQuery, never()).setParameter("titleLike", "% %");
         verify(resultQuery, never()).setParameter("titleLike", "%%");
         verify(countQuery, never()).setParameter("titleLike", "% %");
@@ -174,13 +168,11 @@ class MysqlLikeSearchQueryServiceTest {
     @Test
     void search_shouldOrderByDownloadsAndApplyPaginationOffset() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(40)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(20)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of(3L, 2L));
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(2L);
@@ -199,22 +191,20 @@ class MysqlLikeSearchQueryServiceTest {
 
         assertThat(result.skillIds()).containsExactly(3L, 2L);
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
-        assertThat(queryCaptor.getAllValues().get(0)).contains("ORDER BY s.downloadCount DESC, s.updatedAt DESC, d.skillId DESC");
-        verify(resultQuery).setFirstResult(40);
-        verify(resultQuery).setMaxResults(20);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
+        assertThat(queryCaptor.getAllValues().get(0)).contains("ORDER BY s.download_count DESC, s.updated_at DESC, d.skill_id DESC");
+        verify(resultQuery).setParameter("limit", 20);
+        verify(resultQuery).setParameter("offset", 40);
     }
 
     @Test
     void search_shouldOrderByRatingForRatingSort() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(10)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of(8L));
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(1L);
@@ -232,20 +222,18 @@ class MysqlLikeSearchQueryServiceTest {
         ));
 
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
-        assertThat(queryCaptor.getAllValues().get(0)).contains("ORDER BY s.ratingAvg DESC, s.updatedAt DESC, d.skillId DESC");
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
+        assertThat(queryCaptor.getAllValues().get(0)).contains("ORDER BY s.rating_avg DESC, s.updated_at DESC, d.skill_id DESC");
     }
 
     @Test
     void search_shouldUseRelevanceRankingWhenKeywordAndSortAreRelevance() {
         EntityManager entityManager = mock(EntityManager.class);
-        TypedQuery<Long> resultQuery = mock(TypedQuery.class);
-        TypedQuery<Long> countQuery = mock(TypedQuery.class);
+        Query resultQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
 
-        when(entityManager.createQuery(anyString(), eq(Long.class))).thenReturn(resultQuery, countQuery);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(resultQuery, countQuery);
         when(resultQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(resultQuery);
-        when(resultQuery.setFirstResult(0)).thenReturn(resultQuery);
-        when(resultQuery.setMaxResults(10)).thenReturn(resultQuery);
         when(resultQuery.getResultList()).thenReturn(List.of(42L));
         when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(1L);
@@ -263,7 +251,7 @@ class MysqlLikeSearchQueryServiceTest {
         ));
 
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
-        verify(entityManager, org.mockito.Mockito.times(2)).createQuery(queryCaptor.capture(), eq(Long.class));
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(queryCaptor.capture());
         assertThat(queryCaptor.getAllValues().get(0)).contains("WHEN LOWER(COALESCE(d.title, '')) = :titleExact THEN 4");
         assertThat(queryCaptor.getAllValues().get(0)).contains("WHEN LOWER(COALESCE(d.title, '')) LIKE :titlePrefix THEN 3");
         verify(resultQuery).setParameter("titleExact", "agent");

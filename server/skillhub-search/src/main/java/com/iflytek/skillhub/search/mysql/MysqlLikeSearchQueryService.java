@@ -40,33 +40,33 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
                 : query.visibilityScope().memberNamespaceIds();
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT d.skillId ");
-        sql.append("FROM SkillSearchDocumentEntity d, Skill s, Namespace n ");
-        sql.append("WHERE d.skillId = s.id ");
-        sql.append("AND d.namespaceId = n.id ");
+        sql.append("SELECT d.skill_id ");
+        sql.append("FROM skill_search_document d ");
+        sql.append("JOIN skill s ON d.skill_id = s.id ");
+        sql.append("JOIN namespace n ON d.namespace_id = n.id ");
         sql.append("AND (d.visibility = 'PUBLIC' ");
         if (query.visibilityScope().userId() != null) {
-            sql.append("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespaceId IN :memberNamespaceIds) ");
+            sql.append("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespace_id IN (:memberNamespaceIds)) ");
         }
         sql.append(") ");
         sql.append("AND d.status = 'ACTIVE' ");
         sql.append("AND s.status = :skillStatusActive ");
-        sql.append("AND s.hidden = FALSE ");
+        sql.append("AND s.hidden = false ");
         sql.append("AND (n.status <> :namespaceStatusArchived ");
         if (query.visibilityScope().userId() != null) {
-            sql.append("OR d.namespaceId IN :memberNamespaceIds ");
+            sql.append("OR d.namespace_id IN (:memberNamespaceIds) ");
         }
         sql.append(") ");
 
         if (query.namespaceId() != null) {
-            sql.append("AND d.namespaceId = :namespaceId ");
+            sql.append("AND d.namespace_id = :namespaceId ");
         }
 
         if (query.labelSlugs() != null && !query.labelSlugs().isEmpty()) {
-            sql.append("AND d.skillId IN (");
-            sql.append("SELECT sl.skillId FROM SkillLabel sl ");
-            sql.append("JOIN LabelDefinition ld ON ld.id = sl.labelId ");
-            sql.append("WHERE LOWER(ld.slug) IN :labelSlugs");
+            sql.append("AND d.skill_id IN (");
+            sql.append("SELECT sl.skill_id FROM skill_label sl ");
+            sql.append("JOIN label_definition ld ON ld.id = sl.label_id ");
+            sql.append("WHERE LOWER(ld.slug) IN (:labelSlugs)");
             sql.append(") ");
         }
 
@@ -75,49 +75,47 @@ public class MysqlLikeSearchQueryService implements SearchQueryService {
             sql.append("LOWER(COALESCE(d.title, '')) LIKE :titleLike ");
             sql.append("OR LOWER(COALESCE(d.summary, '')) LIKE :titleLike ");
             sql.append("OR LOWER(COALESCE(d.keywords, '')) LIKE :titleLike ");
-            sql.append("OR LOWER(COALESCE(d.searchText, '')) LIKE :titleLike");
+            sql.append("OR LOWER(COALESCE(d.search_text, '')) LIKE :titleLike");
             sql.append(") ");
         }
 
         if ("downloads".equals(query.sortBy())) {
-            sql.append("ORDER BY s.downloadCount DESC, s.updatedAt DESC, d.skillId DESC ");
+            sql.append("ORDER BY s.download_count DESC, s.updated_at DESC, d.skill_id DESC ");
         } else if ("rating".equals(query.sortBy())) {
-            sql.append("ORDER BY s.ratingAvg DESC, s.updatedAt DESC, d.skillId DESC ");
+            sql.append("ORDER BY s.rating_avg DESC, s.updated_at DESC, d.skill_id DESC ");
         } else if ("newest".equals(query.sortBy())) {
-            sql.append("ORDER BY s.updatedAt DESC, d.skillId DESC ");
+            sql.append("ORDER BY s.updated_at DESC, d.skill_id DESC ");
         } else if (useRelevanceOrdering) {
             sql.append("ORDER BY CASE ");
             sql.append("WHEN LOWER(COALESCE(d.title, '')) = :titleExact THEN 4 ");
             sql.append("WHEN LOWER(COALESCE(d.title, '')) LIKE :titlePrefix THEN 3 ");
             sql.append("WHEN LOWER(COALESCE(d.title, '')) LIKE :titleLike THEN 2 ");
-            sql.append("ELSE 1 END DESC, s.updatedAt DESC, d.skillId DESC ");
+            sql.append("ELSE 1 END DESC, s.updated_at DESC, d.skill_id DESC ");
         } else {
-            sql.append("ORDER BY s.updatedAt DESC, d.skillId DESC ");
+            sql.append("ORDER BY s.updated_at DESC, d.skill_id DESC ");
         }
+        sql.append("LIMIT :limit OFFSET :offset");
 
-        Query resultQuery = entityManager.createQuery(sql.toString(), Long.class);
+        Query resultQuery = entityManager.createNativeQuery(sql.toString());
         bindParameters(resultQuery, query, memberNamespaceIds, normalizedKeyword, useRelevanceOrdering);
-        resultQuery.setFirstResult(query.page() * query.size());
-        resultQuery.setMaxResults(query.size());
+        resultQuery.setParameter("limit", query.size());
+        resultQuery.setParameter("offset", query.page() * query.size());
 
         @SuppressWarnings("unchecked")
-        List<Long> skillIds = resultQuery.getResultList();
+        List<Number> rawSkillIds = resultQuery.getResultList();
+        List<Long> skillIds = rawSkillIds.stream().map(Number::longValue).toList();
 
-        String countSql = sql.toString().replaceFirst("SELECT d\\.skillId", "SELECT COUNT(d.skillId)");
+        String countSql = sql.toString().replaceFirst("SELECT d\\.skill_id", "SELECT COUNT(d.skill_id)");
         int orderByIndex = countSql.indexOf("ORDER BY");
         if (orderByIndex >= 0) {
             countSql = countSql.substring(0, orderByIndex);
         }
 
-        Query countQuery = entityManager.createQuery(countSql, Long.class);
+        Query countQuery = entityManager.createNativeQuery(countSql);
         bindParameters(countQuery, query, memberNamespaceIds, normalizedKeyword, false);
-        long total = (Long) countQuery.getSingleResult();
+        long total = ((Number) countQuery.getSingleResult()).longValue();
 
         return new SearchResult(skillIds, total, query.page(), query.size());
-    }
-
-    EntityManager entityManager() {
-        return entityManager;
     }
 
     private void bindParameters(Query query,
