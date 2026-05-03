@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 如果一组运行时状态能力（session、rate limit、auth throttle、UASS state）需要一起切换，不要在每个 profile 里分别维护散落的 mode；优先收敛到一个 `skillhub.runtime.state.provider` 开关，再由集中映射层派生具体属性。
 - `local` / `local-h2` / `local-mysql` 这类本地浏览器运行 profile 不要覆盖成 `server.servlet.session.cookie.same-site=none` + `secure=true`；在 `http://localhost` 下这会让 session cookie 无法建立，浏览器登录 smoke 会卡在 `/login`。
 - 当 `skillhub.search.engine` 新增方言值时，`SearchQueryService`、`SearchIndexService`、`SearchRebuildService` 三类 bean 需要一起覆盖该条件装配；只补 query provider 会让常规事件监听和同步服务在启动期注入失败。
 - MySQL 过渡期扩展 `migration-mysql` 时，除了请求主链路直接写入的表，还要同步覆盖发布后异步通知和删除清理会访问的表；否则 `local-mysql` 真实 smoke 可能在 `publish`/`delete` 后半段才暴露缺表。
@@ -238,4 +239,15 @@
   - 发现的 patterns：本地运行态验证最好同时覆盖 API 级集成测试和浏览器 smoke，这样能把 seed 数据、登录态和页面渲染问题一次性串起来。
   - 遇到的陷阱：浏览器手工登录即使 API 返回 200，也要再确认前端代理和 cookie 共享是否真的生效；这次是直接在浏览器上下文里复用同一登录请求后才成功继续下去。
   - 有用的上下文：`local-mysql` 下的 `global` namespace 和搜索 fixture 都是稳定锚点，适合后续 Redis 切换或 Lucene 接入时继续复用做 smoke 数据。
+---
+## 2026-05-03 10:13 - US-017
+- 为本地运行态增加了统一的 `skillhub.runtime.state.provider` 切换，并新增 `RuntimeStateEnvironmentPostProcessor` / `RuntimeStatePropertyDefaults`，把 `session`、`rate limit`、`auth failure throttle`、`UASS state` 的具体模式集中映射到 `memory` 或 `redis`。
+- 更新了 `application-local.yml`、`application-local-h2.yml`、`application-local-mysql.yml`，让各 profile 显式声明默认 runtime-state provider，并可通过 `SKILLHUB_RUNTIME_STATE_PROVIDER=redis|memory` 在不改 controller / app service 的前提下切换。
+- 新增 `RuntimeStatePropertyDefaultsTest`、`RuntimeStateEnvironmentPostProcessorTest`，并扩展 `LocalMysqlProfileBindingTest` 覆盖 `local-mysql` 的默认 memory 路径和 Redis 覆盖路径。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=RuntimeStatePropertyDefaultsTest,RuntimeStateEnvironmentPostProcessorTest,LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/java/com/iflytek/skillhub/config/RuntimeStateProvider.java`、`server/skillhub-app/src/main/java/com/iflytek/skillhub/config/RuntimeStatePropertyDefaults.java`、`server/skillhub-app/src/main/java/com/iflytek/skillhub/config/RuntimeStateEnvironmentPostProcessor.java`、`server/skillhub-app/src/main/resources/META-INF/spring.factories`、`server/skillhub-app/src/main/resources/application-local.yml`、`server/skillhub-app/src/main/resources/application-local-h2.yml`、`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RuntimeStatePropertyDefaultsTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RuntimeStateEnvironmentPostProcessorTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当多个状态型子系统需要同步切换时，用环境后处理器集中派生配置，比在每个 profile 重复维护 session / throttle / UASS mode 更稳。
+  - 遇到的陷阱：如果 memory profile 仍显式排除了 Redis 自动装配，切到 Redis provider 时必须同步覆盖 `spring.autoconfigure.exclude`，否则 Redis bean 不会回来。
+  - 有用的上下文：这轮只做了 provider switch 和装配回归，真正的 Redis session / rate limit / auth throttle / UASS 持久化行为仍由 `US-018` 到 `US-021` 分别落地。
 ---

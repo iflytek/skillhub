@@ -22,8 +22,15 @@ spring:
       - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  session:
+    store-type: none
 
 skillhub:
+  runtime:
+    state:
+      # Override with SKILLHUB_RUNTIME_STATE_PROVIDER=redis to validate the
+      # Redis-backed runtime path without changing controller/app wiring.
+      provider: ${SKILLHUB_RUNTIME_STATE_PROVIDER:memory}
   public:
     base-url: http://localhost:3000
   storage:

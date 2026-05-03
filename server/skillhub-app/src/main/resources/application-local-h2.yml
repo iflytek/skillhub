@@ -26,6 +26,8 @@ spring:
       - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  session:
+    store-type: none
 
 server:
   servlet:
@@ -35,6 +37,11 @@ server:
         secure: true
 
 skillhub:
+  runtime:
+    state:
+      # Override with SKILLHUB_RUNTIME_STATE_PROVIDER=redis when validating the
+      # Redis-backed runtime path against the lightweight H2 stack.
+      provider: ${SKILLHUB_RUNTIME_STATE_PROVIDER:memory}
   public:
     base-url: http://localhost:3000
   storage:
@@ -66,9 +73,9 @@ skillhub:
       # Pre-register rollout administrators for first-time UASS sign-in.
       # Example:
       admin-users:
-         - ussId: uass-admin-001
-           roles:
-             - USER_ADMIN
+        - ussId: uass-admin-001
+          roles:
+            - USER_ADMIN
     device:
       enabled: false
     failure-throttle:

@@ -45,11 +45,15 @@ skillhub:
       client-id: your-client-id
       client-secret: your-client-secret
       callback-path: /api/v1/auth/uass/callback
-      cache-mode: redis
     notification:
       cleanup:
         read-retention-days: 30
         unread-retention-days: 90
+  runtime:
+    state:
+      # Override with SKILLHUB_RUNTIME_STATE_PROVIDER=memory to fall back to
+      # in-process session/rate-limit/UASS state without changing app code.
+      provider: ${SKILLHUB_RUNTIME_STATE_PROVIDER:redis}
   security:
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}
