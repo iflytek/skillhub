@@ -89,7 +89,7 @@ class RuntimeStateEnvironmentPostProcessorTest {
             return redisTemplate;
         }
 
-        @Bean
+        @Bean(name = "skillhubRedisTemplate")
         RedisTemplate<String, Object> redisTemplate() {
             RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
             RedisConnectionFactory connectionFactory = mock(RedisConnectionFactory.class);

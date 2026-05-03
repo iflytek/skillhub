@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.auth.uass.store;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 import org.springframework.util.StringUtils;
@@ -9,7 +11,10 @@ public record UassLoginState(
         Instant createdAt,
         String provider,
         String requestFingerprint
-) {
+) implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     public UassLoginState {
         if (!StringUtils.hasText(returnTo)) {

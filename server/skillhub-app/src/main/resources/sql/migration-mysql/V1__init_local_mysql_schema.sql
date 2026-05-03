@@ -231,6 +231,46 @@ CREATE TABLE skill_tag (
     CONSTRAINT fk_skill_tag_created_by FOREIGN KEY (created_by) REFERENCES user_account(id)
 );
 
+CREATE TABLE label_definition (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(64) NOT NULL,
+    type VARCHAR(16) NOT NULL,
+    visible_in_filter BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_by VARCHAR(128) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_label_definition_slug (slug),
+    KEY idx_label_definition_visible_sort (visible_in_filter, type, sort_order, id),
+    CONSTRAINT fk_label_definition_created_by FOREIGN KEY (created_by) REFERENCES user_account(id)
+);
+
+CREATE TABLE label_translation (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    label_id BIGINT NOT NULL,
+    locale VARCHAR(16) NOT NULL,
+    display_name VARCHAR(128) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_label_translation_label_locale (label_id, locale),
+    KEY idx_label_translation_label_id (label_id),
+    CONSTRAINT fk_label_translation_label_id FOREIGN KEY (label_id) REFERENCES label_definition(id) ON DELETE CASCADE
+);
+
+CREATE TABLE skill_label (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    skill_id BIGINT NOT NULL,
+    label_id BIGINT NOT NULL,
+    created_by VARCHAR(128) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_skill_label_skill_label (skill_id, label_id),
+    KEY idx_skill_label_label_id (label_id),
+    KEY idx_skill_label_skill_id (skill_id),
+    CONSTRAINT fk_skill_label_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id) ON DELETE CASCADE,
+    CONSTRAINT fk_skill_label_label_id FOREIGN KEY (label_id) REFERENCES label_definition(id) ON DELETE CASCADE,
+    CONSTRAINT fk_skill_label_created_by FOREIGN KEY (created_by) REFERENCES user_account(id)
+);
+
 CREATE TABLE skill_version_stats (
     skill_version_id BIGINT NOT NULL PRIMARY KEY,
     skill_id BIGINT NOT NULL,
@@ -348,6 +388,37 @@ CREATE TABLE skill_report (
     KEY idx_skill_report_skill_id (skill_id),
     CONSTRAINT fk_skill_report_skill_id FOREIGN KEY (skill_id) REFERENCES skill(id),
     CONSTRAINT fk_skill_report_namespace_id FOREIGN KEY (namespace_id) REFERENCES namespace(id)
+);
+
+CREATE TABLE notification (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    recipient_id VARCHAR(128) NOT NULL,
+    category VARCHAR(32) NOT NULL,
+    event_type VARCHAR(64) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body_json TEXT NULL,
+    entity_type VARCHAR(64) NULL,
+    entity_id BIGINT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'UNREAD',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP NULL,
+    KEY idx_notification_recipient_created (recipient_id, created_at DESC),
+    KEY idx_notification_recipient_status (recipient_id, status, created_at DESC)
+);
+
+CREATE TABLE user_notification (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
+    category VARCHAR(64) NOT NULL,
+    entity_type VARCHAR(64) NOT NULL,
+    entity_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body_json TEXT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'UNREAD',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP NULL,
+    KEY idx_user_notification_user_created_at (user_id, created_at DESC),
+    KEY idx_user_notification_user_status (user_id, status, created_at DESC)
 );
 
 CREATE TABLE notification_preference (

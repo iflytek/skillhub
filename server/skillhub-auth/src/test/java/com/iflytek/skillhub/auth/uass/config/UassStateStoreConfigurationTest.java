@@ -20,6 +20,7 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 @ExtendWith(OutputCaptureExtension.class)
 class UassStateStoreConfigurationTest {
@@ -119,6 +120,18 @@ class UassStateStoreConfigurationTest {
     }
 
     @Test
+    void redisMode_prefersQualifiedSkillhubRedisTemplateWhenMultipleRedisTemplatesExist() {
+        contextRunner
+                .withUserConfiguration(MultipleRedisTemplatesTestConfig.class)
+                .withPropertyValues(
+                        "skillhub.auth.uass.enabled=true",
+                        "skillhub.auth.uass.cache-mode=redis"
+                )
+                .run(context -> assertThat(context.getBean(UassLoginStateStore.class))
+                        .isInstanceOf(RedisUassLoginStateStore.class));
+    }
+
+    @Test
     void redisMode_failsFastWhenRedisTemplateIsMissing() {
         contextRunner
                 .withPropertyValues(
@@ -155,7 +168,7 @@ class UassStateStoreConfigurationTest {
     @Configuration
     static class AvailableRedisTemplateTestConfig {
 
-        @Bean
+        @Bean(name = "skillhubRedisTemplate")
         RedisTemplate<String, Object> redisTemplate() {
             RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
             RedisConnectionFactory connectionFactory = mock(RedisConnectionFactory.class);
@@ -170,7 +183,7 @@ class UassStateStoreConfigurationTest {
     @Configuration
     static class UnavailableRedisTemplateTestConfig {
 
-        @Bean
+        @Bean(name = "skillhubRedisTemplate")
         RedisTemplate<String, Object> redisTemplate() {
             RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
             RedisConnectionFactory connectionFactory = mock(RedisConnectionFactory.class);
@@ -183,9 +196,34 @@ class UassStateStoreConfigurationTest {
     @Configuration
     static class MissingConnectionFactoryRedisTemplateTestConfig {
 
-        @Bean
+        @Bean(name = "skillhubRedisTemplate")
         RedisTemplate<String, Object> redisTemplate() {
             return mock(RedisTemplate.class);
+        }
+    }
+
+    @Configuration
+    static class MultipleRedisTemplatesTestConfig {
+
+        @Bean(name = "skillhubRedisTemplate")
+        RedisTemplate<String, Object> skillhubRedisTemplate() {
+            RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+            RedisConnectionFactory connectionFactory = mock(RedisConnectionFactory.class);
+            RedisConnection connection = mock(RedisConnection.class);
+            when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
+            when(connectionFactory.getConnection()).thenReturn(connection);
+            when(connection.ping()).thenReturn("PONG");
+            return redisTemplate;
+        }
+
+        @Bean(name = "redisTemplate")
+        RedisTemplate<Object, Object> redisTemplate() {
+            return mock(RedisTemplate.class);
+        }
+
+        @Bean
+        StringRedisTemplate stringRedisTemplate() {
+            return mock(StringRedisTemplate.class);
         }
     }
 }

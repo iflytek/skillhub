@@ -12,13 +12,19 @@ public class RedisUassLoginStateStore implements UassLoginStateStore {
 
     static final String KEY_PREFIX = "uass:state:";
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, ?> redisTemplate;
     private final ValueOperations<String, Object> valueOperations;
     private final Duration ttl;
 
-    public RedisUassLoginStateStore(RedisTemplate<String, Object> redisTemplate, Duration ttl) {
-        this.redisTemplate = Objects.requireNonNull(redisTemplate, "redisTemplate must not be null");
-        this.valueOperations = redisTemplate.opsForValue();
+    public RedisUassLoginStateStore(RedisTemplate<?, ?> redisTemplate, Duration ttl) {
+        @SuppressWarnings("unchecked")
+        RedisTemplate<String, ?> stringKeyTemplate =
+                (RedisTemplate<String, ?>) Objects.requireNonNull(redisTemplate, "redisTemplate must not be null");
+        this.redisTemplate = stringKeyTemplate;
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, Object> operations =
+                (ValueOperations<String, Object>) stringKeyTemplate.opsForValue();
+        this.valueOperations = operations;
         this.ttl = requirePositive(ttl);
     }
 

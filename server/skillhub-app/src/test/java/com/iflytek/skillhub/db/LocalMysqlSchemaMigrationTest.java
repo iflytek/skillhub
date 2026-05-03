@@ -27,6 +27,9 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE skill_version");
         assertThat(sql).contains("CREATE TABLE skill_file");
         assertThat(sql).contains("CREATE TABLE skill_tag");
+        assertThat(sql).contains("CREATE TABLE label_definition");
+        assertThat(sql).contains("CREATE TABLE label_translation");
+        assertThat(sql).contains("CREATE TABLE skill_label");
         assertThat(sql).contains("CREATE TABLE skill_version_stats");
         assertThat(sql).contains("CREATE TABLE skill_search_document");
         assertThat(sql).contains("CREATE TABLE review_task");
@@ -34,6 +37,8 @@ class LocalMysqlSchemaMigrationTest {
         assertThat(sql).contains("CREATE TABLE skill_star");
         assertThat(sql).contains("CREATE TABLE skill_rating");
         assertThat(sql).contains("CREATE TABLE skill_report");
+        assertThat(sql).contains("CREATE TABLE notification");
+        assertThat(sql).contains("CREATE TABLE user_notification");
         assertThat(sql).contains("CREATE TABLE notification_preference");
         assertThat(sql).contains("CREATE TABLE profile_change_request");
         assertThat(sql).contains("CREATE TABLE audit_log");

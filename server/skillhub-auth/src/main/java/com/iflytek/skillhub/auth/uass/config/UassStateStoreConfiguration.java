@@ -7,6 +7,7 @@ import com.iflytek.skillhub.auth.uass.store.UassLoginStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -21,6 +22,7 @@ public class UassStateStoreConfiguration {
     @Bean
     public UassLoginStateStore uassLoginStateStore(
             UassProperties properties,
+            @Qualifier("skillhubRedisTemplate")
             ObjectProvider<RedisTemplate<String, Object>> redisTemplateProvider) {
         if (!properties.isEnabled()) {
             return new LocalUassLoginStateStore(properties.getStateTtl());
@@ -50,7 +52,9 @@ public class UassStateStoreConfiguration {
         return new LocalUassLoginStateStore(properties.getStateTtl());
     }
 
-    private static UassLoginStateStore redisStore(UassProperties properties, RedisTemplate<String, Object> redisTemplate) {
+    private static UassLoginStateStore redisStore(
+            UassProperties properties,
+            RedisTemplate<String, Object> redisTemplate) {
         log.info("UASS login state store is running in REDIS mode. Login state is shared across replicas.");
         return new RedisUassLoginStateStore(redisTemplate, properties.getStateTtl());
     }

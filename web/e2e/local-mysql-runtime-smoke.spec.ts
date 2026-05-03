@@ -16,7 +16,7 @@ interface AuthMeEnvelope {
 test.setTimeout(300_000)
 
 test.describe('Local MySQL Runtime Smoke (Real API)', () => {
-  test('auth, profile, namespace, publish, and search flow work end-to-end', async ({ page }, testInfo) => {
+  test('auth, profile, namespace, publish, delete, search, and logout flow work end-to-end', async ({ page }, testInfo) => {
     await setEnglishLocale(page)
     await loginWithCredentials(page, {
       username: process.env.E2E_ADMIN_USERNAME ?? process.env.BOOTSTRAP_ADMIN_USERNAME ?? 'admin',
@@ -42,8 +42,9 @@ test.describe('Local MySQL Runtime Smoke (Real API)', () => {
       await expect(page.getByText(`@${namespace.slug}`)).toBeVisible()
 
       const keyword = `mysql-smoke-${Date.now().toString(36)}`
+      const skillName = `mysql-smoke-${Date.now().toString(36)}`
       const skill = await builder.publishSkill(namespace.slug, {
-        name: `mysql-smoke-${Date.now().toString(36)}`,
+        name: skillName,
         description: `Searchable ${keyword} skill for local MySQL smoke coverage.`,
       })
 
@@ -52,13 +53,30 @@ test.describe('Local MySQL Runtime Smoke (Real API)', () => {
         await builder.approveReview(reviewTaskId)
       }
 
-      await page.goto(`/dashboard/skills`)
+      await page.goto('/dashboard/skills')
       await expect(page.getByRole('main')).toContainText(skill.slug)
+      await page.getByRole('heading', { name: 'My Skills' }).waitFor()
+      await page.getByRole('heading', { name: skillName }).first().click()
+      await expect(page.getByRole('heading', { name: skillName }).first()).toBeVisible()
+      await page.getByRole('button', { name: 'Delete Skill' }).click()
+      await page.getByRole('button', { name: 'Continue' }).click()
+      await expect(page.getByRole('heading', { name: 'Type the skill slug to confirm' })).toBeVisible()
+      await page.getByRole('textbox', { name: 'Enter skill slug' }).fill(skill.slug)
+      await page.getByRole('button', { name: 'Delete Permanently' }).click()
+      await expect(page.getByText('Skill deleted')).toBeVisible()
+      await page.goto('/dashboard/skills')
+      await expect(page).toHaveURL(/\/dashboard\/skills$/)
+      await expect(page.getByRole('main')).not.toContainText(skill.slug)
 
       await page.goto(`/search?q=${encodeURIComponent(seededSearchKeyword)}&sort=relevance&page=0&starredOnly=false`)
       await expect(page.getByRole('textbox')).toHaveValue(seededSearchKeyword)
       await expect(page.getByRole('main')).toContainText('Local MySQL Search Fixture')
       await expect(page.locator('body')).not.toContainText(/error|500|crash/i)
+
+      await page.goto('/dashboard/skills')
+      await page.getByRole('button', { name: authMe.data.displayName }).click()
+      await page.getByRole('button', { name: 'Logout' }).click()
+      await expect(page).toHaveURL(/\/login\?returnTo=%2Fdashboard%2Fskills$/)
     } finally {
       await builder.cleanup()
     }
