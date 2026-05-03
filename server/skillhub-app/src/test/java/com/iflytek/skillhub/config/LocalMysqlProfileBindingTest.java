@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class LocalMysqlProfileBindingTest {
 
     @Test
-    void localMysqlProfile_usesMysqlDatasourceAndMemoryBackedRuntimeDefaults() throws IOException {
+    void localMysqlProfile_usesMysqlDatasourceAndRedisBackedRuntimeDefaults() throws IOException {
         ConfigurableEnvironment environment = loadEnvironment(
                 List.of("application-local-mysql.yml", "application.yml"),
                 Map.of()
@@ -35,35 +35,35 @@ class LocalMysqlProfileBindingTest {
         assertEquals("classpath:sql/migration-mysql", environment.getProperty("spring.flyway.locations"));
         assertEquals("local", environment.getProperty("skillhub.storage.provider"));
         assertEquals("mysql", environment.getProperty("skillhub.search.engine"));
-        assertEquals("memory", environment.getProperty("skillhub.runtime.state.provider"));
+        assertEquals("redis", environment.getProperty("skillhub.runtime.state.provider"));
         assertEquals(
                 System.getProperty("user.home") + "/.skillhub/local-mysql/storage",
                 environment.getProperty("skillhub.storage.local.base-path")
         );
-        assertEquals("memory", environment.getProperty("skillhub.ratelimit.mode"));
-        assertEquals("memory", environment.getProperty("skillhub.auth.failure-throttle.mode"));
-        assertEquals("local", environment.getProperty("skillhub.auth.uass.cache-mode"));
-        assertEquals("none", environment.getProperty("spring.session.store-type"));
-        assertEquals("lax", environment.getProperty("server.servlet.session.cookie.same-site"));
-        assertEquals("false", environment.getProperty("server.servlet.session.cookie.secure"));
-        assertThat(environment.getProperty("spring.autoconfigure.exclude", String[].class))
-                .containsExactlyElementsOf(RuntimeStatePropertyDefaults.memoryAutoConfigurationExcludes());
-    }
-
-    @Test
-    void localMysqlProfile_canSwitchToRedisBackedRuntimeState() throws IOException {
-        ConfigurableEnvironment environment = loadEnvironment(
-                List.of("application-local-mysql.yml", "application.yml"),
-                Map.of("SKILLHUB_RUNTIME_STATE_PROVIDER", "redis")
-        );
-        applyRuntimeStateDefaults(environment);
-
-        assertEquals("redis", environment.getProperty("skillhub.runtime.state.provider"));
         assertEquals("redis", environment.getProperty("skillhub.ratelimit.mode"));
         assertEquals("redis", environment.getProperty("skillhub.auth.failure-throttle.mode"));
         assertEquals("redis", environment.getProperty("skillhub.auth.uass.cache-mode"));
         assertEquals("redis", environment.getProperty("spring.session.store-type"));
+        assertEquals("lax", environment.getProperty("server.servlet.session.cookie.same-site"));
+        assertEquals("false", environment.getProperty("server.servlet.session.cookie.secure"));
         assertThat(environment.getProperty("spring.autoconfigure.exclude", String[].class)).isEmpty();
+    }
+
+    @Test
+    void localMysqlProfile_canFallbackToMemoryBackedRuntimeState() throws IOException {
+        ConfigurableEnvironment environment = loadEnvironment(
+                List.of("application-local-mysql.yml", "application.yml"),
+                Map.of("SKILLHUB_RUNTIME_STATE_PROVIDER", "memory")
+        );
+        applyRuntimeStateDefaults(environment);
+
+        assertEquals("memory", environment.getProperty("skillhub.runtime.state.provider"));
+        assertEquals("memory", environment.getProperty("skillhub.ratelimit.mode"));
+        assertEquals("memory", environment.getProperty("skillhub.auth.failure-throttle.mode"));
+        assertEquals("local", environment.getProperty("skillhub.auth.uass.cache-mode"));
+        assertEquals("none", environment.getProperty("spring.session.store-type"));
+        assertThat(environment.getProperty("spring.autoconfigure.exclude", String[].class))
+                .containsExactlyElementsOf(RuntimeStatePropertyDefaults.memoryAutoConfigurationExcludes());
     }
 
     private ConfigurableEnvironment loadEnvironment(List<String> resourceNames,

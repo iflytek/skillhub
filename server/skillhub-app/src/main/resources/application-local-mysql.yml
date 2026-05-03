@@ -28,9 +28,10 @@ spring:
 skillhub:
   runtime:
     state:
-      # Override with SKILLHUB_RUNTIME_STATE_PROVIDER=redis to validate the
-      # Redis-backed runtime path without changing controller/app wiring.
-      provider: ${SKILLHUB_RUNTIME_STATE_PROVIDER:memory}
+      # Stage-two local MySQL runs with Redis-backed runtime state by default.
+      # Override with SKILLHUB_RUNTIME_STATE_PROVIDER=memory to fall back to the
+      # phase-one in-process runtime without changing controller/app wiring.
+      provider: ${SKILLHUB_RUNTIME_STATE_PROVIDER:redis}
   public:
     base-url: http://localhost:3000
   storage:

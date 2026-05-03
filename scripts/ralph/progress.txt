@@ -23,6 +23,7 @@
 - 如果一个搜索 provider 只在特定方言下合法，查询、索引写入和 rebuild 三类 bean 都必须一起受同一 `@ConditionalOnProperty` 开关约束；只隔离 query bean 不足以阻止非目标 runtime 误装配 PostgreSQL-only 组件。
 - 迁移中的新搜索 provider 可以先用“独立 package + `@ConditionalOnProperty` + 最小装配测试”建立方言边界；如果后续行为 story 尚未落地，先不要抢跑接入索引/rebuild provider，以免跨 story 扩大改动面。
 - `local-mysql` profile 这类运行时切换，最好在 profile YAML 和配置绑定测试里同时显式断言搜索 provider 值；这样可以把“本地运行时”和“测试数据库”分层切开，避免 profile 仍回落到 `h2-like` 的默认路径。
+- 阶段切换时，profile 默认值可以直接设成下一阶段的 provider，再用环境变量保留上一阶段 fallback；绑定测试要同时覆盖默认值和回退值，避免配置迁移只改了一半。
 
 ## 2026-05-02 23:30 - US-001
 - 将 `server/skillhub-app/pom.xml` 的运行时 JDBC 驱动从 PostgreSQL 切换为 MySQL 8，并将 Flyway 数据库支持从 PostgreSQL 插件切换为 MySQL 插件。
@@ -219,6 +220,18 @@
   - 发现的 patterns：对于这类“过渡 no-op service” story，若实现与装配测试已经在分支中落地，后续迭代可以先复核 bean 选择和空操作契约，再决定是否需要补代码。
   - 遇到的陷阱：`prd.json` 里的 story 状态可能落后于实际代码和测试状态，开始实现前先比对当前分支实现与最近进度，避免重复开发。
   - 有用的上下文：`MysqlNoopSearchServicesTest` 已同时覆盖 no-op index 与 no-op rebuild 的安全调用，`SearchRuntimeSelectionTest` 则负责验证 mysql runtime 的 rebuild bean 选择；这两处就是后续 Lucene 替换前的主要回归守卫。
+---
+
+## 2026-05-03 11:07 - US-018
+- 将 `local-mysql` 的 runtime-state 默认值切到 Redis，并保留 `SKILLHUB_RUNTIME_STATE_PROVIDER=memory` 作为上一阶段回退。
+- 新增真实 Redis 容器的 session 持久化验证，确认 `SessionRepository` 能跨 context 读取已写入的 authenticated session。
+- 更新了 `LocalMysqlProfileBindingTest` 的默认/回退断言，并将 `scripts/ralph/prd.json` 中的 `US-018` 标记为通过。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest,RedisSessionRuntimeSelectionTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RedisSessionRuntimeSelectionTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：阶段切换类 profile 最稳妥的做法是把下一阶段 provider 设为默认值，再用环境变量保留上一阶段回退。
+  - 遇到的陷阱：Spring Session 的 `redis` 路径在测试里最好用真实 Redis 容器，不要只停留在 bean wiring。
+  - 有用的上下文：`RuntimeStatePropertyDefaults` 会统一覆盖 `spring.autoconfigure.exclude`，所以 `local-mysql` 的 session 切换应以 provider 默认值为准。
 ---
 ## 2026-05-03 09:38 - US-002
 - 去掉 `application-local-mysql.yml` 对 session cookie 的 `same-site: none` / `secure: true` 覆盖，让 `local-mysql` 浏览器运行态回落到基线的 `lax` + `false`，修复本地 HTTP 下无法建立登录态的问题。
