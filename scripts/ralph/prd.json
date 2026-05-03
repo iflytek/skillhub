@@ -615,8 +615,8 @@
       ],
       "priority": 36,
       "passes": true,
-      "notes": "[验证失败 - 第2次] 2026-05-04 01:28\n- 失败项1：`server/skillhub-app/src/main/java/com/iflytek/skillhub/config/RuntimeStateEnvironmentPostProcessor.java` 在 fresh `server/skillhub-app/target/site/jacoco/jacoco.csv` 中仍为 `LINE_MISSED=2`；JaCoCo 源码报告显示第 20-21 行的 `replace(...)` 分支未覆盖。\n- 失败项2：`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/entity/ApiToken.java` 在 fresh `server/skillhub-auth/target/site/jacoco/jacoco.csv` 中仍为 `LINE_MISSED=1`；JaCoCo 源码报告显示第 47 行受保护无参构造器未覆盖。\n- 失败项3：`server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/entity/IdentityBinding.java` 在 fresh `server/skillhub-auth/target/site/jacoco/jacoco.csv` 中仍为 `LINE_MISSED=1`；JaCoCo 源码报告显示第 45 行受保护无参构造器未覆盖。\n- 建议修复方向：补一条 `RuntimeStateEnvironmentPostProcessor` 的“property source 已存在时 replace”测试路径，并让 `ApiTokenTest` / `IdentityBindingTest` 显式命中受保护无参构造器；修复后重新执行 `mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs`、`mvn -f server/pom.xml -pl skillhub-app,skillhub-auth,skillhub-domain,skillhub-infra,skillhub-search -am jacoco:report -DskipTests`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`。",
-      "retryCount": 2,
+      "notes": "",
+      "retryCount": 0,
       "blocked": false
     }
   ]
