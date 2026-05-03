@@ -1,5 +1,7 @@
 ## Codebase Patterns
 - 如果一组运行时状态能力（session、rate limit、auth throttle、UASS state）需要一起切换，不要在每个 profile 里分别维护散落的 mode；优先收敛到一个 `skillhub.runtime.state.provider` 开关，再由集中映射层派生具体属性。
+- 当 runtime-state provider 已经统一派生默认值时，profile YAML 里不要继续保留旧阶段的叶子覆盖；每完成一个 story 就把对应的硬编码默认删掉，避免配置来源互相打架。
+- Redis-backed runtime selection 最好用 `ApplicationContextRunner` + disposable Redis container 做 focused verification，同时断言 bean selection 和最小行为。
 - `local` / `local-h2` / `local-mysql` 这类本地浏览器运行 profile 不要覆盖成 `server.servlet.session.cookie.same-site=none` + `secure=true`；在 `http://localhost` 下这会让 session cookie 无法建立，浏览器登录 smoke 会卡在 `/login`。
 - 当 `skillhub.search.engine` 新增方言值时，`SearchQueryService`、`SearchIndexService`、`SearchRebuildService` 三类 bean 需要一起覆盖该条件装配；只补 query provider 会让常规事件监听和同步服务在启动期注入失败。
 - MySQL 过渡期扩展 `migration-mysql` 时，除了请求主链路直接写入的表，还要同步覆盖发布后异步通知和删除清理会访问的表；否则 `local-mysql` 真实 smoke 可能在 `publish`/`delete` 后半段才暴露缺表。
@@ -263,4 +265,14 @@
   - 发现的 patterns：当多个状态型子系统需要同步切换时，用环境后处理器集中派生配置，比在每个 profile 重复维护 session / throttle / UASS mode 更稳。
   - 遇到的陷阱：如果 memory profile 仍显式排除了 Redis 自动装配，切到 Redis provider 时必须同步覆盖 `spring.autoconfigure.exclude`，否则 Redis bean 不会回来。
   - 有用的上下文：这轮只做了 provider switch 和装配回归，真正的 Redis session / rate limit / auth throttle / UASS 持久化行为仍由 `US-018` 到 `US-021` 分别落地。
+---
+## 2026-05-03 11:26 - US-019
+- 将 `local-mysql` 里遗留的 `skillhub.ratelimit.mode: memory` 去掉，让限流真正通过统一的 runtime-state provider 进入 Redis path。
+- 新增 `RedisRateLimiterRuntimeSelectionTest`，用 Redis Testcontainer 验证 Redis provider 下会装配 `RedisSlidingWindowRateLimiter` 并实际执行滑动窗口限流，同时保留 memory provider 的 fallback 验证。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=RedisRateLimiterRuntimeSelectionTest,LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RedisRateLimiterRuntimeSelectionTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当 runtime-state provider 已经统一派生默认值时，profile YAML 里不要继续保留旧阶段的叶子覆盖；每完成一个 story 就把对应的硬编码默认删掉，避免配置来源互相打架。
+  - 遇到的陷阱：Redis-backed runtime selection 最稳的是直接用 Testcontainers 验证，而不是只看 `@ConditionalOnProperty` 或 mock bean wiring。
+  - 有用的上下文：`skillhub.ratelimit.mode` 已经完全交给 provider 派生，后续 `US-020` / `US-021` 可以直接沿用同样的 selection test 模式。
 ---

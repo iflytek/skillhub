@@ -41,8 +41,6 @@ skillhub:
   search:
     # MySQL runtime uses the mysql-like query provider; local-h2 keeps the h2-like fallback.
     engine: mysql
-  ratelimit:
-    mode: memory
   auth:
     mock:
       enabled: true
