@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- `skillhub-app` 的 `jacoco:report-aggregate` 只会输出依赖模块（`skillhub-domain`、`skillhub-auth`、`skillhub-infra`、`skillhub-search`、`skillhub-notification`）的类级行统计；app 自模块类和部分 interface/repository 不会出现在 aggregate `jacoco.csv`，验证它们时要结合现有 feature gate 或模块级报告，不要把 `UNMATCHED` 直接误判成漏测。
 - 对 JPA entity 做覆盖率收口时，优先在同 package 的轻量单测里直接调用 `protected` 构造器和 `@PrePersist` / `@PreUpdate` lifecycle 方法；通常不需要拉起 JPA 或数据库就能把字段映射类的剩余行收干。
 - 对 Lucene / filesystem 分支做覆盖率收口时，优先给生产类增加最小的 `protected` seam（如 `openDirectory`、`walkIndexDirectory`、`analyze`）并在测试里 override，通常比堆真实 IO 场景更稳定，也更容易精确打到异常和空结果分支。
 - 遇到 feature-scoped JaCoCo gate 时，优先直接查看 `target/site/jacoco-aggregate/*/*.java.html` 的 `nc`/`pc` 行，而不是盲补测试；源码高亮能最快定位缺的是默认分支、异常分支，还是构造器 helper。
@@ -500,4 +501,13 @@
   - 发现的 patterns：字段型 entity 的覆盖率通常可以通过 package 内白盒单测直接收口，不必引入 repository 或 `@DataJpaTest` 才能命中 lifecycle 和 getter/setter 行。
   - 遇到的陷阱：如果用固定未来时间做 `preUpdate()` 断言，测试机会比种子时间更早，导致“更新时间应更晚”的断言反向失败；这类断言最好用 `Instant.EPOCH` 或显式 past seed。
   - 有用的上下文：`server/skillhub-app/target/site/jacoco-aggregate/skillhub-auth/com.iflytek.skillhub.auth.entity/*.java.html` 仍是这类 coverage 回归最快的定位入口，能直接看到哪些行已经转成 `fc`。
+---
+## 2026-05-04 00:50 - US-036
+- 为 `AuditLog`、`SecurityAudit`、`SkillVersion`、`SkillVersionStats`、`ProfileChangeRequest` 新增同 package 白盒单测，补齐构造器、getter/setter、`@PrePersist` / `@PreUpdate`、soft delete，以及 `downloadCount == null` 分支，收口迁移范围里最后 5 个 `line_missed`。
+- 重新运行 `mvn -f server/pom.xml -pl skillhub-domain -am -Dtest=AuditLogTest,SecurityAuditTest,SkillVersionTest,SkillVersionStatsTest,ProfileChangeRequestTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`；fresh aggregate `jacoco.csv` 中 25 个可匹配迁移类现已全部 `line_missed=0`，现有 `check-uass-feature-coverage` 也通过。
+- 更改的文件：`server/skillhub-domain/src/test/java/com/iflytek/skillhub/domain/audit/AuditLogTest.java`、`server/skillhub-domain/src/test/java/com/iflytek/skillhub/domain/security/SecurityAuditTest.java`、`server/skillhub-domain/src/test/java/com/iflytek/skillhub/domain/skill/SkillVersionTest.java`、`server/skillhub-domain/src/test/java/com/iflytek/skillhub/domain/skill/SkillVersionStatsTest.java`、`server/skillhub-domain/src/test/java/com/iflytek/skillhub/domain/user/ProfileChangeRequestTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：对纯 entity / record 型生产类做 coverage 收口时，package 内白盒单测配合最小反射赋值，通常能最快命中 lifecycle、getter/setter 和 defensive null 分支。
+  - 遇到的陷阱：`git diff main...HEAD` 过滤出来的迁移类里，会混入 aggregate `jacoco.csv` 本来不产出 row 的 app 自模块类和 interface/repository；最终核对时要区分“真实 `line_missed`”和“报告口径不包含”的 `UNMATCHED`。
+  - 有用的上下文：这轮 final check 的有效信号是 `mvn ... verify -DskipITs` 成功，加上 aggregate 里已匹配到的迁移类全部 `line_missed=0`；当前 `UNMATCHED` 只剩 app 自模块类与无类级行统计的 repository/interface。
 ---
