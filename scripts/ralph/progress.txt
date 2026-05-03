@@ -1,5 +1,6 @@
 ## Codebase Patterns
 - 为新搜索 provider 定义文档模型时，优先固定 `SearchResult` 只返回 `skillIds + pagination metadata`，hydrate 继续留在应用层；像 `labelSlugs` 这类额外过滤如果要下沉到索引，必须显式增加索引字段，不要依赖隐式 join。
+- local-file-index 的增量写入应以 `skillId` 作为 Lucene term 键，统一用 `updateDocument` 做幂等 upsert、`deleteDocuments` 做删除；打开 `FSDirectory` 之前先 `Files.createDirectories(...)`，否则空目录首写会失败。
 - 当运行时 provider 已统一派生默认值时，profile YAML 不要再保留旧阶段的叶子覆盖；验证 Redis 路径时优先补一个真实容器的 selection test，断言环境值和可观察行为都切到目标实现。
 - 如果一组运行时状态能力（session、rate limit、auth throttle、UASS state）需要一起切换，不要在每个 profile 里分别维护散落的 mode；优先收敛到一个 `skillhub.runtime.state.provider` 开关，再由集中映射层派生具体属性。
 - 如果 app 级别的 Redis state 需要独立模板，优先给它单独的 bean 名称（例如 `skillhubRedisTemplate`）并通过 `@Qualifier` 注入，避免和 Spring 默认 `redisTemplate` 发生冲突。
@@ -332,4 +333,14 @@
   - 发现的 patterns：搜索 provider 设计 story 最稳的落点是先在架构文档里把“文档字段、触发器、回退路径”写成显式契约，再让后续实现 story 逐个对齐这些边界。
   - 遇到的陷阱：如果查询契约里已经有 `labelSlugs` 这类过滤条件，但文档模型里没写清它是否下沉到索引，后续实现很容易在 Lucene 字段和应用层 side lookup 之间反复返工。
   - 有用的上下文：当前 `skillhub.search.provider` 已经是面对阶段三的稳定配置键，但实际 bean 装配仍主要受 `skillhub.search.engine` 控制；后续落地 `LocalFileIndex*Service` 时要同时维护这两层约定，直到装配切换完成。
+---
+## 2026-05-03 15:12 - US-025
+- 实现了 `LocalFileIndexService`，用嵌入式 Lucene 支持 `index` / `batchIndex` / `remove`，按 `skillId` 做幂等 upsert 和删除，并将索引目录按配置懒创建。
+- 新增 `LocalFileIndexServiceTest` 覆盖单条更新、批量写入和删除行为，同时为 `skillhub-search` 补入 Lucene 依赖。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-search -am test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，全部通过。
+- 更改的文件：`server/skillhub-search/pom.xml`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/LocalFileIndexService.java`、`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/localfile/package-info.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/localfile/LocalFileIndexServiceTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：Lucene 增量写入最好直接围绕 `skillId` term 做 upsert / delete，这样和上层删除与重建事件能保持同一主键协议。
+  - 遇到的陷阱：`FSDirectory` 不是“目录存在即能写”，路径必须先创建；否则空目录首写会在初始化阶段就失败。
+  - 有用的上下文：`LocalFileIndexService` 现在只负责写删边界，查询和重建还会在后续 story 里单独接入。
 ---
