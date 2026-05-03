@@ -19,12 +19,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 class RuntimeStateEnvironmentPostProcessorTest {
+
+    private final RuntimeStateEnvironmentPostProcessor postProcessor = new RuntimeStateEnvironmentPostProcessor();
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(
@@ -68,6 +71,23 @@ class RuntimeStateEnvironmentPostProcessorTest {
                     assertThat(context.getBean(RateLimiter.class)).isInstanceOf(RedisSlidingWindowRateLimiter.class);
                     assertThat(context.getBean(UassLoginStateStore.class)).isInstanceOf(RedisUassLoginStateStore.class);
                 });
+    }
+
+    @Test
+    void postProcessor_replacesExistingRuntimeStatePropertySource() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setProperty("skillhub.runtime.state.provider", "redis");
+        environment.getPropertySources().addFirst(new MapPropertySource(
+                RuntimeStatePropertyDefaults.PROPERTY_SOURCE_NAME,
+                java.util.Map.of("spring.session.store-type", "none")
+        ));
+
+        postProcessor.postProcessEnvironment(environment, null);
+
+        assertThat(environment.getPropertySources().get(RuntimeStatePropertyDefaults.PROPERTY_SOURCE_NAME))
+                .isInstanceOf(MapPropertySource.class);
+        assertThat(environment.getProperty("spring.session.store-type")).isEqualTo("redis");
+        assertThat(environment.getProperty("skillhub.ratelimit.mode")).isEqualTo("redis");
     }
 
     @Configuration

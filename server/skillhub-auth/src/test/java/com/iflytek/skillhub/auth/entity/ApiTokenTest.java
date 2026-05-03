@@ -8,6 +8,21 @@ import org.junit.jupiter.api.Test;
 class ApiTokenTest {
 
     @Test
+    void protectedNoArgsConstructorSupportsJpaInstantiation() {
+        ApiToken token = new ApiToken();
+
+        assertThat(token.getId()).isNull();
+        assertThat(token.getSubjectType()).isEqualTo("USER");
+        assertThat(token.getSubjectId()).isNull();
+        assertThat(token.getUserId()).isNull();
+        assertThat(token.getName()).isNull();
+        assertThat(token.getTokenPrefix()).isNull();
+        assertThat(token.getTokenHash()).isNull();
+        assertThat(token.getScopeJson()).isNull();
+        assertThat(token.getCreatedAt()).isNull();
+    }
+
+    @Test
     void constructorAndLifecycleCallbacksPopulateCoreFields() {
         ApiToken token = new ApiToken("usr_1", "cli", "sk_live", "hash_123", "[\"skill:publish\"]");
 

@@ -9,6 +9,20 @@ import org.springframework.test.util.ReflectionTestUtils;
 class IdentityBindingTest {
 
     @Test
+    void protectedNoArgsConstructorSupportsJpaInstantiation() {
+        IdentityBinding binding = new IdentityBinding();
+
+        assertThat(binding.getId()).isNull();
+        assertThat(binding.getUserId()).isNull();
+        assertThat(binding.getProviderCode()).isNull();
+        assertThat(binding.getSubject()).isNull();
+        assertThat(binding.getLoginName()).isNull();
+        assertThat(binding.getExtraJson()).isNull();
+        assertThat(binding.getCreatedAt()).isNull();
+        assertThat(binding.getUpdatedAt()).isNull();
+    }
+
+    @Test
     void constructorAndPrePersistPopulateCoreFields() {
         IdentityBinding binding = new IdentityBinding("usr_1", "github", "gh_1", "alice");
 

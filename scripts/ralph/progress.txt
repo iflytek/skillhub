@@ -521,3 +521,12 @@
   - 遇到的陷阱：只看 `verify` 的 aggregate gate 不足以回答模块级 `jacoco.csv` 是否 fresh；如果 validator 点名了具体 module report，记得再显式生成一次 `jacoco:report`。
   - 有用的上下文：`SkillVersionStatsJpaRepository` 的 `CURRENT_TIMESTAMP` 更新在 H2 上会触发 `Instant` 类型校验问题，改成 native SQL 后 MySQL/H2 的持久化验证都能共用同一条查询。
 ---
+## 2026-05-04 01:38 - US-036
+- 为 `RuntimeStateEnvironmentPostProcessorTest` 新增真实 `postProcessEnvironment(...)` 替换路径测试，显式预置同名 property source 后断言 `replace(...)` 分支生效；同时在 `ApiTokenTest`、`IdentityBindingTest` 里直接命中 package 内可访问的受保护无参构造器，收口 validator 剩余的 3 个覆盖缺口。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=RuntimeStateEnvironmentPostProcessorTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-auth -am -Dtest=ApiTokenTest,IdentityBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs`、`mvn -f server/pom.xml -pl skillhub-app,skillhub-auth,skillhub-domain,skillhub-infra,skillhub-search -am jacoco:report -DskipTests`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过；fresh JaCoCo csv 中 `RuntimeStateEnvironmentPostProcessor`、`ApiToken`、`IdentityBinding` 均已 `LINE_MISSED=0`。
+- 更改的文件：`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RuntimeStateEnvironmentPostProcessorTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/entity/ApiTokenTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/entity/IdentityBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖 `EnvironmentPostProcessor` 一类启动钩子时，优先直接构造 `MockEnvironment` 并调用真实 post-processor，再预置/替换 `PropertySource`，比只复用 helper 初始化器更容易命中分支。
+  - 遇到的陷阱：JaCoCo csv 里 `INSTRUCTION_MISSED` 仍可能大于 0，但如果 validator 盯的是 `LINE_MISSED`，要按列口径核对，避免把已通过的类误判成仍有缺口。
+  - 有用的上下文：`ApiToken` 和 `IdentityBinding` 的受保护 JPA 无参构造器在同 package 测试里可以直接调用，不需要反射或拉起 `@DataJpaTest`。
+---
