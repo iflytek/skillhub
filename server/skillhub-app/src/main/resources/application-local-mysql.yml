@@ -65,8 +65,6 @@ skillhub:
             - USER_ADMIN
     device:
       enabled: false
-    failure-throttle:
-      mode: memory
   bootstrap:
     admin:
       enabled: true

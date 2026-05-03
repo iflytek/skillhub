@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 当运行时 provider 已统一派生默认值时，profile YAML 不要再保留旧阶段的叶子覆盖；验证 Redis 路径时优先补一个真实容器的 selection test，断言环境值和可观察行为都切到目标实现。
 - 如果一组运行时状态能力（session、rate limit、auth throttle、UASS state）需要一起切换，不要在每个 profile 里分别维护散落的 mode；优先收敛到一个 `skillhub.runtime.state.provider` 开关，再由集中映射层派生具体属性。
 - 当 runtime-state provider 已经统一派生默认值时，profile YAML 里不要继续保留旧阶段的叶子覆盖；每完成一个 story 就把对应的硬编码默认删掉，避免配置来源互相打架。
 - Redis-backed runtime selection 最好用 `ApplicationContextRunner` + disposable Redis container 做 focused verification，同时断言 bean selection 和最小行为。
@@ -275,4 +276,14 @@
   - 发现的 patterns：当 runtime-state provider 已经统一派生默认值时，profile YAML 里不要继续保留旧阶段的叶子覆盖；每完成一个 story 就把对应的硬编码默认删掉，避免配置来源互相打架。
   - 遇到的陷阱：Redis-backed runtime selection 最稳的是直接用 Testcontainers 验证，而不是只看 `@ConditionalOnProperty` 或 mock bean wiring。
   - 有用的上下文：`skillhub.ratelimit.mode` 已经完全交给 provider 派生，后续 `US-020` / `US-021` 可以直接沿用同样的 selection test 模式。
+---
+## 2026-05-03 11:43 - US-020
+- 移除了 `local-mysql` profile 里对 `skillhub.auth.failure-throttle.mode` 的残余 memory 覆盖，让认证失败节流真正跟随统一 runtime-state provider 切到 Redis。
+- 新增 `RedisAuthFailureThrottleRuntimeSelectionTest`，用 Redis Testcontainer 验证 Redis provider 下的失败计数写入、节流触发与 memory fallback 行为。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=RedisAuthFailureThrottleRuntimeSelectionTest,LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -f server/pom.xml -pl skillhub-app -am test` 和 `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/RedisAuthFailureThrottleRuntimeSelectionTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：认证类 runtime 切换最好直接验证 `recordFailure` 写入和 `assertAllowed` 拦截，而不是只看 bean 装配。
+  - 遇到的陷阱：`AuthFailureThrottleService` 的 memory fallback 测试必须用同一个 identifier 触发 8 次失败；只打 IP 不一定会命中阈值。
+  - 有用的上下文：`local-mysql` 现在只剩 Redis-backed runtime-state 的默认路线上还保留 `auth failure throttle`，后续 `US-021` 可以沿用同类 selection test 模式。
 ---
