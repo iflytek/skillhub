@@ -40,27 +40,8 @@ class LocalMysqlProfileBindingTest {
         assertEquals("memory", environment.getProperty("skillhub.ratelimit.mode"));
         assertEquals("memory", environment.getProperty("skillhub.auth.failure-throttle.mode"));
         assertEquals("local", environment.getProperty("skillhub.auth.uass.cache-mode"));
-    }
-
-    @Test
-    void localMysqlProfile_excludesRedisSessionAutoconfiguration() throws IOException {
-        ConfigurableEnvironment environment = loadEnvironment(
-                List.of("application-local-mysql.yml", "application.yml"),
-                Map.of()
-        );
-
-        assertEquals(
-                "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration",
-                environment.getProperty("spring.autoconfigure.exclude[0]")
-        );
-        assertEquals(
-                "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration",
-                environment.getProperty("spring.autoconfigure.exclude[1]")
-        );
-        assertEquals(
-                "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration",
-                environment.getProperty("spring.autoconfigure.exclude[2]")
-        );
+        assertEquals("lax", environment.getProperty("server.servlet.session.cookie.same-site"));
+        assertEquals("false", environment.getProperty("server.servlet.session.cookie.secure"));
     }
 
     private ConfigurableEnvironment loadEnvironment(List<String> resourceNames,

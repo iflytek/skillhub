@@ -23,13 +23,6 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
-server:
-  servlet:
-    session:
-      cookie:
-        same-site: none
-        secure: true
-
 skillhub:
   public:
     base-url: http://localhost:3000

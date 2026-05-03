@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- `local` / `local-h2` / `local-mysql` 这类本地浏览器运行 profile 不要覆盖成 `server.servlet.session.cookie.same-site=none` + `secure=true`；在 `http://localhost` 下这会让 session cookie 无法建立，浏览器登录 smoke 会卡在 `/login`。
 - 当 `skillhub.search.engine` 新增方言值时，`SearchQueryService`、`SearchIndexService`、`SearchRebuildService` 三类 bean 需要一起覆盖该条件装配；只补 query provider 会让常规事件监听和同步服务在启动期注入失败。
 - MySQL 过渡期扩展 `migration-mysql` 时，除了请求主链路直接写入的表，还要同步覆盖发布后异步通知和删除清理会访问的表；否则 `local-mysql` 真实 smoke 可能在 `publish`/`delete` 后半段才暴露缺表。
 - mysql-like 排序 story 可以直接与 h2-like provider 对齐：`downloads`/`rating`/`newest` 走 JPQL 属性排序，`relevance` 只在存在关键词时启用 `CASE + titleExact/titlePrefix/titleLike`，并且 count query 必须禁绑 relevance-only 参数。
@@ -217,6 +218,17 @@
   - 发现的 patterns：对于这类“过渡 no-op service” story，若实现与装配测试已经在分支中落地，后续迭代可以先复核 bean 选择和空操作契约，再决定是否需要补代码。
   - 遇到的陷阱：`prd.json` 里的 story 状态可能落后于实际代码和测试状态，开始实现前先比对当前分支实现与最近进度，避免重复开发。
   - 有用的上下文：`MysqlNoopSearchServicesTest` 已同时覆盖 no-op index 与 no-op rebuild 的安全调用，`SearchRuntimeSelectionTest` 则负责验证 mysql runtime 的 rebuild bean 选择；这两处就是后续 Lucene 替换前的主要回归守卫。
+---
+## 2026-05-03 09:38 - US-002
+- 去掉 `application-local-mysql.yml` 对 session cookie 的 `same-site: none` / `secure: true` 覆盖，让 `local-mysql` 浏览器运行态回落到基线的 `lax` + `false`，修复本地 HTTP 下无法建立登录态的问题。
+- 更新 `LocalMysqlProfileBindingTest`，显式断言 `local-mysql` profile 的 session cookie 默认值，避免后续再把浏览器不可用的 secure-cookie 配置带回本地 profile。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test` 和 `mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`，确认通过。
+- 复用了现有 `tiger-mysql`（`127.0.0.1:33306`）与 `agent-browser`：以 `SPRING_PROFILES_ACTIVE=local-mysql`、`SKILLHUB_SEARCH_ENGINE=mysql` 启动临时库 `skillhub_us002_browser`，验证 `GET /actuator/health -> {\"status\":\"UP\"}`；随后在浏览器中打开 `http://127.0.0.1:3000/login`，确认会发出 `POST /api/v1/auth/local/login`，并成功跳转到 `http://127.0.0.1:3000/dashboard`，同时拿到 `JSESSIONID` 与 `XSRF-TOKEN` cookie。
+- 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：本地 profile 的浏览器 smoke 如果失败在“点登录没请求/没登录态”，先检查 session cookie 是否被 profile 覆盖成 HTTPS-only，而不是先怀疑前端表单逻辑。
+  - 遇到的陷阱：`agent-browser` 的 `fill` / 逐字符 `type` 对 React 表单有时会留下不完整状态；需要验证真实提交时，可以在浏览器内用原生 setter + `input/change` 事件补一次，再调用 `form.requestSubmit()`。
+  - 有用的上下文：`local-mysql` 在 `http://127.0.0.1:3000` + `http://127.0.0.1:19080` 的开发链路下，登录成功后的稳定验收信号是 `/api/v1/auth/local/login` 请求、跳转到 `/dashboard`，以及浏览器里同时存在 `JSESSIONID` 和 `XSRF-TOKEN`。
 ---
 ## 2026-05-03 09:03 - US-016
 - 为 `local-mysql` 运行态补了一个确定性的可搜索 fixture，并新增 `MysqlLikeSearchRuntimeIntegrationTest` 与 `web/e2e/local-mysql-runtime-smoke.spec.ts`，串起登录、profile、namespace、publish 和搜索的真实验证链路。

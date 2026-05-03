@@ -34,7 +34,7 @@
       "priority": 2,
       "passes": true,
       "notes": "",
-      "retryCount": 0,
+      "retryCount": 1,
       "blocked": false
     },
     {
