@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 认证/用户域的浏览器验收如果现成 Playwright `registerSession` 夹具超时，先在真实浏览器上下文里直接核对 `/api/v1/auth/me`、受保护路由和 logout 结果，先区分产品缺陷与测试夹具波动，再决定是否需要改代码。
 - local-file-index 如果要新增过滤或排序能力，必须同步升级 `SkillSearchDocument`、Lucene writer 和 rebuild 来源；只改 `LocalFileIndexQueryService` 会因为索引里缺字段而得到“查询代码支持了，但文档模型没跟上”的假完成。
 - 当 `skillhub.search.provider` 从 `mysql-like` 切到 `local-file-index` 时，查询、索引写入和 rebuild 三类 bean 都要一起跟随 provider 条件切换；否则运行时会出现“Lucene 已写入，但查询仍走 mysql-like”的假切换。
 - 复现本地运行态或浏览器回归前，先重建当前分支的 `skillhub-app` 可执行 jar，并确认目标端口确实是 SkillHub 进程；陈旧 `target` 产物或端口占用会制造与当前代码无关的假故障。
@@ -78,6 +79,16 @@
 ---
 ## 2026-05-03 00:01 - US-001
 - 修复 `local-mysql` profile 仍回落到 PostgreSQL 搜索装配的问题，在 `application-local-mysql.yml` 中显式设置 `skillhub.search.engine: h2`，并为该覆盖增加绑定断言。
+---
+## 2026-05-03 20:14 - US-031
+- 复用已运行的 `127.0.0.1:3000 -> 19080` 本地最终运行态，使用 `agent-browser` 完成认证与基础用户域验收：确认 `admin / ChangeMe!2026` 登录后可进入 `/settings/profile`，刷新后会话仍保留，资料页能显示 `local-admin` / `Local Admin` / `local-admin@example.test`，登出后回到 `/login?returnTo=%2Fsettings%2Fprofile` 且 `/api/v1/auth/me` 返回 401。
+- 额外复核了资料页后端接口 `GET /api/v1/user/profile`，确认在已认证会话下返回 200；本轮未发现需要修改的产品代码，因此只将 Ralph 状态文件收口到 `US-031` 通过。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，全部通过；补跑的 `PLAYWRIGHT_WEB_PORT=3000 SKILLHUB_API_PROXY_TARGET=http://127.0.0.1:19080 pnpm --dir web exec playwright test e2e/settings-pages.spec.ts --project chromium` 在 `beforeEach registerSession` 阶段超时，未作为本 story 的阻塞项。
+- 更改的文件：`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：认证/用户域验收可以先用真实浏览器上下文验证 `login -> protected page -> refresh -> logout`，再决定是否需要动现有 Playwright 夹具。
+  - 遇到的陷阱：`agent-browser` 对登录表单点击不一定稳定触发 React 提交；如果网络面板里没有 `POST /api/v1/auth/local/login`，先不要误判后端故障。
+  - 有用的上下文：当前 `local-mysql` 最终运行态的资料页接口是 `/api/v1/user/profile`，不是 `/api/v1/users/me/profile`；后者的 500 不能作为本 story 的产品回归证据。
 - 顺手移除了 `web/e2e/search-edge-cases.spec.ts` 中阻塞 `pnpm --dir web lint` 的未使用 `Page` 类型导入，恢复前端 lint 绿灯。
 - 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=LocalMysqlProfileBindingTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am -DskipTests package`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
 - 更改的文件：`server/skillhub-app/src/main/resources/application-local-mysql.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/LocalMysqlProfileBindingTest.java`、`web/e2e/search-edge-cases.spec.ts`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
