@@ -79,4 +79,50 @@ class UassLoginInitiationServiceTest {
 
         assertThat(loginUrl).isEqualTo("https://uass.example.com/login?state=state-3");
     }
+
+    @Test
+    void constructor_normalizesBlankPublicBaseUrlToNull() {
+        UassProperties properties = new UassProperties();
+        properties.setCallbackPath("/api/v1/auth/uass/callback");
+        UassLoginInitiationService configuredService = new UassLoginInitiationService(
+                uassClientFacade,
+                uassLoginStateService,
+                properties,
+                "   "
+        );
+
+        when(uassLoginStateService.startLogin("/dashboard", null)).thenReturn("state-4");
+        when(uassClientFacade.buildLoginUrl("state-4", URI.create("http://localhost/api/v1/auth/uass/callback")))
+                .thenReturn("https://uass.example.com/login?state=state-4");
+
+        String loginUrl = configuredService.buildLoginUrl(
+                "/dashboard",
+                URI.create("http://localhost/api/v1/auth/uass/redirect")
+        );
+
+        assertThat(loginUrl).isEqualTo("https://uass.example.com/login?state=state-4");
+    }
+
+    @Test
+    void constructor_appendsTrailingSlashToConfiguredPublicBaseUrl() {
+        UassProperties properties = new UassProperties();
+        properties.setCallbackPath("/api/v1/auth/uass/callback");
+        UassLoginInitiationService configuredService = new UassLoginInitiationService(
+                uassClientFacade,
+                uassLoginStateService,
+                properties,
+                "https://public.skillhub.example.com"
+        );
+
+        when(uassLoginStateService.startLogin("/dashboard", null)).thenReturn("state-5");
+        when(uassClientFacade.buildLoginUrl("state-5", URI.create("https://public.skillhub.example.com/api/v1/auth/uass/callback")))
+                .thenReturn("https://uass.example.com/login?state=state-5");
+
+        String loginUrl = configuredService.buildLoginUrl(
+                "/dashboard",
+                URI.create("http://localhost/api/v1/auth/uass")
+        );
+
+        assertThat(loginUrl).isEqualTo("https://uass.example.com/login?state=state-5");
+    }
 }

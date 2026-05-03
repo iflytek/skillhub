@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.policy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
@@ -155,8 +156,45 @@ class RouteSecurityPolicyRegistryTest {
     void shouldIgnoreCsrf_forBearerAndApiPaths() {
         assertTrue(registry.shouldIgnoreCsrf("/api/v1/admin/users", null));
         assertTrue(registry.shouldIgnoreCsrf("/not-api", "Bearer token"));
+        assertFalse(registry.shouldIgnoreCsrf("/ui/settings", "Basic token"));
         assertFalse(registry.shouldIgnoreCsrf(null, null));
         assertFalse(registry.shouldIgnoreCsrf("/ui/settings", null));
+    }
+
+    @Test
+    void authorizationPolicies_rejectsRoleProtectedRuleWithoutRoles() {
+        RoutePolicyProperties properties = new RoutePolicyProperties();
+        RoutePolicyProperties.RoleProtectedRouteRule rule = new RoutePolicyProperties.RoleProtectedRouteRule();
+        rule.setMethod(HttpMethod.POST);
+        rule.setPattern("/api/v1/custom/admin");
+        rule.setRoles(java.util.List.of());
+        properties.setExtraRoleProtected(java.util.List.of(rule));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> new RouteSecurityPolicyRegistry(properties).authorizationPolicies()
+        );
+
+        assertEquals(
+                "skillhub.security.route-policy.extra-role-protected roles must not be empty",
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void authorizationPolicies_rejectsBlankPatternsInYamlOverlay() {
+        RoutePolicyProperties properties = new RoutePolicyProperties();
+        RoutePolicyProperties.RouteRule rule = new RoutePolicyProperties.RouteRule();
+        rule.setMethod(HttpMethod.GET);
+        rule.setPattern("   ");
+        properties.setExtraPermitAll(java.util.List.of(rule));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> new RouteSecurityPolicyRegistry(properties).authorizationPolicies()
+        );
+
+        assertEquals("skillhub.security.route-policy rule pattern must not be blank", exception.getMessage());
     }
 
     @Test

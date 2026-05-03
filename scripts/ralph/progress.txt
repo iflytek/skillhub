@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 遇到 feature-scoped JaCoCo gate 时，优先直接查看 `target/site/jacoco-aggregate/*/*.java.html` 的 `nc`/`pc` 行，而不是盲补测试；源码高亮能最快定位缺的是默认分支、异常分支，还是构造器 helper。
 - 认证/用户域的浏览器验收如果现成 Playwright `registerSession` 夹具超时，先在真实浏览器上下文里直接核对 `/api/v1/auth/me`、受保护路由和 logout 结果，先区分产品缺陷与测试夹具波动，再决定是否需要改代码。
 - 做最终态浏览器验收前，先确认前端代理目标端口真的有当前分支的 SkillHub 后端在监听；旧的 Vite 进程如果仍指向失效的 `SKILLHUB_API_PROXY_TARGET`，会把所有 `/api` 请求伪装成前端 500，结论不可信。
 - local-file-index 如果要新增过滤或排序能力，必须同步升级 `SkillSearchDocument`、Lucene writer 和 rebuild 来源；只改 `LocalFileIndexQueryService` 会因为索引里缺字段而得到“查询代码支持了，但文档模型没跟上”的假完成。
@@ -470,4 +471,13 @@
   - 发现的 patterns：当 validator note 指向的是旧端口上的运行态故障时，先用 fresh build + 新库 + 新端口重验对应接口，区分“陈旧进程问题”和“当前 HEAD 回归”。
   - 遇到的陷阱：本机 `agent-browser` 当前默认 Chrome 会因 sandbox 限制启动失败；如果后续 story 还要复用它，需要显式处理 `--no-sandbox` 或改走 Playwright。
   - 有用的上下文：当前 clean runtime 里 skill detail 接口已经稳定返回 `200`；若后续继续补真正的浏览器删除验收，更值得优先排查的是前端登录/runtime config 或 CSRF 行为，而不是 detail 查询服务。
+---
+## 2026-05-03 23:07 - US-034
+- 针对 UASS feature coverage gate 补齐了 `RouteSecurityPolicyRegistry`、`MockUassGateway`、`UassProperties`、`UassLoginInitiationService`、`MockUassLoginCoordinator`、`UassBootstrapAdminRoleService` 的缺失分支测试，并新增 `UassBootstrapAdminRoleServiceTest` 收口 bootstrap admin 角色注入路径。
+- 用 JaCoCo aggregate 源码报告逐行定位未覆盖分支后，重新跑了 `mvn -f server/pom.xml -pl skillhub-auth -am -Dtest=RouteSecurityPolicyRegistryTest,MockUassGatewayTest,UassPropertiesBindingTest,UassLoginInitiationServiceTest,MockUassLoginCoordinatorTest,UassBootstrapAdminRoleServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`；其中 `check-uass-feature-coverage` 已通过。
+- 更改的文件：`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistryTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/MockUassGatewayTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/MockUassLoginCoordinatorTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassBootstrapAdminRoleServiceTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassLoginInitiationServiceTest.java`、`server/skillhub-auth/src/test/java/com/iflytek/skillhub/auth/uass/UassPropertiesBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：对于 feature-scoped 覆盖率门禁，优先在现有测试文件里补默认值、blank/null、异常路径这类小分支，通常比新增集成测试更快把 `line_missed` 清零。
+  - 遇到的陷阱：`PlatformRoleDefaults.withDefaultUserRole(...)` 只会在角色集合为空时补 `USER`；如果 bootstrap 角色已经包含非空集合，返回 principal 的角色集不会自动附带 `USER`。
+  - 有用的上下文：`skillhub-app` 的 `verify` 已经内嵌 `report-aggregate + scripts/check-feature-jacoco.sh`，所以 `US-034` 的通过信号直接以这条命令收口即可，不需要单独手工解析 csv。
 ---

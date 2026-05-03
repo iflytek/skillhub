@@ -24,6 +24,22 @@ class MockUassGatewayTest {
     }
 
     @Test
+    void buildLoginUrl_usesConfiguredMockBaseUrlAndFallbackPathWhenCallbackPathDoesNotMatch() {
+        MockUassLoginCoordinator coordinator = Mockito.mock(MockUassLoginCoordinator.class);
+        UassProperties properties = mockProperties("mock://self");
+        properties.setCallbackPath("/api/v1/auth/uass/callback");
+        properties.setMockLoginBaseUrl("https://mock-idp.example.com/base");
+        MockUassGateway gateway = new MockUassGateway(properties, coordinator);
+
+        String loginUrl = gateway.buildLoginUrl(new UassLoginUrlRequest(
+                "state-2",
+                URI.create("http://localhost/unexpected/callback")
+        ));
+
+        assertThat(loginUrl).isEqualTo("https://mock-idp.example.com/mock-uass?state=state-2&callbackUrl=http://localhost/unexpected/callback");
+    }
+
+    @Test
     void validateLoginAndProfileUseMockIdentityShape() {
         MockUassLoginCoordinator coordinator = Mockito.mock(MockUassLoginCoordinator.class);
         when(coordinator.validateLogin("mock-login-1")).thenReturn(new UassValidatedLogin(
@@ -101,6 +117,16 @@ class MockUassGatewayTest {
         assertThatThrownBy(() -> gateway.checkLoginStatus(new UassSessionDescriptor("user", null, null, null, null)))
                 .isInstanceOf(UassClientException.class)
                 .hasMessageContaining("No UASS gateway implementation configured");
+    }
+
+    @Test
+    void checkLoginStatus_returnsFalseWhenUserCodeIsBlank() {
+        MockUassGateway gateway = new MockUassGateway(
+                mockProperties("mock://self"),
+                Mockito.mock(MockUassLoginCoordinator.class)
+        );
+
+        assertThat(gateway.checkLoginStatus(new UassSessionDescriptor(" ", null, null, null, null))).isFalse();
     }
 
     private static UassProperties mockProperties(String baseUrl) {
