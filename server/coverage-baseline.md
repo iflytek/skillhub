@@ -106,16 +106,8 @@ Generated: 2026-05-04
 ### skillhub-infra
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| SkillSearchDocumentEntity | com.iflytek.skillhub.infra.jpa | 50 | 0 |
-| WebClientHttpClient | com.iflytek.skillhub.infra.http | 49 | 0 |
-| JpaSkillRepositoryAdapter | com.iflytek.skillhub.infra.jpa | 21 | 0 |
-| WebClientConfig | com.iflytek.skillhub.infra.http | 14 | 0 |
 | SkillScannerAdapter | com.iflytek.skillhub.infra.scanner | 7 | 52 |
 | SkillScannerService | com.iflytek.skillhub.infra.scanner | 6 | 58 |
-| AuditLogJpaRepository | com.iflytek.skillhub.infra.jpa | 6 | 0 |
-| JpaSkillStorageDeletionCompensationRepositoryAdapter | com.iflytek.skillhub.infra.jpa | 5 | 0 |
-| HttpClientException | com.iflytek.skillhub.infra.http | 4 | 6 |
-| SecurityScanException | com.iflytek.skillhub.infra.scanner | 2 | 2 |
 | NotificationJpaRepository | com.iflytek.skillhub.infra.jpa | 2 | 0 |
 | SkillVersionJpaRepository | com.iflytek.skillhub.infra.jpa | 2 | 0 |
 | SkillJpaRepository | com.iflytek.skillhub.infra.jpa | 2 | 0 |

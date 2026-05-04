@@ -224,20 +224,12 @@
 
 | Class | Line Missed | Line Covered | Line Coverage |
 |------|------:|------:|------:|
-| `com.iflytek.skillhub.infra.http.HttpClientException` | 4 | 6 | 60.00% |
-| `com.iflytek.skillhub.infra.http.WebClientConfig` | 14 | 0 | 0.00% |
-| `com.iflytek.skillhub.infra.http.WebClientHttpClient` | 49 | 0 | 0.00% |
-| `com.iflytek.skillhub.infra.jpa.AuditLogJpaRepository` | 6 | 0 | 0.00% |
-| `com.iflytek.skillhub.infra.jpa.JpaSkillRepositoryAdapter` | 21 | 0 | 0.00% |
-| `com.iflytek.skillhub.infra.jpa.JpaSkillStorageDeletionCompensationRepositoryAdapter` | 5 | 0 | 0.00% |
 | `com.iflytek.skillhub.infra.jpa.NotificationJpaRepository` | 2 | 0 | 0.00% |
 | `com.iflytek.skillhub.infra.jpa.SecurityAuditJpaRepository` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.infra.jpa.SkillJpaRepository` | 2 | 0 | 0.00% |
 | `com.iflytek.skillhub.infra.jpa.SkillReportJpaRepository` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity` | 50 | 0 | 0.00% |
 | `com.iflytek.skillhub.infra.jpa.SkillVersionJpaRepository` | 2 | 0 | 0.00% |
 | `com.iflytek.skillhub.infra.jpa.SkillVersionStatsJpaRepository` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.infra.scanner.SecurityScanException` | 2 | 2 | 50.00% |
 | `com.iflytek.skillhub.infra.scanner.SkillScannerAdapter` | 7 | 52 | 88.14% |
 | `com.iflytek.skillhub.infra.scanner.SkillScannerService` | 6 | 58 | 90.62% |
 
