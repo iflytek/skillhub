@@ -8,3 +8,14 @@
   - 遇到的陷阱：`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md` 是两个独立跟踪文件，不能只改其中一个；validator 会分别核对。
   - 有用的上下文：这两个清单都遵循"仅列出 line_missed > 0 的类"的约定，因此四目标类应直接移除，而不是把 missed 改为 0 后保留在列表里。
 ---
+
+## 2026-05-05 00:28 - US-105B
+- 实现 auth token 与 session 相关类 100% 行覆盖率：ApiTokenService、ApiTokenScopeService、ApiTokenScopeFilter、PlatformSessionService、LocalCredential。
+- 补全/新增测试文件：ApiTokenServiceTest（+25 个 case）、ApiTokenServiceCoverageTest（4 个边缘 case）、ApiTokenScopeServiceTest（+6 个 case）、ApiTokenScopeFilterTest（+8 个 case）、PlatformSessionServiceTest（6 个 case）、LocalCredentialTest（+4 个 case）。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 5 个目标类（line_missed=0，按约定直接移除而非改 0）。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过；auth 模块 JaCoCo 确认 5 目标类 LINE_MISSED=0。
+- **未来迭代的学习：**
+  - 发现的 patterns：mock-maker-inline 已启用（`mockito-extensions/org.mockito.plugins.MockMaker`），可直接用 `MockedStatic` 覆盖静态分支（如 ApiTokenService.sha256 的 NoSuchAlgorithmException）。
+  - 遇到的陷阱：JaCoCo aggregate 报告与模块级报告独立生成，验证时应先看模块级 `target/site/jacoco/jacoco.csv` 确认 LINE_MISSED=0，再决定是否更新清单。
+  - 有用的上下文：PlatformSessionService 中的 `request.changeSessionId()` 在 MockHttpServletRequest 上默认无行为，直接测试 SecurityContext + session attribute 断言即可覆盖核心逻辑。
+---

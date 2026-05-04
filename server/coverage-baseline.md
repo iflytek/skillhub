@@ -94,14 +94,8 @@ Generated: 2026-05-04
 | LocalAuthService | com.iflytek.skillhub.auth.local | 16 | 86 |
 | GitLabClaimsExtractor | com.iflytek.skillhub.auth.oauth | 8 | 43 |
 | AccountMergeRequest | com.iflytek.skillhub.auth.merge | 6 | 17 |
-| UserRoleBinding | com.iflytek.skillhub.auth.entity | 6 | 5 |
-| Role | com.iflytek.skillhub.auth.entity | 5 | 2 |
-| RolePermission.RolePermissionId | com.iflytek.skillhub.auth.entity | 5 | 0 |
 | DeviceAuthService | com.iflytek.skillhub.auth.device | 5 | 52 |
-| Permission | com.iflytek.skillhub.auth.entity | 4 | 0 |
 | SkillHubOAuth2AuthorizationRequestResolver | com.iflytek.skillhub.auth.oauth | 3 | 7 |
-| RolePermission | com.iflytek.skillhub.auth.entity | 3 | 0 |
-| AuthFlowException | com.iflytek.skillhub.auth.exception | 3 | 7 |
 | OAuth2LoginSuccessHandler | com.iflytek.skillhub.auth.oauth | 2 | 14 |
 | OAuthLoginRedirectSupport | com.iflytek.skillhub.auth.oauth | 2 | 6 |
 | OAuth2LoginFailureHandler | com.iflytek.skillhub.auth.oauth | 2 | 8 |
@@ -109,8 +103,6 @@ Generated: 2026-05-04
 | GitHubClaimsExtractor.new ParameterizedTypeReference() {...} | com.iflytek.skillhub.auth.oauth | 1 | 0 |
 | DeviceCodeData | com.iflytek.skillhub.auth.device | 1 | 12 |
 | UassProperties | com.iflytek.skillhub.auth.uass | 1 | 43 |
-| DirectAuthProvider | com.iflytek.skillhub.auth.direct | 1 | 0 |
-| DirectAuthRequest | com.iflytek.skillhub.auth.direct | 1 | 0 |
 ### skillhub-infra
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|

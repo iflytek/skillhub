@@ -134,16 +134,7 @@
 | `com.iflytek.skillhub.auth.device.DeviceCodeResponse` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.device.DeviceCodeStatus` | 4 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.device.DeviceTokenResponse` | 3 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.direct.DirectAuthProvider` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.direct.DirectAuthRequest` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.entity.ApiToken` | 15 | 19 | 55.88% |
 | `com.iflytek.skillhub.auth.entity.IdentityBinding` | 17 | 8 | 32.00% |
-| `com.iflytek.skillhub.auth.entity.Permission` | 4 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.entity.RolePermission.RolePermissionId` | 5 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.entity.RolePermission` | 3 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.entity.Role` | 5 | 2 | 28.57% |
-| `com.iflytek.skillhub.auth.entity.UserRoleBinding` | 6 | 5 | 45.45% |
-| `com.iflytek.skillhub.auth.exception.AuthFlowException` | 4 | 6 | 60.00% |
 | `com.iflytek.skillhub.auth.local.LocalAuthService` | 16 | 86 | 84.31% |
 | `com.iflytek.skillhub.auth.local.PasswordResetService` | 17 | 97 | 85.09% |
 | `com.iflytek.skillhub.auth.merge.AccountMergeRequest` | 6 | 17 | 73.91% |
