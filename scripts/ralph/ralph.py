@@ -10,6 +10,8 @@ import time
 import os
 import argparse
 import threading
+import errno
+import pty
 from pathlib import Path
 
 import dashboard
@@ -17,6 +19,8 @@ import dashboard
 # 配置
 MAX_ITERATIONS = 100
 TIMEOUT_SECONDS = 30 * 60
+POLL_INTERVAL_SECONDS = 5
+HEARTBEAT_INTERVAL_SECONDS = 60
 
 # Agent 选择：支持 "claude"、"codex"、"opencode"
 # 用法：python ralph.py [agent] [model]
@@ -92,6 +96,128 @@ PRD_FILE = SCRIPT_DIR / "prd.json"
 RALPH_AGENT_FILE = SCRIPT_DIR / "ralph-agent.json"
 
 
+def _stream_agent_output(master_fd: int) -> None:
+    """
+    实时转发 agent 的 stdout/stderr 到 Ralph 自己的 stdout。
+    外层如果把 Ralph 重定向到 ralph.log，这里就会同步落盘。
+    """
+    try:
+        while True:
+            try:
+                chunk = os.read(master_fd, 4096)
+            except OSError as e:
+                # PTY 在子进程退出后常见地以 EIO 结束读取。
+                if e.errno == errno.EIO:
+                    break
+                raise
+
+            if not chunk:
+                break
+
+            if hasattr(sys.stdout, "buffer"):
+                sys.stdout.buffer.write(chunk)
+            else:
+                sys.stdout.write(chunk.decode("utf-8", errors="replace"))
+            sys.stdout.flush()
+    finally:
+        os.close(master_fd)
+
+
+def _start_agent_process(cmd: list[str], stdin_data: str | None) -> tuple[subprocess.Popen, threading.Thread | None]:
+    """
+    启动 agent，并将其输出实时转发到当前进程 stdout/stderr。
+    使用 PTY 可以让大多数 CLI 以交互式/行刷新的方式输出，避免日志长时间空白。
+    """
+    master_fd, slave_fd = pty.openpty()
+    output_thread: threading.Thread | None = None
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            cwd=str(PROJECT_ROOT),
+            stdin=subprocess.PIPE if stdin_data is not None else None,
+            stdout=slave_fd,
+            stderr=slave_fd,
+        )
+    finally:
+        os.close(slave_fd)
+
+    output_thread = threading.Thread(
+        target=_stream_agent_output,
+        args=(master_fd,),
+        daemon=True,
+    )
+    output_thread.start()
+
+    if stdin_data is not None:
+        def write_stdin():
+            if process.stdin:
+                process.stdin.write(stdin_data.encode("utf-8"))
+                process.stdin.close()
+
+        threading.Thread(target=write_stdin, daemon=True).start()
+
+    return process, output_thread
+
+
+def _wait_output_thread(output_thread: threading.Thread | None, timeout: float = 2.0) -> None:
+    if output_thread is not None:
+        output_thread.join(timeout=timeout)
+
+
+def _format_runtime_seconds(seconds: float) -> str:
+    total_seconds = int(seconds)
+    minutes, secs = divmod(total_seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours > 0:
+        return f"{hours}小时{minutes}分{secs}秒"
+    if minutes > 0:
+        return f"{minutes}分{secs}秒"
+    return f"{secs}秒"
+
+
+def _wait_for_agent_completion(
+    process: subprocess.Popen,
+    output_thread: threading.Thread | None,
+    *,
+    label: str,
+    timeout_seconds: int,
+) -> bool:
+    """
+    等待 agent 结束，并定期写 heartbeat 到 ralph.log。
+    返回值：True 表示超时并已终止；False 表示正常结束。
+    """
+    start_time = time.time()
+    last_heartbeat_at = start_time
+
+    while True:
+        ret_code = process.poll()
+        if ret_code is not None:
+            _wait_output_thread(output_thread)
+            print(f"\n✓ {label}完成")
+            return False
+
+        now = time.time()
+        elapsed_time = now - start_time
+
+        if now - last_heartbeat_at >= HEARTBEAT_INTERVAL_SECONDS:
+            print(f"⏳ {label}运行中... 已运行 {_format_runtime_seconds(elapsed_time)} (pid={process.pid})")
+            last_heartbeat_at = now
+
+        if elapsed_time > timeout_seconds:
+            print(f"\n⚠️  {label}超时! 已运行 {int(elapsed_time)} 秒")
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            _wait_output_thread(output_thread)
+            return True
+
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
 def run_developer(iteration: int) -> bool:
     """
     调用开发 Agent
@@ -107,41 +233,17 @@ def run_developer(iteration: int) -> bool:
     cmd, stdin_data = build_process_cmd(prompt)
 
     try:
-        process = subprocess.Popen(
-            cmd,
-            cwd=str(PROJECT_ROOT),
-            stdin=subprocess.PIPE if stdin_data is not None else None,
+        process, output_thread = _start_agent_process(cmd, stdin_data)
+        timed_out = _wait_for_agent_completion(
+            process,
+            output_thread,
+            label="开发 Agent",
+            timeout_seconds=TIMEOUT_SECONDS,
         )
-
-        if stdin_data is not None:
-            def write_stdin():
-                if process.stdin:
-                    process.stdin.write(stdin_data.encode("utf-8"))
-                    process.stdin.close()
-            t = threading.Thread(target=write_stdin)
-            t.start()
-
-        start_time = time.time()
-
-        while True:
-            ret_code = process.poll()
-            if ret_code is not None:
-                print("\n✓ 开发迭代完成")
-                return False
-
-            elapsed_time = time.time() - start_time
-            if elapsed_time > TIMEOUT_SECONDS:
-                print(f"\n⚠️  开发 Agent 超时! 已运行 {int(elapsed_time)} 秒")
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                print("   进程已终止，将在下一次迭代重试")
-                return True
-
-            time.sleep(60)
+        if timed_out:
+            print("   进程已终止，将在下一次迭代重试")
+            return True
+        return False
 
     except Exception as e:
         print(f"\n❌ 开发 Agent 错误: {e}")
@@ -161,41 +263,16 @@ def run_validator(iteration: int) -> None:
     cmd, stdin_data = build_process_cmd(prompt)
 
     try:
-        process = subprocess.Popen(
-            cmd,
-            cwd=str(PROJECT_ROOT),
-            stdin=subprocess.PIPE if stdin_data is not None else None,
+        process, output_thread = _start_agent_process(cmd, stdin_data)
+        timed_out = _wait_for_agent_completion(
+            process,
+            output_thread,
+            label="Validator",
+            timeout_seconds=TIMEOUT_SECONDS * 2,
         )
-
-        if stdin_data is not None:
-            def write_stdin():
-                if process.stdin:
-                    process.stdin.write(stdin_data.encode("utf-8"))
-                    process.stdin.close()
-            t = threading.Thread(target=write_stdin)
-            t.start()
-
-        start_time = time.time()
-
-        while True:
-            ret_code = process.poll()
-            if ret_code is not None:
-                print("\n✓ 验证完成")
-                return
-
-            elapsed_time = time.time() - start_time
-            if elapsed_time > TIMEOUT_SECONDS * 2:
-                print(f"\n⚠️  Validator 超时! 已运行 {int(elapsed_time)} 秒")
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                print("   Validator 进程已终止，跳过本次验证")
-                return
-
-            time.sleep(60)
+        if timed_out:
+            print("   Validator 进程已终止，跳过本次验证")
+        return
 
     except Exception as e:
         print(f"\n❌ Validator 错误: {e}")

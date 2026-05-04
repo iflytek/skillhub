@@ -179,4 +179,110 @@ class IdentityBindingServiceTest {
         assertThatThrownBy(() -> service.createPendingUserIfAbsent(claims))
                 .isInstanceOf(AccountDisabledException.class);
     }
+
+    @Test
+    void bindOrCreate_existingPendingUser_throwsAccountPending() {
+        OAuthClaims claims = new OAuthClaims(
+                "github",
+                "gh_1",
+                "alice@example.com",
+                true,
+                "alice",
+                Map.of()
+        );
+        IdentityBinding binding = new IdentityBinding("usr_1", "github", "gh_1", "alice");
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        user.setStatus(UserStatus.PENDING);
+
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.of(binding));
+        when(userRepo.findById("usr_1")).thenReturn(Optional.of(user));
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThatThrownBy(() -> service.bindOrCreate(claims, UserStatus.ACTIVE))
+                .isInstanceOf(AccountPendingException.class);
+    }
+
+    @Test
+    void createPendingUserIfAbsent_existingPendingBinding_throwsAccountPending() {
+        OAuthClaims claims = new OAuthClaims(
+                "github",
+                "gh_1",
+                "alice@example.com",
+                true,
+                "alice",
+                Map.of()
+        );
+        IdentityBinding binding = new IdentityBinding("usr_1", "github", "gh_1", "alice");
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        user.setStatus(UserStatus.PENDING);
+
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.of(binding));
+        when(userRepo.findById("usr_1")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.createPendingUserIfAbsent(claims))
+                .isInstanceOf(AccountPendingException.class);
+    }
+
+    @Test
+    void bindOrCreate_resolvesExistingUserByUssId() {
+        OAuthClaims claims = new OAuthClaims(
+                "uass",
+                "uss_1",
+                "alice@example.com",
+                true,
+                "alice",
+                Map.of("uss_id", "uss-123", "avatar_url", "https://example.test/a.png")
+        );
+        UserAccount existingUser = new UserAccount("usr_existing", "old-name", "old@example.com", null);
+        existingUser.setUssId("uss-123");
+
+        when(bindingRepo.findByProviderCodeAndSubject("uass", "uss_1")).thenReturn(Optional.empty());
+        when(userRepo.findByUssId("uss-123")).thenReturn(Optional.of(existingUser));
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.displayName()).isEqualTo("alice");
+        verify(bindingRepo).save(any(IdentityBinding.class));
+    }
+
+    @Test
+    void bindOrCreate_refreshUserSkipsNullEmailAndAvatar() {
+        OAuthClaims claims = new OAuthClaims(
+                "github",
+                "gh_1",
+                null,
+                true,
+                "alice",
+                Map.of()
+        );
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.displayName()).isEqualTo("alice");
+    }
+
+    @Test
+    void bindOrCreateResult_returnsNewlyCreatedFlag() {
+        OAuthClaims claims = new OAuthClaims(
+                "github",
+                "gh_1",
+                "alice@example.com",
+                true,
+                "alice",
+                Map.of()
+        );
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        IdentityBindingService.BindOrCreateResult result = service.bindOrCreateResult(claims, UserStatus.ACTIVE);
+
+        assertThat(result.newlyCreated()).isTrue();
+        assertThat(result.principal()).isNotNull();
+    }
 }

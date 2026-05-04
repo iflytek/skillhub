@@ -10,12 +10,14 @@ import webbrowser
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 PRD_FILE = SCRIPT_DIR / "prd.json"
 PROGRESS_FILE = SCRIPT_DIR / "progress.txt"
 HTML_FILE = SCRIPT_DIR / "dashboard.html"
 PIXEL_HTML_FILE = SCRIPT_DIR / "dashboard-p.html"
+RALPH_LOG_FILE = Path.home() / "logs" / "skillhub" / "ralph.log"
 
 _state: dict = {
     "iteration": 0,
@@ -80,52 +82,120 @@ def _build_api_response() -> dict:
     }
 
 
-class _Handler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        path = self.path.split("?")[0]
+def _tail_lines(path: Path, limit: int = 100) -> str:
+    if limit <= 0:
+        return ""
 
-        if path == "/api/state":
-            body = json.dumps(_build_api_response(), ensure_ascii=False).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
+    with path.open("rb") as f:
+        f.seek(0, 2)
+        file_size = f.tell()
+        block_size = 4096
+        buffer = bytearray()
+        line_count = 0
+        position = file_size
+
+        while position > 0 and line_count <= limit:
+            read_size = min(block_size, position)
+            position -= read_size
+            f.seek(position)
+            chunk = f.read(read_size)
+            buffer[:0] = chunk
+            line_count = buffer.count(b"\n")
+
+    text = buffer.decode("utf-8", errors="replace")
+    lines = text.splitlines()
+    return "\n".join(lines[-limit:])
+
+
+def _build_ralph_log_response(limit: int = 100) -> dict:
+    limit = max(1, min(limit, 500))
+
+    if not RALPH_LOG_FILE.exists():
+        return {
+            "path": str(RALPH_LOG_FILE),
+            "exists": False,
+            "updatedAt": None,
+            "logs": "",
+            "lineLimit": limit,
+        }
+
+    return {
+        "path": str(RALPH_LOG_FILE),
+        "exists": True,
+        "updatedAt": int(RALPH_LOG_FILE.stat().st_mtime),
+        "logs": _tail_lines(RALPH_LOG_FILE, limit),
+        "lineLimit": limit,
+    }
+
+
+class _Handler(BaseHTTPRequestHandler):
+    def _send_bytes(
+        self,
+        body: bytes,
+        *,
+        status: int = 200,
+        content_type: str | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> None:
+        try:
+            self.send_response(status)
+            if content_type:
+                self.send_header("Content-Type", content_type)
+            if extra_headers:
+                for key, value in extra_headers.items():
+                    self.send_header(key, value)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # Remote clients may disconnect between headers and body write.
+            pass
+
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path == "/api/state":
+            body = json.dumps(_build_api_response(), ensure_ascii=False).encode("utf-8")
+            self._send_bytes(
+                body,
+                content_type="application/json; charset=utf-8",
+                extra_headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        elif path == "/api/ralph-log":
+            query = parse_qs(parsed.query)
+            raw_limit = query.get("lines", ["100"])[0]
+            try:
+                line_limit = int(raw_limit)
+            except ValueError:
+                line_limit = 100
+
+            body = json.dumps(_build_ralph_log_response(line_limit), ensure_ascii=False).encode("utf-8")
+            self._send_bytes(
+                body,
+                content_type="application/json; charset=utf-8",
+                extra_headers={"Access-Control-Allow-Origin": "*"},
+            )
 
         elif path in ("/", "/index.html"):
             try:
                 html = HTML_FILE.read_bytes()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(html)))
-                self.end_headers()
-                self.wfile.write(html)
+                self._send_bytes(html, content_type="text/html; charset=utf-8")
             except Exception as e:
                 msg = str(e).encode()
-                self.send_response(500)
-                self.send_header("Content-Length", str(len(msg)))
-                self.end_headers()
-                self.wfile.write(msg)
+                self._send_bytes(msg, status=500)
 
         elif path in ("/p", "/p.html"):
             try:
                 html = PIXEL_HTML_FILE.read_bytes()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(html)))
-                self.end_headers()
-                self.wfile.write(html)
+                self._send_bytes(html, content_type="text/html; charset=utf-8")
             except Exception as e:
                 msg = str(e).encode()
-                self.send_response(500)
-                self.send_header("Content-Length", str(len(msg)))
-                self.end_headers()
-                self.wfile.write(msg)
+                self._send_bytes(msg, status=500)
 
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._send_bytes(b"", status=404)
 
     def log_message(self, format: str, *args) -> None:  # suppress access logs
         pass

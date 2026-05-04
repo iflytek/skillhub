@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.infra.scanner;
 
 import com.iflytek.skillhub.infra.http.HttpClient;
+import com.iflytek.skillhub.infra.http.HttpClientException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -140,6 +141,79 @@ class SkillScannerServiceTest {
         assertThat(httpClient.lastHealthUri).isEqualTo("http://scanner.test/health");
     }
 
+    @Test
+    void scanDirectory_propagatesHttpClientException() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        httpClient.postException = new HttpClientException(500, "scanner error");
+        SkillScannerService service = new SkillScannerService(
+                httpClient,
+                "http://scanner.test",
+                "/scan-upload",
+                "/health"
+        );
+        ScanOptions options = ScanOptions.disabled();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.scanDirectory("/tmp/demo", options))
+                .isInstanceOf(HttpClientException.class)
+                .hasMessage("HTTP 500: scanner error");
+    }
+
+    @Test
+    void scanUpload_propagatesHttpClientException() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        httpClient.multipartException = new HttpClientException(503, "scanner busy");
+        SkillScannerService service = new SkillScannerService(
+                httpClient,
+                "http://scanner.test",
+                "/scan-upload",
+                "/health"
+        );
+        ScanOptions options = ScanOptions.disabled();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.scanUpload(Path.of("/tmp/demo.zip"), options))
+                .isInstanceOf(HttpClientException.class)
+                .hasMessage("HTTP 503: scanner busy");
+    }
+
+    @Test
+    void constructorRejectsNullScheme() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "scanner.test:8080", "/scan", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void scanDirectory_withAidefenseAndEmptyKeyDoesNotIncludeKey() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        SkillScannerApiResponse apiResponse = new SkillScannerApiResponse(
+                "scan-1", "test-skill", true, "LOW", 0, null, 0.5, "2026-03-22T07:00:00"
+        );
+        httpClient.postResponse = apiResponse;
+        SkillScannerService service = new SkillScannerService(
+                httpClient, "http://scanner.test", "/scan-upload", "/health"
+        );
+        ScanOptions options = new ScanOptions(false, false, "openai", false, true, "", false, false);
+
+        service.scanDirectory("/tmp/demo", options);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) httpClient.lastPostBody;
+        assertThat(body.containsKey("aidefense_api_key")).isFalse();
+    }
+
+    @Test
+    void scanDirectory_summarizesNullResponseBody() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        httpClient.postException = new HttpClientException(500, null);
+        SkillScannerService service = new SkillScannerService(
+                httpClient, "http://scanner.test", "/scan-upload", "/health"
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.scanDirectory("/tmp/demo", ScanOptions.disabled()))
+                .isInstanceOf(HttpClientException.class);
+    }
+
     private static final class FakeHttpClient implements HttpClient {
         private Object postResponse;
         private Object multipartResponse;
@@ -150,6 +224,8 @@ class SkillScannerServiceTest {
         private HttpHeaders lastMultipartHeaders;
         private String lastHealthUri;
         private boolean healthy;
+        private RuntimeException postException;
+        private RuntimeException multipartException;
 
         @Override
         public <T> T get(String uri, Class<T> responseType) {
@@ -161,6 +237,9 @@ class SkillScannerServiceTest {
         public <T> T post(String uri, Object body, Class<T> responseType) {
             this.lastPostUri = uri;
             this.lastPostBody = body;
+            if (postException != null) {
+                throw postException;
+            }
             return (T) postResponse;
         }
 
@@ -178,7 +257,10 @@ class SkillScannerServiceTest {
                                    Class<T> responseType) {
             this.lastMultipartUri = uri;
             this.lastMultipartParts = parts;
-             this.lastMultipartHeaders = headers;
+            this.lastMultipartHeaders = headers;
+            if (multipartException != null) {
+                throw multipartException;
+            }
             return (T) multipartResponse;
         }
 

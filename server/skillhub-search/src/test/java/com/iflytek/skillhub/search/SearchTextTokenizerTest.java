@@ -21,4 +21,14 @@ class SearchTextTokenizerTest {
         assertThat(tokenizer.tokenizeForQuery("OpenAI Agent"))
                 .containsExactly("openai", "agent");
     }
+
+    @Test
+    void tokenizeForIndexShouldReturnEmptyForNull() {
+        assertThat(tokenizer.tokenizeForIndex(null)).isEmpty();
+    }
+
+    @Test
+    void enrichForIndexShouldReturnEmptyForBlank() {
+        assertThat(tokenizer.enrichForIndex("   ")).isEmpty();
+    }
 }

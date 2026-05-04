@@ -98,4 +98,22 @@ class SlugValidatorTest {
         String result = SlugValidator.slugify("My 技能 Package!");
         assertEquals("my-技能-package", result);
     }
+
+    @Test
+    void shouldRejectNullSlug() {
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () -> SlugValidator.validate(null));
+        assertEquals("error.slug.blank", ex.messageCode());
+    }
+
+    @Test
+    void shouldRejectBlankSlug() {
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () -> SlugValidator.validate("   "));
+        assertEquals("error.slug.blank", ex.messageCode());
+    }
+
+    @Test
+    void shouldRejectNullRawForSlugify() {
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () -> SlugValidator.slugify(null));
+        assertEquals("error.slug.blank", ex.messageCode());
+    }
 }

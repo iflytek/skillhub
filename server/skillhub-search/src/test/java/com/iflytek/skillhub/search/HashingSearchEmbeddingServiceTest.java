@@ -37,4 +37,24 @@ class HashingSearchEmbeddingServiceTest {
 
         assertThat(pluralMatch).isGreaterThan(unrelatedMatch);
     }
+
+    @Test
+    void similarityWithNullOrBlankVectorReturnsZero() {
+        assertThat(service.similarity("test", null)).isEqualTo(0D);
+        assertThat(service.similarity("test", "   ")).isEqualTo(0D);
+        assertThat(service.similarity("test", "")).isEqualTo(0D);
+    }
+
+    @Test
+    void similarityWithMismatchedVectorLengthsReturnsZero() {
+        assertThat(service.similarity("test", "0.1,0.2")).isEqualTo(0D);
+    }
+
+    @Test
+    void embedWithNullOrBlankTextReturnsZeroVector() {
+        String nullEmbed = service.embed(null);
+        String blankEmbed = service.embed("   ");
+        assertThat(nullEmbed).isEqualTo(blankEmbed);
+        assertThat(service.similarity("anything", nullEmbed)).isEqualTo(0D);
+    }
 }

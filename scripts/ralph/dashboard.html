@@ -73,8 +73,25 @@
   .stories-panel .panel-title { padding: 12px 16px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 500; }
   .stories-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
   .logs-panel { flex: 1; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-  .logs-panel .panel-title { padding: 12px 16px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 500; }
+  .logs-panel .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px 8px; }
+  .logs-panel .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 500; }
   .logs-content { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+  .panel-actions { display: flex; align-items: center; gap: 8px; }
+  .panel-button {
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 12px;
+    background: hsla(211,100%,50%,0.08);
+    color: var(--mac-blue);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .panel-button:hover { background: hsla(211,100%,50%,0.14); transform: translateY(-1px); }
+  .panel-button:active { transform: translateY(0); }
+  .panel-button:disabled { opacity: 0.6; cursor: wait; transform: none; }
 
   .bottombar {
     display: flex; align-items: center; justify-content: space-between;
@@ -111,6 +128,54 @@
   .log-header.latest { color: var(--mac-blue); }
   .log-body { padding: 12px 16px; font-size: 12px; line-height: 1.7; color: var(--muted); font-family: var(--font-mono); white-space: pre-wrap; word-break: break-word; }
   .log-body strong { color: var(--fg); font-weight: 600; }
+  .raw-log-body {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--fg);
+    font-family: var(--font-mono);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: min(70vh, 760px);
+    overflow: auto;
+  }
+  .raw-log-meta { padding: 0 16px 12px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+  .raw-log-empty { padding: 16px; color: var(--muted); font-style: italic; }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(17, 24, 39, 0.24);
+    z-index: 20;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-card {
+    width: min(980px, 100%);
+    max-height: calc(100vh - 48px);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-bottom: 0.5px solid hsla(0,0%,88%,0.5);
+  }
+  .modal-title { font-size: 13px; font-weight: 600; letter-spacing: -0.2px; }
+  .modal-close {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
 
   /* Animations */
   @keyframes breathe {
@@ -166,7 +231,12 @@
       <div class="stories-list" id="storyList"></div>
     </div>
     <div class="logs-panel glass-lg">
-      <div class="panel-title">Progress Log</div>
+      <div class="panel-header">
+        <div class="panel-title">Progress Log</div>
+        <div class="panel-actions">
+          <button class="panel-button" id="ralphLogButton" type="button">查看 Ralph Log</button>
+        </div>
+      </div>
       <div class="logs-content" id="logContent"></div>
     </div>
   </div>
@@ -181,8 +251,20 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="ralphLogModal" aria-hidden="true">
+  <div class="modal-card glass-lg">
+    <div class="modal-header">
+      <div class="modal-title">Ralph Log 最近 100 行</div>
+      <button class="modal-close" id="ralphLogClose" type="button" aria-label="关闭">×</button>
+    </div>
+    <div class="raw-log-meta" id="ralphLogMeta"></div>
+    <div class="raw-log-body" id="ralphLogContent"></div>
+  </div>
+</div>
+
 <script>
 const POLL_MS = 2000;
+const RALPH_LOG_LINES = 100;
 
 const PHASE_MAP = {
   idle:       { label: '等待启动',           color: 'var(--mac-gray)',   animate: false },
@@ -301,6 +383,90 @@ const FALLBACK = {
   logs: `## Codebase Patterns\n- Next.js 16 + App Router + Tailwind CSS v4\n- 静态导出：next.config.mjs 中设置 output: 'export'\n- 页面文件位于 app/ 目录\n\n## 2026-03-29 23:30 - US-001\n- 搭建了 Next.js 16 (App Router) 项目骨架\n- 配置了 Tailwind CSS v4（使用 @tailwindcss/postcss 插件）\n- next.config.mjs 中设置 output: 'export' 启用静态导出\n- 实现了两栏布局：左侧固定宽度 320px 列表区 + 右侧弹性内容区\n- TypeScript 类型检查通过，next build 成功生成 out/ 静态产物\n- **未来迭代的学习：**\n  - Tailwind CSS v4 不使用传统的 tailwind.config.js\n  - PostCSS 配置使用 "@tailwindcss/postcss" 插件名\n\n## 2026-03-29 23:45 - US-002\n- 定义了 Note 接口类型\n- 创建了示例数据文件，包含 2 条示例笔记\n- 将 page.tsx 改为 "use client" 客户端组件\n- 应用初始化后默认选中第一条示例笔记\n- TypeScript 类型检查和 next build 均通过\n- **未来迭代的学习：**\n  - page.tsx 需要 "use client" 指令才能使用 React hooks\n  - 类型定义放在 app/types.ts，示例数据放在 app/sample-data.ts`
 };
 
+const ralphLogState = {
+  open: false,
+  loading: false,
+  logs: '',
+  path: '',
+  exists: false,
+  updatedAt: null,
+  error: '',
+};
+
+function fmtTimestamp(ts) {
+  if (!ts) return '未知';
+  return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
+}
+
+function renderRalphLogModal() {
+  const modal = document.getElementById('ralphLogModal');
+  const button = document.getElementById('ralphLogButton');
+  const meta = document.getElementById('ralphLogMeta');
+  const content = document.getElementById('ralphLogContent');
+
+  modal.classList.toggle('open', ralphLogState.open);
+  modal.setAttribute('aria-hidden', ralphLogState.open ? 'false' : 'true');
+  button.disabled = ralphLogState.loading;
+  button.textContent = ralphLogState.loading ? '加载中...' : '查看 Ralph Log';
+
+  if (!ralphLogState.open) return;
+
+  if (ralphLogState.error) {
+    meta.textContent = ralphLogState.error;
+    content.innerHTML = '<div class="raw-log-empty">无法读取 Ralph Log</div>';
+    return;
+  }
+
+  const pathPart = ralphLogState.path ? `路径: ${ralphLogState.path}` : '路径未知';
+  const updatedPart = ralphLogState.updatedAt ? `更新时间: ${fmtTimestamp(ralphLogState.updatedAt)}` : '更新时间: 未知';
+  meta.textContent = `${pathPart} · ${updatedPart}`;
+
+  if (!ralphLogState.exists) {
+    content.innerHTML = '<div class="raw-log-empty">未找到 Ralph Log 文件</div>';
+    return;
+  }
+
+  if (!ralphLogState.logs.trim()) {
+    content.innerHTML = '<div class="raw-log-empty">日志文件存在，但最近没有可显示内容</div>';
+    return;
+  }
+
+  content.textContent = ralphLogState.logs;
+  content.scrollTop = content.scrollHeight;
+}
+
+async function fetchRalphLog() {
+  ralphLogState.loading = true;
+  ralphLogState.error = '';
+  renderRalphLogModal();
+
+  try {
+    const res = await fetch(`/api/ralph-log?lines=${RALPH_LOG_LINES}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    ralphLogState.logs = data.logs || '';
+    ralphLogState.path = data.path || '';
+    ralphLogState.exists = Boolean(data.exists);
+    ralphLogState.updatedAt = data.updatedAt || null;
+  } catch (e) {
+    ralphLogState.error = `读取失败: ${e.message || e}`;
+  } finally {
+    ralphLogState.loading = false;
+    renderRalphLogModal();
+  }
+}
+
+function openRalphLogModal() {
+  ralphLogState.open = true;
+  renderRalphLogModal();
+  fetchRalphLog();
+}
+
+function closeRalphLogModal() {
+  ralphLogState.open = false;
+  renderRalphLogModal();
+}
+
 async function poll() {
   let data;
   if (!useFallback) {
@@ -319,7 +485,19 @@ async function poll() {
   renderProgress(data.stories);
   renderLogs(data.logs);
   renderPhase(data.runtime);
+  if (ralphLogState.open && !ralphLogState.loading && !useFallback) {
+    fetchRalphLog();
+  }
 }
+
+document.getElementById('ralphLogButton').addEventListener('click', openRalphLogModal);
+document.getElementById('ralphLogClose').addEventListener('click', closeRalphLogModal);
+document.getElementById('ralphLogModal').addEventListener('click', (event) => {
+  if (event.target.id === 'ralphLogModal') closeRalphLogModal();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && ralphLogState.open) closeRalphLogModal();
+});
 
 setInterval(poll, POLL_MS);
 poll();

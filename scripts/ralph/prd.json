@@ -1,7 +1,7 @@
 {
   "project": "SkillHub",
   "branchName": "ralph/remove-h2-and-converge-mysql-runtime",
-  "description": "收敛 SkillHub 到 MySQL 主路径。已完成的 local-h2、h2-like 和文档收口任务不再保留在当前待办中；当前 PRD 只跟踪剩余的测试基线修复、MySQL 迁移、主路径验证和覆盖率门禁。",
+  "description": "收敛 SkillHub 到 MySQL 主路径。已完成的 local-h2、h2-like 和文档收口任务不再保留在当前待办中；当前 PRD 只跟踪剩余的测试基线修复、MySQL 迁移、主路径验证和覆盖率门禁。剩余覆盖率与门禁工作已按更适合单次 Agent 迭代执行的粒度拆分。",
   "userStories": [
     {
       "id": "US-101",
@@ -78,13 +78,193 @@
     },
     {
       "id": "US-105",
-      "title": "补齐核心模块主路径单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望先补齐认证、搜索、基础设施、通知和领域核心服务测试，以便最重要的主路径没有覆盖率盲区。",
+      "title": "补齐 auth 安全配置与策略覆盖率",
+      "description": "作为维护者，我希望先收口 auth 的安全配置与路由策略测试，以便最外层安全边界先稳定下来。",
       "acceptanceCriteria": [
-        "Target the highest-missed auth, search, infra, notification, and domain service classes from the coverage inventory",
+        "Target `SecurityConfig`, `AccessPolicyFactory`, `RouteSecurityPolicyRegistry`, and `PassiveSessionAuthenticator` from the current coverage inventory",
         "Each targeted production class reaches 100% line coverage before the story is considered done",
-        "Tests cover success, invalid input, permission failure, empty result, recovery, and exception branches for the targeted classes",
-        "Update the tracked inventory to show zero missed lines for the targeted classes completed in this story",
+        "Tests cover security chain wiring, permit/deny policy selection, and fallback or empty-branch behavior for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105B",
+      "title": "补齐 auth token 与 session 相关覆盖率",
+      "description": "作为维护者，我希望把令牌、scope 和 session 相关测试拆开补齐，以便认证主路径的授权与会话行为可以单独收口。",
+      "acceptanceCriteria": [
+        "Target `ApiTokenService`, `ApiTokenScopeService`, `ApiTokenScopeFilter`, `PlatformSessionService`, and `LocalCredential` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover token creation and revoke behavior, scope filtering, invalid token paths, and session persistence edge cases for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105C",
+      "title": "补齐 auth 登录编排与身份绑定覆盖率",
+      "description": "作为维护者，我希望把账户合并、身份绑定和登录编排拆成单独任务，以便模型能在一次迭代内收口一组相近的认证服务。",
+      "acceptanceCriteria": [
+        "Target `AccountMergeService`, `IdentityBindingService`, `OAuthLoginFlowService`, `CustomOAuth2UserService`, and `LocalDirectAuthProvider` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover happy path, duplicate or missing identity cases, provider errors, and recovery branches for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105D",
+      "title": "补齐 auth 实体与轻量认证类型覆盖率",
+      "description": "作为维护者，我希望把 auth 模块里剩余的实体、异常和轻量 provider 类型单独清扫完，以便避免这些小类拖住大 story。",
+      "acceptanceCriteria": [
+        "Target `ApiToken`, `Role`, `Permission`, `RolePermission`, `UserRoleBinding`, `AuthFlowException`, `DirectAuthProvider`, and `DirectAuthRequest` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover derived accessors, equality and lifecycle behavior, defaulting, and exception message branches where applicable",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105E",
+      "title": "补齐 search 核心帮助类与抽象服务覆盖率",
+      "description": "作为维护者，我希望把搜索模块拆成纯 helper/抽象服务测试任务，以便一次迭代只处理同一类测试手法。",
+      "acceptanceCriteria": [
+        "Target `SearchTextTokenizer`, `SearchQuery`, `SearchVisibilityScope`, `SkillSearchDocument`, `HashingSearchEmbeddingService`, `AbstractJpaSearchIndexService`, `AbstractJpaSearchRebuildService`, `JpaSearchIndexService`, `JpaSearchRebuildService`, and `SearchIndexEventListener` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover normalization, empty input, conditional delegation, no-op branches, and exception or retry behavior where applicable",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105F",
+      "title": "补齐 infra HTTP 与 repository adapter 覆盖率",
+      "description": "作为维护者，我希望把基础设施层的 HTTP 客户端和 JPA adapter 拆成单独 story，以便聚焦在 seam、异常分支和 adapter 行为测试。",
+      "acceptanceCriteria": [
+        "Target `WebClientHttpClient`, `WebClientConfig`, `JpaSkillRepositoryAdapter`, `JpaSkillStorageDeletionCompensationRepositoryAdapter`, `AuditLogJpaRepository`, `SkillSearchDocumentEntity`, `HttpClientException`, and `SecurityScanException` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover request or response failure handling, adapter translation, empty result branches, and entity lifecycle behavior for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105G",
+      "title": "补齐 notification 服务与 SSE 管理覆盖率",
+      "description": "作为维护者，我希望把通知域拆成单独的小任务，以便快速补齐通知偏好、通知实体和 SSE 管理的分支。",
+      "acceptanceCriteria": [
+        "Target `NotificationPreferenceService`, `NotificationPreference`, `Notification`, and `SseEmitterManager` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover preference toggles, unread or read state transitions, emitter timeout or disconnect handling, and cleanup branches for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105H",
+      "title": "补齐 domain 核心技能服务覆盖率",
+      "description": "作为维护者，我希望先收口 domain 中最核心的技能服务类，以便搜索、发布和下载等主路径不再依赖大而杂的剩余 story。",
+      "acceptanceCriteria": [
+        "Target `SkillQueryService`, `SkillLifecycleProjectionService`, `SkillPublishService`, `SkillGovernanceService`, and `SkillDownloadService` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover success, invalid input, hidden or archived data, permission failure, empty result, and recovery branches for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105I",
+      "title": "补齐 domain 治理与审核服务覆盖率",
+      "description": "作为维护者，我希望把治理、审核、标签和安全扫描相关 domain service 分拆出来，以便一次迭代只围绕一类规则型服务补测。",
+      "acceptanceCriteria": [
+        "Target `LabelDefinitionService`, `SkillLabelService`, `PromotionService`, `ReviewService`, `NamespaceGovernanceService`, `SkillReportService`, and `SecurityScanService` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover approval and rejection behavior, duplicate or conflicting state, empty result, permission failure, and exception branches for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105J",
+      "title": "补齐 domain 实体与值对象第一批覆盖率",
+      "description": "作为维护者，我希望把 domain 里与标签、命名空间、技能模型相关的实体拆开补齐，以便避免这些轻量类型与复杂服务混在同一个 story。",
+      "acceptanceCriteria": [
+        "Target `LabelDefinition`, `LabelTranslation`, `SkillLabel`, `Namespace`, `NamespaceMember`, `Skill`, `SkillFile`, `SkillTag`, and `SkillStorageDeletionCompensation` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover constructors, invariants, derived accessors, lifecycle methods, and validation branches where applicable",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-105K",
+      "title": "补齐 domain 实体与轻量类型第二批覆盖率",
+      "description": "作为维护者，我希望把剩余的 request、状态和异常类单独收口，以便让最后一批轻量 domain 类型可以快速完成。",
+      "acceptanceCriteria": [
+        "Target `PasswordResetRequest`, `IdempotencyRecord`, `IdempotencyStatus`, `UserNotification`, `ScannerType`, `SecurityAudit`, `AuditLog`, `SecurityScanRequest`, `PromotionRequest`, `ReviewTask`, `DomainBadRequestException`, `DomainForbiddenException`, and `DomainNotFoundException` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover state transitions, timestamp and lifecycle behavior, message or code derivation, and exception constructors for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -96,13 +276,121 @@
     },
     {
       "id": "US-106",
-      "title": "补齐 app 层与剩余辅助类到 100% 行覆盖率",
-      "description": "作为维护者，我希望收口控制器、配置、过滤器、实体、DTO、record 和辅助类，以便整体未覆盖清单归零。",
+      "title": "补齐 compat 层与兼容 DTO 覆盖率",
+      "description": "作为维护者，我希望先把 compat 兼容层拆成单独任务，以便代理一次只处理一套 facade/controller/DTO 组合。",
       "acceptanceCriteria": [
-        "Target the remaining uncovered app-layer classes, including controllers, filters, config classes, lightweight app services, entities, DTOs, records, helpers, and adapters",
+        "Target `ClawHubCompatAppService`, `ClawHubRegistryFacade`, `CompatSkillLookupService`, `ClawHubCompatController`, and the uncovered `com.iflytek.skillhub.compat.dto.*` response types from the current coverage inventory",
         "Each targeted production class reaches 100% line coverage before the story is considered done",
-        "Tests validate authorization, validation, defaulting, derived accessors, and edge cases where applicable",
-        "The tracked uncovered inventory contains no remaining missed-line production classes after this story completes unless explicitly blocked in writing",
+        "Tests cover response mapping, missing skill behavior, compatibility fallbacks, and DTO accessor branches where applicable",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-106B",
+      "title": "补齐 portal 技能与治理控制器覆盖率第一批",
+      "description": "作为维护者，我希望把 skill、namespace、review 相关 portal controller 拆成一批，以便控制器测试可以连续复用同一套 MockMvc 模式。",
+      "acceptanceCriteria": [
+        "Target `SkillController`, `SkillLifecycleController`, `SkillLabelController`, `SkillTagController`, `NamespaceController`, `ReviewController`, and `PromotionController` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover authorization, validation failures, empty result handling, and response mapping branches for the targeted controllers",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-106C",
+      "title": "补齐 portal 通知与 admin 控制器覆盖率第二批",
+      "description": "作为维护者，我希望把通知、安全审计和后台控制器拆成另一批，以便每次迭代只关注一组 transport 层分支。",
+      "acceptanceCriteria": [
+        "Target `NotificationController`, `NotificationPreferenceController`, `SecurityAuditController`, `MeController`, `AdminSkillController`, `AdminSkillReportController`, and `AdminLabelController` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover authorization boundaries, invalid input handling, paging or empty responses, and response mapping branches for the targeted controllers",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-106D",
+      "title": "补齐 app 服务覆盖率第一批",
+      "description": "作为维护者，我希望先收口和评审、生命周期、治理工作流相关的 app service，以便先清掉最重的业务编排类。",
+      "acceptanceCriteria": [
+        "Target `ReviewPortalAppService`, `SkillLifecycleAppService`, `PromotionPortalAppService`, `AdminAuditLogAppService`, and `GovernanceWorkflowAppService` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover happy path, permission failure, empty result, invalid transition, and exception or compensation branches for the targeted services",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-106E",
+      "title": "补齐标签与命名空间 app 服务覆盖率第二批",
+      "description": "作为维护者，我希望把标签、搜索同步、命名空间和我的技能相关 app service 单独成批，以便模型一次只处理相近依赖图。",
+      "acceptanceCriteria": [
+        "Target `SkillLabelAppService`, `PublicLabelAppService`, `LabelLocalizationService`, `LabelSearchSyncService`, `LabelSearchSyncListener`, `NamespacePortalCommandAppService`, `NamespacePortalQueryAppService`, and `MySkillAppService` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover event dispatch, no-op branches, localization fallback, empty result, and permission failure behavior for the targeted services",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-106F",
+      "title": "补齐配置、过滤器、限流与异常处理覆盖率",
+      "description": "作为维护者，我希望把配置类、过滤器、限流器和全局异常处理分拆出来，以便这类基础组件可以用 focused test 一次收口。",
+      "acceptanceCriteria": [
+        "Target `SkillScannerConfig`, `ProfileModerationProperties`, `RedisStreamConfig`, `RedissonConfig`, `SkillScannerProperties`, `SkillScannerProperties.Analyzers`, `SkillScannerProperties.Policy`, `GlobalExceptionHandler`, `IdempotencyInterceptor`, `AnonymousDownloadIdentityService`, `ClientIpResolver`, `RedisSlidingWindowRateLimiter`, `SkillHubMetrics`, and `SensitiveLogSanitizer` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover bean wiring, defaulting, header or IP parsing edge cases, timeout or rate-limit branches, and exception mapping behavior for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-106G",
+      "title": "补齐打包提取、流处理与剩余辅助类覆盖率",
+      "description": "作为维护者，我希望把 archive extractor、stream consumer 和零散 helper 拆成最后一批 app 层任务，以便避免它们和 controller/service 混做。",
+      "acceptanceCriteria": [
+        "Target `ZipPackageExtractor`, `SkillPackageArchiveExtractor`, `MultipartPackageExtractor`, `AbstractStreamConsumer`, `ScanTaskConsumer`, `NotificationEventListener`, `CliWhoamiResponse`, `MemberResponse`, `ApiResponseFactory`, `ConfirmPublishRequest`, `SkillCheckResponse`, `SubmitReviewRequest`, `TagRequest`, `LabelSearchSyncRequestedEvent`, and `NoOpProfileModerationService` from the current coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover malformed archive input, stream retry or shutdown behavior, event fan-out, and DTO accessor or defaulting branches for the targeted classes",
+        "Update the tracked inventory or coverage notes to show zero missed lines for the targeted classes completed in this story",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -114,12 +402,45 @@
     },
     {
       "id": "US-107",
-      "title": "建立 Java 100% 行覆盖率自动门禁",
-      "description": "作为维护者，我希望把 Java 生产代码 100% 行覆盖率变成自动门禁，以便后续变更不会回退。",
+      "title": "收敛覆盖率门禁的输入范围与事实来源",
+      "description": "作为维护者，我希望先把门禁要检查的生产类范围、报告路径和 inventory 来源收敛清楚，以便后续接门禁时不会把口径问题和实现问题混在一起。",
+      "acceptanceCriteria": [
+        "Define the agreed post-H2 MySQL main-path production coverage scope, report paths, and any explicit exclusions in tracked project files",
+        "Ensure the tracked inventory and gate input both point to the same source of truth for missed-line classes",
+        "Run the agreed Java test command set and regenerate the relevant reports successfully after the scope definition is updated",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-107B",
+      "title": "接入 Maven 覆盖率失败门禁",
+      "description": "作为维护者，我希望把覆盖率校验真正接到 Maven 构建里，以便未覆盖行重新出现时构建能稳定失败。",
       "acceptanceCriteria": [
         "Add a Maven or equivalent automated gate that fails when the agreed Java production coverage scope is below 100% line coverage",
         "The gate runs on the post-H2-removal MySQL main path rather than a historical feature-only scope",
+        "Failure output clearly identifies the missed-line class or inventory entry that caused the build to fail",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-107C",
+      "title": "文档化本地覆盖率校验并完成最终验证",
+      "description": "作为维护者，我希望最后把本地执行方式写清楚并跑通最终命令，以便门禁不仅存在，而且可被团队稳定复用。",
+      "acceptanceCriteria": [
         "Document the exact verification command developers must run locally before submission",
+        "Document where the gate reads its inventory or coverage report inputs and how to refresh them",
         "Run the final verification command successfully with the new coverage gate enabled",
         "Typecheck passes",
         "Tests pass"

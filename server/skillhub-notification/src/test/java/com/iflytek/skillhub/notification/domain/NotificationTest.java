@@ -45,4 +45,12 @@ class NotificationTest {
         assertEquals(CREATED_AT, notification.getCreatedAt());
         assertNull(notification.getReadAt());
     }
+
+    @Test
+    void protectedConstructor_shouldBeAccessible() {
+        Notification notification = new Notification();
+        assertNull(notification.getId());
+        assertNull(notification.getRecipientId());
+        assertNull(notification.getReadAt());
+    }
 }

@@ -90,4 +90,51 @@ class NotificationPreferenceServiceTest {
     void updatePreferences_shouldRejectNullPayload() {
         assertThrows(DomainBadRequestException.class, () -> service.updatePreferences("user-1", null));
     }
+
+    @Test
+    void updatePreference_shouldRejectUnsupportedChannel() {
+        NotificationChannel otherChannel = mock(NotificationChannel.class);
+        when(otherChannel.name()).thenReturn("EMAIL");
+        assertThrows(DomainBadRequestException.class, () ->
+                service.updatePreference("user-1", NotificationCategory.REVIEW, otherChannel, true));
+    }
+
+    @Test
+    void updatePreferences_shouldProcessValidCommands() {
+        when(preferenceRepository.findByUserIdAndCategoryAndChannel(
+                "user-1", NotificationCategory.REVIEW, NotificationChannel.IN_APP))
+                .thenReturn(Optional.empty());
+        when(preferenceRepository.findByUserIdAndCategoryAndChannel(
+                "user-1", NotificationCategory.PUBLISH, NotificationChannel.IN_APP))
+                .thenReturn(Optional.empty());
+        when(preferenceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.updatePreferences("user-1", List.of(
+                new NotificationPreferenceService.PreferenceCommand(NotificationCategory.REVIEW, NotificationChannel.IN_APP, false),
+                new NotificationPreferenceService.PreferenceCommand(NotificationCategory.PUBLISH, NotificationChannel.IN_APP, true)
+        ));
+
+        verify(preferenceRepository, times(2)).save(any(NotificationPreference.class));
+    }
+
+    @Test
+    void getPreferences_shouldReflectSavedInAppPreferences() {
+        NotificationPreference reviewPref = new NotificationPreference(
+                "user-1", NotificationCategory.REVIEW, NotificationChannel.IN_APP, false);
+        when(preferenceRepository.findByUserId("user-1")).thenReturn(List.of(reviewPref));
+
+        List<NotificationPreferenceService.PreferenceView> prefs = service.getPreferences("user-1");
+
+        assertEquals(NotificationCategory.values().length, prefs.size());
+        NotificationPreferenceService.PreferenceView reviewView = prefs.stream()
+                .filter(p -> p.category() == NotificationCategory.REVIEW)
+                .findFirst()
+                .orElseThrow();
+        assertFalse(reviewView.enabled());
+        NotificationPreferenceService.PreferenceView publishView = prefs.stream()
+                .filter(p -> p.category() == NotificationCategory.PUBLISH)
+                .findFirst()
+                .orElseThrow();
+        assertTrue(publishView.enabled());
+    }
 }

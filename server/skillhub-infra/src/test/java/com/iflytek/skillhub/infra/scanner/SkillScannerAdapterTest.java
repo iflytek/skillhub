@@ -99,15 +99,78 @@ class SkillScannerAdapterTest {
                 .hasMessage("Security scan failed");
     }
 
+    @Test
+    void isHealthyDelegatesToService() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.healthy = true;
+        SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", ScanOptions.disabled());
+
+        assertThat(adapter.isHealthy()).isTrue();
+    }
+
+    @Test
+    void getScannerTypeReturnsSkillScanner() {
+        SkillScannerAdapter adapter = new SkillScannerAdapter(new StubSkillScannerService(), "local", ScanOptions.disabled());
+        assertThat(adapter.getScannerType()).isEqualTo("skill-scanner");
+    }
+
+    @Test
+    void scan_mapsSafeVerdict() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.directoryResponse = new SkillScannerApiResponse(
+                "scan-3", "test-skill", true, null, 0, null, 0.5, "2026-03-22T07:00:00"
+        );
+        SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", ScanOptions.disabled());
+
+        SecurityScanResponse response = adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of()));
+
+        assertThat(response.verdict()).isEqualTo(SecurityVerdict.SAFE);
+        assertThat(response.findingsCount()).isEqualTo(0);
+        assertThat(response.maxSeverity()).isNull();
+    }
+
+    @Test
+    void scan_mapsNullFindingsToEmptyList() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.directoryResponse = new SkillScannerApiResponse(
+                "scan-4", "test-skill", false, "MEDIUM", 0, null, 1.0, "2026-03-22T07:00:00"
+        );
+        SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", ScanOptions.disabled());
+
+        SecurityScanResponse response = adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of()));
+
+        assertThat(response.findings()).isEmpty();
+        assertThat(response.verdict()).isEqualTo(SecurityVerdict.SUSPICIOUS);
+    }
+
+    @Test
+    void scan_mapsNullScanDurationToZero() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.directoryResponse = new SkillScannerApiResponse(
+                "scan-5", "test-skill", true, null, 0, null, null, "2026-03-22T07:00:00"
+        );
+        SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", ScanOptions.disabled());
+
+        SecurityScanResponse response = adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of()));
+
+        assertThat(response.scanDurationSeconds()).isEqualTo(0.0);
+    }
+
     private static final class StubSkillScannerService extends SkillScannerService {
         private String lastDirectoryPath;
         private Path lastUploadPath;
         private SkillScannerApiResponse directoryResponse;
         private SkillScannerApiResponse uploadResponse;
         private RuntimeException directoryException;
+        private boolean healthy;
 
         private StubSkillScannerService() {
             super(new NoOpHttpClient(), "http://scanner.test", "/scan-upload", "/health");
+        }
+
+        @Override
+        public boolean isHealthy() {
+            return healthy;
         }
 
         @Override

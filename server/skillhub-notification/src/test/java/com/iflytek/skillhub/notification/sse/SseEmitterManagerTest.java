@@ -2,6 +2,7 @@ package com.iflytek.skillhub.notification.sse;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -129,6 +130,30 @@ class SseEmitterManagerTest {
     }
 
     @Test
+    void register_shouldThrowWhenTotalLimitReached() {
+        for (int i = 0; i < 1000; i++) {
+            emitters.add(new TestEmitter());
+        }
+        for (int i = 0; i < 1000; i++) {
+            manager.register("user-" + i);
+        }
+
+        emitters.add(new TestEmitter());
+        assertThrows(IllegalStateException.class, () -> manager.register("overflow-user"));
+    }
+
+    @Test
+    void register_shouldCleanupWhenInitialSendFails() throws IOException {
+        TestEmitter failingEmitter = new TestEmitter();
+        failingEmitter.failOnConnected();
+        emitters.add(failingEmitter);
+
+        assertDoesNotThrow(() -> manager.register("user-1"));
+        assertEquals(0, manager.totalEmitters());
+        assertEquals(0, manager.emittersForUser("user-1"));
+    }
+
+    @Test
     void register_multipleUsers_shouldTrackSeparately() {
         emitters.add(new TestEmitter());
         emitters.add(new TestEmitter());
@@ -150,6 +175,7 @@ class SseEmitterManagerTest {
         private java.util.function.Consumer<Throwable> errorCallback = error -> {};
         private String userId;
         private boolean failAfterConnected;
+        private boolean failOnConnected;
         private boolean throwOnComplete;
         private int sendCount;
 
@@ -167,6 +193,10 @@ class SseEmitterManagerTest {
 
         void throwOnComplete() {
             this.throwOnComplete = true;
+        }
+
+        void failOnConnected() {
+            this.failOnConnected = true;
         }
 
         void fireError() {
@@ -199,6 +229,9 @@ class SseEmitterManagerTest {
         @Override
         public void send(SseEventBuilder builder) throws IOException {
             sendCount++;
+            if (failOnConnected && sendCount == 1) {
+                throw new IOException("connected send failed");
+            }
             if (failAfterConnected && sendCount > 1) {
                 throw new IOException("send failed");
             }

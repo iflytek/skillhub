@@ -130,6 +130,24 @@ class SecurityConfigTest {
                 .containsExactlyInAnyOrder("http://localhost:[*]", "http://127.0.0.1:[*]");
     }
 
+    @Test
+    void corsConfigurationSource_handlesNullBaseUrlGracefully() {
+        SecurityConfig config = newConfig(null, null);
+
+        CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
+
+        assertThat(cors.getAllowedOrigins()).isEmpty();
+        assertThat(cors.getAllowedOriginPatterns()).isEmpty();
+    }
+
+    @Test
+    void isLoopbackHost_recognizesIpv6Loopback() throws Exception {
+        java.lang.reflect.Method method = SecurityConfig.class.getDeclaredMethod("isLoopbackHost", String.class);
+        method.setAccessible(true);
+
+        assertThat(method.invoke(null, "::1")).isEqualTo(true);
+    }
+
     private SecurityConfig newConfig(String publicBaseUrl, String uassMockLoginBaseUrl) {
         return new SecurityConfig(
                 customOAuth2UserService,

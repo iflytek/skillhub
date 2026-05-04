@@ -33,4 +33,15 @@ class SearchIndexEventListenerTest {
 
         verify(searchIndexService).remove(42L);
     }
+
+    @Test
+    void nonArchivedStatusShouldTriggerRebuild() {
+        SearchRebuildService searchRebuildService = mock(SearchRebuildService.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+        SearchIndexEventListener listener = new SearchIndexEventListener(searchRebuildService, searchIndexService);
+
+        listener.onSkillStatusChanged(new SkillStatusChangedEvent(42L, SkillStatus.ACTIVE, SkillStatus.HIDDEN));
+
+        verify(searchRebuildService).rebuildBySkill(42L);
+    }
 }
