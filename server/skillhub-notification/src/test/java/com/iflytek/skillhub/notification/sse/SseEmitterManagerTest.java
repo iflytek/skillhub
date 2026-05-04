@@ -168,6 +168,17 @@ class SseEmitterManagerTest {
         assertEquals(1, manager.emittersForUser("user-2"));
     }
 
+    @Test
+    void noArgConstructor_shouldCreateManagerAndRegister() {
+        SseEmitterManager defaultManager = new SseEmitterManager();
+        assertNotNull(defaultManager);
+        assertEquals(0, defaultManager.totalEmitters());
+
+        SseEmitter emitter = defaultManager.register("user-default");
+        assertNotNull(emitter);
+        assertEquals(1, defaultManager.totalEmitters());
+    }
+
     private static final class TestEmitter extends SseEmitter {
         private final AtomicInteger errorCallbacks = new AtomicInteger(0);
         private Runnable completionCallback = () -> {};

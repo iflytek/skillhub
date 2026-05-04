@@ -12,6 +12,7 @@ import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
@@ -275,6 +276,7 @@ class SkillPublishServiceTest {
 
         Skill skill = new Skill(1L, "test-skill", publisherId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setLatestVersionId(8L);
         SkillVersion draftVersion = new SkillVersion(1L, "1.0.0", publisherId);
         draftVersion.setStatus(SkillVersionStatus.DRAFT);
         setId(draftVersion, 8L);
@@ -669,6 +671,102 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void testPublishFromEntries_ShouldRejectWhenPackageValidationFails() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        PackageEntry skillMd = new PackageEntry("SKILL.md", "test".getBytes(), 4, "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.fail("Missing required file"));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+        assertEquals("error.skill.publish.package.invalid", ex.messageCode());
+    }
+
+    @Test
+    void testPublishFromEntries_ShouldRejectWhenPrePublishValidationFails() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.fail("Invalid namespace"));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+        assertEquals("error.skill.publish.precheck.failed", ex.messageCode());
+    }
+
+    @Test
+    void testPublishFromEntries_ShouldRejectWhenExistingVersionIsPublished() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+        Skill skill = new Skill(1L, "test-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        SkillVersion publishedVersion = new SkillVersion(1L, "1.0.0", publisherId);
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        setId(publishedVersion, 8L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId))).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).thenReturn(Optional.of(publishedVersion));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+        assertEquals("error.skill.version.exists", ex.messageCode());
+    }
+
+    @Test
+    void testPublishFromEntries_ShouldRejectArchivedNamespace() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        setId(namespace, 1L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                service.publishFromEntries(namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+        assertEquals("error.namespace.archived", ex.messageCode());
+    }
+
+    @Test
     void testPublishFromEntries_ShouldRejectFrozenNamespace() throws Exception {
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";
@@ -793,6 +891,74 @@ class SkillPublishServiceTest {
         assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
         verify(prePublishValidator).validate(any());
         verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void testRereleasePublishedVersion_RejectsNonPublishedSource() throws Exception {
+        String publisherId = "user-100";
+        Skill skill = new Skill(1L, "demo-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 11L);
+        SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", publisherId);
+        setId(sourceVersion, 21L);
+        sourceVersion.setStatus(SkillVersionStatus.DRAFT);
+
+        when(skillRepository.findById(skill.getId())).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.3")).thenReturn(Optional.of(sourceVersion));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () -> service.rereleasePublishedVersion(
+                skill.getId(), "1.2.3", "1.2.4", publisherId,
+                Map.of(skill.getNamespaceId(), com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER), false));
+        assertEquals("error.skill.version.notPublished", ex.messageCode());
+    }
+
+    @Test
+    void testRereleasePublishedVersion_RejectsUnauthorizedUser() throws Exception {
+        String publisherId = "user-100";
+        Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 11L);
+        SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", "owner-1");
+        setId(sourceVersion, 21L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(skillRepository.findById(skill.getId())).thenReturn(Optional.of(skill));
+
+        assertThrows(DomainForbiddenException.class, () -> service.rereleasePublishedVersion(
+                skill.getId(), "1.2.3", "1.2.4", publisherId,
+                Map.of(), false));
+    }
+
+    @Test
+    void testRereleasePublishedVersion_ThrowsWhenFileReadFails() throws Exception {
+        String publisherId = "user-100";
+        Skill skill = new Skill(1L, "demo-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 11L);
+        skill.setDisplayName("Demo Skill");
+        skill.setSummary("Original summary");
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setId(namespace, 1L);
+
+        SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", publisherId);
+        setId(sourceVersion, 21L);
+        sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        sourceVersion.setPublishedAt(Instant.parse("2026-03-15T10:00:00Z"));
+
+        String sourceSkillMd = "---\nname: Demo Skill\ndescription: Original summary\nversion: 1.2.3\n---\nHello world";
+        SkillFile skillMdFile = new SkillFile(sourceVersion.getId(), "SKILL.md", (long) sourceSkillMd.getBytes(StandardCharsets.UTF_8).length, "text/markdown", "hash1", "skills/11/21/SKILL.md");
+
+        when(skillRepository.findById(skill.getId())).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.3")).thenReturn(Optional.of(sourceVersion));
+        when(skillVersionRepository.findBySkillIdAndVersion(skill.getId(), "1.2.4")).thenReturn(Optional.empty());
+        when(skillFileRepository.findByVersionId(sourceVersion.getId())).thenReturn(List.of(skillMdFile));
+        when(objectStorageService.getObject(skillMdFile.getStorageKey())).thenReturn(new java.io.InputStream() {
+            @Override
+            public int read() throws java.io.IOException {
+                throw new java.io.IOException("disk error");
+            }
+        });
+
+        assertThrows(IllegalStateException.class, () -> service.rereleasePublishedVersion(
+                skill.getId(), "1.2.3", "1.2.4", publisherId,
+                Map.of(skill.getNamespaceId(), com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER), false));
     }
 
     @Test
@@ -1325,6 +1491,133 @@ class SkillPublishServiceTest {
         assertNotNull(result);
         verify(reviewTaskRepository).save(any(ReviewTask.class));
         verify(securityScanService).triggerScan(eq(10L), anyList(), eq(publisherId));
+    }
+
+    @Test
+    void testDeleteReplaceableVersionArtifacts_RejectsPublishedVersion() throws Exception {
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        SkillVersion publishedVersion = new SkillVersion(1L, "1.0.0", "owner");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        setId(publishedVersion, 8L);
+
+        java.lang.reflect.Method method = SkillPublishService.class.getDeclaredMethod(
+                "deleteReplaceableVersionArtifacts", Skill.class, SkillVersion.class, String.class);
+        method.setAccessible(true);
+
+        assertThrows(DomainBadRequestException.class, () -> {
+            try {
+                method.invoke(service, skill, publishedVersion, "test-ns");
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                throw (RuntimeException) e.getCause();
+            }
+        });
+    }
+
+    @Test
+    void testDeleteStorageAfterCommit_skipsWhenStorageKeysEmpty() throws Exception {
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+
+        java.lang.reflect.Method method = SkillPublishService.class.getDeclaredMethod(
+                "deleteStorageAfterCommit", Skill.class, String.class, java.util.List.class);
+        method.setAccessible(true);
+        method.invoke(service, skill, "test-ns", java.util.List.of());
+
+        verify(objectStorageService, never()).deleteObjects(anyList());
+    }
+
+    @Test
+    void testBuildBundle_ThrowsOnZipEntryError() throws Exception {
+        java.lang.reflect.Method method = SkillPublishService.class.getDeclaredMethod(
+                "buildBundle", java.util.List.class);
+        method.setAccessible(true);
+
+        PackageEntry badEntry = new PackageEntry(null, "test".getBytes(), 4, "text/plain");
+        assertThrows(IllegalStateException.class, () -> {
+            try {
+                method.invoke(service, java.util.List.of(badEntry));
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                throw (RuntimeException) e.getCause();
+            }
+        });
+    }
+
+    @Test
+    void testPublishFromEntries_ThrowsWhenFileUploadFails() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+        Skill skill = new Skill(1L, "test-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId))).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("1.0.0"))).thenReturn(Optional.empty());
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion saved = invocation.getArgument(0);
+            if (saved.getId() == null) setId(saved, 10L);
+            return saved;
+        });
+        doThrow(new RuntimeException("storage unavailable")).when(objectStorageService).putObject(anyString(), any(), anyLong(), anyString());
+
+        assertThrows(IllegalStateException.class, () -> service.publishFromEntries(
+                namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
+    }
+
+    @Test
+    void testPublishFromEntries_ThrowsWhenMetadataSerializationFails() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-100";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+        Skill skill = new Skill(1L, "test-skill", publisherId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+
+        ObjectMapper failingMapper = mock(ObjectMapper.class);
+        when(failingMapper.writeValueAsString(any())).thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("fail") {});
+
+        SkillPublishService testService = new SkillPublishService(
+                namespaceRepository, namespaceMemberRepository, skillRepository,
+                skillVersionRepository, skillFileRepository, objectStorageService,
+                skillPackageValidator, skillMetadataParser, prePublishValidator,
+                failingMapper, reviewTaskRepository, securityScanService,
+                compensationService, eventPublisher, CLOCK
+        );
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(any(), eq("test-skill"), eq(publisherId))).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("1.0.0"))).thenReturn(Optional.empty());
+        lenient().when(securityScanService.isEnabled()).thenReturn(false);
+        lenient().when(skillVersionRepository.findBySkillIdAndStatus(anyLong(), eq(SkillVersionStatus.PENDING_REVIEW))).thenReturn(List.of());
+
+        assertThrows(IllegalStateException.class, () -> testService.publishFromEntries(
+                namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()));
     }
 
     private void setId(Object entity, Long id) throws Exception {

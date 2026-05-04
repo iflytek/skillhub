@@ -115,6 +115,20 @@ class SkillGovernanceServiceTest {
     }
 
     @Test
+    void archiveSkillAsAdmin_bypassesPermissionCheck() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 10L);
+        given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(skill)).willReturn(skill);
+
+        Skill result = service.archiveSkillAsAdmin(10L, "admin", "127.0.0.1", "JUnit", null);
+
+        assertThat(result.getStatus()).isEqualTo(SkillStatus.ARCHIVED);
+        verify(auditLogService).record("admin", "ARCHIVE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", null);
+        verify(eventPublisher).publishEvent(any(SkillStatusChangedEvent.class));
+    }
+
+    @Test
     void unarchiveSkill_restoresActiveStatus() {
         Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
         setField(skill, "id", 10L);
@@ -140,6 +154,24 @@ class SkillGovernanceServiceTest {
     }
 
     @Test
+    void unhideSkill_restoresVisibleState() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 10L);
+        skill.setHidden(true);
+        skill.setHiddenAt(Instant.now(CLOCK));
+        skill.setHiddenBy("admin");
+        given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
+        given(skillRepository.save(skill)).willReturn(skill);
+
+        Skill result = service.unhideSkill(10L, "admin", "127.0.0.1", "JUnit");
+
+        assertThat(result.isHidden()).isFalse();
+        assertThat(result.getHiddenAt()).isNull();
+        assertThat(result.getHiddenBy()).isNull();
+        verify(auditLogService).record("admin", "UNHIDE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", null);
+    }
+
+    @Test
     void yankVersion_setsYankedStatus() {
         SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
         version.setStatus(SkillVersionStatus.PUBLISHED);
@@ -153,6 +185,16 @@ class SkillGovernanceServiceTest {
         assertThat(result.getYankedBy()).isEqualTo("admin");
         assertThat(result.getYankedAt()).isEqualTo(Instant.now(CLOCK));
         verify(auditLogService).record("admin", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
+    }
+
+    @Test
+    void yankVersion_rejectsNonPublishedVersion() {
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        version.setStatus(SkillVersionStatus.DRAFT);
+        given(skillVersionRepository.findById(22L)).willReturn(Optional.of(version));
+
+        assertThrows(DomainBadRequestException.class,
+                () -> service.yankVersion(22L, "admin", "127.0.0.1", "JUnit", "broken"));
     }
 
     @Test
@@ -171,6 +213,17 @@ class SkillGovernanceServiceTest {
         verify(skillVersionRepository).save(version);
         verify(skillRepository).save(skill);
         verify(objectStorageService, never()).deleteObject(any());
+    }
+
+    @Test
+    void withdrawPendingVersion_rejectsNonPendingVersion() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        setField(version, "id", 2L);
+        version.setStatus(SkillVersionStatus.UPLOADED);
+
+        assertThrows(DomainBadRequestException.class,
+                () -> service.withdrawPendingVersion(skill, version, "owner"));
     }
 
     @Test
@@ -355,6 +408,19 @@ class SkillGovernanceServiceTest {
 
         assertThat(skill.getLatestVersionId()).isEqualTo(3L);
         verify(skillRepository).save(skill);
+    }
+
+    @Test
+    void deleteStorageAfterCommit_skipsWhenStorageKeysEmpty() throws Exception {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 1L);
+
+        java.lang.reflect.Method method = SkillGovernanceService.class.getDeclaredMethod(
+                "deleteStorageAfterCommit", Skill.class, String.class, java.util.List.class);
+        method.setAccessible(true);
+        method.invoke(service, skill, "test-ns", java.util.List.of());
+
+        verify(objectStorageService, never()).deleteObjects(anyList());
     }
 
     private void setField(Object target, String fieldName, Object value) {

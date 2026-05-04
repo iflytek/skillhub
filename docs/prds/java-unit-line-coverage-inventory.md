@@ -195,13 +195,7 @@
 | `com.iflytek.skillhub.domain.skill.SkillVersion` | 7 | 51 | 87.93% |
 | `com.iflytek.skillhub.domain.skill.Skill` | 8 | 57 | 87.69% |
 | `com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser` | 14 | 49 | 77.78% |
-| `com.iflytek.skillhub.domain.skill.service.SkillDownloadService` | 10 | 102 | 91.07% |
-| `com.iflytek.skillhub.domain.skill.service.SkillGovernanceService` | 16 | 125 | 88.65% |
 | `com.iflytek.skillhub.domain.skill.service.SkillHardDeleteService` | 3 | 72 | 96.00% |
-| `com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService` | 41 | 34 | 45.33% |
-| `com.iflytek.skillhub.domain.skill.service.SkillPublishService` | 19 | 249 | 92.91% |
-| `com.iflytek.skillhub.domain.skill.service.SkillQueryService.ReviewSkillSnapshotDTO` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.domain.skill.service.SkillQueryService` | 98 | 222 | 69.38% |
 | `com.iflytek.skillhub.domain.skill.service.SkillReviewSubmitService` | 2 | 46 | 95.83% |
 | `com.iflytek.skillhub.domain.skill.service.SkillStorageDeletionCompensationService` | 4 | 21 | 84.00% |
 | `com.iflytek.skillhub.domain.skill.service.SkillTagService` | 5 | 46 | 90.20% |
@@ -237,10 +231,6 @@
 
 | Class | Line Missed | Line Covered | Line Coverage |
 |------|------:|------:|------:|
-| `com.iflytek.skillhub.notification.domain.NotificationPreference` | 5 | 9 | 64.29% |
-| `com.iflytek.skillhub.notification.domain.Notification` | 2 | 24 | 92.31% |
-| `com.iflytek.skillhub.notification.service.NotificationPreferenceService` | 5 | 29 | 85.29% |
-| `com.iflytek.skillhub.notification.sse.SseEmitterManager` | 5 | 56 | 91.80% |
 
 ## skillhub-search
 

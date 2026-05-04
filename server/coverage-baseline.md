@@ -24,8 +24,6 @@ Generated: 2026-05-04
 ### skillhub-domain
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| SkillQueryService | com.iflytek.skillhub.domain.skill.service | 98 | 222 |
-| SkillLifecycleProjectionService | com.iflytek.skillhub.domain.skill.service | 41 | 34 |
 | LabelDefinitionService | com.iflytek.skillhub.domain.label | 37 | 65 |
 | PromotionService | com.iflytek.skillhub.domain.review | 32 | 137 |
 | SkillPackagePolicy | com.iflytek.skillhub.domain.skill.validation | 29 | 58 |
@@ -35,8 +33,6 @@ Generated: 2026-05-04
 | IdempotencyRecord | com.iflytek.skillhub.domain.idempotency | 22 | 0 |
 | SecurityScanService | com.iflytek.skillhub.domain.security | 20 | 70 |
 | UserAccount | com.iflytek.skillhub.domain.user | 20 | 10 |
-| SkillPublishService | com.iflytek.skillhub.domain.skill.service | 19 | 249 |
-| SkillGovernanceService | com.iflytek.skillhub.domain.skill.service | 16 | 125 |
 | SkillReportService | com.iflytek.skillhub.domain.report | 16 | 51 |
 | NamespaceGovernanceService | com.iflytek.skillhub.domain.namespace | 15 | 42 |
 | SkillPackageValidator | com.iflytek.skillhub.domain.skill.validation | 14 | 53 |
@@ -49,7 +45,6 @@ Generated: 2026-05-04
 | NamespaceService | com.iflytek.skillhub.domain.namespace | 11 | 44 |
 | ProfileReviewService | com.iflytek.skillhub.domain.user | 11 | 37 |
 | SkillRating | com.iflytek.skillhub.domain.social | 11 | 11 |
-| SkillDownloadService | com.iflytek.skillhub.domain.skill.service | 10 | 102 |
 | SkillStorageDeletionCompensation | com.iflytek.skillhub.domain.skill | 10 | 23 |
 | NamespaceMember | com.iflytek.skillhub.domain.namespace | 10 | 10 |
 | Namespace | com.iflytek.skillhub.domain.namespace | 10 | 18 |
@@ -75,7 +70,6 @@ Generated: 2026-05-04
 | SkillReviewSubmitService | com.iflytek.skillhub.domain.skill.service | 2 | 46 |
 | ReviewTask | com.iflytek.skillhub.domain.review | 2 | 25 |
 | PromotionRequest | com.iflytek.skillhub.domain.review | 2 | 30 |
-| SkillQueryService.ReviewSkillSnapshotDTO | com.iflytek.skillhub.domain.skill.service | 1 | 0 |
 | DomainForbiddenException | com.iflytek.skillhub.domain.shared.exception | 1 | 2 |
 | DomainNotFoundException | com.iflytek.skillhub.domain.shared.exception | 1 | 2 |
 | DomainBadRequestException | com.iflytek.skillhub.domain.shared.exception | 1 | 2 |
@@ -119,10 +113,6 @@ Generated: 2026-05-04
 ### skillhub-notification
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| NotificationPreferenceService | com.iflytek.skillhub.notification.service | 5 | 29 |
-| NotificationPreference | com.iflytek.skillhub.notification.domain | 5 | 9 |
-| SseEmitterManager | com.iflytek.skillhub.notification.sse | 5 | 56 |
-| Notification | com.iflytek.skillhub.notification.domain | 2 | 24 |
 ### skillhub-storage
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
