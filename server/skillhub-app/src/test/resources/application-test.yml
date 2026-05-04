@@ -8,14 +8,17 @@ spring:
       enabled: false
   datasource:
     generate-unique-name: true
-    url: jdbc:h2:mem:testdb-${random.uuid};DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ""
+    driver-class-name: ""
+    username: ""
+    password: ""
   jpa:
+    database-platform: ""
     hibernate:
       ddl-auto: create
-    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        dialect: ""
   flyway:
     enabled: false
   data:

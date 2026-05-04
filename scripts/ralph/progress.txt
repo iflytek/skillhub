@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- `application-test.yml` 这类共享 test profile 如果需要避免继承主运行时 datasource，优先把 `spring.datasource.*` 和 JPA dialect 相关属性显式清空，再让需要 MySQL 的测试通过 `@AutoConfigureTestDatabase(replace = NONE)` + `@DynamicPropertySource` 自带数据源。
 - 退役旧 runtime/provider 的文档收口不能只改单一 quickstart；凡是仍被 `README` / `docs` / `design runtime` 作为当前入口链引用的架构与配置文档，都要一起去掉“仍在活跃支持”的措辞。
 - 退役一个按条件装配的 runtime provider 时，要同时清理它专属的 `ApplicationContextRunner`/单元测试引用；只删生产类会让 `testCompile` 继续被死类名卡住。
 - 当 README / docs 索引把某份 design/runtime 文档列为“当前入口”时，验收 current-entry runtime docs 不能只看 quickstart；需要沿入口链接链一起核对 profile、provider 和启动示例是否仍指向当前正式路径。
@@ -58,6 +59,16 @@
   - 发现的 patterns：app 级别的 Redis state 最好用专用 bean 名称 + `@Qualifier` 固化边界，测试和运行时都更稳。
   - 遇到的陷阱：浏览器 smoke 里直接点登录表单不一定最稳，复用 `page.context().request` 先建立会话，再去验证受保护路由和 logout，成功率更高。
   - 有用的上下文：`local-mysql` 现在已经能用 `tiger-mysql`/`tiger-redis` 在空库上启动，搜索页的稳定命中目标是 `mysql-runtime-fixture`。
+---
+## 2026-05-04 15:47 - US-005
+- 去掉了 `server/skillhub-app/src/test/resources/application-test.yml` 里的 H2 URL/driver/user/password 和 H2 dialect，改为只保留共享测试开关，并显式清空主运行时 datasource / dialect 覆盖，避免 `test` profile 继承 `application.yml` 的 MySQL 配置。
+- 新增 `TestProfileBindingTest` 作为配置守卫，验证 `application-test.yml` 会清空主路径 datasource / dialect，同时继续保留 `generate-unique-name`、`ddl-auto=create` 和 `flyway.enabled=false` 这类共享测试基线。
+- 运行了 `mvn -q -f server/pom.xml -pl skillhub-app -am -Dtest=PrometheusEndpointTest,TestProfileBindingTest,SkillControllerTest,AuthJsonPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`。
+- 更改的文件：`server/skillhub-app/src/test/resources/application-test.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/TestProfileBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：共享 test profile 想摆脱主运行时 datasource 继承时，可以用“清空 datasource / dialect + 嵌入式库自动选择”的方式，而不是把 H2 URL 再次硬编码回去。
+  - 遇到的陷阱：如果只删除 `application-test.yml` 里的 H2 配置而不覆盖 `application.yml` 的 `spring.datasource.*`，`@ActiveProfiles("test")` 的 `SpringBootTest` 会直接去连本地 MySQL。
+  - 有用的上下文：`PrometheusEndpointTest` 是这类回归的高信号哨兵；它不自带 MySQL Testcontainers，但会完整拉起 `test` profile 上下文，最容易暴露 datasource 继承问题。
 ---
 ## 2026-05-03 19:19 - US-029
 - 为 `LocalFileIndexQueryService` 补齐了 Lucene 侧的过滤、排序和分页：支持 namespace / label / visibility / active-status 过滤，支持 `downloads`、`rating`、`newest` 与关键词 `relevance` 排序，并继续返回 `skillIds + page/size/total` 元数据以复用现有 hydrate 链路。
