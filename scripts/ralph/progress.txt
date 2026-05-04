@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 退役一个按条件装配的 runtime provider 时，要同时清理它专属的 `ApplicationContextRunner`/单元测试引用；只删生产类会让 `testCompile` 继续被死类名卡住。
 - 当 README / docs 索引把某份 design/runtime 文档列为“当前入口”时，验收 current-entry runtime docs 不能只看 quickstart；需要沿入口链接链一起核对 profile、provider 和启动示例是否仍指向当前正式路径。
 - 集成测试如果注入的是 domain repository contract，不要假设它自带 `deleteAll()` 之类的 Spring Data 扩展；清理夹具时优先用唯一测试数据，或直接注入对应的 JPA repository / `EntityManager`。
 - 把控制器/集成测试迁到 MySQL Testcontainers 后，凡是会写 `created_by`、`updated_by`、`reviewed_by` 这类用户外键的流程，都要在夹具里显式创建对应 `UserAccount`；H2 路径很容易把缺失引用掩盖掉。
@@ -563,4 +564,13 @@
   - 发现的 patterns：主入口文档的“当前正式源码路径”表述需要在 README、docs 索引和 quickstart 三处同时收口，否则读者会从不同入口得到不同 runtime 结论。
   - 遇到的陷阱：即使具体启动段落已经删掉，只要入口页还用模糊措辞保留历史 profile，validator 仍会把它判成当前正式方案的一部分。
   - 有用的上下文：本轮无 UI 变更，不需要浏览器验证；验收重点是入口文档的一致性和现有后端测试基线保持绿色。
+---
+## 2026-05-04 15:05 - US-003
+- 删除了 `H2LikeSearchQueryService` 运行时代码和对应单测，并把 `SearchRuntimeSelectionTest` 中对 h2-like provider 的直接编译期引用去掉，确保搜索模块不再暴露该旧 provider 的活动实现。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -f server/pom.xml -pl skillhub-app -am test`，全部通过。
+- 更改的文件：`server/skillhub-search/src/main/java/com/iflytek/skillhub/search/h2/H2LikeSearchQueryService.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/h2/H2LikeSearchQueryServiceTest.java`、`server/skillhub-search/src/test/java/com/iflytek/skillhub/search/SearchRuntimeSelectionTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：退役旧搜索 provider 时，优先一起清掉它的 runtime selection 测试和专属单测，能最快恢复编译绿色并避免死引用。
+  - 遇到的陷阱：本仓库未找到指令里提到的“补充说明信息.md”与 `tasks/prd-aiba-agent-gateway.md`；后续如果还依赖这些上下文，需要先确认实际路径。
+  - 有用的上下文：`JpaSearchIndexService` / `JpaSearchRebuildService` 仍然保留在代码里并只挂 `engine=h2` 条件，这轮没有移除它们；后续如果要彻底清理 h2 provider 叙事，应在文档与 runtime selection 层继续收口。
 ---
