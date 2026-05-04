@@ -1,7 +1,13 @@
 package com.iflytek.skillhub.config;
 
+import com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer;
+import com.iflytek.skillhub.search.SearchRebuildService;
 import java.io.IOException;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -11,6 +17,14 @@ import org.springframework.core.io.ClassPathResource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TestProfileBindingTest {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(ConfigurationPropertiesAutoConfiguration.class))
+            .withUserConfiguration(SearchRuntimeProperties.class, LocalFileIndexStartupSynchronizer.class)
+            .withPropertyValues(
+                    "skillhub.search.provider=local-file-index",
+                    "skillhub.search.local-file-index.directory=/tmp/test-search-index"
+            );
 
     @Test
     void testProfileClearsMainRuntimeDatasourceWithoutReintroducingH2Settings() throws IOException {
@@ -32,5 +46,31 @@ class TestProfileBindingTest {
         assertThat(environment.getProperty("spring.datasource.generate-unique-name")).isEqualTo("true");
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("create");
         assertThat(environment.getProperty("spring.flyway.enabled")).isEqualTo("false");
+    }
+
+    @Test
+    void testProfileDisablesLocalFileIndexStartupSynchronizerBean() {
+        contextRunner
+                .withPropertyValues("spring.profiles.active=test", "skillhub.search.startup-sync-enabled=false")
+                .run(context -> assertThat(context).doesNotHaveBean(LocalFileIndexStartupSynchronizer.class));
+    }
+
+    @Test
+    void startupSynchronizerBeanIsPresentWhenStartupSyncRemainsEnabled() {
+        contextRunner
+                .withBean(SearchRebuildService.class, (Supplier<SearchRebuildService>) () -> new SearchRebuildService() {
+                    @Override
+                    public void rebuildAll() {
+                    }
+
+                    @Override
+                    public void rebuildByNamespace(Long namespaceId) {
+                    }
+
+                    @Override
+                    public void rebuildBySkill(Long skillId) {
+                    }
+                })
+                .run(context -> assertThat(context).hasSingleBean(LocalFileIndexStartupSynchronizer.class));
     }
 }

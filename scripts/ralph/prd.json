@@ -1,16 +1,17 @@
 {
   "project": "SkillHub",
   "branchName": "ralph/remove-h2-and-converge-mysql-runtime",
-  "description": "将 SkillHub 从 H2 辅助运行与测试路径进一步收敛到 MySQL 主路径，移除 local-h2 与 h2-like 的正式支持，迁移关键持久化与集成测试到 MySQL Testcontainers，并重建后续 100% 行覆盖率冲刺所需的可信基线。",
+  "description": "收敛 SkillHub 到 MySQL 主路径。已完成的 local-h2、h2-like 和文档收口任务不再保留在当前待办中；当前 PRD 只跟踪剩余的测试基线修复、MySQL 迁移、主路径验证和覆盖率门禁。",
   "userStories": [
     {
-      "id": "US-001",
-      "title": "移除 local-h2 作为源码运行入口",
-      "description": "作为维护者，我希望 application-local-h2.yml 不再作为正式源码运行入口，以便仓库只围绕 MySQL 主路径组织运行时。",
+      "id": "US-101",
+      "title": "恢复 MySQL 主路径测试基线",
+      "description": "作为维护者，我希望先把仍然阻塞构建和测试的副作用清掉，以便后续所有 MySQL 迁移和覆盖率工作都建立在可运行的基线上。",
       "acceptanceCriteria": [
-        "Remove or archive server/skillhub-app/src/main/resources/application-local-h2.yml from the formal source runtime path",
-        "No current-entry source startup document recommends local-h2 as the normal way to run the app from source",
-        "The repository still builds after the local-h2 runtime profile file is removed or archived",
+        "Test profile no longer runs startup synchronizer or scheduled-task side effects that break general SpringBoot tests",
+        "skillhub-app testCompile succeeds without repository method ambiguity or similar compile blockers",
+        "Previously blocked tests such as SkillVersionStatsMysqlPersistenceTest, LocalDevDataInitializerTest, LocalFileIndexStartupSynchronizerTest, AdminUserAppServiceTest, and UserProfileControllerUnitTest pass against the current API",
+        "The agreed backend test command passes on the current MySQL main path",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -21,81 +22,87 @@
       "blocked": false
     },
     {
-      "id": "US-002",
-      "title": "清理主入口文档中的 local-h2 运行说明",
-      "description": "作为维护者，我希望 README、docs 入口和本地启动文档不再把 local-h2 当成正式运行方案，以便日常开发入口保持单一清晰。",
+      "id": "US-102",
+      "title": "迁移剩余持久化与集成测试到 MySQL Testcontainers",
+      "description": "作为开发者，我希望剩余依赖 H2 默认行为的持久化和集成测试全部切到 MySQL Testcontainers，以便验证真实主路径而不是 H2 兼容路径。",
       "acceptanceCriteria": [
-        "README and docs entry pages no longer present local-h2 as a formal source runtime option",
-        "docs/local-runtime-quickstart.md no longer includes a standard local-h2 startup section",
-        "docs/README.md states MySQL is the standard runtime path and does not list local-h2 as a current main option",
+        "AuthJsonPersistenceTest uses MySQL Testcontainers with migration-mysql and ddl-auto=none",
+        "SkillVersionJsonPersistenceTest uses MySQL Testcontainers with migration-mysql and ddl-auto=none",
+        "AuditAndInfraJsonPersistenceTest uses MySQL Testcontainers with migration-mysql and ddl-auto=none",
+        "LocalFileIndexLifecycleIntegrationTest compiles against the current implementation and runs in the appropriate module",
+        "No remaining target test still relies on H2 defaults for main-path verification",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-003",
-      "title": "移除 H2LikeSearchQueryService 运行时代码",
-      "description": "作为维护者，我希望删除 h2-like 搜索实现，以便搜索运行时只保留 MySQL 主路径相关 provider。",
+      "id": "US-103",
+      "title": "完成去 H2 后的 MySQL 主路径回归验证",
+      "description": "作为交付负责人，我希望在收敛完成后做一次完整的端到端回归，以便确认主路径真实可用。",
       "acceptanceCriteria": [
-        "Remove server/skillhub-search/src/main/java/com/iflytek/skillhub/search/h2/H2LikeSearchQueryService.java",
-        "The search module no longer exposes h2-like as an active runtime provider option",
-        "Compilation succeeds after removing the H2 search provider implementation",
+        "Use agent-browser to verify login on /login, including the local account path and the mock UASS redirect path",
+        "Use agent-browser to verify one publish-related flow, one search flow, and one governance or review flow on the MySQL main path",
+        "A backend health check at /actuator/health returns UP during the validation run",
+        "Record the end-to-end validation result in project docs or notes before starting the coverage stories",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-004",
-      "title": "收口 h2-like provider 的测试与文档引用",
-      "description": "作为维护者，我希望 search provider 选择测试和设计文档不再覆盖 h2-like，以便所有搜索说明都和 MySQL 主路径一致。",
+      "id": "US-104",
+      "title": "生成 MySQL 主路径覆盖率基线与缺口清单",
+      "description": "作为维护者，我希望先生成稳定的 MySQL 主路径覆盖率基线，以便后续补测有明确目标。",
       "acceptanceCriteria": [
-        "SearchRuntimeSelectionTest no longer asserts or wires h2-like provider behavior",
-        "Runtime and search architecture documents no longer describe h2-like as a current active provider",
-        "No current-entry runtime document tells operators to use h2-like",
+        "Run the agreed Java test command set on the MySQL main path successfully before generating the report",
+        "Generate a stable JaCoCo aggregate report from the current main-path test baseline",
+        "Produce a checked-in inventory of uncovered classes with missed-line counts and module grouping",
+        "Document the current overall and per-module line coverage numbers in a tracked file",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-005",
-      "title": "去掉 application-test.yml 中的 H2 默认测试数据库",
-      "description": "作为维护者，我希望测试默认配置不再隐式使用 H2，以便后续测试基线围绕 MySQL 主路径建立。",
+      "id": "US-105",
+      "title": "补齐核心模块主路径单元测试到 100% 行覆盖率",
+      "description": "作为维护者，我希望先补齐认证、搜索、基础设施、通知和领域核心服务测试，以便最重要的主路径没有覆盖率盲区。",
       "acceptanceCriteria": [
-        "server/skillhub-app/src/test/resources/application-test.yml no longer declares H2 as the default datasource for the main test path",
-        "application-test.yml still provides only the minimal shared test settings needed by app tests",
-        "Tests that require MySQL now provide MySQL-specific datasource settings explicitly rather than inheriting H2 defaults",
+        "Target the highest-missed auth, search, infra, notification, and domain service classes from the coverage inventory",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests cover success, invalid input, permission failure, empty result, recovery, and exception branches for the targeted classes",
+        "Update the tracked inventory to show zero missed lines for the targeted classes completed in this story",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 5,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-006",
-      "title": "隔离测试环境中的 startup synchronizer 副作用",
-      "description": "作为维护者，我希望 local-file-index startup synchronizer 不污染 test profile 上下文，以便控制器和集成测试能稳定启动。",
+      "id": "US-106",
+      "title": "补齐 app 层与剩余辅助类到 100% 行覆盖率",
+      "description": "作为维护者，我希望收口控制器、配置、过滤器、实体、DTO、record 和辅助类，以便整体未覆盖清单归零。",
       "acceptanceCriteria": [
-        "Test profile disables or isolates LocalFileIndexStartupSynchronizer side effects from general SpringBoot tests",
-        "Controller or filter tests no longer fail because startup rebuild logic tries to touch runtime tables during test context bootstrap",
-        "At least one previously failing SpringBootTest that was blocked by startup sync now passes",
+        "Target the remaining uncovered app-layer classes, including controllers, filters, config classes, lightweight app services, entities, DTOs, records, helpers, and adapters",
+        "Each targeted production class reaches 100% line coverage before the story is considered done",
+        "Tests validate authorization, validation, defaulting, derived accessors, and edge cases where applicable",
+        "The tracked uncovered inventory contains no remaining missed-line production classes after this story completes unless explicitly blocked in writing",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -106,325 +113,9 @@
       "blocked": false
     },
     {
-      "id": "US-007",
-      "title": "隔离测试环境中的定时任务副作用",
-      "description": "作为维护者，我希望 test profile 不再运行会访问业务表的定时任务，以便空 schema 或轻量测试上下文不再被后台任务污染。",
-      "acceptanceCriteria": [
-        "Scheduled tasks that access idempotency or storage-compensation tables do not run under the test profile",
-        "SpringBootTest contexts no longer fail because scheduled tasks access missing business tables during test startup",
-        "At least one previously failing SpringBootTest that was blocked by scheduled task side effects now passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 7,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-008",
-      "title": "迁移 AuthJsonPersistenceTest 到 MySQL Testcontainers",
-      "description": "作为开发者，我希望 AuthJsonPersistenceTest 使用 MySQL Testcontainers 和 migration-mysql，以便认证 JSON 字段按真实主路径验证。",
-      "acceptanceCriteria": [
-        "AuthJsonPersistenceTest uses MySQL Testcontainers with spring.flyway.locations=classpath:sql/migration-mysql and ddl-auto=none",
-        "The test persists ApiToken and IdentityBinding JSON fields successfully under MySQL",
-        "Running the single test class AuthJsonPersistenceTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 8,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-009",
-      "title": "迁移 SkillVersionJsonPersistenceTest 到 MySQL Testcontainers",
-      "description": "作为开发者，我希望 SkillVersionJsonPersistenceTest 使用 MySQL Testcontainers 和 migration-mysql，以便 SkillVersion JSON 字段按真实主路径验证。",
-      "acceptanceCriteria": [
-        "SkillVersionJsonPersistenceTest uses MySQL Testcontainers with migration-mysql and ddl-auto=none",
-        "The test persists parsedMetadataJson and manifestJson successfully under MySQL",
-        "Running the single test class SkillVersionJsonPersistenceTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 9,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-010",
-      "title": "迁移 AuditAndInfraJsonPersistenceTest 到 MySQL Testcontainers",
-      "description": "作为开发者，我希望 AuditAndInfraJsonPersistenceTest 使用 MySQL Testcontainers 和 migration-mysql，以便审计与基础设施 JSON 字段按真实主路径验证。",
-      "acceptanceCriteria": [
-        "AuditAndInfraJsonPersistenceTest uses MySQL Testcontainers with migration-mysql and ddl-auto=none",
-        "The test persists SecurityAudit, ProfileChangeRequest, and AuditLog JSON/text fields successfully under MySQL",
-        "Running the single test class AuditAndInfraJsonPersistenceTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 10,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-011",
-      "title": "修复 SkillVersionStatsMysqlPersistenceTest 的仓储适配器引用",
-      "description": "作为开发者，我希望 SkillVersionStatsMysqlPersistenceTest 引用当前存在的适配器与仓储类型，以便版本下载计数在 MySQL 下可验证。",
-      "acceptanceCriteria": [
-        "SkillVersionStatsMysqlPersistenceTest references the current JPA adapter and repository types that exist in the codebase",
-        "The test proves incrementDownloadCount works twice under MySQL without relying on H2 behavior",
-        "Running the single test class SkillVersionStatsMysqlPersistenceTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 11,
-      "passes": false,
-      "notes": "[验证失败 - 第1次] 2026-05-04 14:12\n- 失败项1：不满足 “Running the single test class SkillVersionStatsMysqlPersistenceTest passes”。运行 `mvn -q -f server/pom.xml -pl skillhub-app -am -Dtest=SkillVersionStatsMysqlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test` 时，构建在 `testCompile` 阶段失败，未能进入该单测类执行；失败点是 [SkillDeleteFlowIntegrationTest](/home/ubuntu/code-work/skillhub/server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillDeleteFlowIntegrationTest:200) 与 [SkillApprovalVisibilityFlowIntegrationTest](/home/ubuntu/code-work/skillhub/server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillApprovalVisibilityFlowIntegrationTest:263) 对 `userAccountRepository.findById(...)` 的调用发生二义性，编译器同时匹配 `UserAccountRepository.findById(String)` 与 `CrudRepository.findById(ID)`。\n- 失败项2：不满足 “Tests pass”。运行 `mvn -q -f server/pom.xml -pl skillhub-app -am test` 结果相同，同样在上述两个测试文件的 `findById(...)` 二义性上失败。\n- 建议修复方向：先消除 `userAccountRepository.findById(...)` 的二义性调用，恢复 `skillhub-app` 的 `testCompile` 绿色基线；然后重新运行单类命令与后端全量 `mvn test`。本轮 `pnpm --dir web typecheck` 已通过。",
-      "retryCount": 1,
-      "blocked": false
-    },
-    {
-      "id": "US-012",
-      "title": "修复 LocalFileIndexLifecycleIntegrationTest 的测试依赖与类引用",
-      "description": "作为开发者，我希望 LocalFileIndexLifecycleIntegrationTest 对齐当前 local-file-index 实现和测试依赖，以便 Lucene 生命周期行为能够继续验证。",
-      "acceptanceCriteria": [
-        "LocalFileIndexLifecycleIntegrationTest compiles against the current LocalFileIndexService and LocalFileIndexRebuildService classes",
-        "The test module has the required Lucene and local-file-index test compile dependencies or the test is moved to the appropriate module",
-        "Running the single test class LocalFileIndexLifecycleIntegrationTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 12,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-013",
-      "title": "修复 LocalDevDataInitializerTest 与当前 SkillSearchDocument 签名的一致性",
-      "description": "作为开发者，我希望 LocalDevDataInitializerTest 的断言与当前 SkillSearchDocument record 字段保持一致，以便种子数据行为测试不再依赖过时签名。",
-      "acceptanceCriteria": [
-        "LocalDevDataInitializerTest only asserts fields that exist on the current SkillSearchDocument record",
-        "The test validates the seeded search fixture using the current record shape",
-        "Running the single test class LocalDevDataInitializerTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 13,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-014",
-      "title": "修复 LocalFileIndexStartupSynchronizerTest 与当前 record 构造签名的一致性",
-      "description": "作为开发者，我希望 LocalFileIndexStartupSynchronizerTest 使用当前 SkillSearchDocument 构造签名，以便 startup sync 测试可持续维护。",
-      "acceptanceCriteria": [
-        "LocalFileIndexStartupSynchronizerTest constructs SkillSearchDocument using the current record signature",
-        "The test still verifies missing, rebuild-on-startup, and corrupted-index branches",
-        "Running the single test class LocalFileIndexStartupSynchronizerTest passes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 14,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-015",
-      "title": "修复 AdminUserAppServiceTest 与 UserProfileControllerUnitTest 的用户模型调用",
-      "description": "作为开发者，我希望这两组单元测试对齐当前 UserAccount API，以便用户侧单测不再依赖过时模型调用。",
-      "acceptanceCriteria": [
-        "AdminUserAppServiceTest compiles and passes against the current UserAccount API",
-        "UserProfileControllerUnitTest compiles and passes against the current UserAccount API",
-        "No test in skillhub-app fails because of outdated UserAccount setter or getter assumptions",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 15,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-016",
-      "title": "完成去 H2 后的 MySQL 主路径全量端到端验证",
-      "description": "作为交付负责人，我希望在去 H2 和 MySQL 主路径收敛完成后先做一轮全量端到端验证，以便确认后续覆盖率专项建立在真实可运行的主路径之上。",
-      "acceptanceCriteria": [
-        "Use agent-browser to verify login on /login, including the local account path and the mock UASS redirect path",
-        "Use agent-browser to verify one publish-related flow and one search flow on the MySQL main path",
-        "Use agent-browser to verify one governance or review flow on the MySQL main path",
-        "A backend health check at /actuator/health returns UP during the validation run",
-        "Record the end-to-end validation result in project docs or notes before starting the coverage stories",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 16,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-017",
-      "title": "生成 MySQL 主路径覆盖率基线与未覆盖清单",
-      "description": "作为维护者，我希望先生成稳定的 MySQL 主路径覆盖率基线，以便后续每一批补测都有明确目标。",
-      "acceptanceCriteria": [
-        "Run the agreed Java test command set on the MySQL main path successfully before generating the report",
-        "Generate a stable JaCoCo aggregate report from the current main-path test baseline",
-        "Produce a checked-in inventory of uncovered classes with missed-line counts and module grouping",
-        "Document the current overall and per-module line coverage numbers in a tracked file",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 17,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-018",
-      "title": "补齐 auth 模块核心服务单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望先补齐认证主链路核心服务测试，以便优先覆盖登录、密码、令牌、身份绑定和会话逻辑。",
-      "acceptanceCriteria": [
-        "Target the highest-missed auth main-path service classes from the coverage inventory",
-        "Each targeted auth production class reaches 100% line coverage before the story is considered done",
-        "Tests explicitly cover success, invalid input, permission failure, and exception branches for the targeted classes",
-        "Update the tracked inventory to show zero missed lines for the targeted auth classes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 18,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-019",
-      "title": "补齐 search 模块主路径单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望补齐 MySQL 主路径下 search 模块的查询、索引、重建和辅助能力测试，以便搜索行为不再留有盲区。",
-      "acceptanceCriteria": [
-        "Target MySQL-main-path search classes such as mysql-like, local-file-index helpers, tokenizer, and embedding helpers from the coverage inventory",
-        "Each targeted search production class reaches 100% line coverage before the story is considered done",
-        "Tests cover normal results, empty results, invalid input, and recovery/error branches for the targeted classes",
-        "Update the tracked inventory to show zero missed lines for the targeted search classes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 19,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-020",
-      "title": "补齐 infra 模块主路径单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望补齐 HTTP、scanner、repository adapter 等基础设施主路径测试，以便外部集成和适配层行为可验证。",
-      "acceptanceCriteria": [
-        "Target the highest-missed infra classes from the inventory, including HTTP client and scanner adapters when they are part of the MySQL main path",
-        "Each targeted infra production class reaches 100% line coverage before the story is considered done",
-        "Tests cover successful external calls, failure translation, retry or fallback behavior, and serialization boundaries where applicable",
-        "Update the tracked inventory to show zero missed lines for the targeted infra classes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 20,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-021",
-      "title": "补齐 notification 模块主路径单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望补齐通知、偏好和 SSE 相关测试，以便通知子系统在主路径上没有未覆盖分支。",
-      "acceptanceCriteria": [
-        "Target notification service, preference service, dispatcher, and SSE manager classes listed in the coverage inventory",
-        "Each targeted notification production class reaches 100% line coverage before the story is considered done",
-        "Tests cover persistence, suppression, push failure, and edge-case cleanup branches for the targeted classes",
-        "Update the tracked inventory to show zero missed lines for the targeted notification classes",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 21,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-022",
-      "title": "补齐 domain 核心业务服务单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望补齐发布、审核、推广、查询、治理等核心领域服务测试，以便主业务规则达到完整行覆盖。",
-      "acceptanceCriteria": [
-        "Target the highest-missed domain service classes from the coverage inventory, including publish, review, promotion, query, governance, and related validation services",
-        "Each targeted domain production class reaches 100% line coverage before the story is considered done",
-        "Tests cover success, rejected transitions, missing data, forbidden operations, and compensation/error branches for the targeted classes",
-        "Update the tracked inventory to show zero missed lines for the targeted domain classes completed in this story",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 22,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-023",
-      "title": "补齐 app 层控制器、配置类与过滤器单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望补齐 app 层控制器、配置类、过滤器与轻量应用服务测试，以便应用入口层没有覆盖率尾巴。",
-      "acceptanceCriteria": [
-        "Target the highest-missed app-layer production classes from the coverage inventory, including controllers, filters, config classes, and lightweight app services",
-        "Each targeted app production class reaches 100% line coverage before the story is considered done",
-        "Tests cover success envelopes, authorization failures, validation failures, header behavior, and configuration branches for the targeted classes",
-        "Update the tracked inventory to show zero missed lines for the targeted app classes completed in this story",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 23,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-024",
-      "title": "补齐剩余实体、DTO、record 与辅助类单元测试到 100% 行覆盖率",
-      "description": "作为维护者，我希望在核心服务补齐后收口剩余实体、DTO、record 和辅助类，以便整体未覆盖清单归零。",
-      "acceptanceCriteria": [
-        "Target the remaining uncovered production classes that are not part of earlier stories, including entities, DTOs, records, helpers, and adapters",
-        "Each remaining targeted production class reaches 100% line coverage before the story is considered done",
-        "Tests validate constructors, normalization logic, derived accessors, defaulting rules, and edge cases where applicable",
-        "The tracked uncovered inventory contains no remaining missed-line production classes after this story completes unless explicitly blocked in writing",
-        "Typecheck passes",
-        "Tests pass"
-      ],
-      "priority": 24,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-025",
+      "id": "US-107",
       "title": "建立 Java 100% 行覆盖率自动门禁",
-      "description": "作为维护者，我希望把 Java 生产代码 100% 行覆盖率变成自动门禁，以便后续变更不会让覆盖率回退。",
+      "description": "作为维护者，我希望把 Java 生产代码 100% 行覆盖率变成自动门禁，以便后续变更不会回退。",
       "acceptanceCriteria": [
         "Add a Maven or equivalent automated gate that fails when the agreed Java production coverage scope is below 100% line coverage",
         "The gate runs on the post-H2-removal MySQL main path rather than a historical feature-only scope",
@@ -433,7 +124,7 @@
         "Typecheck passes",
         "Tests pass"
       ],
-      "priority": 25,
+      "priority": 7,
       "passes": false,
       "notes": "",
       "retryCount": 0,

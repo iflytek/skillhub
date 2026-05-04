@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 对有启动副作用的 `ApplicationRunner` / `CommandLineRunner`，测试隔离不要只在 `run()` 里早退；优先用 `@ConditionalOnProperty` 直接让 `test` profile 下的 bean 不装配，这样通用 `SpringBootTest` 上下文更稳定。
 - `application-test.yml` 这类共享 test profile 如果需要避免继承主运行时 datasource，优先把 `spring.datasource.*` 和 JPA dialect 相关属性显式清空，再让需要 MySQL 的测试通过 `@AutoConfigureTestDatabase(replace = NONE)` + `@DynamicPropertySource` 自带数据源。
 - 退役旧 runtime/provider 的文档收口不能只改单一 quickstart；凡是仍被 `README` / `docs` / `design runtime` 作为当前入口链引用的架构与配置文档，都要一起去掉“仍在活跃支持”的措辞。
 - 退役一个按条件装配的 runtime provider 时，要同时清理它专属的 `ApplicationContextRunner`/单元测试引用；只删生产类会让 `testCompile` 继续被死类名卡住。
@@ -595,4 +596,23 @@
   - 发现的 patterns：清理退役 provider 的“当前入口文档”时，搜索架构文档、runtime 参考文档和项目总览需要同时对齐，否则 validator 很容易从旁路文档里重新发现旧 runtime 仍被当成活跃路径描述。
   - 遇到的陷阱：本仓库根目录没有 `Makefile`，虽然 AGENTS 仍写着优先通过它执行；后续验证如果继续依赖该入口，先确认仓库是否已移除它，再改用等价的 `pnpm` / `mvn` 命令。
   - 有用的上下文：`tasks/` 下当前只找到 `tasks/prd-mysql8-runtime-and-local-file-index.md`，未发现指令中提到的 `tasks/prd-aiba-agent-gateway.md`；后续若继续引用该背景，需要先核实真实文件名。
+---
+## 2026-05-04 16:07 - US-006
+- 将 `LocalFileIndexStartupSynchronizer` 改为受 `skillhub.search.startup-sync-enabled` 条件装配控制；当 `test` profile 关闭该开关时，启动同步器 bean 不再进入通用 `SpringBootTest` 上下文，而不是等到 `run()` 阶段才早退。
+- 扩展 `TestProfileBindingTest`，新增回归断言验证 `test` profile 下不会注册 `LocalFileIndexStartupSynchronizer`，且当 startup sync 保持开启时 bean 仍会正常装配。
+- 运行了 `mvn -q -f server/pom.xml -pl skillhub-app -am -Dtest=LocalFileIndexStartupSynchronizerTest,TestProfileBindingTest,PrometheusEndpointTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -q -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`，确认通过。
+- 更改的文件：`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalFileIndexStartupSynchronizer.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/TestProfileBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：对带启动副作用的 runner，用配置条件把 bean 整体隔离出测试上下文，比在 `run()` 方法里做 no-op 更稳，尤其适合共享 `application-test.yml` 的通用 `SpringBootTest`。
+  - 遇到的陷阱：`ApplicationContextRunner.withBean(...)` 给多方法接口补 stub 时，最好显式传 `Supplier<T>`，否则 lambda 容易被 Java 编译器误判成接口实现而报类型推断错误。
+  - 有用的上下文：当前仓库里没有指令提到的“补充说明信息.md”和 `tasks/prd-aiba-agent-gateway.md`；本轮只能以 `scripts/ralph/prd.json`、`progress.txt` 和现有代码为准推进。
+---
+## 2026-05-04 16:40 - US-101
+- 复用了并确认了 `LocalFileIndexStartupSynchronizer` 的条件装配修复，使 `test` profile 不再把本地索引启动副作用带进通用 `SpringBootTest`；同时验证 `skillhub-app` 的历史 `testCompile` 阻塞已经解除。
+- 回归通过了 `SkillVersionStatsMysqlPersistenceTest`、`LocalDevDataInitializerTest`、`LocalFileIndexStartupSynchronizerTest`、`AdminUserAppServiceTest`、`UserProfileControllerUnitTest`、`TestProfileBindingTest` 与 `PrometheusEndpointTest`，并进一步确认 `mvn -q -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck`、`pnpm --dir web lint` 全部返回成功。
+- 更改的文件：`server/skillhub-app/src/main/java/com/iflytek/skillhub/bootstrap/LocalFileIndexStartupSynchronizer.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/config/TestProfileBindingTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：恢复长链路测试基线时，先跑 PRD 明确点名的阻塞测试集，再跑模块全量 `mvn test`，比直接在全量日志里找问题更快定位是否已经闭合。
+  - 遇到的陷阱：长跑 Maven 测试在交互会话里容易被会话本身截断；需要拿真实退出码时，可以把输出重定向到文件后静默等待完成。
+  - 有用的上下文：`US-101` 实际收口主要集中在启动副作用隔离与基线验证，当前工作区未发现新的 `UserAccount` API 兼容性或 `SkillVersionStats` 编译阻塞残留。
 ---
