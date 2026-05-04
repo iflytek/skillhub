@@ -136,7 +136,6 @@
 | `com.iflytek.skillhub.auth.device.DeviceTokenResponse` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.direct.DirectAuthProvider` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.direct.DirectAuthRequest` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.direct.LocalDirectAuthProvider` | 6 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.entity.ApiToken` | 15 | 19 | 55.88% |
 | `com.iflytek.skillhub.auth.entity.IdentityBinding` | 17 | 8 | 32.00% |
 | `com.iflytek.skillhub.auth.entity.Permission` | 4 | 0 | 0.00% |
@@ -145,21 +144,16 @@
 | `com.iflytek.skillhub.auth.entity.Role` | 5 | 2 | 28.57% |
 | `com.iflytek.skillhub.auth.entity.UserRoleBinding` | 6 | 5 | 45.45% |
 | `com.iflytek.skillhub.auth.exception.AuthFlowException` | 4 | 6 | 60.00% |
-| `com.iflytek.skillhub.auth.identity.IdentityBindingService` | 12 | 46 | 79.31% |
 | `com.iflytek.skillhub.auth.local.LocalAuthService` | 16 | 86 | 84.31% |
 | `com.iflytek.skillhub.auth.local.PasswordResetService` | 17 | 97 | 85.09% |
 | `com.iflytek.skillhub.auth.merge.AccountMergeRequest` | 6 | 17 | 73.91% |
-| `com.iflytek.skillhub.auth.merge.AccountMergeService` | 34 | 120 | 77.92% |
 | `com.iflytek.skillhub.auth.mock.MockAuthFilter` | 22 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService` | 13 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor.GitHubEmail` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor.new ParameterizedTypeReference() {...}` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor` | 27 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.oauth.GitLabClaimsExtractor` | 8 | 43 | 84.31% |
 | `com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler` | 2 | 8 | 80.00% |
 | `com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler` | 2 | 14 | 87.50% |
-| `com.iflytek.skillhub.auth.oauth.OAuthLoginFlowService.AuthenticatedLoginContext` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.oauth.OAuthLoginFlowService` | 20 | 23 | 53.49% |
 | `com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport` | 2 | 6 | 75.00% |
 | `com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver` | 3 | 7 | 70.00% |
 | `com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry.RouteAuthorizationPolicy` | 3 | 4 | 57.14% |

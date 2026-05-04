@@ -87,19 +87,14 @@ Generated: 2026-05-04
 ### skillhub-auth
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| AccountMergeService | com.iflytek.skillhub.auth.merge | 34 | 120 |
 | GitHubClaimsExtractor | com.iflytek.skillhub.auth.oauth | 27 | 0 |
 | MockAuthFilter | com.iflytek.skillhub.auth.mock | 22 | 0 |
 | RbacService | com.iflytek.skillhub.auth.rbac | 22 | 0 |
-| OAuthLoginFlowService | com.iflytek.skillhub.auth.oauth | 20 | 23 |
 | PasswordResetService | com.iflytek.skillhub.auth.local | 17 | 97 |
 | LocalAuthService | com.iflytek.skillhub.auth.local | 16 | 86 |
-| CustomOAuth2UserService | com.iflytek.skillhub.auth.oauth | 13 | 0 |
 | GitLabClaimsExtractor | com.iflytek.skillhub.auth.oauth | 8 | 43 |
 | AccountMergeRequest | com.iflytek.skillhub.auth.merge | 6 | 17 |
-| IdentityBindingService | com.iflytek.skillhub.auth.identity | 6 | 75 |
 | UserRoleBinding | com.iflytek.skillhub.auth.entity | 6 | 5 |
-| LocalDirectAuthProvider | com.iflytek.skillhub.auth.direct | 6 | 0 |
 | Role | com.iflytek.skillhub.auth.entity | 5 | 2 |
 | RolePermission.RolePermissionId | com.iflytek.skillhub.auth.entity | 5 | 0 |
 | DeviceAuthService | com.iflytek.skillhub.auth.device | 5 | 52 |
@@ -111,7 +106,6 @@ Generated: 2026-05-04
 | OAuthLoginRedirectSupport | com.iflytek.skillhub.auth.oauth | 2 | 6 |
 | OAuth2LoginFailureHandler | com.iflytek.skillhub.auth.oauth | 2 | 8 |
 | GitHubClaimsExtractor.GitHubEmail | com.iflytek.skillhub.auth.oauth | 1 | 0 |
-| OAuthLoginFlowService.AuthenticatedLoginContext | com.iflytek.skillhub.auth.oauth | 1 | 0 |
 | GitHubClaimsExtractor.new ParameterizedTypeReference() {...} | com.iflytek.skillhub.auth.oauth | 1 | 0 |
 | DeviceCodeData | com.iflytek.skillhub.auth.device | 1 | 12 |
 | UassProperties | com.iflytek.skillhub.auth.uass | 1 | 43 |
