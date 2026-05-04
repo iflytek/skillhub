@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- Review 管理当前前端入口是 `/dashboard/reviews`，详情页是 `/dashboard/reviews/{id}`；如果文档或旧脚本还在访问 `/admin/reviews`，先按过期入口处理。
+- 如果要在本地运行态里种出真实 `PENDING_REVIEW` 任务，不要让 `SUPER_ADMIN` 直接发布自己的 team/global skill；先让普通账号成为 team namespace 的 `ADMIN`/`OWNER` 再发布，才能走审核队列。
 - 多个 `@DataJpaTest` 需要复用同一个 MySQL Testcontainers 时，不要把 JUnit 的 `@Container` 直接放到共享父类上交给各子类生命周期管理；更稳的做法是共享基类里手动 `start()` 单例容器，再用元注解统一固定 `migration-mysql + ddl-auto=none`。
 - 对有启动副作用的 `ApplicationRunner` / `CommandLineRunner`，测试隔离不要只在 `run()` 里早退；优先用 `@ConditionalOnProperty` 直接让 `test` profile 下的 bean 不装配，这样通用 `SpringBootTest` 上下文更稳定。
 - `application-test.yml` 这类共享 test profile 如果需要避免继承主运行时 datasource，优先把 `spring.datasource.*` 和 JPA dialect 相关属性显式清空，再让需要 MySQL 的测试通过 `@AutoConfigureTestDatabase(replace = NONE)` + `@DynamicPropertySource` 自带数据源。
@@ -626,4 +628,14 @@
   - 发现的 patterns：把 MySQL slice 测试共同的 profile/Flyway/JPA 约束收敛成元注解，能比逐个类复制注解更稳地守住主路径。
   - 遇到的陷阱：如果多个子类共享同一个 Testcontainers 实例，不要依赖 `@Testcontainers` 为父类里的 `@Container` 管生命周期；后续子类会拿到已停止容器。
   - 有用的上下文：`LocalFileIndexLifecycleIntegrationTest` 当前在 `server/skillhub-app/src/test/java/com/iflytek/skillhub/service`，它依赖 Lucene 临时目录和 mock repository，不走数据库，因此本 story 只需要确认它继续能在 app 模块编译执行。
+---
+## 2026-05-04 17:30 - US-103
+- 在隔离的 MySQL 主路径运行态上完成了回归验证：复用 `tiger-mysql` 创建临时库 `skillhub_us103_regression`，以 `19180` 后端和 `13100/13101` 前端启动当前分支，确认 `GET /actuator/health -> {"status":"UP"}`。
+- 使用 `agent-browser` 验证了 `/login` 的本地账号与 mock UASS 跳转链路，并在浏览器中确认 `/dashboard/skills` 的真实发布结果、`/search` 的种子搜索结果与排序切换，以及 `/dashboard/reviews` / `/dashboard/reviews/1` 的待审任务与详情页。
+- 将本轮验证结果记录到 `docs/mysql-main-path-regression-validation.md`，并补充 `docs/README.md` 索引，作为覆盖率 story 之前的主路径回归基线说明。
+- 更改的文件：`docs/mysql-main-path-regression-validation.md`、`docs/README.md`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当前 review 管理页面的真实入口是 `/dashboard/reviews` 而不是 `/admin/reviews`，浏览器回归和文档说明都应该沿这个路由走。
+  - 遇到的陷阱：`agent-browser` 遇到隐藏 file input 和某些 React 提交按钮时，普通 `click`/`upload` 组合不一定能把最终动作真正发到后端；需要结合浏览器上下文请求和最终 UI 状态一起判断，避免把工具兼容性误判成产品缺陷。
+  - 有用的上下文：如果后续需要稳定种出待审核任务，最省事的方式是沿用现有 E2E helper 思路，让 `local-user` 成为 team namespace 的 `ADMIN` 后再发布，这样会得到 `PENDING_REVIEW`，而 `local-admin` 直发容易直接变成 `PUBLISHED`。
 ---

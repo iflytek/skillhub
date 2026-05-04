@@ -38,6 +38,7 @@
 - [dev-workflow.md](./dev-workflow.md)
 - [local-runtime-quickstart.md](./local-runtime-quickstart.md)
 - [e2e.md](./e2e.md)
+- [mysql-main-path-regression-validation.md](./mysql-main-path-regression-validation.md)
 
 ## 需求、设计与实现专题
 
