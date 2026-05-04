@@ -19,3 +19,15 @@
   - 遇到的陷阱：JaCoCo aggregate 报告与模块级报告独立生成，验证时应先看模块级 `target/site/jacoco/jacoco.csv` 确认 LINE_MISSED=0，再决定是否更新清单。
   - 有用的上下文：PlatformSessionService 中的 `request.changeSessionId()` 在 MockHttpServletRequest 上默认无行为，直接测试 SecurityContext + session attribute 断言即可覆盖核心逻辑。
 ---
+
+## 2026-05-05 02:00 - US-105D
+- 实现 auth 实体与轻量认证类型 100% 行覆盖率：ApiToken、Role、Permission、RolePermission（含 RolePermissionId）、UserRoleBinding、AuthFlowException、DirectAuthProvider、DirectAuthRequest。
+- 补全/新增测试文件：AuthFlowExceptionTest（2 个 case，覆盖所有 getter 与无参分支）、DirectAuthProviderTest（1 个 case，覆盖默认 displayName() 方法）。
+- 已有测试的实体类（ApiTokenTest、RoleTest、PermissionTest、RolePermissionTest、UserRoleBindingTest）在先前迭代中已添加，本次验证 JaCoCo 模块级报告确认 LINE_MISSED=0。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 8 个目标类。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过；auth 模块 JaCoCo 确认 8 目标类 LINE_MISSED=0。
+- **未来迭代的学习：**
+  - 发现的 patterns：auth 模块的实体类大多使用 `protected` 无参构造函数 + `@PrePersist` 生命周期回调，测试时需覆盖 JPA 实例化路径和 `prePersist()` 分支。
+  - 遇到的陷阱：接口的 default 方法（如 `DirectAuthProvider.displayName()`）不会被实现类覆盖时自动覆盖，需要单独创建匿名实现或 mock 来触发 JaCoCo 命中。
+  - 有用的上下文：JaCoCo 模块级 `target/site/jacoco/jacoco.csv` 与 aggregate 报告口径可能不同，验证时应以模块级 CSV 为准，确认 LINE_MISSED=0 后再更新清单。
+---
