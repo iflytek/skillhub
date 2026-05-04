@@ -14,6 +14,7 @@ import com.iflytek.skillhub.auth.token.ApiTokenAuthenticationFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenScopeFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -29,6 +30,7 @@ class SecurityConfigFilterChainTest {
             .withBean(ApiTokenScopeFilter.class, () -> mock(ApiTokenScopeFilter.class))
             .withBean(AuthenticationEntryPoint.class, () -> mock(AuthenticationEntryPoint.class))
             .withBean(AccessDeniedHandler.class, () -> mock(AccessDeniedHandler.class))
+            .withBean(ClientRegistrationRepository.class, () -> mock(ClientRegistrationRepository.class))
             .withBean(RoutePolicyProperties.class)
             .withBean(RouteSecurityPolicyRegistry.class)
             .withUserConfiguration(SecurityConfig.class)

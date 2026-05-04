@@ -198,6 +198,22 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_rejectsNullPatternsInYamlOverlay() {
+        RoutePolicyProperties properties = new RoutePolicyProperties();
+        RoutePolicyProperties.RouteRule rule = new RoutePolicyProperties.RouteRule();
+        rule.setMethod(HttpMethod.GET);
+        rule.setPattern(null);
+        properties.setExtraPermitAll(java.util.List.of(rule));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> new RouteSecurityPolicyRegistry(properties).authorizationPolicies()
+        );
+
+        assertEquals("skillhub.security.route-policy rule pattern must not be blank", exception.getMessage());
+    }
+
+    @Test
     void shouldProjectRequestContext_onlyForApiRoutes() {
         assertTrue(registry.shouldProjectRequestContext("/api/web/namespaces/team-a"));
         assertFalse(registry.shouldProjectRequestContext(null));

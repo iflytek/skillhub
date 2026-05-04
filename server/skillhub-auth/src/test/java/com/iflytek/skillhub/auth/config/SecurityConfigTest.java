@@ -148,6 +148,26 @@ class SecurityConfigTest {
         assertThat(method.invoke(null, "::1")).isEqualTo(true);
     }
 
+    @Test
+    void corsConfigurationSource_skipsUriWithoutHost() {
+        SecurityConfig config = newConfig("mailto:test@example.com", "");
+
+        CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
+
+        assertThat(cors.getAllowedOrigins()).isEmpty();
+        assertThat(cors.getAllowedOriginPatterns()).isEmpty();
+    }
+
+    @Test
+    void corsConfigurationSource_skipsUriWithNullScheme() {
+        SecurityConfig config = newConfig("//example.com", "");
+
+        CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
+
+        assertThat(cors.getAllowedOrigins()).isEmpty();
+        assertThat(cors.getAllowedOriginPatterns()).isEmpty();
+    }
+
     private SecurityConfig newConfig(String publicBaseUrl, String uassMockLoginBaseUrl) {
         return new SecurityConfig(
                 customOAuth2UserService,

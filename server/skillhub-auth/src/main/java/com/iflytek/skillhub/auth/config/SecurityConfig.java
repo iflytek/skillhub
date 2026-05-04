@@ -159,7 +159,7 @@ public class SecurityConfig {
                 .deleteCookies("SESSION")
             )
             .addFilterBefore(apiTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(apiTokenScopeFilter, ApiTokenAuthenticationFilter.class);
+            .addFilterAfter(apiTokenScopeFilter, UsernamePasswordAuthenticationFilter.class);
 
         MockAuthFilter mockAuthFilter = mockAuthFilterProvider.getIfAvailable();
         if (mockAuthFilter != null) {
