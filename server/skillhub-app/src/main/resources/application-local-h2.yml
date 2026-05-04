@@ -74,11 +74,9 @@ skillhub:
       mock-login-base-url: ${SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL:http://localhost:3001}
       cache-mode: local
       # Pre-register rollout administrators for first-time UASS sign-in.
-      # Example:
+      # Listed users receive full platform administration on first sign-in.
       admin-users:
-        - ussId: uass-admin-001
-          roles:
-            - USER_ADMIN
+        - ussId: uass-admin-003
     device:
       enabled: false
     failure-throttle:

@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.uass;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -94,16 +95,12 @@ public class UassProperties {
         this.adminUsers = adminUsers == null ? List.of() : List.copyOf(adminUsers);
     }
 
-    public List<String> rolesForUssId(String ussId) {
+    public boolean isBootstrapAdminUssId(String ussId) {
         String normalizedUssId = normalize(ussId);
         if (!StringUtils.hasText(normalizedUssId)) {
-            return List.of();
+            return false;
         }
-        return adminUsers.stream()
-                .filter(config -> normalizedUssId.equals(config.getUssId()))
-                .findFirst()
-                .map(AdminUserConfig::normalizedRoles)
-                .orElse(List.of());
+        return adminUsers.stream().anyMatch(config -> normalizedUssId.equals(config.getUssId()));
     }
 
     private static String normalize(String value) {
@@ -112,7 +109,6 @@ public class UassProperties {
 
     public static class AdminUserConfig {
         private String ussId = "";
-        private List<String> roles = List.of("USER_ADMIN");
 
         public String getUssId() {
             return normalize(ussId);
@@ -120,22 +116,6 @@ public class UassProperties {
 
         public void setUssId(String ussId) {
             this.ussId = ussId;
-        }
-
-        public List<String> getRoles() {
-            return roles;
-        }
-
-        public void setRoles(List<String> roles) {
-            this.roles = roles == null ? List.of("USER_ADMIN") : List.copyOf(roles);
-        }
-
-        private List<String> normalizedRoles() {
-            return roles.stream()
-                    .map(UassProperties::normalize)
-                    .filter(StringUtils::hasText)
-                    .map(value -> value.toUpperCase(java.util.Locale.ROOT))
-                    .toList();
         }
     }
 

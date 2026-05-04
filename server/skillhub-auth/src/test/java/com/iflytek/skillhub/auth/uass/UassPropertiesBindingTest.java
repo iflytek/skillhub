@@ -57,28 +57,26 @@ class UassPropertiesBindingTest {
 
         UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
         adminUser.setUssId(" U-1 ");
-        adminUser.setRoles(null);
         properties.setAdminUsers(java.util.List.of(adminUser));
 
         assertThat(properties.getCallbackPath()).isEqualTo("/api/v1/auth/uass/callback");
         assertThat(properties.getStateTtl()).isEqualTo(Duration.ofMinutes(10));
         assertThat(properties.getCacheMode()).isEqualTo(UassProperties.CacheMode.AUTO);
-        assertThat(adminUser.getRoles()).containsExactly("USER_ADMIN");
-        assertThat(properties.rolesForUssId(" ")).isEmpty();
-        assertThat(properties.rolesForUssId("U-1")).containsExactly("USER_ADMIN");
+        assertThat(adminUser.getUssId()).isEqualTo("U-1");
+        assertThat(properties.isBootstrapAdminUssId(" ")).isFalse();
+        assertThat(properties.isBootstrapAdminUssId("U-1")).isTrue();
     }
 
     @Test
-    void rolesForUssId_normalizesAndFiltersConfiguredRoles() {
+    void bootstrapAdminLookup_normalizesConfiguredUssIds() {
         UassProperties properties = new UassProperties();
         UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
         adminUser.setUssId(" U-2 ");
-        adminUser.setRoles(java.util.List.of(" auditor ", " ", "user_admin"));
         properties.setAdminUsers(java.util.List.of(adminUser));
 
         assertThat(adminUser.getUssId()).isEqualTo("U-2");
-        assertThat(properties.rolesForUssId(" U-2 ")).containsExactly("AUDITOR", "USER_ADMIN");
-        assertThat(properties.rolesForUssId("unknown")).isEmpty();
+        assertThat(properties.isBootstrapAdminUssId(" U-2 ")).isTrue();
+        assertThat(properties.isBootstrapAdminUssId("unknown")).isFalse();
     }
 
     private UassProperties bind(Map<String, Object> envVars) {

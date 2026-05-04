@@ -1,28 +1,42 @@
 package com.iflytek.skillhub.search.mysql;
 
+import com.iflytek.skillhub.domain.label.LabelDefinitionRepository;
+import com.iflytek.skillhub.domain.label.LabelTranslationRepository;
+import com.iflytek.skillhub.domain.label.SkillLabelRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.search.AbstractJpaSearchRebuildService;
+import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchRebuildService;
+import com.iflytek.skillhub.search.SearchTextTokenizer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
- * Transitional no-op rebuild service for the mysql-like search provider.
+ * Transitional MySQL rebuild service backed by the shared JPA search document table.
  */
 @Service
 @ConditionalOnProperty(prefix = "skillhub.search", name = "provider", havingValue = "mysql-like")
-public class MysqlNoopSearchRebuildService implements SearchRebuildService {
+public class MysqlNoopSearchRebuildService extends AbstractJpaSearchRebuildService implements SearchRebuildService {
 
-    @Override
-    public void rebuildAll() {
-        // No-op until the MySQL runtime gets a dedicated rebuild implementation.
-    }
-
-    @Override
-    public void rebuildByNamespace(Long namespaceId) {
-        // No-op until the MySQL runtime gets a dedicated rebuild implementation.
-    }
-
-    @Override
-    public void rebuildBySkill(Long skillId) {
-        // No-op until the MySQL runtime gets a dedicated rebuild implementation.
+    public MysqlNoopSearchRebuildService(SkillRepository skillRepository,
+                                         NamespaceRepository namespaceRepository,
+                                         SkillVersionRepository skillVersionRepository,
+                                         LabelDefinitionRepository labelDefinitionRepository,
+                                         LabelTranslationRepository labelTranslationRepository,
+                                         SkillLabelRepository skillLabelRepository,
+                                         SearchIndexService searchIndexService,
+                                         SearchTextTokenizer searchTextTokenizer) {
+        super(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                labelDefinitionRepository,
+                labelTranslationRepository,
+                skillLabelRepository,
+                searchIndexService,
+                searchTextTokenizer
+        );
     }
 }

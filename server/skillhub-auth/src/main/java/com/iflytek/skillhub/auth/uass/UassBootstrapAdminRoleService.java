@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(prefix = "skillhub.auth.uass", name = "enabled", havingValue = "true")
 public class UassBootstrapAdminRoleService {
 
+    private static final String BOOTSTRAP_ADMIN_ROLE = "SUPER_ADMIN";
+
     private final UserRoleBindingRepository userRoleBindingRepository;
     private final RoleRepository roleRepository;
     private final UassProperties uassProperties;
@@ -40,8 +42,7 @@ public class UassBootstrapAdminRoleService {
             return principal;
         }
 
-        List<String> configuredRoles = uassProperties.rolesForUssId(ussId);
-        if (configuredRoles.isEmpty()) {
+        if (!uassProperties.isBootstrapAdminUssId(ussId)) {
             return principal;
         }
 
@@ -50,21 +51,14 @@ public class UassBootstrapAdminRoleService {
                 .map(binding -> binding.getRole().getCode())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        boolean changed = false;
-        for (String configuredRole : configuredRoles) {
-            if ("USER".equals(configuredRole) || existingRoleCodes.contains(configuredRole)) {
-                continue;
-            }
-            Role role = roleRepository.findByCode(configuredRole)
-                    .orElseThrow(() -> new IllegalStateException("Missing built-in role: " + configuredRole));
-            userRoleBindingRepository.save(new UserRoleBinding(principal.userId(), role));
-            existingRoleCodes.add(configuredRole);
-            changed = true;
-        }
-
-        if (!changed) {
+        if (existingRoleCodes.contains(BOOTSTRAP_ADMIN_ROLE)) {
             return principal;
         }
+
+        Role role = roleRepository.findByCode(BOOTSTRAP_ADMIN_ROLE)
+                .orElseThrow(() -> new IllegalStateException("Missing built-in role: " + BOOTSTRAP_ADMIN_ROLE));
+        userRoleBindingRepository.save(new UserRoleBinding(principal.userId(), role));
+        existingRoleCodes.add(BOOTSTRAP_ADMIN_ROLE);
 
         Set<String> resolvedRoles = PlatformRoleDefaults.withDefaultUserRole(existingRoleCodes);
         return new PlatformPrincipal(

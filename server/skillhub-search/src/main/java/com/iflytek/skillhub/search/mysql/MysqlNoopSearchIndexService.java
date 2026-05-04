@@ -1,30 +1,21 @@
 package com.iflytek.skillhub.search.mysql;
 
+import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.AbstractJpaSearchIndexService;
+import com.iflytek.skillhub.search.SearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchIndexService;
-import com.iflytek.skillhub.search.SkillSearchDocument;
-import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
- * Transitional no-op index writer for the mysql-like search provider.
+ * Transitional MySQL search document writer backed by the shared JPA search document table.
  */
 @Service
 @ConditionalOnProperty(prefix = "skillhub.search", name = "provider", havingValue = "mysql-like")
-public class MysqlNoopSearchIndexService implements SearchIndexService {
+public class MysqlNoopSearchIndexService extends AbstractJpaSearchIndexService implements SearchIndexService {
 
-    @Override
-    public void index(SkillSearchDocument document) {
-        // No-op until the MySQL runtime gets a dedicated index implementation.
-    }
-
-    @Override
-    public void batchIndex(List<SkillSearchDocument> documents) {
-        // No-op until the MySQL runtime gets a dedicated index implementation.
-    }
-
-    @Override
-    public void remove(Long skillId) {
-        // No-op until the MySQL runtime gets a dedicated index implementation.
+    public MysqlNoopSearchIndexService(SkillSearchDocumentJpaRepository repository,
+                                       SearchEmbeddingService searchEmbeddingService) {
+        super(repository, searchEmbeddingService);
     }
 }

@@ -118,11 +118,10 @@ class UassIdentityServiceTest {
     }
 
     @Test
-    void resolvePrincipal_newUserGetsConfiguredBootstrapAdminRoles() {
+    void resolvePrincipal_newUserGetsConfiguredBootstrapSuperAdminRole() {
         UassProperties properties = new UassProperties();
         UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
         adminUser.setUssId("U2001");
-        adminUser.setRoles(List.of("USER_ADMIN", "AUDITOR"));
         properties.setAdminUsers(List.of(adminUser));
         service = new UassIdentityService(
                 new IdentityBindingService(
@@ -139,16 +138,15 @@ class UassIdentityServiceTest {
         when(userRepo.findByUssId("U2001")).thenReturn(Optional.empty());
         when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
-        when(roleRepository.findByCode("USER_ADMIN")).thenReturn(Optional.of(role("USER_ADMIN")));
-        when(roleRepository.findByCode("AUDITOR")).thenReturn(Optional.of(role("AUDITOR")));
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(role("SUPER_ADMIN")));
 
         PlatformPrincipal principal = service.resolvePrincipal(
                 loginContext("U2001"),
                 userProfile("U2001", "Bootstrap Admin", "admin@example.com", Map.of())
         );
 
-        verify(roleBindingRepo, org.mockito.Mockito.times(2)).save(any());
-        assertThat(principal.platformRoles()).contains("USER_ADMIN", "AUDITOR");
+        verify(roleBindingRepo, org.mockito.Mockito.times(1)).save(any());
+        assertThat(principal.platformRoles()).contains("SUPER_ADMIN");
     }
 
     @Test

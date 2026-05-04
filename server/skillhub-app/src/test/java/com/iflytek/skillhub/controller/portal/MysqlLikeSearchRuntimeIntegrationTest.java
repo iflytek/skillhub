@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,6 +21,7 @@ import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
+import com.iflytek.skillhub.search.SearchRebuildService;
 import jakarta.persistence.EntityManager;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,6 +98,9 @@ class MysqlLikeSearchRuntimeIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private SearchRebuildService searchRebuildService;
+
     private Namespace namespace;
     private Skill skill;
 
@@ -164,6 +169,21 @@ class MysqlLikeSearchRuntimeIntegrationTest {
                 .andExpect(jsonPath("$.data.items[0].slug").value(skill.getSlug()))
                 .andExpect(jsonPath("$.data.items[0].namespace").value(namespace.getSlug()))
                 .andExpect(jsonPath("$.data.items[0].displayName").value(skill.getDisplayName()));
+    }
+
+    @Test
+    void mysqlLikeRebuildServiceShouldPopulateSearchDocumentTable() {
+        skillSearchDocumentJpaRepository.deleteAll();
+        entityManager.clear();
+
+        searchRebuildService.rebuildBySkill(skill.getId());
+
+        SkillSearchDocumentEntity document = skillSearchDocumentJpaRepository.findBySkillId(skill.getId())
+                .orElseThrow(() -> new AssertionError("expected mysql-like rebuild to persist search document"));
+
+        assertThat(document.getSkillId()).isEqualTo(skill.getId());
+        assertThat(document.getNamespaceId()).isEqualTo(namespace.getId());
+        assertThat(document.getTitle()).isEqualTo(skill.getDisplayName());
     }
 
     private UsernamePasswordAuthenticationToken apiAuth(String userId, String... roles) {

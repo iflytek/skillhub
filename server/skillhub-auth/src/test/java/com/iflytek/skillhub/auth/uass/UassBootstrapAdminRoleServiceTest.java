@@ -45,12 +45,11 @@ class UassBootstrapAdminRoleServiceTest {
     void applyIfConfigured_returnsOriginalPrincipalWhenNoRoleNeedsToBeAdded() {
         UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
         adminUser.setUssId("U-1");
-        adminUser.setRoles(List.of("USER", "USER_ADMIN"));
         properties.setAdminUsers(List.of(adminUser));
         when(userRoleBindingRepository.findByUserId("user-1"))
-                .thenReturn(List.of(new UserRoleBinding("user-1", role("USER_ADMIN"))));
+                .thenReturn(List.of(new UserRoleBinding("user-1", role("SUPER_ADMIN"))));
 
-        PlatformPrincipal principal = principal(Set.of("USER", "USER_ADMIN"));
+        PlatformPrincipal principal = principal(Set.of("SUPER_ADMIN"));
 
         PlatformPrincipal resolved = service.applyIfConfigured("U-1", true, principal);
 
@@ -63,32 +62,29 @@ class UassBootstrapAdminRoleServiceTest {
     void applyIfConfigured_throwsWhenConfiguredRoleDoesNotExist() {
         UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
         adminUser.setUssId("U-2");
-        adminUser.setRoles(List.of("AUDITOR"));
         properties.setAdminUsers(List.of(adminUser));
         when(userRoleBindingRepository.findByUserId("user-1")).thenReturn(List.of());
-        when(roleRepository.findByCode("AUDITOR")).thenReturn(Optional.empty());
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.applyIfConfigured("U-2", true, principal(Set.of("USER"))))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Missing built-in role: AUDITOR");
+                .hasMessage("Missing built-in role: SUPER_ADMIN");
 
         verify(userRoleBindingRepository, never()).save(any());
     }
 
     @Test
-    void applyIfConfigured_addsConfiguredRolesAndReturnsExpandedPrincipal() {
+    void applyIfConfigured_addsSuperAdminAndReturnsExpandedPrincipal() {
         UassProperties.AdminUserConfig adminUser = new UassProperties.AdminUserConfig();
         adminUser.setUssId("U-3");
-        adminUser.setRoles(List.of("USER_ADMIN", "AUDITOR"));
         properties.setAdminUsers(List.of(adminUser));
         when(userRoleBindingRepository.findByUserId("user-1")).thenReturn(List.of());
-        when(roleRepository.findByCode("USER_ADMIN")).thenReturn(Optional.of(role("USER_ADMIN")));
-        when(roleRepository.findByCode("AUDITOR")).thenReturn(Optional.of(role("AUDITOR")));
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(role("SUPER_ADMIN")));
 
         PlatformPrincipal resolved = service.applyIfConfigured("U-3", true, principal(Set.of("USER")));
 
-        assertThat(resolved.platformRoles()).containsExactlyInAnyOrder("USER_ADMIN", "AUDITOR");
-        verify(userRoleBindingRepository, times(2)).save(any(UserRoleBinding.class));
+        assertThat(resolved.platformRoles()).containsExactlyInAnyOrder("USER", "SUPER_ADMIN");
+        verify(userRoleBindingRepository, times(1)).save(any(UserRoleBinding.class));
     }
 
     private static PlatformPrincipal principal(Set<String> roles) {
