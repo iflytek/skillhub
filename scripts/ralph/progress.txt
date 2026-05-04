@@ -639,3 +639,12 @@
   - 遇到的陷阱：`agent-browser` 遇到隐藏 file input 和某些 React 提交按钮时，普通 `click`/`upload` 组合不一定能把最终动作真正发到后端；需要结合浏览器上下文请求和最终 UI 状态一起判断，避免把工具兼容性误判成产品缺陷。
   - 有用的上下文：如果后续需要稳定种出待审核任务，最省事的方式是沿用现有 E2E helper 思路，让 `local-user` 成为 team namespace 的 `ADMIN` 后再发布，这样会得到 `PENDING_REVIEW`，而 `local-admin` 直发容易直接变成 `PUBLISHED`。
 ---
+
+## 2026-05-04 18:04 - US-104
+- 通过 `mvn -f server/pom.xml -pl skillhub-app -am clean verify -DskipITs` 生成 MySQL 主路径覆盖率基线与缺口清单，并创建 `server/coverage-baseline.md` 记录当前整体和分模块覆盖率数据。
+- 更改的文件：`server/coverage-baseline.md`、`scripts/ralph/prd.json`
+- **未来迭代的学习：**
+  - 发现的 patterns：JaCoCo aggregate report 对 `skillhub-app` 的 `report-aggregate` 曾报 `Unknown block type 65`，用 `clean` 重新跑一遍可消除旧 exec 文件冲突。
+  - 遇到的陷阱：模块级 JaCoCo CSV 需要通过 `jacoco:report` 显式刷新；直接用 `verify` 里的 `jacoco:report-aggregate` 可能只更新了 aggregate gate，而模块级 `jacoco.csv` 仍停留在旧值。
+  - 有用的上下文：整体覆盖率约 79.31%，最高缺口集中在 `skillhub-domain`（717 行未覆盖）和 `skillhub-app`（998 行未覆盖），其中 `SkillQueryService`、`ClawHubCompatAppService`、`AbstractStreamConsumer` 是行数缺口最多的几个类。
+---
