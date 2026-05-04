@@ -1,12 +1,14 @@
 # 本地运行速查表
 
-本文只保留当前最常用的本地启动组合，面向日常开发和联调。
+本文只保留当前正式支持的源码启动组合，面向日常开发和联调。
 
 更完整的运行时参数说明见：
 
 - [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)
 
-## 当前推荐组合
+## 当前正式源码组合
+
+当前正式源码运行 profile 仅保留 `local-mysql`。
 
 ### 1. MySQL + local-file-index + 本地缓存
 
@@ -77,26 +79,6 @@ java -jar server/skillhub-app/target/skillhub-app-0.1.0.jar
 
 前端仍使用与上面相同的 `3000/3001` 启动方式。
 
-### 3. H2 + h2-like + 本地缓存
-
-适用场景：
-
-- 只想要最轻量的本地验证
-- 不关心 MySQL 等价行为
-
-后端：
-
-```bash
-SPRING_PROFILES_ACTIVE=local-h2 \
-java -jar server/skillhub-app/target/skillhub-app-0.1.0.jar
-```
-
-前端主站：
-
-```bash
-pnpm --dir web dev --host 127.0.0.1 --port 3000 --strictPort
-```
-
 ## 登录方式
 
 ### 本地账号
@@ -140,7 +122,7 @@ curl -fsS 'http://127.0.0.1:8080/api/v1/auth/methods?returnTo=%2Fdashboard'
 
 看后端启动日志：
 
-- `The following 1 profile is active: "local-mysql"` 或 `local-h2`
+- `The following 1 profile is active: "local-mysql"`
 - `UASS login state store is running in LOCAL mode`
 - `Database: jdbc:mysql://localhost:3306/skillhub`
 

@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- 集成测试如果注入的是 domain repository contract，不要假设它自带 `deleteAll()` 之类的 Spring Data 扩展；清理夹具时优先用唯一测试数据，或直接注入对应的 JPA repository / `EntityManager`。
+- 把控制器/集成测试迁到 MySQL Testcontainers 后，凡是会写 `created_by`、`updated_by`、`reviewed_by` 这类用户外键的流程，都要在夹具里显式创建对应 `UserAccount`；H2 路径很容易把缺失引用掩盖掉。
 - 如果 validator 需要核对 `server/<module>/target/site/jacoco/jacoco.csv` 这类模块级 JaCoCo 报告，`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs` 之后还要补一次 `jacoco:report`；否则 aggregate gate 虽然是 fresh 的，模块级 csv/html 可能仍停留在旧值。
 - `skillhub-app` 的 `jacoco:report-aggregate` 只会输出依赖模块（`skillhub-domain`、`skillhub-auth`、`skillhub-infra`、`skillhub-search`、`skillhub-notification`）的类级行统计；app 自模块类和部分 interface/repository 不会出现在 aggregate `jacoco.csv`，验证它们时要结合现有 feature gate 或模块级报告，不要把 `UNMATCHED` 直接误判成漏测。
 - 对 JPA entity 做覆盖率收口时，优先在同 package 的轻量单测里直接调用 `protected` 构造器和 `@PrePersist` / `@PreUpdate` lifecycle 方法；通常不需要拉起 JPA 或数据库就能把字段映射类的剩余行收干。
@@ -529,4 +531,25 @@
   - 发现的 patterns：覆盖 `EnvironmentPostProcessor` 一类启动钩子时，优先直接构造 `MockEnvironment` 并调用真实 post-processor，再预置/替换 `PropertySource`，比只复用 helper 初始化器更容易命中分支。
   - 遇到的陷阱：JaCoCo csv 里 `INSTRUCTION_MISSED` 仍可能大于 0，但如果 validator 盯的是 `LINE_MISSED`，要按列口径核对，避免把已通过的类误判成仍有缺口。
   - 有用的上下文：`ApiToken` 和 `IdentityBinding` 的受保护 JPA 无参构造器在同 package 测试里可以直接调用，不需要反射或拉起 `@DataJpaTest`。
+---
+## 2026-05-04 13:27 - US-001
+- 移除了正式源码运行路径中的 `server/skillhub-app/src/main/resources/application-local-h2.yml`，并把当前源码入口文档收口为仅承认 `local-mysql` 是正式 profile。
+- 同步删掉了 `docs/local-runtime-quickstart.md` 中的标准 `local-h2` 启动段落，收紧了 `README.md` 与 `docs/dev-workflow.md` 对源码运行入口的表述。
+- 为了继续推进验证，顺手修复了 `MysqlLikeSearchRuntimeIntegrationTest` 对 domain repository `deleteAll()` 的过时依赖，改成唯一化 fixture 数据，避免把领域仓储当成 `JpaRepository` 使用。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -q -f server/pom.xml -pl skillhub-app -am test`、`mvn -q -f server/pom.xml -pl skillhub-app -am -Dmaven.test.skip=true package`；前端两项与后端 `package` 通过，但全量 `mvn test` 仍被现有基线失败阻塞：`PromotionApprovalFlowIntegrationTest` 等测试继续在空 H2 schema 上报错，本轮未扩展到该后续 story。
+- 更改的文件：`README.md`、`docs/local-runtime-quickstart.md`、`docs/dev-workflow.md`、`server/skillhub-app/src/main/resources/application-local-h2.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/MysqlLikeSearchRuntimeIntegrationTest.java`
+- **未来迭代的学习：**
+  - 发现的 patterns：源码运行入口文档要和真正保留的 Spring profile 保持一一对应；如果 profile 文件已经退出正式路径，quickstart 里不能再把它列成“当前正式组合”。
+  - 遇到的陷阱：`skillhub-app` 全量测试当前不是绿色基线；即使修掉一个陈旧测试编译错误，后面还会继续暴露依赖 H2 空 schema 的旧集成测试。
+  - 有用的上下文：本轮没有 UI 行为改动，因此没有浏览器验证需求；真正阻塞 `US-001` 全量验收的是后续测试基线收口，而不是 profile 文件删除本身。
+---
+## 2026-05-04 14:29 - US-001
+- 继续收口 `US-001`：把 `design/runtime/runtime-core-configuration-reference.md` 从当前源码入口视角改成只保留 `local-mysql`，并明确 `local-h2` / `h2-like` 仅属于历史材料，不再是当前正式 source runtime 组合。
+- 修复了 `SkillDeleteFlowIntegrationTest` 与 `SkillApprovalVisibilityFlowIntegrationTest` 的 `findById(...)` 二义性，改用 `existsById(...)`；同时为 MySQL Testcontainers 路径补齐 `super-1` 等外键依赖用户夹具，避免 `reviewed_by` / `updated_by` 约束在审批与删除链路上失败。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint`、`mvn -q -f server/pom.xml -pl skillhub-app -am -Dmaven.test.skip=true package`、`mvn -q -f server/pom.xml -pl skillhub-app -am -Dtest=SkillApprovalVisibilityFlowIntegrationTest,SkillDeleteFlowIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test` 和 `mvn -q -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`README.md`、`design/runtime/runtime-core-configuration-reference.md`、`docs/README.md`、`docs/dev-workflow.md`、`docs/local-runtime-quickstart.md`、`server/skillhub-app/src/main/resources/application-local-h2.yml`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/MysqlLikeSearchRuntimeIntegrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/PromotionApprovalFlowIntegrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillApprovalVisibilityFlowIntegrationTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillDeleteFlowIntegrationTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：当前源码入口文档如果仍被 README / docs 索引为“正式入口”，其中的 profile、provider 和启动示例都必须和当前唯一保留的 runtime path 一致，不能只改 quickstart 而漏掉 reference 文档。
+  - 遇到的陷阱：把测试从 H2 迁到 MySQL 后，原本被宽松约束掩盖的 `user_account` 外键会立即暴露；审批人、管理员这类 actor 即使只出现在审计/状态字段里，也要在夹具里显式落库。
+  - 有用的上下文：本轮没有 UI 变更，因此无需浏览器验证；`US-001` 的后端验收关键点是“文档入口收口 + MySQL 测试基线恢复”，而不是新增任何运行时代码。
 ---

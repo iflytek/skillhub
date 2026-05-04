@@ -13,6 +13,8 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.infra.jpa.UserAccountJpaRepository;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -27,7 +30,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -39,11 +47,32 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=none",
+        "spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect",
+        "spring.flyway.enabled=true",
+        "spring.flyway.locations=classpath:sql/migration-mysql"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(TestRedisConfig.class)
+@Testcontainers
 class SkillDeleteFlowIntegrationTest {
+
+    @Container
+    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
+            .withDatabaseName("skillhub_skill_delete")
+            .withUsername("skillhub")
+            .withPassword("skillhub");
+
+    @DynamicPropertySource
+    static void mysqlProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
+        registry.add("spring.datasource.username", MYSQL::getUsername);
+        registry.add("spring.datasource.password", MYSQL::getPassword);
+        registry.add("spring.datasource.driver-class-name", MYSQL::getDriverClassName);
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -59,6 +88,9 @@ class SkillDeleteFlowIntegrationTest {
 
     @Autowired
     private SkillFileRepository skillFileRepository;
+
+    @Autowired
+    private UserAccountJpaRepository userAccountRepository;
 
     @MockBean
     private SearchIndexService searchIndexService;
@@ -115,6 +147,7 @@ class SkillDeleteFlowIntegrationTest {
     @Test
     void adminDeleteById_removesPersistedSkillGraphForSuperAdmin() throws Exception {
         PersistedSkillGraph graph = createSkillGraph("owner-1");
+        ensureUser("super-1", "Super Admin", "super-1@example.com");
 
         mockMvc.perform(delete("/api/v1/skills/id/" + graph.skill().getId())
                         .with(authentication(apiAuth("super-1", "SUPER_ADMIN")))
@@ -134,7 +167,8 @@ class SkillDeleteFlowIntegrationTest {
 
     private PersistedSkillGraph createSkillGraph(String ownerId) {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
-        Namespace namespace = namespaceRepository.save(new Namespace("global-delete-" + suffix, "Global Delete " + suffix, "system"));
+        ensureUser(ownerId, "Skill Owner", ownerId + "-" + suffix + "@example.com");
+        Namespace namespace = namespaceRepository.save(new Namespace("global-delete-" + suffix, "Global Delete " + suffix, ownerId));
 
         Skill skill = new Skill(namespace.getId(), "demo-skill-" + suffix, ownerId, SkillVisibility.PUBLIC);
         skill.setCreatedBy(ownerId);
@@ -161,6 +195,12 @@ class SkillDeleteFlowIntegrationTest {
         ));
 
         return new PersistedSkillGraph(namespace, skill, version, file);
+    }
+
+    private void ensureUser(String userId, String displayName, String email) {
+        if (!userAccountRepository.existsById(userId)) {
+            userAccountRepository.saveAndFlush(new UserAccount(userId, displayName, email, null));
+        }
     }
 
     private UsernamePasswordAuthenticationToken portalAuth(String userId, String... roles) {

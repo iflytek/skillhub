@@ -85,7 +85,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 ### 默认账户
 
-当前源码启动推荐入口：
+当前唯一正式源码启动入口：
 
 ```bash
 scripts/dev/local-mysql-local-index-memory-up.sh

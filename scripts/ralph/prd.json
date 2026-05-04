@@ -15,9 +15,9 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "",
-      "retryCount": 0,
+      "passes": true,
+      "notes": "[验证失败 - 第3次] 2026-05-04 14:02\n- 失败项1：不满足 “No current-entry source startup document recommends local-h2 as the normal way to run the app from source”。README 仍把 `design/runtime/runtime-core-configuration-reference.md` 列为“当前源码运行入口文档”，而该文档第 45、49、54、213 行仍保留 `local-h2` 作为当前 profile 选项，并给出 `SPRING_PROFILES_ACTIVE=local-h2` 启动示例。\n- 失败项2：`mvn -q -f server/pom.xml -pl skillhub-app -am test` 未通过，不满足 “Tests pass”。失败停在测试编译阶段：`server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillDeleteFlowIntegrationTest.java` 第 200 行和 `server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillApprovalVisibilityFlowIntegrationTest.java` 第 263 行调用 `userAccountRepository.findById(...)` 时出现二义性，编译器同时匹配到了 `UserAccountRepository.findById(String)` 与 `CrudRepository.findById(ID)`。\n- 建议修复方向：先把 `design/runtime/runtime-core-configuration-reference.md` 中 `local-h2` 从当前源码运行入口说明里移除或归档；同时消除上述两处测试代码的 `findById(...)` 二义性调用，再重新跑后端全量 `mvn -q -f server/pom.xml -pl skillhub-app -am test` 验证。",
+      "retryCount": 3,
       "blocked": false
     },
     {
@@ -186,8 +186,8 @@
       ],
       "priority": 11,
       "passes": false,
-      "notes": "",
-      "retryCount": 0,
+      "notes": "[验证失败 - 第1次] 2026-05-04 14:12\n- 失败项1：不满足 “Running the single test class SkillVersionStatsMysqlPersistenceTest passes”。运行 `mvn -q -f server/pom.xml -pl skillhub-app -am -Dtest=SkillVersionStatsMysqlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test` 时，构建在 `testCompile` 阶段失败，未能进入该单测类执行；失败点是 [SkillDeleteFlowIntegrationTest](/home/ubuntu/code-work/skillhub/server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillDeleteFlowIntegrationTest:200) 与 [SkillApprovalVisibilityFlowIntegrationTest](/home/ubuntu/code-work/skillhub/server/skillhub-app/src/test/java/com/iflytek/skillhub/controller/portal/SkillApprovalVisibilityFlowIntegrationTest:263) 对 `userAccountRepository.findById(...)` 的调用发生二义性，编译器同时匹配 `UserAccountRepository.findById(String)` 与 `CrudRepository.findById(ID)`。\n- 失败项2：不满足 “Tests pass”。运行 `mvn -q -f server/pom.xml -pl skillhub-app -am test` 结果相同，同样在上述两个测试文件的 `findById(...)` 二义性上失败。\n- 建议修复方向：先消除 `userAccountRepository.findById(...)` 的二义性调用，恢复 `skillhub-app` 的 `testCompile` 绿色基线；然后重新运行单类命令与后端全量 `mvn test`。本轮 `pnpm --dir web typecheck` 已通过。",
+      "retryCount": 1,
       "blocked": false
     },
     {

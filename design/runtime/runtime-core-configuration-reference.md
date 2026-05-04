@@ -18,11 +18,12 @@ As of 2026-05-04, the current standard runtime direction is:
 - runtime state: `Redis`
 - search provider: `local-file-index`
 
-For local troubleshooting and migration fallback, the following variants are still intentionally supported:
+For local troubleshooting and migration fallback, the following variants are still intentionally supported in current source startup docs:
 
 - `MySQL 8 + memory + mysql-like`
 - `MySQL 8 + memory + local-file-index`
-- `H2 + memory + h2-like`
+
+Historical design archives may still mention `local-h2`, but that profile is no longer part of the current formal source runtime path.
 
 ## Configuration Priority
 
@@ -42,17 +43,16 @@ Primary properties:
 
 | Property | Meaning | Typical values |
 |---|---|---|
-| `SPRING_PROFILES_ACTIVE` | Selects the profile bundle | `local-mysql`, `local-h2`, `local` |
+| `SPRING_PROFILES_ACTIVE` | Selects the profile bundle | `local-mysql`, `local` |
 | `LOCAL_MYSQL_DATASOURCE_URL` | MySQL JDBC URL for `local-mysql` | `jdbc:mysql://localhost:3306/skillhub?...` |
 | `LOCAL_MYSQL_DATASOURCE_USERNAME` | MySQL username | `skillhub` |
 | `LOCAL_MYSQL_DATASOURCE_PASSWORD` | MySQL password | `skillhub_dev` |
-| `LOCAL_H2_FILE_PATH` | H2 file path for `local-h2` | `${user.home}/.skillhub/local-h2/skillhub` |
 
 Rules:
 
 - `local-mysql` means the authoritative runtime data lives in MySQL and schema is initialized by Flyway from `sql/migration-mysql`.
-- `local-h2` is only for lightweight local development and tests.
-- `local-h2` is not the production-equivalent path and should not be used to validate MySQL runtime behavior.
+- Current formal source startup documentation only retains `local-mysql` as the repository-owned profile path.
+- If you encounter `local-h2` in older design materials, treat it as historical context rather than a current source runtime option.
 
 ### 2. Runtime State
 
@@ -83,8 +83,8 @@ Primary properties:
 
 | Property | Meaning | Values |
 |---|---|---|
-| `skillhub.search.engine` | Search runtime family | `mysql`, `h2` |
-| `SKILLHUB_SEARCH_PROVIDER` | Active search backend | `local-file-index`, `mysql-like`, `h2-like` |
+| `skillhub.search.engine` | Search runtime family | `mysql` |
+| `SKILLHUB_SEARCH_PROVIDER` | Active search backend | `local-file-index`, `mysql-like` |
 | `skillhub.search.rebuild-on-startup` | Force startup rebuild for local-file-index | `true`, `false` |
 
 Rules:
@@ -93,6 +93,7 @@ Rules:
 - `local-file-index` uses embedded Lucene as the query backend.
 - `local-file-index` depends on an initial synchronization step from MySQL authority data into the local Lucene directory.
 - When provider is `local-file-index`, `Query`, `Index`, and `Rebuild` beans must all switch together.
+- Archived materials may still mention `h2` / `h2-like`, but they are not part of the current formal source runtime combinations.
 
 ### 4. Local Search Index Path
 
@@ -116,7 +117,6 @@ Primary properties:
 | Property | Meaning | Typical value |
 |---|---|---|
 | `LOCAL_MYSQL_STORAGE_BASE_PATH` | Local package/object storage base path under MySQL runtime | `${user.home}/.skillhub/local-mysql/storage` |
-| `LOCAL_H2_STORAGE_BASE_PATH` | Local package/object storage base path under H2 runtime | `${user.home}/.skillhub/local-storage` |
 
 Rules:
 
@@ -197,20 +197,6 @@ Required settings:
 ```bash
 SPRING_PROFILES_ACTIVE=local-mysql
 SKILLHUB_SEARCH_PROVIDER=mysql-like
-SKILLHUB_RUNTIME_STATE_PROVIDER=memory
-```
-
-### C. Lightweight H2 fallback
-
-Use when:
-
-- you need the lightest local startup
-- you do not need MySQL-equivalent behavior
-
-Required settings:
-
-```bash
-SPRING_PROFILES_ACTIVE=local-h2
 SKILLHUB_RUNTIME_STATE_PROVIDER=memory
 ```
 

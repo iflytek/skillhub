@@ -24,6 +24,7 @@ import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.SearchRebuildService;
 import jakarta.persistence.EntityManager;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,27 +108,28 @@ class MysqlLikeSearchRuntimeIntegrationTest {
     @BeforeEach
     void setUp() {
         skillSearchDocumentJpaRepository.deleteAll();
-        skillVersionRepository.deleteAll();
-        skillRepository.deleteAll();
-        namespaceRepository.deleteAll();
-        userAccountRepository.deleteAll();
+        String suffix = UUID.randomUUID().toString().replace("-", "");
+        String ownerId = "mysql-search-owner-" + suffix;
+        String namespaceSlug = "mysql-search-team-" + suffix;
+        String skillSlug = "mysql-runtime-smoke-" + suffix;
+        String searchableText = "mysql runtime smoke " + suffix;
 
         UserAccount owner = userAccountRepository.save(new UserAccount(
-                "mysql-search-owner",
+                ownerId,
                 "MySQL Search Owner",
-                "mysql-search-owner@example.com",
+                ownerId + "@example.com",
                 null
         ));
 
         namespace = namespaceRepository.save(new Namespace(
-                "mysql-search-team",
+                namespaceSlug,
                 "MySQL Search Team",
                 owner.getId()
         ));
 
-        skill = new Skill(namespace.getId(), "mysql-runtime-smoke", owner.getId(), SkillVisibility.PUBLIC);
+        skill = new Skill(namespace.getId(), skillSlug, owner.getId(), SkillVisibility.PUBLIC);
         skill.setDisplayName("MySQL Runtime Smoke Skill");
-        skill.setSummary("Searchable mysql-like runtime verification document.");
+        skill.setSummary("Searchable " + searchableText + " verification document.");
         skill.setCreatedBy(owner.getId());
         skill.setUpdatedBy(owner.getId());
         skill = skillRepository.save(skill);
@@ -149,8 +151,8 @@ class MysqlLikeSearchRuntimeIntegrationTest {
                 owner.getId(),
                 skill.getDisplayName(),
                 skill.getSummary(),
-                "mysql,smoke",
-                "mysql runtime smoke searchable document",
+                "mysql,smoke," + suffix,
+                searchableText + " searchable document",
                 "",
                 "PUBLIC",
                 "ACTIVE"

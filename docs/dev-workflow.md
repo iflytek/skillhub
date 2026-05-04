@@ -28,7 +28,7 @@ This starts the repository-owned local source combination:
 - runtime state: `memory`
 - search provider: `local-file-index`
 
-For the exact environment variables and fallback combinations such as `mysql-like` or `local-h2`, see:
+For the exact environment variables and fallback combinations such as `mysql-like`, see:
 
 - [local-runtime-quickstart.md](./local-runtime-quickstart.md)
 - [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)

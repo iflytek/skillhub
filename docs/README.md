@@ -8,7 +8,6 @@
 - 标准搜索 provider：`local-file-index`
 - 标准生产运行时状态：`Redis`
 - 常见本地联调回退：`memory`
-- 轻量本地模式：`local-h2`
 
 对应入口文档：
 
