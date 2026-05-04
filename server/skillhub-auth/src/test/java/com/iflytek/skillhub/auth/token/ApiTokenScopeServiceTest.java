@@ -118,4 +118,40 @@ class ApiTokenScopeServiceTest {
 
         assertTrue(decision.allowed());
     }
+
+    @Test
+    void parseScopesReturnsEmptySetForNull() {
+        Set<String> scopes = scopeService.parseScopes(null);
+        assertTrue(scopes.isEmpty());
+    }
+
+    @Test
+    void parseScopesReturnsEmptySetForBlank() {
+        Set<String> scopes = scopeService.parseScopes("   ");
+        assertTrue(scopes.isEmpty());
+    }
+
+    @Test
+    void parseScopesReturnsEmptySetForEmptyJsonArray() {
+        Set<String> scopes = scopeService.parseScopes("[]");
+        assertTrue(scopes.isEmpty());
+    }
+
+    @Test
+    void parseScopesReturnsEmptySetForInvalidJson() {
+        Set<String> scopes = scopeService.parseScopes("not-json");
+        assertTrue(scopes.isEmpty());
+    }
+
+    @Test
+    void parseScopesFiltersNullElements() {
+        Set<String> scopes = scopeService.parseScopes("[\"skill:read\", null, \"skill:publish\"]");
+        assertEquals(Set.of("skill:read", "skill:publish"), scopes);
+    }
+
+    @Test
+    void parseScopesFiltersEmptyAndBlankElements() {
+        Set<String> scopes = scopeService.parseScopes("[\"skill:read\", \"\", \"  \", \"skill:publish\"]");
+        assertEquals(Set.of("skill:read", "skill:publish"), scopes);
+    }
 }

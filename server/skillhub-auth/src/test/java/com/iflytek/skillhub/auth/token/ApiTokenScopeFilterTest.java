@@ -103,6 +103,125 @@ class ApiTokenScopeFilterTest {
     }
 
     @Test
+    void shouldAllowApiTokenWithCorrectScope() throws Exception {
+        AccessDeniedHandler handler = mock(AccessDeniedHandler.class);
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-1",
+                "Alice",
+                "alice@example.com",
+                "",
+                "api_token",
+                Set.of("USER")
+        );
+        var authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("SCOPE_skill:read")
+                )
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/skills");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(handler, never()).handle(eq(request), eq(response), any());
+    }
+
+    @Test
+    void shouldSkipWhenAuthenticationIsNull() throws Exception {
+        AccessDeniedHandler handler = mock(AccessDeniedHandler.class);
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        SecurityContextHolder.clearContext();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/skills");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(handler, never()).handle(eq(request), eq(response), any());
+    }
+
+    @Test
+    void shouldSkipWhenAuthenticationIsNotAuthenticated() throws Exception {
+        AccessDeniedHandler handler = mock(AccessDeniedHandler.class);
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        var authentication = new UsernamePasswordAuthenticationToken(
+                "anonymous",
+                null
+        );
+        authentication.setAuthenticated(false);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/skills");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(handler, never()).handle(eq(request), eq(response), any());
+    }
+
+    @Test
+    void shouldSkipWhenPrincipalIsNotPlatformPrincipal() throws Exception {
+        AccessDeniedHandler handler = mock(AccessDeniedHandler.class);
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        var authentication = new UsernamePasswordAuthenticationToken(
+                "not-a-platform-principal",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/skills");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(handler, never()).handle(eq(request), eq(response), any());
+    }
+
+    @Test
+    void shouldNotFilterReturnsTrueForNullPath() {
+        AccessDeniedHandler handler = mock(AccessDeniedHandler.class);
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        MockHttpServletRequest request = new MockHttpServletRequest() {
+            @Override
+            public String getRequestURI() {
+                return null;
+            }
+        };
+
+        assertTrue(filter.shouldNotFilter(request));
+    }
+
+    @Test
+    void shouldNotFilterReturnsTrueForNonApiPath() {
+        AccessDeniedHandler handler = mock(AccessDeniedHandler.class);
+        ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/some/other/path");
+
+        assertTrue(filter.shouldNotFilter(request));
+    }
+
+    @Test
     void shouldDenyApiWebRequestsWithoutRequiredScope() throws Exception {
         AccessDeniedHandler handler = (request, response, accessDeniedException) -> {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, accessDeniedException.getMessage());

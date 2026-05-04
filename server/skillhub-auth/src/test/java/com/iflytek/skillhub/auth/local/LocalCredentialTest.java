@@ -64,4 +64,30 @@ class LocalCredentialTest {
         LocalCredential credential = new LocalCredential();
         assertThat(credential).isNotNull();
     }
+
+    @Test
+    void getIdReturnsNullForNewCredential() {
+        LocalCredential credential = new LocalCredential("user-1", "alice", "hash123");
+        assertThat(credential.getId()).isNull();
+    }
+
+    @Test
+    void getCreatedAtReturnsValueAfterPrePersist() {
+        LocalCredential credential = new LocalCredential("user-1", "alice", "hash123");
+        credential.prePersist();
+        assertThat(credential.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void getUpdatedAtReturnsValueAfterPrePersist() {
+        LocalCredential credential = new LocalCredential("user-1", "alice", "hash123");
+        credential.prePersist();
+        assertThat(credential.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void getUsernameReturnsConstructorValue() {
+        LocalCredential credential = new LocalCredential("user-1", "alice", "hash123");
+        assertThat(credential.getUsername()).isEqualTo("alice");
+    }
 }

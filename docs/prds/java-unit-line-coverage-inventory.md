@@ -147,7 +147,6 @@
 | `com.iflytek.skillhub.auth.exception.AuthFlowException` | 4 | 6 | 60.00% |
 | `com.iflytek.skillhub.auth.identity.IdentityBindingService` | 12 | 46 | 79.31% |
 | `com.iflytek.skillhub.auth.local.LocalAuthService` | 16 | 86 | 84.31% |
-| `com.iflytek.skillhub.auth.local.LocalCredential` | 12 | 16 | 57.14% |
 | `com.iflytek.skillhub.auth.local.PasswordResetService` | 17 | 97 | 85.09% |
 | `com.iflytek.skillhub.auth.merge.AccountMergeRequest` | 6 | 17 | 73.91% |
 | `com.iflytek.skillhub.auth.merge.AccountMergeService` | 34 | 120 | 77.92% |
@@ -165,10 +164,6 @@
 | `com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver` | 3 | 7 | 70.00% |
 | `com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry.RouteAuthorizationPolicy` | 3 | 4 | 57.14% |
 | `com.iflytek.skillhub.auth.rbac.RbacService` | 22 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.session.PlatformSessionService` | 9 | 17 | 65.38% |
-| `com.iflytek.skillhub.auth.token.ApiTokenScopeFilter` | 3 | 27 | 90.00% |
-| `com.iflytek.skillhub.auth.token.ApiTokenScopeService` | 3 | 22 | 88.00% |
-| `com.iflytek.skillhub.auth.token.ApiTokenService` | 36 | 43 | 54.43% |
 
 ## skillhub-domain
 

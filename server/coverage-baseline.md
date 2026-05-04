@@ -87,7 +87,6 @@ Generated: 2026-05-04
 ### skillhub-auth
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| ApiTokenService | com.iflytek.skillhub.auth.token | 36 | 43 |
 | AccountMergeService | com.iflytek.skillhub.auth.merge | 34 | 120 |
 | GitHubClaimsExtractor | com.iflytek.skillhub.auth.oauth | 27 | 0 |
 | MockAuthFilter | com.iflytek.skillhub.auth.mock | 22 | 0 |
@@ -96,7 +95,6 @@ Generated: 2026-05-04
 | PasswordResetService | com.iflytek.skillhub.auth.local | 17 | 97 |
 | LocalAuthService | com.iflytek.skillhub.auth.local | 16 | 86 |
 | CustomOAuth2UserService | com.iflytek.skillhub.auth.oauth | 13 | 0 |
-| LocalCredential | com.iflytek.skillhub.auth.local | 12 | 16 |
 | GitLabClaimsExtractor | com.iflytek.skillhub.auth.oauth | 8 | 43 |
 | AccountMergeRequest | com.iflytek.skillhub.auth.merge | 6 | 17 |
 | IdentityBindingService | com.iflytek.skillhub.auth.identity | 6 | 75 |
@@ -107,8 +105,6 @@ Generated: 2026-05-04
 | DeviceAuthService | com.iflytek.skillhub.auth.device | 5 | 52 |
 | Permission | com.iflytek.skillhub.auth.entity | 4 | 0 |
 | SkillHubOAuth2AuthorizationRequestResolver | com.iflytek.skillhub.auth.oauth | 3 | 7 |
-| ApiTokenScopeService | com.iflytek.skillhub.auth.token | 3 | 22 |
-| ApiTokenScopeFilter | com.iflytek.skillhub.auth.token | 3 | 27 |
 | RolePermission | com.iflytek.skillhub.auth.entity | 3 | 0 |
 | AuthFlowException | com.iflytek.skillhub.auth.exception | 3 | 7 |
 | OAuth2LoginSuccessHandler | com.iflytek.skillhub.auth.oauth | 2 | 14 |
