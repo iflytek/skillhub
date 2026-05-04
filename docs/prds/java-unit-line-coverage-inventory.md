@@ -254,10 +254,6 @@
 
 | Class | Line Missed | Line Covered | Line Coverage |
 |------|------:|------:|------:|
-| `com.iflytek.skillhub.search.HashingSearchEmbeddingService` | 4 | 49 | 92.45% |
-| `com.iflytek.skillhub.search.SearchTextTokenizer` | 2 | 31 | 93.94% |
-| `com.iflytek.skillhub.search.SearchVisibilityScope` | 1 | 3 | 75.00% |
-| `com.iflytek.skillhub.search.event.SearchIndexEventListener` | 1 | 9 | 90.00% |
 | `com.iflytek.skillhub.search.h2.H2LikeSearchQueryService` | 23 | 60 | 72.29% |
 | `com.iflytek.skillhub.search.postgres.PostgresFullTextIndexService` | 19 | 42 | 68.85% |
 | `com.iflytek.skillhub.search.postgres.PostgresFullTextQueryService` | 13 | 168 | 92.82% |

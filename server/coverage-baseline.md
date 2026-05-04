@@ -124,16 +124,6 @@ Generated: 2026-05-04
 ### skillhub-search
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| AbstractJpaSearchRebuildService | com.iflytek.skillhub.search | 87 | 85 |
-| AbstractJpaSearchIndexService | com.iflytek.skillhub.search | 20 | 47 |
-| HashingSearchEmbeddingService | com.iflytek.skillhub.search | 4 | 49 |
-| SkillSearchDocument | com.iflytek.skillhub.search | 3 | 1 |
-| JpaSearchRebuildService | com.iflytek.skillhub.search | 2 | 0 |
-| SearchTextTokenizer | com.iflytek.skillhub.search | 2 | 31 |
-| SearchVisibilityScope | com.iflytek.skillhub.search | 2 | 2 |
-| SearchQuery | com.iflytek.skillhub.search | 2 | 1 |
-| JpaSearchIndexService | com.iflytek.skillhub.search | 2 | 0 |
-| SearchIndexEventListener | com.iflytek.skillhub.search.event | 1 | 9 |
 ### skillhub-notification
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
