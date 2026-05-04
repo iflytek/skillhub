@@ -24,17 +24,10 @@ Generated: 2026-05-04
 ### skillhub-domain
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| LabelDefinitionService | com.iflytek.skillhub.domain.label | 37 | 65 |
-| PromotionService | com.iflytek.skillhub.domain.review | 32 | 137 |
 | SkillPackagePolicy | com.iflytek.skillhub.domain.skill.validation | 29 | 58 |
-| SkillLabelService | com.iflytek.skillhub.domain.label | 28 | 7 |
-| ReviewService | com.iflytek.skillhub.domain.review | 26 | 141 |
 | PasswordResetRequest | com.iflytek.skillhub.domain.auth | 24 | 0 |
 | IdempotencyRecord | com.iflytek.skillhub.domain.idempotency | 22 | 0 |
-| SecurityScanService | com.iflytek.skillhub.domain.security | 20 | 70 |
 | UserAccount | com.iflytek.skillhub.domain.user | 20 | 10 |
-| SkillReportService | com.iflytek.skillhub.domain.report | 16 | 51 |
-| NamespaceGovernanceService | com.iflytek.skillhub.domain.namespace | 15 | 42 |
 | SkillPackageValidator | com.iflytek.skillhub.domain.skill.validation | 14 | 53 |
 | SkillTag | com.iflytek.skillhub.domain.skill | 14 | 8 |
 | SkillMetadataParser | com.iflytek.skillhub.domain.skill.metadata | 14 | 49 |

@@ -10,8 +10,10 @@ import static org.mockito.Mockito.when;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
 import java.time.Clock;
@@ -104,6 +106,44 @@ class SkillReportServiceTest {
     }
 
     @Test
+    void submitReport_rejectsNullReason() {
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                () -> service.submitReport(10L, "user-1", null, null, "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.report.reason.required");
+    }
+
+    @Test
+    void submitReport_rejectsBlankReason() {
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                () -> service.submitReport(10L, "user-1", "   ", null, "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.report.reason.required");
+    }
+
+    @Test
+    void submitReport_rejectsInactiveSkill() {
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        setField(skill, "id", 10L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        when(skillRepository.findById(10L)).thenReturn(Optional.of(skill));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                () -> service.submitReport(10L, "user-1", "spam", null, "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.report.unavailable");
+    }
+
+    @Test
+    void submitReport_rejectsHiddenSkill() {
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        setField(skill, "id", 10L);
+        skill.setHidden(true);
+        when(skillRepository.findById(10L)).thenReturn(Optional.of(skill));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                () -> service.submitReport(10L, "user-1", "spam", null, "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.report.unavailable");
+    }
+
+    @Test
     void resolveReport_marksReportResolved() {
         SkillReport report = new SkillReport(10L, 1L, "user-1", "spam", null);
         setField(report, "id", 99L);
@@ -162,6 +202,67 @@ class SkillReportServiceTest {
         );
 
         verify(skillGovernanceService).archiveSkillAsAdmin(10L, "admin", "127.0.0.1", "JUnit", "handled");
+    }
+
+    @Test
+    void dismissReport_marksReportDismissed() {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "spam", null);
+        setField(report, "id", 99L);
+        when(skillReportRepository.findById(99L)).thenReturn(Optional.of(report));
+        when(skillReportRepository.save(report)).thenReturn(report);
+
+        SkillReport saved = service.dismissReport(99L, "admin", "not valid", "127.0.0.1", "JUnit");
+
+        assertThat(saved.getStatus()).isEqualTo(SkillReportStatus.DISMISSED);
+        assertThat(saved.getHandledBy()).isEqualTo("admin");
+        assertThat(saved.getHandledAt()).isEqualTo(Instant.now(CLOCK));
+        verify(auditLogService).record("admin", "DISMISS_SKILL_REPORT", "SKILL_REPORT", 99L, null, "127.0.0.1", "JUnit", null);
+        verify(governanceNotificationService).notifyUser(
+                eq("user-1"), eq("REPORT"), eq("SKILL_REPORT"), eq(99L), eq("Report dismissed"), any()
+        );
+    }
+
+    @Test
+    void requirePendingReport_throwsWhenNotFound() {
+        when(skillReportRepository.findById(99L)).thenReturn(Optional.empty());
+
+        DomainNotFoundException ex = assertThrows(DomainNotFoundException.class,
+                () -> service.resolveReport(99L, "admin", "ok", "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.report.notFound");
+    }
+
+    @Test
+    void requirePendingReport_throwsWhenAlreadyHandled() {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "spam", null);
+        setField(report, "id", 99L);
+        report.setStatus(SkillReportStatus.RESOLVED);
+        when(skillReportRepository.findById(99L)).thenReturn(Optional.of(report));
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                () -> service.resolveReport(99L, "admin", "ok", "127.0.0.1", "JUnit"));
+        assertThat(ex.messageCode()).isEqualTo("error.skill.report.alreadyHandled");
+    }
+
+    @Test
+    void normalize_returnsNullForNull() {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "spam", null);
+        setField(report, "id", 99L);
+        when(skillReportRepository.findById(99L)).thenReturn(Optional.of(report));
+        when(skillReportRepository.save(report)).thenReturn(report);
+
+        SkillReport saved = service.dismissReport(99L, "admin", null, "127.0.0.1", "JUnit");
+        assertThat(saved.getHandleComment()).isNull();
+    }
+
+    @Test
+    void normalize_returnsNullForEmptyAfterTrim() {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "spam", null);
+        setField(report, "id", 99L);
+        when(skillReportRepository.findById(99L)).thenReturn(Optional.of(report));
+        when(skillReportRepository.save(report)).thenReturn(report);
+
+        SkillReport saved = service.dismissReport(99L, "admin", "   ", "127.0.0.1", "JUnit");
+        assertThat(saved.getHandleComment()).isNull();
     }
 
     private void setField(Object target, String fieldName, Object value) {
