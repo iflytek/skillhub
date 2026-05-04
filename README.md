@@ -1,25 +1,18 @@
 <div align="center">
   <img src="./skillhub-logo.svg" alt="SkillHub Logo" width="120" height="120" />
   <h1>SkillHub</h1>
-  <p>An enterprise-grade, open-source agent skill registry — publish, discover, and manage reusable skill packages across your organization. </p>
+  <p>企业级开源智能体技能注册中心 — 在组织内发布、发现和管理可复用的技能包</p>
 </div>
 
 <div align="center">
 
-[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/iflytek/skillhub)
-[![Docs](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
+[![文档](https://img.shields.io/badge/docs-zread.ai-4A90E2?logo=gitbook&logoColor=white)](https://zread.ai/iflytek/skillhub)
 [![Discord](https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qHYvtDNPHS)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
-[![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
+[![许可证](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
+[![构建](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
 [![Java](https://img.shields.io/badge/java-17-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/17/)
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
-
-</div>
-
-<div align="center">
-
-[English](./README.md) | [中文](./README_zh.md)
 
 </div>
 
@@ -29,424 +22,371 @@
   <img src="https://xfyun-doc.xfyun.cn/lc-sp-skillhub-demo-1775551643410.gif" alt="SkillHub Demo" width="800" />
 </div>
 
-SkillHub is a self-hosted platform that gives teams a private,
-governed place to share agent skills. Publish a skill package, push
-it to a namespace, and let others find it through search or
-install it via CLI. Built for on-premise deployment behind your
-firewall, with the same polish you'd expect from a public registry.
+SkillHub 是一个自托管平台，为团队提供私有的、受治理的智能体技能共享空间。发布技能包，推送到命名空间，让其他人通过搜索发现或通过 CLI 安装。专为防火墙后的本地部署而构建，提供与公共注册中心相同的精致体验。
 
-## Documentation
+## 文档
 
-- 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
-- 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
+- 📖 **[用户指南](https://iflytek.github.io/skillhub/)** — 技能发布、搜索、CLI 使用等用户操作指南
+- 🛠️ **[开发者文档](https://zread.ai/iflytek/skillhub)** — 架构设计、API 参考、本地开发、部署运维等技术文档
 
-## Highlights
+## 核心特性
 
-- **Self-Hosted & Private** — Deploy on your own infrastructure.
-  Keep proprietary skills behind your firewall with full data
-  sovereignty. One `make dev-all` command to get running locally.
-- **Publish & Version** — Upload agent skill packages with semantic
-  versioning, custom tags (`beta`, `stable`), and automatic
-  `latest` tracking.
-- **Discover** — Full-text search with filters by namespace,
-  downloads, ratings, and recency. Visibility rules ensure
-  users only see what they're authorized to.
-- **Team Namespaces** — Organize skills under team or global scopes.
-  Each namespace has its own members, roles (Owner / Admin /
-  Member), and publishing policies.
-- **Review & Governance** — Team admins review within their namespace;
-  platform admins gate promotions to the global scope. Governance
-  actions are audit-logged for compliance.
-- **Social Features** — Star skills, rate them, and track downloads.
-  Build a community around your organization's best practices.
-- **Account Merging** — Consolidate multiple OAuth identities and
-  API tokens under a single user account.
-- **API Token Management** — Generate scoped tokens for CLI and
-  programmatic access with prefix-based secure hashing.
-- **CLI-First** — Native REST API plus a compatibility layer for
-  existing ClawHub-style registry clients. Native CLI APIs are the
-  primary supported path while protocol compatibility continues to
-  expand.
-- **Pluggable Storage** — Local filesystem for development, S3 /
-  MinIO for production. Swap via config.
-- **Internationalization** — Multi-language support with i18next.
+- **自托管与私有化** — 部署在您自己的基础设施上。将专有技能保留在防火墙后，完全掌控数据主权。当前仓库提供可直接执行的本地运行脚本与标准运行时文档。
+- **发布与版本管理** — 上传智能体技能包，支持语义化版本控制、自定义标签（`beta`、`stable`）和自动 `latest` 跟踪。
+- **发现** — 全文搜索，支持按命名空间、下载量、评分和时间筛选。可见性规则确保用户只能看到其有权访问的内容。
+- **团队命名空间** — 在团队或全局范围下组织技能。每个命名空间拥有自己的成员、角色（Owner / Admin / Member）和发布策略。
+- **审核与治理** — 团队管理员在其命名空间内审核；平台管理员控制向全局范围的推广。治理操作记录审计日志以满足合规要求。
+- **社交功能** — 收藏技能、评分并跟踪下载量。围绕组织的最佳实践构建社区。
+- **账户合并** — 将多个 OAuth 身份和 API 令牌整合到单个用户账户下。
+- **API 令牌管理** — 为 CLI 和程序化访问生成作用域令牌，采用基于前缀的安全哈希。
+- **CLI 优先** — 原生 REST API，加上对现有 ClawHub 风格注册中心客户端的兼容层。原生 CLI API 是主要支持路径，协议兼容性持续扩展中。
+- **可插拔存储** — 开发环境使用本地文件系统，生产环境使用 S3 / MinIO。通过配置切换。
+- **国际化** — 使用 i18next 支持多语言。
 
-## Quick Start
+## 快速开始
 
-Start the full local stack with:
+使用以下命令启动完整的本地环境：
 
 ```bash
 rm -rf /tmp/skillhub-runtime
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
 ```
 
-The default command pulls the `latest` stable release images. Use `--version edge` if you want the newest build from `main`.
+默认命令会拉取 `latest` 稳定版镜像；如果你想跟随 `main` 的最新构建，请显式传 `--version edge`。
 
-**Configure public URL (recommended for production):**
+**配置公网访问地址（生产环境推荐）：**
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 ```
 
-The `--public-url` parameter sets the public access URL for your SkillHub instance. This ensures:
-- CLI install commands show the correct registry URL
-- Agent setup instructions display the correct skill.md URL
-- OAuth callbacks and device auth links work properly
+`--public-url` 参数用于设置 SkillHub 实例的公网访问地址。配置后：
+- CLI 安装命令会显示正确的注册中心地址
+- Agent 设置指引会显示正确的 skill.md URL
+- OAuth 回调和设备认证链接能正常工作
 
-**For users in China (Aliyun mirror):**
+**国内用户（阿里云镜像）：**
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
-If deployment runs into problems, clear the existing runtime home and retry.
+如果部署遇到问题，请清除现有的运行时目录并重试。
 
-### Prerequisites
+### 前置要求
 
 - Docker & Docker Compose
 
-### Local Development
+### 访问应用
+
+- Web UI: http://localhost:3000
+- 后端 API: http://localhost:8080
+- Mock UASS: http://localhost:3001/mock-uass
+
+### 默认账户
+
+当前源码启动推荐入口：
 
 ```bash
-make dev-all
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
-> **For developers in China**: If Maven dependency download times out, configure Aliyun mirror. See [Local Development Guide](https://iflytek.github.io/skillhub/quickstart.html#本地开发) for details.
+当前默认源码组合：
 
-Then open:
+- profile: `local-mysql`
+- 数据库：`MySQL 8`
+- 搜索：`local-file-index`
+- 运行时状态：`memory`
+- 本地 UASS mock 第三方页：`3001`
 
-- Web UI: `http://localhost:3000`
-- Backend API: `http://localhost:8080`
+本地开发默认创建一个可账号密码登录的 bootstrap 管理员：
 
-By default, `make dev-all` starts the backend with the `local` profile.
-In that mode, local development keeps the mock-auth users below and also
-creates a password-based bootstrap admin account by default:
+- `local-user` — 普通用户，用于发布和命名空间操作
+- `local-admin` — 超级管理员，用于审核和管理流程
 
-- `local-user` for normal publishing and namespace operations
-- `local-admin` with `SUPER_ADMIN` for review and admin flows
+本地 bootstrap 管理员默认已在 `application-local.yml` 中开启：
 
-Use them with the `X-Mock-User-Id` header in local development.
+- 用户名：`admin`
+- 密码：`ChangeMe!2026`
+- 如需关闭，请在启动后端前设置环境变量 `BOOTSTRAP_ADMIN_ENABLED=false`
 
-The local bootstrap admin is enabled by default in `application-local.yml`:
+通过 `runtime.sh` 或 `compose.release.yml` 部署时，发布模板同样默认开启管理员，
+使用相同的默认账号密码（`admin` / `ChangeMe!2026`），零配置即可登录。
+**生产环境请务必修改密码**——`validate-release-config.sh` 会拒绝默认值
 
-- username: `admin`
-- password: `ChangeMe!2026`
-- To disable it, set `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
-
-Stop everything with:
+### 停止服务
 
 ```bash
-make dev-all-down
+/tmp/skillhub-runtime/runtime.sh down
 ```
 
-Reset local dependencies and start from a clean slate with:
+## 开发
+
+### 前置要求
+
+- Java 17+
+- Node.js 20+
+- Docker & Docker Compose
+
+### 启动开发环境
 
 ```bash
-make dev-all-reset
+# 克隆仓库
+git clone https://github.com/iflytek/skillhub.git
+cd skillhub
+
+# 启动推荐的本地源码运行组合
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
-Run `make help` to see all available commands.
+> **国内开发者**：如果 Maven 依赖下载超时，需配置阿里云镜像。详见 [本地开发指南](https://iflytek.github.io/skillhub/quickstart.html#本地开发)。
 
-Useful backend commands:
+### 常用命令
 
 ```bash
-make test
-make test-backend-app
-make build-backend-app
+scripts/dev/local-mysql-local-index-memory-status.sh   # 查看当前运行状态
+scripts/dev/local-mysql-local-index-memory-down.sh     # 停止当前本地源码运行组合
+mvn -q -f server/pom.xml -pl skillhub-app -am test     # 运行后端测试
+mvn -q -f server/pom.xml -pl skillhub-app -am package -DskipTests  # 打包后端
+pnpm --dir web generate-api                            # 重新生成 OpenAPI 类型
+./scripts/check-openapi-generated.sh                   # 验证 API 契约同步
 ```
 
-Do not run `./mvnw -pl skillhub-app clean test` directly under `server/`.
-`skillhub-app` depends on sibling modules in the same repo, and a standalone clean build
-can fall back to stale artifacts from the local Maven repository, which surfaces misleading
-`cannot find symbol` and signature-mismatch errors. Use `-am`, or the `make test-backend-app`
-and `make build-backend-app` targets above.
+说明：
 
-For the full development workflow (local dev → staging → PR), see [docs/dev-workflow.md](docs/dev-workflow.md).
+- 当前 checkout 不再自带历史文档里提到的顶层 `Makefile`
+- 以 `scripts/dev/`、[docs/local-runtime-quickstart.md](./docs/local-runtime-quickstart.md) 和 [design/runtime/runtime-core-configuration-reference.md](./design/runtime/runtime-core-configuration-reference.md) 作为当前源码运行入口文档
+- 不要在 `server/` 下直接执行 `./mvnw -pl skillhub-app clean test`。`skillhub-app` 依赖同仓库的 sibling modules，单独 clean 构建时会回退到本地 Maven 仓库里的旧产物并出现大量 `cannot find symbol` / 签名不匹配错误。需要使用 `-am`
 
-### API Contract Sync
+### 项目结构
 
-OpenAPI types for the web client are checked into the repository.
-When backend API contracts change, regenerate the SDK and commit the
-updated generated file:
-
-```bash
-make generate-api
+```
+skillhub/
+├── server/                 # 后端（Java/Spring Boot）
+│   ├── skillhub-app/      # 主应用程序
+│   ├── skillhub-domain/   # 核心业务逻辑
+│   ├── skillhub-auth/     # 认证授权
+│   ├── skillhub-search/   # 搜索功能
+│   ├── skillhub-storage/  # 存储层
+│   └── skillhub-infra/    # 基础设施
+├── web/                   # 前端（React/TypeScript）
+├── docs/                  # 文档
+├── scripts/               # 实用脚本
+├── deploy/                # 部署配置
+├── monitoring/            # Prometheus + Grafana
+└── docker-compose.yml    # 本地开发栈
 ```
 
-For a stricter end-to-end drift check, run:
+## 部署
+
+### 使用 Docker Compose
 
 ```bash
-./scripts/check-openapi-generated.sh
-```
-
-This starts local dependencies, boots the backend, regenerates the
-frontend schema, and fails if the checked-in SDK is stale.
-
-### Container Runtime
-
-Published runtime images are built by GitHub Actions and pushed to GHCR.
-This is the supported path for anyone who wants a ready-to-use local
-environment without building the backend or frontend on their machine.
-Published images target both `linux/amd64` and `linux/arm64`.
-
-**Quick deployment with curl:**
-
-```bash
-# Default (GHCR images)
+# 默认（GHCR 镜像）
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
 
-# Aliyun mirror (recommended for users in China)
+# 阿里云镜像（国内推荐）
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
-**Deployment parameters:**
+### 配置参数说明
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `--public-url <url>` | Public access URL (recommended) | `--public-url https://skill.example.com` |
-| `--version <tag>` | Specific image tag | `--version v0.2.0` |
-| `--aliyun` | Use Aliyun mirror (China) | `--aliyun` |
-| `--home <dir>` | Runtime directory | `--home /opt/skillhub` |
-| `--no-scanner` | Disable security scanner | `--no-scanner` |
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `--public-url <url>` | 公网访问地址（推荐配置） | `--public-url https://skill.example.com` |
+| `--version <tag>` | 指定镜像版本 | `--version v0.2.0` |
+| `--aliyun` | 使用阿里云镜像（国内推荐） | `--aliyun` |
+| `--home <dir>` | 指定运行时目录 | `--home /opt/skillhub` |
+| `--no-scanner` | 禁用安全扫描服务 | `--no-scanner` |
 
-> **Important**: Configure `--public-url` for production deployments to ensure CLI install commands and Agent setup instructions display the correct URLs.
+> **重要**：生产环境请务必配置 `--public-url`，确保 CLI 安装命令和 Agent 设置指引显示正确的地址。
 
-**Manual deployment:**
-
-1. Copy the runtime environment template.
-2. Pick an image tag.
-3. Start the stack with Docker Compose.
+### 使用 Kubernetes
 
 ```bash
-cp .env.release.example .env.release
+# 应用 Kubernetes 清单
+kubectl apply -f deploy/k8s/
+
+# 或使用 Helm（即将推出）
+helm install skillhub ./deploy/helm
 ```
 
-Recommended image tags:
+### 环境变量
 
-- `SKILLHUB_VERSION=latest` for the latest stable release (default)
-- `SKILLHUB_VERSION=edge` for the latest `main` build
-- `SKILLHUB_VERSION=vX.Y.Z` for a fixed release
-
-Start the runtime:
+关键配置选项：
 
 ```bash
-make validate-release-config
-docker compose --env-file .env.release -f compose.release.yml up -d
+# 数据库
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+SPRING_DATASOURCE_USERNAME=skillhub
+SPRING_DATASOURCE_PASSWORD=skillhub
+
+# Redis
+SPRING_DATA_REDIS_HOST=localhost
+SPRING_DATA_REDIS_PORT=6379
+
+# 存储（S3/MinIO）
+STORAGE_TYPE=s3
+STORAGE_S3_ENDPOINT=http://localhost:9000
+STORAGE_S3_ACCESS_KEY=minioadmin
+STORAGE_S3_SECRET_KEY=minioadmin
+STORAGE_S3_BUCKET=skillhub
+
+# 认证
+AUTH_JWT_SECRET=your-secret-key
+AUTH_SESSION_TIMEOUT=30m
 ```
 
-Then open:
+完整配置参考请查看 [`application.yml`](./server/skillhub-app/src/main/resources/application.yml)。
 
-- Web UI: `SKILLHUB_PUBLIC_BASE_URL` 对应的地址
-- Backend API: `http://localhost:8080`
+### 上传白名单覆盖
 
-Stop it with:
+技能包上传校验默认使用
+[`SkillPackagePolicy.java`](./server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/validation/SkillPackagePolicy.java)
+中的扩展名白名单。`SkillPublishProperties` 默认也会把这份列表作为
+`skillhub.publish.allowed-file-extensions` 的值。
 
-```bash
-docker compose --env-file .env.release -f compose.release.yml down
-```
-
-The runtime stack uses its own Compose project name, so it does not
-collide with containers from `make dev-all`.
-
-The production Compose stack now defaults to the `docker` profile only.
-It does not enable local mock auth. The release template (`.env.release.example`)
-enables the bootstrap admin by default, so zero-config quickstart via
-`runtime.sh` works out of the box:
-
-- username: `admin`
-- password: `ChangeMe!2026`
-
-Recommended production baseline:
-
-- set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
-- keep MySQL / Redis bound to `127.0.0.1`
-- use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
-- change `BOOTSTRAP_ADMIN_PASSWORD` to a strong password (`validate-release-config.sh` rejects the default `ChangeMe!2026`)
-- rotate or disable the bootstrap admin after initial setup
-- run `make validate-release-config` before `docker compose up -d`
-
-If the GHCR package remains private, run `docker login ghcr.io` before
-`docker compose up -d`.
-
-### Upload Allowlist Override
-
-Skill package upload validation uses the default extension allowlist from
-[`SkillPackagePolicy.java`](./server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/validation/SkillPackagePolicy.java).
-`SkillPublishProperties` uses that same list by default for
-`skillhub.publish.allowed-file-extensions`.
-
-If you need to replace the default allowlist at runtime, set:
+如果需要在运行时整体替换默认白名单，可以设置：
 
 ```bash
 SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=.md,.json,.xsd,.xsl,.dtd,.docx,.xlsx,.pptx
 ```
 
-Spring Boot binds this environment variable to
-`skillhub.publish.allowed-file-extensions`. When set, it replaces the default
-allowlist instead of appending to it.
+Spring Boot 会把这个环境变量绑定到
+`skillhub.publish.allowed-file-extensions`。一旦设置，该配置会替换默认白名单，
+而不是在默认列表后追加。
 
-### Monitoring
+## 架构
 
-A Prometheus + Grafana monitoring stack lives under [`monitoring/`](./monitoring).
-It scrapes the backend's Actuator Prometheus endpoint.
+SkillHub 采用清晰的分层架构：
 
-Start it with:
+- **表现层**：REST API（Spring Boot）+ React 前端
+- **应用层**：用例编排和 DTO 转换
+- **领域层**：核心业务逻辑和实体
+- **基础设施层**：数据库、存储、搜索
 
-```bash
-cd monitoring
-docker compose -f docker-compose.monitoring.yml up -d
-```
+关键设计决策：
 
-Then open:
+- **多模块 Maven 项目**：清晰的模块边界和依赖管理
+- **领域驱动设计**：丰富的领域模型和业务规则
+- **CQRS 模式**：读写分离以优化性能
+- **事件溯源**：审计日志和治理操作
+- **可插拔存储**：通过配置在本地/S3/MinIO 之间切换
 
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001` (`admin` / `admin`)
+详细架构文档请参阅 [`docs/`](./docs/) 目录。
 
-By default Prometheus scrapes `http://host.docker.internal:8080/actuator/prometheus`,
-so start the backend locally on port `8080` first.
+## 技术栈
 
-## Kubernetes
+### 后端
+- **语言**：Java 17
+- **框架**：Spring Boot 3.2.3
+- **数据库**：MySQL 8 + Flyway 迁移
+- **缓存**：Redis 7
+- **存储**：S3/MinIO
+- **搜索**：MySQL + local-file-index（Lucene）
 
-Basic Kubernetes manifests are available under [`deploy/k8s/`](./deploy/k8s):
+### 前端
+- **语言**：TypeScript
+- **框架**：React 19
+- **构建工具**：Vite
+- **路由**：TanStack Router
+- **数据获取**：TanStack Query
+- **样式**：Tailwind CSS + Radix UI
+- **API 客户端**：OpenAPI TypeScript（类型安全）
+- **国际化**：i18next
 
-- `configmap.yaml`
-- `secret.yaml.example`
-- `backend-deployment.yaml`
-- `frontend-deployment.yaml`
-- `services.yaml`
-- `ingress.yaml`
+### 基础设施
+- **容器化**：Docker & Docker Compose
+- **监控**：Prometheus + Grafana
+- **部署**：Kubernetes 清单
+- **CI/CD**：GitHub Actions
 
-Apply them after creating your own secret:
+## 路线图
 
-```bash
-kubectl apply -f deploy/k8s/configmap.yaml
-kubectl apply -f deploy/k8s/secret.yaml
-kubectl apply -f deploy/k8s/backend-deployment.yaml
-kubectl apply -f deploy/k8s/frontend-deployment.yaml
-kubectl apply -f deploy/k8s/services.yaml
-kubectl apply -f deploy/k8s/ingress.yaml
-```
+- [x] 核心技能注册功能
+- [x] 命名空间和团队管理
+- [x] 审核和治理工作流
+- [x] 全文搜索和筛选
+- [x] 社交功能（收藏、评分、下载）
+- [x] API 令牌管理
+- [x] 账户合并
+- [x] 国际化支持
+- [ ] Helm Chart 部署
+- [ ] 高级搜索过滤器
+- [ ] 技能依赖管理
+- [ ] Webhook 集成
+- [ ] 审计日志导出
+- [ ] LDAP/SAML 集成
 
-## Smoke Test
+完整路线图请参阅 [`docs/10-delivery-roadmap.md`](./docs/10-delivery-roadmap.md)。
 
-A lightweight smoke test script is available at [`scripts/smoke-test.sh`](./scripts/smoke-test.sh).
+## 与智能体平台集成
 
-Run it against a local backend:
-
-```bash
-./scripts/smoke-test.sh http://localhost:8080
-```
-
-## Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐
-│   Web UI    │     │  CLI Tools  │     │  REST API    │
-│  (React 19) │     │             │     │              │
-└──────┬──────┘     └──────┬──────┘     └──────┬───────┘
-       │                   │                   │
-       └───────────────────┼───────────────────┘
-                           │
-                    ┌──────▼──────┐
-                    │   Nginx     │
-                    └──────┬──────┘
-                           │
-                    ┌──────▼──────┐
-                    │ Spring Boot │  Auth · RBAC · Core Services
-                    │   (Java 17) │  OAuth2 · API Tokens · Audit
-                    └──────┬──────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-       ┌──────▼───┐  ┌─────▼────┐  ┌────▼────┐
-       │   MySQL  │  │  Redis   │  │ Storage │
-       │    16    │  │    7     │  │ S3/MinIO│
-       └──────────┘  └──────────┘  └─────────┘
-```
-
-**Backend (Spring Boot 3.2.3, Java 17):**
-- Multi-module Maven project with clean architecture
-- Modules: app, domain, auth, search, storage, infra
-- MySQL 8 with Flyway migrations
-- Redis for session management
-- S3/MinIO for skill package storage
-
-**Frontend (React 19, TypeScript, Vite):**
-- TanStack Router for routing
-- TanStack Query for data fetching
-- Tailwind CSS + Radix UI for styling
-- OpenAPI TypeScript for type-safe API client
-- i18next for internationalization
-
-## Usage with Agent Platforms
-
-SkillHub works as a skill registry backend for several agent platforms. Point any of the clients below at your SkillHub instance to publish, discover, and install skills.
+SkillHub 设计为与各种智能体平台和框架无缝集成。
 
 ### [OpenClaw](https://github.com/openclaw/openclaw)
 
-[OpenClaw](https://github.com/openclaw/openclaw) is an open-source agent skill CLI. Configure it to use your SkillHub endpoint as the registry:
+[OpenClaw](https://github.com/openclaw/openclaw) 是开源的智能体技能 CLI 工具。配置它使用您的 SkillHub 端点作为注册中心：
 
 ```bash
-# Configure registry URL
+# 配置注册中心地址
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 
-# Authenticate once if needed
+# 如需认证，先登录一次
 clawhub login --token YOUR_API_TOKEN
 
-# Search and install skills
+# 搜索和安装技能
 npx clawhub search email
 npx clawhub install my-skill
 npx clawhub install my-namespace--my-skill
 
-# Publish to global namespace
+# 发布到 global 空间
 npx clawhub publish ./my-skill --slug my-skill --version 1.0.0
 
-# Publish to a team namespace such as my-space
+# 发布到如 my-space 这样的团队空间
 npx clawhub publish ./my-skill --slug my-space--my-skill --version 1.0.0
 ```
 
-`my-space--my-skill` is the canonical compat slug. SkillHub parses it as
-namespace `my-space` plus skill slug `my-skill`.
+其中 `my-space--my-skill` 是兼容层使用的 canonical slug，SkillHub 会将其解析为
+namespace `my-space` 和 skill slug `my-skill`。
 
-> 💡 **Tip**: The above commands are not only applicable to OpenClaw, but also to other CLI Coding Agents or Agent assistants by specifying the installation directory (`--dir`). For example: `npx clawhub --dir ~/.claude/skills install my-skill`
+> 💡 **提示**：上述命令不仅适用于 OpenClaw，通过指定安装目录（`--dir`），也可适用于其他的 CLI Coding Agent 或 Agent 助手。例如：`npx clawhub --dir ~/.claude/skills install my-skill`
 
-📖 **[CLI Compatibility API →](./docs/06-api-design.md)**
+📖 **[CLI 兼容 API 说明 →](./docs/06-api-design.md)**
 
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
-[AstronClaw](https://agent.xfyun.cn/astron-claw) is a cloud AI assistant built on OpenClaw's core capabilities, providing 24/7 online service through enterprise platforms like WeChat Work, DingTalk, and Feishu. It features a built-in skill system with over 130 official skills. You can connect it to a self-hosted SkillHub registry to enable one-click skill installation, search repository, dialogue-based automatic installation, and even custom skills management within your organization.
+[AstronClaw](https://agent.xfyun.cn/astron-claw) 是基于 OpenClaw 核心能力打造的云端 AI 助手，提供全天候在线服务，随时随地通过企业微信、钉钉、飞书等渠道提供服务。它内置了丰富的技能系统，您可以将其连接到自托管的 SkillHub 注册中心，支持技能市场一键安装、仓库搜索、对话自动安装，甚至管理和分发组织内部的自定义私有技能。
 
 ### [Loomy](https://loomy.xunfei.cn/)
 
-[Loomy](https://loomy.xunfei.cn/) is a desktop AI work partner focusing on real office scenarios. It integrates deeply with local files and system tools to build efficient automated workflows for individuals and small teams. By connecting Loomy to your SkillHub registry, you can easily discover and install organization-specific skills to enhance your local desktop automation and productivity.
+[Loomy](https://loomy.xunfei.cn/) 是聚焦真实办公场景的桌面端 AI 工作搭子。它深入打通本地文件和系统工具，为个人及小团队构建高效的自动化工作流。通过将 Loomy 连接到您的 SkillHub 注册中心，您可以轻松发现并安装组织内部的专属技能，从而增强本地桌面端的自动化与协同办公能力。
 
 ### [astron-agent](https://github.com/iflytek/astron-agent)
 
-[astron-agent](https://github.com/iflytek/astron-agent) is the iFlytek Astron agent framework. Skills stored in SkillHub can be referenced and loaded by astron-agent, enabling a governed, versioned skill lifecycle from development to production.
+[astron-agent](https://github.com/iflytek/astron-agent) 是科大讯飞星火智能体框架。存储在 SkillHub 中的技能可以被 astron-agent 引用和加载，实现从开发到生产的受治理、版本化的技能生命周期。
 
 ---
 
-> 🌟 **Show & Tell** — Have you built something with SkillHub? We'd love to hear about it!
-> Share your use case, integration, or deployment story in the
-> [**Discussions → Show and Tell**](https://github.com/iflytek/skillhub/discussions/categories/show-and-tell) category.
+> 🌟 **展示与分享** — 您使用 SkillHub 构建了什么？我们很想听听！
+> 在 [**Discussions → Show and Tell**](https://github.com/iflytek/skillhub/discussions/categories/show-and-tell) 分类中分享您的用例、集成或部署故事。
 
-## Contributing
+## 贡献
 
-Contributions are welcome. Please open an issue first to discuss
-what you'd like to change.
+欢迎贡献。请先开启 issue 讨论您想要更改的内容。
 
-- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
+- 贡献指南：[`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- 行为准则：[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 
-## 📞 Support
+## 📞 支持
 
-- 💬 **Community Discussion**: [GitHub Discussions](https://github.com/iflytek/skillhub/discussions)
-- 🐛 **Bug Reports**: [Issues](https://github.com/iflytek/skillhub/issues)
-- 👾 **Discord**: [Join our Server](https://discord.gg/qHYvtDNPHS)
-- 👥 **WeChat Work Group**:
+- 💬 **社区讨论**：[GitHub Discussions](https://github.com/iflytek/skillhub/discussions)
+- 🐛 **Bug 报告**：[Issues](https://github.com/iflytek/skillhub/issues)
+- 👾 **Discord**：[加入我们的服务器](https://discord.gg/qHYvtDNPHS)
+- 👥 **企业微信群**：
 
-  ![WeChat Work Group](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)
+  ![企业微信群](https://github.com/iflytek/astron-agent/raw/main/docs/imgs/WeCom_Group.png)
 
-## License
+## 许可证
 
 Apache License 2.0

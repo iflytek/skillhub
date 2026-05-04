@@ -34,6 +34,8 @@
 - [security-scanning-runtime.md](./runtime/security-scanning-runtime.md)
 - [password-reset-email-smtp.md](./runtime/password-reset-email-smtp.md)
 - [mysql-runtime-and-search-provider-migration.md](./runtime/mysql-runtime-and-search-provider-migration.md)
+- [runtime-core-configuration-reference.md](./runtime/runtime-core-configuration-reference.md)
+- [production-readiness-assessment-and-hardening-plan.md](./runtime/production-readiness-assessment-and-hardening-plan.md)
 
 ### `implemented/`
 

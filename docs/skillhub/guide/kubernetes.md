@@ -21,8 +21,8 @@
 deploy/k8s/
 ├── base/            # 基础配置
 └── overlays/
-    ├── with-infra/  # 内置 PostgreSQL / Redis
-    └── external/    # 外部 PostgreSQL / Redis
+    ├── with-infra/  # 内置 MySQL / Redis
+    └── external/    # 外部 MySQL / Redis
 ```
 
 ## 最小部署流程
@@ -44,10 +44,10 @@ kubectl create namespace skillhub
 ### 3. 选择部署模式
 
 ```bash
-# 自带 PostgreSQL / Redis
+# 自带 MySQL / Redis
 kubectl apply -k deploy/k8s/overlays/with-infra/
 
-# 使用外部 PostgreSQL / Redis
+# 使用外部 MySQL / Redis
 kubectl apply -k deploy/k8s/overlays/external/
 ```
 

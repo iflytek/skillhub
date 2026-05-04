@@ -218,8 +218,8 @@ Web 端与 CLI 保持同一发布语义，只是在交互上可提供更明确�
 
 一期使用原子 SQL 直接更新，可接受。如出现热点行瓶颈，切换为：
 1. Redis `INCR` 做实时计数（key: `skill:downloads:{skillId}`）
-2. 定时任务每 5 分钟批量回写 PostgreSQL
-3. 查询时合并 PostgreSQL 存量 + Redis 增量
+2. 定时任务每 5 分钟批量回写 MySQL
+3. 查询时合并 MySQL 存量 + Redis 增量
 
 ## 4 搜索流程
 

@@ -123,7 +123,7 @@ skillhub/
 ├── compose.release.yml   # 单机运行时编排（发布镜像 + MySQL + Redis）
 ├── .env.release.example  # 单机运行时环境变量模板
 ├── .github/workflows/    # GitHub Actions 镜像发布流程
-├── Makefile              # 顶层开发编排（dev / dev-all / build）
+├── scripts/dev/          # 当前仓库内可执行的本地运行时脚本
 ├── docs/                 # 设计文档
 └── README.md
 ```
@@ -134,7 +134,7 @@ skillhub/
 
 部署模型收敛为两条路径：
 
-- 开发路径：`make dev-all`。前后端在宿主机运行，`docker-compose.yml` 只负责 MySQL、Redis、MinIO。
+- 开发路径：`scripts/dev/local-mysql-local-index-memory-up.sh` 或等价显式命令。前后端在宿主机运行，`docker-compose.yml` 负责依赖服务。
 - 交付路径：GitHub Actions 构建并发布 `server` / `web` 镜像；用户通过 `compose.release.yml` 在本地一键拉起前后端容器和基础服务。
 - 发布镜像为多架构 manifest，至少覆盖 `linux/amd64` 与 `linux/arm64`。
 

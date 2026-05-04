@@ -10,7 +10,7 @@ A: SkillHub is the enterprise self-hosted option focused on data sovereignty, na
 
 A: Back up two things first:
 
-- PostgreSQL
+- MySQL
 - Object storage such as MinIO or S3
 
 For production, make backups part of your deployment and operations workflow.

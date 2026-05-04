@@ -4,7 +4,7 @@ This page keeps only the shortest startup path. Deeper publishing, discovery, re
 
 ## One-Click Deployment
 
-Use the curl command to deploy SkillHub with Web UI, Backend API, PostgreSQL, Redis, MinIO, and Skill Scanner:
+Use the curl command to deploy SkillHub with Web UI, Backend API, MySQL, Redis, and Skill Scanner:
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
@@ -47,12 +47,12 @@ After deployment:
 
 ## Local Development
 
-To run from source:
+To run from source, use the repository-owned local runtime script instead of relying on the historical `make dev-all` entrypoint:
 
 ```bash
 git clone https://github.com/iflytek/skillhub.git
 cd skillhub
-make dev-all
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
 Typical prerequisites:
@@ -61,11 +61,23 @@ Typical prerequisites:
 - Docker & Docker Compose
 - Node.js / pnpm for frontend work
 
-If `make dev-all` fails, check:
+If source startup fails, check:
 
 1. Maven dependency downloads
 2. `java -version`
-3. Port conflicts on `8080` or `3000`
+3. Port conflicts on `8080`, `3000`, or `3001`
+4. whether `docker compose ps` shows MySQL as healthy
+
+Default source startup combination:
+
+- MySQL
+- `local-file-index`
+- memory runtime state
+- local mock UASS page on `3001`
+
+For the full runtime matrix, see:
+
+- [../../local-runtime-quickstart.md](../../local-runtime-quickstart.md)
 
 For more troubleshooting, see [FAQ](/en/faq).
 

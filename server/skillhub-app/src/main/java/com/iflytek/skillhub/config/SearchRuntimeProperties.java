@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class SearchRuntimeProperties {
 
     private String provider = "local-file-index";
+    private boolean rebuildOnStartup = false;
     private final LocalFileIndex localFileIndex = new LocalFileIndex();
 
     public String getProvider() {
@@ -20,6 +21,14 @@ public class SearchRuntimeProperties {
 
     public void setProvider(String provider) {
         this.provider = provider;
+    }
+
+    public boolean isRebuildOnStartup() {
+        return rebuildOnStartup;
+    }
+
+    public void setRebuildOnStartup(boolean rebuildOnStartup) {
+        this.rebuildOnStartup = rebuildOnStartup;
     }
 
     public LocalFileIndex getLocalFileIndex() {

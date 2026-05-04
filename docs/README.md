@@ -1,5 +1,21 @@
 # 文档总览
 
+## 当前标准运行时
+
+当前仓库默认/标准运行时请优先按下面理解：
+
+- 数据库：`MySQL 8`
+- 标准搜索 provider：`local-file-index`
+- 标准生产运行时状态：`Redis`
+- 常见本地联调回退：`memory`
+- 轻量本地模式：`local-h2`
+
+对应入口文档：
+
+- [local-runtime-quickstart.md](./local-runtime-quickstart.md)
+- [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)
+- [../design/runtime/production-readiness-assessment-and-hardening-plan.md](../design/runtime/production-readiness-assessment-and-hardening-plan.md)
+
 ## 当前主文档
 
 以下文档仍属于当前项目的主入口文档：
@@ -14,12 +30,12 @@
 - [07-skill-protocol.md](./07-skill-protocol.md)
 - [08-frontend-architecture.md](./08-frontend-architecture.md)
 - [09-deployment.md](./09-deployment.md)
-- [10-delivery-roadmap.md](./10-delivery-roadmap.md)
 - [14-skill-lifecycle.md](./14-skill-lifecycle.md)
 
 ## 开发与测试
 
 - [dev-workflow.md](./dev-workflow.md)
+- [local-runtime-quickstart.md](./local-runtime-quickstart.md)
 - [e2e.md](./e2e.md)
 
 ## 需求、设计与实现专题
@@ -33,6 +49,8 @@
 - [../design/auth/private-sso-integration-playbook.md](../design/auth/private-sso-integration-playbook.md)
 - [../design/runtime/security-scanning-runtime.md](../design/runtime/security-scanning-runtime.md)
 - [../design/runtime/password-reset-email-smtp.md](../design/runtime/password-reset-email-smtp.md)
+- [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)
+- [../design/runtime/production-readiness-assessment-and-hardening-plan.md](../design/runtime/production-readiness-assessment-and-hardening-plan.md)
 
 ## 文档站
 

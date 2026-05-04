@@ -25,7 +25,7 @@ SkillHub 的目标是把这些问题收敛到一个私有、可控、可审计�
 |------|------|
 | 前端 | React 19 + Vite |
 | 后端 | Java 17 + Spring Boot 3.2 |
-| 数据库 | PostgreSQL 16 |
+| 数据库 | MySQL 8 |
 | 缓存 | Redis 7 |
 | 存储 | MinIO / S3 |
 | 部署 | Docker Compose / Kubernetes |

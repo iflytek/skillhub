@@ -4,7 +4,7 @@
 
 ## 一键部署
 
-使用 curl 命令快速部署 SkillHub（包含 Web UI、Backend API、PostgreSQL、Redis、MinIO、Skill Scanner）：
+使用 curl 命令快速部署 SkillHub（包含 Web UI、Backend API、MySQL、Redis、Skill Scanner）：
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
@@ -47,12 +47,12 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- l
 
 ## 本地开发
 
-如需从源码启动：
+如需从源码启动，当前仓库推荐直接使用仓库内脚本，而不是依赖历史 `make dev-all` 入口：
 
 ```bash
 git clone https://github.com/iflytek/skillhub.git
 cd skillhub
-make dev-all
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
 常见前置要求：
@@ -61,11 +61,23 @@ make dev-all
 - Docker & Docker Compose
 - Node.js / pnpm（前端开发时）
 
-如果 `make dev-all` 失败，先检查：
+如果源码启动失败，先检查：
 
 1. Maven 依赖是否能正常下载
 2. `java -version` 是否满足要求
-3. `8080` / `3000` 端口是否被占用
+3. `8080` / `3000` / `3001` 端口是否被占用
+4. `docker compose ps` 中 MySQL 是否 healthy
+
+源码启动默认组合：
+
+- MySQL
+- `local-file-index`
+- memory runtime state
+- 本地 mock UASS 页在 `3001`
+
+更完整的组合说明见：
+
+- [../../local-runtime-quickstart.md](../../local-runtime-quickstart.md)
 
 更详细的排障说明见 [常见问题](/faq)。
 

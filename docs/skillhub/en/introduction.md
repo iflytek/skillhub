@@ -25,7 +25,7 @@ SkillHub is designed to pull those concerns into a private, controllable, and au
 |-------|------------|
 | Frontend | React 19 + Vite |
 | Backend | Java 17 + Spring Boot 3.2 |
-| Database | PostgreSQL 16 |
+| Database | MySQL 8 |
 | Cache | Redis 7 |
 | Storage | MinIO / S3 |
 | Deployment | Docker Compose / Kubernetes |

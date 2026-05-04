@@ -21,8 +21,8 @@ This page keeps only the minimum Kubernetes deployment path. Detailed configurat
 deploy/k8s/
 ├── base/
 └── overlays/
-    ├── with-infra/
-    └── external/
+    ├── with-infra/  # built-in MySQL / Redis
+    └── external/    # external MySQL / Redis
 ```
 
 ## Minimum Flow
@@ -44,10 +44,10 @@ At minimum, provide:
 ### 3. Choose a Deployment Mode
 
 ```bash
-# Built-in PostgreSQL / Redis
+# Built-in MySQL / Redis
 kubectl apply -k deploy/k8s/overlays/with-infra/
 
-# External PostgreSQL / Redis
+# External MySQL / Redis
 kubectl apply -k deploy/k8s/overlays/external/
 ```
 

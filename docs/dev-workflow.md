@@ -13,18 +13,25 @@ This document describes the recommended workflow for developing SkillHub locally
 
 Use this stage for active development — writing code, fixing bugs, iterating quickly.
 
-### Start the full local stack
+### Start the standard local source stack
 
 ```bash
-make dev-all
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
-This starts:
-- Dependency services (MySQL, Redis, MinIO) via Docker
-- Backend (Spring Boot) directly on your machine at http://localhost:8080
-- Frontend (Vite) directly on your machine at http://localhost:3000
+This starts the repository-owned local source combination:
 
-SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `3306`, `6379`, and `9000`.
+- dependency service: MySQL via Docker
+- backend: Spring Boot jar on your machine at `http://localhost:8080`
+- frontend: Vite on your machine at `http://localhost:3000`
+- mock third-party UASS page: Vite on `http://localhost:3001`
+- runtime state: `memory`
+- search provider: `local-file-index`
+
+For the exact environment variables and fallback combinations such as `mysql-like` or `local-h2`, see:
+
+- [local-runtime-quickstart.md](./local-runtime-quickstart.md)
+- [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)
 
 ### Backend restarts
 
@@ -35,10 +42,22 @@ SkillHub now pins a shared Docker Compose project name for local development, so
 After editing backend code, restart the backend explicitly:
 
 ```bash
-make dev-server-restart
+pkill -f 'skillhub-app-0.1.0.jar' || true
+mvn -q -f server/pom.xml -pl skillhub-app -am package -DskipTests
+env \
+  SKILLHUB_SEARCH_PROVIDER=local-file-index \
+  SKILLHUB_RUNTIME_STATE_PROVIDER=memory \
+  SPRING_PROFILES_ACTIVE=local-mysql \
+  SKILLHUB_AUTH_UASS_ENABLED=true \
+  SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL=http://localhost:3001 \
+  java -jar server/skillhub-app/target/skillhub-app-0.1.0.jar
 ```
 
-If you are running the server in a foreground terminal instead of `make dev-all`, stop it and run `make dev-server` again. Expect a full restart in about 5-10 seconds, including rebuilding the backend modules.
+If you want to stop the whole local source stack, use:
+
+```bash
+scripts/dev/local-mysql-local-index-memory-down.sh
+```
 
 ### Mock authentication
 
@@ -60,32 +79,26 @@ or the Compose environment.
 
 ### Local UASS configuration
 
-If you are integrating the enterprise UASS login flow locally, prefer editing
-the Spring profile YAML files instead of exporting variables for every shell
-session:
+If you are integrating the enterprise UASS login flow locally, the current source startup path already supports the local mock browser flow:
 
-- `server/skillhub-app/src/main/resources/application-local.yml`
-- `server/skillhub-app/src/main/resources/application-local-h2.yml`
+- login page on `3000`
+- mock third-party page on `3001`
+- callback back into the main app on `3000`
 
-Both profiles now include a `skillhub.auth.uass` template. Set
-`enabled: true` and keep `base-url: mock://self` to verify the browser flow
-without a real provider. When switching to the enterprise gateway, replace the
-`base-url`, `client-id`, and `client-secret`, and provide a custom
-`UassGateway` bean in the backend.
+For current bootstrap admin semantics:
+
+- `uass-admin-003` is the configured bootstrap admin `ussId`
+- listed bootstrap admin users are granted `SUPER_ADMIN` on first account creation
 
 ### Useful commands
 
 | Command                          | Description                      |
 |----------------------------------|----------------------------------|
-| `make dev-all`                   | Start full local stack           |
-| `make dev-all-down`              | Stop all local services          |
-| `make dev-status`                | Check status of all services     |
-| `make dev-logs`                  | Tail backend logs                |
-| `SERVICE=frontend make dev-logs` | Tail frontend logs               |
-| `make dev-all-reset`             | Full reset (clears data volumes) |
-| `make dev-server-restart`        | Restart backend after Java changes |
-| `make namespace-smoke`           | Run namespace workflow smoke test |
-| `make db-reset`                  | Reset database only              |
+| `scripts/dev/local-mysql-local-index-memory-up.sh` | Start the standard local source stack |
+| `scripts/dev/local-mysql-local-index-memory-down.sh` | Stop the standard local source stack |
+| `scripts/dev/local-mysql-local-index-memory-status.sh` | Check ports, docker status, and health |
+| `docker compose up -d mysql` | Start MySQL only |
+| `docker compose stop mysql` | Stop MySQL only |
 
 ### Claude + Codex parallel workflow
 
@@ -106,20 +119,20 @@ make parallel-up
 
 Then verify the merged result at http://localhost:3000.
 
-Because all worktrees share the same local dependency project, you only need one set of MySQL, Redis, and MinIO containers for all of them.
+Because all worktrees share the same local dependency project, you only need one set of dependency containers for all of them.
 
 If you need to inspect or resolve merge conflicts before starting the app, you can still split the flow manually:
 
 ```bash
 cd ../skillhub-integration-legal-pages
 make parallel-sync
-make dev-all
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
 Additional rules:
 
 - Never let two agents write to the same checkout at the same time.
-- Reserve `make dev-all` and browser verification for the integration worktree only.
+- Reserve browser verification on `localhost:3000` for the integration worktree only.
 - Run `make parallel-sync` before final verification whenever agent branches have diverged.
 
 ## Stage 2: Staging Regression (pre-PR validation)
@@ -128,7 +141,7 @@ Use this stage when a feature or bugfix is complete and you want to verify it wo
 
 ### What staging does
 
-`make staging` runs a **hybrid** Docker environment:
+The staging flow still targets a **hybrid** Docker environment:
 - **Backend**: built as a Docker image from your local source
 - **Frontend**: built as static files (`pnpm build`) and served by Nginx
 - **Dependencies**: same MySQL/Redis/MinIO as local dev
@@ -137,9 +150,9 @@ This is faster than building both images but still validates the containerized b
 
 ### Run staging
 
-```bash
-make staging
-```
+Older project materials may still mention `make staging`, but this checkout does not currently carry the historical top-level `Makefile`.
+
+If you need staging validation from this checkout, use the compose and build files directly or restore the repository-owned orchestration entrypoint before relying on the older command names.
 
 This will:
 1. Build the backend Docker image
@@ -154,24 +167,16 @@ If all tests pass, the environment stays running at:
 
 ### Stop staging
 
-```bash
-make staging-down
-```
+If you are still using the historical orchestration entrypoint in another checkout, stop it there.
+For this checkout, staging orchestration should be considered an engineering follow-up item rather than a ready-to-run repository command.
 
 ### View staging logs
 
-```bash
-make staging-logs            # backend logs
-SERVICE=web make staging-logs  # nginx logs
-```
+For this checkout, inspect the relevant compose services directly if you run staging by hand.
 
 ## Stage 3: Create Pull Request
 
-After staging passes:
-
-```bash
-make pr
-```
+After staging passes, push and create the PR with your normal git + `gh` workflow.
 
 This will:
 1. Check for uncommitted changes (prompts to commit if any)
@@ -180,14 +185,13 @@ This will:
 
 The PR title and body are auto-populated from your commit messages.
 
-> **Note:** `make pr` requires an interactive terminal. Do not use it in CI.
+> **Note:** the historical `make pr` command name may still appear in older notes, but PR creation in this checkout should be treated as normal `git push` + `gh pr create` workflow instead of a guaranteed repository script.
 
 ## Full workflow summary
 
-```
-make dev-all          # start local dev
+```bash
+scripts/dev/local-mysql-local-index-memory-up.sh
 # ... write code, test in browser ...
-make staging          # regression test in Docker
-make staging-down     # stop staging
-make pr               # push + create PR
+# run manual staging validation if needed
+# push and open PR with git + gh
 ```

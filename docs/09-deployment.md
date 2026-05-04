@@ -4,9 +4,10 @@
 
 当前仓库只保留两种运行方式：
 
-- 开发环境：`make dev-all`
+- 开发环境：仓库脚本或显式命令
+  - 推荐脚本：`scripts/dev/local-mysql-local-index-memory-up.sh`
   - 前端和后端运行在宿主机
-  - `docker-compose.yml` 只负责 MySQL、Redis、MinIO
+  - `docker-compose.yml` 当前最常用于依赖服务启动
 - 单机交付环境：`docker compose --env-file .env.release -f compose.release.yml up -d`
   - 前端和后端都运行在容器内
 - 使用 GitHub Actions 发布到 GHCR 的镜像
@@ -70,27 +71,23 @@
 
 ## 4 开发环境
 
-开发入口保持不变：
+当前推荐源码开发入口：
 
 ```bash
-make dev-all
+scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
 行为：
 
-- `docker-compose.yml` 启动 MySQL、Redis、MinIO
-- `server` 在宿主机通过 Maven Wrapper 启动
+- `docker-compose.yml` 至少启动 MySQL
+- `server` 在宿主机通过打包后的 Spring Boot jar 启动
 - `web` 在宿主机通过 Vite 启动
 
 常用命令：
 
-```bash
-make dev
-make dev-all
-make dev-down
-make dev-all-down
-make dev-all-reset
-```
+详细本地组合说明见：
+
+- [local-runtime-quickstart.md](./local-runtime-quickstart.md)
 
 ## 5 单机交付环境
 

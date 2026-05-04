@@ -376,7 +376,12 @@
 | status | enum | |
 | updated_at | datetime | |
 
-PostgreSQL Full-Text Index：在 `skill_search_document` 表增加 `search_vector tsvector` 列，通过触发器或 `GENERATED ALWAYS AS` 自动维护，建立 GIN 索引。
+当前标准搜索路径说明：
+
+- `skill_search_document` 继续承担数据库侧权威搜索文档快照
+- 当前默认搜索 provider 为 `local-file-index`，由独立 Lucene 本地索引目录承载查询
+- `mysql-like` 作为显式回退 provider 保留
+- 因此这里不再把 PostgreSQL Full-Text Index 作为当前默认实现说明
 
 ## 3.4 幂等记录表
 
@@ -393,7 +398,7 @@ PostgreSQL Full-Text Index：在 `skill_search_document` 表增加 `search_vecto
 | expires_at | datetime | 过期时间（默认 24h） |
 
 - 流程：收到请求 → 插入 record（PROCESSING）→ 业务处理 → 更新为 COMPLETED + resource_id → 重复请求时查 record 返回已有结果
-- Redis 做快速去重缓存（SETNX），PostgreSQL 做持久化兜底
+- Redis 做快速去重缓存（SETNX），MySQL 做持久化兜底
 - 定时任务清理过期记录
 
 ## 3.5 关键索引设计

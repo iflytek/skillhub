@@ -38,6 +38,7 @@ class LocalMysqlProfileBindingTest {
         assertEquals("local", environment.getProperty("skillhub.storage.provider"));
         assertEquals("mysql", environment.getProperty("skillhub.search.engine"));
         assertEquals("local-file-index", environment.getProperty("skillhub.search.provider"));
+        assertEquals("false", environment.getProperty("skillhub.search.rebuild-on-startup"));
         assertEquals("redis", environment.getProperty("skillhub.runtime.state.provider"));
         assertEquals(
                 System.getProperty("user.home") + "/.skillhub/local-mysql/storage",
@@ -102,6 +103,7 @@ class LocalMysqlProfileBindingTest {
         assertEquals("mysql", environment.getProperty("skillhub.search.engine"));
         assertEquals("mysql-like", properties.getProvider());
         assertEquals(Path.of("/tmp/skillhub-lucene"), properties.getLocalFileIndex().getDirectory());
+        assertEquals("false", environment.getProperty("skillhub.search.rebuild-on-startup"));
     }
 
     private ConfigurableEnvironment loadEnvironment(List<String> resourceNames,

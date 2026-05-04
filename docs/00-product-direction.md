@@ -100,7 +100,7 @@ ClawHub CLI 使用单一 slug 模型，slug 校验规则为 `[a-z0-9]([a-z0-9-]*
 - 技能浏览、详情、下载（公共技能匿名可访问）
 - 标签管理（`latest` 系统保留只读 + 自定义标签人工维护）
 - 技能包文件校验与 SKILL.md 元数据抽取
-- 基于 PostgreSQL 全文索引的搜索
+- 基于 MySQL 权威数据 + 可切换搜索 provider 的搜索（当前默认 `local-file-index`，保留 `mysql-like` 回退）
 
 命名空间与组织：
 - 单一全局命名空间（`@global/skill-name`），由平台管理员管理，不支持多个平台级 namespace
