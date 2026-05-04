@@ -1,3 +1,8 @@
+## Codebase Patterns
+- 覆盖率 story 开始前应先运行模块级 JaCoCo (`mvn -pl <module> test jacoco:report`) 确认目标类现状，避免对已 100% 覆盖的类重复造轮子。
+- 两个覆盖率清单文件 (`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`) 需要同步更新，缺一不可。
+- mock-maker-inline 已启用，可直接用 `MockedStatic` 覆盖静态分支。
+---
 
 ## 2026-05-04 23:50 - US-105
 - 修复 validator 反馈：更新 `server/coverage-baseline.md` 和 `docs/prds/java-unit-line-coverage-inventory.md`，将 `SecurityConfig`、`AccessPolicyFactory`、`RouteSecurityPolicyRegistry`、`PassiveSessionAuthenticator` 四目标类从 uncovered classes inventory 中移除（实际 JaCoCo aggregate 报告已确认 LINE_MISSED=0）。
@@ -30,4 +35,15 @@
   - 发现的 patterns：auth 模块的实体类大多使用 `protected` 无参构造函数 + `@PrePersist` 生命周期回调，测试时需覆盖 JPA 实例化路径和 `prePersist()` 分支。
   - 遇到的陷阱：接口的 default 方法（如 `DirectAuthProvider.displayName()`）不会被实现类覆盖时自动覆盖，需要单独创建匿名实现或 mock 来触发 JaCoCo 命中。
   - 有用的上下文：JaCoCo 模块级 `target/site/jacoco/jacoco.csv` 与 aggregate 报告口径可能不同，验证时应以模块级 CSV 为准，确认 LINE_MISSED=0 后再更新清单。
+---
+
+## 2026-05-05 03:20 - US-105E
+- 验证 search 核心帮助类与抽象服务 100% 行覆盖率：SearchTextTokenizer、SearchQuery、SearchVisibilityScope、SkillSearchDocument、HashingSearchEmbeddingService、AbstractJpaSearchIndexService、AbstractJpaSearchRebuildService、JpaSearchIndexService、JpaSearchRebuildService、SearchIndexEventListener 共 10 个目标类 JaCoCo 确认 LINE_MISSED=0。
+- 发现目标类在先前迭代（commit 47e9f83b 等）中已有完整测试覆盖，本次无需新增测试代码。
+- 同步提交已未提交的覆盖率清单更新：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 10 个目标类条目。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子。
+  - 遇到的陷阱：git working tree 中可能存在前序迭代未提交的清单修改，执行前应先 `git diff` 确认当前状态，避免遗漏已完成的清单更新。
+  - 有用的上下文：search 模块的抽象服务（AbstractJpaSearchIndexService / AbstractJpaSearchRebuildService）大部分逻辑已被具体实现类和现有测试覆盖，无需单独为 abstract class 写独立测试。
 ---
