@@ -47,3 +47,27 @@
   - 遇到的陷阱：git working tree 中可能存在前序迭代未提交的清单修改，执行前应先 `git diff` 确认当前状态，避免遗漏已完成的清单更新。
   - 有用的上下文：search 模块的抽象服务（AbstractJpaSearchIndexService / AbstractJpaSearchRebuildService）大部分逻辑已被具体实现类和现有测试覆盖，无需单独为 abstract class 写独立测试。
 ---
+
+## 2026-05-05 04:12 - US-105F
+- 实现 infra HTTP 与 repository adapter 100% 行覆盖率：WebClientHttpClient、WebClientConfig、JpaSkillRepositoryAdapter、JpaSkillStorageDeletionCompensationRepositoryAdapter、AuditLogJpaRepository、SkillSearchDocumentEntity、HttpClientException、SecurityScanException。
+- 补全/新增测试文件：WebClientHttpClientTest（12 个 case，覆盖 GET/POST/multipart/health 的 happy path 与两类异常分支）、WebClientConfigTest（2 个 case，覆盖 bean 定制器创建与应用）、AuditLogJpaRepositoryTest（5 个 case，覆盖 search 默认方法的全部过滤组合）、JpaSkillRepositoryAdapterTest（13 个 case，覆盖全部委托方法）、SkillSearchDocumentEntityTest（5 个 case，覆盖构造函数、getter/setter、@PreUpdate 生命周期）。
+- 已有测试的 HttpClientExceptionTest 与 SecurityScanExceptionTest 在先前迭代中已覆盖全部构造函数，JaCoCo 确认 LINE_MISSED=0；JpaSkillStorageDeletionCompensationRepositoryAdapterTest 同样已 100% 覆盖。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 8 个目标类。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过；skillhub-infra 模块 JaCoCo 确认 8 目标类 LINE_MISSED=0。
+- **未来迭代的学习：**
+  - 发现的 patterns：Spring Data JPA 接口默认方法（如 AuditLogJpaRepository.search）在被 mock 时，需使用 `Mockito.mock(Interface.class, CALLS_REAL_METHODS)` 才能让默认实现真正执行；否则 Mockito 会返回 null。
+  - 遇到的陷阱：SkillJpaRepository 同时继承 CrudRepository 与 SkillRepository，导致 `findById`/`save`/`delete` 在 Mockito 的 `when()` 和 `verify()` 中出现编译歧义；需显式强转为 `JpaRepository<Skill, Long>` 后再调用 `doReturn`/`doNothing`/`verify`。
+  - 有用的上下文：WebClient 的 fluent API 在 Mockito 中链式 mock 时，每个中间类型（RequestHeadersUriSpec / RequestBodyUriSpec / RequestHeadersSpec / ResponseSpec）都需要单独 mock，且 `when(getSpec.uri(...)).thenReturn(...)` 的泛型协变在某些 JDK/Mockito 组合下会编译失败，改用独立 mock 变量 + raw type 声明可规避。
+---
+
+## 2026-05-05 05:20 - US-105G
+- 补齐 notification 服务与 SSE 管理覆盖率：NotificationPreferenceService、NotificationPreference、Notification、SseEmitterManager。
+- 模块级 JaCoCo 确认 NotificationPreference、Notification、SseEmitterManager 已 LINE_MISSED=0；仅 NotificationPreferenceService 有 1 条 missed line（line 34 的 `filter(p -> p.getChannel() == NotificationChannel.IN_APP)` lambda 中 `==` 的 false 分支未覆盖）。
+- 新增 1 个测试 case：`getPreferences_shouldFilterOutNonInAppChannel`，通过 mock NotificationPreference 返回 mock NotificationChannel 命中 false 分支，覆盖后 NotificationPreferenceService LINE_MISSED=0。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：mock-maker-inline 已启用，可直接 mock enum 返回值来覆盖 `==` 比较分支。
+  - 遇到的陷阱：MockitoExtension 的严格模式下，未被使用的 stubbing（如 `when(otherPref.getCategory())`）会触发 UnnecessaryStubbingException；在 lambda filter 场景中，若元素被过滤掉，后续对元素的 stubbing 就不会被执行。
+  - 有用的上下文：NotificationChannel 当前仅定义 IN_APP 一个值，因此覆盖非 IN_APP 分支必须借助 mock；如果未来新增真实枚举值，测试可直接替换为真实实例。
+---

@@ -137,4 +137,21 @@ class NotificationPreferenceServiceTest {
                 .orElseThrow();
         assertTrue(publishView.enabled());
     }
+
+    @Test
+    void getPreferences_shouldFilterOutNonInAppChannel() {
+        NotificationPreference inAppPref = new NotificationPreference(
+                "user-1", NotificationCategory.REVIEW, NotificationChannel.IN_APP, false);
+        NotificationPreference otherPref = mock(NotificationPreference.class);
+        when(otherPref.getChannel()).thenReturn(mock(NotificationChannel.class));
+        when(preferenceRepository.findByUserId("user-1")).thenReturn(List.of(inAppPref, otherPref));
+
+        List<NotificationPreferenceService.PreferenceView> prefs = service.getPreferences("user-1");
+
+        NotificationPreferenceService.PreferenceView reviewView = prefs.stream()
+                .filter(p -> p.category() == NotificationCategory.REVIEW)
+                .findFirst()
+                .orElseThrow();
+        assertFalse(reviewView.enabled());
+    }
 }
