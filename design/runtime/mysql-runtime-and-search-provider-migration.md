@@ -11,15 +11,15 @@ As of 2026-05-04, the current standard runtime is:
 - search provider: `local-file-index`
 
 `mysql-like` remains as an explicit search fallback.
-`local-h2` remains for lightweight local development and tests.
+Historical materials may still mention `local-h2` and `h2-like`, but they are no longer part of the current formal runtime path.
 
 ## Runtime Axes
 
 Treat relational database, runtime state, and search as three separate provider axes.
 
-- relational database: `h2`, `mysql8`
+- relational database: `mysql8`
 - runtime state: `memory`, `redis`, `disabled`
-- search provider: `h2-like`, `mysql-like`, `local-file-index`
+- search provider: `mysql-like`, `local-file-index`
 
 Do not bundle these switches into one migration step. The database move, Redis adoption, and search backend replacement must stay independently switchable.
 

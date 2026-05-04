@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 退役旧 runtime/provider 的文档收口不能只改单一 quickstart；凡是仍被 `README` / `docs` / `design runtime` 作为当前入口链引用的架构与配置文档，都要一起去掉“仍在活跃支持”的措辞。
 - 退役一个按条件装配的 runtime provider 时，要同时清理它专属的 `ApplicationContextRunner`/单元测试引用；只删生产类会让 `testCompile` 继续被死类名卡住。
 - 当 README / docs 索引把某份 design/runtime 文档列为“当前入口”时，验收 current-entry runtime docs 不能只看 quickstart；需要沿入口链接链一起核对 profile、provider 和启动示例是否仍指向当前正式路径。
 - 集成测试如果注入的是 domain repository contract，不要假设它自带 `deleteAll()` 之类的 Spring Data 扩展；清理夹具时优先用唯一测试数据，或直接注入对应的 JPA repository / `EntityManager`。
@@ -573,4 +574,14 @@
   - 发现的 patterns：退役旧搜索 provider 时，优先一起清掉它的 runtime selection 测试和专属单测，能最快恢复编译绿色并避免死引用。
   - 遇到的陷阱：本仓库未找到指令里提到的“补充说明信息.md”与 `tasks/prd-aiba-agent-gateway.md`；后续如果还依赖这些上下文，需要先确认实际路径。
   - 有用的上下文：`JpaSearchIndexService` / `JpaSearchRebuildService` 仍然保留在代码里并只挂 `engine=h2` 条件，这轮没有移除它们；后续如果要彻底清理 h2 provider 叙事，应在文档与 runtime selection 层继续收口。
+---
+## 2026-05-04 15:24 - US-004
+- 收口了当前入口文档中的旧 provider 叙事：`docs/04-search-architecture.md` 不再把 `h2` / `h2-like` 写成当前活跃运行时，`design/runtime/mysql-runtime-and-search-provider-migration.md` 与 `design/overview/project-deep-analysis.md` 也同步改成只承认 `mysql` 路径与 `mysql-like` 显式回退。
+- 没有改运行时代码或 UI，仅修正文档与架构说明，确保 `SearchRuntimeSelectionTest` 已经体现的现状和当前入口文档一致。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -f server/pom.xml -pl skillhub-app -am test`，全部通过；本轮无 UI 变更，不需要浏览器验证。
+- 更改的文件：`docs/04-search-architecture.md`、`design/runtime/mysql-runtime-and-search-provider-migration.md`、`design/overview/project-deep-analysis.md`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：清理退役 provider 的“当前入口文档”时，搜索架构文档、runtime 参考文档和项目总览需要同时对齐，否则 validator 很容易从旁路文档里重新发现旧 runtime 仍被当成活跃路径描述。
+  - 遇到的陷阱：本仓库根目录没有 `Makefile`，虽然 AGENTS 仍写着优先通过它执行；后续验证如果继续依赖该入口，先确认仓库是否已移除它，再改用等价的 `pnpm` / `mvn` 命令。
+  - 有用的上下文：`tasks/` 下当前只找到 `tasks/prd-mysql8-runtime-and-local-file-index.md`，未发现指令中提到的 `tasks/prd-aiba-agent-gateway.md`；后续若继续引用该背景，需要先核实真实文件名。
 ---

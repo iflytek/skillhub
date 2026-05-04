@@ -119,15 +119,16 @@ WHERE (visibility = 'PUBLIC')
 - `mysql-like` 保留为显式回退路径
 - 语义向量字段仍保留在文档模型中，供后续相关度增强使用
 
-### 5.4 当前迁移期 provider 隔离
+### 5.4 当前 provider 隔离
 
-- `skillhub.search.engine=h2` 时，只装配 `H2LikeSearchQueryService` 与共享的 JPA 搜索文档索引/重建实现，不再实例化任何 MySQL/Lucene 运行时 bean。
-- `skillhub.search.engine=mysql` 时，由 `skillhub.search.provider` 在 `local-file-index` 与 `mysql-like` 之间切换最终实现；`local-mysql` profile 默认走 `local-file-index`，保留 `mysql-like` 作为显式回退路径，而 `local-h2` 继续选择 h2-like provider。
+- 当前正式搜索运行时只保留 `skillhub.search.engine=mysql`。
+- 在该 engine 下，由 `skillhub.search.provider` 在 `local-file-index` 与 `mysql-like` 之间切换最终实现。
+- `local-mysql` profile 默认走 `local-file-index`，`mysql-like` 仅作为显式回退路径。
+- 旧的 `h2` / `h2-like` 资料只代表历史迁移背景，不再属于当前运行时装配说明。
 
 ### 5.5 Phase 3 local-file-index 配置约定
 
 - 对外搜索 provider 配置统一收敛为 `skillhub.search.provider`：
-  - `h2-like`：`local-h2` 测试/轻量联调
   - `mysql-like`：`local-file-index` 不可用时的显式回退值
   - `local-file-index`：第三阶段 Lucene provider，也是 `local-mysql` 当前默认值
 - 当前 bean 装配由 `skillhub.search.engine=mysql` 搭配 `skillhub.search.provider=mysql-like|local-file-index` 控制；`local-file-index` 负责 query/index/rebuild 三类 bean 的最终默认装配。
@@ -135,7 +136,6 @@ WHERE (visibility = 'PUBLIC')
 - 嵌入式 Lucene 索引目录使用 `skillhub.search.local-file-index.directory`：
   - `application.yml` 默认值：`${user.home}/.skillhub/search-index`
   - `local-mysql` 默认值：`${user.home}/.skillhub/local-mysql/search-index`
-  - `local-h2` 默认值：`${user.home}/.skillhub/local-h2/search-index`
 - 目录策略：
   - 索引目录必须与 `skillhub.storage.local.base-path` 分离，避免清空索引时误删上传包内容。
   - 目录应位于单节点本地可写路径；当前不把多实例共享文件系统当作前提。
