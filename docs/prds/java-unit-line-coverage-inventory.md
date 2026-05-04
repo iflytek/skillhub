@@ -128,9 +128,7 @@
 
 | Class | Line Missed | Line Covered | Line Coverage |
 |------|------:|------:|------:|
-| `com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.config.RedisTemplateConfig` | 11 | 0 | 0.00% |
-| `com.iflytek.skillhub.auth.config.SecurityConfig` | 65 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.device.DeviceAuthService` | 57 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.device.DeviceCodeData` | 13 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.device.DeviceCodeResponse` | 1 | 0 | 0.00% |
@@ -165,9 +163,7 @@
 | `com.iflytek.skillhub.auth.oauth.OAuthLoginFlowService` | 20 | 23 | 53.49% |
 | `com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport` | 2 | 6 | 75.00% |
 | `com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver` | 3 | 7 | 70.00% |
-| `com.iflytek.skillhub.auth.policy.AccessPolicyFactory` | 14 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry.RouteAuthorizationPolicy` | 3 | 4 | 57.14% |
-| `com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry` | 2 | 108 | 98.18% |
 | `com.iflytek.skillhub.auth.rbac.RbacService` | 22 | 0 | 0.00% |
 | `com.iflytek.skillhub.auth.session.PlatformSessionService` | 9 | 17 | 65.38% |
 | `com.iflytek.skillhub.auth.token.ApiTokenScopeFilter` | 3 | 27 | 90.00% |

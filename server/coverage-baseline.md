@@ -87,7 +87,6 @@ Generated: 2026-05-04
 ### skillhub-auth
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| SecurityConfig | com.iflytek.skillhub.auth.config | 52 | 68 |
 | ApiTokenService | com.iflytek.skillhub.auth.token | 36 | 43 |
 | AccountMergeService | com.iflytek.skillhub.auth.merge | 34 | 120 |
 | GitHubClaimsExtractor | com.iflytek.skillhub.auth.oauth | 27 | 0 |
@@ -96,7 +95,6 @@ Generated: 2026-05-04
 | OAuthLoginFlowService | com.iflytek.skillhub.auth.oauth | 20 | 23 |
 | PasswordResetService | com.iflytek.skillhub.auth.local | 17 | 97 |
 | LocalAuthService | com.iflytek.skillhub.auth.local | 16 | 86 |
-| AccessPolicyFactory | com.iflytek.skillhub.auth.policy | 14 | 0 |
 | CustomOAuth2UserService | com.iflytek.skillhub.auth.oauth | 13 | 0 |
 | LocalCredential | com.iflytek.skillhub.auth.local | 12 | 16 |
 | GitLabClaimsExtractor | com.iflytek.skillhub.auth.oauth | 8 | 43 |
@@ -120,7 +118,6 @@ Generated: 2026-05-04
 | OAuthLoginFlowService.AuthenticatedLoginContext | com.iflytek.skillhub.auth.oauth | 1 | 0 |
 | GitHubClaimsExtractor.new ParameterizedTypeReference() {...} | com.iflytek.skillhub.auth.oauth | 1 | 0 |
 | DeviceCodeData | com.iflytek.skillhub.auth.device | 1 | 12 |
-| PassiveSessionAuthenticator | com.iflytek.skillhub.auth.bootstrap | 1 | 0 |
 | UassProperties | com.iflytek.skillhub.auth.uass | 1 | 43 |
 | DirectAuthProvider | com.iflytek.skillhub.auth.direct | 1 | 0 |
 | DirectAuthRequest | com.iflytek.skillhub.auth.direct | 1 | 0 |
