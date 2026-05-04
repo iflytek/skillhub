@@ -8,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
@@ -27,7 +28,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
+@SpringBootTest(properties = "skillhub.public.base-url=http://localhost:3000")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(TestRedisConfig.class)
@@ -63,6 +64,28 @@ class SkillLifecycleDeleteControllerTest {
                 .andExpect(jsonPath("$.data.skillId").value(1))
                 .andExpect(jsonPath("$.data.deleted").value(true))
                 .andExpect(jsonPath("$.data.slug").value("demo-skill"));
+    }
+
+    @Test
+    void deleteSkill_allowsLoopbackDevOriginOnNonDefaultPort() throws Exception {
+        given(skillDeleteAppService.deleteSkillFromPortal(
+                eq("global"),
+                eq("demo-skill"),
+                eq("local-admin"),
+                any(),
+                any()))
+                .willReturn(new SkillDeleteAppService.DeleteResult(1L, "global", "demo-skill", true));
+
+        mockMvc.perform(delete("/api/web/skills/global/demo-skill")
+                        .param("ownerId", "local-admin")
+                        .header("Origin", "http://127.0.0.1:13194")
+                        .with(authentication(portalAuth("local-admin", "SUPER_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:13194"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.deleted").value(true));
     }
 
     @Test

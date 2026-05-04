@@ -1,6 +1,6 @@
 # SkillHub 项目外部依赖分析
 
-> 生成时间: 2026-04-28
+> 更新时间: 2026-05-04
 
 本文档记录 SkillHub 项目的所有外部依赖，包括前端、后端、基础设施服务和外部 API。
 
@@ -127,7 +127,7 @@ skillhub-parent
 | 依赖 | 版本 | 用途 |
 |------|------|------|
 | Spring Boot | 3.2.3 | 应用框架 |
-| Java | 21 | 运行时 |
+| Java | 17 | 运行时 |
 | spring-boot-starter-web | - | Web 服务 |
 | spring-boot-starter-data-jpa | - | JPA 持久化 |
 | spring-boot-starter-test | - | 测试支持 |
@@ -136,10 +136,10 @@ skillhub-parent
 
 | 依赖 | 版本 | 用途 |
 |------|------|------|
-| PostgreSQL | 16 | 主数据库 |
-| H2 Database | - | 测试数据库 |
+| MySQL | 8.4 | 主数据库 |
+| H2 Database | - | 轻量本地模式与单元测试数据库 |
 | Flyway Core | - | 数据库迁移 |
-| Flyway PostgreSQL | 10.10.0 | PostgreSQL 迁移支持 |
+| Flyway MySQL | - | MySQL 迁移支持 |
 | Hibernate ORM | - | ORM 框架 |
 
 ### 2.4 缓存与会话
@@ -165,10 +165,12 @@ skillhub-parent
 | AWS S3 SDK | 2.20.26 | S3 兼容存储 |
 | AWS Apache Client | 2.20.26 | HTTP 客户端 |
 
-### 2.7 搜索分词
+### 2.7 搜索与分词
 
 | 依赖 | 版本 | 用途 |
 |------|------|------|
+| lucene-core | 9.12.3 | 本地文件索引核心 |
+| lucene-analysis-common | 9.12.3 | Lucene 分析器 |
 | jieba-analysis | 1.0.3.1 | 中文分词 |
 
 ### 2.8 API 文档
@@ -230,7 +232,7 @@ skillhub-parent
 
 | 服务 | 镜像 | 端口 | 用途 |
 |------|------|------|------|
-| PostgreSQL | postgres:16-alpine | 5432 | 关系数据库 |
+| MySQL | mysql:8.4 | 3306 | 关系数据库 |
 | Redis | redis:7-alpine | 6379 | 缓存与会话存储 |
 | MinIO | minio/minio:latest | 9000/9001 | S3 兼容对象存储 |
 | Skill Scanner | 本地构建 | 8000 | AI 技能分析服务 |
@@ -277,8 +279,8 @@ skillhub-parent
 │  ┌─────────────┐     ┌─────────────────────────────────────────┐   │
 │  │   Scanner   │     │            Infrastructure               │   │
 │  │  (Python)   │     │  ┌─────────┐  ┌─────────┐  ┌─────────┐  │   │
-│  │             │     │  │PostgreSQL│  │  Redis  │  │  MinIO  │  │   │
-│  │ - Cisco AI  │     │  │   :5432  │  │  :6379  │  │:9000/1  │  │   │
+│  │             │     │  │  MySQL   │  │  Redis  │  │  MinIO  │  │   │
+│  │ - Cisco AI  │     │  │   :3306  │  │  :6379  │  │:9000/1  │  │   │
 │  │   Scanner   │     │  └─────────┘  └─────────┘  └─────────┘  │   │
 │  └─────────────┘     └─────────────────────────────────────────┘   │
 │                                                                      │
@@ -298,10 +300,10 @@ skillhub-parent
 | 前端样式 | Tailwind CSS 3 | 原子化 CSS |
 | 后端框架 | Spring Boot 3.2 | Java 主流框架 |
 | 编程语言 | Java 17 | LTS 版本 |
-| 数据库 | PostgreSQL 16 | 关系型数据库 |
+| 数据库 | MySQL 8 | 当前默认关系型数据库 |
 | 缓存 | Redis 7 | KV 存储 |
 | 对象存储 | MinIO | S3 兼容 |
-| 搜索 | Jieba 分词 | 中文处理 |
+| 搜索 | Lucene + Jieba | `local-file-index` 默认搜索路径 |
 | 容器化 | Docker Compose | 本地开发 |
 | 测试 | Playwright + Vitest | E2E + 单元 |
 | 国际化 | i18next | 多语言支持 |
@@ -313,8 +315,8 @@ skillhub-parent
 ### 开发环境
 
 ```bash
-# PostgreSQL
-POSTGRES_IMAGE=postgres:16-alpine
+# MySQL
+MYSQL_IMAGE=mysql:8.4
 
 # Redis
 REDIS_IMAGE=redis:7-alpine

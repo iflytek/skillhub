@@ -1,20 +1,6 @@
 spring:
   jpa:
-    hibernate:
-      ddl-auto: validate
     show-sql: true
-  flyway:
-    enabled: true
-  datasource:
-    url: jdbc:postgresql://localhost:5432/skillhub
-    username: skillhub
-    password: skillhub_dev
-  data:
-    redis:
-      host: localhost
-      port: 6379
-  session:
-    store-type: redis
   security:
     oauth2:
       client:
@@ -27,12 +13,16 @@ server:
   servlet:
     session:
       cookie:
-        same-site: none
-        secure: true
+        same-site: lax
+        secure: false
 
 skillhub:
   public:
     base-url: http://localhost:3000
+  storage:
+    provider: local
+    local:
+      base-path: ${LOCAL_STORAGE_BASE_PATH:${user.home}/.skillhub/local/storage}
   auth:
     mock:
       enabled: true
@@ -51,9 +41,12 @@ skillhub:
         unread-retention-days: 90
   runtime:
     state:
-      # Override with SKILLHUB_RUNTIME_STATE_PROVIDER=memory to fall back to
-      # in-process session/rate-limit/UASS state without changing app code.
       provider: ${SKILLHUB_RUNTIME_STATE_PROVIDER:redis}
+  search:
+    engine: mysql
+    provider: ${SKILLHUB_SEARCH_PROVIDER:local-file-index}
+    local-file-index:
+      directory: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:${user.home}/.skillhub/local/search-index}
   security:
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:false}

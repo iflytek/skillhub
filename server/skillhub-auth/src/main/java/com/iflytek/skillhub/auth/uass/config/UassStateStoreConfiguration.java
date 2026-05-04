@@ -28,13 +28,14 @@ public class UassStateStoreConfiguration {
             return new LocalUassLoginStateStore(properties.getStateTtl());
         }
 
-        RedisTemplate<String, Object> redisTemplate = redisTemplateProvider.getIfAvailable();
         return switch (properties.getCacheMode()) {
             case LOCAL -> localStore(properties, "cacheMode=local");
             case REDIS -> {
+                RedisTemplate<String, Object> redisTemplate = redisTemplateProvider.getIfAvailable();
                 yield redisStore(properties, requireAvailableRedis(redisTemplate, "cacheMode=redis"));
             }
             case AUTO -> {
+                RedisTemplate<String, Object> redisTemplate = redisTemplateProvider.getIfAvailable();
                 if (isRedisAvailable(redisTemplate)) {
                     yield redisStore(properties, redisTemplate);
                 }

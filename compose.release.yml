@@ -12,19 +12,20 @@ services:
       timeout: 5s
       retries: 10
 
-  postgres:
-    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
     restart: unless-stopped
     ports:
-      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+      - "${MYSQL_BIND_ADDRESS:-127.0.0.1}:${MYSQL_PORT:-3306}:3306"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-skillhub}
-      POSTGRES_USER: ${POSTGRES_USER:-skillhub}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skillhub_demo}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-skillhub}
+      MYSQL_USER: ${MYSQL_USER:-skillhub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-skillhub_demo}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-skillhub_root_demo}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skillhub} -d ${POSTGRES_DB:-skillhub}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER:-skillhub} -p${MYSQL_PASSWORD:-skillhub_demo} --silent"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -50,9 +51,9 @@ services:
       - "${API_PORT:-8080}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-skillhub}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-skillhub}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-skillhub_demo}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-skillhub}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-skillhub}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-skillhub_demo}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
@@ -69,6 +70,7 @@ services:
       SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE: ${SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE:-false}
       SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET: ${SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET:-false}
       SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY: ${SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY:-PT10M}
+      SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:-/var/lib/skillhub/search-index}
       SKILLHUB_SECURITY_SCANNER_ENABLED: ${SKILLHUB_SECURITY_SCANNER_ENABLED:-true}
       SKILLHUB_SECURITY_SCANNER_URL: http://skill-scanner:8000
       SKILLHUB_SECURITY_SCANNER_MODE: upload
@@ -93,8 +95,9 @@ services:
       SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME:-SkillHub}
     volumes:
       - skillhub_storage:/var/lib/skillhub/storage
+      - skillhub_search_index:/var/lib/skillhub/search-index
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -125,6 +128,7 @@ services:
       start_period: 10s
 
 volumes:
-  postgres_data:
+  mysql_data:
   redis_data:
   skillhub_storage:
+  skillhub_search_index:

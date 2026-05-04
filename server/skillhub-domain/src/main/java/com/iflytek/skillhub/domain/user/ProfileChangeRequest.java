@@ -6,7 +6,7 @@ import java.time.Instant;
 /**
  * Represents a user-initiated profile change request.
  *
- * <p>Each request captures a batch of field changes as JSONB (e.g. displayName, avatarUrl),
+ * <p>Each request captures a batch of field changes as JSON text (e.g. displayName, avatarUrl),
  * along with the previous values for audit and rollback purposes.
  *
  * <p>Depending on the moderation configuration, a request may be:

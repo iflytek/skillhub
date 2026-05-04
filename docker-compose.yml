@@ -13,18 +13,19 @@ services:
       timeout: 5s
       retries: 5
 
-  postgres:
-    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
     ports:
-      - "5432:5432"
+      - "3306:3306"
     environment:
-      POSTGRES_DB: skillhub
-      POSTGRES_USER: skillhub
-      POSTGRES_PASSWORD: skillhub_dev
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-skillhub}
+      MYSQL_USER: ${MYSQL_USER:-skillhub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-skillhub_dev}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-skillhub_root_dev}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U skillhub"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -57,5 +58,5 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
+  mysql_data:
   minio_data:

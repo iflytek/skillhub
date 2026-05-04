@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 /**
  * Transitional MySQL-oriented search provider boundary.
  *
- * <p>This skeleton intentionally avoids PostgreSQL FTS-specific SQL and
+ * <p>This skeleton intentionally avoids retired database-specific full-text SQL and
  * terminology. Follow-up stories extend it with MySQL-safe filtering,
  * matching, ordering, and paging behavior.
  */

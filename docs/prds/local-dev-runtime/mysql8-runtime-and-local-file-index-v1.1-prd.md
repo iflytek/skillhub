@@ -1,8 +1,25 @@
 # MySQL 8 运行时迁移与本地文件索引路线图 - 产品需求文档 (PRD) v1.1
 
+## 0. 当前状态快照（2026-05-04）
+
+该 PRD 立项后的主链路迁移已经基本完成。
+
+已完成：
+
+- 默认运行态已切换到 `MySQL 8 + Redis + local-file-index`
+- `mysql-like` 过渡搜索 provider 已落地，并保留为显式回退路径
+- `local-file-index` 的 query / index / rebuild 主链路已落地
+- PostgreSQL 默认配置、标准 Compose 入口和 PostgreSQL FTS 默认代码路径已退出当前主运行时
+- 真实运行态与浏览器端到端验证已经覆盖认证、用户、命名空间、技能主链路、搜索和管理后台
+
+剩余待办：
+
+- 迁移范围 Java 单元测试补齐
+- 最终 JaCoCo 覆盖率门禁收口
+
 ## 1. 介绍
 
-当前仓库已经具备：
+本 PRD 立项时，仓库基线是：
 
 - `local` PostgreSQL 标准运行模式
 - `local-h2` 轻量本地联调模式
@@ -87,70 +104,70 @@
 **描述：** 作为后端维护者，我希望主运行时完全基于 MySQL 8，以便与真实部署环境保持一致。
 
 **Acceptance Criteria：**
-- [ ] 新增 MySQL 8 运行 profile 和对应配置
-- [ ] 应用可以在 MySQL 8 下成功启动
-- [ ] 登录、用户、命名空间、技能基础 CRUD 在 MySQL 8 下可用
-- [ ] 主运行时不再依赖 PostgreSQL driver
+- [x] 新增 MySQL 8 运行 profile 和对应配置
+- [x] 应用可以在 MySQL 8 下成功启动
+- [x] 登录、用户、命名空间、技能基础 CRUD 在 MySQL 8 下可用
+- [x] 主运行时不再依赖 PostgreSQL driver
 
 ### US-002: 在迁移期间保留 mysql-like 搜索兜底
 **描述：** 作为开发者，我希望在本地文件索引服务接入前仍有一个可工作的搜索兜底方案，以便先迁通主链路。
 
 **Acceptance Criteria：**
-- [ ] 新增 `mysql-like` 搜索查询实现
-- [ ] 搜索接口在 MySQL 8 下返回 200 且可检索基础关键词
-- [ ] `SkillSearchAppService` 不感知底层搜索 provider
-- [ ] `mysql-like` 明确标记为过渡方案，而不是最终搜索形态
+- [x] 新增 `mysql-like` 搜索查询实现
+- [x] 搜索接口在 MySQL 8 下返回 200 且可检索基础关键词
+- [x] `SkillSearchAppService` 不感知底层搜索 provider
+- [x] `mysql-like` 明确标记为过渡方案，而不是最终搜索形态
 
 ### US-003: Redis 统一接管运行时状态
 **描述：** 作为运维人员，我希望 MySQL 运行时最终统一使用 Redis 处理会话和状态，以便支撑多实例部署。
 
 **Acceptance Criteria：**
-- [ ] Session 可切换到 Redis
-- [ ] rate limit / auth throttle / UASS state store 可切换到 Redis
-- [ ] 相关装配集中在基础设施层，不扩散到业务层
-- [ ] 多实例场景下不会因节点切换丢失登录态
+- [x] Session 可切换到 Redis
+- [x] rate limit / auth throttle / UASS state store 可切换到 Redis
+- [x] 相关装配集中在基础设施层，不扩散到业务层
+- [x] 多实例场景下不会因节点切换丢失登录态
 
 ### US-004: 后续切换到本地文件索引服务
 **描述：** 作为平台维护者，我希望最终搜索不再依赖关系库，以便彻底摆脱 PostgreSQL Full-Text 并减少对 MySQL LIKE 的长期依赖。
 
 **Acceptance Criteria：**
-- [ ] 定义本地文件索引服务的文档模型
-- [ ] 定义索引目录、写入、删除、重建策略
-- [ ] 提供 `Query / Index / Rebuild` 三类实现
-- [ ] 搜索主路径可从 `mysql-like` 切换为 `local-file-index`
+- [x] 定义本地文件索引服务的文档模型
+- [x] 定义索引目录、写入、删除、重建策略
+- [x] 提供 `Query / Index / Rebuild` 三类实现
+- [x] 搜索主路径可从 `mysql-like` 切换为 `local-file-index`
 
 ### US-005: 保留 H2 作为测试数据库
 **描述：** 作为开发者，我希望现有单元测试继续沿用 H2，以便保持测试速度和维护成本可控。
 
 **Acceptance Criteria：**
-- [ ] 单元测试默认仍可使用 H2
-- [ ] 不要求将全部单元测试替换为 MySQL
-- [ ] 对数据库方言敏感的能力补充 MySQL 专项验证
-- [ ] H2 仅作为测试辅助，不再被视为最终运行时目标的一部分
+- [x] 单元测试默认仍可使用 H2
+- [x] 不要求将全部单元测试替换为 MySQL
+- [x] 对数据库方言敏感的能力补充 MySQL 专项验证
+- [x] H2 仅作为测试辅助，不再被视为最终运行时目标的一部分
 
 ### US-006: 最终移除 PostgreSQL 相关运行时代码
 **描述：** 作为维护者，我希望在迁移完成后彻底移除 PostgreSQL 相关运行时代码，以便减少维护成本和误用空间。
 
 **Acceptance Criteria：**
-- [ ] PostgreSQL driver 从主运行依赖中移除
-- [ ] PostgreSQL profile 不再作为标准路径
-- [ ] PostgreSQL FTS 搜索实现退出主运行时装配
-- [ ] PostgreSQL 专属 schema / SQL / 文档完成清理或归档
+- [x] PostgreSQL driver 从主运行依赖中移除
+- [x] PostgreSQL profile 不再作为标准路径
+- [x] PostgreSQL FTS 搜索实现退出主运行时装配
+- [x] PostgreSQL 专属 schema / SQL / 文档完成清理或归档
 
 ### US-007: 完成功能后的全量端到端验证
 **描述：** 作为交付负责人，我希望在所有功能开发完成后执行一轮全量端到端验证，以便确认整个 MySQL 运行时迁移链路在真实浏览器和真实后端联调下可用。
 
 **Acceptance Criteria：**
-- [ ] 在所有功能开发完成后，执行覆盖主要功能点的全量端到端验证
-- [ ] 端到端验证覆盖登录、用户、命名空间、技能基础 CRUD、搜索、管理后台以及已启用的认证主链路
-- [ ] 端到端验证过程中允许继续修改后端代码，直到所有功能点都通过
-- [ ] 端到端验证完成后，形成明确的通过结果，而不是只验证部分关键页面
+- [x] 在所有功能开发完成后，执行覆盖主要功能点的全量端到端验证
+- [x] 端到端验证覆盖登录、用户、命名空间、技能基础 CRUD、搜索、管理后台以及已启用的认证主链路
+- [x] 端到端验证过程中允许继续修改后端代码，直到所有功能点都通过
+- [x] 端到端验证完成后，形成明确的通过结果，而不是只验证部分关键页面
 
 ### US-008: 在全量 E2E 通过后补齐 Java 后台单元测试和 100% 行覆盖率
 **描述：** 作为维护者，我希望在全量端到端验证通过之后，再集中补齐 Java 后台单元测试并把行覆盖率提升到 100%，以便在功能稳定后统一做质量收口。
 
 **Acceptance Criteria：**
-- [ ] Java 后台单元测试补齐工作在全量端到端验证通过之后再开始
+- [x] Java 后台单元测试补齐工作在全量端到端验证通过之后再开始
 - [ ] 对本次迁移新增和重度修改的 Java 生产代码补充单元测试
 - [ ] 最终目标是相关 Java 生产代码单元测试行覆盖率达到 100%
 - [ ] 覆盖率检查进入最终收口阶段，而不是在主要功能链路尚未稳定时提前阻塞开发
@@ -275,13 +292,13 @@
 - PostgreSQL 从主运行时和部署说明中完全退出
 - 阶段二、阶段三上线后，可通过配置回切到上一阶段路线，但不能回切到 PostgreSQL
 
-## 10. 开放问题
+## 10. 历史开放问题与当前结论
 
-1. `local-file-index` 是嵌入式索引，还是独立本地服务？
-2. `local-file-index` 的索引粒度是 skill 级还是 version 级？
-3. 阶段一是否要保留 PostgreSQL 作为“仅历史兼容” profile，还是直接删除？
-4. MySQL 8 的 schema 初始化第一版使用 Flyway、Hibernate，还是 init SQL？
-5. 多实例部署时，`local-file-index` 是否允许单节点索引、其他节点远程查询？
+1. `local-file-index` 已按嵌入式 Lucene 落地，和应用进程同生命周期运行，不引入独立搜索 daemon。
+2. 当前索引文档模型已经收敛到每 skill 一条 `SkillSearchDocument`，查询合同继续返回 `skillIds + pagination metadata`。
+3. PostgreSQL 没有继续保留为标准运行 profile，只保留必要的历史材料和非当前入口说明。
+4. MySQL 空库启动路径已收敛到专用 `migration-mysql` Flyway 目录，而不是依赖 Hibernate 自动建表。
+5. 多实例部署下的 `local-file-index` 仍按“单节点本地可写目录”假设设计；如果后续需要跨节点共享或远程查询，应另开新 PRD，而不是继续在本 PRD 中追加。
 
 ## 11. 实施阶段
 

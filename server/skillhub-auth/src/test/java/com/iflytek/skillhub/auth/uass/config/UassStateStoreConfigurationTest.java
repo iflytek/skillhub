@@ -108,6 +108,23 @@ class UassStateStoreConfigurationTest {
     }
 
     @Test
+    void localMode_doesNotRequireRedisTemplateWhenFeatureIsEnabled(CapturedOutput output) {
+        contextRunner
+                .withPropertyValues(
+                        "skillhub.auth.uass.enabled=true",
+                        "skillhub.auth.uass.cache-mode=local"
+                )
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    assertThat(context.getBean(UassLoginStateStore.class))
+                            .isInstanceOf(LocalUassLoginStateStore.class);
+                });
+
+        assertThat(output).contains("LOCAL mode")
+                .contains("cacheMode=local");
+    }
+
+    @Test
     void redisMode_usesRedisStoreWhenRedisTemplateIsAvailable() {
         contextRunner
                 .withUserConfiguration(AvailableRedisTemplateTestConfig.class)

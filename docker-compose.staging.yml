@@ -1,11 +1,11 @@
 # Staging environment: hybrid mode
 # - Backend: locally built Docker image
 # - Frontend: locally built static files mounted into Nginx
-# - Dependencies: reuses docker-compose.yml (postgres, redis, minio)
+# - Dependencies: reuses docker-compose.yml (mysql, redis, minio)
 #
 # Usage: make staging
 # Do NOT use directly — use the make target which handles build + deps + cleanup.
-# NOTE: postgres, redis, minio services are defined in docker-compose.yml.
+# NOTE: mysql, redis, minio services are defined in docker-compose.yml.
 # When invoked via "docker compose -f docker-compose.yml -f docker-compose.staging.yml",
 # Docker Compose merges both files so these services are available by hostname.
 
@@ -16,11 +16,12 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/skillhub
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
       SPRING_DATASOURCE_USERNAME: skillhub
       SPRING_DATASOURCE_PASSWORD: skillhub_dev
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY: /tmp/skillhub/search-index
       SESSION_COOKIE_SECURE: "false"
       SKILLHUB_PUBLIC_BASE_URL: "http://localhost"
       DEVICE_AUTH_VERIFICATION_URI: "http://localhost/cli/auth"
@@ -43,7 +44,7 @@ services:
       OAUTH2_GITHUB_CLIENT_ID: local-placeholder
       OAUTH2_GITHUB_CLIENT_SECRET: local-placeholder
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
       redis:
         condition: service_healthy

@@ -1,12 +1,14 @@
 # Tech Stack 兼容性分析
 
 > 分析日期：2026-04-28
+>
+> 状态更新（2026-05-04）：本文形成于仓库仍以 PostgreSQL 路线做数据库选型分析的阶段，用于保留历史方案比较背景。它不再代表当前默认运行时。当前标准运行时请以 `MySQL 8 + Redis + local-file-index` 为准，参见 [../runtime/mysql-runtime-and-search-provider-migration.md](../runtime/mysql-runtime-and-search-provider-migration.md)。
 
-## 1. PostgreSQL 版本兼容性
+## 1. 历史背景：PostgreSQL 版本兼容性
 
 ### 1.1 当前配置
 
-项目使用 PostgreSQL，数据库迁移文件中使用的关键特性：
+以下内容描述的是项目在迁移前使用 PostgreSQL 作为主运行时时的关键特性：
 
 ```sql
 ALTER TABLE skill_search_document

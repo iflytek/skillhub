@@ -19,20 +19,22 @@ spring:
     timeout-per-shutdown-phase: 30s
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.MySQLDialect
         jdbc:
           time_zone: UTC
   jackson:
     time-zone: UTC
   flyway:
     enabled: true
-    locations: classpath:sql/migration
+    locations: classpath:sql/migration-mysql
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/skillhub}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true}
+    driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${SPRING_DATASOURCE_USERNAME:skillhub}
     password: ${SPRING_DATASOURCE_PASSWORD:skillhub_dev}
     hikari:
@@ -142,8 +144,8 @@ skillhub:
     max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
     max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
   search:
-    engine: postgres
-    provider: ${SKILLHUB_SEARCH_PROVIDER:postgres-fts}
+    engine: mysql
+    provider: ${SKILLHUB_SEARCH_PROVIDER:local-file-index}
     local-file-index:
       directory: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:${user.home}/.skillhub/search-index}
     rebuild-on-startup: false

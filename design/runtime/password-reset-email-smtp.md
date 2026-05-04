@@ -186,7 +186,7 @@ docker run -d --name skillhub-mailhog \
   mailhog/mailhog
 ```
 
-2. 启动依赖服务（Postgres/Redis）：
+2. 启动依赖服务（MySQL/Redis）：
 
 ```bash
 make dev

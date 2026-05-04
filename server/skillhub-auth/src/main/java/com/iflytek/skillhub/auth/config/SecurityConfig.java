@@ -183,6 +183,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
         configuration.setAllowedOrigins(resolveAllowedOrigins(publicBaseUrl, uassMockLoginBaseUrl));
+        configuration.setAllowedOriginPatterns(resolveAllowedOriginPatterns(publicBaseUrl, uassMockLoginBaseUrl));
         configuration.setAllowedMethods(List.of(
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
@@ -235,6 +236,28 @@ public class SecurityConfig {
         return List.copyOf(origins);
     }
 
+    private static List<String> resolveAllowedOriginPatterns(String... baseUrls) {
+        Set<String> originPatterns = new LinkedHashSet<>();
+        for (String baseUrl : baseUrls) {
+            String normalized = baseUrl == null ? "" : baseUrl.trim();
+            if (normalized.isEmpty()) {
+                continue;
+            }
+            try {
+                URI publicUri = URI.create(normalized);
+                String scheme = publicUri.getScheme();
+                String host = publicUri.getHost();
+                if (scheme != null && host != null && isLoopbackHost(host)) {
+                    originPatterns.add(originPatternOf(scheme, "localhost"));
+                    originPatterns.add(originPatternOf(scheme, "127.0.0.1"));
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Leave the pattern allow-list empty if the public base URL is invalid.
+            }
+        }
+        return List.copyOf(originPatterns);
+    }
+
     private static boolean isLoopbackHost(String host) {
         return "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "::1".equals(host);
     }
@@ -244,5 +267,9 @@ public class SecurityConfig {
             return scheme + "://" + host;
         }
         return scheme + "://" + host + ":" + port;
+    }
+
+    private static String originPatternOf(String scheme, String host) {
+        return scheme + "://" + host + ":[*]";
     }
 }

@@ -46,7 +46,7 @@ ACL 投影计算规则：
 - 匿名用户：`includeAllPublic=true`，其余为空集，`userId=null`
 - 已登录用户：`includeAllPublic=true`，`memberNamespaceIds` = 用户所属空间，`adminNamespaceIds` = 用户是 ADMIN 以上的空间，`userId` = 当前用户 ID
 
-一期 PostgreSQL 实现中，`SearchVisibilityScope` 转换为 WHERE 条件：
+当前 MySQL 运行时实现中，`SearchVisibilityScope` 转换为 WHERE 条件：
 ```sql
 WHERE (visibility = 'PUBLIC')
    OR (visibility = 'NAMESPACE_ONLY' AND namespace_id IN (:memberNamespaceIds))
@@ -75,7 +75,7 @@ WHERE (visibility = 'PUBLIC')
 
 唯一约束：`(skill_id)`
 
-PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，基于 `title`、`summary`、`keywords`、`search_text` 自动维护，建立 GIN 索引。详见第 7 节。
+当前默认搜索运行时以 MySQL 作为权威数据源，并通过 `local-file-index`（Lucene）维护独立索引目录；`skill_search_document` 继续承担数据库侧权威搜索文档快照。
 
 ## 4 索引写入时机
 
@@ -107,32 +107,26 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 
 | 阶段 | 实现 | 索引粒度 | 切换方式 |
 |------|------|---------|---------|
-| 一期 | PostgreSQL Full-Text (tsvector + GIN) | 每 skill 一条（latest published） | 默认 |
-| 一点五期 | PostgreSQL Full-Text + 语义向量重排 | 每 skill 一条（latest published） | 配置 `skillhub.search.semantic.enabled=true` |
+| 当前 | MySQL + local-file-index (Lucene) | 每 skill 一条（latest published） | 默认 |
+| 回退 | MySQL + mysql-like | 每 skill 一条（latest published） | 配置 `skillhub.search.provider=mysql-like` |
 | 二期 | ES / OpenSearch | 每 skill_version 一条 + skill 聚合文档 | 配置 `search.provider=elasticsearch` |
 | 三期 | 向量检索 | 每 skill_version 多条（chunk 级） | 配置 `search.provider=vector` |
 | 四期 | 混合排序 | 关键词 + 向量混合 | 配置 `search.provider=hybrid` |
 
-当前代码实现已落在“一点五期”：
-- 仍然使用 PostgreSQL 全文搜索作为主召回
-- 搜索文档表新增 `semantic_vector` 缓存字段
-- relevance 排序下，对全文候选集追加语义向量重排
-- 语义向量不可用时自动降级为现有全文相关度排序
+当前代码实现已落在 “MySQL + local-file-index” 阶段：
+- MySQL 保持 `skill_search_document` 作为权威快照表
+- `local-file-index` 负责 query/index/rebuild 三类最终默认 bean
+- `mysql-like` 保留为显式回退路径
+- 语义向量字段仍保留在文档模型中，供后续相关度增强使用
 
 ### 5.4 当前迁移期 provider 隔离
 
-- `skillhub.search.engine=postgres` 时，运行时会装配 `search.postgres` 下的 PostgreSQL FTS 查询、索引写入与重建实现。
-- `skillhub.search.engine=h2` 时，只装配 `H2LikeSearchQueryService` 与共享的 JPA 搜索文档索引/重建实现，不再实例化任何 `search.postgres.*` bean。
+- `skillhub.search.engine=h2` 时，只装配 `H2LikeSearchQueryService` 与共享的 JPA 搜索文档索引/重建实现，不再实例化任何 MySQL/Lucene 运行时 bean。
 - `skillhub.search.engine=mysql` 时，由 `skillhub.search.provider` 在 `local-file-index` 与 `mysql-like` 之间切换最终实现；`local-mysql` profile 默认走 `local-file-index`，保留 `mysql-like` 作为显式回退路径，而 `local-h2` 继续选择 h2-like provider。
-- 当前仍暂时保留但已限制在 PostgreSQL provider 下的遗留实现：
-  - `PostgresFullTextQueryService`
-  - `PostgresFullTextIndexService`
-  - `PostgresSearchRebuildService`
 
 ### 5.5 Phase 3 local-file-index 配置约定
 
 - 对外搜索 provider 配置统一收敛为 `skillhub.search.provider`：
-  - `postgres-fts`：迁移期遗留，仅当前默认 `application.yml` 使用
   - `h2-like`：`local-h2` 测试/轻量联调
   - `mysql-like`：`local-file-index` 不可用时的显式回退值
   - `local-file-index`：第三阶段 Lucene provider，也是 `local-mysql` 当前默认值
@@ -164,7 +158,7 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 - 回退路径约定：
   - 运行时通过 `skillhub.search.provider=mysql-like|local-file-index` 切换最终搜索后端。
   - `mysql-like` 是 `local-file-index` 的显式回退方案；如果 Lucene 目录损坏、索引格式变更或本地文件系统不可写，优先切回 `mysql-like`，再执行重建或清理。
-  - 回退不要求切回 PostgreSQL；MySQL 仍是搜索文档的权威数据源。
+  - 回退不要求切到历史数据库实现；MySQL 仍是搜索文档的权威数据源。
 
 ### 5.3 SPI 演进策略
 
@@ -183,28 +177,7 @@ PostgreSQL 全文搜索索引：表增加 `search_vector tsvector` 生成列，�
 
 `rebuildAll()` / `rebuildByNamespace()` 执行前获取 Redis 分布式锁（key: `search:rebuild:{scope}`，TTL: 10min），获取失败则跳过。
 
-## 7 PostgreSQL 全文搜索中文支持
+## 7 历史实现说明
 
-PostgreSQL 全文搜索使用 `tsvector` + `tsquery` + GIN 索引：
-
-```sql
--- 增加 tsvector 生成列
-ALTER TABLE skill_search_document
-ADD COLUMN search_vector tsvector
-GENERATED ALWAYS AS (
-    setweight(to_tsvector('simple', coalesce(title, '')), 'A') ||
-    setweight(to_tsvector('simple', coalesce(summary, '')), 'B') ||
-    setweight(to_tsvector('simple', coalesce(keywords, '')), 'B') ||
-    setweight(to_tsvector('simple', coalesce(search_text, '')), 'C')
-) STORED;
-
--- 建立 GIN 索引
-CREATE INDEX idx_search_vector ON skill_search_document USING GIN (search_vector);
-```
-
-中文支持方案：
-- 一期使用 `simple` 分词配置（按空格和标点分词），对中文支持有限但零依赖
-- 如需更好的中文分词，可安装 `zhparser` 或 `pg_jieba` 扩展，替换为对应的 text search configuration
-- PostgreSQL 的 `tsvector` 支持权重（A/B/C/D），可对 title 赋予更高权重，提升搜索相关性
-
-已知局限：`simple` 分词对中文的精度不如专业搜索引擎。建议 Phase 2 完成后评估搜索效果，如不满足需求则在 Phase 3 提前引入 ES。
+旧的 PostgreSQL FTS 方案已退出当前主运行时，不再作为默认配置、默认 bean 或当前部署入口保留。
+如果需要追溯历史设计，请查阅对应归档材料；当前仓库的有效运行路径以 `MySQL + local-file-index` 为准。

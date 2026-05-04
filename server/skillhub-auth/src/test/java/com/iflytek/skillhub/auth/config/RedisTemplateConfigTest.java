@@ -1,9 +1,11 @@
 package com.iflytek.skillhub.auth.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.BeanCreationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -18,6 +20,20 @@ class RedisTemplateConfigTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(DefaultRedisTemplateConfig.class, RedisTemplateConfig.class);
+
+    @Test
+    void lazyTypedRedisTemplateDoesNotBreakContextsWithoutRedisConnectionFactory() {
+        new ApplicationContextRunner()
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .withUserConfiguration(RedisTemplateConfig.class)
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    assertThatThrownBy(() -> context.getBean("skillhubRedisTemplate"))
+                            .isInstanceOf(BeanCreationException.class)
+                            .hasRootCauseInstanceOf(IllegalStateException.class)
+                            .hasRootCauseMessage("skillhubRedisTemplate requires RedisConnectionFactory when instantiated");
+                });
+    }
 
     @Test
     void createsTypedRedisTemplateEvenWhenDefaultRedisTemplateBeanExists() {

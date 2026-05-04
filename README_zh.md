@@ -209,7 +209,7 @@ helm install skillhub ./deploy/helm
 
 ```bash
 # 数据库
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/skillhub
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
 SPRING_DATASOURCE_USERNAME=skillhub
 SPRING_DATASOURCE_PASSWORD=skillhub
 
@@ -272,10 +272,10 @@ SkillHub 采用清晰的分层架构：
 ### 后端
 - **语言**：Java 17
 - **框架**：Spring Boot 3.2.3
-- **数据库**：PostgreSQL 16 + Flyway 迁移
+- **数据库**：MySQL 8 + Flyway 迁移
 - **缓存**：Redis 7
 - **存储**：S3/MinIO
-- **搜索**：PostgreSQL 全文搜索
+- **搜索**：MySQL + local-file-index（Lucene）
 
 ### 前端
 - **语言**：TypeScript

@@ -6,12 +6,12 @@
 
 - 开发环境：`make dev-all`
   - 前端和后端运行在宿主机
-  - `docker-compose.yml` 只负责 PostgreSQL、Redis、MinIO
+  - `docker-compose.yml` 只负责 MySQL、Redis、MinIO
 - 单机交付环境：`docker compose --env-file .env.release -f compose.release.yml up -d`
   - 前端和后端都运行在容器内
 - 使用 GitHub Actions 发布到 GHCR 的镜像
 - 默认发布 `linux/amd64` 与 `linux/arm64` 多架构镜像
-  - PostgreSQL、Redis 与应用容器一起通过 Compose 启动
+  - MySQL、Redis 与应用容器一起通过 Compose 启动
 
 不再维护本地构建整套 demo 容器的中间模式，也不再保留 `docker-compose.prod.yml`。
 
@@ -33,13 +33,13 @@
 └───┬────┬─────┘
     │    │
     ▼    ▼
- PostgreSQL  Redis
+   MySQL      Redis
 ```
 
 说明：
 - Web 容器提供静态资源，并将 `/api/*`、`/oauth2/*`、`/.well-known/*` 反代到后端
 - 后端默认运行 `docker` profile，不再启用本地 mock 登录
-- PostgreSQL / Redis 默认只绑定 `127.0.0.1`
+- MySQL / Redis 默认只绑定 `127.0.0.1`
 - 对象存储推荐使用外部 S3 / OSS，通过环境变量注入
 
 ## 3 Profile 约定
@@ -78,7 +78,7 @@ make dev-all
 
 行为：
 
-- `docker-compose.yml` 启动 PostgreSQL、Redis、MinIO
+- `docker-compose.yml` 启动 MySQL、Redis、MinIO
 - `server` 在宿主机通过 Maven Wrapper 启动
 - `web` 在宿主机通过 Vite 启动
 
@@ -111,8 +111,8 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 - `compose.release.yml`
   - 使用发布镜像，不在用户机器上执行本地构建
-  - 负责拉起 PostgreSQL、Redis、server、web
-  - PostgreSQL、Redis 默认只绑定到 `127.0.0.1`
+  - 负责拉起 MySQL、Redis、server、web
+  - MySQL、Redis 默认只绑定到 `127.0.0.1`
   - Web 和后端都支持运行时环境变量注入，不需要为每个环境重建镜像
 - `.env.release.example`
   - 运行时变量模板
@@ -209,7 +209,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
    - `SKILLHUB_PUBLIC_BASE_URL` 填最终 HTTPS 域名，且不要带尾部 `/`
    - `SKILLHUB_STORAGE_PROVIDER=s3`
    - 按云厂商 OSS / S3 兼容参数填写 `SKILLHUB_STORAGE_S3_*`
-   - 设置非默认的 `POSTGRES_PASSWORD`
+   - 设置非默认的 `MYSQL_PASSWORD`
    - 模板默认已开启首登管理员，务必将 `BOOTSTRAP_ADMIN_PASSWORD` 改为强密码
 3. 启动前校验
    - 运行 `make validate-release-config`

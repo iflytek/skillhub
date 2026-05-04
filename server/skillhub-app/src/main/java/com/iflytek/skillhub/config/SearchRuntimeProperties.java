@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "skillhub.search")
 public class SearchRuntimeProperties {
 
-    private String provider = "postgres-fts";
+    private String provider = "local-file-index";
     private final LocalFileIndex localFileIndex = new LocalFileIndex();
 
     public String getProvider() {

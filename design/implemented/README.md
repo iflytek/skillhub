@@ -17,6 +17,7 @@
 - 仓库已存在 `local-h2` 配置与种子数据
 - 已存在 H2 搜索降级实现
 - 相关 Redis / 本地模式策略已进入代码路径
+- 以上 PRD 写作时的标准本地路径仍是 PostgreSQL；当前真实标准运行时已收敛到 `MySQL 8 + Redis + local-file-index`，`local-h2` 仅保留为轻量联调与测试模式
 
 ### 2. 搜索、预览与文件浏览
 - [search-and-preview/file-preview-syntax-highlighting-v1.0-prd.md](./search-and-preview/file-preview-syntax-highlighting-v1.0-prd.md)
@@ -38,4 +39,3 @@
 
 - 这里的“已实现”表示主路径能力已经进入仓库代码，不要求与原 PRD 逐字逐项完全一致。
 - 如果后续出现第二阶段扩展需求，建议重新回到 `docs/prds` 新开 PRD，而不是继续在这里追加未实现规划。
-

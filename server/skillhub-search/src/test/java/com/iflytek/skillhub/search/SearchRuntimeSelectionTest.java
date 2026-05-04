@@ -16,9 +16,6 @@ import com.iflytek.skillhub.search.localfile.LocalFileIndexService;
 import com.iflytek.skillhub.search.mysql.MysqlNoopSearchIndexService;
 import com.iflytek.skillhub.search.mysql.MysqlNoopSearchRebuildService;
 import com.iflytek.skillhub.search.mysql.MysqlLikeSearchQueryService;
-import com.iflytek.skillhub.search.postgres.PostgresFullTextIndexService;
-import com.iflytek.skillhub.search.postgres.PostgresFullTextQueryService;
-import com.iflytek.skillhub.search.postgres.PostgresSearchRebuildService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -40,10 +37,7 @@ class SearchRuntimeSelectionTest {
                     LocalFileIndexService.class,
                     LocalFileIndexRebuildService.class,
                     JpaSearchIndexService.class,
-                    JpaSearchRebuildService.class,
-                    PostgresFullTextQueryService.class,
-                    PostgresFullTextIndexService.class,
-                    PostgresSearchRebuildService.class
+                    JpaSearchRebuildService.class
             );
 
     @Test
@@ -59,14 +53,11 @@ class SearchRuntimeSelectionTest {
                     assertThat(context).doesNotHaveBean(LocalFileIndexService.class);
                     assertThat(context).doesNotHaveBean(LocalFileIndexQueryService.class);
                     assertThat(context).doesNotHaveBean(LocalFileIndexRebuildService.class);
-                    assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
-                    assertThat(context).doesNotHaveBean(PostgresFullTextIndexService.class);
-                    assertThat(context).doesNotHaveBean(PostgresSearchRebuildService.class);
                 });
     }
 
     @Test
-    void mysqlSearchEngine_instantiatesMysqlLikeQueryServiceWithoutPostgresOnlyQueryBean() {
+    void mysqlSearchEngine_instantiatesMysqlLikeQueryServiceWithoutH2OrLuceneBeans() {
         contextRunner
                 .withPropertyValues("skillhub.search.engine=mysql", "skillhub.search.provider=mysql-like")
                 .run(context -> {
@@ -77,9 +68,9 @@ class SearchRuntimeSelectionTest {
                     assertThat(context).doesNotHaveBean(H2LikeSearchQueryService.class);
                     assertThat(context).doesNotHaveBean(JpaSearchIndexService.class);
                     assertThat(context).doesNotHaveBean(JpaSearchRebuildService.class);
-                    assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
-                    assertThat(context).doesNotHaveBean(PostgresFullTextIndexService.class);
-                    assertThat(context).doesNotHaveBean(PostgresSearchRebuildService.class);
+                    assertThat(context).doesNotHaveBean(LocalFileIndexQueryService.class);
+                    assertThat(context).doesNotHaveBean(LocalFileIndexService.class);
+                    assertThat(context).doesNotHaveBean(LocalFileIndexRebuildService.class);
                 });
     }
 
@@ -99,9 +90,8 @@ class SearchRuntimeSelectionTest {
                     assertThat(context).doesNotHaveBean(H2LikeSearchQueryService.class);
                     assertThat(context).doesNotHaveBean(MysqlNoopSearchIndexService.class);
                     assertThat(context).doesNotHaveBean(MysqlNoopSearchRebuildService.class);
-                    assertThat(context).doesNotHaveBean(PostgresFullTextQueryService.class);
-                    assertThat(context).doesNotHaveBean(PostgresFullTextIndexService.class);
-                    assertThat(context).doesNotHaveBean(PostgresSearchRebuildService.class);
+                    assertThat(context).doesNotHaveBean(JpaSearchIndexService.class);
+                    assertThat(context).doesNotHaveBean(JpaSearchRebuildService.class);
                 });
     }
 

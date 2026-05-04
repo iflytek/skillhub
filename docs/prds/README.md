@@ -21,11 +21,16 @@
 - [local-dev-runtime/database-pluggable-local-runtime-v1.0-prd.md](./local-dev-runtime/database-pluggable-local-runtime-v1.0-prd.md)
 - [local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-prd.md](./local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-prd.md)
 - [local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-task-breakdown.md](./local-dev-runtime/mysql8-runtime-and-local-file-index-v1.1-task-breakdown.md)
+- [local-dev-runtime/postgres-runtime-exit-and-migration-coverage-gate-v1.0-prd.md](./local-dev-runtime/postgres-runtime-exit-and-migration-coverage-gate-v1.0-prd.md)
+- [local-dev-runtime/postgres-runtime-exit-and-migration-coverage-gate-v1.0-task-breakdown.md](./local-dev-runtime/postgres-runtime-exit-and-migration-coverage-gate-v1.0-task-breakdown.md)
 
 保留原因：
 - 该文档讨论的是“数据库可插拔本地运行时”的长期演进方向。
-- 其中关于未来 `MySQL 8 + Redis + local-file-index` 的目标尚未完全落地。
-- v1.1 是当前推荐推进版本；v1.0 保留作为 `local-h2` 过渡阶段的历史背景。
+- `MySQL 8 + Redis + local-file-index` 主运行态、PostgreSQL 默认路径清理、以及主要 E2E 验证已经落地。
+- 当前剩余待办已经明显收敛到“迁移范围 Java 单元测试补齐与最终覆盖率门禁”。
+- v1.1 仍保留在 PRD 区，是因为最终质量收口尚未完成；不是因为主运行态还没有迁通。
+- PostgreSQL 退出与迁移门禁文档用于跟踪最后的质量门禁和状态收尾，而不是重新定义主运行时方向。
+- 可长期复用的实现规则已经沉淀到 [design/runtime/mysql-runtime-and-search-provider-migration.md](../../design/runtime/mysql-runtime-and-search-provider-migration.md)。
 - 因此仍归类为 PRD，而不是已实现设计。
 
 ### 测试与质量支持资料

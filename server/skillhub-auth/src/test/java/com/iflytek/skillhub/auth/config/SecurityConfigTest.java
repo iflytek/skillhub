@@ -73,11 +73,15 @@ class SecurityConfigTest {
 
         assertThat(cors.getAllowedOrigins())
                 .containsExactlyInAnyOrder("http://127.0.0.1:3001", "http://localhost:3001");
+        assertThat(cors.getAllowedOriginPatterns())
+                .containsExactlyInAnyOrder("http://localhost:[*]", "http://127.0.0.1:[*]");
         assertThat(cors.getAllowedMethods())
                 .containsExactly("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         assertThat(cors.getExposedHeaders())
                 .containsExactly("Location", "X-Request-Id");
         assertThat(cors.getAllowCredentials()).isTrue();
+        assertThat(cors.checkOrigin("http://127.0.0.1:13194")).isEqualTo("http://127.0.0.1:13194");
+        assertThat(cors.checkOrigin("http://localhost:13086")).isEqualTo("http://localhost:13086");
     }
 
     @Test
@@ -87,6 +91,7 @@ class SecurityConfigTest {
         CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
 
         assertThat(cors.getAllowedOrigins()).containsExactly("https://skillhub.example.com");
+        assertThat(cors.getAllowedOriginPatterns()).isEmpty();
     }
 
     @Test
@@ -96,6 +101,7 @@ class SecurityConfigTest {
         CorsConfiguration cors = corsFor(config.corsConfigurationSource(), "/api/test");
 
         assertThat(cors.getAllowedOrigins()).isEmpty();
+        assertThat(cors.getAllowedOriginPatterns()).isEmpty();
     }
 
     @Test
@@ -120,6 +126,8 @@ class SecurityConfigTest {
                         "http://localhost:3001",
                         "http://127.0.0.1:3001"
                 );
+        assertThat(cors.getAllowedOriginPatterns())
+                .containsExactlyInAnyOrder("http://localhost:[*]", "http://127.0.0.1:[*]");
     }
 
     private SecurityConfig newConfig(String publicBaseUrl, String uassMockLoginBaseUrl) {

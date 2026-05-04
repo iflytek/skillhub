@@ -259,7 +259,7 @@ enables the bootstrap admin by default, so zero-config quickstart via
 Recommended production baseline:
 
 - set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
-- keep PostgreSQL / Redis bound to `127.0.0.1`
+- keep MySQL / Redis bound to `127.0.0.1`
 - use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
 - change `BOOTSTRAP_ADMIN_PASSWORD` to a strong password (`validate-release-config.sh` rejects the default `ChangeMe!2026`)
 - rotate or disable the bootstrap admin after initial setup
@@ -359,7 +359,7 @@ Run it against a local backend:
               ┌────────────┼────────────┐
               │            │            │
        ┌──────▼───┐  ┌─────▼────┐  ┌────▼────┐
-       │PostgreSQL│  │  Redis   │  │ Storage │
+       │   MySQL  │  │  Redis   │  │ Storage │
        │    16    │  │    7     │  │ S3/MinIO│
        └──────────┘  └──────────┘  └─────────┘
 ```
@@ -367,7 +367,7 @@ Run it against a local backend:
 **Backend (Spring Boot 3.2.3, Java 17):**
 - Multi-module Maven project with clean architecture
 - Modules: app, domain, auth, search, storage, infra
-- PostgreSQL 16 with Flyway migrations
+- MySQL 8 with Flyway migrations
 - Redis for session management
 - S3/MinIO for skill package storage
 

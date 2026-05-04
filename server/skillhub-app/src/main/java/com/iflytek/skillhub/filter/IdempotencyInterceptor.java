@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
  * Prevents duplicate execution of mutating HTTP requests identified by
  * {@code X-Request-Id}.
  *
- * <p>Redis is treated as the fast-path cache, while PostgreSQL remains the
- * durable source of truth when cache access fails.
+ * <p>Redis is treated as the fast-path cache, while the relational database
+ * remains the durable source of truth when cache access fails.
  */
 @Component
 public class IdempotencyInterceptor implements HandlerInterceptor {
@@ -69,7 +69,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             String cached = redisTemplate != null ? redisTemplate.opsForValue().get(redisKey) : null;
             isDuplicate = "COMPLETED".equals(cached);
         } catch (Exception ignored) {
-            // Redis unavailable, fall through to PostgreSQL
+            // Redis unavailable, fall through to the database
         }
 
         if (isDuplicate) {
@@ -77,7 +77,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // Check PostgreSQL fallback
+        // Check the database fallback
         Optional<IdempotencyRecord> existing = idempotencyRecordRepository.findByRequestId(requestId);
         if (existing.isPresent()) {
             IdempotencyRecord record = existing.get();
@@ -101,7 +101,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
                     redisTemplate.opsForValue().set(redisKey, "PROCESSING", EXPIRY_HOURS, TimeUnit.HOURS);
                 }
             } catch (Exception ignored) {
-                // Redis unavailable, PostgreSQL is the source of truth
+                // Redis unavailable, the database is the source of truth
             }
         }
 

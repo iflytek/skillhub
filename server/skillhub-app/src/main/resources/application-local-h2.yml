@@ -2,7 +2,7 @@ spring:
   main:
     allow-bean-definition-overriding: true
   datasource:
-    url: jdbc:h2:file:${LOCAL_H2_FILE_PATH:${user.home}/.skillhub/local-h2/skillhub};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:file:${LOCAL_H2_FILE_PATH:${user.home}/.skillhub/local-h2/skillhub};DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -33,8 +33,8 @@ server:
   servlet:
     session:
       cookie:
-        same-site: none
-        secure: true
+        same-site: lax
+        secure: false
 
 skillhub:
   runtime:

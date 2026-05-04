@@ -20,11 +20,11 @@ make dev-all
 ```
 
 This starts:
-- Dependency services (Postgres, Redis, MinIO) via Docker
+- Dependency services (MySQL, Redis, MinIO) via Docker
 - Backend (Spring Boot) directly on your machine at http://localhost:8080
 - Frontend (Vite) directly on your machine at http://localhost:3000
 
-SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `5432`, `6379`, and `9000`.
+SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `3306`, `6379`, and `9000`.
 
 ### Backend restarts
 
@@ -106,7 +106,7 @@ make parallel-up
 
 Then verify the merged result at http://localhost:3000.
 
-Because all worktrees share the same local dependency project, you only need one set of Postgres, Redis, and MinIO containers for all of them.
+Because all worktrees share the same local dependency project, you only need one set of MySQL, Redis, and MinIO containers for all of them.
 
 If you need to inspect or resolve merge conflicts before starting the app, you can still split the flow manually:
 
@@ -131,7 +131,7 @@ Use this stage when a feature or bugfix is complete and you want to verify it wo
 `make staging` runs a **hybrid** Docker environment:
 - **Backend**: built as a Docker image from your local source
 - **Frontend**: built as static files (`pnpm build`) and served by Nginx
-- **Dependencies**: same Postgres/Redis/MinIO as local dev
+- **Dependencies**: same MySQL/Redis/MinIO as local dev
 
 This is faster than building both images but still validates the containerized backend and the production Nginx serving path.
 

@@ -5,10 +5,10 @@
 - JDK: 21
 - Framework: Spring Boot 3.x（最新稳定版）
 - Security: Spring Security + spring-boot-starter-oauth2-client
-- Database: PostgreSQL 16.x
+- Database: MySQL 8.x
 - Cache/Session: Redis 7.x（一期必须依赖，用于 Session 存储 + 分布式锁 + 幂等去重）
 - Object Storage: `LocalFile` + S3 协议兼容对象存储双实现
-- Search: PostgreSQL Full-Text Search（一期）
+- Search: MySQL + local-file-index（当前默认）
 - Future Search: Elasticsearch / OpenSearch / Vector Search
 
 ## 2. 总体架构
@@ -22,7 +22,7 @@ server/
 ├── skillhub-app                 # 启动、配置装配、Controller 聚合
 ├── skillhub-domain              # 领域模型 + 领域服务 + 应用服务
 ├── skillhub-auth                # OAuth2 认证 + RBAC + 授权判定
-├── skillhub-search              # 搜索 SPI + PostgreSQL 全文实现
+├── skillhub-search              # 搜索 SPI + mysql-like / local-file-index 实现
 ├── skillhub-storage             # 对象存储抽象 + LocalFile/S3 双实现
 └── skillhub-infra               # JPA、通用工具、配置基础
 ```
@@ -74,7 +74,7 @@ storage → (独立抽象)     # 纯 SPI，不依赖 domain
 
 ### skillhub-search
 - SPI 接口：`SearchIndexService`, `SearchQueryService`, `SearchRebuildService`
-- 一期实现：`PostgresFullTextIndexService`, `PostgresFullTextQueryService`
+- 当前实现：`MysqlLikeSearchQueryService`, `LocalFileIndexService`, `LocalFileIndexQueryService`
 - 独立搜索文档表 `skill_search_document`
 - 未来扩展点：ES / 向量检索实现
 
@@ -119,8 +119,8 @@ skillhub/
 │   ├── Dockerfile        # 前端多阶段构建
 │   ├── nginx.conf.template        # Nginx 运行时模板
 │   └── runtime-config.js.template # 前端运行时环境变量模板
-├── docker-compose.yml    # 本地开发依赖服务（PostgreSQL/Redis/MinIO）
-├── compose.release.yml   # 单机运行时编排（发布镜像 + PostgreSQL + Redis）
+├── docker-compose.yml    # 本地开发依赖服务（MySQL/Redis/MinIO）
+├── compose.release.yml   # 单机运行时编排（发布镜像 + MySQL + Redis）
 ├── .env.release.example  # 单机运行时环境变量模板
 ├── .github/workflows/    # GitHub Actions 镜像发布流程
 ├── Makefile              # 顶层开发编排（dev / dev-all / build）
@@ -134,7 +134,7 @@ skillhub/
 
 部署模型收敛为两条路径：
 
-- 开发路径：`make dev-all`。前后端在宿主机运行，`docker-compose.yml` 只负责 PostgreSQL、Redis、MinIO。
+- 开发路径：`make dev-all`。前后端在宿主机运行，`docker-compose.yml` 只负责 MySQL、Redis、MinIO。
 - 交付路径：GitHub Actions 构建并发布 `server` / `web` 镜像；用户通过 `compose.release.yml` 在本地一键拉起前后端容器和基础服务。
 - 发布镜像为多架构 manifest，至少覆盖 `linux/amd64` 与 `linux/arm64`。
 
@@ -154,7 +154,7 @@ skillhub/
 
 | 组件 | 一期要求 | 职责 |
 |------|---------|------|
-| PostgreSQL 16.x | 主从 | 主存储 |
+| MySQL 8.x | 主从 | 主存储 |
 | Redis 7.x | Sentinel 或 Cluster | Session 存储 + 分布式锁 + 幂等去重 |
 | 对象存储 | LocalFile（开发）/ MinIO / 云厂商 S3 | 技能包文件 + 预打包 zip |
 | Ingress | Nginx Ingress Controller | 路由分发 + TLS 终止 |

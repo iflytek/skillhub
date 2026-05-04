@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
- * Rebuilds denormalized search documents without tying runtime wiring to PostgreSQL-only classes.
+ * Rebuilds denormalized search documents without tying runtime wiring to a specific database engine.
  */
 @Service
 @ConditionalOnProperty(prefix = "skillhub.search", name = "engine", havingValue = "h2")

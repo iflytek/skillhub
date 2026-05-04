@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
  * H2-compatible fallback search implementation for local lightweight development.
  *
  * <p>This implementation intentionally trades ranking quality for portability by using
- * case-insensitive LIKE matching instead of PostgreSQL full-text search.
+ * case-insensitive LIKE matching instead of the MySQL/Lucene production search path.
  */
 @Service
 @ConditionalOnProperty(prefix = "skillhub.search", name = "engine", havingValue = "h2")
