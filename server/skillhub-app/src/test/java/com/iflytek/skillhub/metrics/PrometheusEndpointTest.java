@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
+@SpringBootTest(properties = "skillhub.search.provider=mysql-like")
 @ActiveProfiles("test")
 @Import(TestRedisConfig.class)
 class PrometheusEndpointTest {

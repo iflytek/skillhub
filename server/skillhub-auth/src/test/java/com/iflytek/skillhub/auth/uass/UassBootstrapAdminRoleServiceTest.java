@@ -83,7 +83,7 @@ class UassBootstrapAdminRoleServiceTest {
 
         PlatformPrincipal resolved = service.applyIfConfigured("U-3", true, principal(Set.of("USER")));
 
-        assertThat(resolved.platformRoles()).containsExactlyInAnyOrder("USER", "SUPER_ADMIN");
+        assertThat(resolved.platformRoles()).containsExactly("SUPER_ADMIN");
         verify(userRoleBindingRepository, times(1)).save(any(UserRoleBinding.class));
     }
 

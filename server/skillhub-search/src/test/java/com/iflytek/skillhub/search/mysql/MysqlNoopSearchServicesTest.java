@@ -14,12 +14,14 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.HashingSearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SkillSearchDocument;
 import com.iflytek.skillhub.search.SearchTextTokenizer;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -79,9 +81,11 @@ class MysqlNoopSearchServicesTest {
         when(skill.getOwnerId()).thenReturn("owner");
         when(skill.getDisplayName()).thenReturn("MySQL Skill");
         when(skill.getSummary()).thenReturn("summary");
+        when(skill.getVisibility()).thenReturn(SkillVisibility.PUBLIC);
         when(skill.getStatus()).thenReturn(SkillStatus.ACTIVE);
         when(skill.getDownloadCount()).thenReturn(0L);
         when(skill.getRatingAvg()).thenReturn(java.math.BigDecimal.ZERO);
+        when(skill.getUpdatedAt()).thenReturn(Instant.parse("2026-05-04T00:00:00Z"));
         when(skill.isHidden()).thenReturn(false);
 
         Namespace namespace = mock(Namespace.class);

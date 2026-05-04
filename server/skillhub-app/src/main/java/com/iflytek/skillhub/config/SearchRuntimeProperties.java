@@ -13,6 +13,7 @@ public class SearchRuntimeProperties {
 
     private String provider = "local-file-index";
     private boolean rebuildOnStartup = false;
+    private boolean startupSyncEnabled = true;
     private final LocalFileIndex localFileIndex = new LocalFileIndex();
 
     public String getProvider() {
@@ -29,6 +30,14 @@ public class SearchRuntimeProperties {
 
     public void setRebuildOnStartup(boolean rebuildOnStartup) {
         this.rebuildOnStartup = rebuildOnStartup;
+    }
+
+    public boolean isStartupSyncEnabled() {
+        return startupSyncEnabled;
+    }
+
+    public void setStartupSyncEnabled(boolean startupSyncEnabled) {
+        this.startupSyncEnabled = startupSyncEnabled;
     }
 
     public LocalFileIndex getLocalFileIndex() {

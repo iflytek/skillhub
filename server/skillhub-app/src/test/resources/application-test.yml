@@ -3,6 +3,9 @@ spring:
     allow-bean-definition-overriding: true
     banner-mode: "off"
     log-startup-info: false
+  task:
+    scheduling:
+      enabled: false
   datasource:
     generate-unique-name: true
     url: jdbc:h2:mem:testdb-${random.uuid};DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -44,6 +47,9 @@ server:
         secure: true
 
 skillhub:
+  search:
+    provider: mysql-like
+    startup-sync-enabled: false
   auth:
     enforce-active-user-check: false
     device:

@@ -38,6 +38,10 @@ public class LocalFileIndexStartupSynchronizer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        if (!searchRuntimeProperties.isStartupSyncEnabled()) {
+            return;
+        }
+
         if (!LOCAL_FILE_INDEX_PROVIDER.equals(searchRuntimeProperties.getProvider())) {
             return;
         }

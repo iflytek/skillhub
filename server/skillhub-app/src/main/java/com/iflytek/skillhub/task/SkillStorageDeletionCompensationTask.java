@@ -3,11 +3,13 @@ package com.iflytek.skillhub.task;
 import com.iflytek.skillhub.domain.skill.service.SkillStorageDeletionCompensationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Profile("!test")
 public class SkillStorageDeletionCompensationTask {
 
     private static final Logger logger = LoggerFactory.getLogger(SkillStorageDeletionCompensationTask.class);

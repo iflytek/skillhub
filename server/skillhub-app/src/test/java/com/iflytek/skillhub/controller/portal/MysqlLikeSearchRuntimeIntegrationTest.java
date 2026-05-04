@@ -106,6 +106,12 @@ class MysqlLikeSearchRuntimeIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        skillSearchDocumentJpaRepository.deleteAll();
+        skillVersionRepository.deleteAll();
+        skillRepository.deleteAll();
+        namespaceRepository.deleteAll();
+        userAccountRepository.deleteAll();
+
         UserAccount owner = userAccountRepository.save(new UserAccount(
                 "mysql-search-owner",
                 "MySQL Search Owner",
