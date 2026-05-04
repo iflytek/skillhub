@@ -1,12 +1,12 @@
 # 本地运行速查表
 
-本文只保留当前正式支持的源码启动组合，面向日常开发和联调。
+本文只保留当前正式支持的源码启动组合，面向日常开发和联调。历史 `local-h2` 资料仅作归档背景，不再属于当前正式源码运行入口。
 
 更完整的运行时参数说明见：
 
 - [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)
 
-## 当前正式源码组合
+## 当前唯一正式源码组合
 
 当前正式源码运行 profile 仅保留 `local-mysql`。
 

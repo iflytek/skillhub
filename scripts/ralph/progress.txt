@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 当 README / docs 索引把某份 design/runtime 文档列为“当前入口”时，验收 current-entry runtime docs 不能只看 quickstart；需要沿入口链接链一起核对 profile、provider 和启动示例是否仍指向当前正式路径。
 - 集成测试如果注入的是 domain repository contract，不要假设它自带 `deleteAll()` 之类的 Spring Data 扩展；清理夹具时优先用唯一测试数据，或直接注入对应的 JPA repository / `EntityManager`。
 - 把控制器/集成测试迁到 MySQL Testcontainers 后，凡是会写 `created_by`、`updated_by`、`reviewed_by` 这类用户外键的流程，都要在夹具里显式创建对应 `UserAccount`；H2 路径很容易把缺失引用掩盖掉。
 - 如果 validator 需要核对 `server/<module>/target/site/jacoco/jacoco.csv` 这类模块级 JaCoCo 报告，`mvn -f server/pom.xml -pl skillhub-app -am verify -DskipITs` 之后还要补一次 `jacoco:report`；否则 aggregate gate 虽然是 fresh 的，模块级 csv/html 可能仍停留在旧值。
@@ -552,4 +553,14 @@
   - 发现的 patterns：当前源码入口文档如果仍被 README / docs 索引为“正式入口”，其中的 profile、provider 和启动示例都必须和当前唯一保留的 runtime path 一致，不能只改 quickstart 而漏掉 reference 文档。
   - 遇到的陷阱：把测试从 H2 迁到 MySQL 后，原本被宽松约束掩盖的 `user_account` 外键会立即暴露；审批人、管理员这类 actor 即使只出现在审计/状态字段里，也要在夹具里显式落库。
   - 有用的上下文：本轮没有 UI 变更，因此无需浏览器验证；`US-001` 的后端验收关键点是“文档入口收口 + MySQL 测试基线恢复”，而不是新增任何运行时代码。
+---
+## 2026-05-04 14:46 - US-002
+- 收紧了 `README.md`、`docs/README.md` 和 `docs/local-runtime-quickstart.md` 的入口表述，明确 `local-mysql` 是当前唯一正式源码运行路径，并把历史 `local-h2` / `h2-like` 统一降级为归档背景说明。
+- 这轮没有扩展到运行时代码或 UI；目标仅限主入口文档清理，避免 README 和 docs 索引继续给出多入口暗示。
+- 运行了 `pnpm --dir web typecheck`、`pnpm --dir web lint` 和 `mvn -q -f server/pom.xml -pl skillhub-app -am test`，确认通过。
+- 更改的文件：`README.md`、`docs/README.md`、`docs/local-runtime-quickstart.md`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：主入口文档的“当前正式源码路径”表述需要在 README、docs 索引和 quickstart 三处同时收口，否则读者会从不同入口得到不同 runtime 结论。
+  - 遇到的陷阱：即使具体启动段落已经删掉，只要入口页还用模糊措辞保留历史 profile，validator 仍会把它判成当前正式方案的一部分。
+  - 有用的上下文：本轮无 UI 变更，不需要浏览器验证；验收重点是入口文档的一致性和现有后端测试基线保持绿色。
 ---

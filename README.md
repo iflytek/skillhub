@@ -91,6 +91,8 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 scripts/dev/local-mysql-local-index-memory-up.sh
 ```
 
+历史材料中如果仍出现 `local-h2`，一律按归档背景理解；它不再属于当前正式源码运行方案。
+
 当前默认源码组合：
 
 - profile: `local-mysql`
