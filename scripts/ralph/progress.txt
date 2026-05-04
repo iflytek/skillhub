@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- 多个 `@DataJpaTest` 需要复用同一个 MySQL Testcontainers 时，不要把 JUnit 的 `@Container` 直接放到共享父类上交给各子类生命周期管理；更稳的做法是共享基类里手动 `start()` 单例容器，再用元注解统一固定 `migration-mysql + ddl-auto=none`。
 - 对有启动副作用的 `ApplicationRunner` / `CommandLineRunner`，测试隔离不要只在 `run()` 里早退；优先用 `@ConditionalOnProperty` 直接让 `test` profile 下的 bean 不装配，这样通用 `SpringBootTest` 上下文更稳定。
 - `application-test.yml` 这类共享 test profile 如果需要避免继承主运行时 datasource，优先把 `spring.datasource.*` 和 JPA dialect 相关属性显式清空，再让需要 MySQL 的测试通过 `@AutoConfigureTestDatabase(replace = NONE)` + `@DynamicPropertySource` 自带数据源。
 - 退役旧 runtime/provider 的文档收口不能只改单一 quickstart；凡是仍被 `README` / `docs` / `design runtime` 作为当前入口链引用的架构与配置文档，都要一起去掉“仍在活跃支持”的措辞。
@@ -615,4 +616,14 @@
   - 发现的 patterns：恢复长链路测试基线时，先跑 PRD 明确点名的阻塞测试集，再跑模块全量 `mvn test`，比直接在全量日志里找问题更快定位是否已经闭合。
   - 遇到的陷阱：长跑 Maven 测试在交互会话里容易被会话本身截断；需要拿真实退出码时，可以把输出重定向到文件后静默等待完成。
   - 有用的上下文：`US-101` 实际收口主要集中在启动副作用隔离与基线验证，当前工作区未发现新的 `UserAccount` API 兼容性或 `SkillVersionStats` 编译阻塞残留。
+---
+## 2026-05-04 16:57 - US-102
+- 将 `AuthJsonPersistenceTest`、`SkillVersionJsonPersistenceTest`、`AuditAndInfraJsonPersistenceTest` 收敛到共享的 MySQL JPA 测试元注解和单例 Testcontainers 基类，统一固定 `migration-mysql`、`ddl-auto=none` 与 `test` profile，避免后续回退到嵌入式数据库默认路径。
+- 额外验证了 `LocalFileIndexLifecycleIntegrationTest` 仍位于 `skillhub-app` 并在当前实现上正常编译运行，满足这条 story 对 local-file-index 生命周期集成测试的要求。
+- 运行了 `mvn -f server/pom.xml -pl skillhub-app -am -Dtest=AuthJsonPersistenceTest,SkillVersionJsonPersistenceTest,AuditAndInfraJsonPersistenceTest,LocalFileIndexLifecycleIntegrationTest -Dsurefire.failIfNoSpecifiedTests=false test`、`mvn -f server/pom.xml -pl skillhub-app -am test`、`pnpm --dir web typecheck` 和 `pnpm --dir web lint`。
+- 更改的文件：`server/skillhub-app/src/test/java/com/iflytek/skillhub/auth/AuthJsonPersistenceTest`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/skill/SkillVersionJsonPersistenceTest`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/domain/audit/AuditAndInfraJsonPersistenceTest`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/MysqlMigrationDataJpaTest.java`、`server/skillhub-app/src/test/java/com/iflytek/skillhub/db/MysqlContainerBackedDataJpaTest.java`、`scripts/ralph/prd.json`、`scripts/ralph/progress.txt`
+- **未来迭代的学习：**
+  - 发现的 patterns：把 MySQL slice 测试共同的 profile/Flyway/JPA 约束收敛成元注解，能比逐个类复制注解更稳地守住主路径。
+  - 遇到的陷阱：如果多个子类共享同一个 Testcontainers 实例，不要依赖 `@Testcontainers` 为父类里的 `@Container` 管生命周期；后续子类会拿到已停止容器。
+  - 有用的上下文：`LocalFileIndexLifecycleIntegrationTest` 当前在 `server/skillhub-app/src/test/java/com/iflytek/skillhub/service`，它依赖 Lucene 临时目录和 mock repository，不走数据库，因此本 story 只需要确认它继续能在 app 模块编译执行。
 ---
