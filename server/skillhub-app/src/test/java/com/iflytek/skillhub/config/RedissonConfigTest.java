@@ -184,6 +184,23 @@ class RedissonConfigTest {
         assertThat(serverConfig.getAddress()).isEqualTo("redis://localhost:6379");
     }
 
+    @Test
+    void redissonClient_withMockedRedisson_returnsClient() {
+        RedisProperties properties = new RedisProperties();
+        properties.setHost("localhost");
+        properties.setPort(6379);
+
+        RedissonClient mockClient = mock(RedissonClient.class);
+        try (MockedStatic<Redisson> redisson = mockStatic(Redisson.class)) {
+            redisson.when(() -> Redisson.create(org.mockito.ArgumentMatchers.any(Config.class)))
+                    .thenReturn(mockClient);
+
+            RedissonConfig config = new RedissonConfig();
+            RedissonClient result = config.redissonClient(properties);
+            assertThat(result).isSameAs(mockClient);
+        }
+    }
+
     private SentinelServersConfig sentinelConfig(Config config) throws Exception {
         Method method = Config.class.getDeclaredMethod("getSentinelServersConfig");
         method.setAccessible(true);

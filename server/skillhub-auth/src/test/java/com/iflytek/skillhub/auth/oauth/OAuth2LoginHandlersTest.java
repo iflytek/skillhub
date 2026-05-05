@@ -17,7 +17,9 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class OAuth2LoginHandlersTest {
 
@@ -92,5 +94,44 @@ class OAuth2LoginHandlersTest {
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/login?returnTo=%2Fsettings%2Faccounts");
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
+    }
+
+    @Test
+    void failureHandler_fallsBackToSuperWhenRedirectTargetIsNull() throws Exception {
+        OAuthLoginFlowService oauthLoginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2LoginFailureHandler handler = new OAuth2LoginFailureHandler(oauthLoginFlowService);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(oauthLoginFlowService.consumeReturnTo(any())).thenReturn(null);
+        when(oauthLoginFlowService.resolveFailureRedirect(any(), any())).thenReturn(null);
+
+        handler.onAuthenticationFailure(
+                request,
+                response,
+                new OAuth2AuthenticationException(new OAuth2Error("invalid_request"))
+        );
+
+        assertThat(response.getRedirectedUrl()).isNull();
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void successHandler_fallsBackToSuperWhenPrincipalIsNotOAuth2User() throws Exception {
+        OAuthLoginFlowService oauthLoginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
+                new com.iflytek.skillhub.auth.session.PlatformSessionService(),
+                oauthLoginFlowService
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(oauthLoginFlowService.consumeReturnTo(any())).thenReturn(null);
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                "not-an-oauth2-user", null, List.of()
+        );
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/dashboard");
     }
 }

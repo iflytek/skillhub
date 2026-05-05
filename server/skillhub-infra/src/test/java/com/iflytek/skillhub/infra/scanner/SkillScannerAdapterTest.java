@@ -156,6 +156,32 @@ class SkillScannerAdapterTest {
         assertThat(response.scanDurationSeconds()).isEqualTo(0.0);
     }
 
+    @Test
+    void scan_mapsNullMaxSeverityToSuspiciousWhenNotSafe() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.directoryResponse = new SkillScannerApiResponse(
+                "scan-6", "test-skill", false, null, 0, null, 1.0, "2026-03-22T07:00:00"
+        );
+        SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", ScanOptions.disabled());
+
+        SecurityScanResponse response = adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of()));
+
+        assertThat(response.verdict()).isEqualTo(SecurityVerdict.SUSPICIOUS);
+    }
+
+    @Test
+    void scan_mapsUnknownMaxSeverityToSuspicious() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.directoryResponse = new SkillScannerApiResponse(
+                "scan-7", "test-skill", false, "LOW", 0, null, 1.0, "2026-03-22T07:00:00"
+        );
+        SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", ScanOptions.disabled());
+
+        SecurityScanResponse response = adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of()));
+
+        assertThat(response.verdict()).isEqualTo(SecurityVerdict.SUSPICIOUS);
+    }
+
     private static final class StubSkillScannerService extends SkillScannerService {
         private String lastDirectoryPath;
         private Path lastUploadPath;

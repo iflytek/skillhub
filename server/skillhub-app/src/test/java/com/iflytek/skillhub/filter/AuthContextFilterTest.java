@@ -27,6 +27,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.context.support.StaticMessageSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -132,5 +133,77 @@ class AuthContextFilterTest {
         verify(filterChain).doFilter(same(request), same(response));
         verify(userAccountRepository, never()).findById(org.mockito.ArgumentMatchers.anyString());
         verify(namespaceMemberRepository, never()).findByUserId(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void principalWithNullPlatformRoles_setsEmptySet() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal("user-3", "Charlie", "charlie@example.com", null, "local", null);
+        UserAccount user = new UserAccount("user-3", "Charlie", "charlie@example.com", null);
+        user.setStatus(UserStatus.ACTIVE);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/auth/me");
+        request.getSession(true).setAttribute("platformPrincipal", principal);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, List.of())
+        );
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(userAccountRepository.findById("user-3")).thenReturn(java.util.Optional.of(user));
+        when(namespaceMemberRepository.findByUserId("user-3")).thenReturn(List.of());
+
+        filter.doFilter(request, response, filterChain);
+
+        assertEquals(java.util.Set.of(), request.getAttribute("platformRoles"));
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void clearAuthentication_withNullSession_returnsWithoutError() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/auth/me");
+        // No session created
+        ReflectionTestUtils.invokeMethod(filter, "clearAuthentication", request);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void resolvePrincipal_fromSessionAttribute() {
+        PlatformPrincipal principal = new PlatformPrincipal("user-4", "Dave", "dave@example.com", null, "local", Set.of("USER"));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession(true).setAttribute("platformPrincipal", principal);
+
+        PlatformPrincipal resolved = (PlatformPrincipal) ReflectionTestUtils.invokeMethod(filter, "resolvePrincipal", request);
+        assertEquals("user-4", resolved.userId());
+    }
+
+    @Test
+    void duplicateNamespaceRoles_usesMergeFunction() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal("user-5", "Eve", "eve@example.com", null, "local", Set.of("USER"));
+        UserAccount user = new UserAccount("user-5", "Eve", "eve@example.com", null);
+        user.setStatus(UserStatus.ACTIVE);
+
+        NamespaceMember member1 = new NamespaceMember(9L, "user-5", NamespaceRole.ADMIN);
+        NamespaceMember member2 = new NamespaceMember(9L, "user-5", NamespaceRole.MEMBER);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/auth/me");
+        request.getSession(true).setAttribute("platformPrincipal", principal);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, List.of())
+        );
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(userAccountRepository.findById("user-5")).thenReturn(java.util.Optional.of(user));
+        when(namespaceMemberRepository.findByUserId("user-5")).thenReturn(List.of(member1, member2));
+
+        filter.doFilter(request, response, filterChain);
+
+        assertEquals("user-5", request.getAttribute("userId"));
+        verify(filterChain).doFilter(request, response);
     }
 }

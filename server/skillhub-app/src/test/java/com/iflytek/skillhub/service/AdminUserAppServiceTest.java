@@ -82,12 +82,44 @@ class AdminUserAppServiceTest {
     }
 
     @Test
+    void listUsers_withEmptyResult_returnsEmptyRoles() {
+        PageRequest pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(adminUserSearchRepository.search(null, null, pageable))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        PageResponse<?> response = service.listUsers(null, null, 0, 20);
+
+        assertThat(response.total()).isZero();
+        assertThat(response.items()).isEmpty();
+    }
+
+    @Test
     void updateUserRole_nonSuperAdminCannotAssignSuperAdmin() {
         when(userAccountRepository.findById("user-1"))
                 .thenReturn(Optional.of(user("user-1", "alice", "alice@example.com", UserStatus.ACTIVE)));
 
         assertThrows(DomainForbiddenException.class,
                 () -> service.updateUserRole("user-1", "SUPER_ADMIN", Set.of("USER_ADMIN")));
+    }
+
+    @Test
+    void updateUserRole_superAdminCanAssignSuperAdmin() {
+        when(userAccountRepository.findById("user-1"))
+                .thenReturn(Optional.of(user("user-1", "alice", "alice@example.com", UserStatus.ACTIVE)));
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(role("SUPER_ADMIN")));
+
+        var response = service.updateUserRole("user-1", "SUPER_ADMIN", Set.of("SUPER_ADMIN"));
+
+        assertThat(response.role()).isEqualTo("SUPER_ADMIN");
+    }
+
+    @Test
+    void updateUserRole_blankRoleCode_throwsBadRequest() {
+        when(userAccountRepository.findById("user-1"))
+                .thenReturn(Optional.of(user("user-1", "alice", "alice@example.com", UserStatus.ACTIVE)));
+
+        assertThrows(DomainBadRequestException.class,
+                () -> service.updateUserRole("user-1", "", Set.of("SUPER_ADMIN")));
     }
 
     @Test

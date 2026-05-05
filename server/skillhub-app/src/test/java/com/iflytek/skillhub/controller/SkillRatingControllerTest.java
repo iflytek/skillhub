@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.controller.portal.SkillRatingController;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.social.SkillRatingService;
 import org.junit.jupiter.api.Test;
@@ -114,5 +115,13 @@ class SkillRatingControllerTest {
         mockMvc.perform(get("/api/v1/skills/10/rating"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void getUserRating_withNullPrincipal_returnsDefaultResponse() {
+        SkillRatingService service = org.mockito.Mockito.mock(SkillRatingService.class);
+        com.iflytek.skillhub.dto.ApiResponseFactory factory = org.mockito.Mockito.mock(com.iflytek.skillhub.dto.ApiResponseFactory.class);
+        SkillRatingController controller = new SkillRatingController(factory, service);
+        controller.getUserRating(10L, null);
     }
 }

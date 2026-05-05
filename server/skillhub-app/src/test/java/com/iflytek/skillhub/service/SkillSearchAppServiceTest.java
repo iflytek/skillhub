@@ -231,6 +231,100 @@ class SkillSearchAppServiceTest {
         assertEquals(false, scope.platformWideAccess());
     }
 
+    @Test
+    void search_withNullSortBy_defaultsToNewest() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search("skill", null, null, 0, 20, null, null);
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        assertEquals("newest", captor.getValue().sortBy());
+    }
+
+    @Test
+    void search_withNullUserNsRoles_usesEmptyMap() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+        when(namespaceService.getNamespaceBySlugForRead("team-a", "user-1", Map.of())).thenReturn(
+                new Namespace("team-a", "Team A", "owner-1")
+        );
+
+        service.search("skill", "team-a", "newest", 0, 20, "user-1", null);
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        SearchVisibilityScope scope = captor.getValue().visibilityScope();
+        assertEquals("user-1", scope.userId());
+        assertEquals(Set.of(), scope.memberNamespaceIds());
+    }
+
+    @Test
+    void search_withAdminRole_includesAdminNamespaceIds() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+        when(rbacService.getUserRoleCodes("user-1")).thenReturn(Set.of("USER"));
+
+        service.search("skill", null, "newest", 0, 20, "user-1",
+                Map.of(7L, NamespaceRole.ADMIN, 8L, NamespaceRole.OWNER, 9L, NamespaceRole.MEMBER));
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        SearchVisibilityScope scope = captor.getValue().visibilityScope();
+        assertEquals(Set.of(7L, 8L), scope.adminNamespaceIds());
+        assertEquals(Set.of(7L, 8L, 9L), scope.memberNamespaceIds());
+    }
+
+    @Test
+    void search_filtersNullAndBlankLabelSlugs() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search("skill", null, "newest", 0, 20, java.util.Arrays.asList("valid", "", null, "  "), null, null);
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        assertEquals(List.of("valid"), captor.getValue().labelSlugs());
+    }
+
+    @Test
+    void search_withMismatchedSkillIds_returnsEmptyWhenRepositoryFindsNothing() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(99L), 1, 0, 20));
+        when(skillRepository.findByIdIn(List.of(99L))).thenReturn(List.of());
+
+        SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 20, null, null);
+
+        assertEquals(0, response.items().size());
+    }
+
+    @Test
+    void search_withPublishedVersion_populatesLifecycleProjection() {
+        Skill skill = new Skill(1L, "skill-a", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 10L);
+        skill.setLatestVersionId(101L);
+
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        setField(namespace, "id", 1L);
+        namespace.setStatus(NamespaceStatus.ACTIVE);
+
+        com.iflytek.skillhub.domain.skill.SkillVersion version = new com.iflytek.skillhub.domain.skill.SkillVersion(10L, "1.0.0", "owner-1");
+        setField(version, "id", 101L);
+        version.setStatus(com.iflytek.skillhub.domain.skill.SkillVersionStatus.PUBLISHED);
+
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(10L), 1, 0, 20));
+        when(skillRepository.findByIdIn(List.of(10L))).thenReturn(List.of(skill));
+        when(namespaceRepository.findByIdIn(List.of(1L))).thenReturn(List.of(namespace));
+        when(skillVersionRepository.findByIdIn(List.of(101L))).thenReturn(List.of(version));
+
+        SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 20, null, null);
+
+        assertEquals(1, response.items().size());
+        assertEquals("1.0.0", response.items().get(0).headlineVersion().version());
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

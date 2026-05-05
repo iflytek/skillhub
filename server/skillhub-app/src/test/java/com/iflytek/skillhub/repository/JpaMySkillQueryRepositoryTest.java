@@ -132,4 +132,35 @@ class JpaMySkillQueryRepositoryTest {
         assertThat(responses.get(0).publishedVersion()).isNotNull();
         assertThat(responses.get(0).canSubmitPromotion()).isFalse();
     }
+
+    @Test
+    void getSkillSummaries_returnsEmptyListForEmptyInput() {
+        var responses = repository.getSkillSummaries(List.of(), "user-1");
+        assertThat(responses).isEmpty();
+    }
+
+    @Test
+    void getSkillSummaries_disablesPromotionForGlobalNamespace() {
+        Skill skill = new Skill(101L, "global-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Global Skill");
+        ReflectionTestUtils.setField(skill, "id", 5L);
+
+        SkillVersion publishedVersion = new SkillVersion(5L, "1.0.0", "user-1");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(publishedVersion, "id", 55L);
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", Instant.parse("2026-03-15T10:30:00Z"));
+
+        Namespace namespace = new Namespace("global", "Global", "user-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+        ReflectionTestUtils.setField(namespace, "type", com.iflytek.skillhub.domain.namespace.NamespaceType.GLOBAL);
+
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(skillVersionRepository.findBySkillIdAndStatus(5L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(5L)).willReturn(List.of(publishedVersion));
+
+        var responses = repository.getSkillSummaries(List.of(skill), "user-1");
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).canSubmitPromotion()).isFalse();
+    }
 }

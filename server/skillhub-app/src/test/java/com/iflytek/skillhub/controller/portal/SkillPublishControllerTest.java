@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -21,6 +22,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
+import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -61,6 +63,9 @@ class SkillPublishControllerTest {
 
     @MockBean
     private SkillHubMetrics skillHubMetrics;
+
+    @MockBean
+    private SkillPackageArchiveExtractor skillPackageArchiveExtractor;
 
     @Test
     void publish_recordsMetricsAfterSuccess() throws Exception {
@@ -159,6 +164,41 @@ class SkillPublishControllerTest {
                 .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void publish_invalidArchive_throwsDomainBadRequest() throws Exception {
+        given(skillPackageArchiveExtractor.extract(any()))
+            .willThrow(new IllegalArgumentException("corrupted"));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+            "usr_1",
+            "publisher",
+            "publisher@example.com",
+            "",
+            "local",
+            Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+            principal,
+            null,
+            List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "skill.zip",
+            "application/zip",
+            buildZipBytes()
+        );
+
+        mockMvc.perform(multipart("/api/v1/skills/global/publish")
+                .file(file)
+                .param("visibility", "PUBLIC")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(400));
     }
 
     private byte[] buildZipBytes() throws Exception {

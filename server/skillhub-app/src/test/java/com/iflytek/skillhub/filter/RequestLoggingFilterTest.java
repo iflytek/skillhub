@@ -86,6 +86,8 @@ class RequestLoggingFilterTest {
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/skills");
         request.setRemoteAddr("127.0.0.1");
+        request.setQueryString("q=test");
+        request.addHeader("User-Agent", "TestAgent/1.0");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         FilterChain filterChain = (req, res) -> {};
@@ -93,12 +95,35 @@ class RequestLoggingFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertThat(loggedMessages()).anySatisfy(message -> {
-            assertThat(message).contains("GET /api/v1/skills");
+            assertThat(message).contains("GET /api/v1/skills?q=test");
             assertThat(message).contains("200");
             assertThat(message).contains("127.0.0.1");
             assertThat(message).contains("ms");
+            assertThat(message).contains("UA: TestAgent/1.0");
         });
         assertThat(loggedMessages()).noneMatch(message -> message.contains("Headers: {"));
+    }
+
+    @Test
+    void doFilterInternal_handlesUnknownEncoding()
+            throws ServletException, IOException {
+        RequestLoggingFilter filter = new RequestLoggingFilter();
+        attachAppender();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/skills");
+        request.setCharacterEncoding("UNKNOWN-ENC");
+        request.setContent("body".getBytes(StandardCharsets.UTF_8));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        FilterChain filterChain = (req, res) -> {
+            req.getInputStream().readAllBytes();
+        };
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(loggedMessages()).anySatisfy(message ->
+                assertThat(message).contains("[unknown encoding]")
+        );
     }
 
     private void attachAppender() {

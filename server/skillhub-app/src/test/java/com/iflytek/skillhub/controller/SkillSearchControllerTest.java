@@ -165,4 +165,23 @@ class SkillSearchControllerTest {
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(20));
     }
+
+    @Test
+    void searchShouldClampIntegerOverflowPage() throws Exception {
+        when(skillSearchAppService.search(
+                eq(null),
+                eq(null),
+                eq("newest"),
+                eq(0),
+                eq(20),
+                eq(null),
+                any(),
+                any()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
+
+        mockMvc.perform(get("/api/web/skills")
+                        .param("page", "2147483648"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(0));
+    }
 }

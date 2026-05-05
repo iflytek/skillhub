@@ -90,6 +90,30 @@ class RuntimeStateEnvironmentPostProcessorTest {
         assertThat(environment.getProperty("skillhub.ratelimit.mode")).isEqualTo("redis");
     }
 
+    @Test
+    void postProcessor_withEmptyOverrides_returnsEarly() {
+        MockEnvironment environment = new MockEnvironment();
+        // No skillhub.runtime.state.provider set, so resolveOverrides returns empty
+
+        postProcessor.postProcessEnvironment(environment, null);
+
+        assertThat(environment.getPropertySources().contains(RuntimeStatePropertyDefaults.PROPERTY_SOURCE_NAME))
+                .isFalse();
+    }
+
+    @Test
+    void postProcessor_addsFirst_whenPropertySourceDoesNotExist() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setProperty("skillhub.runtime.state.provider", "memory");
+
+        postProcessor.postProcessEnvironment(environment, null);
+
+        assertThat(environment.getPropertySources().contains(RuntimeStatePropertyDefaults.PROPERTY_SOURCE_NAME))
+                .isTrue();
+        assertThat(environment.getProperty("spring.session.store-type")).isEqualTo("none");
+        assertThat(environment.getProperty("skillhub.ratelimit.mode")).isEqualTo("memory");
+    }
+
     @Configuration
     @EnableConfigurationProperties(UassProperties.class)
     static class RuntimeStateTestConfig {

@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +38,21 @@ class AdminProfileReviewAppServiceTest {
     void setUp() {
         profileReviewQueryRepository = new JpaProfileReviewQueryRepository(userAccountRepository);
         service = new AdminProfileReviewAppService(profileReviewService, profileReviewQueryRepository);
+    }
+
+    @Test
+    void list_withNullStatus_defaultsToPending() {
+        given(profileReviewService.listByStatus(ProfileChangeStatus.PENDING, PageRequest.of(0, 20), "DESC"))
+                .willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+        var response = service.list(null, 0, 20, "DESC");
+        assertThat(response.items()).isEmpty();
+    }
+
+    @Test
+    void list_withInvalidStatus_throwsDomainBadRequest() {
+        assertThatThrownBy(() -> service.list("INVALID", 0, 20, "DESC"))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class);
     }
 
     @Test

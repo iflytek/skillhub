@@ -118,6 +118,16 @@ class GovernanceNotificationServiceTest {
         assertThat(result.getReadAt()).isEqualTo(Instant.now(clock));
     }
 
+    @Test
+    void countUnreadNotifications_delegatesToRepository() {
+        when(userNotificationRepository.countByUserIdAndStatus("user-1", UserNotificationStatus.UNREAD))
+                .thenReturn(5L);
+
+        long result = service.countUnreadNotifications("user-1");
+
+        assertThat(result).isEqualTo(5L);
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

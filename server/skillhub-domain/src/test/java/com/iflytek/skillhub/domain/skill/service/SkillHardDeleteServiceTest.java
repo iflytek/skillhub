@@ -213,6 +213,36 @@ class SkillHardDeleteServiceTest {
         );
     }
 
+    @Test
+    void hardDeleteSkill_skipsStorageWhenNoVersions() {
+        Skill skill = new Skill(9L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 7L);
+        skill.setLatestVersionId(null);
+
+        given(skillVersionRepository.findBySkillId(7L)).willReturn(List.of());
+
+        service.hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
+
+        verify(objectStorageService, never()).deleteObjects(anyList());
+    }
+
+    @Test
+    void hardDeleteSkill_deletesStorageImmediatelyWhenNoTransactionSync() {
+        Skill skill = new Skill(9L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 7L);
+        SkillVersion version = new SkillVersion(7L, "1.0.0", "owner-1");
+        setField(version, "id", 22L);
+
+        given(skillVersionRepository.findBySkillId(7L)).willReturn(List.of(version));
+        given(skillFileRepository.findByVersionId(22L)).willReturn(List.of(
+                new SkillFile(22L, "README.md", 20L, "text/markdown", "sha2", "skills/7/22/README.md")
+        ));
+
+        service.hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
+
+        verify(objectStorageService).deleteObjects(anyList());
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

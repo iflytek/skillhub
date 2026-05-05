@@ -245,6 +245,53 @@ class GovernanceWorkbenchAppServiceTest {
     }
 
     @Test
+    void listActivity_withNonGovernanceRole_returnsEmpty() {
+        PageResponse<?> response = service.listActivity(Set.of("USER"), 0, 20);
+        assertThat(response.total()).isZero();
+        assertThat(response.items()).isEmpty();
+    }
+
+    @Test
+    void listActivity_withAuditorRole_returnsEntries() {
+        when(adminAuditLogAppService.listAuditLogsByActions(
+                eq(0), eq(20), isNull(), any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(new PageResponse<>(List.of(), 0, 0, 20));
+
+        PageResponse<?> response = service.listActivity(Set.of("AUDITOR"), 0, 20);
+        assertThat(response.total()).isZero();
+    }
+
+    @Test
+    void listInbox_withNamespaceAdminOnly_returnsReviewsOnly() {
+        ReviewTask reviewTask = createReviewTask(1L, 11L, 101L, "owner");
+        when(reviewTaskRepository.findByNamespaceIdAndStatus(11L, ReviewTaskStatus.PENDING, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of(reviewTask)));
+        when(governanceQueryRepository.getReviewInboxItems(List.of(reviewTask)))
+                .thenReturn(List.of(new GovernanceInboxItemResponse(
+                        "REVIEW", 1L, "team-a/skill-a@1.0.0", "Pending review",
+                        "2026-03-16T02:00:00Z", "team-a", "skill-a")));
+
+        PageResponse<?> response = service.listInbox(
+                "ns-admin", Map.of(11L, NamespaceRole.ADMIN), Set.of(), null, 0, 20);
+
+        assertThat(response.total()).isEqualTo(1);
+        assertThat(response.items()).hasSize(1);
+    }
+
+    @Test
+    void listInbox_withEmptyResult_returnsEmptyPage() {
+        when(reviewTaskRepository.findByStatus(ReviewTaskStatus.PENDING, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(promotionRequestRepository.findByStatus(ReviewTaskStatus.PENDING, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(skillReportRepository.findByStatus(SkillReportStatus.PENDING, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        PageResponse<?> response = service.listInbox("admin", Map.of(), Set.of("SKILL_ADMIN"), null, 0, 20);
+        assertThat(response.items()).isEmpty();
+    }
+
+    @Test
     void listActivity_preservesUnderlyingTotalAcrossPages() {
         when(adminAuditLogAppService.listAuditLogsByActions(
                 eq(1),

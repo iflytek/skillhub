@@ -65,4 +65,17 @@ class OAuth2AuthorizationRequestResolverTest {
         assertThat(session).isNotNull();
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
     }
+
+    @Test
+    void resolve_withoutRegistrationId_storesSanitizedReturnTo() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/github");
+        request.setParameter("returnTo", "/dashboard");
+
+        resolver.resolve(request);
+
+        HttpSession session = request.getSession(false);
+        assertThat(session).isNotNull();
+        assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE))
+                .isEqualTo("/dashboard");
+    }
 }

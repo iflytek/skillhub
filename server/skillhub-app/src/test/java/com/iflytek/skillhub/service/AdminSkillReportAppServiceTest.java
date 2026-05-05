@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 import com.iflytek.skillhub.domain.report.SkillReport;
@@ -33,6 +34,30 @@ class AdminSkillReportAppServiceTest {
     @BeforeEach
     void setUp() {
         service = new AdminSkillReportAppService(skillReportRepository, adminSkillReportQueryRepository);
+    }
+
+    @Test
+    void listReports_withBlankStatus_defaultsToPending() {
+        given(skillReportRepository.findByStatus(SkillReportStatus.PENDING, PageRequest.of(0, 20)))
+                .willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+        var response = service.listReports("   ", 0, 20);
+        assertThat(response.total()).isZero();
+    }
+
+    @Test
+    void listReports_withInvalidStatus_throwsDomainBadRequest() {
+        assertThatThrownBy(() -> service.listReports("INVALID", 0, 20))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class);
+    }
+
+    @Test
+    void listReports_withValidStatus_parsesAndQueries() {
+        given(skillReportRepository.findByStatus(SkillReportStatus.RESOLVED, PageRequest.of(0, 20)))
+                .willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+        var response = service.listReports("RESOLVED", 0, 20);
+        assertThat(response.total()).isZero();
     }
 
     @Test

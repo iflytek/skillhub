@@ -214,6 +214,37 @@ class SkillScannerServiceTest {
                 .isInstanceOf(HttpClientException.class);
     }
 
+    @Test
+    void scanDirectory_includesAidefenseApiKeyWhenPresent() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        SkillScannerApiResponse apiResponse = new SkillScannerApiResponse(
+                "scan-1", "test-skill", true, "LOW", 0, null, 0.5, "2026-03-22T07:00:00"
+        );
+        httpClient.postResponse = apiResponse;
+        SkillScannerService service = new SkillScannerService(
+                httpClient, "http://scanner.test", "/scan-upload", "/health"
+        );
+        ScanOptions options = new ScanOptions(false, false, "openai", false, true, "secret-key", false, false);
+
+        service.scanDirectory("/tmp/demo", options);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) httpClient.lastPostBody;
+        assertThat(body.get("aidefense_api_key")).isEqualTo("secret-key");
+    }
+
+    @Test
+    void constructor_stripsTrailingSlashFromBaseUrl() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        SkillScannerService service = new SkillScannerService(
+                httpClient, "http://scanner.test/", "/scan-upload", "/health"
+        );
+
+        service.scanDirectory("/tmp/demo", ScanOptions.disabled());
+
+        assertThat(httpClient.lastPostUri).isEqualTo("http://scanner.test/scan");
+    }
+
     private static final class FakeHttpClient implements HttpClient {
         private Object postResponse;
         private Object multipartResponse;

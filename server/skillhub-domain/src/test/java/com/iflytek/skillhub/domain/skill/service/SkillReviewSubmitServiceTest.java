@@ -152,6 +152,46 @@ class SkillReviewSubmitServiceTest {
             assertThrows(DomainForbiddenException.class,
                     () -> service.submitForReview(skillId, versionId, SkillVisibility.PUBLIC, otherUserId, Map.of()));
         }
+
+        @Test
+        @DisplayName("should reject when version does not belong to skill")
+        void shouldRejectWhenVersionMismatch() {
+            Long skillId = 1L;
+            Long versionId = 100L;
+            String userId = "user-1";
+
+            Skill skill = createSkill(skillId, userId, 10L, SkillVisibility.PRIVATE);
+            SkillVersion version = createVersion(versionId, 999L, SkillVersionStatus.UPLOADED);
+
+            when(skillRepository.findById(skillId)).thenReturn(Optional.of(skill));
+            when(skillVersionRepository.findById(versionId)).thenReturn(Optional.of(version));
+
+            assertThrows(DomainBadRequestException.class,
+                    () -> service.submitForReview(skillId, versionId, SkillVisibility.PUBLIC, userId, Map.of()));
+        }
+
+        @Test
+        @DisplayName("should allow admin role to submit")
+        void shouldAllowAdminRole() {
+            Long skillId = 1L;
+            Long versionId = 100L;
+            String ownerId = "owner-1";
+            String adminId = "admin-1";
+            Long namespaceId = 10L;
+
+            Skill skill = createSkill(skillId, ownerId, namespaceId, SkillVisibility.PRIVATE);
+            SkillVersion version = createVersion(versionId, skillId, SkillVersionStatus.UPLOADED);
+
+            when(skillRepository.findById(skillId)).thenReturn(Optional.of(skill));
+            when(skillVersionRepository.findById(versionId)).thenReturn(Optional.of(version));
+            when(reviewTaskRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            Map<Long, NamespaceRole> roles = Map.of(namespaceId, NamespaceRole.ADMIN);
+
+            service.submitForReview(skillId, versionId, SkillVisibility.PUBLIC, adminId, roles);
+
+            assertEquals(SkillVersionStatus.PENDING_REVIEW, version.getStatus());
+        }
     }
 
     @Nested
@@ -242,6 +282,23 @@ class SkillReviewSubmitServiceTest {
             when(skillVersionRepository.findById(versionId)).thenReturn(Optional.of(version));
 
             // When/Then
+            assertThrows(DomainBadRequestException.class,
+                    () -> service.confirmPublish(skillId, versionId, userId, Map.of()));
+        }
+
+        @Test
+        @DisplayName("should reject when version does not belong to skill")
+        void shouldRejectWhenVersionMismatch() {
+            Long skillId = 1L;
+            Long versionId = 100L;
+            String userId = "user-1";
+
+            Skill skill = createSkill(skillId, userId, 10L, SkillVisibility.PRIVATE);
+            SkillVersion version = createVersion(versionId, 999L, SkillVersionStatus.UPLOADED);
+
+            when(skillRepository.findById(skillId)).thenReturn(Optional.of(skill));
+            when(skillVersionRepository.findById(versionId)).thenReturn(Optional.of(version));
+
             assertThrows(DomainBadRequestException.class,
                     () -> service.confirmPublish(skillId, versionId, userId, Map.of()));
         }

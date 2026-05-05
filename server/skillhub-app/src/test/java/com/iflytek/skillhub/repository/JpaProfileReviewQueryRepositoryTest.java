@@ -105,4 +105,10 @@ class JpaProfileReviewQueryRepositoryTest {
         assertThat(response.get(0).currentDisplayName()).isEqualTo("Current Name");
         assertThat(response.get(0).requestedDisplayName()).isNull();
     }
+
+    @Test
+    void getProfileReviewSummaries_returnsEmptyListForEmptyInput() {
+        var response = repository.getProfileReviewSummaries(List.of());
+        assertThat(response).isEmpty();
+    }
 }

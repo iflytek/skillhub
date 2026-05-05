@@ -116,4 +116,12 @@ class SlugValidatorTest {
         DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () -> SlugValidator.slugify(null));
         assertEquals("error.slug.blank", ex.messageCode());
     }
+
+    @Test
+    void constructor_isAccessibleViaReflection() throws Exception {
+        java.lang.reflect.Constructor<SlugValidator> ctor = SlugValidator.class.getDeclaredConstructor();
+        ctor.setAccessible(true);
+        SlugValidator instance = ctor.newInstance();
+        assertNotNull(instance);
+    }
 }

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.controller.portal.SkillStarController;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.social.SkillStarService;
 import org.junit.jupiter.api.Test;
@@ -133,6 +134,14 @@ class SkillStarControllerTest {
         mockMvc.perform(get("/api/v1/skills/10/star"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void checkStarred_withNullPrincipal_returnsFalse() {
+        SkillStarService service = org.mockito.Mockito.mock(SkillStarService.class);
+        com.iflytek.skillhub.dto.ApiResponseFactory factory = org.mockito.Mockito.mock(com.iflytek.skillhub.dto.ApiResponseFactory.class);
+        SkillStarController controller = new SkillStarController(factory, service);
+        controller.checkStarred(10L, null);
     }
 
     @Test

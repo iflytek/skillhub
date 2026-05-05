@@ -73,4 +73,10 @@ class JpaAdminSkillReportQueryRepositoryTest {
         assertThat(response.get(0).skillSlug()).isNull();
         assertThat(response.get(0).skillDisplayName()).isNull();
     }
+
+    @Test
+    void getSkillReportSummaries_returnsEmptyListForEmptyInput() {
+        var response = repository.getSkillReportSummaries(List.of());
+        assertThat(response).isEmpty();
+    }
 }

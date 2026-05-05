@@ -240,4 +240,56 @@ class ReviewPermissionCheckerTest {
         assertFalse(checker.canReviewPromotion(req, userId,
                 Set.of("SKILL_ADMIN")));
     }
+
+    @Test
+    void ownerCanSubmitReview() {
+        assertTrue(checker.canSubmitReview(10L, Map.of(10L, NamespaceRole.OWNER)));
+    }
+
+    @Test
+    void adminCanSubmitReview() {
+        assertTrue(checker.canSubmitReview(10L, Map.of(10L, NamespaceRole.ADMIN)));
+    }
+
+    @Test
+    void platformAdminCanSubmitForReviewForeignSkill() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-2", SkillVisibility.PUBLIC);
+        assertTrue(checker.canSubmitForReview(sourceSkill, "user-1", Map.of(), Set.of("SKILL_ADMIN")));
+    }
+
+    @Test
+    void ownerCanSubmitForReviewForeignSkill() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-2", SkillVisibility.PUBLIC);
+        assertTrue(checker.canSubmitForReview(sourceSkill, "user-1", Map.of(10L, NamespaceRole.OWNER), Set.of()));
+    }
+
+    @Test
+    void outsiderCannotSubmitForReviewForeignSkill() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-2", SkillVisibility.PUBLIC);
+        assertFalse(checker.canSubmitForReview(sourceSkill, "user-1", Map.of(), Set.of()));
+    }
+
+    @Test
+    void canViewPromotion_nonSubmitterWithoutPermission_returnsFalse() {
+        PromotionRequest req = new PromotionRequest(1L, 1L, 1L, "user-2");
+        assertFalse(checker.canViewPromotion(req, "user-1", Set.of()));
+    }
+
+    @Test
+    void canReadPromotion_nonSubmitterWithoutPermission_returnsFalse() {
+        PromotionRequest req = new PromotionRequest(1L, 1L, 1L, "user-2");
+        assertFalse(checker.canReadPromotion(req, "user-1", Set.of()));
+    }
+
+    @Test
+    void canReadReview_nonSubmitterWithoutPermission_returnsFalse() {
+        ReviewTask task = new ReviewTask(1L, 10L, "user-2");
+        assertFalse(checker.canReadReview(task, "user-1", NamespaceType.TEAM, Map.of(), Set.of()));
+    }
+
+    @Test
+    void canSubmitPromotion_withPlatformRoles_delegatesCorrectly() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-2", SkillVisibility.PUBLIC);
+        assertTrue(checker.canSubmitPromotion(sourceSkill, "user-1", Map.of(), Set.of("SUPER_ADMIN")));
+    }
 }
