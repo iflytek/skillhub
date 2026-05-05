@@ -2,6 +2,18 @@
 - 覆盖率 story 开始前应先运行模块级 JaCoCo (`mvn -pl <module> test jacoco:report`) 确认目标类现状，避免对已 100% 覆盖的类重复造轮子。
 - 两个覆盖率清单文件 (`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`) 需要同步更新，缺一不可。
 - mock-maker-inline 已启用，可直接用 `MockedStatic` 覆盖静态分支。
+- domain 服务测试中，`SkillSlugResolutionService` 和 `VisibilityChecker` 是高频依赖，建议直接实例化（非 mock）以简化测试编排，因为它们的逻辑轻量且无副作用。
+---
+
+## 2026-05-05 07:12 - US-105H
+- 实现 domain 核心技能服务 100% 行覆盖率：SkillQueryService、SkillLifecycleProjectionService、SkillPublishService、SkillGovernanceService、SkillDownloadService。
+- 补全/新增测试文件：SkillQueryServiceTest（+793 行，覆盖 DTO 构建、版本解析、文件读取、生命周期权限等边缘分支）、SkillPublishServiceTest（+293 行，覆盖发布校验、警告确认、版本替换、重新发布、存储补偿等）、SkillGovernanceServiceTest（+66 行，覆盖隐藏/归档/撤销/下架/删除版本权限与状态分支）、SkillDownloadServiceTest（+221 行，覆盖按标签下载、回退打包、匿名下载、文件名处理等）。
+- 模块级 JaCoCo 确认 5 目标类 LINE_MISSED=0；同步更新覆盖率清单，从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 6 个目标类条目（含 ReviewSkillSnapshotDTO）。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：domain 层服务大量使用构造函数注入，测试时直接 new 被测对象并传入 mock 依赖即可；`TransactionSynchronizationManager` 在测试中需手动 init/clear。
+  - 遇到的陷阱：先前迭代遗留的未提交测试修改与清单更新混在一起，执行前应通过 `git diff --stat` 确认当前 working tree 状态，避免重复劳动。
+  - 有用的上下文：`SkillQueryService` 的 `canSubmitPromotion` 与 `canManageRestrictedSkill` 是两个独立权限检查，前者依赖 namespace 类型和 promotion request 状态，后者仅依赖用户角色——测试中需要分别覆盖。
 ---
 
 ## 2026-05-04 23:50 - US-105
@@ -71,3 +83,24 @@
   - 遇到的陷阱：MockitoExtension 的严格模式下，未被使用的 stubbing（如 `when(otherPref.getCategory())`）会触发 UnnecessaryStubbingException；在 lambda filter 场景中，若元素被过滤掉，后续对元素的 stubbing 就不会被执行。
   - 有用的上下文：NotificationChannel 当前仅定义 IN_APP 一个值，因此覆盖非 IN_APP 分支必须借助 mock；如果未来新增真实枚举值，测试可直接替换为真实实例。
 ---
+
+## 2026-05-05 07:55 - US-105I
+- 补齐 domain 治理与审核服务 100% 行覆盖率：LabelDefinitionService、SkillLabelService、PromotionService、ReviewService、NamespaceGovernanceService、SkillReportService、SecurityScanService。
+- 补全/新增测试文件：LabelDefinitionServiceTest（+25 个 case，覆盖约束映射、排序更新、翻译 CRUD、空值校验等）、SkillLabelServiceTest（~13 个 case，覆盖 attach/detach/权限/空值分支）、PromotionServiceTest（+3 个嵌套类，覆盖平台角色提交、审批冲突分支、查看权限）、ReviewServiceTest（+3 个嵌套类，覆盖平台角色提交、元数据边缘、权限委托）、NamespaceGovernanceServiceTest（~16 个 case，覆盖 freeze/unfreeze/archive/restore 的状态转换与权限）、SkillReportServiceTest（+8 个 case，覆盖举报提交校验、处置分支、通知触发）、SecurityScanServiceTest（+10 个 case，覆盖上传模式、路径遍历、ZipSlip、序列化降级、软/硬删除）。
+- 模块级 JaCoCo 确认 7 目标类 LINE_MISSED=0；同步更新覆盖率清单，从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 7 个目标类条目。
+- 质量检查：backend 596 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：domain 服务中权限检查通常发生在业务校验之前，因此测试"前置校验失败"场景时，需先 stub 权限返回 true，否则会被权限异常截断，导致预期的 DomainBadRequestException 变成 DomainForbiddenException。
+  - 遇到的陷阱：MockitoExtension 严格模式下，`UnnecessaryStubbingException` 非常敏感；当测试在方法早期抛出异常时，后续流程中的 stubbing 不会被执行，需移除或重构这些未使用的 stub。
+  - 有用的上下文：`DataIntegrityViolationException` 在 `duplicateTargetSkillConflict` 中被包装为 `DomainBadRequestException`，其 cause 是外层的 `DataIntegrityViolationException` 本身，而不是内层的 `RuntimeException`；测试断言时应直接比较外层的异常对象。
+---
+
+## 2026-05-05 08:15 - US-105J
+- 补齐 domain 实体与值对象第一批 100% 行覆盖率：LabelDefinition、LabelTranslation、SkillLabel、Namespace、NamespaceMember、Skill、SkillFile、SkillTag、SkillStorageDeletionCompensation。
+- 新增/补全测试文件：LabelTranslationTest（5 个 case，覆盖构造函数、@PrePersist/@PreUpdate、getter、protected 无参构造）、NamespaceTest（5 个 case，覆盖构造函数、生命周期回调、全部 getter/setter）、SkillTest（6 个 case，覆盖构造函数、生命周期、全部 getter/setter、hidden 字段）、NamespaceMemberTest（补充 gettersWork 覆盖 getId() 等）。
+- 模块级 JaCoCo 确认 9 目标类 LINE_MISSED=0；同步更新覆盖率清单，从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 9 个目标类条目。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：domain 实体类的测试模式非常一致——覆盖 protected 无参构造（JPA 实例化）、public 构造字段断言、@PrePersist/@PreUpdate 时间戳行为、全部 getter/setter。
+  - 遇到的陷阱：测试中使用枚举值前需先查看源码确认实际可用的枚举常量，不能假设存在（如 NamespaceType 没有 PLATFORM、SkillVisibility 没有 HIDDEN）。
+  - 有用的上下文：JaCoCo 对实体类的未覆盖行通常是 protected 构造、生命周期回调、以及未被其他测试间接调用的 getter；新增专门的实体测试类可快速收口。
