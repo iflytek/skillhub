@@ -18,12 +18,16 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -145,6 +149,109 @@ class LabelAdminAppServiceTest {
         assertThat(responses).hasSize(2);
         verify(labelDefinitionService).updateSortOrders(any(), eq(Set.of("SUPER_ADMIN")));
         verify(auditLogService).record(eq("admin"), eq("LABEL_SORT_ORDER_UPDATE"), eq("LABEL"), eq(null), any(), eq("127.0.0.1"), eq("JUnit"), eq("{\"count\":2}"));
+    }
+
+    @Test
+    void listAll_returnsMappedResponses() {
+        LabelDefinition label1 = label(10L, "official", LabelType.RECOMMENDED, true, 1);
+        LabelDefinition label2 = label(11L, "featured", LabelType.PRIVILEGED, false, 2);
+        when(labelDefinitionService.listAll()).thenReturn(List.of(label1, label2));
+        when(labelDefinitionService.listTranslations(10L))
+                .thenReturn(List.of(new LabelTranslation(10L, "en", "Official")));
+        when(labelDefinitionService.listTranslations(11L))
+                .thenReturn(List.of(new LabelTranslation(11L, "zh", "精选")));
+
+        List<LabelDefinitionResponse> responses = service.listAll();
+
+        assertThat(responses).hasSize(2);
+        assertThat(responses.get(0).slug()).isEqualTo("official");
+        assertThat(responses.get(1).slug()).isEqualTo("featured");
+    }
+
+    @Test
+    void afterCommit_runsImmediatelyWhenSynchronizationNotActive() {
+        LabelDefinition existing = label(10L, "official", LabelType.RECOMMENDED, true, 1);
+        when(rbacService.getUserRoleCodes("admin")).thenReturn(Set.of("SUPER_ADMIN"));
+        when(labelDefinitionService.getBySlug("official")).thenReturn(existing);
+        when(skillLabelService.listByLabelId(10L)).thenReturn(List.of(
+                new SkillLabel(100L, 10L, "owner-1")
+        ));
+        when(labelDefinitionService.update(eq("official"), eq(LabelType.PRIVILEGED), eq(false), eq(3), any(), eq(Set.of("SUPER_ADMIN"))))
+                .thenReturn(existing);
+        when(labelDefinitionService.listTranslations(10L)).thenReturn(List.of());
+
+        // Ensure no transaction is active
+        assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+
+        service.update(
+                "official",
+                new AdminLabelUpdateRequest(LabelType.PRIVILEGED, false, 3, List.of()),
+                "admin",
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        );
+
+        // When no transaction is active, afterCommit runs immediately
+        verify(labelSearchSyncService).rebuildSkills(List.of(100L));
+    }
+
+    @Test
+    void create_recordsNullAuditContextSafely() {
+        LabelDefinition created = label(10L, "official", LabelType.RECOMMENDED, true, 1);
+        when(rbacService.getUserRoleCodes("admin")).thenReturn(Set.of("SUPER_ADMIN"));
+        when(labelDefinitionService.create(eq("official"), eq(LabelType.RECOMMENDED), eq(true), eq(1), any(), eq("admin"), eq(Set.of("SUPER_ADMIN"))))
+                .thenReturn(created);
+        when(labelDefinitionService.listTranslations(10L))
+                .thenReturn(List.of(new LabelTranslation(10L, "en", "Official")));
+
+        LabelDefinitionResponse response = service.create(
+                new AdminLabelCreateRequest(
+                        "official",
+                        LabelType.RECOMMENDED,
+                        true,
+                        1,
+                        List.of(new LabelTranslationItemRequest("en", "Official"))
+                ),
+                "admin",
+                null
+        );
+
+        assertThat(response.slug()).isEqualTo("official");
+        verify(auditLogService).record(eq("admin"), eq("LABEL_CREATE"), eq("LABEL"), eq(10L), any(), eq((String) null), eq((String) null), eq("{\"slug\":\"official\"}"));
+    }
+
+    @Test
+    void update_registersAfterCommitWhenTransactionActive() {
+        LabelDefinition existing = label(10L, "official", LabelType.RECOMMENDED, true, 1);
+        LabelDefinition updated = label(10L, "official", LabelType.PRIVILEGED, false, 3);
+        when(rbacService.getUserRoleCodes("admin")).thenReturn(Set.of("SUPER_ADMIN"));
+        when(labelDefinitionService.getBySlug("official")).thenReturn(existing);
+        when(skillLabelService.listByLabelId(10L)).thenReturn(List.of(
+                new SkillLabel(100L, 10L, "owner-1")
+        ));
+        when(labelDefinitionService.update(eq("official"), eq(LabelType.PRIVILEGED), eq(false), eq(3), any(), eq(Set.of("SUPER_ADMIN"))))
+                .thenReturn(updated);
+        when(labelDefinitionService.listTranslations(10L)).thenReturn(List.of());
+
+        TransactionSynchronization[] captured = new TransactionSynchronization[1];
+        try (MockedStatic<TransactionSynchronizationManager> tsm = mockStatic(TransactionSynchronizationManager.class)) {
+            tsm.when(TransactionSynchronizationManager::isSynchronizationActive).thenReturn(true);
+            tsm.when(() -> TransactionSynchronizationManager.registerSynchronization(any(TransactionSynchronization.class)))
+                    .thenAnswer(invocation -> {
+                        captured[0] = invocation.getArgument(0);
+                        return null;
+                    });
+
+            service.update(
+                    "official",
+                    new AdminLabelUpdateRequest(LabelType.PRIVILEGED, false, 3, List.of()),
+                    "admin",
+                    new AuditRequestContext("127.0.0.1", "JUnit")
+            );
+
+            assertThat(captured[0]).isNotNull();
+            captured[0].afterCommit();
+            verify(labelSearchSyncService).rebuildSkills(List.of(100L));
+        }
     }
 
     private LabelDefinition label(Long id, String slug, LabelType type, boolean visibleInFilter, int sortOrder) {

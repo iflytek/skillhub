@@ -30,10 +30,8 @@ public class JpaAdminSkillReportQueryRepository implements AdminSkillReportQuery
             return List.of();
         }
         List<Long> skillIds = reports.stream().map(SkillReport::getSkillId).distinct().toList();
-        Map<Long, Skill> skillsById = skillIds.isEmpty()
-                ? Map.of()
-                : skillRepository.findByIdIn(skillIds).stream()
-                        .collect(Collectors.toMap(Skill::getId, Function.identity()));
+        Map<Long, Skill> skillsById = skillRepository.findByIdIn(skillIds).stream()
+                .collect(Collectors.toMap(Skill::getId, Function.identity()));
 
         List<Long> namespaceIds = skillsById.values().stream().map(Skill::getNamespaceId).distinct().toList();
         Map<Long, String> namespaceSlugs = namespaceIds.isEmpty()

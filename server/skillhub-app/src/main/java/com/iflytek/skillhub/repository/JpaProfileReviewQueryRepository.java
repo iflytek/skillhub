@@ -35,7 +35,7 @@ public class JpaProfileReviewQueryRepository implements ProfileReviewQueryReposi
                 .distinct()
                 .toList();
         Map<String, UserAccount> usersById = allUserIds.isEmpty()
-                ? Map.of()
+                ? new java.util.HashMap<>()
                 : userAccountRepository.findByIdIn(allUserIds).stream()
                         .collect(Collectors.toMap(UserAccount::getId, Function.identity()));
         return requests.stream()

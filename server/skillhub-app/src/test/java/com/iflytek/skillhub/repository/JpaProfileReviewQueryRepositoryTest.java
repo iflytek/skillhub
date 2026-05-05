@@ -111,4 +111,23 @@ class JpaProfileReviewQueryRepositoryTest {
         var response = repository.getProfileReviewSummaries(List.of());
         assertThat(response).isEmpty();
     }
+
+    @Test
+    void getProfileReviewSummaries_handlesAllNullUserIds() {
+        ProfileChangeRequest request = new ProfileChangeRequest(
+                null,
+                "{}",
+                "{}",
+                ProfileChangeStatus.PENDING,
+                "PASS",
+                null
+        );
+        ReflectionTestUtils.setField(request, "id", 4L);
+        ReflectionTestUtils.setField(request, "createdAt", Instant.parse("2026-03-19T08:00:00Z"));
+
+        var response = repository.getProfileReviewSummaries(List.of(request));
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).username()).isNull();
+    }
 }

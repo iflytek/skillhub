@@ -115,6 +115,76 @@ class NamespaceMemberCandidateServiceTest {
         verify(namespaceService, org.mockito.Mockito.never()).assertAdminOrOwner(1L, "guest-1");
     }
 
+    @Test
+    void searchCandidates_returnsEmptyListWhenSearchIsBlank() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        setField(namespace, "id", 1L);
+
+        NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
+                namespaceService,
+                namespaceAccessPolicy,
+                namespaceMemberRepository,
+                userAccountRepository
+        );
+
+        when(namespaceService.getNamespaceBySlug("team-a")).thenReturn(namespace);
+        doNothing().when(namespaceService).assertAdminOrOwner(1L, "owner-1");
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+
+        List<NamespaceCandidateUserResponse> result = service.searchCandidates("team-a", "   ", "owner-1", 10);
+
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void searchCandidates_throwsWhenSearchTooShort() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        setField(namespace, "id", 1L);
+
+        NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
+                namespaceService,
+                namespaceAccessPolicy,
+                namespaceMemberRepository,
+                userAccountRepository
+        );
+
+        when(namespaceService.getNamespaceBySlug("team-a")).thenReturn(namespace);
+        doNothing().when(namespaceService).assertAdminOrOwner(1L, "owner-1");
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
+                service.searchCandidates("team-a", "a", "owner-1", 10));
+
+        assertEquals("error.namespace.member.search.tooShort", exception.messageCode());
+    }
+
+    @Test
+    void searchCandidates_usesDefaultSizeWhenZeroProvided() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        setField(namespace, "id", 1L);
+
+        NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
+                namespaceService,
+                namespaceAccessPolicy,
+                namespaceMemberRepository,
+                userAccountRepository
+        );
+
+        when(namespaceService.getNamespaceBySlug("team-a")).thenReturn(namespace);
+        doNothing().when(namespaceService).assertAdminOrOwner(1L, "owner-1");
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceId(1L, PageRequest.of(0, 500)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(userAccountRepository.search("alice", UserStatus.ACTIVE, PageRequest.of(0, 10)))
+                .thenReturn(new PageImpl<>(List.of(
+                        new UserAccount("user-2", "alice", "alice@example.com", null)
+                )));
+
+        List<NamespaceCandidateUserResponse> result = service.searchCandidates("team-a", "alice", "owner-1", 0);
+
+        assertEquals(1, result.size());
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

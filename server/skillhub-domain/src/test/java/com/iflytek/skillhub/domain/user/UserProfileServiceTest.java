@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.user;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -209,6 +211,61 @@ class UserProfileServiceTest {
 
         // user_account should NOT be updated
         verify(userAccountRepository, never()).save(any());
+    }
+
+    // ===== Mixed result =====
+
+    @Test
+    void updateProfile_mixedChanges_shouldReturnMixedResult() {
+        var user = testUser();
+        when(userAccountRepository.findById("user-1")).thenReturn(Optional.of(user));
+        when(moderationConfig.machineReview()).thenReturn(false);
+        when(moderationConfig.humanReview()).thenReturn(true);
+        // displayName requires review, avatarUrl does not (and is immediate)
+        when(fieldPolicyConfig.fieldPolicies()).thenReturn(Map.of(
+                "displayName", new ProfileFieldPolicyConfig.FieldPolicy(true, true),
+                "avatarUrl", new ProfileFieldPolicyConfig.FieldPolicy(true, false)));
+        when(changeRequestRepository.findByUserIdAndStatus("user-1", ProfileChangeStatus.PENDING))
+                .thenReturn(List.of());
+
+        var result = userProfileService.updateProfile(
+                "user-1", Map.of("displayName", "NewName", "avatarUrl", "https://example.com/new.png"),
+                "req-1", "127.0.0.1", "TestAgent");
+
+        assertInstanceOf(UpdateProfileResult.Mixed.class, result);
+    }
+
+    // ===== JsonProcessingException fallback =====
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateProfile_jsonSerializationFailure_shouldWrapInRuntimeException() throws Exception {
+        var user = testUser();
+        when(userAccountRepository.findById("user-1")).thenReturn(Optional.of(user));
+        when(moderationConfig.machineReview()).thenReturn(false);
+        stubFieldPolicies(false);
+
+        // Swap static MAPPER with a mock that throws using Unsafe (Java 17 compatible)
+        var mapperField = UserProfileService.class.getDeclaredField("MAPPER");
+        mapperField.setAccessible(true);
+        ObjectMapper originalMapper = (ObjectMapper) mapperField.get(null);
+        ObjectMapper badMapper = mock(ObjectMapper.class);
+        when(badMapper.writeValueAsString(any())).thenThrow(new JsonProcessingException("fail") {});
+
+        var unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+        Object staticBase = unsafe.staticFieldBase(mapperField);
+        long staticOffset = unsafe.staticFieldOffset(mapperField);
+        unsafe.putObject(staticBase, staticOffset, badMapper);
+
+        try {
+            assertThrows(RuntimeException.class, () ->
+                    userProfileService.updateProfile(
+                            "user-1", displayNameChange("NewName"), "req-1", "127.0.0.1", "TestAgent"));
+        } finally {
+            unsafe.putObject(staticBase, staticOffset, originalMapper);
+        }
     }
 
     // ===== User not found =====

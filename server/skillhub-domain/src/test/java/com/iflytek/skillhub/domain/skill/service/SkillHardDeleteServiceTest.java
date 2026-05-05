@@ -30,12 +30,16 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class SkillHardDeleteServiceTest {
@@ -241,6 +245,40 @@ class SkillHardDeleteServiceTest {
         service.hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit");
 
         verify(objectStorageService).deleteObjects(anyList());
+    }
+
+    @Test
+    void hardDeleteSkill_shouldThrowWhenAuditPayloadSerializationFails() throws Exception {
+        Skill skill = new Skill(9L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 7L);
+        skill.setLatestVersionId(null);
+
+        given(skillVersionRepository.findBySkillId(7L)).willReturn(List.of());
+
+        ObjectMapper badMapper = mock(ObjectMapper.class);
+        when(badMapper.writeValueAsString(any()))
+                .thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("fail") {});
+
+        service = new SkillHardDeleteService(
+                skillRepository,
+                skillVersionRepository,
+                skillFileRepository,
+                skillTagRepository,
+                reviewTaskRepository,
+                promotionRequestRepository,
+                skillStarRepository,
+                skillRatingRepository,
+                skillReportRepository,
+                skillVersionStatsRepository,
+                objectStorageService,
+                compensationService,
+                securityScanService,
+                auditLogService,
+                badMapper
+        );
+
+        assertThrows(IllegalStateException.class, () ->
+                service.hardDeleteSkill(skill, "global", "super-1", "127.0.0.1", "JUnit"));
     }
 
     private void setField(Object target, String fieldName, Object value) {

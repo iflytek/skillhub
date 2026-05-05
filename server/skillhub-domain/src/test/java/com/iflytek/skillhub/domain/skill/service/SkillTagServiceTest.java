@@ -194,6 +194,104 @@ class SkillTagServiceTest {
                 result.stream().map(SkillTag::getTagName).sorted().collect(Collectors.toList()));
     }
 
+    @Test
+    void testListTags_shouldDenyAccess_whenVisibilityCheckerRejects() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PRIVATE);
+        setId(skill, 1L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(visibilityChecker.canAccess(eq(skill), eq("user-100"), any())).thenReturn(false);
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.listTags(namespaceSlug, skillSlug, "user-100", java.util.Map.of()));
+    }
+
+    @Test
+    void testListTags_withoutUserArgs_shouldDelegateToOverload() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "user-100", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setLatestVersionId(5L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillTagRepository.findBySkillId(1L)).thenReturn(List.of());
+        when(visibilityChecker.canAccess(eq(skill), isNull(), eq(java.util.Map.of()))).thenReturn(true);
+
+        List<SkillTag> result = service.listTags(namespaceSlug, skillSlug);
+
+        assertEquals(1, result.size());
+        assertEquals("latest", result.get(0).getTagName());
+    }
+
+    @Test
+    void testCreateTag_shouldRejectNonPublishedVersion() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String tagName = "stable";
+        String targetVersion = "1.0.0";
+        String operatorId = "user-100";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, operatorId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, targetVersion, operatorId);
+        setId(version, 1L);
+        version.setStatus(SkillVersionStatus.DRAFT);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, operatorId))
+                .thenReturn(Optional.of(new NamespaceMember(1L, operatorId, NamespaceRole.OWNER)));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, targetVersion)).thenReturn(Optional.of(version));
+
+        assertThrows(DomainBadRequestException.class, () ->
+                service.createOrMoveTag(namespaceSlug, skillSlug, tagName, targetVersion, operatorId));
+    }
+
+    @Test
+    void testCreateTag_shouldMoveExistingTag() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String tagName = "stable";
+        String targetVersion = "2.0.0";
+        String operatorId = "user-100";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, operatorId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, targetVersion, operatorId);
+        setId(version, 2L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillTag existingTag = new SkillTag(1L, tagName, 1L, operatorId);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, operatorId))
+                .thenReturn(Optional.of(new NamespaceMember(1L, operatorId, NamespaceRole.OWNER)));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, targetVersion)).thenReturn(Optional.of(version));
+        when(skillTagRepository.findBySkillIdAndTagName(1L, tagName)).thenReturn(Optional.of(existingTag));
+        when(skillTagRepository.save(existingTag)).thenReturn(existingTag);
+
+        SkillTag result = service.createOrMoveTag(namespaceSlug, skillSlug, tagName, targetVersion, operatorId);
+
+        assertNotNull(result);
+        assertEquals(2L, result.getVersionId());
+        verify(skillTagRepository).save(existingTag);
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);

@@ -1,11 +1,15 @@
 package com.iflytek.skillhub.domain.skill.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.skill.SkillStorageDeletionCompensation;
@@ -90,5 +94,41 @@ class SkillStorageDeletionCompensationServiceTest {
         assertThat(record.getAttemptCount()).isEqualTo(1);
         assertThat(record.getLastError()).contains("s3 down");
         verify(repository).findTop100ByStatusOrderByCreatedAtAsc(SkillStorageDeletionCompensationStatus.PENDING);
+    }
+
+    @Test
+    void recordFailure_shouldThrowWhenSerializationFails() throws Exception {
+        ObjectMapper badMapper = mock(ObjectMapper.class);
+        when(badMapper.writeValueAsString(anyList())).thenThrow(
+                new com.fasterxml.jackson.core.JsonProcessingException("fail") {});
+
+        service = new SkillStorageDeletionCompensationService(repository, objectStorageService, badMapper);
+
+        assertThatThrownBy(() -> service.recordFailure(11L, "global", "demo-skill", List.of("key"), "err"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to serialize");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void retryPendingCleanup_shouldCatchDeserializationFailureAndMarkAttempt() throws Exception {
+        ObjectMapper badMapper = mock(ObjectMapper.class);
+        org.mockito.Mockito.doThrow(new com.fasterxml.jackson.core.JsonProcessingException("fail") {})
+                .when(badMapper).readValue(anyString(),
+                        org.mockito.ArgumentMatchers.isA(com.fasterxml.jackson.core.type.TypeReference.class));
+
+        SkillStorageDeletionCompensation record = new SkillStorageDeletionCompensation(
+                11L, "global", "demo-skill", "bad-json", "boom");
+        given(repository.findTop100ByStatusOrderByCreatedAtAsc(SkillStorageDeletionCompensationStatus.PENDING))
+                .willReturn(List.of(record));
+
+        service = new SkillStorageDeletionCompensationService(repository, objectStorageService, badMapper);
+
+        int retried = service.retryPendingCleanup();
+
+        assertThat(retried).isEqualTo(1);
+        assertThat(record.getStatus()).isEqualTo(SkillStorageDeletionCompensationStatus.PENDING);
+        assertThat(record.getAttemptCount()).isEqualTo(1);
+        assertThat(record.getLastError()).contains("Failed to deserialize");
     }
 }

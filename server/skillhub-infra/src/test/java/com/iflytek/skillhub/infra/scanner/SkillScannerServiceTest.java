@@ -184,6 +184,22 @@ class SkillScannerServiceTest {
     }
 
     @Test
+    void constructorRejectsEmptyHost() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "http://", "/scan", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructorRejectsBlankHost() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new SkillScannerService(httpClient, "http://:8080", "/scan", "/health"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void scanDirectory_withAidefenseAndEmptyKeyDoesNotIncludeKey() {
         FakeHttpClient httpClient = new FakeHttpClient();
         SkillScannerApiResponse apiResponse = new SkillScannerApiResponse(

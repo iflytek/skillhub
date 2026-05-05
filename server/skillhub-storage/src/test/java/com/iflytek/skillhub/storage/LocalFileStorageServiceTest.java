@@ -107,4 +107,14 @@ class LocalFileStorageServiceTest {
 
         assertThat(service.generatePresignedUrl("packages/demo.zip", Duration.ofMinutes(10), "demo.zip")).isNull();
     }
+
+    @Test
+    void getObjectThrowsForMissingFile() {
+        assertThrows(StorageAccessException.class, () -> storageService.getObject("nonexistent/file.txt"));
+    }
+
+    @Test
+    void getMetadataThrowsForMissingFile() {
+        assertThrows(StorageAccessException.class, () -> storageService.getMetadata("nonexistent/file.txt"));
+    }
 }

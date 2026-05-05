@@ -187,6 +187,22 @@ class ReviewSkillDetailAppServiceTest {
                 .isInstanceOf(DomainForbiddenException.class);
     }
 
+    @Test
+    void getReviewFileContent_returnsInputStreamForAuthorizedUser() throws Exception {
+        ReviewTask task = createReviewTask(42L, 101L, 20L, "submitter");
+        Namespace namespace = createNamespace(20L, "team-a");
+
+        given(reviewTaskRepository.findById(42L)).willReturn(Optional.of(task));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(reviewService.canViewReview(task, "admin", namespace.getType(), Map.of(), Set.of("SKILL_ADMIN"))).willReturn(true);
+        given(skillQueryService.getFileContentByVersionId(101L, "README.md")).willReturn(new ByteArrayInputStream("content".getBytes()));
+
+        java.io.InputStream result = service.getReviewFileContent(42L, "README.md", "admin", Map.of());
+
+        assertThat(new String(result.readAllBytes())).isEqualTo("content");
+    }
+
     private ReviewTask createReviewTask(Long reviewId, Long versionId, Long namespaceId, String submittedBy) {
         ReviewTask task = new ReviewTask(versionId, namespaceId, submittedBy);
         setField(task, "id", reviewId);

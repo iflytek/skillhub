@@ -104,4 +104,53 @@ class LocalFileIndexStartupSynchronizerTest {
 
         verify(rebuildService).rebuildAll();
     }
+
+    @Test
+    void startupSyncDisabledShouldSkip() throws Exception {
+        SearchRuntimeProperties properties = new SearchRuntimeProperties();
+        properties.setProvider("local-file-index");
+        properties.setStartupSyncEnabled(false);
+        properties.getLocalFileIndex().setDirectory(tempDir);
+        SearchRebuildService rebuildService = mock(SearchRebuildService.class);
+
+        LocalFileIndexStartupSynchronizer synchronizer =
+                new LocalFileIndexStartupSynchronizer(properties, rebuildService);
+
+        synchronizer.run(new DefaultApplicationArguments(new String[0]));
+
+        verify(rebuildService, never()).rebuildAll();
+    }
+
+    @Test
+    void uninitializedIndexShouldTriggerRebuild() throws Exception {
+        SearchRuntimeProperties properties = new SearchRuntimeProperties();
+        properties.setProvider("local-file-index");
+        properties.getLocalFileIndex().setDirectory(tempDir);
+        Files.createDirectories(tempDir);
+        SearchRebuildService rebuildService = mock(SearchRebuildService.class);
+
+        LocalFileIndexStartupSynchronizer synchronizer =
+                new LocalFileIndexStartupSynchronizer(properties, rebuildService);
+
+        synchronizer.run(new DefaultApplicationArguments(new String[0]));
+
+        verify(rebuildService).rebuildAll();
+    }
+
+    @Test
+    void inspectIndexIOExceptionShouldReturnCorrupted() throws Exception {
+        SearchRuntimeProperties properties = new SearchRuntimeProperties();
+        properties.setProvider("local-file-index");
+        Path filePath = tempDir.resolve("not-a-dir");
+        Files.createFile(filePath);
+        properties.getLocalFileIndex().setDirectory(filePath);
+        SearchRebuildService rebuildService = mock(SearchRebuildService.class);
+
+        LocalFileIndexStartupSynchronizer synchronizer =
+                new LocalFileIndexStartupSynchronizer(properties, rebuildService);
+
+        synchronizer.run(new DefaultApplicationArguments(new String[0]));
+
+        verify(rebuildService).rebuildAll();
+    }
 }

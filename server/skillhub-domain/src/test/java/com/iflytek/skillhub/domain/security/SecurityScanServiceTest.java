@@ -380,6 +380,24 @@ class SecurityScanServiceTest {
         verify(auditRepository).deleteBySkillVersionId(42L);
     }
 
+    @Test
+    void triggerScan_shouldThrowWhenTempDirectoryWriteFails() throws Exception {
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        PackageEntry entry = new PackageEntry(
+                ".",
+                "boom".getBytes(),
+                4L,
+                "text/plain"
+        );
+
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        assertThatThrownBy(() -> service.triggerScan(42L, List.of(entry), "publisher-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to save temp directory");
+    }
+
     private void setId(Object target, Long id) throws Exception {
         Field field = target.getClass().getDeclaredField("id");
         field.setAccessible(true);

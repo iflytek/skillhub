@@ -32,21 +32,21 @@ The following classes are tracked but explicitly excluded from the production co
 ## Overall Line Coverage
 | Metric | Value |
 |--------|-------|
-| Total Lines | 11941 |
-| Covered Lines | 11520 |
-| Missed Lines | 421 |
-| Line Coverage | 96.47% |
+| Total Lines | 11939 |
+| Covered Lines | 11596 |
+| Missed Lines | 343 |
+| Line Coverage | 97.13% |
 
 ## Per-Module Line Coverage
 | Module | Total Lines | Covered | Missed | Coverage |
 |--------|-------------|---------|--------|----------|
-| skillhub-app | 5109 | 4993 | 116 | 97.73% |
+| skillhub-app | 5107 | 5039 | 68 | 98.67% |
 | skillhub-auth | 2083 | 1982 | 101 | 95.15% |
-| skillhub-domain | 3312 | 3173 | 139 | 95.80% |
-| skillhub-infra | 308 | 307 | 1 | 99.68% |
+| skillhub-domain | 3312 | 3200 | 112 | 96.62% |
+| skillhub-infra | 308 | 308 | 0 | 100.00% |
 | skillhub-notification | 207 | 207 | 0 | 100.00% |
 | skillhub-search | 709 | 709 | 0 | 100.00% |
-| skillhub-storage | 213 | 149 | 64 | 69.95% |
+| skillhub-storage | 213 | 151 | 62 | 70.89% |
 
 ## Uncovered Classes Inventory (by module, sorted by missed lines desc)
 
@@ -57,21 +57,7 @@ The following classes are tracked but explicitly excluded from the production co
 | JpaGovernanceQueryRepository | com.iflytek.skillhub.repository | 14 | 148 |
 | UserProfileController | com.iflytek.skillhub.controller | 12 | 71 |
 | AuthController | com.iflytek.skillhub.controller | 7 | 51 |
-| AuthFailureThrottleService | com.iflytek.skillhub.security | 7 | 83 |
 | SkillDeleteAppService | com.iflytek.skillhub.service | 6 | 53 |
-| LocalFileIndexStartupSynchronizer | com.iflytek.skillhub.bootstrap | 5 | 24 |
-| LabelAdminAppService | com.iflytek.skillhub.service | 5 | 72 |
-| ReviewPortalAppService | com.iflytek.skillhub.service | 5 | 98 |
-| ReviewController | com.iflytek.skillhub.controller.portal | 4 | 49 |
-| NamespaceMemberCandidateService | com.iflytek.skillhub.service | 4 | 29 |
-| PromotionPortalAppService | com.iflytek.skillhub.service | 4 | 50 |
-| PromotionController | com.iflytek.skillhub.controller.portal | 3 | 15 |
-| LabelAdminAppService.new TransactionSynchronization() {...} | com.iflytek.skillhub.service | 3 | 0 |
-| ReviewSkillDetailAppService | com.iflytek.skillhub.service | 3 | 69 |
-| GovernanceWorkflowAppService | com.iflytek.skillhub.service | 2 | 37 |
-| JpaAdminSkillReportQueryRepository | com.iflytek.skillhub.repository | 1 | 32 |
-| JpaMySkillQueryRepository | com.iflytek.skillhub.repository | 1 | 53 |
-| JpaProfileReviewQueryRepository | com.iflytek.skillhub.repository | 1 | 39 |
 
 ### skillhub-auth
 | Class | Package | Missed Lines | Covered Lines |
@@ -97,21 +83,8 @@ The following classes are tracked but explicitly excluded from the production co
 | SkillRating | com.iflytek.skillhub.domain.social | 11 | 11 |
 | ProfileReviewService | com.iflytek.skillhub.domain.user | 11 | 37 |
 | LabelPermissionChecker | com.iflytek.skillhub.domain.label | 10 | 0 |
-| SkillReport | com.iflytek.skillhub.domain.report | 7 | 24 |
-| SkillTagService | com.iflytek.skillhub.domain.skill.service | 5 | 46 |
-| NamespaceMemberService | com.iflytek.skillhub.domain.namespace | 4 | 48 |
-| SkillStorageDeletionCompensationService | com.iflytek.skillhub.domain.skill.service | 4 | 21 |
-| UserProfileService | com.iflytek.skillhub.domain.user | 3 | 60 |
-| SecurityScanService | com.iflytek.skillhub.domain.security | 2 | 88 |
-| SkillHardDeleteService | com.iflytek.skillhub.domain.skill.service | 2 | 73 |
-
-### skillhub-infra
-| Class | Package | Missed Lines | Covered Lines |
-|-------|---------|--------------|---------------|
-| SkillScannerService | com.iflytek.skillhub.infra.scanner | 1 | 63 |
 
 ### skillhub-storage
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
 | S3StorageService | com.iflytek.skillhub.storage | 62 | 68 |
-| LocalFileStorageService | com.iflytek.skillhub.storage | 2 | 27 |

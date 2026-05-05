@@ -2,6 +2,7 @@ package com.iflytek.skillhub.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -157,6 +158,79 @@ class JpaMySkillQueryRepositoryTest {
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
         given(skillVersionRepository.findBySkillIdAndStatus(5L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(skillVersionRepository.findBySkillId(5L)).willReturn(List.of(publishedVersion));
+
+        var responses = repository.getSkillSummaries(List.of(skill), "user-1");
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).canSubmitPromotion()).isFalse();
+    }
+
+    @Test
+    void getSkillSummaries_disablesPromotionWhenNoPublishedVersion() {
+        Skill skill = new Skill(101L, "no-published", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("No Published");
+        ReflectionTestUtils.setField(skill, "id", 6L);
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(skillVersionRepository.findBySkillIdAndStatus(6L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
+        given(skillVersionRepository.findBySkillId(6L)).willReturn(List.of());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(6L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(6L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
+
+        var responses = repository.getSkillSummaries(List.of(skill), "user-1");
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).canSubmitPromotion()).isFalse();
+    }
+
+    @Test
+    void getSkillSummaries_disablesPromotionWhenPublishedVersionStatusIsNotPublished() {
+        Skill skill = new Skill(101L, "archived-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Archived Skill");
+        ReflectionTestUtils.setField(skill, "id", 7L);
+
+        SkillVersion archivedVersion = new SkillVersion(7L, "1.0.0", "user-1");
+        archivedVersion.setStatus(SkillVersionStatus.REJECTED);
+        ReflectionTestUtils.setField(archivedVersion, "id", 77L);
+        ReflectionTestUtils.setField(archivedVersion, "createdAt", Instant.parse("2026-03-15T10:30:00Z"));
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(skillVersionRepository.findBySkillIdAndStatus(7L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
+        given(skillVersionRepository.findBySkillId(7L)).willReturn(List.of(archivedVersion));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(7L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(7L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
+
+        var responses = repository.getSkillSummaries(List.of(skill), "user-1");
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).canSubmitPromotion()).isFalse();
+    }
+
+    @Test
+    void getSkillSummaries_disablesPromotionWhenApprovedRequestExists() {
+        Skill skill = new Skill(101L, "approved-skill", "user-1", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Approved Skill");
+        ReflectionTestUtils.setField(skill, "id", 8L);
+
+        SkillVersion publishedVersion = new SkillVersion(8L, "1.0.0", "user-1");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(publishedVersion, "id", 88L);
+        ReflectionTestUtils.setField(publishedVersion, "createdAt", Instant.parse("2026-03-15T10:30:00Z"));
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(skillVersionRepository.findBySkillIdAndStatus(8L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(8L)).willReturn(List.of(publishedVersion));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(8L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(8L, ReviewTaskStatus.APPROVED)).willReturn(Optional.of(mock(com.iflytek.skillhub.domain.review.PromotionRequest.class)));
 
         var responses = repository.getSkillSummaries(List.of(skill), "user-1");
 

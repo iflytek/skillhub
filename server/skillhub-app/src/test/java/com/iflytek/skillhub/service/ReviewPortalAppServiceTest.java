@@ -155,4 +155,36 @@ class ReviewPortalAppServiceTest {
                 .isInstanceOf(DomainNotFoundException.class)
                 .hasMessageContaining("namespace.not_found");
     }
+
+    @Test
+    void approveReview_delegatesToDomainServiceAndRecordsAudit() {
+        ReviewTask task = new ReviewTask(1L, 7L, "submitter-1");
+        org.springframework.test.util.ReflectionTestUtils.setField(task, "id", 11L);
+
+        when(rbacService.getUserRoleCodes("admin")).thenReturn(Set.of("SKILL_ADMIN"));
+        when(reviewService.approveReview(11L, "admin", "looks good", Map.of(), Set.of("SKILL_ADMIN")))
+                .thenReturn(task);
+        when(governanceQueryRepository.getReviewTaskResponse(task))
+                .thenReturn(new ReviewTaskResponse(11L, 1L, "team-a", "skill-a", "1.0.0", "APPROVED", "submitter-1", null, null, null, null, null, null));
+
+        ReviewTaskResponse response = service.approveReview(11L, "looks good", "admin", Map.of(), new AuditRequestContext("127.0.0.1", "JUnit"));
+
+        assertThat(response.id()).isEqualTo(11L);
+    }
+
+    @Test
+    void approveReview_withNullComment_recordsAuditWithNullDetail() {
+        ReviewTask task = new ReviewTask(1L, 7L, "submitter-1");
+        org.springframework.test.util.ReflectionTestUtils.setField(task, "id", 11L);
+
+        when(rbacService.getUserRoleCodes("admin")).thenReturn(Set.of("SKILL_ADMIN"));
+        when(reviewService.approveReview(11L, "admin", null, Map.of(), Set.of("SKILL_ADMIN")))
+                .thenReturn(task);
+        when(governanceQueryRepository.getReviewTaskResponse(task))
+                .thenReturn(new ReviewTaskResponse(11L, 1L, "team-a", "skill-a", "1.0.0", "APPROVED", "submitter-1", null, null, null, null, null, null));
+
+        ReviewTaskResponse response = service.approveReview(11L, null, "admin", Map.of(), new AuditRequestContext("127.0.0.1", "JUnit"));
+
+        assertThat(response.id()).isEqualTo(11L);
+    }
 }

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -280,5 +281,50 @@ class NamespaceMemberServiceTest {
         Optional<NamespaceRole> result = namespaceMemberService.getMemberRole(1L, "user-2");
 
         assertFalse(result.isPresent());
+    }
+
+    @Test
+    void removeMember_shouldRemoveNonOwnerMember() {
+        Long namespaceId = 1L;
+        String userId = "user-2";
+        NamespaceMember member = new NamespaceMember(namespaceId, userId, NamespaceRole.MEMBER);
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.of(member));
+
+        namespaceMemberService.removeMember(namespaceId, userId, "user-99");
+
+        verify(namespaceMemberRepository).deleteByNamespaceIdAndUserId(namespaceId, userId);
+    }
+
+    @Test
+    void addMember_shouldRejectImmutableNamespace() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("system", "System", "owner-1");
+        when(namespaceService.getNamespace(namespaceId)).thenReturn(namespace);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                namespaceMemberService.addMember(namespaceId, "user-2", NamespaceRole.MEMBER, "user-99"));
+
+        assertTrue(ex.getMessage().contains("immutable"));
+    }
+
+    @Test
+    void listMembers_shouldDelegateToRepository() {
+        Long namespaceId = 1L;
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        org.springframework.data.domain.Page<NamespaceMember> page = new org.springframework.data.domain.PageImpl<>(
+                List.of(new NamespaceMember(namespaceId, "user-2", NamespaceRole.MEMBER)), pageable, 1);
+        when(namespaceMemberRepository.findByNamespaceId(namespaceId, pageable)).thenReturn(page);
+
+        org.springframework.data.domain.Page<NamespaceMember> result = namespaceMemberService.listMembers(namespaceId, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        verify(namespaceMemberRepository).findByNamespaceId(namespaceId, pageable);
     }
 }
