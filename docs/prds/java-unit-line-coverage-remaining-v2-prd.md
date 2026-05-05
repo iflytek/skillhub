@@ -145,51 +145,11 @@
 - 非核心类：Wave 1 ~ Wave 4 默认按正常测试补到目标值
 - 只有 Wave 5 的非核心清尾轮，才允许 coverage-only 写法
 
-### Wave 0: 先收敛单测数据库边界
+前置约束说明：
 
-### US-R200: 先清理单测中的真实 MySQL 依赖，并补齐测试边界文档
-
-目标测试/基座（需要调整）：
-
-- `com.iflytek.skillhub.infra.jpa.SkillVersionStatsJpaRepositoryTest`
-- `com.iflytek.skillhub.auth.AuthJsonPersistenceTest`
-- `com.iflytek.skillhub.domain.skill.SkillVersionJsonPersistenceTest`
-- `com.iflytek.skillhub.domain.audit.AuditAndInfraJsonPersistenceTest`
-- `com.iflytek.skillhub.domain.skill.SkillVersionMysqlPersistenceTest`
-- `com.iflytek.skillhub.domain.skill.SkillVersionStatsMysqlPersistenceTest`
-- `com.iflytek.skillhub.domain.skill.SkillFileMysqlPersistenceTest`
-- `com.iflytek.skillhub.db.MysqlContainerBackedDataJpaTest`
-- `com.iflytek.skillhub.db.MysqlMigrationDataJpaTest`
-
-保留为真实 MySQL 集成/运行时验证（不按单测口径迁移，但需要继续保持 integration/runtime 定位）：
-
-- `com.iflytek.skillhub.controller.portal.SkillApprovalVisibilityFlowIntegrationTest`
-- `com.iflytek.skillhub.controller.portal.MysqlLikeSearchRuntimeIntegrationTest`
-- `com.iflytek.skillhub.controller.portal.SkillDeleteFlowIntegrationTest`
-- `com.iflytek.skillhub.controller.portal.PromotionApprovalFlowIntegrationTest`
-
-当前分析结论：
-
-- 现有需要调整的 7 个测试类里，前 6 个本质上是 repository/entity/json persistence 单测或切片测试，不应继续依赖真实 MySQL
-- `MysqlContainerBackedDataJpaTest` 与 `MysqlMigrationDataJpaTest` 当前把这类单测整体绑定到了 `MySQLContainer`，需要在本轮优先拆掉
-- 当前仓库里尚未看到现成的 H2 DataJpa 测试基座或 H2 测试依赖，因此需要把“H2 基座补齐或改为 mock”作为本轮前置任务
-- 已确认可优先恢复历史 H2 版本的测试：
-  - `SkillVersionStatsJpaRepositoryTest`：`22edee12^` 仍是显式 H2 版本
-  - `AuthJsonPersistenceTest`：`42197935` 仍是普通 `@DataJpaTest`，当时 `application-test.yml` 使用 H2
-  - `SkillVersionJsonPersistenceTest`：`87ba9b54` 仍是普通 `@DataJpaTest`，当时 `application-test.yml` 使用 H2
-  - `AuditAndInfraJsonPersistenceTest`：`34b56b63` 仍是普通 `@DataJpaTest`，当时 `application-test.yml` 使用 H2
-- 已确认旧版 `server/skillhub-app/pom.xml` 与 `server/skillhub-infra/pom.xml` 都曾包含 H2 依赖，因此“恢复 H2 单测基座”有历史依据
-- 当前没有发现可直接恢复为 H2 的历史版本、需要改写或重分类的测试：
-  - `SkillVersionMysqlPersistenceTest`
-  - `SkillVersionStatsMysqlPersistenceTest`
-  - `SkillFileMysqlPersistenceTest`
-
-Checklist:
-
-- [ ] 把“单测只允许 H2/mock，不允许真实 MySQL”写入 design
-- [ ] 为单测补统一的 H2 或 mock 测试基座
-- [ ] 将上述真实 MySQL 单测迁为 H2/mock，或明确重分类后移出单测补覆盖范围
-- [ ] 后续本轮新增覆盖率测试全部遵守该边界
+- 单测数据库边界与 H2 基座恢复已完成，不再作为待办 story 跟踪。
+- 当前 design 已明确：单元测试、`DataJpaTest`、JaCoCo 覆盖率门禁测试只能使用 `H2` 或 mock，真实 MySQL 只保留给显式的 MySQL 集成/运行时验证。
+- 以下剩余 story 默认都建立在上述边界已经生效的前提下执行。
 
 ### Wave 1: 超轻量清扫，优先用正常测试拿掉简单类
 

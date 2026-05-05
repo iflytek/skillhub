@@ -97,11 +97,16 @@ Unit tests, repository slice tests, and JaCoCo coverage-gate tests that exercise
 
 Do not require a real MySQL server or `MySQLContainer` for unit coverage work.
 
+The default unit-test lane must remain runnable in CI environments that do not provide a database endpoint.
+If a test depends on a real MySQL instance, it is not a unit-test-lane test anymore.
+
 Real MySQL is reserved for explicit integration, runtime, or regression validation such as:
 
 - Flyway migration boot verification
 - dialect-sensitive runtime smoke
 - end-to-end search, approval, promotion, or delete flows intentionally marked as integration/runtime tests
+
+These MySQL-backed tests should be isolated with an explicit integration marker or profile so they do not silently slip back into the default coverage lane.
 
 If an existing test currently sits in the unit-test lane but requires `MySQLContainer`, it must be handled in one of two ways:
 
