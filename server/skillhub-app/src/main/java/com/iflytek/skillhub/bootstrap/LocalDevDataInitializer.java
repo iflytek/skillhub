@@ -43,7 +43,7 @@ import org.springframework.util.ReflectionUtils;
  * Seeds predictable users, memberships, and admin roles for the local development profile.
  */
 @Component
-@Profile({"local", "local-h2", "local-mysql"})
+@Profile("local-mysql")
 @Order(10)
 public class LocalDevDataInitializer implements ApplicationRunner {
 

@@ -23,8 +23,6 @@ For local troubleshooting and migration fallback, the following variants are sti
 - `MySQL 8 + memory + mysql-like`
 - `MySQL 8 + memory + local-file-index`
 
-Historical design archives may still mention `local-h2`, but that profile is no longer part of the current formal source runtime path.
-
 ## Configuration Priority
 
 Runtime behavior is determined in this order:
@@ -52,7 +50,6 @@ Rules:
 
 - `local-mysql` means the authoritative runtime data lives in MySQL and schema is initialized by Flyway from `sql/migration-mysql`.
 - Current formal source startup documentation only retains `local-mysql` as the repository-owned profile path.
-- If you encounter `local-h2` in older design materials, treat it as historical context rather than a current source runtime option.
 
 ### 2. Runtime State
 
@@ -93,7 +90,6 @@ Rules:
 - `local-file-index` uses embedded Lucene as the query backend.
 - `local-file-index` depends on an initial synchronization step from MySQL authority data into the local Lucene directory.
 - When provider is `local-file-index`, `Query`, `Index`, and `Rebuild` beans must all switch together.
-- Archived materials may still mention `h2` / `h2-like`, but they are not part of the current formal source runtime combinations.
 
 ### 4. Local Search Index Path
 
@@ -234,7 +230,7 @@ Check:
 2. `/api/v1/auth/methods` includes `UASS_REDIRECT`
 3. `mock-login-base-url` points to the `3001` frontend if you expect the mock third-party page
 
-### 3. Runtime unexpectedly talks to PostgreSQL or Redis
+### 3. Runtime unexpectedly talks to the wrong database or Redis
 
 Check:
 

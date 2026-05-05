@@ -137,7 +137,6 @@ skillhub-parent
 | 依赖 | 版本 | 用途 |
 |------|------|------|
 | MySQL | 8.4 | 主数据库 |
-| H2 Database | - | 轻量本地模式与单元测试数据库 |
 | Flyway Core | - | 数据库迁移 |
 | Flyway MySQL | - | MySQL 迁移支持 |
 | Hibernate ORM | - | ORM 框架 |

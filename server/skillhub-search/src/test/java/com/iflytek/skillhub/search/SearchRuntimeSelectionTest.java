@@ -33,13 +33,11 @@ class SearchRuntimeSelectionTest {
                     MysqlNoopSearchIndexService.class,
                     MysqlNoopSearchRebuildService.class,
                     LocalFileIndexService.class,
-                    LocalFileIndexRebuildService.class,
-                    JpaSearchIndexService.class,
-                    JpaSearchRebuildService.class
+                    LocalFileIndexRebuildService.class
             );
 
     @Test
-    void mysqlSearchEngine_instantiatesMysqlLikeQueryServiceWithoutH2OrLuceneBeans() {
+    void mysqlSearchEngine_instantiatesMysqlLikeQueryServiceWithoutLuceneBeans() {
         contextRunner
                 .withPropertyValues("skillhub.search.engine=mysql", "skillhub.search.provider=mysql-like")
                 .run(context -> {
@@ -47,8 +45,6 @@ class SearchRuntimeSelectionTest {
                     assertThat(context).doesNotHaveBean(LocalFileIndexQueryService.class);
                     assertThat(context).hasSingleBean(MysqlNoopSearchIndexService.class);
                     assertThat(context).hasSingleBean(MysqlNoopSearchRebuildService.class);
-                    assertThat(context).doesNotHaveBean(JpaSearchIndexService.class);
-                    assertThat(context).doesNotHaveBean(JpaSearchRebuildService.class);
                     assertThat(context).doesNotHaveBean(LocalFileIndexQueryService.class);
                     assertThat(context).doesNotHaveBean(LocalFileIndexService.class);
                     assertThat(context).doesNotHaveBean(LocalFileIndexRebuildService.class);
@@ -70,8 +66,6 @@ class SearchRuntimeSelectionTest {
                     assertThat(context).doesNotHaveBean(MysqlLikeSearchQueryService.class);
                     assertThat(context).doesNotHaveBean(MysqlNoopSearchIndexService.class);
                     assertThat(context).doesNotHaveBean(MysqlNoopSearchRebuildService.class);
-                    assertThat(context).doesNotHaveBean(JpaSearchIndexService.class);
-                    assertThat(context).doesNotHaveBean(JpaSearchRebuildService.class);
                 });
     }
 

@@ -186,7 +186,7 @@
 - 仅用于普通发布审核，"提升到全局"使用独立的 `promotion_request` 表
 - `version` 字段用于乐观锁，防止多 Pod 并发审核
 - 业务约束：同一 `skill_version_id` 在 `status=PENDING` 时只能存在一条记录，重复提交返回 409 Conflict。撤回时删除 `PENDING` review_task，并将 `skill_version` 回退到 `DRAFT`
-- PostgreSQL 并发约束落地：通过唯一索引 `(skill_version_id)` + 软删除标记实现。`review_task` 表增加 `deleted` 字段（bigint, 默认 0），唯一索引改为 `(skill_version_id, deleted)`。撤回时将 `deleted` 设为 `id`（非零值），新提交时 `deleted=0`，利用唯一索引防止并发重复提交。或者采用更简单的方案：撤回时物理删除 review_task 记录，依赖 `INSERT` 的唯一约束 `(skill_version_id)` 防并发。PostgreSQL 还支持 partial unique index 方案：`CREATE UNIQUE INDEX ON review_task (skill_version_id) WHERE status = 'PENDING'`，更优雅地实现"PENDING 状态唯一"约束
+- 并发约束建议通过唯一索引落地：可以采用 `(skill_version_id)` 唯一约束配合撤回时物理删除，也可以采用 `deleted` 软删除字段加 `(skill_version_id, deleted)` 唯一索引，保证 `PENDING` 状态下不会重复提交
 
 ### promotion_request
 
@@ -209,7 +209,7 @@
 - 审批通过后填充 `target_skill_id`，指向全局空间新创建的 skill
 - `promotion_request` 是提升关系的唯一事实来源，skill 表不再冗余 `promoted_to_skill_id`
 - 业务约束：同一 `source_version_id` 在 `status=PENDING` 时只能存在一条记录，重复提交返回 409 Conflict
-- PostgreSQL 并发约束落地：与 `review_task` 类似，通过唯一索引防止并发重复提交。推荐使用 partial unique index：`CREATE UNIQUE INDEX ON promotion_request (source_version_id) WHERE status = 'PENDING'`，或增加 `deleted` 字段 + `(source_version_id, deleted)` 唯一约束，或采用物理删除 + `(source_version_id)` 唯一约束方案
+- 并发约束建议与 `review_task` 保持一致：通过唯一索引防止同一 `source_version_id` 在 `PENDING` 状态下重复提交，可采用物理删除配合单列唯一约束，或采用 `deleted` 字段加复合唯一索引方案
 
 ### skill_star
 
@@ -381,7 +381,7 @@
 - `skill_search_document` 继续承担数据库侧权威搜索文档快照
 - 当前默认搜索 provider 为 `local-file-index`，由独立 Lucene 本地索引目录承载查询
 - `mysql-like` 作为显式回退 provider 保留
-- 因此这里不再把 PostgreSQL Full-Text Index 作为当前默认实现说明
+- 因此这里不再把历史数据库全文检索方案作为当前默认实现说明
 
 ## 3.4 幂等记录表
 

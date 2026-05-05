@@ -15,8 +15,6 @@
 - [../design/runtime/runtime-core-configuration-reference.md](../design/runtime/runtime-core-configuration-reference.md)
 - [../design/runtime/production-readiness-assessment-and-hardening-plan.md](../design/runtime/production-readiness-assessment-and-hardening-plan.md)
 
-历史材料若提到 `local-h2` / `h2-like`，仅表示归档背景，不代表当前标准源码运行方案。
-
 ## 当前主文档
 
 以下文档仍属于当前项目的主入口文档：

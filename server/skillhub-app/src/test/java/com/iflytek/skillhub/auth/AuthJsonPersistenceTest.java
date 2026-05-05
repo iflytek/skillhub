@@ -28,7 +28,7 @@ class AuthJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
     private IdentityBindingRepository identityBindingRepository;
 
     @Test
-    void persistsApiTokenScopeJsonWithoutPostgresSpecificColumnDefinition() {
+    void persistsApiTokenScopeJsonOnMySqlSchema() {
         entityManager.persist(new UserAccount("user-token", "Token User", "token@example.com", null));
 
         ApiToken token = new ApiToken(
@@ -47,7 +47,7 @@ class AuthJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
     }
 
     @Test
-    void persistsIdentityBindingExtraJsonWithoutPostgresSpecificColumnDefinition() {
+    void persistsIdentityBindingExtraJsonOnMySqlSchema() {
         entityManager.persist(new UserAccount("user-binding", "Binding User", "binding@example.com", null));
 
         IdentityBinding binding = new IdentityBinding("user-binding", "github", "gh_42", "binding-user");

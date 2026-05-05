@@ -124,7 +124,6 @@ WHERE (visibility = 'PUBLIC')
 - 当前正式搜索运行时只保留 `skillhub.search.engine=mysql`。
 - 在该 engine 下，由 `skillhub.search.provider` 在 `local-file-index` 与 `mysql-like` 之间切换最终实现。
 - `local-mysql` profile 默认走 `local-file-index`，`mysql-like` 仅作为显式回退路径。
-- 旧的 `h2` / `h2-like` 资料只代表历史迁移背景，不再属于当前运行时装配说明。
 
 ### 5.5 Phase 3 local-file-index 配置约定
 
@@ -177,7 +176,6 @@ WHERE (visibility = 'PUBLIC')
 
 `rebuildAll()` / `rebuildByNamespace()` 执行前获取 Redis 分布式锁（key: `search:rebuild:{scope}`，TTL: 10min），获取失败则跳过。
 
-## 7 历史实现说明
+## 7 当前实现说明
 
-旧的 PostgreSQL FTS 方案已退出当前主运行时，不再作为默认配置、默认 bean 或当前部署入口保留。
-如果需要追溯历史设计，请查阅对应归档材料；当前仓库的有效运行路径以 `MySQL + local-file-index` 为准。
+当前仓库的有效搜索运行路径以 `MySQL + local-file-index` 为准，`mysql-like` 仅作为显式回退 provider。

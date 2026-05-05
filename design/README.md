@@ -18,7 +18,6 @@
 
 - [project-deep-analysis.md](./overview/project-deep-analysis.md)
 - [external-dependencies.md](./overview/external-dependencies.md)
-- [java-and-database-compatibility.md](./overview/java-and-database-compatibility.md)（历史数据库选型分析，文首已标注不代表当前默认运行时）
 
 ### `governance/`
 

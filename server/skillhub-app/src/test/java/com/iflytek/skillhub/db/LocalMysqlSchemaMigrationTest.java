@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class LocalMysqlSchemaMigrationTest {
 
     @Test
-    void localMysqlSchema_initializesRequiredBootstrapTablesWithoutPostgresSpecificTypes() throws IOException {
+    void localMysqlSchema_initializesRequiredBootstrapTablesWithPortableColumnTypes() throws IOException {
         String sql = Files.readString(mysqlInitMigration());
 
         assertThat(sql).contains("CREATE TABLE user_account");

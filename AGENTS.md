@@ -23,7 +23,6 @@ SkillHub 是一个企业自托管的 agent skill registry 与治理平台。
 | MySQL 8 | 当前标准运行模式主数据库 |
 | Redis + Spring Session + Redisson | 会话、限流、扫描任务流 |
 | Flyway | 当前 MySQL 主路径 schema 初始化与迁移 |
-| H2 | 仅保留为少量测试/历史兼容残留，不属于当前正式源码运行模式 |
 | React 19 + Vite | 前端应用 |
 | TypeScript | 前端类型系统 |
 | TanStack Router / Query | 路由与数据获取 |
@@ -84,12 +83,12 @@ skillhub/
   - `skillhub-app`：Spring Boot 入口、controller、app service、运行时配置
   - `skillhub-domain`：领域模型与核心业务规则
   - `skillhub-auth`：认证、OAuth、本地账号、device auth、token、session
-  - `skillhub-search`：搜索 SPI 与当前 MySQL / local-file-index 实现，以及少量待清理历史装配残留
+  - `skillhub-search`：搜索 SPI 与当前 MySQL / local-file-index 实现
   - `skillhub-storage`：对象存储抽象与实现
   - `skillhub-infra`：JPA 与外部集成适配
   - `skillhub-notification`：通知能力
 - 常见调用链：`controller -> app service -> domain service / repository`
-- 例外：搜索适配层允许直接写存储引擎相关 SQL，见 `server/skillhub-search/.../PostgresFullTextQueryService.java`
+- 例外：搜索适配层允许直接写存储引擎相关 SQL，见 `server/skillhub-search/.../MysqlLikeSearchQueryService.java`
 
 ### 前端
 
@@ -102,7 +101,6 @@ skillhub/
 ### 运行模式
 
 - `local-mysql`：当前正式源码运行模式，使用 `MySQL 8 + Redis + Flyway`
-- 历史材料中如果仍出现 `local` / `local-h2` / `postgres` / `h2`，默认按归档背景或待清理残留理解，不视为当前正式运行入口
 - 搜索当前正式 provider 口径：
   - `local-file-index`：当前主 provider
   - `mysql-like`：显式 fallback provider
@@ -208,5 +206,5 @@ make test-backend-app
 
 - 本地开发按 `docs/dev-workflow.md` 使用 Java 17，并与 `server/pom.xml` 保持一致。
 - 不要在 `server/` 下直接运行 `./mvnw -pl skillhub-app clean test`；使用 `-am` 或 `make test-backend-app`，避免落到过期本地 Maven 产物。
-- 新库初始化只走 `server/skillhub-app/src/main/resources/sql/migration/V1__init_schema.sql`；旧的拆分迁移文件已删除，不再保留归档目录。
-- 当前仓库已经完成主路径向 MySQL 收敛，但仍有少量 H2 残留待清；改动相关文件时，先确认你修改的是“当前入口文档”还是“归档材料”，并避免把历史 H2 材料重新写回当前主入口文档。
+- 新库初始化只走 `server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`。
+- 当前仓库的正式源码运行路径已经收敛到 `MySQL 8 + Redis + local-file-index`；改动运行时文档或配置时，不要重新引入旧数据库路线。

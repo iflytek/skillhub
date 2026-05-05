@@ -63,7 +63,7 @@
 - `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/config/SecurityConfig.java:90-149` - 原因：了解整体过滤器链、logout URL、API 入口点和 SessionCreationPolicy。
 - `server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/config/RedisTemplateConfig.java:14-32` - 原因：现有认证跨切面共享 RedisTemplate 配置，UASS Redis store 应优先复用。
 - `server/skillhub-app/src/main/resources/application.yml:40-48` - 原因：现有 Redis 和 Spring Session 配置入口，UASS cache mode 要与现有运行时配置协同。
-- `server/skillhub-app/src/main/resources/application-local-h2.yml:1-24` - 原因：单机轻量模式下禁用 Redis 的现状，需要保证 UASS 本地缓存模式与该运行方式兼容。
+- `server/skillhub-app/src/main/resources/application-local-mysql.yml:1-24` - 原因：单机轻量模式下本地缓存与 UASS 配置的兼容性需要明确。
 - `web/src/pages/login.tsx:20-80` - 原因：当前登录页结构、returnTo 处理和 tab 布局；UASS 入口要融入这里。
 - `web/src/features/auth/use-password-login.ts:11-34` - 原因：当前密码登录 mutation 的模式；新增 UASS 登录不能破坏现有本地/direct 登录逻辑。
 - `web/src/features/auth/login-button.tsx:1-44` - 原因：OAuth 登录按钮渲染方式；如果需要统一展示风格可参考这里。

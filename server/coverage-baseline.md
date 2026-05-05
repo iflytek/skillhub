@@ -3,7 +3,7 @@ Generated: 2026-05-05
 
 ## Scope Definition
 
-- **Profile:** MySQL main path (post-H2 removal)
+- **Profile:** MySQL main path
 - **Source of truth:** Module-level JaCoCo CSVs at `server/*/target/site/jacoco/jacoco.csv`
 - **Report command:** `mvn -f server/pom.xml -pl skillhub-app -am test jacoco:report-aggregate`
 - **Aggregate report path:** `server/skillhub-app/target/site/jacoco-aggregate/index.html`

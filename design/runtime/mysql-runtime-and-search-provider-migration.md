@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document captures durable rules from the completed migration work that moved SkillHub away from PostgreSQL as the default runtime path.
+This document captures durable rules from the completed runtime migration that converged SkillHub on the current MySQL search path.
 
 As of 2026-05-04, the current standard runtime is:
 
@@ -11,35 +11,6 @@ As of 2026-05-04, the current standard runtime is:
 - search provider: `local-file-index`
 
 `mysql-like` remains as an explicit search fallback.
-Historical materials may still mention `local-h2` and `h2-like`, but they are no longer part of the current formal runtime path.
-
-## Status Checkpoint
-
-As of 2026-05-05, the "formal runtime exit" part of the H2 cleanup is mostly complete, but the repository is not yet fully free of H2-related residuals.
-
-### Completed
-
-- `local-h2` is no longer a current formal source runtime entrypoint.
-- current-entry docs no longer describe `local-h2` / `h2-like` as the standard runtime path.
-- the old `h2-like` search implementation is no longer part of the current source tree.
-- the main runtime and migration direction has been converged to `MySQL 8 + Redis + local-file-index`.
-
-### Still Residual
-
-- some code paths still mention `local-h2` as a compatibility or historical profile, for example local dev data seeding.
-- some SQL bootstrap materials for `local-h2` still remain in the source tree as historical or compatibility leftovers.
-- some search bean wiring still uses `havingValue = "h2"` conditions even though the old H2 query-provider path has already been removed.
-- H2 still exists in parts of the Maven build and in at least one focused repository test.
-- some project guidance and coverage inventory files still contain stale H2-era references.
-
-### Practical Interpretation
-
-Use the following boundary until the remaining cleanup work is finished:
-
-- "H2 removed from the formal runtime path": yes
-- "H2 fully removed from source, tests, dependency graph, and project guidance": not yet
-
-Do not update design or delivery notes to claim full H2 removal until the residual items above are cleared.
 
 ## Runtime Axes
 
@@ -104,7 +75,7 @@ Create the index directory before the first write. Empty-path first writes other
 
 ### 6. Cross-dialect writes should be isolated behind adapters
 
-Do not keep PostgreSQL-only SQL in Spring Data repository annotations if the runtime must support MySQL.
+Do not keep database-specific SQL in Spring Data repository annotations if the runtime must support MySQL.
 
 Preferred pattern for simple counter or stats upsert:
 
@@ -122,8 +93,6 @@ Do not rely on the default Spring `redisTemplate` bean for app-specific state wi
 
 ### 8. Dialect validation must use the real target database
 
-Keep H2 for fast tests, but do not use H2 to prove MySQL-specific behavior.
-
 Use targeted MySQL validation for:
 
 - schema bootstrapping and Flyway migration
@@ -132,12 +101,6 @@ Use targeted MySQL validation for:
 - search provider query behavior
 
 Prefer Testcontainers MySQL plus the real MySQL migration directory, with `ddl-auto=none`.
-
-Current residual note:
-
-- this rule already reflects the intended target state
-- however, the repository still contains limited H2-based helper testing and compatibility remnants
-- those remnants should be treated as transitional, not as evidence that H2 is still a valid formal runtime path
 
 ### 9. Migration directories should follow runtime reality
 
@@ -183,14 +146,11 @@ When validating local browser flows, first confirm the frontend proxy points at 
 - run Maven verification serially when modules share the same `target` path expectations
 - do not trust stale JaCoCo module reports; regenerate them before coverage decisions
 
-## What "PostgreSQL Removed" Means
+## What Runtime Convergence Means
 
-For SkillHub, PostgreSQL removal means:
+For SkillHub, runtime convergence means:
 
 - it is no longer the default runtime database
 - it is no longer the standard compose dependency for local, staging, or release entrypoints
-- PostgreSQL-only search runtime beans are no longer part of the current default code path
-- current-entry docs no longer describe PostgreSQL as the standard path
-
-It does not require erasing all historical references.
-Historical notes, reset scripts, and archive materials may remain if they are clearly not part of the current runtime entry path.
+- search runtime beans switch only between the supported MySQL-backed providers
+- current-entry docs describe only the active runtime path and its explicit fallback

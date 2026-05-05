@@ -53,7 +53,7 @@ Overall assessment:
 
 The project is in meaningfully better shape than a typical evolving internal platform because several structural concerns have already been addressed.
 
-### 1. Standard runtime direction has changed from historical PostgreSQL dependence
+### 1. Standard runtime direction has converged on the current MySQL path
 
 The current default path is already aligned around:
 
@@ -271,15 +271,11 @@ The repository has already improved here, but continued cleanup is still benefic
 
 These items can remain as long as they are clearly documented.
 
-### 1. `local-h2`
-
-This remains valuable as a lightweight development path, provided it is not presented as production-equivalent validation.
-
-### 2. `mysql-like`
+### 1. `mysql-like`
 
 This remains valuable as an explicit fallback and debugging provider, provided it is not misrepresented as the standard production path.
 
-### 3. Historical design materials
+### 2. Historical design materials
 
 Historical documents may remain as long as they are clearly marked and do not compete with current operational guidance.
 
