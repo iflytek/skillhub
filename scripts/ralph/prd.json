@@ -47,8 +47,8 @@
         "Update the tracked inventory and coverage notes to remove the completed classes from the remaining list"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Primary targets live in Wave 2 and Wave 3 of docs/prds/java-unit-line-coverage-remaining-v2-prd.md.",
+      "passes": true,
+      "notes": "Primary targets live in Wave 2 and Wave 3 of docs/prds/java-unit-line-coverage-remaining-v2-prd.md. Target classes confirmed LINE_MISSED=0: JpaMySkillQueryRepository, AuthFailureThrottleService, LocalFileIndexStartupSynchronizer, LabelAdminAppService, NamespaceMemberService. Overall coverage improved from 97.02% to 97.13%, uncovered classes reduced from 29 to 23.",
       "retryCount": 0,
       "blocked": false
     },

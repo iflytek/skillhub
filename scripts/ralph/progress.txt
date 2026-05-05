@@ -243,3 +243,17 @@
   - 遇到的陷阱：`scripts/ralph/regenerate-coverage.py` 必须从项目根目录运行，否则会因相对路径找不到 `server/*/target/site/jacoco/jacoco.csv`。
   - 有用的上下文：JaCoCo CSV 的列顺序是 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,...；LINE_MISSED 是第 8 列（1-based），awk 中应使用 `$8` 而非 `$9`。
 ---
+
+## 2026-05-06 03:45 - US-108B
+- 清中等难度非核心 app 与 infra 覆盖率缺口到 100%。
+- 修复遗留测试失败：SkillStorageDeletionCompensationServiceTest（修正 deserialize 失败场景断言）、AuthFailureThrottleServiceTest（移除 redis 模式下不可达分支的错误期望）。
+- 新增/扩展测试覆盖：JpaMySkillQueryRepositoryTest（+2 case）、AuthFailureThrottleServiceTest（+3 case）、LocalFileIndexStartupSynchronizerTest（+3 case）、LabelAdminAppServiceTest（+2 case）、NamespaceMemberServiceTest（+1 case）。
+- 目标类 JaCoCo 确认 LINE_MISSED=0：JpaMySkillQueryRepository、AuthFailureThrottleService、LocalFileIndexStartupSynchronizer、LabelAdminAppService、NamespaceMemberService。
+- 同步重新生成 coverage-baseline.md 与 java-unit-line-coverage-inventory.md。
+- 更改的文件：JpaMySkillQueryRepositoryTest.java、AuthFailureThrottleServiceTest.java、LocalFileIndexStartupSynchronizerTest.java、LabelAdminAppServiceTest.java、NamespaceMemberServiceTest.java、SkillStorageDeletionCompensationServiceTest.java、coverage-baseline.md、java-unit-line-coverage-inventory.md 等。
+- **未来迭代的学习：**
+  - 发现的 patterns：前序迭代遗留的测试文件可能包含与生产代码行为不一致的断言（如期望异常抛出但生产代码实际捕获了异常），执行覆盖率 story 前应先跑通全量测试，避免把错误假设带进新测试。
+  - 遇到的陷阱：`TransactionSynchronizationManager.isSynchronizationActive()` 在单元测试中默认返回 false；要覆盖 `registerSynchronization` 内部分支需使用 `MockedStatic` 配合 `TransactionSynchronization` 参数捕获。
+  - 遇到的陷阱：`FSDirectory.open(Path)` 在传入普通文件路径时可能不抛出 IOException（取决于 Lucene 版本和 JDK 的 NIO 实现），测试 IOException 分支时直接传入已存在的普通文件在部分环境下可能不够稳定，可考虑反射直接调用 protected 方法。
+  - 有用的上下文：JaCoCo CSV 只显示有 missed lines 的类；要确认目标类是否已清零，最简单的方式是 grep 缺失列表——如果类名不出现即为 100%。
+---
