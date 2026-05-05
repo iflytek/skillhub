@@ -25,8 +25,6 @@ Generated: 2026-05-04
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
 | SkillPackagePolicy | com.iflytek.skillhub.domain.skill.validation | 29 | 58 |
-| PasswordResetRequest | com.iflytek.skillhub.domain.auth | 24 | 0 |
-| IdempotencyRecord | com.iflytek.skillhub.domain.idempotency | 22 | 0 |
 | UserAccount | com.iflytek.skillhub.domain.user | 20 | 10 |
 | SkillPackageValidator | com.iflytek.skillhub.domain.skill.validation | 14 | 53 |
 | SkillMetadataParser | com.iflytek.skillhub.domain.skill.metadata | 14 | 49 |
@@ -37,13 +35,10 @@ Generated: 2026-05-04
 | LabelPermissionChecker | com.iflytek.skillhub.domain.label | 10 | 0 |
 | SkillReport | com.iflytek.skillhub.domain.report | 8 | 23 |
 | SkillStar | com.iflytek.skillhub.domain.social | 7 | 4 |
-| UserNotification | com.iflytek.skillhub.domain.governance | 7 | 18 |
 | SkillTagService | com.iflytek.skillhub.domain.skill.service | 5 | 46 |
 | SkillStorageDeletionCompensationService | com.iflytek.skillhub.domain.skill.service | 4 | 21 |
 | AuditLogQueryService | com.iflytek.skillhub.domain.audit | 4 | 0 |
 | NamespaceMemberService | com.iflytek.skillhub.domain.namespace | 4 | 48 |
-| ScannerType | com.iflytek.skillhub.domain.security | 4 | 7 |
-| IdempotencyStatus | com.iflytek.skillhub.domain.idempotency | 4 | 0 |
 | ValidationResult | com.iflytek.skillhub.domain.skill.validation | 3 | 6 |
 | SkillHardDeleteService | com.iflytek.skillhub.domain.skill.service | 3 | 72 |
 | SlugValidator | com.iflytek.skillhub.domain.namespace | 3 | 23 |
@@ -52,12 +47,6 @@ Generated: 2026-05-04
 | LabelSlugValidator | com.iflytek.skillhub.domain.label | 3 | 12 |
 | NoOpPrePublishValidator | com.iflytek.skillhub.domain.skill.validation | 2 | 0 |
 | SkillReviewSubmitService | com.iflytek.skillhub.domain.skill.service | 2 | 46 |
-| ReviewTask | com.iflytek.skillhub.domain.review | 2 | 25 |
-| PromotionRequest | com.iflytek.skillhub.domain.review | 2 | 30 |
-| DomainForbiddenException | com.iflytek.skillhub.domain.shared.exception | 1 | 2 |
-| DomainNotFoundException | com.iflytek.skillhub.domain.shared.exception | 1 | 2 |
-| DomainBadRequestException | com.iflytek.skillhub.domain.shared.exception | 1 | 2 |
-| SecurityScanRequest | com.iflytek.skillhub.domain.security | 1 | 0 |
 | UpdateProfileResult | com.iflytek.skillhub.domain.user | 1 | 2 |
 | ModerationResult | com.iflytek.skillhub.domain.user | 1 | 3 |
 | UpdateProfileResult.Mixed | com.iflytek.skillhub.domain.user | 1 | 0 |

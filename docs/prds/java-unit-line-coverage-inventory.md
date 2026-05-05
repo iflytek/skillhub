@@ -155,27 +155,14 @@
 | Class | Line Missed | Line Covered | Line Coverage |
 |------|------:|------:|------:|
 | `com.iflytek.skillhub.domain.audit.AuditLogQueryService` | 4 | 0 | 0.00% |
-| `com.iflytek.skillhub.domain.audit.AuditLog` | 8 | 14 | 63.64% |
-| `com.iflytek.skillhub.domain.auth.PasswordResetRequest` | 24 | 0 | 0.00% |
 | `com.iflytek.skillhub.domain.governance.GovernanceNotificationService` | 1 | 15 | 93.75% |
-| `com.iflytek.skillhub.domain.governance.UserNotification` | 7 | 18 | 72.00% |
-| `com.iflytek.skillhub.domain.idempotency.IdempotencyRecord` | 22 | 0 | 0.00% |
-| `com.iflytek.skillhub.domain.idempotency.IdempotencyStatus` | 4 | 0 | 0.00% |
 | `com.iflytek.skillhub.domain.label.LabelPermissionChecker` | 10 | 0 | 0.00% |
 | `com.iflytek.skillhub.domain.label.LabelSlugValidator` | 3 | 12 | 80.00% |
 | `com.iflytek.skillhub.domain.namespace.NamespaceMemberService` | 4 | 48 | 92.31% |
 | `com.iflytek.skillhub.domain.namespace.NamespaceService` | 11 | 44 | 80.00% |
 | `com.iflytek.skillhub.domain.namespace.SlugValidator` | 3 | 23 | 88.46% |
 | `com.iflytek.skillhub.domain.report.SkillReport` | 8 | 23 | 74.19% |
-| `com.iflytek.skillhub.domain.review.PromotionRequest` | 2 | 30 | 93.75% |
 | `com.iflytek.skillhub.domain.review.ReviewPermissionChecker` | 3 | 37 | 92.50% |
-| `com.iflytek.skillhub.domain.review.ReviewTask` | 2 | 25 | 92.59% |
-| `com.iflytek.skillhub.domain.security.ScannerType` | 4 | 7 | 63.64% |
-| `com.iflytek.skillhub.domain.security.SecurityAudit` | 12 | 36 | 75.00% |
-| `com.iflytek.skillhub.domain.security.SecurityScanRequest` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException` | 1 | 2 | 66.67% |
-| `com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException` | 1 | 2 | 66.67% |
-| `com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException` | 1 | 2 | 66.67% |
 | `com.iflytek.skillhub.domain.skill.SkillVersionStats` | 16 | 0 | 0.00% |
 | `com.iflytek.skillhub.domain.skill.SkillVersion` | 7 | 51 | 87.93% |
 | `com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser` | 14 | 49 | 77.78% |
