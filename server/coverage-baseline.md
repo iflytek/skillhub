@@ -97,7 +97,6 @@ Generated: 2026-05-04
 ### skillhub-app
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| ClawHubCompatAppService | com.iflytek.skillhub.compat | 70 | 103 |
 | AbstractStreamConsumer | com.iflytek.skillhub.stream | 55 | 68 |
 | SkillLabelAppService | com.iflytek.skillhub.service | 47 | 27 |
 | SkillScannerConfig | com.iflytek.skillhub.config | 43 | 3 |
@@ -117,8 +116,7 @@ Generated: 2026-05-04
 | LabelLocalizationService | com.iflytek.skillhub.service | 17 | 1 |
 | ScanTaskConsumer | com.iflytek.skillhub.stream | 16 | 103 |
 | GovernanceWorkflowAppService | com.iflytek.skillhub.service | 15 | 24 |
-| CompatSkillLookupService | com.iflytek.skillhub.compat | 13 | 19 |
-| ClawHubRegistryFacade | com.iflytek.skillhub.compat | 13 | 71 |
+| MultipartPackageExtractor | com.iflytek.skillhub.controller.support | 13 | 32 |
 | MultipartPackageExtractor | com.iflytek.skillhub.controller.support | 13 | 32 |
 | NotificationController | com.iflytek.skillhub.controller.portal | 13 | 46 |
 | JpaGovernanceQueryRepository | com.iflytek.skillhub.repository | 12 | 150 |
@@ -127,7 +125,6 @@ Generated: 2026-05-04
 | PublicLabelAppService | com.iflytek.skillhub.service | 12 | 4 |
 | IdempotencyInterceptor | com.iflytek.skillhub.filter | 12 | 50 |
 | SecurityAuditController | com.iflytek.skillhub.controller.portal | 11 | 43 |
-| ClawHubCompatController | com.iflytek.skillhub.compat | 9 | 15 |
 | NamespacePortalCommandAppService | com.iflytek.skillhub.service | 9 | 70 |
 | MySkillAppService | com.iflytek.skillhub.service | 9 | 53 |
 | SkillLifecycleController | com.iflytek.skillhub.controller.portal | 9 | 18 |

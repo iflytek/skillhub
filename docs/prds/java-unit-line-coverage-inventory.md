@@ -13,23 +13,6 @@
 |------|------:|------:|------:|
 | `com.iflytek.skillhub.bootstrap.BootstrapAdminInitializer` | 3 | 47 | 94.00% |
 | `com.iflytek.skillhub.bootstrap.LocalDevDataInitializer` | 30 | 56 | 65.12% |
-| `com.iflytek.skillhub.compat.ClawHubCompatAppService` | 86 | 87 | 50.29% |
-| `com.iflytek.skillhub.compat.ClawHubCompatController` | 9 | 15 | 62.50% |
-| `com.iflytek.skillhub.compat.ClawHubRegistryFacade` | 53 | 31 | 36.90% |
-| `com.iflytek.skillhub.compat.CompatSkillLookupService` | 13 | 19 | 59.38% |
-| `com.iflytek.skillhub.compat.dto.ClawHubDeleteResponse` | 3 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubRegistryModeration` | 3 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubRegistryOwner` | 2 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubRegistrySkillResponse` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubRegistrySkillVersion` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubRegistrySkill` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubSkillListResponse.SkillListItem.LatestVersion` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubSkillListResponse.SkillListItem` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubSkillListResponse` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubSkillResponse.OwnerInfo` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubSkillResponse.VersionInfo` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubStarResponse` | 3 | 0 | 0.00% |
-| `com.iflytek.skillhub.compat.dto.ClawHubUnstarResponse` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.config.ProfileModerationProperties` | 1 | 1 | 50.00% |
 | `com.iflytek.skillhub.config.RedisStreamConfig` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.config.RedissonConfig` | 3 | 43 | 93.48% |

@@ -2,6 +2,7 @@ package com.iflytek.skillhub.compat;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.compat.dto.ClawHubSkillResponse;
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -51,8 +53,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -370,6 +374,107 @@ class ClawHubCompatControllerTest {
                 .andExpect(jsonPath("$.ok").value(true))
                 .andExpect(jsonPath("$.skillId").value("14"))
                 .andExpect(jsonPath("$.versionId").value("36"));
+    }
+
+    @Test
+    void downloadByPath_redirects() throws Exception {
+        mockMvc.perform(get("/api/v1/download/team-ai--my-skill")
+                        .param("version", "latest"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "/api/v1/skills/team-ai/my-skill/download"));
+    }
+
+    @Test
+    void listSkills_returnsItems() throws Exception {
+        when(skillSearchAppService.search("", null, "newest", 0, 25, null, null))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(
+                        new SkillSummaryResponse(1L, "demo", "Demo", "summary", "PUBLIC", "ACTIVE",
+                                0L, 0, BigDecimal.ZERO, 0,
+                                "global", Instant.parse("2026-03-18T09:00:00Z"), false,
+                                new SkillLifecycleVersionResponse(11L, "1.0.0", "PUBLISHED"),
+                                null, null, null)), 1, 0, 25));
+
+        mockMvc.perform(get("/api/v1/skills"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items[0].slug").value("demo"));
+    }
+
+    @Test
+    void deleteSkill_returnsOk() throws Exception {
+        mockMvc.perform(delete("/api/v1/skills/team-ai--my-skill")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+    }
+
+    @Test
+    void undeleteSkill_returnsOk() throws Exception {
+        mockMvc.perform(multipart("/api/v1/skills/team-ai--my-skill/undelete")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+    }
+
+    @Test
+    void starSkill_returnsOk() {
+        ClawHubCompatAppService appService = org.mockito.Mockito.mock(ClawHubCompatAppService.class);
+        ClawHubCompatController controller = new ClawHubCompatController(appService);
+        PlatformPrincipal principal = new PlatformPrincipal("user-1", "User", null, null, null, Set.of());
+        when(appService.starSkill("team-a--demo", principal))
+                .thenReturn(new com.iflytek.skillhub.compat.dto.ClawHubStarResponse(true, false));
+
+        var response = controller.starSkill("team-a--demo", principal);
+
+        assertThat(response.ok()).isTrue();
+        assertThat(response.starred()).isTrue();
+    }
+
+    @Test
+    void unstarSkill_returnsOk() {
+        ClawHubCompatAppService appService = org.mockito.Mockito.mock(ClawHubCompatAppService.class);
+        ClawHubCompatController controller = new ClawHubCompatController(appService);
+        PlatformPrincipal principal = new PlatformPrincipal("user-1", "User", null, null, null, Set.of());
+        when(appService.unstarSkill("team-a--demo", principal))
+                .thenReturn(new com.iflytek.skillhub.compat.dto.ClawHubUnstarResponse(true, false));
+
+        var response = controller.unstarSkill("team-a--demo", principal);
+
+        assertThat(response.ok()).isTrue();
+        assertThat(response.unstarred()).isTrue();
+    }
+
+    @Test
+    void skillResponse_ownerInfo_canBeInstantiated() {
+        var owner = new ClawHubSkillResponse.OwnerInfo("handle", "Display", "https://example.com/avatar.png");
+        assertThat(owner.handle()).isEqualTo("handle");
+        assertThat(owner.displayName()).isEqualTo("Display");
+        assertThat(owner.image()).isEqualTo("https://example.com/avatar.png");
+    }
+
+    @Test
+    void publish_returnsOk() throws Exception {
+        SkillVersion version = publishVersion("1.0.0", 37L);
+        given(skillPublishService.publishFromEntries(
+                eq("global"),
+                anyList(),
+                eq("user-42"),
+                eq(SkillVisibility.PUBLIC),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(false)))
+                .willReturn(new SkillPublishService.PublishResult(15L, "my-skill", version));
+
+        mockMvc.perform(multipart("/api/v1/publish")
+                        .file(new MockMultipartFile("file", "skill.zip", "application/zip", "zip-content".getBytes(StandardCharsets.UTF_8)))
+                        .param("namespace", "global")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true))
+                .andExpect(jsonPath("$.skillId").value("15"))
+                .andExpect(jsonPath("$.versionId").value("37"));
     }
 
     private CompatSkillLookupService.CompatSkillContext legacyCompatContext(String namespaceSlug, String skillSlug) {
