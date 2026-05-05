@@ -181,3 +181,15 @@
   - 遇到的陷阱：git working tree 中可能存在大量前序迭代未提交的测试文件和清单更新，执行前应先 `git status` 和 `git diff --stat` 确认当前状态。
   - 有用的上下文：app service 层测试模式高度一致——mock 依赖 + 直接实例化被测对象；对于事件监听类（LabelSearchSyncListener），只需覆盖 onApplicationEvent 的 happy path 和异常分支即可达到 LINE_MISSED=0。
 ---
+
+## 2026-05-05 19:45 - US-106F
+- 补齐配置、过滤器、限流与异常处理覆盖率：14 个目标类（SkillScannerConfig、ProfileModerationProperties、RedisStreamConfig、RedissonConfig、SkillScannerProperties 及 Analyzers/Policy、GlobalExceptionHandler、IdempotencyInterceptor、AnonymousDownloadIdentityService、ClientIpResolver、RedisSlidingWindowRateLimiter、SkillHubMetrics、SensitiveLogSanitizer）全部达到 LINE_MISSED=0。
+- 新增/扩展测试文件：RedisStreamConfigTest（3 case）、SkillScannerConfigTest（5 case）、SkillScannerPropertiesTest（6 case，覆盖 getters/setters）、SkillHubMetricsTest（9 case，SimpleMeterRegistry）、ClientIpResolverTest（12 case，覆盖 Forwarded/X-Forwarded-For/X-Real-IP/RemoteAddr/IPv6）、AnonymousDownloadIdentityServiceTest（16 case，覆盖 cookie/HMAC/secure/X-Forwarded-Proto/异常分支）、GlobalExceptionHandlerTest（扩展至 16 case，覆盖所有异常处理器与 resolveUserId 分支）、IdempotencyInterceptorTest（扩展至 14 case，覆盖 Redis/DB/异常路径）、SensitiveLogSanitizerTest（扩展至 5 case）、ProfileModerationPropertiesBindingTest（+1 case，覆盖 isAnyModerationEnabled false 分支）、RedissonConfigTest（+9 case，覆盖 constructor/sentinel/scheme 分支）。
+- 关键基础设施变更：将 skillhub-app 的 mockito-extensions MockMaker 从 mock-maker-subclass 切换为 mock-maker-inline，启用 MockedStatic 支持（覆盖 MessageDigest/Mac/Redisson 静态分支）。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 移除 14 个目标类条目；重新生成 `server/coverage-baseline.md` 以反映当前 JaCoCo 数据。
+- 质量检查：backend 148 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过；skillhub-app 模块 JaCoCo 确认 14 目标类 LINE_MISSED=0。
+- **未来迭代的学习：**
+  - 发现的 patterns：Spring `@Configuration` 类测试有两种模式——`ApplicationContextRunner`（验证条件装配与 bean 委托）和直接实例化 + 反射调用 private static 方法（验证配置构建逻辑）。
+  - 遇到的陷阱：JaCoCo 对静态方法的行覆盖统计与 MockedStatic 存在微妙交互——如果 `MockedStatic.when(...)` 拦截了被测方法内的静态调用，该调用行可能不会被计入覆盖；对 `Redisson.create()` 等构造型静态调用，使用 try-catch 让真实代码执行一次即可命中。
+  - 有用的上下文：coverage-baseline.md 已严重滞后于当前 JaCoCo 数据（整体从 81.67% 到 93.96%），建议后续 story 用脚本全量重生成，而非手工维护差量更新。
+---
