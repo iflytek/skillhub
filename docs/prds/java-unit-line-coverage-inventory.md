@@ -64,12 +64,10 @@
 | `com.iflytek.skillhub.repository.JpaProfileReviewQueryRepository` | 2 | 38 | 95.00% |
 | `com.iflytek.skillhub.security.AuthFailureThrottleService` | 84 | 6 | 6.67% |
 | `com.iflytek.skillhub.security.SensitiveLogSanitizer` | 2 | 16 | 88.89% |
-| `com.iflytek.skillhub.service.AdminAuditLogAppService` | 21 | 37 | 63.79% |
 | `com.iflytek.skillhub.service.AdminProfileReviewAppService` | 3 | 12 | 80.00% |
 | `com.iflytek.skillhub.service.AdminSkillReportAppService` | 3 | 10 | 76.92% |
 | `com.iflytek.skillhub.service.AdminUserAppService` | 2 | 66 | 97.06% |
 | `com.iflytek.skillhub.service.GovernanceWorkbenchAppService` | 1 | 70 | 98.59% |
-| `com.iflytek.skillhub.service.GovernanceWorkflowAppService` | 15 | 24 | 61.54% |
 | `com.iflytek.skillhub.service.LabelAdminAppService.new TransactionSynchronization() {...}` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.service.LabelAdminAppService` | 5 | 72 | 93.51% |
 | `com.iflytek.skillhub.service.LabelLocalizationService` | 17 | 1 | 5.56% |
@@ -81,14 +79,11 @@
 | `com.iflytek.skillhub.service.NamespacePortalCommandAppService` | 9 | 70 | 88.61% |
 | `com.iflytek.skillhub.service.NamespacePortalQueryAppService` | 7 | 43 | 86.00% |
 | `com.iflytek.skillhub.service.NoOpProfileModerationService` | 1 | 1 | 50.00% |
-| `com.iflytek.skillhub.service.PromotionPortalAppService` | 20 | 34 | 62.96% |
 | `com.iflytek.skillhub.service.PublicLabelAppService` | 12 | 4 | 25.00% |
-| `com.iflytek.skillhub.service.ReviewPortalAppService` | 32 | 71 | 68.93% |
 | `com.iflytek.skillhub.service.ReviewSkillDetailAppService` | 3 | 69 | 95.83% |
 | `com.iflytek.skillhub.service.SkillDeleteAppService` | 6 | 53 | 89.83% |
 | `com.iflytek.skillhub.service.SkillLabelAppService.new TransactionSynchronization() {...}` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.service.SkillLabelAppService` | 47 | 27 | 36.49% |
-| `com.iflytek.skillhub.service.SkillLifecycleAppService` | 29 | 70 | 70.71% |
 | `com.iflytek.skillhub.service.SkillSearchAppService` | 5 | 82 | 94.25% |
 | `com.iflytek.skillhub.stream.AbstractStreamConsumer` | 60 | 63 | 51.22% |
 | `com.iflytek.skillhub.stream.ScanTaskConsumer` | 16 | 103 | 86.55% |
