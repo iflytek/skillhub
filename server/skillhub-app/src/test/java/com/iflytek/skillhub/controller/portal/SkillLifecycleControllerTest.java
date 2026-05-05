@@ -78,6 +78,9 @@ class SkillLifecycleControllerTest {
     @MockBean
     private DeviceAuthService deviceAuthService;
 
+    @MockBean
+    private com.iflytek.skillhub.domain.skill.service.SkillReviewSubmitService skillReviewSubmitService;
+
     @Test
     void archiveSkill_returnsUnifiedEnvelope() throws Exception {
         Namespace namespace = new Namespace("global", "Global", "owner");
@@ -356,5 +359,65 @@ class SkillLifecycleControllerTest {
 
     private void setSkillVersionId(SkillVersion version, Long id) {
         org.springframework.test.util.ReflectionTestUtils.setField(version, "id", id);
+    }
+
+    @Test
+    void submitForReview_returnsUnifiedEnvelope() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        setSkillVersionId(version, 2L);
+        version.setStatus(SkillVersionStatus.DRAFT);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).willReturn(java.util.Optional.of(version));
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/submit-review")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":\"1.0.0\",\"targetVisibility\":\"PUBLIC\"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.versionId").value(2))
+                .andExpect(jsonPath("$.data.action").value("SUBMIT_REVIEW"))
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"));
+    }
+
+    @Test
+    void confirmPublish_returnsUnifiedEnvelope() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PRIVATE);
+        setSkillId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        setSkillVersionId(version, 2L);
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).willReturn(java.util.Optional.of(version));
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/confirm-publish")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":\"1.0.0\"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.versionId").value(2))
+                .andExpect(jsonPath("$.data.action").value("CONFIRM_PUBLISH"))
+                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
     }
 }

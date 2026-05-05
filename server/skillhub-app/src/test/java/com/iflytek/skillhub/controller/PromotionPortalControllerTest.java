@@ -136,6 +136,99 @@ class PromotionPortalControllerTest {
                 .andExpect(jsonPath("$.code").value(403));
     }
 
+    @Test
+    void rejectPromotion_returnsUnifiedEnvelope() throws Exception {
+        PromotionRequest request = createPromotionRequest(1L, "user-1");
+        stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(promotionService.rejectPromotion(1L, "admin", "not ready", Set.of("SKILL_ADMIN")))
+                .willReturn(request);
+        stubPromotionResponse(request);
+
+        mockMvc.perform(post("/api/v1/promotions/1/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"not ready\"}")
+                        .with(csrf())
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id").value(1L));
+    }
+
+    @Test
+    void rejectPromotion_withoutBody_usesNullComment() throws Exception {
+        PromotionRequest request = createPromotionRequest(1L, "user-1");
+        stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(promotionService.rejectPromotion(1L, "admin", null, Set.of("SKILL_ADMIN")))
+                .willReturn(request);
+        stubPromotionResponse(request);
+
+        mockMvc.perform(post("/api/v1/promotions/1/reject")
+                        .with(csrf())
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void listPromotions_returnsPagedResults() throws Exception {
+        PromotionRequest request = createPromotionRequest(1L, "user-1");
+        stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(promotionRequestRepository.findByStatus(ReviewTaskStatus.PENDING, org.springframework.data.domain.PageRequest.of(0, 20)))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(List.of(request)));
+        given(governanceQueryRepository.getPromotionResponses(List.of(request)))
+                .willReturn(List.of(toPromotionResponse(request)));
+
+        mockMvc.perform(get("/api/v1/promotions")
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].id").value(1L));
+    }
+
+    @Test
+    void listPendingPromotions_returnsPagedResults() throws Exception {
+        PromotionRequest request = createPromotionRequest(1L, "user-1");
+        stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(promotionRequestRepository.findByStatus(ReviewTaskStatus.PENDING, org.springframework.data.domain.PageRequest.of(0, 20)))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(List.of(request)));
+        given(governanceQueryRepository.getPromotionResponses(List.of(request)))
+                .willReturn(List.of(toPromotionResponse(request)));
+
+        mockMvc.perform(get("/api/v1/promotions/pending")
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].id").value(1L));
+    }
+
+    private PromotionResponseDto toPromotionResponse(PromotionRequest request) {
+        return new PromotionResponseDto(
+                request.getId(),
+                request.getSourceSkillId(),
+                "team-a",
+                "skill-a",
+                "1.0.0",
+                "global",
+                request.getTargetSkillId(),
+                request.getStatus().name(),
+                request.getSubmittedBy(),
+                "Submitter",
+                request.getReviewedBy(),
+                null,
+                request.getReviewComment(),
+                request.getSubmittedAt(),
+                request.getReviewedAt()
+        );
+    }
+
     private void stubPromotionResponse(PromotionRequest request) {
         given(governanceQueryRepository.getPromotionResponse(request)).willReturn(new PromotionResponseDto(
                 request.getId(),

@@ -6,7 +6,7 @@ Generated: 2026-05-04
 |--------|-------|
 | Total Lines | 11945 |
 | Covered Lines | 9473 |
-| Missed Lines | 2466 |
+| Missed Lines | 2372 |
 | Line Coverage | 79.31% |
 
 ## Per-Module Line Coverage
@@ -102,11 +102,9 @@ Generated: 2026-05-04
 | SkillScannerConfig | com.iflytek.skillhub.config | 43 | 3 |
 | NotificationEventListener | com.iflytek.skillhub.listener | 39 | 94 |
 | ReviewPortalAppService | com.iflytek.skillhub.service | 32 | 71 |
-| SkillController | com.iflytek.skillhub.controller.portal | 32 | 109 |
 | GlobalExceptionHandler | com.iflytek.skillhub.exception | 30 | 44 |
 | AdminUserSearchRepository | com.iflytek.skillhub.repository | 29 | 3 |
 | SkillLifecycleAppService | com.iflytek.skillhub.service | 29 | 70 |
-| ReviewController | com.iflytek.skillhub.controller.portal | 26 | 27 |
 | AnonymousDownloadIdentityService | com.iflytek.skillhub.ratelimit | 23 | 38 |
 | AdminAuditLogAppService | com.iflytek.skillhub.service | 21 | 37 |
 | ZipPackageExtractor | com.iflytek.skillhub.controller.support | 21 | 54 |
@@ -127,11 +125,10 @@ Generated: 2026-05-04
 | SecurityAuditController | com.iflytek.skillhub.controller.portal | 11 | 43 |
 | NamespacePortalCommandAppService | com.iflytek.skillhub.service | 9 | 70 |
 | MySkillAppService | com.iflytek.skillhub.service | 9 | 53 |
-| SkillLifecycleController | com.iflytek.skillhub.controller.portal | 9 | 18 |
-| NamespaceController | com.iflytek.skillhub.controller.portal | 9 | 28 |
+| CliWhoamiResponse | com.iflytek.skillhub.dto | 8 | 0 |
 | CliWhoamiResponse | com.iflytek.skillhub.dto | 8 | 0 |
 | LabelSearchSyncListener | com.iflytek.skillhub.service | 8 | 4 |
-| SkillLabelController | com.iflytek.skillhub.controller.portal | 8 | 5 |
+| AuthController | com.iflytek.skillhub.controller | 7 | 51 |
 | AuthController | com.iflytek.skillhub.controller | 7 | 51 |
 | AuthFailureThrottleService | com.iflytek.skillhub.security | 7 | 83 |
 | ClientIpResolver | com.iflytek.skillhub.ratelimit | 7 | 18 |
@@ -147,8 +144,7 @@ Generated: 2026-05-04
 | SkillHubMetrics | com.iflytek.skillhub.metrics | 5 | 19 |
 | AdminSkillController | com.iflytek.skillhub.controller.admin | 5 | 15 |
 | LabelAdminAppService | com.iflytek.skillhub.service | 5 | 72 |
-| PromotionController | com.iflytek.skillhub.controller.portal | 5 | 13 |
-| SkillTagController | com.iflytek.skillhub.controller.portal | 5 | 9 |
+| TokenController | com.iflytek.skillhub.controller | 4 | 34 |
 | TokenController | com.iflytek.skillhub.controller | 4 | 34 |
 | LocalAuthController | com.iflytek.skillhub.controller | 4 | 38 |
 | NamespaceMemberCandidateService | com.iflytek.skillhub.service | 4 | 29 |

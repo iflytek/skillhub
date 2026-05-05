@@ -70,6 +70,7 @@ class SkillControllerDownloadTest {
             ));
 
         mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .header("X-Forwarded-Proto", "https")
                 .with(user("test-user"))
                 .requestAttr("userId", "test-user")
                 .with(csrf()))
@@ -198,5 +199,134 @@ class SkillControllerDownloadTest {
                 "ratelimit:download:user:test-user:ns:global:slug:demo-skill:version:1.0.0",
                 120,
                 60);
+    }
+
+    @Test
+    void downloadVersion_streamsWhenPresignedUrlIsBlank() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", "test-user", java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                () -> new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-1.0.0.zip",
+                3L,
+                "application/zip",
+                "",
+                false
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .with(user("test-user"))
+                .requestAttr("userId", "test-user")
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-1.0.0.zip\""));
+    }
+
+    @Test
+    void downloadLatest_streamsWhenNoPresignedUrl() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
+        given(skillDownloadService.downloadLatest("global", "demo-skill", "test-user", java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                () -> new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-latest.zip",
+                3L,
+                "application/zip",
+                null,
+                false
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/download")
+                .with(user("test-user"))
+                .requestAttr("userId", "test-user")
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-latest.zip\""));
+    }
+
+    @Test
+    void downloadByTag_redirectsToPresignedUrl() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
+        given(skillDownloadService.downloadByTag("global", "demo-skill", "latest", "test-user", java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                () -> new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-latest.zip",
+                3L,
+                "application/zip",
+                "https://download.example/presigned",
+                false
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/tags/latest/download")
+                .with(user("test-user"))
+                .requestAttr("userId", "test-user")
+                .with(csrf()))
+            .andExpect(status().isFound())
+            .andExpect(header().string("Location", "https://download.example/presigned"));
+    }
+
+    @Test
+    void downloadVersion_recordsFallbackBundleMetricsOnRedirect() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", "test-user", java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                () -> new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-1.0.0.zip",
+                3L,
+                "application/zip",
+                "https://download.example/presigned",
+                true
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .with(user("test-user"))
+                .requestAttr("userId", "test-user")
+                .with(csrf()))
+            .andExpect(status().isFound());
+
+        verify(skillHubMetrics).incrementBundleMissingFallback();
+    }
+
+    @Test
+    void downloadVersion_recordsFallbackBundleMetricsOnStream() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", "test-user", java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                () -> new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-1.0.0.zip",
+                3L,
+                "application/zip",
+                null,
+                true
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .with(user("test-user"))
+                .requestAttr("userId", "test-user")
+                .with(csrf()))
+            .andExpect(status().isOk());
+
+        verify(skillHubMetrics).incrementBundleMissingFallback();
+    }
+
+    @Test
+    void downloadVersion_handlesInvalidPresignedUrl() throws Exception {
+        given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", "test-user", java.util.Map.of()))
+            .willReturn(new SkillDownloadService.DownloadResult(
+                () -> new ByteArrayInputStream("zip".getBytes()),
+                "demo-skill-1.0.0.zip",
+                3L,
+                "application/zip",
+                "bad url with space",
+                false
+            ));
+
+        mockMvc.perform(get("/api/v1/skills/global/demo-skill/versions/1.0.0/download")
+                .header("X-Forwarded-Proto", "https")
+                .with(user("test-user"))
+                .requestAttr("userId", "test-user")
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"demo-skill-1.0.0.zip\""));
     }
 }

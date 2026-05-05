@@ -100,6 +100,37 @@ class NamespacePortalControllerTest {
     }
 
     @Test
+    void listNamespaces_returnsPagedNamespaces() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("owner-1"))
+                .willReturn(List.of(new NamespaceMember(1L, "owner-1", NamespaceRole.OWNER)));
+        given(namespaceRepository.findByIdIn(List.of(1L))).willReturn(List.of(namespace));
+
+        mockMvc.perform(get("/api/v1/namespaces")
+                        .with(auth("owner-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].slug").value("team-a"))
+                .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"));
+    }
+
+    @Test
+    void getNamespace_returnsNamespaceDetail() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("owner-1"))
+                .willReturn(List.of(new NamespaceMember(1L, "owner-1", NamespaceRole.OWNER)));
+        given(namespaceService.getNamespaceBySlugForRead("team-a", "owner-1", Map.of(1L, NamespaceRole.OWNER)))
+                .willReturn(namespace);
+
+        mockMvc.perform(get("/api/v1/namespaces/team-a")
+                        .with(auth("owner-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("team-a"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
     void archiveNamespace_returnsUpdatedNamespace() throws Exception {
         Namespace archived = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
         given(namespaceGovernanceService.archiveNamespace(eq("team-a"), eq("owner-1"), eq("cleanup"), nullable(String.class), any(), any()))
@@ -115,6 +146,38 @@ class NamespacePortalControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.slug").value("team-a"))
                 .andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void unfreezeNamespace_returnsUpdatedNamespace() throws Exception {
+        Namespace unfrozen = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceGovernanceService.unfreezeNamespace(eq("team-a"), eq("owner-1"), nullable(String.class), any(), any()))
+                .willReturn(unfrozen);
+
+        mockMvc.perform(post("/api/v1/namespaces/team-a/unfreeze")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("team-a"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void restoreNamespace_returnsUpdatedNamespace() throws Exception {
+        Namespace restored = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceGovernanceService.restoreNamespace(eq("team-a"), eq("owner-1"), nullable(String.class), any(), any()))
+                .willReturn(restored);
+
+        mockMvc.perform(post("/api/v1/namespaces/team-a/restore")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("team-a"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
     }
 
     @Test

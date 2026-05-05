@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.controller.portal.SkillController;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -13,7 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
@@ -21,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.when;
@@ -237,5 +241,51 @@ class SkillControllerTest {
         mockMvc.perform(get("/api/v1/skills/team/demo/versions"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].downloadAvailable").value(false));
+    }
+
+    @Test
+    void listFilesShouldReturnUnifiedEnvelope() throws Exception {
+        when(skillQueryService.listFiles(
+                eq("team"), eq("demo"), eq("1.0.0"), eq((String) null), eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(List.of(new SkillFile(1L, "README.md", 32L, "text/markdown", "hash", "key")));
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0/files"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].filePath").value("README.md"))
+                .andExpect(jsonPath("$.data[0].fileSize").value(32));
+    }
+
+    @Test
+    void getFileContentShouldReturnOctetStream() throws Exception {
+        when(skillQueryService.getFileContent(
+                eq("team"), eq("demo"), eq("1.0.0"), eq("README.md"), eq((String) null), eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(new java.io.ByteArrayInputStream("content".getBytes()));
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0/file")
+                        .param("path", "README.md"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").doesNotExist());
+    }
+
+    @Test
+    void getFileContentByTagShouldReturnOctetStream() throws Exception {
+        when(skillQueryService.getFileContentByTag(
+                eq("team"), eq("demo"), eq("latest"), eq("README.md"), eq((String) null), eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(new java.io.ByteArrayInputStream("content".getBytes()));
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/tags/latest/file")
+                        .param("path", "README.md"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").doesNotExist());
+    }
+
+    @Test
+    void isSecureRequest_returnsTrueForHttpsForwardedProto() {
+        SkillController controller = new SkillController(null, null, null, null, null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Forwarded-Proto", "https");
+        Boolean result = (Boolean) ReflectionTestUtils.invokeMethod(controller, "isSecureRequest", request);
+        assertTrue(result);
     }
 }

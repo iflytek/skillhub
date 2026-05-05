@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.controller.portal.ReviewController;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
@@ -28,12 +29,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -43,6 +46,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -294,6 +300,182 @@ class ReviewPortalControllerTest {
                         .string("Content-Disposition", org.hamcrest.Matchers.containsString("skill-a-1.2.0.zip")));
     }
 
+    @Test
+    void downloadReviewVersion_redirectsToPresignedUrl() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        given(reviewSkillDetailAppService.downloadReviewPackage(1L, "admin", Map.of()))
+                .willReturn(new SkillDownloadService.DownloadResult(
+                        () -> new java.io.ByteArrayInputStream("zip".getBytes()),
+                        "skill-a-1.2.0.zip",
+                        3L,
+                        "application/zip",
+                        "https://download.example/presigned",
+                        false
+                ));
+
+        mockMvc.perform(get("/api/v1/reviews/1/download")
+                        .header("X-Forwarded-Proto", "https")
+                        .with(auth("admin")))
+                .andExpect(status().isFound())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Location", "https://download.example/presigned"));
+    }
+
+    @Test
+    void downloadReviewVersion_redirectsForInsecureRequest() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        given(reviewSkillDetailAppService.downloadReviewPackage(1L, "admin", Map.of()))
+                .willReturn(new SkillDownloadService.DownloadResult(
+                        () -> new java.io.ByteArrayInputStream("zip".getBytes()),
+                        "skill-a-1.2.0.zip",
+                        3L,
+                        "application/zip",
+                        "https://download.example/presigned",
+                        false
+                ));
+
+        mockMvc.perform(get("/api/v1/reviews/1/download")
+                        .with(auth("admin")))
+                .andExpect(status().isFound());
+    }
+
+    @Test
+    void downloadReviewVersion_handlesInvalidPresignedUrlForSecureRequest() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        given(reviewSkillDetailAppService.downloadReviewPackage(1L, "admin", Map.of()))
+                .willReturn(new SkillDownloadService.DownloadResult(
+                        () -> new java.io.ByteArrayInputStream("zip".getBytes()),
+                        "skill-a-1.2.0.zip",
+                        3L,
+                        "application/zip",
+                        "bad url with space",
+                        false
+                ));
+
+        mockMvc.perform(get("/api/v1/reviews/1/download")
+                        .header("X-Forwarded-Proto", "https")
+                        .with(auth("admin")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Disposition", org.hamcrest.Matchers.containsString("skill-a-1.2.0.zip")));
+    }
+
+    @Test
+    void rejectReview_returnsUnifiedEnvelope() throws Exception {
+        ReviewTask task = createReviewTask(1L, 20L, "user-1");
+        stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(reviewService.rejectReview(1L, "admin", "needs work", Map.of(), Set.of("SKILL_ADMIN")))
+                .willReturn(task);
+        stubReviewResponse(task);
+
+        mockMvc.perform(post("/api/v1/reviews/1/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"needs work\"}")
+                        .with(csrf())
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id").value(1L));
+    }
+
+    @Test
+    void rejectReview_withoutBody_usesNullComment() throws Exception {
+        ReviewTask task = createReviewTask(1L, 20L, "user-1");
+        stubNamespaceRoles("admin", List.of());
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(reviewService.rejectReview(1L, "admin", null, Map.of(), Set.of("SKILL_ADMIN")))
+                .willReturn(task);
+        stubReviewResponse(task);
+
+        mockMvc.perform(post("/api/v1/reviews/1/reject")
+                        .with(csrf())
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void withdrawReview_returnsSuccess() throws Exception {
+        ReviewTask task = createReviewTask(1L, 20L, "user-1");
+        given(reviewTaskRepository.findById(1L)).willReturn(Optional.of(task));
+        com.iflytek.skillhub.domain.skill.SkillVersion version = new com.iflytek.skillhub.domain.skill.SkillVersion(1L, "1.0.0", "user-1");
+        setField(version, "id", 100L);
+        given(reviewService.withdrawReview(task.getSkillVersionId(), "user-1")).willReturn(version);
+
+        mockMvc.perform(post("/api/v1/reviews/1/withdraw")
+                        .with(csrf())
+                        .with(auth("user-1"))
+                        .requestAttr("userId", "user-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void listPendingReviews_returnsPagedResults() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        Namespace namespace = createNamespace(20L, "team-a");
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(reviewService.canReviewNamespace(any(), eq("admin"), eq(namespace.getType()), eq(Map.of()), eq(Set.of("SKILL_ADMIN"))))
+                .willReturn(true);
+        ReviewTask task = createReviewTask(1L, 20L, "user-1");
+        given(reviewTaskRepository.findByNamespaceIdAndStatus(20L, ReviewTaskStatus.PENDING, org.springframework.data.domain.PageRequest.of(0, 20)))
+                .willReturn(new PageImpl<>(List.of(task)));
+        given(governanceQueryRepository.getReviewTaskResponses(List.of(task)))
+                .willReturn(List.of(toReviewResponse(task)));
+
+        mockMvc.perform(get("/api/v1/reviews/pending")
+                        .param("namespaceId", "20")
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].id").value(1L));
+    }
+
+    @Test
+    void listMySubmissions_returnsPagedResults() throws Exception {
+        ReviewTask task = createReviewTask(1L, 20L, "user-1");
+        given(reviewTaskRepository.findBySubmittedByAndStatus("user-1", ReviewTaskStatus.PENDING, org.springframework.data.domain.PageRequest.of(0, 20)))
+                .willReturn(new PageImpl<>(List.of(task)));
+        given(governanceQueryRepository.getReviewTaskResponses(List.of(task)))
+                .willReturn(List.of(toReviewResponse(task)));
+
+        mockMvc.perform(get("/api/v1/reviews/my-submissions")
+                        .with(auth("user-1"))
+                        .requestAttr("userId", "user-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].id").value(1L));
+    }
+
+    @Test
+    void getReviewFile_rejectsInvalidPath() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+
+        mockMvc.perform(get("/api/v1/reviews/1/file")
+                        .param("path", "../etc/passwd")
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getReviewFile_returnsContentForValidPath() throws Exception {
+        stubNamespaceRoles("admin", List.of());
+        given(reviewSkillDetailAppService.getReviewFileContent(1L, "README.md", "admin", Map.of()))
+                .willReturn(new java.io.ByteArrayInputStream("content".getBytes()));
+
+        mockMvc.perform(get("/api/v1/reviews/1/file")
+                        .param("path", "README.md")
+                        .with(auth("admin"))
+                        .requestAttr("userId", "admin"))
+                .andExpect(status().isOk());
+    }
+
     private void stubReviewResponse(ReviewTask task) {
         given(governanceQueryRepository.getReviewTaskResponse(task)).willReturn(toReviewResponse(task));
     }
@@ -404,5 +586,14 @@ class ReviewPortalControllerTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    void isSecureRequest_returnsTrueForHttpsForwardedProto() {
+        ReviewController controller = new ReviewController(null, null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Forwarded-Proto", "https");
+        Boolean result = (Boolean) ReflectionTestUtils.invokeMethod(controller, "isSecureRequest", request);
+        assertTrue(result);
     }
 }

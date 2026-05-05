@@ -17,7 +17,11 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,5 +50,34 @@ class SkillTagControllerTest {
                 .andExpect(jsonPath("$.data[0].tagName").value("latest"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void createOrMoveTag_returnsUpdatedTag() throws Exception {
+        SkillTag tag = new SkillTag(1L, "latest", 2L, "user-1");
+        when(skillTagService.createOrMoveTag(eq("team"), eq("demo"), eq("latest"), eq("1.0.0"), eq("user-1")))
+                .thenReturn(tag);
+
+        mockMvc.perform(put("/api/v1/skills/team/demo/tags/latest")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"targetVersion\":\"1.0.0\"}")
+                        .with(user("user-1"))
+                        .requestAttr("userId", "user-1")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.tagName").value("latest"))
+                .andExpect(jsonPath("$.data.versionId").value(2));
+    }
+
+    @Test
+    void deleteTag_returnsSuccessMessage() throws Exception {
+        mockMvc.perform(delete("/api/v1/skills/team/demo/tags/latest")
+                        .with(user("user-1"))
+                        .requestAttr("userId", "user-1")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.message").value("Tag deleted"));
     }
 }
