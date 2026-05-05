@@ -171,3 +171,13 @@
   - 遇到的陷阱：前序迭代遗留大量未提交的测试文件与清单修改，执行前应先 `git status` 确认 working tree 状态，避免遗漏或重复工作。
   - 有用的上下文：`GovernanceWorkflowAppService` 是纯委托 facade，29 个方法几乎全部是 1-3 行转发；覆盖策略应优先验证 controller 端点是否走通，而非为每个转发方法写独立 mock 测试。
 ---
+## 2026-05-05 17:00 - US-106E
+- 补齐标签与命名空间 app 服务覆盖率第二批：SkillLabelAppService、PublicLabelAppService、LabelLocalizationService、LabelSearchSyncService、LabelSearchSyncListener、NamespacePortalCommandAppService、NamespacePortalQueryAppService、MySkillAppService 共 8 个目标类 JaCoCo 确认 LINE_MISSED=0。
+- 大部分测试为前序迭代遗留的未提交修改（SkillLabelAppServiceTest +129 行、MySkillAppServiceTest +203 行、NamespacePortalCommandAppServiceTest +136 行、NamespacePortalQueryAppServiceTest +66 行、LabelSearchSyncServiceTest +44 行）；新增 3 个测试文件：LabelLocalizationServiceTest、LabelSearchSyncListenerTest、PublicLabelAppServiceTest。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 中移除 10 个目标类条目，从 `server/coverage-baseline.md` 中移除 18 个目标类条目。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；前序迭代遗留的未提交测试修改通常已覆盖大部分目标。
+  - 遇到的陷阱：git working tree 中可能存在大量前序迭代未提交的测试文件和清单更新，执行前应先 `git status` 和 `git diff --stat` 确认当前状态。
+  - 有用的上下文：app service 层测试模式高度一致——mock 依赖 + 直接实例化被测对象；对于事件监听类（LabelSearchSyncListener），只需覆盖 onApplicationEvent 的 happy path 和异常分支即可达到 LINE_MISSED=0。
+---
