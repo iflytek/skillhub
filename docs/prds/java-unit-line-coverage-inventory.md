@@ -70,20 +70,10 @@
 | `com.iflytek.skillhub.service.GovernanceWorkbenchAppService` | 1 | 70 | 98.59% |
 | `com.iflytek.skillhub.service.LabelAdminAppService.new TransactionSynchronization() {...}` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.service.LabelAdminAppService` | 5 | 72 | 93.51% |
-| `com.iflytek.skillhub.service.LabelLocalizationService` | 17 | 1 | 5.56% |
-| `com.iflytek.skillhub.service.LabelSearchSyncListener` | 8 | 4 | 33.33% |
-| `com.iflytek.skillhub.service.LabelSearchSyncRequestedEvent` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.service.LabelSearchSyncService` | 6 | 15 | 71.43% |
-| `com.iflytek.skillhub.service.MySkillAppService` | 9 | 53 | 85.48% |
 | `com.iflytek.skillhub.service.NamespaceMemberCandidateService` | 4 | 29 | 87.88% |
-| `com.iflytek.skillhub.service.NamespacePortalCommandAppService` | 9 | 70 | 88.61% |
-| `com.iflytek.skillhub.service.NamespacePortalQueryAppService` | 7 | 43 | 86.00% |
 | `com.iflytek.skillhub.service.NoOpProfileModerationService` | 1 | 1 | 50.00% |
-| `com.iflytek.skillhub.service.PublicLabelAppService` | 12 | 4 | 25.00% |
 | `com.iflytek.skillhub.service.ReviewSkillDetailAppService` | 3 | 69 | 95.83% |
 | `com.iflytek.skillhub.service.SkillDeleteAppService` | 6 | 53 | 89.83% |
-| `com.iflytek.skillhub.service.SkillLabelAppService.new TransactionSynchronization() {...}` | 3 | 0 | 0.00% |
-| `com.iflytek.skillhub.service.SkillLabelAppService` | 47 | 27 | 36.49% |
 | `com.iflytek.skillhub.service.SkillSearchAppService` | 5 | 82 | 94.25% |
 | `com.iflytek.skillhub.stream.AbstractStreamConsumer` | 60 | 63 | 51.22% |
 | `com.iflytek.skillhub.stream.ScanTaskConsumer` | 16 | 103 | 86.55% |

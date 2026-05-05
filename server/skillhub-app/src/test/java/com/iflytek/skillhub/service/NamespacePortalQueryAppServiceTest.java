@@ -46,6 +46,48 @@ class NamespacePortalQueryAppServiceTest {
     );
 
     @Test
+    void listNamespaces_withNullRoles_returnsEmptyPage() {
+        var response = service.listNamespaces(PageRequest.of(0, 10), null);
+
+        assertThat(response.items()).isEmpty();
+        assertThat(response.total()).isZero();
+    }
+
+    @Test
+    void listNamespaces_emptyResultWhenOffsetExceedsSize() {
+        Namespace teamA = namespace(1L, "team-a");
+        when(namespaceRepository.findByIdIn(anyList())).thenReturn(List.of(teamA));
+
+        var response = service.listNamespaces(PageRequest.of(5, 10), Map.of(1L, NamespaceRole.MEMBER));
+
+        assertThat(response.items()).isEmpty();
+        assertThat(response.total()).isEqualTo(1);
+    }
+
+    @Test
+    void listMyNamespaces_withNullRoles_returnsEmptyList() {
+        var response = service.listMyNamespaces(null);
+        assertThat(response).isEmpty();
+    }
+
+    @Test
+    void listMyNamespaces_withEmptyRoles_returnsEmptyList() {
+        var response = service.listMyNamespaces(Map.of());
+        assertThat(response).isEmpty();
+    }
+
+    @Test
+    void getNamespace_returnsResponseWhenUserIsMember() {
+        Namespace namespace = namespace(1L, "team-a");
+        when(namespaceService.getNamespaceBySlugForRead("team-a", "user-1", Map.of(1L, NamespaceRole.MEMBER)))
+                .thenReturn(namespace);
+
+        var result = service.getNamespace("team-a", "user-1", Map.of(1L, NamespaceRole.MEMBER));
+
+        assertThat(result.slug()).isEqualTo("team-a");
+    }
+
+    @Test
     void listMyNamespaces_sortsBySlugAndProjectsRoleCapabilities() {
         Namespace zeta = namespace(2L, "zeta");
         Namespace alpha = namespace(1L, "alpha");
@@ -156,5 +198,29 @@ class NamespacePortalQueryAppServiceTest {
         assertThat(mr.userId()).isEqualTo("ghost-user");
         assertThat(mr.displayName()).isNull();
         assertThat(mr.email()).isNull();
+    }
+
+    @Test
+    void listMembers_emptyMemberList_returnsEmptyPage() {
+        Namespace ns = namespace(1L, "team-a");
+
+        when(namespaceService.getNamespaceBySlug("team-a")).thenReturn(ns);
+        when(namespaceMemberService.listMembers(eq(1L), any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+        PageResponse<MemberResponse> result = service.listMembers("team-a", PageRequest.of(0, 20), "owner-1");
+
+        assertThat(result.items()).isEmpty();
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void getNamespace_withNullRolesMap() {
+        Namespace namespace = namespace(1L, "team-a");
+        when(namespaceService.getNamespaceBySlugForRead("team-a", "user-1", Map.of()))
+                .thenReturn(namespace);
+
+        assertThatThrownBy(() -> service.getNamespace("team-a", "user-1", null))
+                .isInstanceOf(DomainForbiddenException.class);
     }
 }

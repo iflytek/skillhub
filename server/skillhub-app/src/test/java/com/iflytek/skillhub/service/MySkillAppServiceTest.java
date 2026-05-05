@@ -260,6 +260,209 @@ class MySkillAppServiceTest {
         assertThat(result.items().get(0).headlineVersion().status()).isEqualTo("REJECTED");
     }
 
+    @Test
+    void listMySkills_filtersPublishedSkills() {
+        Skill skill = createSkill(1L, 101L, "published-skill", "user-1");
+        SkillVersion publishedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of());
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+
+        var result = service.listMySkills("user-1", 0, 10, "PUBLISHED", Set.of("USER"));
+
+        assertThat(result.total()).isEqualTo(1);
+        assertThat(result.items()).extracting("slug").containsExactly("published-skill");
+    }
+
+    @Test
+    void listMySkills_filtersArchivedSkills() {
+        Skill skill = createSkill(1L, 101L, "archived-skill", "user-1");
+        skill.setStatus(SkillStatus.ARCHIVED);
+        SkillVersion version = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of(version));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+
+        var result = service.listMySkills("user-1", 0, 10, "ARCHIVED", Set.of("USER"));
+
+        assertThat(result.total()).isEqualTo(1);
+        assertThat(result.items()).extracting("slug").containsExactly("archived-skill");
+    }
+
+    @Test
+    void listMySkills_filtersRejectedSkills() {
+        Skill skill = createSkill(1L, 101L, "rejected-skill", "user-1");
+        SkillVersion rejectedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.REJECTED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of(rejectedVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+
+        var result = service.listMySkills("user-1", 0, 10, "REJECTED", Set.of("USER"));
+
+        assertThat(result.total()).isEqualTo(1);
+        assertThat(result.items()).extracting("slug").containsExactly("rejected-skill");
+    }
+
+    @Test
+    void listMySkills_nullFilterDefaultsToAll() {
+        Skill skill = createSkill(1L, 101L, "my-skill", "user-1");
+        SkillVersion publishedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+                .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of(publishedVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
+
+        var result = service.listMySkills("user-1", 0, 10, null, Set.of("USER"));
+
+        assertThat(result.items()).hasSize(1);
+    }
+
+    @Test
+    void listMySkills_blankFilterDefaultsToAll() {
+        Skill skill = createSkill(1L, 101L, "my-skill", "user-1");
+        SkillVersion publishedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+                .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of(publishedVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
+
+        var result = service.listMySkills("user-1", 0, 10, "   ", Set.of("USER"));
+
+        assertThat(result.items()).hasSize(1);
+    }
+
+    @Test
+    void listMySkills_invalidFilterDefaultsToAll() {
+        Skill skill = createSkill(1L, 101L, "my-skill", "user-1");
+        SkillVersion publishedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+                .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of(publishedVersion));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
+        given(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
+
+        var result = service.listMySkills("user-1", 0, 10, "NOT_A_FILTER", Set.of("USER"));
+
+        assertThat(result.items()).hasSize(1);
+    }
+
+    @Test
+    void listMySkills_pendingReviewFilterExcludesNonPendingSkills() {
+        Skill skill = createSkill(1L, 101L, "published-skill", "user-1");
+        SkillVersion publishedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of());
+
+        var result = service.listMySkills("user-1", 0, 10, "PENDING_REVIEW", Set.of("USER"));
+
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void listMySkills_rejectedFilterExcludesNonRejectedSkills() {
+        Skill skill = createSkill(1L, 101L, "published-skill", "user-1");
+        SkillVersion publishedVersion = createVersion(1L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
+        given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of());
+
+        var result = service.listMySkills("user-1", 0, 10, "REJECTED", Set.of("USER"));
+
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void matchesFilter_allBranchReturnsTrue() {
+        Skill skill = createSkill(1L, 101L, "skill", "user-1");
+
+        Boolean result = org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                service, "matchesFilter", skill, MySkillAppService.MySkillFilter.ALL, java.util.Set.of("USER"));
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void listMySkills_archivedSkillExcludedFromNonArchivedFilters() {
+        Skill archivedSkill = createSkill(1L, 101L, "archived-skill", "user-1");
+        archivedSkill.setStatus(SkillStatus.ARCHIVED);
+        Skill activeSkill = createSkill(2L, 101L, "active-skill", "user-1");
+        SkillVersion version = createVersion(2L, 22L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(archivedSkill, activeSkill));
+        given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(version));
+        given(skillVersionRepository.findBySkillId(2L)).willReturn(List.of());
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
+
+        var result = service.listMySkills("user-1", 0, 10, "PUBLISHED", Set.of("USER"));
+
+        assertThat(result.total()).isEqualTo(1);
+        assertThat(result.items()).extracting("slug").containsExactly("active-skill");
+    }
+
+    @Test
+    void listMySkills_hiddenSkillExcludedForNonSuperAdmin() {
+        Skill hiddenSkill = createSkill(1L, 101L, "hidden-skill", "user-1");
+        hiddenSkill.setHidden(true);
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(hiddenSkill));
+
+        var result = service.listMySkills("user-1", 0, 10, "PENDING_REVIEW", Set.of("USER"));
+
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void listMyStars_returnsEmptyWhenNoStars() {
+        given(skillStarRepository.findByUserId("user-1", PageRequest.of(0, 10)))
+                .willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+        var result = service.listMyStars("user-1", 0, 10);
+
+        assertThat(result.total()).isZero();
+        assertThat(result.items()).isEmpty();
+    }
+
+    @Test
+    void listMySkills_archivedFilterExcludesActiveSkills() {
+        Skill activeSkill = createSkill(1L, 101L, "active-skill", "user-1");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(activeSkill));
+
+        var result = service.listMySkills("user-1", 0, 10, "ARCHIVED", Set.of("USER"));
+
+        assertThat(result.total()).isZero();
+    }
+
+    @Test
+    void listMySkills_publishedFilterExcludesSkillsWithoutPublishedVersion() {
+        Skill skill = createSkill(1L, 101L, "no-publish-skill", "user-1");
+
+        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(skill));
+        given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
+
+        var result = service.listMySkills("user-1", 0, 10, "PUBLISHED", Set.of("USER"));
+
+        assertThat(result.total()).isZero();
+    }
+
     private Skill createSkill(Long id, Long namespaceId, String slug, String ownerId) {
         Skill skill = new Skill(namespaceId, slug, ownerId, SkillVisibility.PUBLIC);
         skill.setDisplayName(slug);

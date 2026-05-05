@@ -5,9 +5,9 @@ Generated: 2026-05-04
 | Metric | Value |
 |--------|-------|
 | Total Lines | 11945 |
-| Covered Lines | 9637 |
-| Missed Lines | 2212 |
-| Line Coverage | 81.48% |
+| Covered Lines | 9756 |
+| Missed Lines | 2093 |
+| Line Coverage | 81.67% |
 
 ## Per-Module Line Coverage
 | Module | Total Lines | Covered | Missed | Coverage |
@@ -18,7 +18,7 @@ Generated: 2026-05-04
 | skillhub-search | 713 | 588 | 125 | 82.47% |
 | skillhub-notification | 207 | 190 | 17 | 91.79% |
 | skillhub-storage | 213 | 135 | 78 | 63.38% |
-| skillhub-app | 5109 | 4392 | 838 | 85.96% |
+| skillhub-app | 5109 | 4511 | 719 | 88.30% |
 
 ## Uncovered Classes Inventory (by module, sorted by missed lines desc)
 ### skillhub-domain
@@ -98,7 +98,6 @@ Generated: 2026-05-04
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
 | AbstractStreamConsumer | com.iflytek.skillhub.stream | 55 | 68 |
-| SkillLabelAppService | com.iflytek.skillhub.service | 47 | 27 |
 | SkillScannerConfig | com.iflytek.skillhub.config | 43 | 3 |
 | NotificationEventListener | com.iflytek.skillhub.listener | 39 | 94 |
 | GlobalExceptionHandler | com.iflytek.skillhub.exception | 30 | 44 |
@@ -107,28 +106,21 @@ Generated: 2026-05-04
 | ZipPackageExtractor | com.iflytek.skillhub.controller.support | 21 | 54 |
 | SkillPackageArchiveExtractor | com.iflytek.skillhub.controller.support | 20 | 56 |
 | MockUassController | com.iflytek.skillhub.controller | 17 | 3 |
-| LabelLocalizationService | com.iflytek.skillhub.service | 17 | 1 |
 | ScanTaskConsumer | com.iflytek.skillhub.stream | 16 | 103 |
 | MultipartPackageExtractor | com.iflytek.skillhub.controller.support | 13 | 32 |
 | MultipartPackageExtractor | com.iflytek.skillhub.controller.support | 13 | 32 |
 | JpaGovernanceQueryRepository | com.iflytek.skillhub.repository | 12 | 150 |
 | DeviceAuthWebController | com.iflytek.skillhub.controller | 12 | 0 |
 | UserProfileController | com.iflytek.skillhub.controller | 12 | 71 |
-| PublicLabelAppService | com.iflytek.skillhub.service | 12 | 4 |
 | IdempotencyInterceptor | com.iflytek.skillhub.filter | 12 | 50 |
-| NamespacePortalCommandAppService | com.iflytek.skillhub.service | 9 | 70 |
-| MySkillAppService | com.iflytek.skillhub.service | 9 | 53 |
 | CliWhoamiResponse | com.iflytek.skillhub.dto | 8 | 0 |
 | CliWhoamiResponse | com.iflytek.skillhub.dto | 8 | 0 |
-| LabelSearchSyncListener | com.iflytek.skillhub.service | 8 | 4 |
 | AuthController | com.iflytek.skillhub.controller | 7 | 51 |
 | AuthController | com.iflytek.skillhub.controller | 7 | 51 |
 | AuthFailureThrottleService | com.iflytek.skillhub.security | 7 | 83 |
 | ClientIpResolver | com.iflytek.skillhub.ratelimit | 7 | 18 |
 | MemberResponse | com.iflytek.skillhub.dto | 7 | 10 |
-| NamespacePortalQueryAppService | com.iflytek.skillhub.service | 7 | 43 |
 | SkillScannerProperties.Analyzers | com.iflytek.skillhub.config | 6 | 31 |
-| LabelSearchSyncService | com.iflytek.skillhub.service | 6 | 15 |
 | SkillDeleteAppService | com.iflytek.skillhub.service | 6 | 53 |
 | SkillScannerProperties | com.iflytek.skillhub.config | 5 | 36 |
 | DeviceAuthController | com.iflytek.skillhub.controller | 5 | 0 |
@@ -146,7 +138,6 @@ Generated: 2026-05-04
 | AccountMergeController | com.iflytek.skillhub.controller | 3 | 19 |
 | InMemorySlidingWindowRateLimiter | com.iflytek.skillhub.ratelimit | 3 | 15 |
 | LabelAdminAppService.new TransactionSynchronization() {...} | com.iflytek.skillhub.service | 3 | 0 |
-| SkillLabelAppService.new TransactionSynchronization() {...} | com.iflytek.skillhub.service | 3 | 0 |
 | ReviewSkillDetailAppService | com.iflytek.skillhub.service | 3 | 69 |
 | AdminSkillReportAppService | com.iflytek.skillhub.service | 3 | 10 |
 | AdminProfileReviewAppService | com.iflytek.skillhub.service | 3 | 12 |
@@ -175,7 +166,6 @@ Generated: 2026-05-04
 | AdminProfileReviewController | com.iflytek.skillhub.controller.admin | 1 | 27 |
 | UserManagementController | com.iflytek.skillhub.controller.admin | 1 | 14 |
 | SkillSearchAppService | com.iflytek.skillhub.service | 1 | 86 |
-| LabelSearchSyncRequestedEvent | com.iflytek.skillhub.service | 1 | 0 |
 | NoOpProfileModerationService | com.iflytek.skillhub.service | 1 | 1 |
 | GovernanceWorkbenchAppService | com.iflytek.skillhub.service | 1 | 70 |
 | MultipartPackageExtractor.PublishPayload.ForkOf | com.iflytek.skillhub.controller.support | 1 | 0 |
