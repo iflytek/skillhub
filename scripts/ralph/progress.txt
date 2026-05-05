@@ -3,6 +3,19 @@
 - 两个覆盖率清单文件 (`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`) 需要同步更新，缺一不可。
 - mock-maker-inline 已启用，可直接用 `MockedStatic` 覆盖静态分支。
 - domain 服务测试中，`SkillSlugResolutionService` 和 `VisibilityChecker` 是高频依赖，建议直接实例化（非 mock）以简化测试编排，因为它们的逻辑轻量且无副作用。
+- 覆盖率基线文件应通过脚本从 `server/*/target/site/jacoco/jacoco.csv` 自动生成，避免手工维护导致的数据漂移。
+- 显式声明 mock / dev-only / platform-specific 类的排除范围，让生产覆盖率门禁的范围清晰可控。
+---
+
+## 2026-05-05 22:15 - US-108
+- 收敛覆盖率门禁的输入范围与事实来源：将 `server/coverage-baseline.md` 与 `docs/prds/java-unit-line-coverage-inventory.md` 从严重滞后的手工维护状态切换为脚本自动生成，确保两者基于同一套 JaCoCo CSV 数据。
+- 新增 `scripts/ralph/regenerate-coverage.py`，从 `server/*/target/site/jacoco/jacoco.csv` 读取模块级报告，统一生成 baseline 与 inventory，并自动标注 16 个 mock/dev-only/platform-specific 排除类。
+- 当前后端多模块 aggregate line coverage：`95.41%`（`11397/11945`），剩余 96 个类、548 条 missed lines。
+- 质量检查：`mvn -f server/pom.xml -pl skillhub-app -am test jacoco:report-aggregate` BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：手工维护两个覆盖率跟踪文件极易漂移，应使用脚本统一生成；模块级 `jacoco.csv` 比 aggregate 报告更适合作为自动化的事实来源。
+  - 遇到的陷阱：并发运行多个 Maven 测试进程会导致 `jacoco.exec` 写入冲突和测试超时；执行前应确保无残留 surefirebooter 进程。
+  - 有用的上下文：`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md` 的读者不同（前者面向门禁/CI，后者面向开发补测），因此格式不同但数据必须同源；脚本生成时应保持两份文件各自的格式约定。
 ---
 
 ## 2026-05-05 07:12 - US-105H
