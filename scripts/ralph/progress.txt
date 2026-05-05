@@ -148,3 +148,14 @@
   - 遇到的陷阱：前序迭代可能遗留大量未提交的测试修改和清单更新；执行前应通过 `git diff --stat` 确认 working tree 状态，避免遗漏已完成的工作成果。
   - 有用的上下文：`SkillController` 和 `ReviewController` 的 `isSecureRequest` 是 private 方法，可通过 `ReflectionTestUtils.invokeMethod` 直接调用覆盖；下载 endpoint 的 presigned URL 重定向逻辑需要同时测试 secure（X-Forwarded-Proto: https）和 insecure 请求路径。
 ---
+
+## 2026-05-05 15:25 - US-106C
+- 补齐 portal 通知与 admin 控制器覆盖率第二批：NotificationController、NotificationPreferenceController、SecurityAuditController、MeController、AdminSkillController、AdminSkillReportController、AdminLabelController 共 7 个目标类达到 100% 行覆盖。
+- 大部分测试为前序迭代遗留的未提交修改（AdminLabelControllerTest +26 行、AdminSkillControllerTest +55 行、AdminSkillReportControllerTest +90 行、NotificationControllerTest +276 行、NotificationPreferenceControllerTest +24 行、SecurityAuditControllerTest +301 行）；新增 MeControllerUnitTest（4 个 case，覆盖 null principal 分支与正常路径）。
+- 模块级 JaCoCo 确认 7 目标类 LINE_MISSED=0；同步更新覆盖率清单，从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 7 个目标类条目，并更新总体 Missed Lines（2372 → 2329）与 skillhub-app 模块覆盖率。
+- 质量检查：backend 654 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：前序迭代可能遗留大量未提交的测试文件和清单更新；执行前应先 `git status` 确认 working tree 状态，避免遗漏已完成的工作成果。
+  - 遇到的陷阱：NotificationController 存在分支未覆盖但行已 100% 覆盖的情况（JaCoCo LINE_MISSED=0 但 BRANCH_MISSED>0）；验收标准以行覆盖为准时，这种情况可视为达标。
+  - 有用的上下文：MockMvc 测试中 `requestAttr("userNsRoles", ...)` 与 Spring Security `with(authentication(...))` 需要同时提供，因为 controller 内部通过 request attribute 获取用户 ID 和角色信息。
+---
