@@ -2,8 +2,6 @@ package com.iflytek.skillhub.domain.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.iflytek.skillhub.db.MysqlContainerBackedDataJpaTest;
-import com.iflytek.skillhub.db.MysqlMigrationDataJpaTest;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.security.ScannerType;
 import com.iflytek.skillhub.domain.security.SecurityAudit;
@@ -20,11 +18,14 @@ import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@MysqlMigrationDataJpaTest
-@Testcontainers
-class AuditAndInfraJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
+@DataJpaTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+class AuditAndInfraJsonPersistenceTest {
 
     @Autowired
     private EntityManager entityManager;

@@ -91,7 +91,24 @@ If app runtime state uses Redis directly, define a dedicated bean name such as `
 
 Do not rely on the default Spring `redisTemplate` bean for app-specific state wiring. The boundary becomes ambiguous in both tests and production bootstrapping.
 
-### 8. Dialect validation must use the real target database
+### 8. Unit tests that touch MySQL-backed code must stay off real MySQL
+
+Unit tests, repository slice tests, and JaCoCo coverage-gate tests that exercise MySQL-backed code must use `H2` or mocks.
+
+Do not require a real MySQL server or `MySQLContainer` for unit coverage work.
+
+Real MySQL is reserved for explicit integration, runtime, or regression validation such as:
+
+- Flyway migration boot verification
+- dialect-sensitive runtime smoke
+- end-to-end search, approval, promotion, or delete flows intentionally marked as integration/runtime tests
+
+If an existing test currently sits in the unit-test lane but requires `MySQLContainer`, it must be handled in one of two ways:
+
+- rewrite it as H2-backed or mock-backed
+- re-scope and rename it as integration/runtime validation, then remove it from the unit coverage plan
+
+### 9. Dialect validation must use the real target database
 
 Use targeted MySQL validation for:
 
@@ -102,13 +119,13 @@ Use targeted MySQL validation for:
 
 Prefer Testcontainers MySQL plus the real MySQL migration directory, with `ddl-auto=none`.
 
-### 9. Migration directories should follow runtime reality
+### 10. Migration directories should follow runtime reality
 
 If one runtime needs a different relational dialect, give it its own Flyway migration directory and validate empty-database startup against that directory.
 
 Do not force one migration tree to serve incompatible dialect assumptions.
 
-### 10. Runtime verification must prove the selected path, not only startup
+### 11. Runtime verification must prove the selected path, not only startup
 
 The minimum reliable verification stack is:
 
@@ -131,6 +148,7 @@ When validating local browser flows, first confirm the frontend proxy points at 
 
 ### Persistence and migration
 
+- keep unit-level persistence coverage tests on H2 or mocks
 - validate empty-db boot with the real migration directory
 - add focused MySQL tests for dialect-sensitive entities and repositories
 - prefer small repository or entity tests over large bootstraps when possible

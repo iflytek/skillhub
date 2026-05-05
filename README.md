@@ -146,7 +146,8 @@ scripts/dev/local-mysql-local-index-memory-up.sh
 ```bash
 scripts/dev/local-mysql-local-index-memory-status.sh   # 查看当前运行状态
 scripts/dev/local-mysql-local-index-memory-down.sh     # 停止当前本地源码运行组合
-mvn -q -f server/pom.xml -pl skillhub-app -am test     # 运行后端测试
+mvn -q -f server/pom.xml -pl skillhub-app -am test     # 运行默认后端测试车道
+mvn -q -f server/pom.xml -pl skillhub-app -am verify -Pmysql-integration-tests  # 显式运行带 mysql-integration 标签的 MySQL 集成测试
 mvn -q -f server/pom.xml -pl skillhub-app -am package -DskipTests  # 打包后端
 pnpm --dir web generate-api                            # 重新生成 OpenAPI 类型
 ./scripts/check-openapi-generated.sh                   # 验证 API 契约同步
@@ -157,6 +158,8 @@ pnpm --dir web generate-api                            # 重新生成 OpenAPI �
 - 当前 checkout 不再自带历史文档里提到的顶层 `Makefile`
 - 以 `scripts/dev/`、[docs/local-runtime-quickstart.md](./docs/local-runtime-quickstart.md) 和 [design/runtime/runtime-core-configuration-reference.md](./design/runtime/runtime-core-configuration-reference.md) 作为当前源码运行入口文档
 - 不要在 `server/` 下直接执行 `./mvnw -pl skillhub-app clean test`。`skillhub-app` 依赖同仓库的 sibling modules，单独 clean 构建时会回退到本地 Maven 仓库里的旧产物并出现大量 `cannot find symbol` / 签名不匹配错误。需要使用 `-am`
+- 默认 `mvn ... test` 会排除带 `mysql-integration` 标签的真实 MySQL 集成测试，但不会因为文件名里带 `IntegrationTest` 就一刀切排除所有集成类
+- 真实 MySQL 集成测试通过 `@Tag("mysql-integration")` + `-Pmysql-integration-tests` 进入单独车道
 
 ### 项目结构
 

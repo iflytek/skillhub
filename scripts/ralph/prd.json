@@ -1,8 +1,25 @@
 {
   "project": "SkillHub",
   "branchName": "ralph/remove-h2-and-converge-mysql-runtime",
-  "description": "当前 PRD 只跟踪新的剩余 Java 行覆盖率收口计划。旧的已完成 story 和已被新计划覆盖的旧未完成 story 已全部移除。覆盖率事实来源以当前模块级 JaCoCo 报告和 docs/prds/java-unit-line-coverage-remaining-v2-prd.md 为准。",
+  "description": "当前 PRD 只跟踪新的剩余 Java 行覆盖率收口计划。本轮最前置新增约束是：单元测试、DataJpa 切片测试、以及参与 JaCoCo 行覆盖率门禁的测试，只要涉及 MySQL 持久化路径，都只能使用 H2 或 mock，不允许真实连接 MySQL 或依赖 MySQLContainer。旧的已完成 story 和已被新计划覆盖的旧未完成 story 已全部移除。覆盖率事实来源以当前模块级 JaCoCo 报告和 docs/prds/java-unit-line-coverage-remaining-v2-prd.md 为准。",
   "userStories": [
+    {
+      "id": "US-107Z",
+      "title": "先收敛单测数据库边界并恢复可复用的 H2 基座",
+      "description": "作为维护者，我希望先把当前单测里对真实 MySQL 的依赖清理掉，并优先恢复仓库里已经存在过的 H2 测试基座，以便后续覆盖率补测不再被 MySQL 运行时绑死。",
+      "acceptanceCriteria": [
+        "Check in design guidance that unit tests, DataJpa slice tests, and JaCoCo coverage-gate tests touching MySQL-backed code must use H2 or mocks rather than a real MySQL connection",
+        "Identify the current MySQLContainer-backed unit or slice tests and either migrate them to H2 or mocks, or explicitly re-scope them as integration or runtime validation outside the unit coverage lane",
+        "Prefer restoring previously existing H2-based versions where the repository history proves they existed, rather than redesigning those tests from scratch",
+        "Restore or reintroduce the minimal H2 test dependency and H2 test configuration needed for the recovered DataJpa tests",
+        "Document which current tests can be directly restored from historical H2 versions and which still require rewrite or reclassification"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "History already confirms direct H2 restoration candidates: SkillVersionStatsJpaRepositoryTest from 22edee12^, AuthJsonPersistenceTest from 42197935, SkillVersionJsonPersistenceTest from 87ba9b54, AuditAndInfraJsonPersistenceTest from 34b56b63, plus prior H2 config in server/skillhub-app/src/test/resources/application-test.yml and H2 deps in older skillhub-app/skillhub-infra pom.xml files. SkillVersionMysqlPersistenceTest, SkillVersionStatsMysqlPersistenceTest, and SkillFileMysqlPersistenceTest do not yet show a direct H2 predecessor and should be rewritten for H2/mock or reclassified as integration/runtime validation.",
+      "retryCount": 0,
+      "blocked": false
+    },
     {
       "id": "US-108",
       "title": "收敛剩余覆盖率计划与口径",

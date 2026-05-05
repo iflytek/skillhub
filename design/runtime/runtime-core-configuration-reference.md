@@ -23,6 +23,13 @@ For local troubleshooting and migration fallback, the following variants are sti
 - `MySQL 8 + memory + mysql-like`
 - `MySQL 8 + memory + local-file-index`
 
+## Test Boundary
+
+- 单元测试、`DataJpaTest` 切片测试、以及用于 JaCoCo 行覆盖率门禁的测试，只要涉及 MySQL 持久化路径，都只能使用 `H2` 或 mock。
+- 这类测试不得直连真实 MySQL，也不得依赖 `MySQLContainer`。
+- 真实 MySQL 只保留给显式的 `*IntegrationTest`、`*RuntimeIntegrationTest`、迁移验证和回归验证。
+- 覆盖率门禁不能依赖本地或远程 MySQL 的可用性。
+
 ## Configuration Priority
 
 Runtime behavior is determined in this order:

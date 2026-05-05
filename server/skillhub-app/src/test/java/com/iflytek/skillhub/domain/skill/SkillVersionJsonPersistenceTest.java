@@ -2,19 +2,20 @@ package com.iflytek.skillhub.domain.skill;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.iflytek.skillhub.db.MysqlContainerBackedDataJpaTest;
-import com.iflytek.skillhub.db.MysqlMigrationDataJpaTest;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.infra.jpa.SkillVersionJpaRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@MysqlMigrationDataJpaTest
-@Testcontainers
-class SkillVersionJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
+@DataJpaTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+class SkillVersionJsonPersistenceTest {
 
     @Autowired
     private EntityManager entityManager;

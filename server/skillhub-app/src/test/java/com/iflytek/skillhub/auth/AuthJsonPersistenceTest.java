@@ -5,18 +5,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.entity.IdentityBinding;
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
-import com.iflytek.skillhub.db.MysqlContainerBackedDataJpaTest;
-import com.iflytek.skillhub.db.MysqlMigrationDataJpaTest;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@MysqlMigrationDataJpaTest
-@Testcontainers
-class AuthJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
+@DataJpaTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+class AuthJsonPersistenceTest {
 
     @Autowired
     private EntityManager entityManager;
@@ -28,7 +29,7 @@ class AuthJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
     private IdentityBindingRepository identityBindingRepository;
 
     @Test
-    void persistsApiTokenScopeJsonOnMySqlSchema() {
+    void persistsApiTokenScopeJsonWithoutPostgresSpecificColumnDefinition() {
         entityManager.persist(new UserAccount("user-token", "Token User", "token@example.com", null));
 
         ApiToken token = new ApiToken(
@@ -47,7 +48,7 @@ class AuthJsonPersistenceTest extends MysqlContainerBackedDataJpaTest {
     }
 
     @Test
-    void persistsIdentityBindingExtraJsonOnMySqlSchema() {
+    void persistsIdentityBindingExtraJsonWithoutPostgresSpecificColumnDefinition() {
         entityManager.persist(new UserAccount("user-binding", "Binding User", "binding@example.com", null));
 
         IdentityBinding binding = new IdentityBinding("user-binding", "github", "gh_42", "binding-user");

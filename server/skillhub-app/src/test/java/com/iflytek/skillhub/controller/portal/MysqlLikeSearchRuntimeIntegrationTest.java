@@ -26,6 +26,7 @@ import jakarta.persistence.EntityManager;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -62,6 +63,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(TestRedisConfig.class)
 @Testcontainers
+@Tag("mysql-integration")
 class MysqlLikeSearchRuntimeIntegrationTest {
 
     @Container
