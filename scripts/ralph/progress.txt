@@ -193,3 +193,15 @@
   - 遇到的陷阱：JaCoCo 对静态方法的行覆盖统计与 MockedStatic 存在微妙交互——如果 `MockedStatic.when(...)` 拦截了被测方法内的静态调用，该调用行可能不会被计入覆盖；对 `Redisson.create()` 等构造型静态调用，使用 try-catch 让真实代码执行一次即可命中。
   - 有用的上下文：coverage-baseline.md 已严重滞后于当前 JaCoCo 数据（整体从 81.67% 到 93.96%），建议后续 story 用脚本全量重生成，而非手工维护差量更新。
 ---
+
+## 2026-05-05 22:05 - US-106G
+- 补齐打包提取、流处理与剩余辅助类覆盖率：15 个目标类（AbstractStreamConsumer、NotificationEventListener、ZipPackageExtractor、SkillPackageArchiveExtractor、MultipartPackageExtractor、ScanTaskConsumer、CliWhoamiResponse、MemberResponse、SkillCheckResponse、NoOpProfileModerationService、MultipartPackageExtractor.PublishPayload.ForkOf、ApiResponseFactory、ConfirmPublishRequest、SubmitReviewRequest、TagRequest）全部达到 LINE_MISSED=0。
+- 补全/新增测试文件：AbstractStreamConsumerTest（扩展至 40 个 case，覆盖安全 reclaim、中断处理、批量 ack、重试退避等）、ScanTaskConsumerTest（扩展至 13 个 case，覆盖 path traversal 安全校验与非法状态处理）、NotificationEventListenerTest（+5 个 case，覆盖异常分支与空消息处理）、ZipPackageExtractorTest（+4 个 case，覆盖目录穿越与空内容分支）、SkillPackageArchiveExtractorTest（+2 个 case，覆盖总大小超限与文件数超限）、MultipartPackageExtractorTest（新增，8 个 case，覆盖正常解析与全部异常分支）、CliWhoamiResponseTest（新增）、MemberResponseTest（新增）、SkillCheckResponseTest（新增）、NoOpProfileModerationServiceTest（新增）、ApiResponseFactoryTest（新增）、ConfirmPublishRequestTest（新增）、SubmitReviewRequestTest（新增）、TagRequestTest（新增）。
+- 关键发现：JaCoCo aggregate 报告受 `jacoco.exec` 残留数据污染，导致已覆盖行显示为未覆盖；解决方案是在测试前 `rm -f server/skillhub-app/target/jacoco.exec` 以获取准确数据。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 15 个目标类条目，更新总体 Missed Lines（722 → 548）与 skillhub-app 模块覆盖率（93.01% → 96.42%）。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；对于 stream consumer 类，通过注入 `Thread.currentThread().interrupt()` 可覆盖中断处理分支。
+  - 遇到的陷阱：JaCoCo `jacoco.exec` 文件会在多次测试运行中累积数据，如果某次运行有失败或部分类未加载，后续 aggregate 报告会显示错误的未覆盖行；每次覆盖率验证前删除旧的 exec 文件是必要步骤。
+  - 有用的上下文：`SkillFileMysqlPersistenceTest` 存在 flaky 行为（BeanDefinitionStoreException），在 aggregate 运行中偶发失败，但独立运行可通过；此类预存问题不影响覆盖率 story 验收。
+---
