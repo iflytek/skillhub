@@ -20,10 +20,10 @@ SkillHub 是一个企业自托管的 agent skill registry 与治理平台。
 |------|------|
 | Java + Spring Boot | 后端 API、认证、治理、业务逻辑 |
 | Maven 多模块 | 后端构建与模块管理 |
-| PostgreSQL | 标准运行模式主数据库 |
+| MySQL 8 | 当前标准运行模式主数据库 |
 | Redis + Spring Session + Redisson | 会话、限流、扫描任务流 |
-| Flyway | PostgreSQL schema 初始化与迁移 |
-| H2 | `local-h2` 轻量本地开发模式 |
+| Flyway | 当前 MySQL 主路径 schema 初始化与迁移 |
+| H2 | 仅保留为少量测试/历史兼容残留，不属于当前正式源码运行模式 |
 | React 19 + Vite | 前端应用 |
 | TypeScript | 前端类型系统 |
 | TanStack Router / Query | 路由与数据获取 |
@@ -84,7 +84,7 @@ skillhub/
   - `skillhub-app`：Spring Boot 入口、controller、app service、运行时配置
   - `skillhub-domain`：领域模型与核心业务规则
   - `skillhub-auth`：认证、OAuth、本地账号、device auth、token、session
-  - `skillhub-search`：搜索 SPI 与 Postgres/H2 实现
+  - `skillhub-search`：搜索 SPI 与当前 MySQL / local-file-index 实现，以及少量待清理历史装配残留
   - `skillhub-storage`：对象存储抽象与实现
   - `skillhub-infra`：JPA 与外部集成适配
   - `skillhub-notification`：通知能力
@@ -101,11 +101,11 @@ skillhub/
 
 ### 运行模式
 
-- `local`：PostgreSQL + Redis + Flyway，接近真实环境
-- `local-h2`：H2 文件库、无 Flyway、无 Redis 会话，面向轻量本地联调
-- 搜索由 `skillhub.search.engine` 切换：
-  - `postgres`：全文检索 + 可选语义重排
-  - `h2`：LIKE 降级搜索
+- `local-mysql`：当前正式源码运行模式，使用 `MySQL 8 + Redis + Flyway`
+- 历史材料中如果仍出现 `local` / `local-h2` / `postgres` / `h2`，默认按归档背景或待清理残留理解，不视为当前正式运行入口
+- 搜索当前正式 provider 口径：
+  - `local-file-index`：当前主 provider
+  - `mysql-like`：显式 fallback provider
 
 ## 代码模式
 
@@ -185,7 +185,7 @@ make test-backend-app
 | `docs/e2e.md` | 前端 E2E 真实请求规范 |
 | `server/pom.xml` | 后端模块边界与 Java 编译配置 |
 | `server/skillhub-app/src/main/resources/application.yml` | 标准运行模式配置 |
-| `server/skillhub-app/src/main/resources/application-local-h2.yml` | 轻量本地模式配置 |
+| `server/skillhub-app/src/main/resources/application-local-mysql.yml` | 当前正式源码运行模式配置 |
 | `server/skillhub-app/src/main/resources/sql/README.md` | Flyway 收敛与 SQL 布局说明 |
 | `web/package.json` | 前端脚本与依赖 |
 | `web/src/app/router.tsx` | 前端路由总表 |
@@ -209,4 +209,4 @@ make test-backend-app
 - 本地开发按 `docs/dev-workflow.md` 使用 Java 17，并与 `server/pom.xml` 保持一致。
 - 不要在 `server/` 下直接运行 `./mvnw -pl skillhub-app clean test`；使用 `-am` 或 `make test-backend-app`，避免落到过期本地 Maven 产物。
 - 新库初始化只走 `server/skillhub-app/src/main/resources/sql/migration/V1__init_schema.sql`；旧的拆分迁移文件已删除，不再保留归档目录。
-- 当前仓库正在做文档治理和 Flyway 迁移收敛；改动相关文件时，先确认你修改的是“当前入口文档”还是“归档材料”。
+- 当前仓库已经完成主路径向 MySQL 收敛，但仍有少量 H2 残留待清；改动相关文件时，先确认你修改的是“当前入口文档”还是“归档材料”，并避免把历史 H2 材料重新写回当前主入口文档。

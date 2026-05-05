@@ -1,5 +1,12 @@
 # 移除 H2 并收敛到 MySQL 主运行时 - 产品需求文档 (PRD) v1.0
 
+> 状态检查（2026-05-05）：
+> 本 PRD 对应的“正式主路径收敛”目标已大体完成，但“彻底移除所有 H2 残留”尚未完成。
+> 当前应按以下口径理解：
+> - `local-h2` 已不再属于当前正式源码运行入口
+> - `h2-like` 已不再属于当前正式搜索主路径
+> - 但仓库中仍存在 H2 残留依赖、少量 H2 测试、局部 profile/bean 条件与历史 SQL/文档引用，尚不能宣称“全仓彻底去 H2”
+
 ## 1. 背景
 
 当前仓库已经明确将 `MySQL 8` 作为后续主流运行时方向，但代码、测试和文档中仍保留一条 `local-h2 + h2-like` 轻量路径。
@@ -20,6 +27,29 @@
 - 移除 `h2-like` 搜索 provider 及其运行时装配。
 - 将关键测试基线迁移到 `MySQL + Testcontainers`。
 - 收口文档，使仓库主入口、开发入口、运行时参考与测试口径保持一致。
+
+## 2A. 当前状态快照（2026-05-05）
+
+### 已完成部分
+
+- `application-local-h2.yml` 已不再作为当前源码运行入口存在。
+- 主 README 与当前 docs 入口已经把 `local-h2` / `h2-like` 归类为历史背景，而不是当前标准运行方案。
+- `h2-like` 的旧实现类已不再作为当前正式 provider 保留在源码中。
+- MySQL 主路径的覆盖率基线与后续补测计划已经围绕模块级 JaCoCo 重新建立。
+
+### 未完成残留
+
+- `LocalDevDataInitializer` 仍带有 `local-h2` profile 标记。
+- `server/skillhub-app/src/main/resources/sql/data-local-h2.sql` 仍然存在。
+- `server/skillhub-app/src/main/resources/sql/README.md` 仍在描述 `local-h2` 路径。
+- `skillhub-search` 中仍有 `havingValue = "h2"` 的 bean 装配残留。
+- Maven 仍保留 H2 依赖，且至少有一个 focused test 显式使用 H2。
+- `AGENTS.md` 与部分 coverage/inventory 文档仍残留 H2 时代描述。
+
+### 当前结论
+
+- 可以说“正式主路径已收敛到 MySQL”
+- 不能说“仓库已经彻底完成去 H2”
 
 ## 3. User Stories
 
@@ -133,6 +163,11 @@
 - `local-h2` 和 `h2-like` 不再属于当前标准运行时与主测试链路。
 - 关键 MySQL 持久化与集成测试通过率达到 100%。
 - 能重新生成可信的 MySQL 主路径覆盖率基线。
+
+补充说明（2026-05-05）：
+
+- 前两条指标目前只在“正式主路径”口径上基本达成
+- 若要宣称本 PRD 完整收尾，还需清掉代码、依赖、测试和项目指导中的 H2 残留
 
 ## 8. Open Questions
 
