@@ -117,3 +117,14 @@
   - 遇到的陷阱：JaCoCo 对 record 类型（如 SecurityScanRequest）的 coverage 统计仅 1 行，因为其 canonical constructor、equals、hashCode、toString 由编译器生成，不再计入额外行；只需一次实例化即可覆盖全部生产行。
   - 有用的上下文：枚举的 `fromValue` 方法通常包含遍历分支和 throw 分支，测试中需同时覆盖匹配值和非法值路径才能命中所有行。
 ---
+
+## 2026-05-05 09:15 - US-106
+- 补齐 compat 层与兼容 DTO 100% 行覆盖率：ClawHubCompatAppService、ClawHubCompatController、ClawHubRegistryFacade、CompatSkillLookupService 及 13 个相关 DTO。
+- 补全/新增测试文件：ClawHubCompatAppServiceTest（+1 case，覆盖 `determineNamespace` 的 `payload == null` 分支）、ClawHubCompatControllerTest（前序未提交修改 +105 行）、ClawHubRegistryFacadeTest（前序未提交修改 +306 行）、CompatSkillLookupServiceTest（前序未提交修改 +115 行）。
+- 模块级 JaCoCo 确认 4 服务类 + 13 DTO 类 LINE_MISSED=0；同步更新覆盖率清单，从 `docs/prds/java-unit-line-coverage-inventory.md` 中移除 16 个目标类条目，从 `server/coverage-baseline.md` 中移除 4 个目标类条目。
+- 质量检查：backend 574 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：compat 层的测试模式与 app service 测试高度一致——mock 依赖 + 直接实例化被测对象；DTO（record）的 JaCoCo 覆盖通常只需要通过公开方法间接实例化一次即可命中全部生产行。
+  - 遇到的陷阱：`publishSkill` 中 `determineNamespace(null)` 分支实际不可达，因为后续代码会调用 `extracted.payload().slug()` 导致 NPE；对于这类不可达的 null 分支，使用 `ReflectionTestUtils.invokeMethod` 直接调用 private 方法即可覆盖，无需强行走完整流程。
+  - 有用的上下文：前序迭代可能遗留大量未提交的测试文件，执行前应先 `git status` 确认 working tree 状态，避免遗漏已有工作成果。
+---

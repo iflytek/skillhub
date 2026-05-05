@@ -6,7 +6,7 @@ Generated: 2026-05-04
 |--------|-------|
 | Total Lines | 11945 |
 | Covered Lines | 9473 |
-| Missed Lines | 2472 |
+| Missed Lines | 2466 |
 | Line Coverage | 79.31% |
 
 ## Per-Module Line Coverage
@@ -159,7 +159,6 @@ Generated: 2026-05-04
 | RedissonConfig | com.iflytek.skillhub.config | 3 | 43 |
 | AccountMergeController | com.iflytek.skillhub.controller | 3 | 19 |
 | InMemorySlidingWindowRateLimiter | com.iflytek.skillhub.ratelimit | 3 | 15 |
-| ClawHubDeleteResponse | com.iflytek.skillhub.compat.dto | 3 | 0 |
 | LabelAdminAppService.new TransactionSynchronization() {...} | com.iflytek.skillhub.service | 3 | 0 |
 | SkillLabelAppService.new TransactionSynchronization() {...} | com.iflytek.skillhub.service | 3 | 0 |
 | ReviewSkillDetailAppService | com.iflytek.skillhub.service | 3 | 69 |
@@ -191,11 +190,6 @@ Generated: 2026-05-04
 | ConfirmPublishRequest | com.iflytek.skillhub.dto | 1 | 0 |
 | AdminProfileReviewController | com.iflytek.skillhub.controller.admin | 1 | 27 |
 | UserManagementController | com.iflytek.skillhub.controller.admin | 1 | 14 |
-| ClawHubSkillListResponse.SkillListItem | com.iflytek.skillhub.compat.dto | 1 | 0 |
-| ClawHubSkillListResponse | com.iflytek.skillhub.compat.dto | 1 | 0 |
-| ClawHubSkillListResponse.SkillListItem.LatestVersion | com.iflytek.skillhub.compat.dto | 1 | 0 |
-| ClawHubSkillResponse.VersionInfo | com.iflytek.skillhub.compat.dto | 1 | 0 |
-| ClawHubSkillResponse.OwnerInfo | com.iflytek.skillhub.compat.dto | 1 | 0 |
 | SkillSearchAppService | com.iflytek.skillhub.service | 1 | 86 |
 | LabelSearchSyncRequestedEvent | com.iflytek.skillhub.service | 1 | 0 |
 | NoOpProfileModerationService | com.iflytek.skillhub.service | 1 | 1 |
