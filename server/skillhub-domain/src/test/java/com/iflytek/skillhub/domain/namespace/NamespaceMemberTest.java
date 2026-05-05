@@ -53,6 +53,19 @@ class NamespaceMemberTest {
     }
 
     @Test
+    void gettersWork() {
+        NamespaceMember member = new NamespaceMember(1L, "user-1", NamespaceRole.ADMIN);
+        member.prePersist();
+
+        assertThat(member.getId()).isNull();
+        assertThat(member.getNamespaceId()).isEqualTo(1L);
+        assertThat(member.getUserId()).isEqualTo("user-1");
+        assertThat(member.getRole()).isEqualTo(NamespaceRole.ADMIN);
+        assertThat(member.getCreatedAt()).isNotNull();
+        assertThat(member.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
     void protectedConstructorExistsForJpa() {
         NamespaceMember member = new NamespaceMember();
         assertThat(member).isNotNull();
