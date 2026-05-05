@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -141,6 +142,155 @@ class ZipPackageExtractorTest {
                     assertThat(exception.messageCode()).isEqualTo("error.skill.publish.package.invalid");
                     assertThat(exception.messageArgs()).containsExactly("Package too large: max 5 bytes");
                 });
+    }
+
+    @Test
+    void extract_rejectsBlankEntryPath() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(defaultProperties());
+        MockMultipartFile file = zipFile(List.of(new ZipSpec("", "content")));
+
+        assertThatThrownBy(() -> extractor.extract(file))
+                .isInstanceOf(DomainBadRequestException.class)
+                .satisfies(error -> {
+                    DomainBadRequestException ex = (DomainBadRequestException) error;
+                    assertThat(ex.messageCode()).isEqualTo("error.skill.publish.package.invalid");
+                    assertThat(ex.messageArgs()).containsExactly("Package entry path is blank");
+                });
+    }
+
+    @Test
+    void extract_rejectsAbsolutePath() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(defaultProperties());
+        MockMultipartFile file = zipFile(Map.of("/etc/passwd", "secret"));
+
+        assertThatThrownBy(() -> extractor.extract(file))
+                .isInstanceOf(DomainBadRequestException.class)
+                .satisfies(error -> {
+                    DomainBadRequestException ex = (DomainBadRequestException) error;
+                    assertThat(ex.messageArgs()).containsExactly("Unsafe package path: /etc/passwd");
+                });
+    }
+
+    @Test
+    void extract_rejectsDoubleSlashPath() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(defaultProperties());
+        MockMultipartFile file = zipFile(Map.of("a//b.txt", "content"));
+
+        assertThatThrownBy(() -> extractor.extract(file))
+                .isInstanceOf(DomainBadRequestException.class)
+                .satisfies(error -> {
+                    DomainBadRequestException ex = (DomainBadRequestException) error;
+                    assertThat(ex.messageArgs()).containsExactly("Unsafe package path: a//b.txt");
+                });
+    }
+
+    @Test
+    void extract_rejectsDotDotPath() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(defaultProperties());
+        MockMultipartFile file = zipFile(Map.of("..", "content"));
+
+        assertThatThrownBy(() -> extractor.extract(file))
+                .isInstanceOf(DomainBadRequestException.class)
+                .satisfies(error -> {
+                    DomainBadRequestException ex = (DomainBadRequestException) error;
+                    assertThat(ex.messageArgs()).containsExactly("Unsafe package path: ..");
+                });
+    }
+
+    @Test
+    void extract_rejectsInvalidPath() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(defaultProperties());
+        MockMultipartFile file = zipFile(Map.of(" invalid", "content"));
+
+        assertThatThrownBy(() -> extractor.extract(file))
+                .isInstanceOf(DomainBadRequestException.class)
+                .satisfies(error -> {
+                    DomainBadRequestException ex = (DomainBadRequestException) error;
+                    assertThat((String) ex.messageArgs()[0]).startsWith("Invalid package path");
+                });
+    }
+
+    @Test
+    void extract_assignsCorrectContentTypes() throws Exception {
+        SkillPublishProperties properties = defaultProperties();
+        properties.setMaxFileCount(32);
+        ZipPackageExtractor extractor = new ZipPackageExtractor(properties);
+        Map<String, String> fileMap = new LinkedHashMap<>();
+        fileMap.put("a.py", "x");
+        fileMap.put("b.json", "x");
+        fileMap.put("c.yaml", "x");
+        fileMap.put("d.yml", "x");
+        fileMap.put("e.txt", "x");
+        fileMap.put("f.md", "x");
+        fileMap.put("g.html", "x");
+        fileMap.put("h.css", "x");
+        fileMap.put("i.csv", "x");
+        fileMap.put("j.xml", "x");
+        fileMap.put("k.js", "x");
+        fileMap.put("l.ts", "x");
+        fileMap.put("m.sh", "x");
+        fileMap.put("n.png", "x");
+        fileMap.put("o.jpg", "x");
+        fileMap.put("p.gif", "x");
+        fileMap.put("q.svg", "x");
+        fileMap.put("r.webp", "x");
+        fileMap.put("s.ico", "x");
+        fileMap.put("t.pdf", "x");
+        fileMap.put("u.toml", "x");
+        fileMap.put("v.bin", "x");
+        MockMultipartFile file = zipFile(fileMap);
+
+        List<PackageEntry> entries = extractor.extract(file);
+
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put("a.py", "text/x-python");
+        expected.put("b.json", "application/json");
+        expected.put("c.yaml", "application/x-yaml");
+        expected.put("d.yml", "application/x-yaml");
+        expected.put("e.txt", "text/plain");
+        expected.put("f.md", "text/markdown");
+        expected.put("g.html", "text/html");
+        expected.put("h.css", "text/css");
+        expected.put("i.csv", "text/csv");
+        expected.put("j.xml", "application/xml");
+        expected.put("k.js", "text/javascript");
+        expected.put("l.ts", "text/typescript");
+        expected.put("m.sh", "text/x-shellscript");
+        expected.put("n.png", "image/png");
+        expected.put("o.jpg", "image/jpeg");
+        expected.put("p.gif", "image/gif");
+        expected.put("q.svg", "image/svg+xml");
+        expected.put("r.webp", "image/webp");
+        expected.put("s.ico", "image/x-icon");
+        expected.put("t.pdf", "application/pdf");
+        expected.put("u.toml", "application/toml");
+        expected.put("v.bin", "application/octet-stream");
+
+        for (PackageEntry entry : entries) {
+            assertThat(entry.contentType())
+                    .as("path: %s", entry.path())
+                    .isEqualTo(expected.get(entry.path()));
+        }
+    }
+
+    @Test
+    void extract_skipsDirectoryEntries() throws Exception {
+        ZipPackageExtractor extractor = new ZipPackageExtractor(defaultProperties());
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            zip.putNextEntry(new ZipEntry("demo/"));
+            zip.closeEntry();
+            zip.putNextEntry(new ZipEntry("demo/readme.txt"));
+            zip.write("content".getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        MockMultipartFile file = new MockMultipartFile("file", "skill.zip", "application/zip", output.toByteArray());
+
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertThat(entries)
+                .extracting(PackageEntry::path)
+                .containsExactly("readme.txt");
     }
 
     private static SkillPublishProperties defaultProperties() {

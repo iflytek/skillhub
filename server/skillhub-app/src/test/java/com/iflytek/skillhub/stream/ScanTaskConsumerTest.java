@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 class ScanTaskConsumerTest {
@@ -286,6 +287,310 @@ class ScanTaskConsumerTest {
         }
     }
 
+    @Test
+    void parsePayload_returnsNull_whenVersionIdIsNull() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        ScanTaskConsumer.ScanTaskPayload payload = consumer.invokeParsePayload("msg-1", Map.of("taskId", "t1"));
+
+        assertThat(payload).isNull();
+    }
+
+    @Test
+    void parsePayload_returnsNull_whenVersionIdIsEmpty() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        ScanTaskConsumer.ScanTaskPayload payload = consumer.invokeParsePayload("msg-1", Map.of("versionId", ""));
+
+        assertThat(payload).isNull();
+    }
+
+    @Test
+    void parsePayload_returnsNull_whenVersionIdIsNotANumber() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        ScanTaskConsumer.ScanTaskPayload payload = consumer.invokeParsePayload("msg-1", Map.of("versionId", "abc"));
+
+        assertThat(payload).isNull();
+    }
+
+    @Test
+    void parsePayload_usesDefaultScannerType_whenNotProvided() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        ScanTaskConsumer.ScanTaskPayload payload = consumer.invokeParsePayload("msg-1", Map.of("versionId", "42"));
+
+        assertThat(payload.scannerType()).isEqualTo(ScannerType.SKILL_SCANNER);
+    }
+
+    @Test
+    void parsePayload_mapsNonBlankPathsAndRetryCount() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        ScanTaskConsumer.ScanTaskPayload payload = consumer.invokeParsePayload("msg-1", Map.of(
+                "taskId", "task-1",
+                "versionId", "42",
+                "skillPath", "/tmp/skill.zip",
+                "bundleKey", "packages/8/42/bundle.zip",
+                "retryCount", "2",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(payload.skillPath()).isEqualTo("/tmp/skill.zip");
+        assertThat(payload.bundleKey()).isEqualTo("packages/8/42/bundle.zip");
+        assertThat(payload.retryCount()).isEqualTo(2);
+    }
+
+    @Test
+    void parsePayload_convertsBlankPathsToNull() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        ScanTaskConsumer.ScanTaskPayload payload = consumer.invokeParsePayload("msg-1", Map.of(
+                "taskId", "task-1",
+                "versionId", "42",
+                "skillPath", "  ",
+                "bundleKey", " "
+        ));
+
+        assertThat(payload.skillPath()).isNull();
+        assertThat(payload.bundleKey()).isNull();
+    }
+
+    @Test
+    void markProcessing_doesNotThrow() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, "/tmp/skill", null, ScannerType.SKILL_SCANNER
+        );
+
+        consumer.invokeMarkProcessing(payload);
+    }
+
+    @Test
+    void sourceDescription_returnsBundleKey_whenPresent() {
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, null, "pkg/bundle.zip", ScannerType.SKILL_SCANNER
+        );
+
+        assertThat(payload.sourceDescription()).isEqualTo("bundleKey:pkg/bundle.zip");
+    }
+
+    @Test
+    void payloadIdentifier_formatsTaskDetails() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, "/tmp/skill.zip", null, ScannerType.SKILL_SCANNER
+        );
+
+        assertThat(consumer.invokePayloadIdentifier(payload))
+                .isEqualTo("taskId=task-1, versionId=42, scanner=SKILL_SCANNER");
+    }
+
+    @Test
+    void resolveWorkingSkillPath_throws_whenBothPathsAreNull() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, null, null, ScannerType.SKILL_SCANNER
+        );
+
+        assertThatThrownBy(() -> consumer.invokeResolveWorkingSkillPath(payload))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("missing skillPath and bundleKey");
+    }
+
+    @Test
+    void resolveWorkingSkillPath_throws_whenSkillPathIsBlank() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, "  ", null, ScannerType.SKILL_SCANNER
+        );
+
+        assertThatThrownBy(() -> consumer.invokeResolveWorkingSkillPath(payload))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("missing skillPath and bundleKey");
+    }
+
+    @Test
+    void cleanupTempPath_skipsNullAndBlankPaths() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        consumer.invokeCleanupTempPath(null);
+        consumer.invokeCleanupTempPath("  ");
+    }
+
+    @Test
+    void cleanupTempPath_skipsPathsOutsideTempDirectory() throws Exception {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        consumer.invokeCleanupTempPath("/etc/passwd");
+    }
+
+    @Test
+    void cleanupTempPath_deletesDirectoryRecursively() throws Exception {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempDir = Files.createTempDirectory(SCAN_TEMP_DIR, "cleanup-dir");
+        Files.writeString(tempDir.resolve("file.txt"), "content");
+
+        consumer.invokeCleanupTempPath(tempDir.toString());
+
+        assertThat(Files.exists(tempDir)).isFalse();
+    }
+
+    @Test
+    void cleanupTempPath_ignoresDeleteFailuresInsideWalk() throws Exception {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempDir = Files.createTempDirectory(SCAN_TEMP_DIR, "cleanup-protected");
+        Path nestedDir = Files.createDirectory(tempDir.resolve("nested"));
+        Path nestedFile = Files.writeString(nestedDir.resolve("file.txt"), "content");
+        nestedDir.toFile().setWritable(false, true);
+
+        try {
+            consumer.invokeCleanupTempPath(tempDir.toString());
+            assertThat(Files.exists(nestedFile)).isTrue();
+        } finally {
+            nestedDir.toFile().setWritable(true, true);
+            Files.deleteIfExists(nestedFile);
+            Files.deleteIfExists(nestedDir);
+            Files.deleteIfExists(tempDir);
+        }
+    }
+
+    @Test
+    void cleanupTempPath_deletesFile() throws Exception {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempFile = Files.createTempFile(SCAN_TEMP_DIR, "cleanup-file", ".txt");
+
+        consumer.invokeCleanupTempPath(tempFile.toString());
+
+        assertThat(Files.exists(tempFile)).isFalse();
+    }
+
+    @Test
+    void cleanupTempPath_handlesExceptionGracefully() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+
+        consumer.invokeCleanupTempPath(" invalid");
+    }
+
+    @Test
+    void cleanupRetryTempPath_doesNothing_whenBundleKeyIsNull() {
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, "/tmp/skill", null, ScannerType.SKILL_SCANNER
+        );
+
+        consumer.invokeCleanupRetryTempPath(payload);
+    }
+
+    @Test
+    void markFailed_doesNotUpdateVersion_whenStatusIsNotScanning() throws Exception {
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setField(version, "id", 42L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                repository, new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 42L, null, null, ScannerType.SKILL_SCANNER
+        );
+
+        consumer.invokeMarkFailed(payload, "scan failed");
+
+        assertThat(repository.savedVersion).isNull();
+    }
+
+    @Test
+    void markFailed_cleansUpEvenWhenVersionNotFound() throws Exception {
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempFile = Files.createTempFile(SCAN_TEMP_DIR, "mark-failed", ".zip");
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                new StubSecurityScanner(), new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(), new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService()
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-1", 999L, tempFile.toString(), null, ScannerType.SKILL_SCANNER
+        );
+
+        consumer.invokeMarkFailed(payload, "scan failed");
+
+        assertThat(Files.exists(tempFile)).isFalse();
+    }
+
     private static final class TestableScanTaskConsumer extends ScanTaskConsumer {
         private final RStream<String, String> stream;
 
@@ -327,6 +632,54 @@ class ScanTaskConsumerTest {
 
         private void invokeRetryMessage(ScanTaskPayload payload, int retryCount) {
             retryMessage(payload, retryCount);
+        }
+
+        private ScanTaskPayload invokeParsePayload(String messageId, Map<String, String> data) {
+            return parsePayload(messageId, data);
+        }
+
+        private void invokeMarkProcessing(ScanTaskPayload payload) {
+            markProcessing(payload);
+        }
+
+        private String invokePayloadIdentifier(ScanTaskPayload payload) {
+            return payloadIdentifier(payload);
+        }
+
+        private String invokeResolveWorkingSkillPath(ScanTaskPayload payload) {
+            try {
+                java.lang.reflect.Method m = ScanTaskConsumer.class.getDeclaredMethod("resolveWorkingSkillPath", ScanTaskPayload.class);
+                m.setAccessible(true);
+                return (String) m.invoke(this, payload);
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof RuntimeException runtimeException) {
+                    throw runtimeException;
+                }
+                throw new RuntimeException(cause);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private void invokeCleanupTempPath(String skillPath) {
+            try {
+                java.lang.reflect.Method m = ScanTaskConsumer.class.getDeclaredMethod("cleanupTempPath", String.class);
+                m.setAccessible(true);
+                m.invoke(this, skillPath);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private void invokeCleanupRetryTempPath(ScanTaskPayload payload) {
+            try {
+                java.lang.reflect.Method m = ScanTaskConsumer.class.getDeclaredMethod("cleanupRetryTempPath", ScanTaskPayload.class);
+                m.setAccessible(true);
+                m.invoke(this, payload);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

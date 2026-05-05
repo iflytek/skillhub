@@ -6,6 +6,8 @@
 - 仅列出 `line_missed > 0` 的类
 - 指标为 Java 生产代码的 JaCoCo line coverage
 - 按模块分组，便于后续拆批补测
+- `2026-05-05` 已同步后端多模块聚合覆盖率：执行 `cd server && mvn -pl skillhub-app -am test jacoco:report-aggregate` 后，aggregate line coverage 为 `96.20%`（`6371/6623`），报告路径为 `server/skillhub-app/target/site/jacoco-aggregate/index.html`
+- `2026-05-05` 已同步 `US-106G` 最终进度：15 个目标类已全部达到 `100%` line coverage，不再出现在本 inventory 中
 
 ## skillhub-app
 
@@ -28,20 +30,8 @@
 | `com.iflytek.skillhub.controller.portal.SkillRatingController` | 1 | 10 | 90.91% |
 | `com.iflytek.skillhub.controller.portal.SkillSearchController` | 2 | 20 | 90.91% |
 | `com.iflytek.skillhub.controller.portal.SkillStarController` | 1 | 10 | 90.91% |
-| `com.iflytek.skillhub.controller.support.MultipartPackageExtractor.PublishPayload.ForkOf` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.controller.support.MultipartPackageExtractor` | 13 | 32 | 71.11% |
-| `com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor` | 20 | 56 | 73.68% |
-| `com.iflytek.skillhub.controller.support.ZipPackageExtractor` | 72 | 3 | 4.00% |
-| `com.iflytek.skillhub.dto.ApiResponseFactory` | 1 | 8 | 88.89% |
-| `com.iflytek.skillhub.dto.CliWhoamiResponse` | 8 | 0 | 0.00% |
-| `com.iflytek.skillhub.dto.ConfirmPublishRequest` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.dto.MemberResponse` | 7 | 10 | 58.82% |
-| `com.iflytek.skillhub.dto.SkillCheckResponse` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.dto.SubmitReviewRequest` | 1 | 0 | 0.00% |
-| `com.iflytek.skillhub.dto.TagRequest` | 1 | 0 | 0.00% |
 | `com.iflytek.skillhub.filter.AuthContextFilter` | 3 | 50 | 94.34% |
 | `com.iflytek.skillhub.filter.RequestLoggingFilter` | 3 | 45 | 93.75% |
-| `com.iflytek.skillhub.listener.NotificationEventListener` | 39 | 94 | 70.68% |
 | `com.iflytek.skillhub.ratelimit.InMemorySlidingWindowRateLimiter` | 3 | 15 | 83.33% |
 | `com.iflytek.skillhub.ratelimit.RateLimitInterceptor` | 2 | 60 | 96.77% |
 | `com.iflytek.skillhub.repository.AdminUserSearchRepository` | 28 | 3 | 9.68% |
@@ -57,12 +47,9 @@
 | `com.iflytek.skillhub.service.LabelAdminAppService.new TransactionSynchronization() {...}` | 3 | 0 | 0.00% |
 | `com.iflytek.skillhub.service.LabelAdminAppService` | 5 | 72 | 93.51% |
 | `com.iflytek.skillhub.service.NamespaceMemberCandidateService` | 4 | 29 | 87.88% |
-| `com.iflytek.skillhub.service.NoOpProfileModerationService` | 1 | 1 | 50.00% |
 | `com.iflytek.skillhub.service.ReviewSkillDetailAppService` | 3 | 69 | 95.83% |
 | `com.iflytek.skillhub.service.SkillDeleteAppService` | 6 | 53 | 89.83% |
 | `com.iflytek.skillhub.service.SkillSearchAppService` | 5 | 82 | 94.25% |
-| `com.iflytek.skillhub.stream.AbstractStreamConsumer` | 60 | 63 | 51.22% |
-| `com.iflytek.skillhub.stream.ScanTaskConsumer` | 16 | 103 | 86.55% |
 
 ## skillhub-auth
 

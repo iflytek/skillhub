@@ -395,8 +395,8 @@
         "Tests pass"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "2026-05-05: 已按 JaCoCo 完成 US-106G 的 15/15 目标类补测，全部达到 100% line coverage：ZipPackageExtractor、SkillPackageArchiveExtractor、MultipartPackageExtractor、AbstractStreamConsumer、ScanTaskConsumer、NotificationEventListener、CliWhoamiResponse、MemberResponse、ApiResponseFactory、ConfirmPublishRequest、SkillCheckResponse、SubmitReviewRequest、TagRequest、LabelSearchSyncRequestedEvent、NoOpProfileModerationService。验证命令：mvn -pl skillhub-app -Dtest=ZipPackageExtractorTest,SkillPackageArchiveExtractorTest,MultipartPackageExtractorTest,AbstractStreamConsumerTest,ScanTaskConsumerTest,NotificationEventListenerTest,CliWhoamiResponseTest,MemberResponseTest,ApiResponseFactoryTest,ConfirmPublishRequestTest,SkillCheckResponseTest,SubmitReviewRequestTest,TagRequestTest,LabelSearchSyncRequestedEventTest,NoOpProfileModerationServiceTest test jacoco:report。另已执行 cd server && mvn -pl skillhub-app -am test jacoco:report-aggregate，当前后端多模块 aggregate line coverage 为 96.20%（6371/6623）。",
       "retryCount": 0,
       "blocked": false
     },

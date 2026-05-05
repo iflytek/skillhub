@@ -156,4 +156,140 @@ class NotificationEventListenerTest {
         verify(dispatcher).dispatch(eq("reporter-1"), eq(NotificationCategory.REPORT),
                 eq("REPORT_RESOLVED"), anyString(), anyString(), eq("SKILL"), eq(1L));
     }
+
+    @Test
+    void onReviewRejected_shouldDispatchToSubmitter() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onReviewRejected(new ReviewRejectedEvent(100L, 1L, 10L, "reviewer-1", "submitter-1", "bad code"));
+
+        verify(dispatcher).dispatch(eq("submitter-1"), eq(NotificationCategory.REVIEW),
+                eq("REVIEW_REJECTED"), anyString(), anyString(), eq("SKILL"), eq(1L));
+    }
+
+    @Test
+    void onPromotionApproved_shouldDispatchToSubmitter() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onPromotionApproved(new PromotionApprovedEvent(200L, 1L, "reviewer-1", "submitter-1"));
+
+        verify(dispatcher).dispatch(eq("submitter-1"), eq(NotificationCategory.PROMOTION),
+                eq("PROMOTION_APPROVED"), anyString(), anyString(), eq("SKILL"), eq(1L));
+    }
+
+    @Test
+    void onPromotionRejected_shouldDispatchToSubmitter() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onPromotionRejected(new PromotionRejectedEvent(200L, 1L, "reviewer-1", "submitter-1", "not ready"));
+
+        verify(dispatcher).dispatch(eq("submitter-1"), eq(NotificationCategory.PROMOTION),
+                eq("PROMOTION_REJECTED"), anyString(), anyString(), eq("SKILL"), eq(1L));
+    }
+
+    @Test
+    void onReportSubmitted_shouldDispatchToPlatformAdmins() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(recipientResolver.resolvePlatformSkillAdmins()).thenReturn(List.of("admin-1"));
+
+        listener.onReportSubmitted(new ReportSubmittedEvent(300L, 1L, "reporter-1"));
+
+        verify(dispatcher).dispatch(eq("admin-1"), eq(NotificationCategory.REPORT),
+                eq("REPORT_SUBMITTED"), anyString(), anyString(), eq("REPORT"), eq(300L));
+    }
+
+    @Test
+    void skillDisplayName_usesSlug_whenDisplayNameIsNull() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skill.getDisplayName()).thenReturn(null);
+        when(skill.getCreatedBy()).thenReturn("publisher-1");
+        when(skill.getSlug()).thenReturn("my-skill");
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onSkillPublished(new SkillPublishedEvent(1L, 10L, "publisher-1"));
+
+        verify(dispatcher).dispatch(anyString(), any(), any(), eq("Skill published: my-skill"), anyString(), any(), any());
+    }
+
+    @Test
+    void skillDisplayName_usesSlug_whenDisplayNameIsBlank() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skill.getDisplayName()).thenReturn("  ");
+        when(skill.getCreatedBy()).thenReturn("publisher-1");
+        when(skill.getSlug()).thenReturn("my-skill");
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onSkillPublished(new SkillPublishedEvent(1L, 10L, "publisher-1"));
+
+        verify(dispatcher).dispatch(anyString(), any(), any(), eq("Skill published: my-skill"), anyString(), any(), any());
+    }
+
+    @Test
+    void bodyWithSkill_omitsNamespace_whenNotFound() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(5L)).thenReturn(Optional.empty());
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onPromotionApproved(new PromotionApprovedEvent(200L, 1L, "reviewer-1", "submitter-1"));
+
+        verify(dispatcher).dispatch(anyString(), any(), any(), anyString(), anyString(), any(), any());
+    }
+
+    @Test
+    void versionLabel_addsVersion_whenPresent() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        com.iflytek.skillhub.domain.skill.SkillVersion version = mock(com.iflytek.skillhub.domain.skill.SkillVersion.class);
+        when(version.getVersion()).thenReturn("2.0.0");
+        when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onReviewApproved(new ReviewApprovedEvent(100L, 1L, 10L, "reviewer-1", "submitter-1"));
+
+        verify(skillVersionRepository).findById(10L);
+        verify(dispatcher).dispatch(anyString(), any(), any(), anyString(), anyString(), any(), any());
+    }
+
+    @Test
+    void versionLabel_skips_whenVersionIdIsNull() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onPromotionApproved(new PromotionApprovedEvent(200L, 1L, "reviewer-1", "submitter-1"));
+
+        verify(dispatcher).dispatch(anyString(), any(), any(), anyString(), anyString(), any(), any());
+        verify(skillVersionRepository, times(0)).findById(any());
+    }
+
+    @Test
+    void toJson_returnsEmptyObject_whenSerializationFails() throws Exception {
+        Skill skill = mockSkill(1L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("fail") {});
+
+        listener.onPromotionApproved(new PromotionApprovedEvent(200L, 1L, "reviewer-1", "submitter-1"));
+
+        verify(dispatcher).dispatch(anyString(), any(), any(), anyString(), eq("{}"), any(), any());
+    }
 }
