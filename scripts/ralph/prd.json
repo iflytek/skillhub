@@ -31,8 +31,8 @@
         "Update the tracked inventory and coverage notes to remove the completed classes from the remaining list"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Primary targets live in Wave 1 and Wave 2 of docs/prds/java-unit-line-coverage-remaining-v2-prd.md.",
+      "passes": true,
+      "notes": "Primary targets live in Wave 1 and Wave 2 of docs/prds/java-unit-line-coverage-remaining-v2-prd.md. All Wave 1 and Wave 2 classes confirmed LINE_MISSED=0. Also covered many Wave 3 classes as they were already in the working tree. Overall coverage improved from 95.41% (548 missed lines) to 96.47% (421 missed lines)."
       "retryCount": 0,
       "blocked": false
     },

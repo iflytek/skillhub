@@ -230,3 +230,16 @@
   - 遇到的陷阱：prd.json 在 `fb34192b` 已被重构，旧 story ID（如 US-106G）不再存在；处理遗留 commits 时只需关注当前 prd.json 中的 story 列表。
   - 有用的上下文：v2 计划将 96 个剩余类分为 14 个执行 story（US-R201 ~ US-R214），后续 coverage story 可直接按 Wave 顺序执行，无需重新规划。
 ---
+
+## 2026-05-06 02:05 - US-108A
+- 实现先清简单非核心覆盖率缺口到 100%：Wave 1 (US-R201) + Wave 2 (US-R202) 全部目标类 JaCoCo 确认 LINE_MISSED=0。
+- Wave 1 覆盖：MockUassLoginRequest/Response, DeviceCodeData, UassProperties, AccountMergeRequest, S3StorageProperties, StorageProperties, StorageAccessException, ModerationResult, UpdateProfileResult, SlugValidator, NoOpPrePublishValidator, SkillhubApplication。
+- Wave 2 覆盖：NotificationJpaRepository, SkillJpaRepository, SkillVersionJpaRepository, SecurityAuditJpaRepository, SkillReportJpaRepository, RuntimeStateEnvironmentPostProcessor, RedissonConfig, BaseApiController。
+- 工作树中已有未提交的 Wave 3 测试修改一并纳入：SkillRatingController, SkillStarController, SkillPublishController, SkillSearchController, AdminProfileReviewController, UserManagementController, AccountMergeController, TokenController, LocalAuthController, AuthContextFilter, RequestLoggingFilter, InMemorySlidingWindowRateLimiter, RateLimitInterceptor, AdminProfileReviewAppService, AdminSkillReportAppService, AdminUserAppService, GovernanceWorkbenchAppService, SkillSearchAppService, GovernanceNotificationService, AuditLogQueryService, LabelSlugValidator, ReviewPermissionChecker。
+- 重新生成 coverage-baseline.md 与 java-unit-line-coverage-inventory.md：整体覆盖率从 95.41% (548 missed) 提升到 96.47% (421 missed)，剩余未覆盖类从 96 个减少到 46 个。
+- 质量检查：backend 971 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：前序迭代遗留的未提交测试修改通常已覆盖大量目标类；执行覆盖率 story 前应先 `git status` 确认 working tree 状态，避免重复造轮子。
+  - 遇到的陷阱：`scripts/ralph/regenerate-coverage.py` 必须从项目根目录运行，否则会因相对路径找不到 `server/*/target/site/jacoco/jacoco.csv`。
+  - 有用的上下文：JaCoCo CSV 的列顺序是 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,...；LINE_MISSED 是第 8 列（1-based），awk 中应使用 `$8` 而非 `$9`。
+---
