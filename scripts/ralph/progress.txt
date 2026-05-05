@@ -128,3 +128,12 @@
   - 遇到的陷阱：`publishSkill` 中 `determineNamespace(null)` 分支实际不可达，因为后续代码会调用 `extracted.payload().slug()` 导致 NPE；对于这类不可达的 null 分支，使用 `ReflectionTestUtils.invokeMethod` 直接调用 private 方法即可覆盖，无需强行走完整流程。
   - 有用的上下文：前序迭代可能遗留大量未提交的测试文件，执行前应先 `git status` 确认 working tree 状态，避免遗漏已有工作成果。
 ---
+
+## 2026-05-05 11:20 - US-106
+- 修复 US-106 的 validator 反馈：从 `server/coverage-baseline.md` 中移除 6 个已达 100% 行覆盖的 compat DTO 条目（ClawHubDeleteResponse、ClawHubSkillListResponse、ClawHubSkillListResponse.SkillListItem、ClawHubSkillListResponse.SkillListItem.LatestVersion、ClawHubSkillResponse.VersionInfo、ClawHubSkillResponse.OwnerInfo），同步更新总体 Missed Lines（2472 → 2466）。
+- 更改的文件：`server/coverage-baseline.md`、`scripts/ralph/prd.json`
+- **未来迭代的学习：**
+  - 发现的 patterns：coverage-baseline.md 与 java-unit-line-coverage-inventory.md 是两个独立跟踪文件，但 baseline 中也会列出 DTO 类；完成 coverage story 后需同时检查两者是否都已移除 line_missed=0 的条目。
+  - 遇到的陷阱：前序迭代的 progress.txt 和 prd.json 修改可能未提交，本次修复时应一并纳入提交。
+  - 有用的上下文：JaCoCo 对 record/nested class 的覆盖统计口径可能与直觉不同，JaCoCo 已确认 LINE_MISSED=0 的条目可直接从 baseline 移除，无需重新跑测试验证。
+---
