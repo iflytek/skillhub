@@ -15,7 +15,7 @@
         "Link the remaining-class line detail inventory from the plan so each class can be worked directly from concrete line numbers"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Source-of-truth docs for this story: docs/prds/java-unit-line-coverage-remaining-v2-prd.md and docs/prds/java-unit-line-coverage-remaining-v2-line-detail.md. Current baseline from 2026-05-05 module-level JaCoCo: 96 classes and 548 missed lines remain.",
       "retryCount": 0,
       "blocked": false

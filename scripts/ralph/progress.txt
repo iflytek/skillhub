@@ -205,3 +205,15 @@
   - 遇到的陷阱：JaCoCo `jacoco.exec` 文件会在多次测试运行中累积数据，如果某次运行有失败或部分类未加载，后续 aggregate 报告会显示错误的未覆盖行；每次覆盖率验证前删除旧的 exec 文件是必要步骤。
   - 有用的上下文：`SkillFileMysqlPersistenceTest` 存在 flaky 行为（BeanDefinitionStoreException），在 aggregate 运行中偶发失败，但独立运行可通过；此类预存问题不影响覆盖率 story 验收。
 ---
+
+## 2026-05-05 22:20 - US-108
+- 收敛剩余覆盖率计划与口径：确认 `docs/prds/java-unit-line-coverage-remaining-v2-prd.md` 与 `docs/prds/java-unit-line-coverage-remaining-v2-line-detail.md` 已存在且满足全部验收标准。
+- 计划文档包含：基于模块级 JaCoCo 的事实来源声明、两段式执行策略（核心类直接 100% 完整功能测试，非核心类允许 90%→100% 尾差清理）、按难度分层的 8 波执行计划（Wave 1 ~ Wave 8）、核心类清单（16 个）、困难非核心类清单（6 个）、本地验证命令、精确到类与行号的剩余缺口明细。
+- 当前基线：96 个类、548 个 missed lines、整体 95.41% line coverage。
+- 无需新增测试代码或生产代码变更；仅验证并标记 story 完成。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：PRD 级别的规划 story 在已有文档满足验收标准时，可直接验证标记通过，无需重复创建文档。
+  - 遇到的陷阱：prd.json 在 `fb34192b` 已被重构，旧 story ID（如 US-106G）不再存在；处理遗留 commits 时只需关注当前 prd.json 中的 story 列表。
+  - 有用的上下文：v2 计划将 96 个剩余类分为 14 个执行 story（US-R201 ~ US-R214），后续 coverage story 可直接按 Wave 顺序执行，无需重新规划。
+---
