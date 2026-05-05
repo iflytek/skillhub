@@ -137,3 +137,14 @@
   - 遇到的陷阱：前序迭代的 progress.txt 和 prd.json 修改可能未提交，本次修复时应一并纳入提交。
   - 有用的上下文：JaCoCo 对 record/nested class 的覆盖统计口径可能与直觉不同，JaCoCo 已确认 LINE_MISSED=0 的条目可直接从 baseline 移除，无需重新跑测试验证。
 ---
+
+## 2026-05-05 13:25 - US-106B
+- 补齐 portal 技能与治理控制器覆盖率第一批：SkillController、SkillLifecycleController、SkillLabelController、SkillTagController、NamespaceController、ReviewController、PromotionController 共 7 个目标类达到 100% 行覆盖。
+- 补全/新增测试 case 共 86 个（覆盖下载重定向/流式回退/metrics 触发、文件内容读取、标签/标签 CRUD、命名空间列表/详情/解冻/恢复、评审/提升审批与列表、安全请求检测等分支）。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 7 个目标类条目。
+- 质量检查：backend 609 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：portal controller 测试中，MockMvc 的 `requestAttr("userId", ...)` 与 `with(user(...))` 需要同时提供，因为 controller 内部通过 request attribute 获取用户 ID，而 Spring Security 通过 authentication principal 获取角色。
+  - 遇到的陷阱：前序迭代可能遗留大量未提交的测试修改和清单更新；执行前应通过 `git diff --stat` 确认 working tree 状态，避免遗漏已完成的工作成果。
+  - 有用的上下文：`SkillController` 和 `ReviewController` 的 `isSecureRequest` 是 private 方法，可通过 `ReflectionTestUtils.invokeMethod` 直接调用覆盖；下载 endpoint 的 presigned URL 重定向逻辑需要同时测试 secure（X-Forwarded-Proto: https）和 insecure 请求路径。
+---
