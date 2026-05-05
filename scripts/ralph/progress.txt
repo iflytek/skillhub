@@ -104,3 +104,16 @@
   - 发现的 patterns：domain 实体类的测试模式非常一致——覆盖 protected 无参构造（JPA 实例化）、public 构造字段断言、@PrePersist/@PreUpdate 时间戳行为、全部 getter/setter。
   - 遇到的陷阱：测试中使用枚举值前需先查看源码确认实际可用的枚举常量，不能假设存在（如 NamespaceType 没有 PLATFORM、SkillVisibility 没有 HIDDEN）。
   - 有用的上下文：JaCoCo 对实体类的未覆盖行通常是 protected 构造、生命周期回调、以及未被其他测试间接调用的 getter；新增专门的实体测试类可快速收口。
+---
+
+## 2026-05-05 08:45 - US-105K
+- 补齐 domain 实体与轻量类型第二批 100% 行覆盖率：PasswordResetRequest、IdempotencyRecord、IdempotencyStatus、UserNotification、ScannerType、SecurityAudit、AuditLog、SecurityScanRequest、PromotionRequest、ReviewTask、DomainBadRequestException、DomainForbiddenException、DomainNotFoundException。
+- 新增 8 个测试文件：DomainBadRequestExceptionTest、DomainForbiddenExceptionTest、DomainNotFoundExceptionTest、ReviewTaskTest、PromotionRequestTest、SecurityScanRequestTest、ScannerTypeTest、UserNotificationTest。
+- 已有测试的 PasswordResetRequestTest、IdempotencyRecordTest、SecurityAuditTest、AuditLogTest 在先前迭代中已覆盖全部行，本次 JaCoCo 模块级报告确认 13 目标类 LINE_MISSED=0。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 13 个目标类条目（inventory 移除 13 条，baseline 移除 11 条；AuditLog 与 SecurityAudit 不在 baseline 中）。
+- 质量检查：backend 503 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：domain 实体类中字段带默认初始值（如 `private ReviewTaskStatus status = ReviewTaskStatus.PENDING`）时，通过 protected 无参构造实例化后字段值并非 null，测试断言需与源码一致。
+  - 遇到的陷阱：JaCoCo 对 record 类型（如 SecurityScanRequest）的 coverage 统计仅 1 行，因为其 canonical constructor、equals、hashCode、toString 由编译器生成，不再计入额外行；只需一次实例化即可覆盖全部生产行。
+  - 有用的上下文：枚举的 `fromValue` 方法通常包含遍历分支和 throw 分支，测试中需同时覆盖匹配值和非法值路径才能命中所有行。
+---
