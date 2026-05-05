@@ -70,6 +70,30 @@ class NotificationPreferenceControllerTest {
     }
 
     @Test
+    void getPreferences_shouldReturnCurrentPreferences() {
+        when(preferenceService.getPreferences("user-1"))
+                .thenReturn(List.of(
+                        new PreferenceView(NotificationCategory.REVIEW, NotificationChannel.IN_APP, true),
+                        new PreferenceView(NotificationCategory.PROMOTION, NotificationChannel.IN_APP, false)
+                ));
+
+        List<NotificationPreferenceResponse> response = controller.getPreferences("user-1").data();
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).category()).isEqualTo("REVIEW");
+        assertThat(response.get(0).enabled()).isTrue();
+        assertThat(response.get(1).category()).isEqualTo("PROMOTION");
+        assertThat(response.get(1).enabled()).isFalse();
+    }
+
+    @Test
+    void updatePreferences_shouldRejectNullPreferences() {
+        NotificationPreferenceUpdateRequest request = new NotificationPreferenceUpdateRequest(null);
+
+        assertThrows(DomainBadRequestException.class, () -> controller.updatePreferences("user-1", request));
+    }
+
+    @Test
     void updatePreferences_shouldDelegateValidPayload() {
         NotificationPreferenceUpdateRequest request = new NotificationPreferenceUpdateRequest(
                 List.of(new NotificationPreferenceUpdateRequest.PreferenceItem("REVIEW", "IN_APP", false))

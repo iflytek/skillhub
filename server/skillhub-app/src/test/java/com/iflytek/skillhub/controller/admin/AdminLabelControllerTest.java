@@ -129,6 +129,32 @@ class AdminLabelControllerTest {
     }
 
     @Test
+    void updateLabel_returnsUpdatedDefinition() throws Exception {
+        when(labelAdminAppService.update(org.mockito.ArgumentMatchers.eq("official"), any(AdminLabelUpdateRequest.class), eq("admin"), any()))
+                .thenReturn(labelResponse("official", "RECOMMENDED", true, 1));
+
+        mockMvc.perform(put("/api/v1/admin/labels/official")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "type":"RECOMMENDED",
+                                  "visibleInFilter":true,
+                                  "sortOrder":1,
+                                  "translations":[
+                                    {"locale":"en","displayName":"Official"}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("official"));
+
+        verify(labelAdminAppService).update(org.mockito.ArgumentMatchers.eq("official"), any(AdminLabelUpdateRequest.class), eq("admin"), any());
+    }
+
+    @Test
     void mutatingEndpoints_requireSuperAdminRole() throws Exception {
         mockMvc.perform(post("/api/v1/admin/labels")
                         .with(authentication(skillAdminAuth()))

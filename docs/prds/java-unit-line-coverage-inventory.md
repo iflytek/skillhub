@@ -29,15 +29,8 @@
 | `com.iflytek.skillhub.controller.LocalAuthController` | 4 | 38 | 90.48% |
 | `com.iflytek.skillhub.controller.TokenController` | 4 | 34 | 89.47% |
 | `com.iflytek.skillhub.controller.UserProfileController` | 12 | 70 | 85.37% |
-| `com.iflytek.skillhub.controller.admin.AdminLabelController` | 2 | 10 | 83.33% |
 | `com.iflytek.skillhub.controller.admin.AdminProfileReviewController` | 1 | 27 | 96.43% |
-| `com.iflytek.skillhub.controller.admin.AdminSkillController` | 5 | 15 | 75.00% |
-| `com.iflytek.skillhub.controller.admin.AdminSkillReportController` | 6 | 16 | 72.73% |
 | `com.iflytek.skillhub.controller.admin.UserManagementController` | 1 | 14 | 93.33% |
-| `com.iflytek.skillhub.controller.portal.MeController` | 2 | 8 | 80.00% |
-| `com.iflytek.skillhub.controller.portal.NotificationController` | 13 | 46 | 77.97% |
-| `com.iflytek.skillhub.controller.portal.NotificationPreferenceController` | 4 | 26 | 86.67% |
-| `com.iflytek.skillhub.controller.portal.SecurityAuditController` | 11 | 43 | 79.63% |
 | `com.iflytek.skillhub.controller.portal.SkillPublishController` | 2 | 20 | 90.91% |
 | `com.iflytek.skillhub.controller.portal.SkillRatingController` | 1 | 10 | 90.91% |
 | `com.iflytek.skillhub.controller.portal.SkillSearchController` | 2 | 20 | 90.91% |

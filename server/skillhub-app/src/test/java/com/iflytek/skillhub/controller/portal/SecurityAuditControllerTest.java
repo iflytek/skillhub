@@ -157,6 +157,288 @@ class SecurityAuditControllerTest {
                 .andExpect(jsonPath("$.data[0].scanId").value("scan-team-admin"));
     }
 
+    @Test
+    void getSecurityAudit_allowsSuperAdminWithoutNamespaceRole() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 10L);
+        audit.setScanId("scan-super");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "owner-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "super", "super", "super@example.com", "", "local", Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(authentication(auth)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].id").value(10L));
+    }
+
+    @Test
+    void getSecurityAudit_allowsNamespaceOwner() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 11L);
+        audit.setScanId("scan-owner");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "owner-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+        given(namespaceMemberRepository.findByUserId("owner-user"))
+                .willReturn(List.of(new NamespaceMember(5L, "owner-user", NamespaceRole.OWNER)));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("owner-user")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].id").value(11L));
+    }
+
+    @Test
+    void getSecurityAudit_filtersByScannerType() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 12L);
+        audit.setScanId("scan-filtered");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(java.util.Optional.of(audit));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .param("scannerType", "skill-scanner")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].id").value(12L));
+    }
+
+    @Test
+    void getSecurityAudit_returnsEmptyWhenScannerTypeNotFound() throws Exception {
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .param("scannerType", "skill-scanner")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    void getSecurityAudit_handlesNullFindingsJson() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 13L);
+        audit.setScanId("scan-null");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        audit.setFindings(null);
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].findings").isArray())
+                .andExpect(jsonPath("$.data[0].findings").isEmpty());
+    }
+
+    @Test
+    void getSecurityAudit_handlesInvalidFindingsJson() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 14L);
+        audit.setScanId("scan-invalid");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        audit.setFindings("not-json");
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].findings").isArray())
+                .andExpect(jsonPath("$.data[0].findings").isEmpty());
+    }
+
+    @Test
+    void getSecurityAudit_rejectsMissingVersion() throws Exception {
+        given(skillVersionRepository.findById(999L)).willReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/999/security-audit")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    void getSecurityAudit_rejectsMissingSkill() throws Exception {
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    void getSecurityAudit_returnsEmptyWhenScannerTypeBlank() throws Exception {
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .param("scannerType", "   ")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    void getSecurityAudit_allowsSkillAdmin() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 15L);
+        audit.setScanId("scan-skill-admin");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "owner-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "skill-admin", "skill-admin", "admin@example.com", "", "github", Set.of("SKILL_ADMIN")
+        );
+        var skillAdminAuth = new UsernamePasswordAuthenticationToken(
+                principal, null, List.of(new SimpleGrantedAuthority("ROLE_SKILL_ADMIN"))
+        );
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(authentication(skillAdminAuth)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].id").value(15L));
+    }
+
+    @Test
+    void getSecurityAudit_handlesBlankFindingsJson() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 16L);
+        audit.setScanId("scan-blank");
+        audit.setVerdict(SecurityVerdict.SAFE);
+        audit.setIsSafe(true);
+        audit.setMaxSeverity("LOW");
+        audit.setFindingsCount(0);
+        audit.setFindings("   ");
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].findings").isArray())
+                .andExpect(jsonPath("$.data[0].findings").isEmpty());
+    }
+
+    @Test
+    void canViewAudit_returnsTrueForSkillAdmin() {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "skill-admin", "skill-admin", "admin@example.com", "", "github", Set.of("SKILL_ADMIN")
+        );
+        boolean result = (boolean) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                new SecurityAuditController(
+                        securityAuditRepository,
+                        skillRepository,
+                        skillVersionRepository,
+                        new com.iflytek.skillhub.domain.skill.VisibilityChecker(),
+                        null,
+                        new com.fasterxml.jackson.databind.ObjectMapper()
+                ),
+                "canViewAudit",
+                skill(8L, "owner-1"),
+                principal,
+                Map.of()
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(result);
+    }
+
+    @Test
+    void canViewAudit_usesEmptyMapWhenUserNsRolesNull() {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "viewer", "viewer", "v@example.com", "", "github", Set.of()
+        );
+        boolean result = (boolean) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                new SecurityAuditController(
+                        securityAuditRepository,
+                        skillRepository,
+                        skillVersionRepository,
+                        new com.iflytek.skillhub.domain.skill.VisibilityChecker(),
+                        null,
+                        new com.fasterxml.jackson.databind.ObjectMapper()
+                ),
+                "canViewAudit",
+                skill(8L, "owner-1"),
+                principal,
+                null
+        );
+        org.junit.jupiter.api.Assertions.assertFalse(result);
+    }
+
+    @Test
+    void canViewAudit_usesEmptySetWhenPlatformRolesNull() {
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "viewer", "viewer", "v@example.com", "", "github", null
+        );
+        boolean result = (boolean) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                new SecurityAuditController(
+                        securityAuditRepository,
+                        skillRepository,
+                        skillVersionRepository,
+                        new com.iflytek.skillhub.domain.skill.VisibilityChecker(),
+                        null,
+                        new com.fasterxml.jackson.databind.ObjectMapper()
+                ),
+                "canViewAudit",
+                skill(8L, "owner-1"),
+                principal,
+                Map.of()
+        );
+        org.junit.jupiter.api.Assertions.assertFalse(result);
+    }
+
     private RequestPostProcessor auth(String userId) {
         PlatformPrincipal principal = new PlatformPrincipal(
                 userId,
@@ -185,6 +467,25 @@ class SecurityAuditControllerTest {
         setField(skill, "id", skillId);
         setField(skill, "status", SkillStatus.ACTIVE);
         return skill;
+    }
+
+    @Test
+    void canViewAudit_returnsFalseWhenPrincipalNull() {
+        boolean result = (boolean) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                new SecurityAuditController(
+                        securityAuditRepository,
+                        skillRepository,
+                        skillVersionRepository,
+                        new com.iflytek.skillhub.domain.skill.VisibilityChecker(),
+                        null,
+                        new com.fasterxml.jackson.databind.ObjectMapper()
+                ),
+                "canViewAudit",
+                skill(8L, "owner-1"),
+                null,
+                Map.of()
+        );
+        org.junit.jupiter.api.Assertions.assertFalse(result);
     }
 
     private void setField(Object target, String fieldName, Object value) {

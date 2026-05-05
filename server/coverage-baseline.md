@@ -5,9 +5,9 @@ Generated: 2026-05-04
 | Metric | Value |
 |--------|-------|
 | Total Lines | 11945 |
-| Covered Lines | 9473 |
-| Missed Lines | 2372 |
-| Line Coverage | 79.31% |
+| Covered Lines | 9637 |
+| Missed Lines | 2329 |
+| Line Coverage | 80.68% |
 
 ## Per-Module Line Coverage
 | Module | Total Lines | Covered | Missed | Coverage |
@@ -18,7 +18,7 @@ Generated: 2026-05-04
 | skillhub-search | 713 | 588 | 125 | 82.47% |
 | skillhub-notification | 207 | 190 | 17 | 91.79% |
 | skillhub-storage | 213 | 135 | 78 | 63.38% |
-| skillhub-app | 5109 | 4111 | 998 | 80.47% |
+| skillhub-app | 5109 | 4275 | 955 | 83.67% |
 
 ## Uncovered Classes Inventory (by module, sorted by missed lines desc)
 ### skillhub-domain
@@ -116,13 +116,11 @@ Generated: 2026-05-04
 | GovernanceWorkflowAppService | com.iflytek.skillhub.service | 15 | 24 |
 | MultipartPackageExtractor | com.iflytek.skillhub.controller.support | 13 | 32 |
 | MultipartPackageExtractor | com.iflytek.skillhub.controller.support | 13 | 32 |
-| NotificationController | com.iflytek.skillhub.controller.portal | 13 | 46 |
 | JpaGovernanceQueryRepository | com.iflytek.skillhub.repository | 12 | 150 |
 | DeviceAuthWebController | com.iflytek.skillhub.controller | 12 | 0 |
 | UserProfileController | com.iflytek.skillhub.controller | 12 | 71 |
 | PublicLabelAppService | com.iflytek.skillhub.service | 12 | 4 |
 | IdempotencyInterceptor | com.iflytek.skillhub.filter | 12 | 50 |
-| SecurityAuditController | com.iflytek.skillhub.controller.portal | 11 | 43 |
 | NamespacePortalCommandAppService | com.iflytek.skillhub.service | 9 | 70 |
 | MySkillAppService | com.iflytek.skillhub.service | 9 | 53 |
 | CliWhoamiResponse | com.iflytek.skillhub.dto | 8 | 0 |
@@ -135,20 +133,17 @@ Generated: 2026-05-04
 | MemberResponse | com.iflytek.skillhub.dto | 7 | 10 |
 | NamespacePortalQueryAppService | com.iflytek.skillhub.service | 7 | 43 |
 | SkillScannerProperties.Analyzers | com.iflytek.skillhub.config | 6 | 31 |
-| AdminSkillReportController | com.iflytek.skillhub.controller.admin | 6 | 16 |
 | LabelSearchSyncService | com.iflytek.skillhub.service | 6 | 15 |
 | SkillDeleteAppService | com.iflytek.skillhub.service | 6 | 53 |
 | SkillScannerProperties | com.iflytek.skillhub.config | 5 | 36 |
 | DeviceAuthController | com.iflytek.skillhub.controller | 5 | 0 |
 | LocalFileIndexStartupSynchronizer | com.iflytek.skillhub.bootstrap | 5 | 24 |
 | SkillHubMetrics | com.iflytek.skillhub.metrics | 5 | 19 |
-| AdminSkillController | com.iflytek.skillhub.controller.admin | 5 | 15 |
 | LabelAdminAppService | com.iflytek.skillhub.service | 5 | 72 |
 | TokenController | com.iflytek.skillhub.controller | 4 | 34 |
 | TokenController | com.iflytek.skillhub.controller | 4 | 34 |
 | LocalAuthController | com.iflytek.skillhub.controller | 4 | 38 |
 | NamespaceMemberCandidateService | com.iflytek.skillhub.service | 4 | 29 |
-| NotificationPreferenceController | com.iflytek.skillhub.controller.portal | 4 | 26 |
 | JpaMySkillQueryRepository | com.iflytek.skillhub.repository | 3 | 51 |
 | SkillScannerProperties.Policy | com.iflytek.skillhub.config | 3 | 10 |
 | RedisStreamConfig | com.iflytek.skillhub.config | 3 | 0 |
@@ -168,9 +163,7 @@ Generated: 2026-05-04
 | SkillhubApplication | com.iflytek.skillhub | 2 | 1 |
 | SensitiveLogSanitizer | com.iflytek.skillhub.security | 2 | 16 |
 | RateLimitInterceptor | com.iflytek.skillhub.ratelimit | 2 | 60 |
-| AdminLabelController | com.iflytek.skillhub.controller.admin | 2 | 10 |
 | AdminUserAppService | com.iflytek.skillhub.service | 2 | 67 |
-| MeController | com.iflytek.skillhub.controller.portal | 2 | 8 |
 | SkillPublishController | com.iflytek.skillhub.controller.portal | 2 | 20 |
 | SkillSearchController | com.iflytek.skillhub.controller.portal | 2 | 22 |
 | ProfileModerationProperties | com.iflytek.skillhub.config | 1 | 1 |

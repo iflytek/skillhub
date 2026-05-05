@@ -114,4 +114,59 @@ class AdminSkillControllerTest {
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.code").value(403));
     }
+
+    @Test
+    void unhideSkill_returnsUpdatedResponse() throws Exception {
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        given(skillGovernanceService.unhideSkill(org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq("admin"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+            .willReturn(skill);
+
+        PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("SUPER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/admin/skills/10/unhide")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.skillId").value(10))
+            .andExpect(jsonPath("$.data.action").value("UNHIDE"));
+    }
+
+    @Test
+    void hideSkill_withNullRequestBody_returnsUpdatedResponse() throws Exception {
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        given(skillGovernanceService.hideSkill(org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.eq("admin"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.isNull()))
+            .willReturn(skill);
+
+        PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("SUPER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/admin/skills/10/hide")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.skillId").value(10))
+            .andExpect(jsonPath("$.data.action").value("HIDE"));
+    }
+
+    @Test
+    void yankVersion_withNullRequestBody_returnsUpdatedResponse() throws Exception {
+        SkillVersion version = new SkillVersion(10L, "1.0.0", "owner");
+        version.setStatus(SkillVersionStatus.YANKED);
+        given(skillGovernanceService.yankVersion(org.mockito.ArgumentMatchers.eq(33L), org.mockito.ArgumentMatchers.eq("admin"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.isNull()))
+            .willReturn(version);
+
+        PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("SKILL_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_SKILL_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/admin/skills/versions/33/yank")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.versionId").value(33))
+            .andExpect(jsonPath("$.data.action").value("YANK"));
+    }
 }

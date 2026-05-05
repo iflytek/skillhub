@@ -143,6 +143,282 @@ class NotificationControllerTest {
         });
     }
 
+    @Test
+    void unreadCount_shouldDelegateToService() {
+        when(notificationService.getUnreadCount("user-1")).thenReturn(5L);
+
+        var response = controller.unreadCount("user-1");
+
+        assertThat(response.data().get("count")).isEqualTo(5L);
+    }
+
+    @Test
+    void markRead_shouldDelegateToService() {
+        var response = controller.markRead(10L, "user-1");
+
+        assertThat(response.code()).isEqualTo(0);
+        verify(notificationService).markRead(10L, "user-1");
+    }
+
+    @Test
+    void markAllRead_shouldDelegateToService() {
+        when(notificationService.markAllRead("user-1")).thenReturn(3);
+
+        var response = controller.markAllRead("user-1");
+
+        assertThat(response.data().get("updated")).isEqualTo(3);
+    }
+
+    @Test
+    void sse_shouldDelegateToManager() {
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter =
+                new org.springframework.web.servlet.mvc.method.annotation.SseEmitter();
+        when(sseEmitterManager.register("user-1")).thenReturn(emitter);
+
+        var result = controller.sse("user-1");
+
+        assertThat(result).isSameAs(emitter);
+    }
+
+    @Test
+    void list_shouldThrowForInvalidCategory() {
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class,
+                () -> controller.list("user-1", "INVALID", 0, 20)
+        );
+    }
+
+    @Test
+    void list_shouldReturnDefaultRouteForUnknownEventType() {
+        Notification notification = notification(
+                15L,
+                NotificationCategory.REVIEW,
+                "UNKNOWN_EVENT",
+                "{}",
+                "OTHER",
+                55L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("OTHER");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/notifications");
+        });
+    }
+
+    @Test
+    void list_shouldHandleNullBodyJsonAndTimestamps() {
+        Notification notification = new Notification(
+                "user-1",
+                NotificationCategory.PUBLISH,
+                "SKILL_PUBLISHED",
+                "Title",
+                null,
+                "SKILL",
+                77L,
+                null
+        );
+        ReflectionTestUtils.setField(notification, "id", 16L);
+        ReflectionTestUtils.setField(notification, "readAt", null);
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("SKILL");
+            assertThat(item.createdAt()).isNull();
+            assertThat(item.readAt()).isNull();
+        });
+    }
+
+    @Test
+    void list_shouldExposeSkillRouteWhenNamespaceAndSlugPresentWithPublishCategory() {
+        Notification notification = notification(
+                17L,
+                NotificationCategory.PUBLISH,
+                "SKILL_PUBLISHED",
+                "{\"namespace\":\"demo\",\"slug\":\"skill-b\"}",
+                "SKILL",
+                88L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.eq(NotificationCategory.PUBLISH), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", "PUBLISH", 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("SKILL");
+            assertThat(item.targetRoute()).isEqualTo("/space/demo/skill-b");
+        });
+    }
+
+    @Test
+    void list_shouldHandleInvalidBodyJsonGracefully() {
+        Notification notification = notification(
+                18L,
+                NotificationCategory.REVIEW,
+                "REVIEW_SUBMITTED",
+                "not-valid-json",
+                "REVIEW",
+                99L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("REVIEW");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/reviews/99");
+        });
+    }
+
+    @Test
+    void list_shouldHandleBlankCategory() {
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of()));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", "   ", 0, 20).data();
+
+        assertThat(page.items()).isEmpty();
+    }
+
+    @Test
+    void list_shouldHandleBlankBodyJson() {
+        Notification notification = new Notification(
+                "user-1",
+                NotificationCategory.PUBLISH,
+                "SKILL_PUBLISHED",
+                "Title",
+                "   ",
+                "SKILL",
+                77L,
+                Instant.parse("2026-03-20T00:00:00Z")
+        );
+        ReflectionTestUtils.setField(notification, "id", 19L);
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("SKILL");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/notifications");
+        });
+    }
+
+    @Test
+    void list_shouldReturnDefaultRouteWhenReviewSubmittedWithNullEntityId() {
+        Notification notification = notification(
+                20L,
+                NotificationCategory.REVIEW,
+                "REVIEW_SUBMITTED",
+                "{\"namespace\":\"demo\",\"slug\":\"skill-a\"}",
+                "REVIEW",
+                null
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("REVIEW");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/notifications");
+        });
+    }
+
+    @Test
+    void list_shouldReturnDefaultRouteWhenNamespaceMissing() {
+        Notification notification = notification(
+                21L,
+                NotificationCategory.PUBLISH,
+                "SKILL_PUBLISHED",
+                "{\"namespace\":\"demo\"}",
+                "SKILL",
+                88L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("SKILL");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/notifications");
+        });
+    }
+
+    @Test
+    void list_shouldReturnDefaultRouteWhenSlugMissing() {
+        Notification notification = notification(
+                22L,
+                NotificationCategory.PUBLISH,
+                "SKILL_PUBLISHED",
+                "{\"slug\":\"skill-b\"}",
+                "SKILL",
+                88L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("SKILL");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/notifications");
+        });
+    }
+
+    @Test
+    void list_shouldReturnDefaultRouteWhenNeitherSkillNorPublish() {
+        Notification notification = notification(
+                23L,
+                NotificationCategory.REVIEW,
+                "SOME_EVENT",
+                "{\"namespace\":\"demo\",\"slug\":\"skill-c\"}",
+                "OTHER",
+                88L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("OTHER");
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/notifications");
+        });
+    }
+
+    @Test
+    void list_shouldHandleNullReadAt() {
+        Notification notification = new Notification(
+                "user-1",
+                NotificationCategory.PUBLISH,
+                "SKILL_PUBLISHED",
+                "Title",
+                null,
+                "SKILL",
+                77L,
+                Instant.parse("2026-03-20T00:00:00Z")
+        );
+        ReflectionTestUtils.setField(notification, "id", 24L);
+        ReflectionTestUtils.setField(notification, "readAt", null);
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("user-1", null, 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.readAt()).isNull();
+        });
+    }
+
     private Notification notification(Long id,
                                       NotificationCategory category,
                                       String eventType,

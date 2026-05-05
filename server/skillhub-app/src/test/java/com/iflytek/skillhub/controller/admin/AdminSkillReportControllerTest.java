@@ -140,6 +140,96 @@ class AdminSkillReportControllerTest {
                 .andExpect(jsonPath("$.code").value(403));
     }
 
+    @Test
+    void dismissReport_returnsUpdatedEnvelope() throws Exception {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "Spam", "details");
+        ReflectionTestUtils.setField(report, "id", 99L);
+        report.setStatus(com.iflytek.skillhub.domain.report.SkillReportStatus.DISMISSED);
+        when(skillReportService.dismissReport(
+                org.mockito.ArgumentMatchers.eq(99L),
+                org.mockito.ArgumentMatchers.eq("super-admin"),
+                org.mockito.ArgumentMatchers.eq("not a problem"),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(report);
+
+        mockMvc.perform(post("/api/v1/admin/skill-reports/99/dismiss")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"not a problem\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reportId").value(99))
+                .andExpect(jsonPath("$.data.status").value("DISMISSED"));
+    }
+
+    @Test
+    void resolveReport_withNullRequestBody_defaultsToResolveOnly() throws Exception {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "Spam", "details");
+        ReflectionTestUtils.setField(report, "id", 99L);
+        report.setStatus(com.iflytek.skillhub.domain.report.SkillReportStatus.RESOLVED);
+        when(skillReportService.resolveReport(
+                org.mockito.ArgumentMatchers.eq(99L),
+                org.mockito.ArgumentMatchers.eq("super-admin"),
+                org.mockito.ArgumentMatchers.eq(SkillReportDisposition.RESOLVE_ONLY),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(report);
+
+        mockMvc.perform(post("/api/v1/admin/skill-reports/99/resolve")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reportId").value(99))
+                .andExpect(jsonPath("$.data.status").value("RESOLVED"));
+    }
+
+    @Test
+    void resolveReport_withNullDisposition_defaultsToResolveOnly() throws Exception {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "Spam", "details");
+        ReflectionTestUtils.setField(report, "id", 99L);
+        report.setStatus(com.iflytek.skillhub.domain.report.SkillReportStatus.RESOLVED);
+        when(skillReportService.resolveReport(
+                org.mockito.ArgumentMatchers.eq(99L),
+                org.mockito.ArgumentMatchers.eq("super-admin"),
+                org.mockito.ArgumentMatchers.eq(SkillReportDisposition.RESOLVE_ONLY),
+                org.mockito.ArgumentMatchers.eq("handled"),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(report);
+
+        mockMvc.perform(post("/api/v1/admin/skill-reports/99/resolve")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"handled\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reportId").value(99))
+                .andExpect(jsonPath("$.data.status").value("RESOLVED"));
+    }
+
+    @Test
+    void dismissReport_withNullRequestBody_defaultsCommentToNull() throws Exception {
+        SkillReport report = new SkillReport(10L, 1L, "user-1", "Spam", "details");
+        ReflectionTestUtils.setField(report, "id", 99L);
+        report.setStatus(com.iflytek.skillhub.domain.report.SkillReportStatus.DISMISSED);
+        when(skillReportService.dismissReport(
+                org.mockito.ArgumentMatchers.eq(99L),
+                org.mockito.ArgumentMatchers.eq("super-admin"),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(report);
+
+        mockMvc.perform(post("/api/v1/admin/skill-reports/99/dismiss")
+                        .with(authentication(superAdminAuth()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reportId").value(99))
+                .andExpect(jsonPath("$.data.status").value("DISMISSED"));
+    }
+
     private UsernamePasswordAuthenticationToken adminAuth() {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "admin", "admin", "admin@example.com", "", "github", Set.of("SKILL_ADMIN")
