@@ -159,3 +159,15 @@
   - 遇到的陷阱：NotificationController 存在分支未覆盖但行已 100% 覆盖的情况（JaCoCo LINE_MISSED=0 但 BRANCH_MISSED>0）；验收标准以行覆盖为准时，这种情况可视为达标。
   - 有用的上下文：MockMvc 测试中 `requestAttr("userNsRoles", ...)` 与 Spring Security `with(authentication(...))` 需要同时提供，因为 controller 内部通过 request attribute 获取用户 ID 和角色信息。
 ---
+
+## 2026-05-05 16:45 - US-106D
+- 补齐 app 服务覆盖率第一批：ReviewPortalAppService、SkillLifecycleAppService、PromotionPortalAppService、AdminAuditLogAppService、GovernanceWorkflowAppService 共 5 个目标类 JaCoCo 确认 LINE_MISSED=0。
+- 补全/新增测试文件：AdminAuditLogAppServiceTest（+167 行，覆盖动态 SQL 过滤、rowMapper、renderDetails/toInstant/toResourceId 私有工具方法）、ReviewPortalAppServiceTest（7 个 case，覆盖 withdrawReview、listReviews 权限/空结果/平台范围、listPendingReviews、getReviewDetail）、GovernanceWorkflowAppServiceTest（新增，覆盖 freezeNamespace 委托路径）。
+- 现有 controller 测试（US-106B/US-106C）与集成测试（PromotionApprovalFlowIntegrationTest 等）已间接覆盖 SkillLifecycleAppService 与 PromotionPortalAppService 的全部行，无需重复造轮子。
+- 同步更新覆盖率清单：从 `docs/prds/java-unit-line-coverage-inventory.md` 和 `server/coverage-baseline.md` 中移除 5 个目标类条目，更新总体 Missed Lines（2329 → 2212）与 skillhub-app 模块覆盖率。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：app service 测试有两种覆盖路径——直接 unit test（mock 依赖 + 实例化被测对象）与间接覆盖（controller / 集成测试走完整 Spring 上下文）。验收时应以 JaCoCo LINE_MISSED=0 为准，不纠结于是否有独立测试类。
+  - 遇到的陷阱：前序迭代遗留大量未提交的测试文件与清单修改，执行前应先 `git status` 确认 working tree 状态，避免遗漏或重复工作。
+  - 有用的上下文：`GovernanceWorkflowAppService` 是纯委托 facade，29 个方法几乎全部是 1-3 行转发；覆盖策略应优先验证 controller 端点是否走通，而非为每个转发方法写独立 mock 测试。
+---
