@@ -54,6 +54,19 @@ class ProfileModerationPropertiesBindingTest {
         assertFalse(properties.humanReview());
     }
 
+    @Test
+    void isAnyModerationEnabled_returnsFalseWhenBothDisabled() throws IOException {
+        ProfileModerationProperties properties = bindProperties(
+                List.of("application.yml"),
+                Map.of(
+                        "SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED", "false",
+                        "SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED", "false"
+                )
+        );
+
+        assertFalse(properties.isAnyModerationEnabled());
+    }
+
     private ProfileModerationProperties bindProperties(List<String> resourceNames,
                                                        Map<String, Object> envVars) throws IOException {
         ConfigurableEnvironment environment = new StandardEnvironment();
