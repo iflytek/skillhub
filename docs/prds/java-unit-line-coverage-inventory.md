@@ -14,7 +14,6 @@
 
 以下类虽被跟踪，但因属于 mock / dev-only / platform-specific，明确排除在覆盖率门禁之外：
 
-- `com.iflytek.skillhub.auth.mock.MockAuthFilter`
 - `com.iflytek.skillhub.bootstrap.LocalDevDataInitializer`
 - `com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer`
 - `com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer.IndexInspection`

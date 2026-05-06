@@ -12,7 +12,6 @@ Generated: 2026-05-06
 
 The following classes are tracked but explicitly excluded from the production coverage gate because they are mock, dev-only, or platform-specific:
 
-- `com.iflytek.skillhub.auth.mock.MockAuthFilter`
 - `com.iflytek.skillhub.bootstrap.LocalDevDataInitializer`
 - `com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer`
 - `com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer.IndexInspection`

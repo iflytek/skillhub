@@ -31,7 +31,6 @@ EXCLUDED_FROM_GATE = {
     "com.iflytek.skillhub.bootstrap.LocalDevDataInitializer",
     "com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer",
     "com.iflytek.skillhub.bootstrap.LocalFileIndexStartupSynchronizer.IndexInspection",
-    "com.iflytek.skillhub.auth.mock.MockAuthFilter",
 }
 
 

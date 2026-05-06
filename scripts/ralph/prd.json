@@ -239,7 +239,7 @@
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Tail-cleanup story only; this runs after US-108D1 and US-108D2.",
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
