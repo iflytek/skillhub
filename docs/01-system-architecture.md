@@ -134,7 +134,7 @@ skillhub/
 
 部署模型收敛为两条路径：
 
-- 开发路径：`scripts/dev/local-mysql-local-index-memory-up.sh` 或等价显式命令。前后端在宿主机运行，`docker-compose.yml` 负责依赖服务。
+- 开发路径：`scripts/dev/dev-up.sh` 或等价显式命令。前后端在宿主机运行，`docker-compose.yml` 负责依赖服务。
 - 交付路径：GitHub Actions 构建并发布 `server` / `web` 镜像；用户通过 `compose.release.yml` 在本地一键拉起前后端容器和基础服务。
 - 发布镜像为多架构 manifest，至少覆盖 `linux/amd64` 与 `linux/arm64`。
 
@@ -143,10 +143,10 @@ skillhub/
 - `http://localhost/api/*` → Web 容器反向代理到 Spring Boot
 - `http://localhost:8080/actuator/health` → 后端健康检查
 
-单机运行时默认使用 `docker` profile：
-- `docker` 负责容器运行时初始化，例如首个管理员账户
+单机运行时默认使用 `prod` profile：
+- `prod` 负责生产运行时配置装配
 - 数据库、Redis、对象存储、站点公网地址都通过环境变量注入
-- 生产环境不启用 `local` profile，因此不会暴露 mock 登录旁路
+- 生产环境不启用 `dev` profile，因此不会暴露 mock 登录旁路
 
 ## 9. 分布式环境要求
 

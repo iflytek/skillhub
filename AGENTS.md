@@ -100,7 +100,10 @@ skillhub/
 
 ### 运行模式
 
-- `local-mysql`：当前正式源码运行模式，使用 `MySQL 8 + Redis + Flyway`
+- `dev`：开发环境，使用 `MySQL 8 + memory + mysql-like`
+- `test`：联调/测试环境，使用 `MySQL 8 + Redis + mysql-like`
+- `prod`：生产环境，使用 `MySQL 8 + Redis + local-file-index`
+- `qa`：仅测试类使用的 profile，位于 `src/test/resources`，使用 `H2 + memory + local-file-index`
 - 搜索当前正式 provider 口径：
   - `local-file-index`：当前主 provider
   - `mysql-like`：显式 fallback provider
@@ -183,7 +186,10 @@ make test-backend-app
 | `docs/e2e.md` | 前端 E2E 真实请求规范 |
 | `server/pom.xml` | 后端模块边界与 Java 编译配置 |
 | `server/skillhub-app/src/main/resources/application.yml` | 标准运行模式配置 |
-| `server/skillhub-app/src/main/resources/application-local-mysql.yml` | 当前正式源码运行模式配置 |
+| `server/skillhub-app/src/main/resources/application-dev.yml` | 开发环境配置 |
+| `server/skillhub-app/src/main/resources/application-test.yml` | 联调/测试环境配置 |
+| `server/skillhub-app/src/main/resources/application-prod.yml` | 生产环境配置 |
+| `server/skillhub-app/src/test/resources/application-qa.yml` | 自动化测试 profile 配置 |
 | `server/skillhub-app/src/main/resources/sql/README.md` | Flyway 收敛与 SQL 布局说明 |
 | `web/package.json` | 前端脚本与依赖 |
 | `web/src/app/router.tsx` | 前端路由总表 |
@@ -207,4 +213,4 @@ make test-backend-app
 - 本地开发按 `docs/dev-workflow.md` 使用 Java 17，并与 `server/pom.xml` 保持一致。
 - 不要在 `server/` 下直接运行 `./mvnw -pl skillhub-app clean test`；使用 `-am` 或 `make test-backend-app`，避免落到过期本地 Maven 产物。
 - 新库初始化只走 `server/skillhub-app/src/main/resources/sql/migration-mysql/V1__init_local_mysql_schema.sql`。
-- 当前仓库的正式源码运行路径已经收敛到 `MySQL 8 + Redis + local-file-index`；改动运行时文档或配置时，不要重新引入旧数据库路线。
+- 当前仓库的 profile 约定已经收敛到 `dev / test / prod / qa`；改动运行时文档或配置时，不要重新引入 `local` / `local-mysql` 这类旧 profile 路线。

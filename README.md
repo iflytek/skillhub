@@ -81,30 +81,28 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 - Web UI: http://localhost:3000
 - 后端 API: http://localhost:8080
-- Mock UASS: http://localhost:3001/mock-uass
 
 ### 默认账户
 
-当前唯一正式源码启动入口：
+当前推荐源码启动入口：
 
 ```bash
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 ```
 
 当前默认源码组合：
 
-- profile: `local-mysql`
+- profile: `dev`
 - 数据库：`MySQL 8`
-- 搜索：`local-file-index`
+- 搜索：`mysql-like`
 - 运行时状态：`memory`
-- 本地 UASS mock 第三方页：`3001`
 
 本地开发默认创建一个可账号密码登录的 bootstrap 管理员：
 
 - `local-user` — 普通用户，用于发布和命名空间操作
 - `local-admin` — 超级管理员，用于审核和管理流程
 
-本地 bootstrap 管理员默认已在 `application-local.yml` 中开启：
+本地 bootstrap 管理员默认已在 `application-dev.yml` 中开启：
 
 - 用户名：`admin`
 - 密码：`ChangeMe!2026`
@@ -136,7 +134,7 @@ git clone https://github.com/iflytek/skillhub.git
 cd skillhub
 
 # 启动推荐的本地源码运行组合
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 ```
 
 > **国内开发者**：如果 Maven 依赖下载超时，需配置阿里云镜像。详见 [本地开发指南](https://iflytek.github.io/skillhub/quickstart.html#本地开发)。
@@ -144,8 +142,8 @@ scripts/dev/local-mysql-local-index-memory-up.sh
 ### 常用命令
 
 ```bash
-scripts/dev/local-mysql-local-index-memory-status.sh   # 查看当前运行状态
-scripts/dev/local-mysql-local-index-memory-down.sh     # 停止当前本地源码运行组合
+scripts/dev/dev-status.sh                              # 查看当前运行状态
+scripts/dev/dev-down.sh                                # 停止当前本地源码运行组合
 mvn -q -f server/pom.xml -pl skillhub-app -am test     # 运行默认后端测试车道
 mvn -q -f server/pom.xml -pl skillhub-app -am verify -Pmysql-integration-tests  # 显式运行带 mysql-integration 标签的 MySQL 集成测试
 mvn -q -f server/pom.xml -pl skillhub-app -am package -DskipTests  # 打包后端

@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(JpaSkillVersionStatsRepositoryAdapter.class)
 class SkillVersionStatsPersistenceCompatibilityTest {

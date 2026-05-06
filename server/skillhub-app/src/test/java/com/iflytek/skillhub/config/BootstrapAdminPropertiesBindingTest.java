@@ -29,9 +29,9 @@ class BootstrapAdminPropertiesBindingTest {
     }
 
     @Test
-    void localProfile_enablesBootstrapAdminByDefault() throws IOException {
+    void devProfile_enablesBootstrapAdminByDefault() throws IOException {
         BootstrapAdminProperties properties = bindProperties(
-                List.of("application-local.yml", "application.yml"),
+                List.of("application-dev.yml", "application.yml"),
                 Map.of()
         );
 
@@ -39,9 +39,9 @@ class BootstrapAdminPropertiesBindingTest {
     }
 
     @Test
-    void localProfile_allowsEnvironmentVariablesToDisableBootstrapAdmin() throws IOException {
+    void devProfile_allowsEnvironmentVariablesToDisableBootstrapAdmin() throws IOException {
         BootstrapAdminProperties properties = bindProperties(
-                List.of("application-local.yml", "application.yml"),
+                List.of("application-dev.yml", "application.yml"),
                 Map.of("BOOTSTRAP_ADMIN_ENABLED", "false")
         );
 

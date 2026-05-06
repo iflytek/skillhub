@@ -249,8 +249,8 @@ class LocalDevDataInitializerTest {
         assertEquals("encoded-ChangeMe!2026", localUserCredential.getPasswordHash());
         assertEquals("encoded-ChangeMe!2026", localAdminCredential.getPasswordHash());
 
-        assertEquals("Local MySQL Search Fixture", existingSkill.getDisplayName());
-        assertEquals("Seeded searchable skill for local MySQL runtime verification.", existingSkill.getSummary());
+        assertEquals("Dev Search Fixture", existingSkill.getDisplayName());
+        assertEquals("Seeded searchable skill for dev runtime verification.", existingSkill.getSummary());
         assertEquals(LocalDevDataInitializer.LOCAL_ADMIN_ID, existingSkill.getCreatedBy());
         assertEquals(LocalDevDataInitializer.LOCAL_ADMIN_ID, existingSkill.getUpdatedBy());
         assertEquals(SkillVisibility.PUBLIC, existingSkill.getVisibility());

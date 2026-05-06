@@ -123,18 +123,18 @@ WHERE (visibility = 'PUBLIC')
 
 - 当前正式搜索运行时只保留 `skillhub.search.engine=mysql`。
 - 在该 engine 下，由 `skillhub.search.provider` 在 `local-file-index` 与 `mysql-like` 之间切换最终实现。
-- `local-mysql` profile 默认走 `local-file-index`，`mysql-like` 仅作为显式回退路径。
+- `prod` profile 默认走 `local-file-index`，`mysql-like` 仅作为显式回退路径；`dev` / `test` 默认走 `mysql-like`。
 
 ### 5.5 Phase 3 local-file-index 配置约定
 
 - 对外搜索 provider 配置统一收敛为 `skillhub.search.provider`：
   - `mysql-like`：`local-file-index` 不可用时的显式回退值
-  - `local-file-index`：第三阶段 Lucene provider，也是 `local-mysql` 当前默认值
+  - `local-file-index`：第三阶段 Lucene provider，也是 `prod` 当前默认值
 - 当前 bean 装配由 `skillhub.search.engine=mysql` 搭配 `skillhub.search.provider=mysql-like|local-file-index` 控制；`local-file-index` 负责 query/index/rebuild 三类 bean 的最终默认装配。
 - `local-file-index` 采用嵌入式 Lucene，和应用进程同生命周期运行，不引入独立搜索 daemon。
 - 嵌入式 Lucene 索引目录使用 `skillhub.search.local-file-index.directory`：
   - `application.yml` 默认值：`${user.home}/.skillhub/search-index`
-  - `local-mysql` 默认值：`${user.home}/.skillhub/local-mysql/search-index`
+  - `prod` 常见值：`/var/lib/skillhub/search-index`
 - 目录策略：
   - 索引目录必须与 `skillhub.storage.local.base-path` 分离，避免清空索引时误删上传包内容。
   - 目录应位于单节点本地可写路径；当前不把多实例共享文件系统当作前提。

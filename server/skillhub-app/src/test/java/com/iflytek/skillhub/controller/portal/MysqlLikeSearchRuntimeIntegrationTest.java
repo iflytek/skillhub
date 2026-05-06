@@ -59,7 +59,7 @@ import org.springframework.test.web.servlet.MockMvc;
         }
 )
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(TestRedisConfig.class)
 @Testcontainers

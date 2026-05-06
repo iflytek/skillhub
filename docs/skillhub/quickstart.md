@@ -52,7 +52,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- l
 ```bash
 git clone https://github.com/iflytek/skillhub.git
 cd skillhub
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 ```
 
 常见前置要求：
@@ -65,15 +65,14 @@ scripts/dev/local-mysql-local-index-memory-up.sh
 
 1. Maven 依赖是否能正常下载
 2. `java -version` 是否满足要求
-3. `8080` / `3000` / `3001` 端口是否被占用
+3. `8080` / `3000` 端口是否被占用
 4. `docker compose ps` 中 MySQL 是否 healthy
 
 源码启动默认组合：
 
 - MySQL
-- `local-file-index`
+- `mysql-like`
 - memory runtime state
-- 本地 mock UASS 页在 `3001`
 
 更完整的组合说明见：
 
@@ -99,7 +98,7 @@ curl -H "X-Mock-User-Id: local-user" http://localhost:8080/api/v1/auth/me
 curl -H "X-Mock-User-Id: local-admin" http://localhost:8080/api/v1/auth/me
 ```
 
-以上请求依赖本地源码启动路径 `scripts/dev/local-mysql-local-index-memory-up.sh`。
+以上请求依赖本地源码启动路径 `scripts/dev/dev-up.sh`。
 
 生产环境部署后，请立即修改默认管理员密码。
 

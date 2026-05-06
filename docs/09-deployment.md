@@ -5,7 +5,7 @@
 当前仓库只保留两种运行方式：
 
 - 开发环境：仓库脚本或显式命令
-  - 推荐脚本：`scripts/dev/local-mysql-local-index-memory-up.sh`
+  - 推荐脚本：`scripts/dev/dev-up.sh`
   - 前端和后端运行在宿主机
   - `docker-compose.yml` 当前最常用于依赖服务启动
 - 单机交付环境：`docker compose --env-file .env.release -f compose.release.yml up -d`
@@ -39,7 +39,7 @@
 
 说明：
 - Web 容器提供静态资源，并将 `/api/*`、`/oauth2/*`、`/.well-known/*` 反代到后端
-- 后端默认运行 `docker` profile，不再启用本地 mock 登录
+- 后端默认运行 `prod` profile，不启用本地 mock 登录
 - MySQL / Redis 默认只绑定 `127.0.0.1`
 - 对象存储推荐使用外部 S3 / OSS，通过环境变量注入
 
@@ -47,13 +47,14 @@
 
 | Profile | 用途 | 说明 |
 |---------|------|------|
-| `local` | 本地源码开发能力 | 启用 mock 登录、开发种子账号、调试日志 |
-| `docker` | 容器运行时能力 | 启用容器运行时相关能力，不会自动打开首登管理员 |
+| `dev` | 本地源码开发能力 | `MySQL + memory + mysql-like`，启用 mock 登录、开发种子账号、调试日志 |
+| `test` | 联调/测试环境能力 | `MySQL + Redis + mysql-like` |
+| `prod` | 生产环境能力 | `MySQL + Redis + local-file-index` |
 
-单机交付环境使用 `SPRING_PROFILES_ACTIVE=docker`，原因如下：
+单机交付环境使用 `SPRING_PROFILES_ACTIVE=prod`，原因如下：
 
 - 生产环境不应开启 `X-Mock-User-Id` 这一类本地开发旁路能力
-- 容器环境仍然保留 `docker` profile 的运行时能力，首个管理员账户初始化不依赖该 profile，通过环境变量控制
+- 容器环境直接复用 `prod` profile；首个管理员账户初始化不依赖额外 profile，通过环境变量控制
 - 数据库、Redis、OSS、站点公网地址全部改为环境变量优先
 
 如需启用首登管理员，来源于以下环境变量：
@@ -74,7 +75,7 @@
 当前推荐源码开发入口：
 
 ```bash
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 ```
 
 行为：

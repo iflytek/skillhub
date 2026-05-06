@@ -45,7 +45,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @Import(TestRedisConfig.class)
 class SkillPublishControllerTest {
 

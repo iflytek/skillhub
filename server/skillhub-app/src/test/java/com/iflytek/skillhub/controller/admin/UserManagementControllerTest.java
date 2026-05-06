@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @Import(TestRedisConfig.class)
 class UserManagementControllerTest {
 

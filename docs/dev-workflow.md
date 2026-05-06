@@ -16,7 +16,7 @@ Use this stage for active development — writing code, fixing bugs, iterating q
 ### Start the standard local source stack
 
 ```bash
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 ```
 
 This starts the repository-owned local source combination:
@@ -24,9 +24,8 @@ This starts the repository-owned local source combination:
 - dependency service: MySQL via Docker
 - backend: Spring Boot jar on your machine at `http://localhost:8080`
 - frontend: Vite on your machine at `http://localhost:3000`
-- mock third-party UASS page: Vite on `http://localhost:3001`
 - runtime state: `memory`
-- search provider: `local-file-index`
+- search provider: `mysql-like`
 
 For the exact environment variables and fallback combinations such as `mysql-like`, see:
 
@@ -45,23 +44,19 @@ After editing backend code, restart the backend explicitly:
 pkill -f 'skillhub-app-0.1.0.jar' || true
 mvn -q -f server/pom.xml -pl skillhub-app -am package -DskipTests
 env \
-  SKILLHUB_SEARCH_PROVIDER=local-file-index \
-  SKILLHUB_RUNTIME_STATE_PROVIDER=memory \
-  SPRING_PROFILES_ACTIVE=local-mysql \
-  SKILLHUB_AUTH_UASS_ENABLED=true \
-  SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL=http://localhost:3001 \
+  SPRING_PROFILES_ACTIVE=dev \
   java -jar server/skillhub-app/target/skillhub-app-0.1.0.jar
 ```
 
 If you want to stop the whole local source stack, use:
 
 ```bash
-scripts/dev/local-mysql-local-index-memory-down.sh
+scripts/dev/dev-down.sh
 ```
 
 ### Mock authentication
 
-When you start the standard `local-mysql` source stack, the mock auth filter is available for
+When you start the standard `dev` source stack, the mock auth filter is available for
 header-based local login. Two mock users are available without a password:
 
 | User ID       | Role        | Header                           |
@@ -95,9 +90,9 @@ For current bootstrap admin semantics:
 
 | Command                          | Description                      |
 |----------------------------------|----------------------------------|
-| `scripts/dev/local-mysql-local-index-memory-up.sh` | Start the standard local source stack |
-| `scripts/dev/local-mysql-local-index-memory-down.sh` | Stop the standard local source stack |
-| `scripts/dev/local-mysql-local-index-memory-status.sh` | Check ports, docker status, and health |
+| `scripts/dev/dev-up.sh` | Start the standard local source stack |
+| `scripts/dev/dev-down.sh` | Stop the standard local source stack |
+| `scripts/dev/dev-status.sh` | Check ports, docker status, and health |
 | `docker compose up -d mysql` | Start MySQL only |
 | `docker compose stop mysql` | Stop MySQL only |
 
@@ -127,7 +122,7 @@ If you need to inspect or resolve merge conflicts before starting the app, you c
 ```bash
 cd ../skillhub-integration-legal-pages
 make parallel-sync
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 ```
 
 Additional rules:
@@ -191,7 +186,7 @@ The PR title and body are auto-populated from your commit messages.
 ## Full workflow summary
 
 ```bash
-scripts/dev/local-mysql-local-index-memory-up.sh
+scripts/dev/dev-up.sh
 # ... write code, test in browser ...
 # run manual staging validation if needed
 # push and open PR with git + gh

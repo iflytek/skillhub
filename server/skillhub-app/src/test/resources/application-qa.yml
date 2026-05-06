@@ -51,8 +51,11 @@ server:
 
 skillhub:
   search:
-    provider: mysql-like
+    provider: local-file-index
+    local-file-index:
+      directory: ${java.io.tmpdir}/skillhub-qa-search-${random.uuid}
     startup-sync-enabled: false
+    rebuild-on-startup: false
   auth:
     enforce-active-user-check: false
     device:
@@ -63,6 +66,9 @@ skillhub:
     mode: OPEN
   ratelimit:
     mode: memory
+  runtime:
+    state:
+      provider: memory
   security:
     scanner:
       enabled: false

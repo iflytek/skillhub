@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @TestPropertySource(properties = "skillhub.auth.uass.enabled=true")
 class UassAuthControllerTest {
 

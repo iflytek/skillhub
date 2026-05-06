@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @TestPropertySource(properties = {
     "skillhub.public.base-url=http://localhost:3001",
     "skillhub.auth.uass.enabled=true",

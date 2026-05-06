@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  * Local-development filter that can establish a session for a requested mock user header.
  */
 @Component
-@Profile({"local", "local-mysql"})
+@Profile("dev")
 @ConditionalOnProperty(name = "skillhub.auth.mock.enabled", havingValue = "true")
 @Order(-100)
 public class MockAuthFilter extends OncePerRequestFilter {

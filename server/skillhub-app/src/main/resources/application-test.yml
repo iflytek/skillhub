@@ -1,0 +1,45 @@
+spring:
+  datasource:
+    url: ${TEST_DATASOURCE_URL:jdbc:mysql://localhost:3306/skillhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${TEST_DATASOURCE_USERNAME:skillhub}
+    password: ${TEST_DATASOURCE_PASSWORD:skillhub_dev}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:sql/migration-mysql
+
+skillhub:
+  runtime:
+    state:
+      provider: redis
+  public:
+    base-url: ${SKILLHUB_PUBLIC_BASE_URL:http://test.skillhub.local}
+  storage:
+    provider: local
+    local:
+      base-path: ${TEST_STORAGE_BASE_PATH:${user.home}/.skillhub/test/storage}
+  search:
+    engine: mysql
+    provider: mysql-like
+    local-file-index:
+      directory: ${SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY:${user.home}/.skillhub/test/search-index}
+  auth:
+    mock:
+      enabled: false
+    device:
+      enabled: false
+  bootstrap:
+    admin:
+      enabled: false
+
+logging:
+  level:
+    com.iflytek.skillhub: INFO
+    org.springframework.security: WARN

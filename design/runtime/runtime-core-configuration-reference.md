@@ -39,7 +39,7 @@ For local troubleshooting and migration fallback, the following variants are sti
 Runtime behavior is determined in this order:
 
 1. command-line or exported environment variables
-2. selected Spring profile file such as `application-local-mysql.yml`
+2. selected Spring profile file such as `application-dev.yml`
 3. shared defaults in `application.yml`
 
 Do not assume the profile file alone is authoritative. Several runtime combinations depend on environment overrides layered on top of the profile defaults.
@@ -52,15 +52,15 @@ Primary properties:
 
 | Property | Meaning | Typical values |
 |---|---|---|
-| `SPRING_PROFILES_ACTIVE` | Selects the profile bundle | `local-mysql`, `local` |
-| `LOCAL_MYSQL_DATASOURCE_URL` | MySQL JDBC URL for `local-mysql` | `jdbc:mysql://localhost:3306/skillhub?...` |
-| `LOCAL_MYSQL_DATASOURCE_USERNAME` | MySQL username | `skillhub` |
-| `LOCAL_MYSQL_DATASOURCE_PASSWORD` | MySQL password | `skillhub_dev` |
+| `SPRING_PROFILES_ACTIVE` | Selects the runtime profile | `dev`, `test`, `prod` |
+| `DEV_DATASOURCE_URL` | MySQL JDBC URL for `dev` | `jdbc:mysql://localhost:3306/skillhub?...` |
+| `TEST_DATASOURCE_URL` | MySQL JDBC URL for `test` | `jdbc:mysql://localhost:3306/skillhub?...` |
+| `PROD_DATASOURCE_URL` | MySQL JDBC URL for `prod` | production MySQL JDBC URL |
 
 Rules:
 
-- `local-mysql` means the authoritative runtime data lives in MySQL and schema is initialized by Flyway from `sql/migration-mysql`.
-- Current formal source startup documentation only retains `local-mysql` as the repository-owned profile path.
+- `dev` / `test` / `prod` all use MySQL as the authoritative runtime database and initialize schema from `sql/migration-mysql`.
+- `qa` is not a deployment profile. It lives only in `src/test/resources/application-qa.yml` for automated tests and uses H2.
 
 ### 2. Runtime State
 
@@ -108,7 +108,7 @@ Primary property:
 
 | Property | Meaning | Typical value |
 |---|---|---|
-| `SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY` | Local Lucene index directory | `${user.home}/.skillhub/local-mysql/search-index` |
+| `SKILLHUB_SEARCH_LOCAL_FILE_INDEX_DIRECTORY` | Local Lucene index directory | `/var/lib/skillhub/search-index` or `${java.io.tmpdir}/skillhub-qa-search-*` |
 
 Rules:
 
@@ -123,7 +123,8 @@ Primary properties:
 
 | Property | Meaning | Typical value |
 |---|---|---|
-| `LOCAL_MYSQL_STORAGE_BASE_PATH` | Local package/object storage base path under MySQL runtime | `${user.home}/.skillhub/local-mysql/storage` |
+| `DEV_STORAGE_BASE_PATH` | Local package/object storage base path for `dev` | `${user.home}/.skillhub/dev/storage` |
+| `TEST_STORAGE_BASE_PATH` | Local package/object storage base path for `test` | `${user.home}/.skillhub/test/storage` |
 
 Rules:
 
@@ -169,43 +170,58 @@ Rules:
 
 ## Recommended Runtime Combinations
 
-### A. Standard local MySQL with local Lucene and memory runtime state
+### A. `dev`: local MySQL with memory runtime state and mysql-like search
 
 Use when:
 
 - you want MySQL as authority
-- you want `local-file-index`
+- you want `mysql-like`
 - you do not want Redis involved
 
 Required settings:
 
 ```bash
-SPRING_PROFILES_ACTIVE=local-mysql
-SKILLHUB_SEARCH_PROVIDER=local-file-index
-SKILLHUB_RUNTIME_STATE_PROVIDER=memory
+SPRING_PROFILES_ACTIVE=dev
 ```
 
-Optional local UASS mock:
-
-```bash
-SKILLHUB_AUTH_UASS_ENABLED=true
-SKILLHUB_AUTH_UASS_MOCK_LOGIN_BASE_URL=http://localhost:3001
-```
-
-### B. MySQL fallback search path
+### B. `test`: MySQL with Redis runtime state and mysql-like search
 
 Use when:
 
-- Lucene is unavailable
-- you need to compare `mysql-like` behavior
+- you want MySQL as authority
+- you need Redis-backed runtime state
+- you want to stay on the SQL-backed search fallback path
 
 Required settings:
 
 ```bash
-SPRING_PROFILES_ACTIVE=local-mysql
-SKILLHUB_SEARCH_PROVIDER=mysql-like
-SKILLHUB_RUNTIME_STATE_PROVIDER=memory
+SPRING_PROFILES_ACTIVE=test
 ```
+
+### C. `prod`: MySQL with Redis runtime state and local-file-index
+
+Use when:
+
+- you need the current production search path
+- you want embedded Lucene as the search backend
+
+Required settings:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+```
+
+### D. `qa`: H2 with memory runtime state and local-file-index
+
+Use when:
+
+- running automated tests from `src/test`
+- you need a self-contained runtime with no MySQL or Redis dependency
+
+Rules:
+
+- `qa` is defined only in `src/test/resources/application-qa.yml`
+- do not use `qa` as a deployed environment profile
 
 ## Startup Synchronization Rules For `local-file-index`
 

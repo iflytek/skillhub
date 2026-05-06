@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "skillhub.search.provider=mysql-like")
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @Import(TestRedisConfig.class)
 class PrometheusSecurityTest {
 

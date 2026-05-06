@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = "skillhub.public.base-url=http://localhost:3000")
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @Import(TestRedisConfig.class)
 class SkillLifecycleDeleteControllerTest {
 

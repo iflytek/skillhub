@@ -5,8 +5,6 @@ printf '8080:\n'
 lsof -nP -iTCP:8080 -sTCP:LISTEN || true
 printf '\n3000:\n'
 lsof -nP -iTCP:3000 -sTCP:LISTEN || true
-printf '\n3001:\n'
-lsof -nP -iTCP:3001 -sTCP:LISTEN || true
 printf '\nDocker:\n'
 docker compose ps
 printf '\nHealth:\n'

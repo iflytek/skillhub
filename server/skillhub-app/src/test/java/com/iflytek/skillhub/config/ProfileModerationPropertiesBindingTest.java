@@ -30,9 +30,9 @@ class ProfileModerationPropertiesBindingTest {
     }
 
     @Test
-    void localProfile_enablesMachineAndHumanReviewByDefault() throws IOException {
+    void devProfile_enablesMachineAndHumanReviewByDefault() throws IOException {
         ProfileModerationProperties properties = bindProperties(
-                List.of("application-local.yml", "application.yml"),
+                List.of("application-dev.yml", "application.yml"),
                 Map.of()
         );
 
@@ -41,9 +41,9 @@ class ProfileModerationPropertiesBindingTest {
     }
 
     @Test
-    void localProfile_allowsEnvironmentVariablesToOverrideDefaults() throws IOException {
+    void devProfile_allowsEnvironmentVariablesToOverrideDefaults() throws IOException {
         ProfileModerationProperties properties = bindProperties(
-                List.of("application-local.yml", "application.yml"),
+                List.of("application-dev.yml", "application.yml"),
                 Map.of(
                         "SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED", "false",
                         "SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED", "false"

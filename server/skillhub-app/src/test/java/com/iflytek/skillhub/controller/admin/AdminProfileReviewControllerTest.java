@@ -38,7 +38,7 @@ import java.util.Set;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 class AdminProfileReviewControllerTest {
 
     @Autowired

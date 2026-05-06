@@ -43,13 +43,13 @@ import org.springframework.util.ReflectionUtils;
  * Seeds predictable users, memberships, and admin roles for the local development profile.
  */
 @Component
-@Profile("local-mysql")
+@Profile("dev")
 @Order(10)
 public class LocalDevDataInitializer implements ApplicationRunner {
 
     public static final String LOCAL_USER_ID = "local-user";
     public static final String LOCAL_ADMIN_ID = "local-admin";
-    public static final String LOCAL_SEARCH_FIXTURE_SLUG = "local-mysql-search-fixture";
+    public static final String LOCAL_SEARCH_FIXTURE_SLUG = "dev-search-fixture";
     public static final String LOCAL_SEARCH_FIXTURE_KEYWORD = "mysql-runtime-fixture";
     private static final String DEFAULT_LOCAL_PASSWORD = "ChangeMe!2026";
 
@@ -127,8 +127,8 @@ public class LocalDevDataInitializer implements ApplicationRunner {
                 .findFirst()
                 .orElseGet(() -> new Skill(globalNamespace.getId(), LOCAL_SEARCH_FIXTURE_SLUG, LOCAL_ADMIN_ID, SkillVisibility.PUBLIC));
 
-        skill.setDisplayName("Local MySQL Search Fixture");
-        skill.setSummary("Seeded searchable skill for local MySQL runtime verification.");
+        skill.setDisplayName("Dev Search Fixture");
+        skill.setSummary("Seeded searchable skill for dev runtime verification.");
         skill.setCreatedBy(LOCAL_ADMIN_ID);
         skill.setUpdatedBy(LOCAL_ADMIN_ID);
         skill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE);

@@ -31,7 +31,7 @@ import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @Import(TestRedisConfig.class)
 class SkillControllerDownloadTest {
 

@@ -33,7 +33,7 @@ class SkillScannerPropertiesBindingTest {
     @Test
     void environmentVariables_overrideScannerDefaults() throws IOException {
         SkillScannerProperties properties = bindProperties(
-                List.of("application-local.yml", "application.yml"),
+                List.of("application-dev.yml", "application.yml"),
                 Map.of(
                         "SKILLHUB_SECURITY_SCANNER_ENABLED", "true",
                         "SKILLHUB_SECURITY_SCANNER_MODE", "upload",

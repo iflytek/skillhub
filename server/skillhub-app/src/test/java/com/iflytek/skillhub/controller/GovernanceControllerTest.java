@@ -38,7 +38,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 class GovernanceControllerTest {
 
     @Autowired

@@ -20,14 +20,14 @@ class MockAuthFilterProfileActivationTest {
             .withPropertyValues("skillhub.auth.mock.enabled=true");
 
     @Test
-    void mockAuthFilter_isActiveForLocalMysqlProfile() {
-        runner.withPropertyValues("spring.profiles.active=local-mysql")
+    void mockAuthFilter_isActiveForDevProfile() {
+        runner.withPropertyValues("spring.profiles.active=dev")
                 .run(context -> assertThat(context).hasSingleBean(MockAuthFilter.class));
     }
 
     @Test
     void mockAuthFilter_isNotActiveWithoutSupportedProfile() {
-        runner.withPropertyValues("spring.profiles.active=test")
+        runner.withPropertyValues("spring.profiles.active=qa")
                 .run(context -> assertThat(context).doesNotHaveBean(MockAuthFilter.class));
     }
 }

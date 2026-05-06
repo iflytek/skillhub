@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("qa")
 @TestPropertySource(properties = {
     "spring.security.oauth2.client.registration.github.client-name=GitHub",
     "spring.security.oauth2.client.registration.gitee.client-id=placeholder",
