@@ -51,20 +51,20 @@ A: SkillHub uses namespaces for logical isolation. Each namespace has its own me
 
 ## Q: How do I upgrade SkillHub?
 
-A: See [Quick Start](/en/quickstart) and the deployment docs for upgrade steps, runtime parameters, and rollback preparation. Back up the database and object storage before upgrading.
+A: See [Quick Start](/quickstart) and the deployment docs for upgrade steps, runtime parameters, and rollback preparation. Back up the database and object storage before upgrading.
 
 ## Q: How do I search, install, or publish skill packages?
 
 A: Start with:
 
-- [Quick Start](/en/quickstart)
+- [Quick Start](/quickstart)
 - [Skill Publishing & Versioning](/en/guide/skill-publish)
 - [Skill Search & Discovery](/en/guide/skill-discovery)
 - [Namespace & Team Management](/en/guide/namespace)
 
 ## Q: What should I do if local development fails to start?
 
-A: Start with the “Local Development” section in [Quick Start](/en/quickstart). If that does not resolve the issue, move on to the repository-level developer docs and backend logs.
+A: Start with the “Local Development” section in [Quick Start](/quickstart). If that does not resolve the issue, move on to the repository-level developer docs and backend logs.
 
 ## Q: What should I do if I run into issues?
 

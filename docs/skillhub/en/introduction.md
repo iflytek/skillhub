@@ -32,7 +32,7 @@ SkillHub is designed to pull those concerns into a private, controllable, and au
 
 ## Next Steps
 
-- [Quick Start](/en/quickstart)
+- [Quick Start](/quickstart)
 - [Skill Publishing & Versioning](/en/guide/skill-publish)
 - [Skill Search & Discovery](/en/guide/skill-discovery)
 - [Namespace & Team Management](/en/guide/namespace)

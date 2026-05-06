@@ -99,6 +99,8 @@ curl -H "X-Mock-User-Id: local-user" http://localhost:8080/api/v1/auth/me
 curl -H "X-Mock-User-Id: local-admin" http://localhost:8080/api/v1/auth/me
 ```
 
+以上请求依赖本地源码启动路径 `scripts/dev/local-mysql-local-index-memory-up.sh`。
+
 生产环境部署后，请立即修改默认管理员密码。
 
 ## 下一步

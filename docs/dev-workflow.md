@@ -61,7 +61,8 @@ scripts/dev/local-mysql-local-index-memory-down.sh
 
 ### Mock authentication
 
-Two mock users are available in local mode (no password needed):
+When you start the standard `local-mysql` source stack, the mock auth filter is available for
+header-based local login. Two mock users are available without a password:
 
 | User ID       | Role        | Header                           |
 |---------------|-------------|----------------------------------|

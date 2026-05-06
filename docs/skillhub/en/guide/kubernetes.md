@@ -82,5 +82,5 @@ kubectl port-forward svc/skillhub-server -n skillhub 8081:8080
 
 ## Continue Reading
 
-- [Quick Start](/en/quickstart)
+- [Quick Start](/quickstart)
 - [Security Scanning](/en/guide/scanner)
