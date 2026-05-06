@@ -12,6 +12,13 @@ As of 2026-05-04, the current standard runtime is:
 
 `mysql-like` remains as an explicit search fallback.
 
+Current repository profile mapping:
+
+- `dev`: `MySQL + memory + mysql-like`
+- `test`: `MySQL + Redis + mysql-like`
+- `prod`: `MySQL + Redis + local-file-index`
+- `qa`: `H2 + memory + local-file-index` for automated tests only
+
 ## Runtime Axes
 
 Treat relational database, runtime state, and search as three separate provider axes.

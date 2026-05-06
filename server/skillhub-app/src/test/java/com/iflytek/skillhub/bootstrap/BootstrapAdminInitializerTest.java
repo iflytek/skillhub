@@ -73,13 +73,13 @@ class BootstrapAdminInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
+        when(userAccountRepository.findById("bootstrap-admin")).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode("ChangeMe!2026")).thenReturn("encoded-password");
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
-        when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
+        when(userRoleBindingRepository.findByUserId("bootstrap-admin")).thenReturn(List.of());
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
-        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin")).thenReturn(Optional.empty());
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "bootstrap-admin")).thenReturn(Optional.empty());
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
 
@@ -87,24 +87,24 @@ class BootstrapAdminInitializerTest {
         verify(userAccountRepository, atLeastOnce()).save(userCaptor.capture());
         List<UserAccount> savedUsers = userCaptor.getAllValues();
         UserAccount savedUser = savedUsers.get(savedUsers.size() - 1);
-        assertEquals("docker-admin", savedUser.getId());
+        assertEquals("bootstrap-admin", savedUser.getId());
         assertEquals("Admin", savedUser.getDisplayName());
         assertEquals("admin@skillhub.local", savedUser.getEmail());
 
         ArgumentCaptor<LocalCredential> credentialCaptor = ArgumentCaptor.forClass(LocalCredential.class);
         verify(localCredentialRepository).save(credentialCaptor.capture());
-        assertEquals("docker-admin", credentialCaptor.getValue().getUserId());
+        assertEquals("bootstrap-admin", credentialCaptor.getValue().getUserId());
         assertEquals("admin", credentialCaptor.getValue().getUsername());
         assertEquals("encoded-password", credentialCaptor.getValue().getPasswordHash());
 
         ArgumentCaptor<UserRoleBinding> roleBindingCaptor = ArgumentCaptor.forClass(UserRoleBinding.class);
         verify(userRoleBindingRepository).save(roleBindingCaptor.capture());
-        assertEquals("docker-admin", roleBindingCaptor.getValue().getUserId());
+        assertEquals("bootstrap-admin", roleBindingCaptor.getValue().getUserId());
         assertEquals("SUPER_ADMIN", roleBindingCaptor.getValue().getRole().getCode());
 
         ArgumentCaptor<NamespaceMember> memberCaptor = ArgumentCaptor.forClass(NamespaceMember.class);
         verify(namespaceMemberRepository).save(memberCaptor.capture());
-        assertEquals("docker-admin", memberCaptor.getValue().getUserId());
+        assertEquals("bootstrap-admin", memberCaptor.getValue().getUserId());
         assertEquals(NamespaceRole.OWNER, memberCaptor.getValue().getRole());
     }
 
@@ -132,15 +132,15 @@ class BootstrapAdminInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        LocalCredential existingCredential = new LocalCredential("docker-admin", "admin", "encoded-password");
+        LocalCredential existingCredential = new LocalCredential("bootstrap-admin", "admin", "encoded-password");
 
         when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(existingCredential));
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
+        when(userAccountRepository.findById("bootstrap-admin")).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
-        when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
+        when(userRoleBindingRepository.findByUserId("bootstrap-admin")).thenReturn(List.of());
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
-        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin")).thenReturn(Optional.empty());
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "bootstrap-admin")).thenReturn(Optional.empty());
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
 
@@ -159,15 +159,15 @@ class BootstrapAdminInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        LocalCredential existingCredential = new LocalCredential("docker-admin", "admin", "encoded-password");
-        UserAccount existingUser = new UserAccount("docker-admin", "Existing Admin", "existing-admin@example.com", null);
+        LocalCredential existingCredential = new LocalCredential("bootstrap-admin", "admin", "encoded-password");
+        UserAccount existingUser = new UserAccount("bootstrap-admin", "Existing Admin", "existing-admin@example.com", null);
 
         when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(existingCredential));
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.of(existingUser));
+        when(userAccountRepository.findById("bootstrap-admin")).thenReturn(Optional.of(existingUser));
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
-        when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
+        when(userRoleBindingRepository.findByUserId("bootstrap-admin")).thenReturn(List.of());
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
-        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin")).thenReturn(Optional.empty());
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "bootstrap-admin")).thenReturn(Optional.empty());
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
 
@@ -189,18 +189,18 @@ class BootstrapAdminInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        UserAccount existingUser = new UserAccount("docker-admin", "Stale Admin", "stale-admin@example.com", null);
-        NamespaceMember existingMembership = new NamespaceMember(1L, "docker-admin", NamespaceRole.OWNER);
+        UserAccount existingUser = new UserAccount("bootstrap-admin", "Stale Admin", "stale-admin@example.com", null);
+        NamespaceMember existingMembership = new NamespaceMember(1L, "bootstrap-admin", NamespaceRole.OWNER);
 
         when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.empty());
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.of(existingUser));
+        when(userAccountRepository.findById("bootstrap-admin")).thenReturn(Optional.of(existingUser));
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode("ChangeMe!2026")).thenReturn("encoded-password");
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
-        when(userRoleBindingRepository.findByUserId("docker-admin"))
-                .thenReturn(List.of(new UserRoleBinding("docker-admin", superAdminRole)));
+        when(userRoleBindingRepository.findByUserId("bootstrap-admin"))
+                .thenReturn(List.of(new UserRoleBinding("bootstrap-admin", superAdminRole)));
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
-        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin"))
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "bootstrap-admin"))
                 .thenReturn(Optional.of(existingMembership));
 
         initializer.run(new DefaultApplicationArguments(new String[0]));

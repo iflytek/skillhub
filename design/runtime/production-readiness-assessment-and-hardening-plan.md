@@ -180,9 +180,10 @@ Minimum expectations:
 
 Recommended supported combinations:
 
-- `MySQL + Redis + local-file-index`
-- `MySQL + memory + local-file-index`
-- `MySQL + memory + mysql-like`
+- `prod`: `MySQL + Redis + local-file-index`
+- `test`: `MySQL + Redis + mysql-like`
+- `dev`: `MySQL + memory + mysql-like`
+- `qa`: `H2 + memory + local-file-index` for automated tests only
 
 ### 2. Make documentation and runtime behavior fully consistent
 
@@ -260,7 +261,7 @@ Future improvements can include:
 Examples:
 
 - clearer start scripts
-- environment profiles for common local/staging combinations
+- environment profiles for common `dev` / `test` / `prod` combinations
 - less manual environment assembly
 
 ### 4. Continued documentation convergence

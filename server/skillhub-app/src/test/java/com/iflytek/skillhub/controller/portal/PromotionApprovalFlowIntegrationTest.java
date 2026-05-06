@@ -84,7 +84,7 @@ class PromotionApprovalFlowIntegrationTest {
     }
 
     private static final String SUBMITTER_ID = "promotion-owner";
-    private static final String REVIEWER_ID = "docker-admin";
+    private static final String REVIEWER_ID = "bootstrap-admin";
 
     @Autowired
     private MockMvc mockMvc;

@@ -50,10 +50,10 @@ services:
     ports:
       - "${API_PORT:-8080}:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-skillhub}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-skillhub}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-skillhub_demo}
+      SPRING_PROFILES_ACTIVE: prod
+      PROD_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-skillhub}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+      PROD_DATASOURCE_USERNAME: ${MYSQL_USER:-skillhub}
+      PROD_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-skillhub_demo}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
@@ -75,7 +75,7 @@ services:
       SKILLHUB_SECURITY_SCANNER_URL: http://skill-scanner:8000
       SKILLHUB_SECURITY_SCANNER_MODE: upload
       BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-false}
-      BOOTSTRAP_ADMIN_USER_ID: ${BOOTSTRAP_ADMIN_USER_ID:-docker-admin}
+      BOOTSTRAP_ADMIN_USER_ID: ${BOOTSTRAP_ADMIN_USER_ID:-bootstrap-admin}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-ChangeMe!2026}
       BOOTSTRAP_ADMIN_DISPLAY_NAME: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-Admin}

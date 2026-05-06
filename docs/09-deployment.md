@@ -96,7 +96,7 @@ scripts/dev/dev-up.sh
 
 ```bash
 cp .env.release.example .env.release
-make validate-release-config
+scripts/validate-release-config.sh
 docker compose --env-file .env.release -f compose.release.yml up -d
 ```
 
@@ -210,7 +210,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
    - 设置非默认的 `MYSQL_PASSWORD`
    - 模板默认已开启首登管理员，务必将 `BOOTSTRAP_ADMIN_PASSWORD` 改为强密码
 3. 启动前校验
-   - 运行 `make validate-release-config`
+   - 运行 `scripts/validate-release-config.sh`
    - 确认没有 `replace-me`、`change-this-*`、`ChangeMe!2026` 之类的占位值
 4. 首次启动
    - 运行 `docker compose --env-file .env.release -f compose.release.yml up -d`
