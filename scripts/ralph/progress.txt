@@ -1,3 +1,15 @@
+## 2026-05-06 15:26 - US-108D2
+- 先把 JpaGovernanceQueryRepository 拉到约 90%（实际达到 100% 行覆盖率）。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.repository.JpaGovernanceQueryRepository` LINE_MISSED=0 / LINE_COVERED=162（从 inventory 记录的 91.36% 提升到 100%）。
+- 提交前序迭代遗留的测试扩展：JpaGovernanceQueryRepositoryTest 新增 10 个 case（单 item 委托方法 getReviewTaskResponse/getPromotionResponse/getReviewInboxItem/getPromotionInboxItem/getReportInboxItem、空列表跳过 lookups、getReviewTaskResponse_missingVersion_throwsNotFound）。
+- 重新生成 coverage-baseline.md 与 java-unit-line-coverage-inventory.md：从两份清单中移除 JpaGovernanceQueryRepository 条目，整体 Missed Lines 下降，aggregate line coverage 从 99.43% 提升到 99.55%。
+- 质量检查：backend BUILD SUCCESS（EXIT_CODE=0）；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；JpaGovernanceQueryRepository 的现有测试 + 前序迭代未提交的扩展已完整覆盖全部 public 方法与主要异常分支。
+  - 遇到的陷阱：前序迭代可能遗留大量未提交的测试修改（本次 JpaGovernanceQueryRepositoryTest 有 125 行未提交增量），执行覆盖率 story 前应先 `git status` 确认 working tree 状态，避免遗漏或重复工作。
+  - 有用的上下文：GovernanceQueryRepository 的 6 个单 item 方法（getReviewTaskResponse/getPromotionResponse/getReviewInboxItem/getPromotionInboxItem/getReportInboxItem）全部是委托到批量方法的 1 行实现，测试覆盖单 item 即可同时覆盖批量路径的映射逻辑；require() 私有工具方法通过强行走不通的 key（如 skillVersionId 不匹配）抛出 DomainNotFoundException 来覆盖。
+---
+
 ## 2026-05-06 13:00 - US-108C8
 - 补齐 BasicPrePublishValidator 与 SkillMetadataParser 到 100% 行覆盖率。
 - 模块级 JaCoCo 确认 `com.iflytek.skillhub.domain.skill.validation.BasicPrePublishValidator` LINE_MISSED=0（现有 11 个 case 已完整覆盖 validate 全部路径：普通文本安全文件、凭证泄露检测、GitHub token、cloud access key、API key、secret/token 模式、placeholder 过滤、非文本文件跳过、isPlaceholderValue 的 null/blank/xxx/dash 分支）；确认 `com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser` LINE_MISSED=0（现有 22 个 case 已完整覆盖 parse 全部路径：标准 frontmatter、扩展字段、缺失 name/description、可选 version、无 frontmatter、缺失结束分隔符、空内容、非 map YAML、宽松解析回退、引号剥离、注释/空行/无冒号/空键过滤等）。
