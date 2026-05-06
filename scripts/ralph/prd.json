@@ -254,8 +254,8 @@
         "Update tracked coverage inventory after the classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Tail-cleanup story only; this runs after US-108D3 and US-108D4.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
