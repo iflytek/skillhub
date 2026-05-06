@@ -15,7 +15,7 @@
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Keep this story to a single core class because mail sending, anonymous flow, and admin-trigger flow already make it a full-sized task.",
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
@@ -30,7 +30,7 @@
         "Update tracked coverage inventory after the class is cleared"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Keep this story to a single core class because login, registration, and password-policy branches are already enough for one short iteration.",
       "retryCount": 0,
       "blocked": false
