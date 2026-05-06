@@ -94,7 +94,7 @@
         "Update tracked coverage inventory after the class is cleared"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Keep this as a standalone story; staged upload, cleanup, and bucket-init branches make it too large to pair safely.",
       "retryCount": 0,
       "blocked": false

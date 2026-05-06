@@ -1,3 +1,14 @@
+## 2026-05-06 12:16 - US-108C6
+- 补齐 S3StorageService 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.storage.S3StorageService` LINE_MISSED=0（现有 34 个 case 已完整覆盖 init/buildS3Client/buildPresigner、putObject/getObject/deleteObject/deleteObjects/exists/getMetadata/generatePresignedUrl 的正常路径与全部异常分支：bucket 自动创建/并发创建/已存在、staging IO 异常/清理异常、NoSuchBucket 重试、RuntimeException 包装为 StorageAccessException 等）。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；S3StorageService 的现有测试已完整覆盖全部 public 方法与主要异常分支，无需新增测试代码即可达标。
+  - 遇到的陷阱：无。
+  - 有用的上下文：S3StorageService 使用 TestableS3StorageService 子类覆盖 buildS3Client/buildPresigner 以注入 mock S3Client/S3Presigner，这是测试 AWS SDK 依赖类的有效模式；静态方法（Files.createTempFile/Files.copy/Files.deleteIfExists）使用 MockedStatic 覆盖 staging 与 cleanup 分支。
+---
+
 ## 2026-05-06 10:50 - US-108C4
 - 补齐 AuthController 与 UserProfileController 到 100% 行覆盖率。
 - 模块级 JaCoCo 确认 `com.iflytek.skillhub.controller.AuthController` LINE_MISSED=0（现有 29 个 case 分布在 AuthControllerTest 与 AuthControllerUnitTest 中，已完整覆盖 me 刷新、用户不存在/禁用、角色绑定映射、providers/methods、session bootstrap、direct login 成功与 UNAUTHORIZED 异常、client IP 解析等全部功能路径）；确认 `com.iflytek.skillhub.controller.UserProfileController` LINE_MISSED=0（现有 24 个 case 分布在 UserProfileControllerTest 与 UserProfileControllerUnitTest 中，已完整覆盖 getProfile/updateProfile 的正常路径与异常分支、pending/mixed/applied 结果、非法 JSON、client IP 解析等全部功能路径）。
