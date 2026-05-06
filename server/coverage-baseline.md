@@ -28,14 +28,14 @@ The following classes are tracked but explicitly excluded from the production co
 | Metric | Value |
 |--------|-------|
 | Total Lines | 11937 |
-| Covered Lines | 11869 |
-| Missed Lines | 68 |
-| Line Coverage | 99.43% |
+| Covered Lines | 11883 |
+| Missed Lines | 54 |
+| Line Coverage | 99.55% |
 
 ## Per-Module Line Coverage
 | Module | Total Lines | Covered | Missed | Coverage |
 |--------|-------------|---------|--------|----------|
-| skillhub-app | 5107 | 5093 | 14 | 99.73% |
+| skillhub-app | 5107 | 5107 | 0 | 100.00% |
 | skillhub-auth | 2083 | 2029 | 54 | 97.41% |
 | skillhub-domain | 3310 | 3310 | 0 | 100.00% |
 | skillhub-infra | 308 | 308 | 0 | 100.00% |
@@ -44,11 +44,6 @@ The following classes are tracked but explicitly excluded from the production co
 | skillhub-storage | 213 | 213 | 0 | 100.00% |
 
 ## Uncovered Classes Inventory (by module, sorted by missed lines desc)
-
-### skillhub-app
-| Class | Package | Missed Lines | Covered Lines |
-|-------|---------|--------------|---------------|
-| JpaGovernanceQueryRepository | com.iflytek.skillhub.repository | 14 | 148 |
 
 ### skillhub-auth
 | Class | Package | Missed Lines | Covered Lines |

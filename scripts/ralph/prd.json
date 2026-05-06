@@ -190,8 +190,8 @@
         "Update tracked coverage inventory with the reduced missed-line count"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Keep this repository isolated because dynamic query setup can easily fill a full short iteration on its own.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },

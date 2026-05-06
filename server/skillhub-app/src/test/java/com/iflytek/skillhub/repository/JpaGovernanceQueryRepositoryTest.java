@@ -183,6 +183,131 @@ class JpaGovernanceQueryRepositoryTest {
         assertThat(responses.get(0).subtitle()).isEqualTo("Pending promotion");
     }
 
+    @Test
+    void getReviewTaskResponse_singleItem_delegatesToBatch() {
+        ReviewTask task = new ReviewTask(101L, 11L, "submitter");
+        setField(task, "id", 6L);
+
+        SkillVersion version = new SkillVersion(201L, "1.2.0", "submitter");
+        setField(version, "id", 101L);
+        Skill skill = new Skill(11L, "skill-a", "submitter", SkillVisibility.PUBLIC);
+        setField(skill, "id", 201L);
+        Namespace namespace = new Namespace("team-a", "Team A", "submitter");
+        setField(namespace, "id", 11L);
+
+        given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of(version));
+        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of(skill));
+        given(namespaceRepository.findByIdIn(List.of(11L))).willReturn(List.of(namespace));
+        given(userAccountRepository.findByIdIn(List.of("submitter"))).willReturn(List.of());
+
+        var response = repository.getReviewTaskResponse(task);
+
+        assertThat(response.namespace()).isEqualTo("team-a");
+    }
+
+    @Test
+    void getPromotionResponse_singleItem_delegatesToBatch() {
+        PromotionRequest request = new PromotionRequest(201L, 101L, 12L, "submitter");
+        setField(request, "id", 7L);
+
+        Skill skill = new Skill(11L, "skill-a", "submitter", SkillVisibility.PUBLIC);
+        setField(skill, "id", 201L);
+        SkillVersion version = new SkillVersion(201L, "1.2.0", "submitter");
+        setField(version, "id", 101L);
+        Namespace sourceNs = new Namespace("team-a", "Team A", "submitter");
+        setField(sourceNs, "id", 11L);
+        Namespace targetNs = new Namespace("global", "Global", "submitter");
+        setField(targetNs, "id", 12L);
+
+        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of(skill));
+        given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of(version));
+        given(namespaceRepository.findByIdIn(List.of(12L, 11L))).willReturn(List.of(targetNs, sourceNs));
+        given(userAccountRepository.findByIdIn(List.of("submitter"))).willReturn(List.of());
+
+        var response = repository.getPromotionResponse(request);
+
+        assertThat(response.sourceNamespace()).isEqualTo("team-a");
+    }
+
+    @Test
+    void getReviewInboxItem_singleItem_delegatesToBatch() {
+        ReviewTask task = new ReviewTask(101L, 11L, "submitter");
+        setField(task, "id", 8L);
+        setField(task, "submittedAt", Instant.parse("2026-03-20T04:00:00Z"));
+
+        given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of());
+
+        var response = repository.getReviewInboxItem(task);
+
+        assertThat(response.type()).isEqualTo("REVIEW");
+        assertThat(response.title()).isEqualTo("Unknown target");
+    }
+
+    @Test
+    void getPromotionInboxItem_singleItem_delegatesToBatch() {
+        PromotionRequest request = new PromotionRequest(201L, 101L, 12L, "submitter");
+        setField(request, "id", 9L);
+        setField(request, "submittedAt", Instant.parse("2026-03-20T05:00:00Z"));
+
+        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of());
+        given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of());
+        given(namespaceRepository.findByIdIn(List.of(12L))).willReturn(List.of());
+
+        var response = repository.getPromotionInboxItem(request);
+
+        assertThat(response.type()).isEqualTo("PROMOTION");
+        assertThat(response.title()).isEqualTo("Unknown target");
+    }
+
+    @Test
+    void getReportInboxItem_singleItem_delegatesToBatch() {
+        SkillReport report = new SkillReport(201L, 11L, "reporter", "Spam", "details");
+        setField(report, "id", 10L);
+        setField(report, "createdAt", Instant.parse("2026-03-20T02:00:00Z"));
+
+        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of());
+        given(namespaceRepository.findByIdIn(List.of(11L))).willReturn(List.of());
+
+        var response = repository.getReportInboxItem(report);
+
+        assertThat(response.type()).isEqualTo("REPORT");
+        assertThat(response.title()).isEqualTo("Unknown target");
+    }
+
+    @Test
+    void getReviewInboxItems_emptyList_skipsLookups() {
+        var responses = repository.getReviewInboxItems(List.of());
+        assertThat(responses).isEmpty();
+    }
+
+    @Test
+    void getPromotionInboxItems_emptyList_skipsLookups() {
+        var responses = repository.getPromotionInboxItems(List.of());
+        assertThat(responses).isEmpty();
+    }
+
+    @Test
+    void getReportInboxItems_emptyList_skipsLookups() {
+        var responses = repository.getReportInboxItems(List.of());
+        assertThat(responses).isEmpty();
+    }
+
+    @Test
+    void getReviewTaskResponse_missingVersion_throwsNotFound() {
+        ReviewTask task = new ReviewTask(999L, 11L, "submitter");
+        setField(task, "id", 14L);
+
+        SkillVersion version = new SkillVersion(201L, "1.2.0", "submitter");
+        setField(version, "id", 888L);
+
+        given(skillVersionRepository.findByIdIn(List.of(999L))).willReturn(List.of(version));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException.class,
+                () -> repository.getReviewTaskResponse(task)
+        );
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

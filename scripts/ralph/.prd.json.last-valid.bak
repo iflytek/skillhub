@@ -142,8 +142,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Keep this story limited to these two governance-heavy core services.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
@@ -158,8 +158,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "This is the smallest remaining core-domain pairing and should be handled as one short story.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
@@ -174,8 +174,8 @@
         "Update tracked coverage inventory with the reduced missed-line count"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Single difficult repository helper only; do not mix with other hard classes at this stage.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
