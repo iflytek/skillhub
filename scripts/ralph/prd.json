@@ -62,7 +62,7 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Controller pair only; do not expand this story to unrelated app services.",
       "retryCount": 0,
       "blocked": false

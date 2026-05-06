@@ -1,3 +1,14 @@
+## 2026-05-06 10:50 - US-108C4
+- 补齐 AuthController 与 UserProfileController 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.controller.AuthController` LINE_MISSED=0（现有 29 个 case 分布在 AuthControllerTest 与 AuthControllerUnitTest 中，已完整覆盖 me 刷新、用户不存在/禁用、角色绑定映射、providers/methods、session bootstrap、direct login 成功与 UNAUTHORIZED 异常、client IP 解析等全部功能路径）；确认 `com.iflytek.skillhub.controller.UserProfileController` LINE_MISSED=0（现有 24 个 case 分布在 UserProfileControllerTest 与 UserProfileControllerUnitTest 中，已完整覆盖 getProfile/updateProfile 的正常路径与异常分支、pending/mixed/applied 结果、非法 JSON、client IP 解析等全部功能路径）。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend 1036 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复工作；AuthController 与 UserProfileController 的单元测试（AuthControllerUnitTest / UserProfileControllerUnitTest）在前序迭代中已完整覆盖所有 public 方法与主要异常分支。
+  - 遇到的陷阱：无。
+  - 有用的上下文：controller 层的覆盖通常由 MockMvc 集成测试 + 直接实例化 unit test 共同完成；unit test 通过反射调用 private 方法（如 `resolveClientIp`）可有效覆盖 proxy header 分支，无需强行走通完整 HTTP 链路。
+---
+
 ## 2026-05-06 10:20 - US-108C3
 - 补齐 DeviceAuthService 与 SecurityConfig 到 100% 行覆盖率。
 - 模块级 JaCoCo 确认 `com.iflytek.skillhub.auth.device.DeviceAuthService` LINE_MISSED=0（现有 12 个 case 已完整覆盖生成代码、授权、轮询、兑换、重复授权、过期/已用/无效代码等全部功能路径）；确认 `com.iflytek.skillhub.auth.config.SecurityConfig` LINE_MISSED=0（现有 10 个 case 已完整覆盖密码编码器、CORS 配置、CSRF 忽略匹配器、路由策略、过滤链构建等全部功能路径）。
