@@ -1,3 +1,14 @@
+## 2026-05-06 12:33 - US-108C7
+- 补齐 SkillPackagePolicy 与 SkillPackageValidator 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy` LINE_MISSED=0（现有 31 个 case 已完整覆盖 normalizeEntryPath 全部异常分支、hasAllowedExtension、validateContentMatchesExtension 全部文件类型签名校验与文本编码校验）；确认 `com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator` LINE_MISSED=0（现有 28 个 case 已完整覆盖 validate 全部路径：正常包、缺失 SKILL.md、文件过多、单文件过大、总包过大、路径遍历、重复路径、扩展名警告、内容不匹配警告、frontmatter 各类错误格式化等）。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend 1035 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；SkillPackagePolicy 与 SkillPackageValidator 的现有测试已完整覆盖全部 public 方法与主要异常分支，无需新增测试代码即可达标。
+  - 遇到的陷阱：无。
+  - 有用的上下文：SkillPackageValidator 的 `formatMetadataError` 使用 switch expression 覆盖多种已知错误码，并通过 default 分支处理未知错误码（含 args 和不含 args 两种路径），测试中通过 mock SkillMetadataParser 抛出自定义 LocalizedDomainException 即可覆盖。
+---
+
 ## 2026-05-06 12:16 - US-108C6
 - 补齐 S3StorageService 到 100% 行覆盖率。
 - 模块级 JaCoCo 确认 `com.iflytek.skillhub.storage.S3StorageService` LINE_MISSED=0（现有 34 个 case 已完整覆盖 init/buildS3Client/buildPresigner、putObject/getObject/deleteObject/deleteObjects/exists/getMetadata/generatePresignedUrl 的正常路径与全部异常分支：bucket 自动创建/并发创建/已存在、staging IO 异常/清理异常、NoSuchBucket 重试、RuntimeException 包装为 StorageAccessException 等）。
