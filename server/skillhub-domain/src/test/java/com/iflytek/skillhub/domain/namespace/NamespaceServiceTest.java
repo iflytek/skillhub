@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -194,5 +195,164 @@ class NamespaceServiceTest {
 
         assertThrows(DomainForbiddenException.class, () ->
                 namespaceService.assertMember(namespaceId, userId));
+    }
+
+    @Test
+    void getNamespaceBySlugForRead_returnsActiveNamespaceWithoutUserId() {
+        String slug = "active-slug";
+        Namespace namespace = new Namespace(slug, "Name", "user-1");
+        when(namespaceRepository.findBySlug(slug)).thenReturn(Optional.of(namespace));
+
+        Namespace result = namespaceService.getNamespaceBySlugForRead(slug, null, null);
+
+        assertNotNull(result);
+        assertEquals(slug, result.getSlug());
+    }
+
+    @Test
+    void getNamespaceBySlugForRead_returnsArchivedNamespaceForMember() {
+        String slug = "archived-slug";
+        Namespace namespace = new Namespace(slug, "Name", "user-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        setField(namespace, "id", 42L);
+        when(namespaceRepository.findBySlug(slug)).thenReturn(Optional.of(namespace));
+
+        Namespace result = namespaceService.getNamespaceBySlugForRead(slug, "user-1",
+                Map.of(namespace.getId(), NamespaceRole.MEMBER));
+
+        assertNotNull(result);
+        assertEquals(slug, result.getSlug());
+    }
+
+    @Test
+    void getNamespaceBySlugForRead_throwsForArchivedNamespaceWhenNotMember() {
+        String slug = "archived-slug";
+        Namespace namespace = new Namespace(slug, "Name", "user-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        setField(namespace, "id", 42L);
+        when(namespaceRepository.findBySlug(slug)).thenReturn(Optional.of(namespace));
+
+        assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.getNamespaceBySlugForRead(slug, "stranger", Map.of()));
+    }
+
+    @Test
+    void getNamespaceBySlugForRead_throwsForArchivedNamespaceWhenUserIdNull() {
+        String slug = "archived-slug";
+        Namespace namespace = new Namespace(slug, "Name", "user-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        when(namespaceRepository.findBySlug(slug)).thenReturn(Optional.of(namespace));
+
+        assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.getNamespaceBySlugForRead(slug, null, null));
+    }
+
+    @Test
+    void getNamespace_returnsNamespace() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("slug", "Name", "user-1");
+        setField(namespace, "id", namespaceId);
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+
+        Namespace result = namespaceService.getNamespace(namespaceId);
+
+        assertNotNull(result);
+        assertEquals(namespaceId, result.getId());
+    }
+
+    @Test
+    void getNamespace_throwsWhenNotFound() {
+        when(namespaceRepository.findById(99L)).thenReturn(Optional.empty());
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.getNamespace(99L));
+        assertEquals("error.namespace.id.notFound", ex.messageCode());
+    }
+
+    @Test
+    void assertAdminOrOwner_allowsOwner() {
+        Long namespaceId = 1L;
+        String userId = "user-1";
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, userId, NamespaceRole.OWNER)));
+
+        assertDoesNotThrow(() -> namespaceService.assertAdminOrOwner(namespaceId, userId));
+    }
+
+    @Test
+    void assertAdminOrOwner_allowsAdmin() {
+        Long namespaceId = 1L;
+        String userId = "user-1";
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, userId, NamespaceRole.ADMIN)));
+
+        assertDoesNotThrow(() -> namespaceService.assertAdminOrOwner(namespaceId, userId));
+    }
+
+    @Test
+    void assertAdminOrOwner_rejectsMember() {
+        Long namespaceId = 1L;
+        String userId = "user-1";
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, userId, NamespaceRole.MEMBER)));
+
+        DomainForbiddenException ex = assertThrows(DomainForbiddenException.class, () ->
+                namespaceService.assertAdminOrOwner(namespaceId, userId));
+        assertEquals("error.namespace.admin.required", ex.messageCode());
+    }
+
+    @Test
+    void assertAdminOrOwner_rejectsNonMember() {
+        Long namespaceId = 1L;
+        String userId = "user-404";
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
+                .thenReturn(Optional.empty());
+
+        DomainForbiddenException ex = assertThrows(DomainForbiddenException.class, () ->
+                namespaceService.assertAdminOrOwner(namespaceId, userId));
+        assertEquals("error.namespace.membership.required", ex.messageCode());
+    }
+
+    @Test
+    void assertMutable_throwsWhenImmutable() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.assertMutable(namespace));
+        assertEquals("error.namespace.system.immutable", ex.messageCode());
+    }
+
+    @Test
+    void assertMutable_throwsWhenNotWritable() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("slug", "Name", "user-1");
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canMutateSettings(namespace)).thenReturn(false);
+
+        DomainBadRequestException ex = assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.assertMutable(namespace));
+        assertEquals("error.namespace.readonly", ex.messageCode());
+    }
+
+    @Test
+    void assertMutable_succeedsWhenMutableAndWritable() {
+        Namespace namespace = new Namespace("slug", "Name", "user-1");
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canMutateSettings(namespace)).thenReturn(true);
+
+        assertDoesNotThrow(() -> namespaceService.assertMutable(namespace));
+    }
+
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 }

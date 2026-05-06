@@ -172,7 +172,7 @@ public class UserProfileController extends BaseApiController {
                     mixedResult.pendingFields()
             );
         } else {
-            throw new IllegalStateException("Unknown update profile result: " + result.getClass().getName());
+            throw new IllegalStateException("Unknown update profile result: " + result);
         }
 
         return ok("response.success.update", response);

@@ -30,6 +30,9 @@ For local troubleshooting and migration fallback, the following variants are sti
 - 默认 surefire 单测 lane 必须在没有 MySQL 可用的环境里也能稳定运行，因此不得把真实 MySQL 作为前置依赖。
 - 真实 MySQL 只保留给显式的 `*IntegrationTest`、`*RuntimeIntegrationTest`、迁移验证和回归验证；这类测试应明确打上独立标记并放入单独执行通道。
 - 覆盖率门禁不能依赖本地或远程 MySQL 的可用性。
+- 覆盖率验证和默认 surefire 单测 lane 必须在独占工作区内执行；同一仓库目录下不要并发跑多个 Maven/Surefire/JaCoCo 任务。
+- 用于完成判断的 JaCoCo 事实必须来自当前轮 `clean` 构建后的新鲜产物，不接受脏 `target/` 或其他任务留下的中间结果。
+- 如果验证链路里出现 `NoClassDefFoundError`、`ClassNotFoundException`、`bad class file`、`NoSuchFileException` 或 `Unable to create test class`，先排查共享工作区并发构建和目标目录污染，再判断是否为真实代码缺陷。
 
 ## Configuration Priority
 

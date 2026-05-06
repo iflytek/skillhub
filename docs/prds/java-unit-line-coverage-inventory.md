@@ -9,6 +9,8 @@
 - 报告命令：`mvn -f server/pom.xml -pl skillhub-app -am test jacoco:report-aggregate`
 - 聚合报告路径：`server/skillhub-app/target/site/jacoco-aggregate/index.html`
 - 当前后端多模块 aggregate line coverage 为 `97.13%`（`11596/11939`）
+- 覆盖率清单只能基于 `clean` 后重新生成的报告更新；不要在并发 Maven/Surefire 任务共享同一工作区时刷新该清单。
+- 如果构建过程中出现缺类、`bad class file` 或 surefire 无法创建测试类，先排查工作区并发污染和脏 `target/`，不要直接把该轮结果写入 inventory。
 
 ### Explicit Exclusions from Production Gate
 

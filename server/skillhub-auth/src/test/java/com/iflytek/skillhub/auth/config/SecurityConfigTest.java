@@ -20,7 +20,17 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import org.mockito.ArgumentCaptor;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 @ExtendWith(MockitoExtension.class)
 class SecurityConfigTest {
 
@@ -183,6 +193,48 @@ class SecurityConfigTest {
                 publicBaseUrl,
                 uassMockLoginBaseUrl
         );
+    }
+
+    @Test
+    void filterChain_csrfIgnoreMatcher_invokesRouteRegistryAndAddsMockAuthFilter() throws Exception {
+        MockAuthFilter mockAuthFilter = mock(MockAuthFilter.class);
+        when(mockAuthFilterProvider.getIfAvailable()).thenReturn(mockAuthFilter);
+        when(routeSecurityPolicyRegistry.shouldIgnoreCsrf("/api/test", "Bearer token")).thenReturn(true);
+
+        SecurityConfig config = newConfig("https://example.com", "");
+
+        java.util.concurrent.atomic.AtomicReference<org.springframework.security.config.Customizer<org.springframework.security.config.annotation.web.configurers.CsrfConfigurer<HttpSecurity>>> csrfCustomizerRef =
+                new java.util.concurrent.atomic.AtomicReference<>();
+
+        HttpSecurity http = org.mockito.Mockito.mock(HttpSecurity.class, org.mockito.Mockito.RETURNS_SELF);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            csrfCustomizerRef.set(invocation.getArgument(0));
+            return http;
+        }).when(http).csrf(any(org.springframework.security.config.Customizer.class));
+
+        org.springframework.security.web.SecurityFilterChain mockChain =
+                org.mockito.Mockito.mock(org.springframework.security.web.SecurityFilterChain.class);
+        org.mockito.Mockito.doReturn(mockChain).when(http).build();
+
+        config.filterChain(http);
+
+        @SuppressWarnings("unchecked")
+        org.springframework.security.config.annotation.web.configurers.CsrfConfigurer<HttpSecurity> csrfConfigurer =
+                org.mockito.Mockito.mock(org.springframework.security.config.annotation.web.configurers.CsrfConfigurer.class, org.mockito.Mockito.RETURNS_SELF);
+        csrfCustomizerRef.get().customize(csrfConfigurer);
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<org.springframework.security.web.util.matcher.RequestMatcher> matcherCaptor =
+                org.mockito.ArgumentCaptor.forClass(org.springframework.security.web.util.matcher.RequestMatcher.class);
+        org.mockito.Mockito.verify(csrfConfigurer).ignoringRequestMatchers(matcherCaptor.capture());
+        org.springframework.security.web.util.matcher.RequestMatcher matcher = matcherCaptor.getValue();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/test");
+        request.addHeader("Authorization", "Bearer token");
+        assertThat(matcher.matches(request)).isTrue();
+
+        org.mockito.Mockito.verify(http).addFilterBefore(mockAuthFilter,
+                org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
     }
 
     private static CorsConfiguration corsFor(CorsConfigurationSource source, String path) {

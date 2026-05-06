@@ -215,4 +215,139 @@ class PasswordResetServiceTest {
                 .extracting("status")
                 .isEqualTo(HttpStatus.BAD_REQUEST);
     }
+
+    @Test
+    void adminTriggerPasswordReset_happyPath_savesRequestAndSendsEmail() {
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+        given(credentialRepository.findByUserId("usr_1")).willReturn(
+                Optional.of(new LocalCredential("usr_1", "alice", "encoded"))
+        );
+        given(passwordEncoder.encode(anyString())).willReturn("encoded-value");
+
+        service.adminTriggerPasswordReset("usr_1", "admin_1");
+
+        verify(resetRequestRepository).save(any(PasswordResetRequest.class));
+        verify(mailSender).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void adminTriggerPasswordReset_emailFailure_throwsException() {
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+        given(credentialRepository.findByUserId("usr_1")).willReturn(
+                Optional.of(new LocalCredential("usr_1", "alice", "encoded"))
+        );
+        given(passwordEncoder.encode(anyString())).willReturn("encoded-value");
+        org.mockito.Mockito.doThrow(new RuntimeException("smtp down")).when(mailSender).send(any(SimpleMailMessage.class));
+
+        assertThatThrownBy(() -> service.adminTriggerPasswordReset("usr_1", "admin_1"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.password.reset.email.failed");
+    }
+
+    @Test
+    void confirmPasswordReset_userNotFound_throwsBadRequest() {
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.confirmPasswordReset("alice@example.com", "123456", "Abcd123!"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.password.reset.invalid.code");
+    }
+
+    @Test
+    void confirmPasswordReset_weakNewPassword_throwsBadRequest() {
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        PasswordResetRequest request = new PasswordResetRequest(
+                "usr_1",
+                "alice@example.com",
+                "encoded-code",
+                Instant.now().plus(Duration.ofMinutes(5)),
+                false,
+                null
+        );
+
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.of(user));
+        given(resetRequestRepository.findByUserIdAndConsumedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
+                anyString(), any(Instant.class))
+        ).willReturn(List.of(request));
+        given(passwordEncoder.matches("123456", "encoded-code")).willReturn(true);
+
+        assertThatThrownBy(() -> service.confirmPasswordReset("alice@example.com", "123456", "weak"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.local.password");
+    }
+
+    @Test
+    void confirmPasswordReset_noCredential_throwsBadRequest() {
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        PasswordResetRequest request = new PasswordResetRequest(
+                "usr_1",
+                "alice@example.com",
+                "encoded-code",
+                Instant.now().plus(Duration.ofMinutes(5)),
+                false,
+                null
+        );
+
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.of(user));
+        given(resetRequestRepository.findByUserIdAndConsumedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
+                anyString(), any(Instant.class))
+        ).willReturn(List.of(request));
+        given(passwordEncoder.matches("123456", "encoded-code")).willReturn(true);
+        given(credentialRepository.findByUserId("usr_1")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.confirmPasswordReset("alice@example.com", "123456", "Abcd123!"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.password.reset.no.credential");
+    }
+
+    @Test
+    void requestPasswordReset_blankEmail_throwsBadRequest() {
+        assertThatThrownBy(() -> service.requestPasswordReset("   "))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("validation.auth.password.reset.email.notBlank");
+    }
+
+    @Test
+    void requestPasswordReset_userWithNoEmail_isSilent() {
+        UserAccount user = new UserAccount("usr_1", "alice", null, null);
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.of(user));
+
+        service.requestPasswordReset("alice@example.com");
+
+        verify(resetRequestRepository, never()).save(any(PasswordResetRequest.class));
+    }
+
+    @Test
+    void findUserByEmail_blankNormalizedEmail_returnsEmpty() throws Exception {
+        java.lang.reflect.Method method = PasswordResetService.class.getDeclaredMethod("findUserByEmail", String.class);
+        method.setAccessible(true);
+
+        Optional<?> result = (Optional<?>) method.invoke(service, "");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void resolveFromAddress_blankFromName_returnsJustAddress() throws Exception {
+        PasswordResetProperties props = new PasswordResetProperties();
+        props.setEmailFromAddress("noreply@skillhub.local");
+        props.setEmailFromName("");
+        PasswordResetService svc = new PasswordResetService(
+                resetRequestRepository,
+                userAccountRepository,
+                credentialRepository,
+                new PasswordPolicyValidator(),
+                passwordEncoder,
+                mailSender,
+                props
+        );
+
+        java.lang.reflect.Method method = PasswordResetService.class.getDeclaredMethod("resolveFromAddress");
+        method.setAccessible(true);
+        String result = (String) method.invoke(svc);
+
+        assertThat(result).isEqualTo("noreply@skillhub.local");
+    }
 }

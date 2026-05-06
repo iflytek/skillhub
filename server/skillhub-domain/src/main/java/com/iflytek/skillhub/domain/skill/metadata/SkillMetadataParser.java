@@ -90,9 +90,6 @@ public class SkillMetadataParser {
 
             String key = line.substring(0, separatorIndex).trim();
             String value = line.substring(separatorIndex + 1).trim();
-            if (key.isEmpty()) {
-                continue;
-            }
 
             values.put(key, stripWrappingQuotes(value));
         }

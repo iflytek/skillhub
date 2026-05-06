@@ -1,139 +1,341 @@
 {
   "project": "SkillHub",
   "branchName": "ralph/remove-h2-and-converge-mysql-runtime",
-  "description": "当前 PRD 只跟踪新的剩余 Java 行覆盖率收口计划。单元测试、DataJpa 切片测试、以及参与 JaCoCo 行覆盖率门禁的测试，只要涉及 MySQL 持久化路径，都只能使用 H2 或 mock，不允许真实连接 MySQL 或依赖 MySQLContainer；真实 MySQL 只保留给显式的 MySQL 集成/运行时验证。相关约束已收敛进 design 文档，因此不再单列为待办 story。覆盖率事实来源以当前模块级 JaCoCo 报告和 docs/prds/java-unit-line-coverage-remaining-v2-prd.md 为准。",
+  "description": "当前 prd.json 只跟踪剩余未完成、预计 20 分钟左右可闭环的 Java 覆盖率微故事。单元测试、DataJpa 切片测试、以及参与 JaCoCo 行覆盖率门禁的测试，只要涉及 MySQL 持久化路径，都只能使用 H2 或 mock，不允许真实连接 MySQL 或依赖 MySQLContainer；真实 MySQL 只保留给显式的 MySQL 集成/运行时验证。相关约束已收敛进 design 文档，因此不再单列为待办 story。覆盖率事实来源以当前模块级 JaCoCo 报告和 docs/prds/java-unit-line-coverage-remaining-v2-prd.md 为准；最终验证必须在 clean 且独占的工作区执行。",
   "userStories": [
     {
-      "id": "US-108",
-      "title": "收敛剩余覆盖率计划与口径",
-      "description": "作为维护者，我希望把当前真实剩余的 JaCoCo 缺口重新整理成新的执行计划，并明确核心类与非核心类的不同验收口径，以便后续补测顺序和标准一致。",
+      "id": "US-108C1",
+      "title": "补齐 PasswordResetService 到 100%",
+      "description": "作为维护者，我希望先单独补齐 PasswordResetService 的剩余覆盖率，以便把高复杂度核心认证逻辑拆成可在 20 分钟左右完成的小任务。",
       "acceptanceCriteria": [
-        "Use the current module-level JaCoCo reports as the source of truth for remaining uncovered Java classes",
-        "Check in a plan document that sorts remaining work primarily by implementation difficulty and secondarily by missed-line size within each difficulty band",
-        "Define that core production classes must reach 100% line coverage with full functional tests rather than coverage-only tests",
-        "Define that non-core supporting classes may use a two-stage approach: normal tests to roughly 90%, then coverage-only tail cleanup from 90% to 100%",
-        "Link the remaining-class line detail inventory from the plan so each class can be worked directly from concrete line numbers"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Source-of-truth docs for this story: docs/prds/java-unit-line-coverage-remaining-v2-prd.md and docs/prds/java-unit-line-coverage-remaining-v2-line-detail.md. Baseline was revalidated on 2026-05-05 by running `mvn -f server/pom.xml -pl skillhub-app -am test jacoco:report`; current module-level JaCoCo still shows 96 classes and 548 missed lines remaining, so the remaining story split stays valid.",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-108A",
-      "title": "先清简单非核心覆盖率缺口到 100%",
-      "description": "作为维护者，我希望先把 DTO、properties、exception、main、repository 接口声明和简单 smoke 入口类清完，以便快速减少剩余类数并缩小门禁范围。",
-      "acceptanceCriteria": [
-        "Target the easy non-core classes listed in the remaining coverage plan first, including DTOs, properties, exceptions, simple inner classes, main entrypoints, and lightweight repository or config smoke targets",
-        "Each targeted non-core class in this story reaches 100% line coverage before the story is considered done",
-        "Tests keep at least minimal executable assertions, but do not need exhaustive business-path depth for these simple support classes",
-        "Update the tracked inventory and coverage notes to remove the completed classes from the remaining list"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Primary targets live in Wave 1 and Wave 2 of docs/prds/java-unit-line-coverage-remaining-v2-prd.md. All Wave 1 and Wave 2 classes confirmed LINE_MISSED=0. Also covered many Wave 3 classes as they were already in the working tree. Overall coverage improved from 95.41% (548 missed lines) to 96.47% (421 missed lines)."
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-108B",
-      "title": "清中等难度非核心 app 与 infra 覆盖率缺口到 100%",
-      "description": "作为维护者，我希望在简单类之后清掉 controller 尾差、filter、rate-limit、scanner seam、轻量 repository helper 和中等 app service，以便把真正困难的类单独留到最后。",
-      "acceptanceCriteria": [
-        "Target the medium-difficulty non-core classes listed in the remaining coverage plan, especially supporting controllers, filters, rate-limiters, scanner adapters, bootstrap helpers, and small app services",
-        "Each targeted non-core class in this story reaches 100% line coverage before the story is considered done",
-        "Tests should still follow normal testing style with basic assertions and should not default to coverage-only tail tests yet",
-        "Update the tracked inventory and coverage notes to remove the completed classes from the remaining list"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Primary targets live in Wave 2 and Wave 3 of docs/prds/java-unit-line-coverage-remaining-v2-prd.md. Target classes confirmed LINE_MISSED=0: JpaMySkillQueryRepository, AuthFailureThrottleService, LocalFileIndexStartupSynchronizer, LabelAdminAppService, NamespaceMemberService. Overall coverage improved from 97.02% to 97.13%, uncovered classes reduced from 29 to 23.",
-      "retryCount": 0,
-      "blocked": false
-    },
-    {
-      "id": "US-108C",
-      "title": "核心功能类直接用完整功能测试做到 100%",
-      "description": "作为维护者，我希望把剩余核心功能类直接补到 100% 行覆盖率，并保持完整功能断言，以确保主链路的覆盖质量不被尾差策略稀释。",
-      "acceptanceCriteria": [
-        "Target all remaining core classes listed in the remaining coverage plan and classify them as requiring full functional tests",
-        "Each targeted core production class reaches 100% line coverage before the story is considered done",
-        "Tests cover the real functional paths, state transitions, and core failure semantics that matter for the class, rather than only touching lines",
-        "Coverage-only or no-assertion tests are not used as the primary means to satisfy this story",
-        "Update the tracked inventory and coverage notes to remove the completed core classes from the remaining list"
+        "Target class: com.iflytek.skillhub.auth.local.PasswordResetService",
+        "The target class reaches 100% line coverage before the story is considered done",
+        "Tests cover real functional paths and failure semantics rather than only touching lines",
+        "Update tracked coverage inventory after the class is cleared"
       ],
       "priority": 7,
       "passes": false,
-      "notes": "Current core list includes LocalAuthService, PasswordResetService, DeviceAuthService, SecurityConfig, AuthController, UserProfileController, SkillDeleteAppService, S3StorageService, SkillPackagePolicy, SkillPackageValidator, BasicPrePublishValidator, SkillMetadataParser, NamespaceService, ProfileReviewService, LabelPermissionChecker, and SkillRating.",
+      "notes": "Keep this story to a single core class because mail sending, anonymous flow, and admin-trigger flow already make it a full-sized task.",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-108D",
-      "title": "困难非核心类先收敛到约 90%",
-      "description": "作为维护者，我希望把剩余困难但非核心的支撑类先拉到大约 90% 行覆盖率，以便把真正阻塞 100% 的尾差行集中留到单独一轮处理。",
+      "id": "US-108C2",
+      "title": "补齐 LocalAuthService 到 100%",
+      "description": "作为维护者，我希望单独补齐 LocalAuthService 的剩余覆盖率，以便把认证主链路测试控制在一个短迭代内完成。",
       "acceptanceCriteria": [
-        "Target the remaining difficult non-core classes from the current coverage plan, such as AdminUserSearchRepository, JpaGovernanceQueryRepository, GitHubClaimsExtractor, MockAuthFilter, GitLabClaimsExtractor, and SkillHubOAuth2AuthorizationRequestResolver",
-        "Each targeted non-core class in this story reaches roughly 90% line coverage or better through normal tests with basic assertions",
-        "The remaining uncovered lines after this story are limited mainly to special tail branches, helper lines, cleanup lines, or low-value edge paths",
-        "Update the tracked inventory and coverage notes with the reduced missed-line counts for these classes"
+        "Target class: com.iflytek.skillhub.auth.local.LocalAuthService",
+        "The target class reaches 100% line coverage before the story is considered done",
+        "Tests cover the real functional paths and core failure semantics",
+        "Update tracked coverage inventory after the class is cleared"
       ],
       "priority": 7,
       "passes": false,
-      "notes": "This is explicitly a staging story for difficult non-core classes only; it does not apply to core classes.",
+      "notes": "Keep this story to a single core class because login, registration, and password-policy branches are already enough for one short iteration.",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-108E",
-      "title": "困难非核心类从 90% 清尾到 100%",
-      "description": "作为维护者，我希望把困难非核心类最后剩下的少量尾差行集中清掉，以便在不稀释核心测试质量的前提下完成全仓 100% line coverage。",
+      "id": "US-108C3",
+      "title": "补齐 DeviceAuthService 与 SecurityConfig 到 100%",
+      "description": "作为维护者，我希望把设备认证服务与安全配置放在一个小批次完成，以便一次性收敛同一认证子域的剩余核心类。",
       "acceptanceCriteria": [
-        "Only after the targeted non-core classes have first reached roughly 90% through normal tests, add focused tail-cleanup tests to take them to 100%",
-        "Coverage-only tests in this story are limited to the remaining special tail lines and do not replace functional tests for the main behavior",
-        "Each targeted non-core class completed in this story reaches 100% line coverage before the story is considered done",
-        "Update the tracked inventory and coverage notes to remove the completed classes from the remaining list"
+        "Target classes: com.iflytek.skillhub.auth.device.DeviceAuthService and com.iflytek.skillhub.auth.config.SecurityConfig",
+        "Both target classes reach 100% line coverage before the story is considered done",
+        "Tests remain function-oriented rather than coverage-only",
+        "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
       "passes": false,
-      "notes": "Allowed tactics in this story include reflection, helper smoke tests, low-assertion tail-line tests, and direct invocation of cleanup or anonymous-inner-class paths, but only for non-core residual lines.",
+      "notes": "This is intentionally capped at two related auth classes so it stays within one short execution window.",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-108F",
-      "title": "执行全量后端单测并验证 Java 行覆盖率 100%",
-      "description": "作为维护者，我希望在所有补测完成后运行一次全量后端单测和覆盖率报告，以便确认不是局部模块看起来达标，而是当前仓库整体 Java 生产代码都已经达到 100% line coverage。",
+      "id": "US-108C4",
+      "title": "补齐 AuthController 与 UserProfileController 到 100%",
+      "description": "作为维护者，我希望把两个核心控制器拆成一个小批次完成，以便在一次短迭代中验证认证与用户资料入口的真实行为。",
       "acceptanceCriteria": [
-        "Run the agreed full backend unit-test command set after all remaining coverage stories are completed",
-        "Regenerate the module-level JaCoCo reports and confirm that no Java production class still has LINE_MISSED greater than 0",
+        "Target classes: com.iflytek.skillhub.controller.AuthController and com.iflytek.skillhub.controller.UserProfileController",
+        "Both target classes reach 100% line coverage before the story is considered done",
+        "Tests cover real request/response behavior or equivalent direct controller semantics",
+        "Update tracked coverage inventory after both classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Controller pair only; do not expand this story to unrelated app services.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108C5",
+      "title": "补齐 SkillDeleteAppService 到 100%",
+      "description": "作为维护者，我希望单独补齐 SkillDeleteAppService 的剩余覆盖率，以便把删除主链路的测试收敛为一个可快速完成的故事。",
+      "acceptanceCriteria": [
+        "Target class: com.iflytek.skillhub.service.SkillDeleteAppService",
+        "The target class reaches 100% line coverage before the story is considered done",
+        "Tests cover the real orchestration path and error semantics",
+        "Update tracked coverage inventory after the class is cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Single-class story because delete orchestration often needs more setup than its line count suggests.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108C6",
+      "title": "补齐 S3StorageService 到 100%",
+      "description": "作为维护者，我希望单独补齐 S3StorageService 的剩余覆盖率，以便把高复杂度存储分支控制在一个独立的短任务中。",
+      "acceptanceCriteria": [
+        "Target class: com.iflytek.skillhub.storage.S3StorageService",
+        "The target class reaches 100% line coverage before the story is considered done",
+        "Tests cover real storage-path behavior and exception semantics",
+        "Update tracked coverage inventory after the class is cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Keep this as a standalone story; staged upload, cleanup, and bucket-init branches make it too large to pair safely.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108C7",
+      "title": "补齐 SkillPackagePolicy 与 SkillPackageValidator 到 100%",
+      "description": "作为维护者，我希望把两个技能包校验核心类放在一个小批次完成，以便一次短迭代内收敛同一规则域的剩余缺口。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy and com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator",
+        "Both target classes reach 100% line coverage before the story is considered done",
+        "Tests cover real validation behavior and important failure semantics",
+        "Update tracked coverage inventory after both classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "This story should stay inside the package-validation domain only.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108C8",
+      "title": "补齐 BasicPrePublishValidator 与 SkillMetadataParser 到 100%",
+      "description": "作为维护者，我希望把预发布校验和元数据解析拆成一个小批次完成，以便把剩余解析/校验逻辑压缩到一次短迭代中。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.domain.skill.validation.BasicPrePublishValidator and com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser",
+        "Both target classes reach 100% line coverage before the story is considered done",
+        "Tests remain functional and assertion-bearing rather than coverage-only",
+        "Update tracked coverage inventory after both classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Parser plus pre-publish validator is the largest pairing still likely to fit into one short task.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108C9",
+      "title": "补齐 NamespaceService 与 ProfileReviewService 到 100%",
+      "description": "作为维护者，我希望把两个治理相关核心类拆成一个小批次完成，以便把剩余状态和权限逻辑放进一次短迭代。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.domain.namespace.NamespaceService and com.iflytek.skillhub.domain.user.ProfileReviewService",
+        "Both target classes reach 100% line coverage before the story is considered done",
+        "Tests cover real state transitions and permission semantics",
+        "Update tracked coverage inventory after both classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Keep this story limited to these two governance-heavy core services.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108C10",
+      "title": "补齐 LabelPermissionChecker 与 SkillRating 到 100%",
+      "description": "作为维护者，我希望把剩余两个较小的核心 domain 类拆成一个结尾小批次，以便在一次短迭代内收掉核心尾差。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.domain.label.LabelPermissionChecker and com.iflytek.skillhub.domain.social.SkillRating",
+        "Both target classes reach 100% line coverage before the story is considered done",
+        "Tests keep clear functional assertions",
+        "Update tracked coverage inventory after both classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "This is the smallest remaining core-domain pairing and should be handled as one short story.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108D1",
+      "title": "先把 AdminUserSearchRepository 拉到约 90%",
+      "description": "作为维护者，我希望先把 AdminUserSearchRepository 用正常测试拉到大约 90%，以便把困难 app 支撑类拆成可快速推进的阶段性任务。",
+      "acceptanceCriteria": [
+        "Target class: com.iflytek.skillhub.repository.AdminUserSearchRepository",
+        "The target class reaches roughly 90% line coverage or better through normal tests with basic assertions",
+        "Remaining uncovered lines are limited mainly to special tail branches or low-value edge paths",
+        "Update tracked coverage inventory with the reduced missed-line count"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Single difficult repository helper only; do not mix with other hard classes at this stage.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108D2",
+      "title": "先把 JpaGovernanceQueryRepository 拉到约 90%",
+      "description": "作为维护者，我希望先把 JpaGovernanceQueryRepository 用正常测试拉到大约 90%，以便将复杂查询类拆成单独的短任务。",
+      "acceptanceCriteria": [
+        "Target class: com.iflytek.skillhub.repository.JpaGovernanceQueryRepository",
+        "The target class reaches roughly 90% line coverage or better through normal tests with basic assertions",
+        "Remaining uncovered lines are limited mainly to tail branches, helpers, or low-value edges",
+        "Update tracked coverage inventory with the reduced missed-line count"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Keep this repository isolated because dynamic query setup can easily fill a full short iteration on its own.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108D3",
+      "title": "先把 GitHubClaimsExtractor 系列拉到约 90%",
+      "description": "作为维护者，我希望先把 GitHubClaimsExtractor 及其小型辅助类型拉到大约 90%，以便把困难 auth 非核心类拆成一次可控的小任务。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor, com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor.GitHubEmail, and the anonymous ParameterizedTypeReference inside GitHubClaimsExtractor",
+        "The target classes reach roughly 90% line coverage or better through normal tests with basic assertions",
+        "Remaining uncovered lines are limited mainly to tail branches or low-value edge paths",
+        "Update tracked coverage inventory with the reduced missed-line count"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Keep the GitHub extractor family together so HTTP/claim parsing setup is reused once.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108D4",
+      "title": "先把 GitLabClaimsExtractor 与 MockAuthFilter 拉到约 90%",
+      "description": "作为维护者，我希望先把 GitLabClaimsExtractor 和 MockAuthFilter 拉到大约 90%，以便把剩余 auth 非核心类继续保持在短任务粒度。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.auth.oauth.GitLabClaimsExtractor and com.iflytek.skillhub.auth.mock.MockAuthFilter",
+        "Both target classes reach roughly 90% line coverage or better through normal tests with basic assertions",
+        "Remaining uncovered lines are limited mainly to tail branches or low-value edge paths",
+        "Update tracked coverage inventory with the reduced missed-line count"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "This pairing stays within auth helper logic and should fit one short iteration.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108E1",
+      "title": "把困难 app 非核心类从 90% 清尾到 100%",
+      "description": "作为维护者，我希望把 app 侧困难非核心类最后的尾差行集中清掉，以便在保持主测试质量的前提下完成这些支撑类的收口。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.repository.AdminUserSearchRepository and com.iflytek.skillhub.repository.JpaGovernanceQueryRepository",
+        "Both target classes first reached roughly 90% in earlier stories and are then taken to 100% with focused tail cleanup",
+        "Coverage-only tactics are limited to residual tail lines and do not replace the main functional tests",
+        "Update tracked coverage inventory after both classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Tail-cleanup story only; this runs after US-108D1 and US-108D2.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108E2",
+      "title": "把困难 auth 非核心类从 90% 清尾到 100%",
+      "description": "作为维护者，我希望把 auth 侧困难非核心类最后的尾差行集中清掉，以便在不稀释核心认证测试质量的前提下完成这些支撑类收口。",
+      "acceptanceCriteria": [
+        "Target classes: com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor, com.iflytek.skillhub.auth.oauth.GitHubClaimsExtractor.GitHubEmail, the anonymous ParameterizedTypeReference inside GitHubClaimsExtractor, com.iflytek.skillhub.auth.oauth.GitLabClaimsExtractor, and com.iflytek.skillhub.auth.mock.MockAuthFilter",
+        "The target classes first reached roughly 90% in earlier stories and are then taken to 100% with focused tail cleanup",
+        "Coverage-only tactics are limited to residual tail lines and do not replace the main functional tests",
+        "Update tracked coverage inventory after the classes are cleared"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Tail-cleanup story only; this runs after US-108D3 and US-108D4.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108F1",
+      "title": "在隔离工作区执行 clean 全量后端单测与 JaCoCo 生成",
+      "description": "作为维护者，我希望先在隔离或独占工作区里完成 clean 全量后端单测和 JaCoCo 生成，以便拿到可信的最终验证输入。",
+      "acceptanceCriteria": [
+        "Run the agreed full backend clean unit-test command set in an exclusive workspace or isolated copy",
+        "Regenerate fresh module-level JaCoCo reports without reusing dirty target outputs",
+        "Do not mark the story done if the run was performed in a shared worktree with concurrent Maven/Surefire tasks",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This split exists because environment hygiene is now a proven prerequisite, not an implementation detail.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108F2",
+      "title": "确认 uncovered inventory 为空并同步最终覆盖率记录",
+      "description": "作为维护者，我希望在可信的全量构建产物生成后，再单独确认 uncovered inventory 已清空并同步最终记录，以便把“构建通过”和“覆盖率记录完成”拆开处理。",
+      "acceptanceCriteria": [
+        "Confirm that no Java production class still has LINE_MISSED greater than 0",
         "Confirm that the final tracked inventory of remaining uncovered classes is empty",
-        "Update the tracked coverage notes or baseline file to record the final 100% line coverage result",
-        "Typecheck passes",
-        "Tests pass"
+        "Update tracked coverage notes or baseline files with the final 100% result",
+        "Do not mark the story done unless the inputs came from US-108F1 or an equivalent clean isolated run"
       ],
       "priority": 8,
       "passes": false,
-      "notes": "This is the final unit-test gate for the remaining coverage program. It should fail if any module-level jacoco.csv still contains uncovered production lines.",
+      "notes": "This story is documentation and fact-sync only; it should not be coupled to the long-running build itself.",
       "retryCount": 0,
       "blocked": false
     },
     {
-      "id": "US-108G",
-      "title": "执行端到端回归验证以防补测过程引入行为回归",
-      "description": "作为交付负责人，我希望在全量单测与 100% 覆盖率达标之后，再做一次端到端回归验证，以便确认补单测过程中没有通过修改生产代码破坏真实业务行为。",
+      "id": "US-108G1",
+      "title": "执行 auth 与健康检查回归 smoke",
+      "description": "作为交付负责人，我希望先做最小 auth 与健康检查回归，以便把最终回归验证拆成能在短时间内完成的小批次。",
       "acceptanceCriteria": [
-        "After US-108F passes, run the agreed end-to-end regression validation on the current main path",
-        "Verify at least the login flow, one publish-related flow, one search flow, and one governance or review flow",
-        "Confirm the backend health endpoint is UP during the validation run",
-        "Record the regression-validation result in tracked project notes or docs together with the final coverage result",
+        "Run backend health verification and one auth/login-related smoke path after US-108F2 passes",
+        "Record the regression result in tracked notes or docs",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 8,
       "passes": false,
-      "notes": "The purpose of this story is to catch production-code regressions that might have been introduced while chasing coverage. This validation happens only after final 100% unit coverage has been confirmed.",
+      "notes": "This is the first regression slice and should stay focused on service health plus authentication.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108G2",
+      "title": "执行 publish 与 search 回归 smoke",
+      "description": "作为交付负责人，我希望再单独做 publish 与 search 回归，以便把用户主链路回归拆成第二个短批次。",
+      "acceptanceCriteria": [
+        "Run one publish-related flow and one search flow after US-108G1 passes",
+        "Record the regression result in tracked notes or docs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This slice only covers publish and search; do not expand it to governance or review.",
+      "retryCount": 0,
+      "blocked": false
+    },
+    {
+      "id": "US-108G3",
+      "title": "执行 governance 或 review 回归 smoke",
+      "description": "作为交付负责人，我希望最后单独做 governance/review 回归，以便把最终业务回归拆成第三个短批次。",
+      "acceptanceCriteria": [
+        "Run one governance or review flow after US-108G2 passes",
+        "Record the regression result in tracked notes or docs together with the earlier smoke slices",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This final regression slice closes the original broad regression story with one focused governance/review path.",
       "retryCount": 0,
       "blocked": false
     }

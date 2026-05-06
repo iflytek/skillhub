@@ -309,6 +309,211 @@ class SkillPackageValidatorTest {
         assertTrue(result.passed());
     }
 
+    @Test
+    void testMissingFrontmatterStartMarker() {
+        String skillMdContent = """
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Invalid SKILL.md frontmatter") && e.contains("missing opening")));
+    }
+
+    @Test
+    void testMissingFrontmatterContent() {
+        String skillMdContent = "---";
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Invalid SKILL.md frontmatter") && e.contains("frontmatter is empty")));
+    }
+
+    @Test
+    void testYamlSyntaxErrorWithLineColumn() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: [unclosed
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        // Loose frontmatter parser recovers from unclosed brackets
+        assertTrue(result.passed());
+    }
+
+    @Test
+    void testYamlSyntaxErrorWithoutLineColumn() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: : invalid
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        // Loose frontmatter parser recovers from colons in values
+        assertTrue(result.passed());
+    }
+
+    @Test
+    void testFrontmatterNotMap() {
+        String skillMdContent = """
+            ---
+            - item1
+            - item2
+            ---
+            Body
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Invalid SKILL.md frontmatter") && e.contains("frontmatter must be a YAML object")));
+    }
+
+    @Test
+    void testUnknownErrorCodeWithArgs() {
+        // Force an unknown error by using a custom validator that throws a LocalizedDomainException
+        // with a code not handled in formatMetadataError. We mock the parser to throw it.
+        SkillMetadataParser mockParser = org.mockito.Mockito.mock(SkillMetadataParser.class);
+        SkillPackageValidator customValidator = new SkillPackageValidator(mockParser);
+
+        org.mockito.Mockito.when(mockParser.parse(org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException("error.custom.unknown", "arg1", "arg2") {
+                    @Override
+                    public int statusCode() {
+                        return 400;
+                    }
+                });
+
+        List<PackageEntry> entries = List.of(skillMdEntry());
+        ValidationResult result = customValidator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("error.custom.unknown") && e.contains("arg1") && e.contains("arg2")));
+    }
+
+    @Test
+    void testUnknownErrorCodeWithoutArgs() {
+        SkillMetadataParser mockParser = org.mockito.Mockito.mock(SkillMetadataParser.class);
+        SkillPackageValidator customValidator = new SkillPackageValidator(mockParser);
+
+        org.mockito.Mockito.when(mockParser.parse(org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException("error.custom.noArgs") {
+                    @Override
+                    public int statusCode() {
+                        return 400;
+                    }
+                });
+
+        List<PackageEntry> entries = List.of(skillMdEntry());
+        ValidationResult result = customValidator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.equals("Invalid SKILL.md frontmatter: error.custom.noArgs")));
+    }
+
+    @Test
+    void testEmptyPackage() {
+        ValidationResult result = validator.validate(java.util.List.of());
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Missing required file: SKILL.md")));
+    }
+
+    @Test
+    void testMissingFrontmatterEndMarker() {
+        String skillMdContent = """
+            ---
+            name: test-skill
+            description: A test skill
+            version: 1.0.0
+            Body without closing delimiter
+            """;
+
+        List<PackageEntry> entries = List.of(
+            new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown")
+        );
+
+        ValidationResult result = validator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("missing closing --- marker")));
+    }
+
+    @Test
+    void testYamlInvalidWithLineColumnFormatting() {
+        SkillMetadataParser mockParser = org.mockito.Mockito.mock(SkillMetadataParser.class);
+        SkillPackageValidator customValidator = new SkillPackageValidator(mockParser);
+
+        org.mockito.Mockito.when(mockParser.parse(org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException("error.skill.metadata.yaml.invalid", "line 3, column 5: bad syntax") {
+                    @Override
+                    public int statusCode() {
+                        return 400;
+                    }
+                });
+
+        List<PackageEntry> entries = List.of(skillMdEntry());
+        ValidationResult result = customValidator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("invalid YAML near line 3, column 5")));
+    }
+
+    @Test
+    void testYamlInvalidWithoutLineColumnFormatting() {
+        SkillMetadataParser mockParser = org.mockito.Mockito.mock(SkillMetadataParser.class);
+        SkillPackageValidator customValidator = new SkillPackageValidator(mockParser);
+
+        org.mockito.Mockito.when(mockParser.parse(org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException("error.skill.metadata.yaml.invalid", "some generic error") {
+                    @Override
+                    public int statusCode() {
+                        return 400;
+                    }
+                });
+
+        List<PackageEntry> entries = List.of(skillMdEntry());
+        ValidationResult result = customValidator.validate(entries);
+
+        assertFalse(result.passed());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("invalid YAML syntax")));
+    }
+
     private PackageEntry skillMdEntry() {
         String skillMdContent = """
             ---

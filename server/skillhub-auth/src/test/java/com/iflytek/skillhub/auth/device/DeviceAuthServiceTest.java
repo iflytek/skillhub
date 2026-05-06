@@ -147,4 +147,53 @@ class DeviceAuthServiceTest {
                 .isInstanceOf(DomainBadRequestException.class)
                 .hasMessage("error.deviceAuth.deviceCode.used");
     }
+
+    @Test
+    void authorizeDeviceCode_rejectsInvalidUserCode() {
+        when(valueOperations.get("device:usercode:INVALID")).thenReturn(null);
+
+        assertThatThrownBy(() -> service.authorizeDeviceCode("INVALID", "user-1"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.deviceAuth.userCode.invalid");
+    }
+
+    @Test
+    void authorizeDeviceCode_rejectsExpiredDeviceCode() {
+        when(valueOperations.get("device:usercode:ABCD-EFGH")).thenReturn("device-1");
+        when(valueOperations.get("device:code:device-1")).thenReturn(null);
+
+        assertThatThrownBy(() -> service.authorizeDeviceCode("ABCD-EFGH", "user-1"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.deviceAuth.deviceCode.expired");
+    }
+
+    @Test
+    void authorizeDeviceCode_rejectsUsedCode() {
+        DeviceCodeData used = new DeviceCodeData("device-1", "ABCD-EFGH", DeviceCodeStatus.USED, "user-1");
+        when(valueOperations.get("device:usercode:ABCD-EFGH")).thenReturn("device-1");
+        when(valueOperations.get("device:code:device-1")).thenReturn(used);
+
+        assertThatThrownBy(() -> service.authorizeDeviceCode("ABCD-EFGH", "user-1"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.deviceAuth.deviceCode.used");
+    }
+
+    @Test
+    void pollToken_rejectsInvalidDeviceCode() {
+        when(valueOperations.get("device:code:missing")).thenReturn(null);
+
+        assertThatThrownBy(() -> service.pollToken("missing"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.deviceAuth.deviceCode.invalid");
+    }
+
+    @Test
+    void pollToken_rejectsUsedDeviceCode() {
+        DeviceCodeData used = new DeviceCodeData("device-1", "ABCD-EFGH", DeviceCodeStatus.USED, "user-1");
+        when(valueOperations.get("device:code:device-1")).thenReturn(used);
+
+        assertThatThrownBy(() -> service.pollToken("device-1"))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.deviceAuth.deviceCode.used");
+    }
 }

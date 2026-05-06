@@ -247,4 +247,125 @@ class LocalAuthServiceTest {
             .isInstanceOf(AuthFlowException.class)
             .hasMessageContaining("validation.auth.local.email.notBlank");
     }
+
+    @Test
+    void register_rejectsExistingUsername() {
+        given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(true);
+
+        assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "alice@example.com"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.username.exists");
+    }
+
+    @Test
+    void register_rejectsExistingEmail() {
+        given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(false);
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com"))
+            .willReturn(Optional.of(new UserAccount("usr_1", "alice", "alice@example.com", null)));
+
+        assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "alice@example.com"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.email.exists");
+    }
+
+    @Test
+    void register_rejectsWeakPassword() {
+        given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(false);
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.register("Alice", "weak", "alice@example.com"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.password");
+    }
+
+    @Test
+    void login_withNullPasswordAndUnknownUsername_performsDummyCheck() {
+        given(credentialRepository.findByUsernameIgnoreCase("ghost")).willReturn(Optional.empty());
+        given(passwordEncoder.matches("", "$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu"))
+            .willReturn(false);
+
+        assertThatThrownBy(() -> service.login("ghost", null))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(passwordEncoder).matches("", "$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu");
+    }
+
+    @Test
+    void login_userNotFoundForCredential_throwsIllegalState() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.login("alice", "Abcd123!"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("User not found for local credential");
+    }
+
+    @Test
+    void changePassword_withWrongCurrentPassword_fails() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        given(credentialRepository.findByUserId("usr_1")).willReturn(Optional.of(credential));
+        given(passwordEncoder.matches("wrong", "encoded")).willReturn(false);
+
+        assertThatThrownBy(() -> service.changePassword("usr_1", "wrong", "NewPass123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.invalidCredentials");
+    }
+
+    @Test
+    void changePassword_withWeakNewPassword_fails() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        given(credentialRepository.findByUserId("usr_1")).willReturn(Optional.of(credential));
+        given(passwordEncoder.matches("Abcd123!", "encoded")).willReturn(true);
+
+        assertThatThrownBy(() -> service.changePassword("usr_1", "Abcd123!", "weak"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.password");
+    }
+
+    @Test
+    void changePassword_success_updatesHashAndResetsCounters() {
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        credential.setFailedAttempts(3);
+        credential.setLockedUntil(Instant.now(CLOCK).plusSeconds(60));
+        given(credentialRepository.findByUserId("usr_1")).willReturn(Optional.of(credential));
+        given(passwordEncoder.matches("Abcd123!", "encoded")).willReturn(true);
+        given(passwordEncoder.encode("NewPass123!")).willReturn("new-encoded");
+
+        service.changePassword("usr_1", "Abcd123!", "NewPass123!");
+
+        assertThat(credential.getPasswordHash()).isEqualTo("new-encoded");
+        assertThat(credential.getFailedAttempts()).isZero();
+        assertThat(credential.getLockedUntil()).isNull();
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    void changePassword_credentialNotFound_fails() {
+        given(credentialRepository.findByUserId("usr_1")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.changePassword("usr_1", "Abcd123!", "NewPass123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.notEnabled");
+    }
+
+    @Test
+    void normalizeUsername_null_returnsEmptyString() throws Exception {
+        java.lang.reflect.Method method = LocalAuthService.class.getDeclaredMethod("normalizeUsername", String.class);
+        method.setAccessible(true);
+        String result = (String) method.invoke(service, (String) null);
+        assertThat(result).isEqualTo("");
+    }
+
+    @Test
+    void validateUsername_invalidFormat_throwsException() throws Exception {
+        java.lang.reflect.Method method = LocalAuthService.class.getDeclaredMethod("validateUsername", String.class);
+        method.setAccessible(true);
+
+        assertThatThrownBy(() -> method.invoke(service, "ab"))
+            .hasCauseInstanceOf(AuthFlowException.class);
+    }
 }

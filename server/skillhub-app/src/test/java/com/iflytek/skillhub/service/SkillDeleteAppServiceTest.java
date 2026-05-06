@@ -238,6 +238,153 @@ class SkillDeleteAppServiceTest {
         )).isInstanceOf(DomainForbiddenException.class);
     }
 
+    @Test
+    void deleteSkillById_namespaceNotFound_throwsNotFound() {
+        Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 11L);
+        setField(skill, "namespaceId", 99L);
+        given(skillRepository.findById(11L)).willReturn(java.util.Optional.of(skill));
+        given(namespaceRepository.findById(99L)).willReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.deleteSkillById(11L, "super-1", new AuditRequestContext("127.0.0.1", "JUnit")))
+                .isInstanceOf(DomainNotFoundException.class)
+                .hasMessageContaining("error.namespace.notFound");
+    }
+
+    @Test
+    void deleteSkillByIdFromPortal_skillNotFound_throwsNotFound() {
+        given(skillRepository.findById(11L)).willReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.deleteSkillByIdFromPortal(
+                11L,
+                new PlatformPrincipal("owner-1", "Owner", "owner@example.com", "", "session", java.util.Set.of("USER")),
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        )).isInstanceOf(DomainNotFoundException.class)
+                .hasMessageContaining("error.skill.notFound");
+    }
+
+    @Test
+    void deleteSkillByIdFromPortal_namespaceNotFound_throwsNotFound() {
+        Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 11L);
+        setField(skill, "namespaceId", 99L);
+        given(skillRepository.findById(11L)).willReturn(java.util.Optional.of(skill));
+        given(namespaceRepository.findById(99L)).willReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.deleteSkillByIdFromPortal(
+                11L,
+                new PlatformPrincipal("owner-1", "Owner", "owner@example.com", "", "session", java.util.Set.of("USER")),
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        )).isInstanceOf(DomainNotFoundException.class)
+                .hasMessageContaining("error.namespace.notFound");
+    }
+
+    @Test
+    void deleteSkillFromPortal_withTargetOwnerId_findsExactMatch() {
+        Skill targetSkill = new Skill(1L, "demo-skill", "owner-2", SkillVisibility.PUBLIC);
+        setField(targetSkill, "id", 12L);
+        Skill otherSkill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(otherSkill, "id", 11L);
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill"))
+                .willReturn(java.util.List.of(otherSkill, targetSkill));
+
+        SkillDeleteAppService.DeleteResult result = service.deleteSkillFromPortal(
+                "global",
+                "demo-skill",
+                "owner-2",
+                new PlatformPrincipal("super-1", "Super", "super@example.com", "", "session", java.util.Set.of("SUPER_ADMIN")),
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        );
+
+        assertThat(result.deleted()).isTrue();
+        assertThat(result.skillId()).isEqualTo(12L);
+    }
+
+    @Test
+    void deleteSkill_nullNamespace_returnsNullNamespace() {
+        given(skillRepository.findByNamespaceSlugAndSlug(null, "demo-skill")).willReturn(java.util.List.of());
+
+        SkillDeleteAppService.DeleteResult result =
+                service.deleteSkill(null, "demo-skill", null, "super-1", new AuditRequestContext("127.0.0.1", "JUnit"));
+        assertThat(result.namespace()).isNull();
+    }
+
+    @Test
+    void deleteSkillFromPortal_multipleCandidatesNoOwnerId_returnsEmpty() {
+        Skill skill1 = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        Skill skill2 = new Skill(1L, "demo-skill", "owner-2", SkillVisibility.PUBLIC);
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill"))
+                .willReturn(java.util.List.of(skill1, skill2));
+
+        SkillDeleteAppService.DeleteResult result = service.deleteSkillFromPortal(
+                "global",
+                "demo-skill",
+                null,
+                new PlatformPrincipal("viewer", "Viewer", "viewer@example.com", "", "session", java.util.Set.of("USER")),
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        );
+
+        assertThat(result.deleted()).isFalse();
+        assertThat(result.skillId()).isNull();
+    }
+
+    @Test
+    void deleteSkill_nullAuditContext_usesNullIpAndAgent() {
+        Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 11L);
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(java.util.List.of(skill));
+
+        SkillDeleteAppService.DeleteResult result =
+                service.deleteSkill("global", "demo-skill", null, "super-1", null);
+
+        assertThat(result.deleted()).isTrue();
+        verify(skillHardDeleteService).hardDeleteSkill(skill, "global", "super-1", null, null);
+    }
+
+    @Test
+    void canDeleteFromPortal_nullPrincipal_returnsFalse() throws Exception {
+        java.lang.reflect.Method method = SkillDeleteAppService.class.getDeclaredMethod("canDeleteFromPortal",
+                com.iflytek.skillhub.domain.skill.Skill.class, PlatformPrincipal.class);
+        method.setAccessible(true);
+
+        Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        boolean result = (boolean) method.invoke(service, skill, null);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void deleteSkill_namespaceStartsWithAt_stripsAtSymbol() {
+        Skill skill = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 11L);
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill")).willReturn(List.of(skill));
+
+        SkillDeleteAppService.DeleteResult result =
+                service.deleteSkill("@global", "demo-skill", null, "super-1", new AuditRequestContext("127.0.0.1", "JUnit"));
+
+        assertThat(result.deleted()).isTrue();
+        assertThat(result.namespace()).isEqualTo("global");
+    }
+
+    @Test
+    void deleteSkillFromPortal_nullPrincipal_multipleCandidates_returnsEmpty() {
+        Skill skill1 = new Skill(1L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        Skill skill2 = new Skill(1L, "demo-skill", "owner-2", SkillVisibility.PUBLIC);
+        given(skillRepository.findByNamespaceSlugAndSlug("global", "demo-skill"))
+                .willReturn(List.of(skill1, skill2));
+
+        SkillDeleteAppService.DeleteResult result = service.deleteSkillFromPortal(
+                "global",
+                "demo-skill",
+                null,
+                null,
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        );
+
+        assertThat(result.deleted()).isFalse();
+        assertThat(result.skillId()).isNull();
+    }
+
     private void setField(Object target, String fieldName, Object value) {
         try {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);

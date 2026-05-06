@@ -151,6 +151,17 @@
 - 当前 design 已明确：单元测试、`DataJpaTest`、JaCoCo 覆盖率门禁测试只能使用 `H2` 或 mock，真实 MySQL 只保留给显式的 MySQL 集成/运行时验证。
 - 以下剩余 story 默认都建立在上述边界已经生效的前提下执行。
 
+执行前预检：
+
+- 开始任一 coverage story 之前，先跑通当前约定的后端单测入口；如果本轮会复用或扩展前序遗留测试，优先跑全量后端单测，而不是只跑新加的测试类。
+- 覆盖率事实只接受本轮 `clean` 后重新生成的 JaCoCo 报告；不得复用脏 `target/`、历史 `jacoco.csv` 或被中断构建留下的产物做完成判断。
+- 执行 `clean test`、`clean test jacoco:report`、aggregate report 或 coverage gate 时，当前工作区必须独占；同一份仓库目录内不得并发运行多个 Maven / Surefire / JaCoCo 任务。
+- 如果当前机器上已有其他后端构建在跑，覆盖率验证应切到隔离副本或临时工作区执行，避免 `clean`、`target/` 重建和 surefire 扫描相互污染。
+- 若验证阶段出现 `NoClassDefFoundError`、`ClassNotFoundException`、`bad class file`、`NoSuchFileException`、`Unable to create test class` 这类缺类异常，第一优先级不是补代码，而是先排查共享工作区并发构建、脏 `target/` 和增量产物污染。
+- 若预检阶段发现既有测试断言与当前生产代码行为不一致（例如测试期望异常继续抛出，但生产代码实际上已经捕获并转换/吞掉异常），应先修正既有测试基线，再继续补新的覆盖率 case。
+- 不允许在“既有测试本来就错”的前提上叠加新覆盖率测试，否则会把错误假设固化进后续 story，并放大 validator 噪音。
+- 覆盖率补测的新增断言必须以当前生产代码语义为准，而不是以历史测试文件中的旧断言为准。
+
 ### Wave 1: 超轻量清扫，优先用正常测试拿掉简单类
 
 ### US-R201: 先清 DTO、properties、exception、main、简单 inner class

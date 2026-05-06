@@ -174,4 +174,202 @@ class SkillMetadataParserTest {
         );
         assertEquals("error.skill.metadata.frontmatter.missingEnd", exception.messageCode());
     }
+
+    @Test
+    void testThrowsWhenContentIsNull() {
+        DomainBadRequestException exception = assertThrows(
+            DomainBadRequestException.class,
+            () -> parser.parse(null)
+        );
+        assertEquals("error.skill.metadata.content.empty", exception.messageCode());
+    }
+
+    @Test
+    void testThrowsWhenContentIsBlank() {
+        DomainBadRequestException exception = assertThrows(
+            DomainBadRequestException.class,
+            () -> parser.parse("   ")
+        );
+        assertEquals("error.skill.metadata.content.empty", exception.messageCode());
+    }
+
+    @Test
+    void testThrowsWhenFrontmatterContentMissing() {
+        String content = "---";
+
+        DomainBadRequestException exception = assertThrows(
+            DomainBadRequestException.class,
+            () -> parser.parse(content)
+        );
+        assertEquals("error.skill.metadata.frontmatter.missingContent", exception.messageCode());
+    }
+
+    @Test
+    void testThrowsWhenFrontmatterIsNotAMap() {
+        String content = """
+            ---
+            - item1
+            - item2
+            ---
+            Body
+            """;
+
+        DomainBadRequestException exception = assertThrows(
+            DomainBadRequestException.class,
+            () -> parser.parse(content)
+        );
+        assertEquals("error.skill.metadata.yaml.notMap", exception.messageCode());
+    }
+
+    @Test
+    void testStripsWrappingQuotes() {
+        String content = """
+            ---
+            name: "quoted-name"
+            description: 'quoted-description'
+            version: \"1.0.0\"
+            ---
+            Body
+            """;
+
+        SkillMetadata metadata = parser.parse(content);
+
+        assertEquals("quoted-name", metadata.name());
+        assertEquals("quoted-description", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testLooseFrontmatterIgnoresCommentsAndEmptyLines() {
+        String content = """
+            ---
+            name: loose-skill
+            # this is a comment
+            description: loose description
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        SkillMetadata metadata = parser.parse(content);
+
+        assertEquals("loose-skill", metadata.name());
+        assertEquals("loose description", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testLooseFrontmatterIgnoresLinesWithoutColon() {
+        String content = """
+            ---
+            name: loose-skill
+            no colon here
+            description: desc
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        SkillMetadata metadata = parser.parse(content);
+
+        assertEquals("loose-skill", metadata.name());
+        assertEquals("desc", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testLooseFrontmatterIgnoresEmptyKey() {
+        String content = """
+            ---
+            name: loose-skill
+             : empty key
+            description: desc
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        SkillMetadata metadata = parser.parse(content);
+
+        assertEquals("loose-skill", metadata.name());
+        assertEquals("desc", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testThrowsWhenYamlInvalidAndLooseParsingEmpty() {
+        // SnakeYAML throws on unclosed mapping start, and loose parsing returns empty because no colons
+        String content = "---\n{\n---\nBody";
+
+        DomainBadRequestException exception = assertThrows(
+            DomainBadRequestException.class,
+            () -> parser.parse(content)
+        );
+        assertEquals("error.skill.metadata.yaml.invalid", exception.messageCode());
+    }
+
+    @Test
+    void testLooseFrontmatterIgnoresCommentsAndEmptyLinesInMalformedYaml() {
+        String content = """
+            ---
+            name: loose-skill
+            # this is a comment
+
+            description: loose description
+            version: 1.0.0
+            ---
+            Body
+            """;
+
+        // Force loose parsing by making SnakeYAML throw — use tab indentation which SnakeYAML rejects
+        String malformed = "---\n\tname: loose-skill\n\tdescription: desc\n\tversion: 1.0.0\n---\nBody";
+
+        SkillMetadata metadata = parser.parse(malformed);
+
+        assertEquals("loose-skill", metadata.name());
+        assertEquals("desc", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testStripsSingleQuotes() {
+        String content = """
+            ---
+            name: 'single-quoted-name'
+            description: 'single-quoted-description'
+            version: '1.0.0'
+            ---
+            Body
+            """;
+
+        SkillMetadata metadata = parser.parse(content);
+
+        assertEquals("single-quoted-name", metadata.name());
+        assertEquals("single-quoted-description", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testLooseFrontmatterIgnoresCommentsInMalformedYaml() {
+        // Tab indentation triggers loose parsing; # comment line hits the continue branch
+        String malformed = "---\n\tname: loose-skill\n\t# this is a comment\n\tdescription: desc\n\tversion: 1.0.0\n---\nBody";
+
+        SkillMetadata metadata = parser.parse(malformed);
+
+        assertEquals("loose-skill", metadata.name());
+        assertEquals("desc", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
+
+    @Test
+    void testLooseFrontmatterStripsQuotesInMalformedYaml() {
+        // Tab indentation triggers loose parsing; quoted values exercise stripWrappingQuotes
+        String malformed = "---\n\tname: \"quoted-name\"\n\tdescription: 'quoted-desc'\n\tversion: \"1.0.0\"\n---\nBody";
+
+        SkillMetadata metadata = parser.parse(malformed);
+
+        assertEquals("quoted-name", metadata.name());
+        assertEquals("quoted-desc", metadata.description());
+        assertEquals("1.0.0", metadata.version());
+    }
 }

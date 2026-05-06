@@ -93,7 +93,108 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent
 CLAUDE_INSTRUCTION_FILE = SCRIPT_DIR / "CLAUDE.md"
 VALIDATOR_INSTRUCTION_FILE = SCRIPT_DIR / "VALIDATOR.md"
 PRD_FILE = SCRIPT_DIR / "prd.json"
+PRD_BACKUP_FILE = SCRIPT_DIR / ".prd.json.last-valid.bak"
 RALPH_AGENT_FILE = SCRIPT_DIR / "ralph-agent.json"
+
+
+def _parse_prd_text(text: str) -> dict:
+    """解析并做最小结构校验，确保 prd.json 至少保持可消费结构。"""
+    prd = json.loads(text)
+    if not isinstance(prd, dict):
+        raise ValueError("顶层必须是 JSON object")
+
+    stories = prd.get("userStories")
+    if not isinstance(stories, list):
+        raise ValueError("缺少 userStories 数组")
+
+    for idx, story in enumerate(stories):
+        if not isinstance(story, dict):
+            raise ValueError(f"userStories[{idx}] 必须是 object")
+        if not isinstance(story.get("id"), str) or not story["id"]:
+            raise ValueError(f"userStories[{idx}] 缺少有效 id")
+
+    return prd
+
+
+def _read_prd_text(path: Path = PRD_FILE) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _load_prd(path: Path = PRD_FILE) -> dict:
+    return _parse_prd_text(_read_prd_text(path))
+
+
+def _write_text_atomically(path: Path, text: str) -> None:
+    tmp_path = path.with_name(f"{path.name}.tmp")
+    tmp_path.write_text(text, encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def _snapshot_current_prd() -> str | None:
+    """
+    读取当前有效的 prd.json，并同步刷新最后一次合法备份。
+    若当前文件已损坏，则自动尝试从最后一次合法备份修复。
+    返回本轮运行前的原始文本，便于失败时直接回滚。
+    """
+    try:
+        text = _read_prd_text(PRD_FILE)
+        _parse_prd_text(text)
+        _write_text_atomically(PRD_BACKUP_FILE, text)
+        return text
+    except Exception as e:
+        print(f"⚠️  当前 prd.json 非法，尝试自动修复: {e}")
+        if _restore_prd_from_backup("启动前自动修复", None):
+            repaired_text = _read_prd_text(PRD_FILE)
+            _parse_prd_text(repaired_text)
+            _write_text_atomically(PRD_BACKUP_FILE, repaired_text)
+            print("✓ prd.json 已自动修复")
+            return repaired_text
+        print("❌ 当前 prd.json 非法，且没有可用备份，无法继续执行")
+        return None
+
+
+def _restore_prd_from_backup(reason: str, snapshot_text: str | None) -> bool:
+    """
+    当 agent 产出非法 JSON 时，优先回滚到本轮前快照；若不存在则尝试最后一次合法备份。
+    """
+    candidates: list[tuple[str, str]] = []
+    if snapshot_text is not None:
+        candidates.append(("本轮执行前快照", snapshot_text))
+
+    if PRD_BACKUP_FILE.exists():
+        try:
+            backup_text = _read_prd_text(PRD_BACKUP_FILE)
+            _parse_prd_text(backup_text)
+            candidates.append(("最后一次合法备份", backup_text))
+        except Exception as e:
+            print(f"⚠️  备份文件也无效，无法用于恢复: {e}")
+
+    for source, text in candidates:
+        try:
+            _write_text_atomically(PRD_FILE, text)
+            _parse_prd_text(text)
+            print(f"↩️  已从{source}恢复 prd.json ({reason})")
+            return True
+        except Exception as e:
+            print(f"⚠️  从{source}恢复失败: {e}")
+
+    return False
+
+
+def _ensure_prd_integrity_after_agent(label: str, snapshot_text: str | None) -> bool:
+    """
+    验证 agent 执行后 prd.json 仍为合法结构。
+    若不合法则自动回滚，并返回 False。
+    """
+    try:
+        _load_prd(PRD_FILE)
+        return True
+    except Exception as e:
+        print(f"⚠️  {label} 产出了非法 prd.json: {e}")
+        if _restore_prd_from_backup(label, snapshot_text):
+            return False
+        print("❌ 无法自动恢复 prd.json，请手动修复后重试")
+        return False
 
 
 def _stream_agent_output(master_fd: int) -> None:
@@ -229,6 +330,10 @@ def run_developer(iteration: int) -> bool:
         print(f"❌ 错误: {CLAUDE_INSTRUCTION_FILE} 不存在")
         return False
 
+    snapshot_text = _snapshot_current_prd()
+    if snapshot_text is None:
+        return True
+
     prompt = CLAUDE_INSTRUCTION_FILE.read_text()
     cmd, stdin_data = build_process_cmd(prompt)
 
@@ -240,6 +345,9 @@ def run_developer(iteration: int) -> bool:
             label="开发 Agent",
             timeout_seconds=TIMEOUT_SECONDS,
         )
+        if not _ensure_prd_integrity_after_agent("开发 Agent", snapshot_text):
+            print("   prd.json 已自动修复，本轮跳过验证，下一次迭代继续")
+            return True
         if timed_out:
             print("   进程已终止，将在下一次迭代重试")
             return True
@@ -259,6 +367,10 @@ def run_validator(iteration: int) -> None:
         print(f"⚠️  警告: {VALIDATOR_INSTRUCTION_FILE} 不存在，跳过验证")
         return
 
+    snapshot_text = _snapshot_current_prd()
+    if snapshot_text is None:
+        return
+
     prompt = VALIDATOR_INSTRUCTION_FILE.read_text()
     cmd, stdin_data = build_process_cmd(prompt)
 
@@ -270,6 +382,8 @@ def run_validator(iteration: int) -> None:
             label="Validator",
             timeout_seconds=TIMEOUT_SECONDS * 2,
         )
+        if not _ensure_prd_integrity_after_agent("Validator", snapshot_text):
+            print("   prd.json 已自动修复，本次验证结果不采纳")
         if timed_out:
             print("   Validator 进程已终止，跳过本次验证")
         return
@@ -279,7 +393,7 @@ def run_validator(iteration: int) -> None:
 def get_current_story_id() -> str | None:
     """返回 prd.json 中第一个 passes=False 且 blocked=False 的 story ID"""
     try:
-        prd = json.loads(PRD_FILE.read_text())
+        prd = _load_prd(PRD_FILE)
         for story in prd.get("userStories", []):
             if not story.get("passes", False) and not story.get("blocked", False):
                 return story.get("id")
@@ -293,7 +407,7 @@ def all_stories_resolved() -> bool:
     检查 prd.json，判断是否所有 story 都已完成或被 blocked
     """
     try:
-        prd = json.loads(PRD_FILE.read_text())
+        prd = _load_prd(PRD_FILE)
         stories = prd.get("userStories", [])
         for story in stories:
             passes = story.get("passes", False)
@@ -338,6 +452,9 @@ def main():
         agent_info += f", Model: {MODEL}"
     print(f"启动 Ralph - 最大迭代次数: {MAX_ITERATIONS}, {agent_info}")
     total_start_time = time.time()
+
+    if _snapshot_current_prd() is None:
+        sys.exit(2)
 
     dashboard.start(max_iterations=MAX_ITERATIONS, host=host)
 
