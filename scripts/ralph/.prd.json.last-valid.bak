@@ -110,8 +110,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "This story should stay inside the package-validation domain only.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },

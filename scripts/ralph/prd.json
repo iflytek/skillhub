@@ -126,8 +126,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Parser plus pre-publish validator is the largest pairing still likely to fit into one short task.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
