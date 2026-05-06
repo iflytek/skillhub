@@ -347,3 +347,15 @@
   - 遇到的陷阱：当前 branch 正在进行 runtime 收敛（local-mysql → dev），LocalDevDataInitializer 的 fixture 名称已变更但对应测试断言未同步，导致全量测试失败；执行覆盖率 story 前应先跑全量测试确认基线状态。
   - 有用的上下文：branch 上存在大量与 runtime 收敛相关的未提交修改（profile 重命名、yml 替换、测试适配等），这些修改与覆盖率 story 无关但必须保持测试绿色；提交时会一并纳入。
 ---
+
+## 2026-05-06 13:25 - US-108C9
+- 补齐 NamespaceService 与 ProfileReviewService 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.domain.namespace.NamespaceService` LINE_MISSED=0（现有 23 个 case 已完整覆盖 createNamespace/updateNamespace/getNamespaceBySlug/getNamespaceBySlugForRead/getNamespace/assertAdminOrOwner/assertMember/assertMutable 的正常路径与全部异常分支：slug 已存在、非法 slug、namespace 不存在、非 owner/admin、GLOBAL namespace 不可变、FROZEN/readonly 不可写、ARCHIVED 非成员不可见等）。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.domain.user.ProfileReviewService` LINE_MISSED=0（现有 17 个 case 已完整覆盖 listByStatus/approve/reject 的正常路径与全部异常分支：非 PENDING 状态、请求不存在、用户不存在、JSON 解析异常、序列化异常、默认/自定义排序方向等）。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend 1035 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；NamespaceService 与 ProfileReviewService 的现有测试已完整覆盖全部 public 方法与主要异常分支，无需新增测试代码即可达标。
+  - 遇到的陷阱：无。
+  - 有用的上下文：NamespaceService 的 `assertMutable` 组合了 `assertNotImmutable` 与 `assertWritable` 两个独立检查，测试需分别覆盖 immutable 失败、writable 失败、以及两者都通过的场景；ProfileReviewService 的 `listByStatus` 根据状态动态选择排序字段（PENDING → createdAt，其他 → reviewedAt），测试中需覆盖两种状态路径。
+---

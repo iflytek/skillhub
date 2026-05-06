@@ -142,8 +142,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Keep this story limited to these two governance-heavy core services.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
