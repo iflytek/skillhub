@@ -359,3 +359,27 @@
   - 遇到的陷阱：无。
   - 有用的上下文：NamespaceService 的 `assertMutable` 组合了 `assertNotImmutable` 与 `assertWritable` 两个独立检查，测试需分别覆盖 immutable 失败、writable 失败、以及两者都通过的场景；ProfileReviewService 的 `listByStatus` 根据状态动态选择排序字段（PENDING → createdAt，其他 → reviewedAt），测试中需覆盖两种状态路径。
 ---
+
+## 2026-05-06 13:59 - US-108C10
+- 补齐 LabelPermissionChecker 与 SkillRating 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.domain.label.LabelPermissionChecker` LINE_MISSED=0：新增 1 个 test case（`canManageSkillLabel_noNamespaceRoleReturnsFalse`），覆盖 `userNamespaceRoles.get(skill.getNamespaceId())` 返回 null 时（用户无该 namespace 角色）的 false 分支。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.domain.social.SkillRating` LINE_MISSED=0（现有 9 个 case 已完整覆盖 protected 构造、public 构造的分数校验、updateScore、prePersist、preUpdate、全部 getter）。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend 1035 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；SkillRating 的实体类测试模式与之前覆盖的实体类一致（protected 构造、@PrePersist/@PreUpdate、getter/setter、业务校验）。
+  - 遇到的陷阱：LabelPermissionChecker 的 `canManageSkillLabel` 中 `userNamespaceRoles.get(skill.getNamespaceId())` 返回 null 的分支容易被忽略——现有测试用 `Map.of()` 覆盖 null userId 场景（提前返回），用 `Map.of(1L, NamespaceRole.MEMBER)` 覆盖非 null 角色场景，但缺少 "map 中无对应 entry" 导致 null role 的场景；测试时需构造一个包含其他 namespace entry 但不包含目标 skill namespace 的 map。
+  - 有用的上下文：`LabelPermissionChecker` 是纯逻辑判断类，无 Spring 依赖，可直接实例化测试；`SkillRating` 是 JPA 实体，测试中通过反射调用 protected 无参构造即可覆盖 JPA 实例化路径。
+---
+
+## 2026-05-06 14:15 - US-108D1
+- 补齐 AdminUserSearchRepository 到 100% 行覆盖率（目标约 90%，实际达到 100%）。
+- 新增 `AdminUserSearchRepositoryTest`（7 个 case），覆盖 search 方法的全部路径：无过滤条件、仅 search 文本、仅 status 过滤、两者组合、空 search 字符串、分页参数、count 查询复用。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.repository.AdminUserSearchRepository` LINE_MISSED=0 / LINE_COVERED=32（从 9.38% 提升到 100%）。
+- 同步重新生成 `server/coverage-baseline.md` 与 `docs/prds/java-unit-line-coverage-inventory.md`：从两份清单中移除 AdminUserSearchRepository 条目，整体 Missed Lines 下降，剩余未覆盖类减少。
+- 质量检查：backend tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：JPA Criteria API 类的单元测试需要大量链式 mock（CriteriaBuilder → CriteriaQuery → Root → Path → Predicate → TypedQuery）；使用 `MockitoSettings(strictness = Strictness.LENIENT)` 可避免 strict stubbing 在复杂链式 mock 场景下的误报；`CriteriaQuery.select()/where()/orderBy()` 需显式 stub 为 return self 才能支持 fluent API。
+  - 遇到的陷阱：`mock(TypedQuery.class)` 使用 raw type 时，Mockito 默认返回 `null` 对未 stub 的方法；当返回值参与自动装箱（如 `long total = query.getSingleResult()`）时会抛出 NPE，因此所有被测路径中的 `getSingleResult()` 都必须显式 stub。
+  - 有用的上下文：`AdminUserSearchRepository` 的 `buildPredicates` 是 private 方法，测试中通过调用 public `search` 方法间接覆盖；search 文本过滤使用 `builder.coalesce(root.get("ussId"), "")` 处理可能为 null 的 ussId 字段，测试中需单独 stub `coalesce` 返回才能覆盖该分支。
+---
