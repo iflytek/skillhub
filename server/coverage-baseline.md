@@ -28,15 +28,15 @@ The following classes are tracked but explicitly excluded from the production co
 | Metric | Value |
 |--------|-------|
 | Total Lines | 11943 |
-| Covered Lines | 11918 |
-| Missed Lines | 25 |
-| Line Coverage | 99.79% |
+| Covered Lines | 11943 |
+| Missed Lines | 0 |
+| Line Coverage | 100.00% |
 
 ## Per-Module Line Coverage
 | Module | Total Lines | Covered | Missed | Coverage |
 |--------|-------------|---------|--------|----------|
 | skillhub-app | 5107 | 5107 | 0 | 100.00% |
-| skillhub-auth | 2089 | 2064 | 25 | 98.80% |
+| skillhub-auth | 2089 | 2089 | 0 | 100.00% |
 | skillhub-domain | 3310 | 3310 | 0 | 100.00% |
 | skillhub-infra | 308 | 308 | 0 | 100.00% |
 | skillhub-notification | 207 | 207 | 0 | 100.00% |
@@ -44,9 +44,3 @@ The following classes are tracked but explicitly excluded from the production co
 | skillhub-storage | 213 | 213 | 0 | 100.00% |
 
 ## Uncovered Classes Inventory (by module, sorted by missed lines desc)
-
-### skillhub-auth
-| Class | Package | Missed Lines | Covered Lines |
-|-------|---------|--------------|---------------|
-| MockAuthFilter | com.iflytek.skillhub.auth.mock | 17 | 5 |
-| GitLabClaimsExtractor | com.iflytek.skillhub.auth.oauth | 8 | 43 |

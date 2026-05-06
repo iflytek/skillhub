@@ -8,7 +8,7 @@
 - 按模块分组，便于后续拆批补测
 - 报告命令：`mvn -f server/pom.xml -pl skillhub-app -am test jacoco:report-aggregate`
 - 聚合报告路径：`server/skillhub-app/target/site/jacoco-aggregate/index.html`
-- 当前后端多模块 aggregate line coverage 为 `99.79%`（`11918/11943`）
+- 当前后端多模块 aggregate line coverage 为 `100.00%`（`11943/11943`）
 
 ### Explicit Exclusions from Production Gate
 
@@ -34,10 +34,8 @@
 
 ## skillhub-auth
 
-| Class | Line Missed | Line Covered | Line Coverage |
-|------|------:|------:|------:|
-| `com.iflytek.skillhub.auth.mock.MockAuthFilter` | 17 | 5 | 22.73% |
-| `com.iflytek.skillhub.auth.oauth.GitLabClaimsExtractor` | 8 | 43 | 84.31% |
+（本模块所有生产类 line_missed = 0）
+
 
 ## skillhub-domain
 

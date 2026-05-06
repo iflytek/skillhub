@@ -222,8 +222,8 @@
         "Update tracked coverage inventory with the reduced missed-line count"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "This pairing stays within auth helper logic and should fit one short iteration.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
