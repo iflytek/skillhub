@@ -301,3 +301,16 @@
   - 遇到的陷阱：`FSDirectory.open(Path)` 在传入普通文件路径时可能不抛出 IOException（取决于 Lucene 版本和 JDK 的 NIO 实现），测试 IOException 分支时直接传入已存在的普通文件在部分环境下可能不够稳定，可考虑反射直接调用 protected 方法。
   - 有用的上下文：JaCoCo CSV 只显示有 missed lines 的类；要确认目标类是否已清零，最简单的方式是 grep 缺失列表——如果类名不出现即为 100%。
 ---
+
+## 2026-05-06 11:30 - US-108C5
+- 补齐 SkillDeleteAppService 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.service.SkillDeleteAppService` LINE_MISSED=0（现有 20 个 case 已完整覆盖 deleteSkill/deleteSkillById/deleteSkillFromPortal/deleteSkillByIdFromPortal 的正常路径与全部异常分支：技能不存在、namespace 不存在、无权限、多候选无 owner、targetOwnerId 精确匹配、null auditContext、@namespace 前缀剥离等）。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 修复 LocalDevDataInitializerTest 中与 dev profile 收敛相关的断言漂移（"Local MySQL Search Fixture" → "Dev Search Fixture"），确保全量测试绿色。
+- 更改的文件：`server/skillhub-app/src/test/java/com/iflytek/skillhub/bootstrap/LocalDevDataInitializerTest.java`
+- 质量检查：backend 1035 tests / 0 failures / BUILD SUCCESS。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前应先运行模块级 JaCoCo 确认目标类现状，避免对已 100% 覆盖的类重复造轮子；SkillDeleteAppService 的现有测试已完整覆盖全部 public 方法与主要异常分支，无需新增测试代码即可达标。
+  - 遇到的陷阱：当前 branch 正在进行 runtime 收敛（local-mysql → dev），LocalDevDataInitializer 的 fixture 名称已变更但对应测试断言未同步，导致全量测试失败；执行覆盖率 story 前应先跑全量测试确认基线状态。
+  - 有用的上下文：branch 上存在大量与 runtime 收敛相关的未提交修改（profile 重命名、yml 替换、测试适配等），这些修改与覆盖率 story 无关但必须保持测试绿色；提交时会一并纳入。
+---

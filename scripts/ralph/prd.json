@@ -78,8 +78,8 @@
         "Update tracked coverage inventory after the class is cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Single-class story because delete orchestration often needs more setup than its line count suggests.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
