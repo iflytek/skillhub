@@ -206,8 +206,8 @@
         "Update tracked coverage inventory with the reduced missed-line count"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Keep the GitHub extractor family together so HTTP/claim parsing setup is reused once.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },

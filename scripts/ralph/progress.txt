@@ -1,3 +1,16 @@
+## 2026-05-06 15:58 - US-108D3
+- 先把 GitHubClaimsExtractor 系列拉到约 90%（实际达到 100% 行覆盖率）。
+- 修改 `GitHubClaimsExtractor`：新增 package-private 构造函数 `GitHubClaimsExtractor(RestClient.Builder)`，与 `GitLabClaimsExtractor` 的测试友好模式保持一致；保留无参默认构造函数以维持 Spring 组件自动装配的兼容性。
+- 新增 `GitHubClaimsExtractorTest`（7 个 case）：覆盖 `getProvider`、主验证邮箱选取、空邮箱列表回退、API 返回 null 回退、无邮箱时 emailVerified=false、多验证邮箱按 primary 排序选取、跳过未验证邮箱并回退到 null。
+- 模块级 JaCoCo 确认 3 目标类全部 LINE_MISSED=0：`GitHubClaimsExtractor`（33 covered）、`GitHubClaimsExtractor.GitHubEmail`（1 covered）、匿名 `ParameterizedTypeReference`（1 covered）。
+- 重新生成 `coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`：移除 3 个 GitHubClaimsExtractor 条目；aggregate line coverage 从 99.55% 提升到 99.79%，剩余未覆盖类从 4 个减少到 2 个（GitLabClaimsExtractor、MockAuthFilter）。
+- 质量检查：backend 1051 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：`MockRestServiceServer.bindTo(RestClient.Builder)` 拦截到的请求 URI 不含 baseUrl；断言 `requestTo` 应使用相对路径（如 `/user/emails`），而非完整 URL。
+  - 遇到的陷阱：`GitHubClaimsExtractor` 原实现使用硬编码 `RestClient.builder().baseUrl(...)` 创建客户端，无法直接注入 mock；添加接受 `RestClient.Builder` 的 package-private 构造函数是最小侵入的测试化改造。
+  - 有用的上下文：`GitHubClaimsExtractor` 与 `GitLabClaimsExtractor` 结构高度相似，但前者 baseUrl 固定、后者从 `ClientRegistration` 动态解析；测试中前者用相对 URI mock，后者用完整 URI mock。
+---
+
 ## 2026-05-06 15:26 - US-108D2
 - 先把 JpaGovernanceQueryRepository 拉到约 90%（实际达到 100% 行覆盖率）。
 - 模块级 JaCoCo 确认 `com.iflytek.skillhub.repository.JpaGovernanceQueryRepository` LINE_MISSED=0 / LINE_COVERED=162（从 inventory 记录的 91.36% 提升到 100%）。
@@ -94,6 +107,7 @@
 - domain 服务测试中，`SkillSlugResolutionService` 和 `VisibilityChecker` 是高频依赖，建议直接实例化（非 mock）以简化测试编排，因为它们的逻辑轻量且无副作用。
 - 覆盖率基线文件应通过脚本从 `server/*/target/site/jacoco/jacoco.csv` 自动生成，避免手工维护导致的数据漂移。
 - 显式声明 mock / dev-only / platform-specific 类的排除范围，让生产覆盖率门禁的范围清晰可控。
+- `MockRestServiceServer` 绑定到 `RestClient.Builder` 时，拦截到的 URI 不含 baseUrl；断言 `requestTo` 应使用相对路径（如 `/user/emails`），而非完整 URL（如 `https://api.github.com/user/emails`）。
 ---
 
 ## 2026-05-05 22:15 - US-108

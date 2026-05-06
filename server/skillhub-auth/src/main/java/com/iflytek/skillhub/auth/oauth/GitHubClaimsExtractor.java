@@ -19,10 +19,20 @@ import java.util.Map;
 @Component
 public class GitHubClaimsExtractor implements OAuthClaimsExtractor {
 
-    private final RestClient restClient = RestClient.builder()
-        .baseUrl("https://api.github.com")
-        .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-        .build();
+    private final RestClient restClient;
+
+    public GitHubClaimsExtractor() {
+        this.restClient = RestClient.builder()
+            .baseUrl("https://api.github.com")
+            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+            .build();
+    }
+
+    GitHubClaimsExtractor(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder
+            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+            .build();
+    }
 
     @Override
     public String getProvider() { return "github"; }

@@ -27,16 +27,16 @@ The following classes are tracked but explicitly excluded from the production co
 ## Overall Line Coverage
 | Metric | Value |
 |--------|-------|
-| Total Lines | 11937 |
-| Covered Lines | 11883 |
-| Missed Lines | 54 |
-| Line Coverage | 99.55% |
+| Total Lines | 11943 |
+| Covered Lines | 11918 |
+| Missed Lines | 25 |
+| Line Coverage | 99.79% |
 
 ## Per-Module Line Coverage
 | Module | Total Lines | Covered | Missed | Coverage |
 |--------|-------------|---------|--------|----------|
 | skillhub-app | 5107 | 5107 | 0 | 100.00% |
-| skillhub-auth | 2083 | 2029 | 54 | 97.41% |
+| skillhub-auth | 2089 | 2064 | 25 | 98.80% |
 | skillhub-domain | 3310 | 3310 | 0 | 100.00% |
 | skillhub-infra | 308 | 308 | 0 | 100.00% |
 | skillhub-notification | 207 | 207 | 0 | 100.00% |
@@ -48,8 +48,5 @@ The following classes are tracked but explicitly excluded from the production co
 ### skillhub-auth
 | Class | Package | Missed Lines | Covered Lines |
 |-------|---------|--------------|---------------|
-| GitHubClaimsExtractor | com.iflytek.skillhub.auth.oauth | 27 | 0 |
 | MockAuthFilter | com.iflytek.skillhub.auth.mock | 17 | 5 |
 | GitLabClaimsExtractor | com.iflytek.skillhub.auth.oauth | 8 | 43 |
-| GitHubClaimsExtractor.GitHubEmail | com.iflytek.skillhub.auth.oauth | 1 | 0 |
-| GitHubClaimsExtractor.new ParameterizedTypeReference() {...} | com.iflytek.skillhub.auth.oauth | 1 | 0 |
