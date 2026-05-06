@@ -1,3 +1,25 @@
+## 2026-05-06 10:20 - US-108C3
+- 补齐 DeviceAuthService 与 SecurityConfig 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.auth.device.DeviceAuthService` LINE_MISSED=0（现有 12 个 case 已完整覆盖生成代码、授权、轮询、兑换、重复授权、过期/已用/无效代码等全部功能路径）；确认 `com.iflytek.skillhub.auth.config.SecurityConfig` LINE_MISSED=0（现有 10 个 case 已完整覆盖密码编码器、CORS 配置、CSRF 忽略匹配器、路由策略、过滤链构建等全部功能路径）。
+- 从 `scripts/ralph/regenerate-coverage.py` 的 `EXCLUDED_FROM_GATE` 中移除设备认证相关类（DeviceAuthService、DeviceCodeData、DeviceCodeResponse、DeviceCodeStatus、DeviceTokenResponse），将其纳入正常覆盖率门禁范围；重新生成 `server/coverage-baseline.md` 与 `docs/prds/java-unit-line-coverage-inventory.md`。
+- 质量检查：backend aggregate tests BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前运行模块级 JaCoCo 可避免对已 100% 覆盖的类重复工作；DeviceAuthService 与 SecurityConfig 的现有测试已完整覆盖全部 public 方法与主要异常分支，无需新增测试代码即可达标。
+  - 遇到的陷阱：`EXCLUDED_FROM_GATE` 中的类如果实际已达到 100% 覆盖，应将其移出排除列表以反映真实状态；移除排除项后需重新运行 regenerate 脚本同步两份清单。
+  - 有用的上下文：SecurityConfig 的 `filterChain` 方法因依赖大量 Spring Security 内部类型，在 Mockito 中链式 mock 较为复杂；现有测试通过 mock HttpSecurity + 验证 addFilterBefore 行为来覆盖核心路径。
+---
+
+## 2026-05-06 09:55 - US-108C2
+- 补齐 LocalAuthService 到 100% 行覆盖率。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.auth.local.LocalAuthService` LINE_MISSED=0；现有测试（23 个 case）已完整覆盖注册、登录、改密码、用户名/邮箱/密码校验、账户状态锁定、失败计数、密码策略、角色默认等全部功能路径。
+- 目标类不在覆盖率清单中（inventory 未跟踪），无需同步更新清单。
+- 质量检查：backend 1036 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：覆盖率 story 开始前运行模块级 JaCoCo 可避免对已 100% 覆盖的类重复工作；LocalAuthService 的 missed lines 全部来自 stale inventory，实际模块报告早已清零。
+  - 遇到的陷阱：无。
+  - 有用的上下文：auth 模块的 LocalAuthService 已有完善的单元测试覆盖所有 public 方法与主要异常分支，无需新增测试代码即可达标。
+---
+
 ## 2026-05-06 09:44 - US-108C1
 - 补齐 PasswordResetService 到 100% 行覆盖率。
 - 模块级 JaCoCo 确认 `com.iflytek.skillhub.auth.local.PasswordResetService` LINE_MISSED=0；现有测试（17 个 case）已完整覆盖匿名请求、admin 触发、确认重置、邮件失败、非法邮箱/密码/credential 缺失等全部功能路径。

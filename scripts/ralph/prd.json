@@ -31,7 +31,7 @@
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Keep this story to a single core class because login, registration, and password-policy branches are already enough for one short iteration.",
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
@@ -46,8 +46,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "This is intentionally capped at two related auth classes so it stays within one short execution window.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
