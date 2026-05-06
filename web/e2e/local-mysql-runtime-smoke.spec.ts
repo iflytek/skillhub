@@ -4,6 +4,7 @@ import { loginWithCredentials } from './helpers/session'
 import { E2eTestDataBuilder } from './helpers/test-data-builder'
 
 const seededSearchKeyword = 'mysql-runtime-fixture'
+const seededSearchTitle = 'Dev Search Fixture'
 
 interface AuthMeEnvelope {
   code: number
@@ -15,7 +16,7 @@ interface AuthMeEnvelope {
 
 test.setTimeout(300_000)
 
-test.describe('Local MySQL Runtime Smoke (Real API)', () => {
+test.describe('Dev Runtime Smoke (Real API)', () => {
   test('auth, profile, namespace, publish, delete, search, and logout flow work end-to-end', async ({ page }, testInfo) => {
     await setEnglishLocale(page)
     await loginWithCredentials(page, {
@@ -45,7 +46,7 @@ test.describe('Local MySQL Runtime Smoke (Real API)', () => {
       const skillName = `mysql-smoke-${Date.now().toString(36)}`
       const skill = await builder.publishSkill(namespace.slug, {
         name: skillName,
-        description: `Searchable ${keyword} skill for local MySQL smoke coverage.`,
+        description: `Searchable ${keyword} skill for dev runtime smoke coverage.`,
       })
 
       if (skill.status === 'PENDING_REVIEW') {
@@ -70,7 +71,7 @@ test.describe('Local MySQL Runtime Smoke (Real API)', () => {
 
       await page.goto(`/search?q=${encodeURIComponent(seededSearchKeyword)}&sort=relevance&page=0&starredOnly=false`)
       await expect(page.getByRole('textbox')).toHaveValue(seededSearchKeyword)
-      await expect(page.getByRole('main')).toContainText('Local MySQL Search Fixture')
+      await expect(page.getByRole('main')).toContainText(seededSearchTitle)
       await expect(page.locator('body')).not.toContainText(/error|500|crash/i)
 
       await page.goto('/dashboard/skills')
