@@ -84,4 +84,13 @@ class LabelPermissionCheckerTest {
         assertThat(checker.canManageSkillLabel(skill, label, "user-1",
                 Map.of(1L, NamespaceRole.MEMBER), Set.of())).isFalse();
     }
+
+    @Test
+    void canManageSkillLabel_noNamespaceRoleReturnsFalse() {
+        Skill skill = new Skill(1L, "slug", "other", null);
+        LabelDefinition label = new LabelDefinition("lbl", LabelType.RECOMMENDED, true, 0, "creator");
+
+        assertThat(checker.canManageSkillLabel(skill, label, "user-1",
+                Map.of(2L, NamespaceRole.ADMIN), Set.of())).isFalse();
+    }
 }

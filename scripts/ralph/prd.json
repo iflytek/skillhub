@@ -158,8 +158,8 @@
         "Update tracked coverage inventory after both classes are cleared"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "This is the smallest remaining core-domain pairing and should be handled as one short story.",
+      "passes": true,
+      "notes": "",
       "retryCount": 0,
       "blocked": false
     },
