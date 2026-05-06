@@ -100,6 +100,19 @@
   - 有用的上下文：auth 模块的 PasswordResetService 已有完善的单元测试覆盖所有 public 方法与主要异常分支，无需新增测试代码即可达标。
 ---
 
+## 2026-05-06 16:20 - US-108D4
+- 先把 GitLabClaimsExtractor 与 MockAuthFilter 拉到约 90%（实际达到 100% 行覆盖率）。
+- 新增 `GitLabClaimsExtractorTest` 7 个 case：覆盖 `getProvider`、email 为 null 时从 API 获取、username 为 null 时回退到 login 属性、API 返回 null 邮箱列表、API 返回空列表、无验证邮箱、API 抛异常。
+- 新增 `MockAuthFilterTest` 6 个 case：覆盖无 mock header、已有 authentication、用户不存在、用户 inactive、活跃用户建立 session、无角色时添加默认 USER 角色。
+- 模块级 JaCoCo 确认 `GitLabClaimsExtractor` LINE_MISSED=0 / LINE_COVERED=51，`MockAuthFilter` LINE_MISSED=0 / LINE_COVERED=22。
+- 重新生成 `coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`：移除 2 个目标类条目；aggregate line coverage 达到 100.00%（11943/11943），剩余未覆盖类清零。
+- 质量检查：backend 1051 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：`GitLabClaimsExtractor` 的 `RestClient` 使用完整 URI（含 baseUrl）发起请求，因此 `MockRestServiceServer` 断言需使用完整 URL（如 `https://gitlab.example.com/api/v4/user/emails`），与 `GitHubClaimsExtractor` 的相对路径模式不同。
+  - 遇到的陷阱：`MockAuthFilter` 的 `doFilterInternal` 是 protected 方法，测试类与被测类在同一 package 下可直接调用；`PlatformPrincipal` 是 record 类型，字段访问器为 `userId()` / `displayName()` 等，不是 `getUserId()` / `getDisplayName()`。
+  - 有用的上下文：`PlatformRoleDefaults.withDefaultUserRole()` 只在角色集合为空时才注入默认 USER 角色，已有角色时不会追加；测试断言需与生产行为一致。
+---
+
 ## Codebase Patterns
 - 覆盖率 story 开始前应先运行模块级 JaCoCo (`mvn -pl <module> test jacoco:report`) 确认目标类现状，避免对已 100% 覆盖的类重复造轮子。
 - 两个覆盖率清单文件 (`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`) 需要同步更新，缺一不可。
@@ -408,4 +421,14 @@
   - 发现的 patterns：JPA Criteria API 类的单元测试需要大量链式 mock（CriteriaBuilder → CriteriaQuery → Root → Path → Predicate → TypedQuery）；使用 `MockitoSettings(strictness = Strictness.LENIENT)` 可避免 strict stubbing 在复杂链式 mock 场景下的误报；`CriteriaQuery.select()/where()/orderBy()` 需显式 stub 为 return self 才能支持 fluent API。
   - 遇到的陷阱：`mock(TypedQuery.class)` 使用 raw type 时，Mockito 默认返回 `null` 对未 stub 的方法；当返回值参与自动装箱（如 `long total = query.getSingleResult()`）时会抛出 NPE，因此所有被测路径中的 `getSingleResult()` 都必须显式 stub。
   - 有用的上下文：`AdminUserSearchRepository` 的 `buildPredicates` 是 private 方法，测试中通过调用 public `search` 方法间接覆盖；search 文本过滤使用 `builder.coalesce(root.get("ussId"), "")` 处理可能为 null 的 ussId 字段，测试中需单独 stub `coalesce` 返回才能覆盖该分支。
+---
+## 2026-05-06 16:35 - US-108E1
+- 把困难 app 非核心类从 90% 清尾到 100%（实际在 US-108D1/D2 中已提前达到 100%）。
+- 模块级 JaCoCo 确认 `com.iflytek.skillhub.repository.AdminUserSearchRepository` LINE_MISSED=0 / LINE_COVERED=32；`com.iflytek.skillhub.repository.JpaGovernanceQueryRepository` LINE_MISSED=0 / LINE_COVERED=162。
+- 覆盖率清单文件（`coverage-baseline.md` 与 `java-unit-line-coverage-inventory.md`）中已不包含两目标类条目，无需额外更新。
+- 质量检查：backend 1051 tests / 0 failures / BUILD SUCCESS；frontend typecheck + lint 全通过。
+- **未来迭代的学习：**
+  - 发现的 patterns：当先行 story（US-108D1/D2）已超额完成目标（约 90% → 100%）时，后续 tail-cleanup story 只需验证 JaCoCo 现状并标记完成，无需重复造轮子。
+  - 遇到的陷阱：无。
+  - 有用的上下文：`AdminUserSearchRepository` 与 `JpaGovernanceQueryRepository` 的现有测试已在 US-108D1/D2 中完整覆盖全部 public 方法与主要异常分支。
 ---
