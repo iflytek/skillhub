@@ -4,50 +4,48 @@
 
 @layer base {
   :root {
-    /* SkillHub — 浅色主题 (indigo-violet brand) */
-    --background: 210 20% 98%;
-    --foreground: 220 26% 14%;
+    /* SkillHub light theme */
+    --background: 0 0% 97%;
+    --foreground: 160 20% 10%;
     --card: 0 0% 100%;
     --card-foreground: 220 26% 14%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 26% 14%;
-    /* Indigo primary (#6A6DFF) */
-    --primary: 239 100% 71%;
+    --primary: 142 71% 37%;
     --primary-foreground: 0 0% 100%;
     /* Surface tones */
-    --secondary: 210 30% 96%;
+    --secondary: 138 30% 95%;
     --secondary-foreground: 220 26% 14%;
     --muted: 210 25% 95%;
     --muted-foreground: 215 14% 46%;
-    /* Violet accent (#B85EFF) */
-    --accent: 271 100% 68%;
+    --accent: 162 60% 40%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 239 100% 71%;
+    --border: 140 20% 88%;
+    --input: 140 20% 88%;
+    --ring: 142 71% 37%;
     --radius: 0.75rem;
 
     /* Extended palette */
-    --surface-glass: 210 30% 97%;
-    --glow-primary: 239 100% 71%;
-    --glow-accent: 271 100% 68%;
+    --surface-glass: 138 30% 97%;
+    --glow-primary: 142 71% 37%;
+    --glow-accent: 162 60% 40%;
     --success: 160 60% 45%;
     --warning: 38 92% 58%;
 
     /* Brand */
-    --brand-start: #6A6DFF;
-    --brand-end: #B85EFF;
-    --brand-gradient: linear-gradient(135deg, #6A6DFF 0%, #B85EFF 100%);
+    --brand-start: #16a34a;
+    --brand-end: #15803d;
+    --brand-gradient: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 
     /* Text semantic */
-    --text-secondary: 215 19% 35%;
-    --text-muted: 215 14% 46%;
-    --text-placeholder: 213 12% 63%;
+    --text-secondary: 160 15% 35%;
+    --text-muted: 160 10% 46%;
+    --text-placeholder: 160 8% 63%;
 
     /* Border semantic */
-    --border-card: 220 26% 94%;
+    --border-card: 140 20% 94%;
   }
 
   .dark {
@@ -254,10 +252,70 @@
 }
 
 .dark .text-gradient-hero {
-  background: linear-gradient(135deg, #8183FF, #C77EFF);
+  background: linear-gradient(135deg, #4ade80, #16a34a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.btn-press,
+.hover-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-press:hover,
+.hover-lift:hover {
+  transform: scale(1.06);
+}
+
+.btn-press:active,
+.hover-lift:active {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:not([disabled]):not(.no-hover-lift):not(.icon-btn),
+a[role="link"]:not(.no-hover-lift):not(.icon-btn),
+[role="button"]:not([disabled]):not(.no-hover-lift):not(.icon-btn) {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+button:not([disabled]):not(.no-hover-lift):not(.icon-btn):hover,
+a[role="link"]:not(.no-hover-lift):not(.icon-btn):hover,
+[role="button"]:not([disabled]):not(.no-hover-lift):not(.icon-btn):hover {
+  transform: scale(1.04);
+}
+
+button:not([disabled]):not(.no-hover-lift):not(.icon-btn):active,
+a[role="link"]:not(.no-hover-lift):not(.icon-btn):active,
+[role="button"]:not([disabled]):not(.no-hover-lift):not(.icon-btn):active {
+  transform: scale(0.97);
+}
+
+button.icon-btn:not([disabled]):hover,
+[role="button"].icon-btn:not([disabled]):hover {
+  border-color: #158940;
+  box-shadow: 0 0 0 2px rgba(21, 137, 64, 0.18);
+  transform: none;
+}
+
+.label-tag {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.label-tag:hover {
+  border-color: #158940;
+  box-shadow: 0 0 0 3px rgba(21, 137, 64, 0.2);
+  background: hsl(var(--primary) / 0.06);
+}
+
+.search-shell {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.search-shell:focus-within {
+  border-color: #158940;
+  box-shadow: 0 0 0 4px rgba(21, 137, 64, 0.15), 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 /* ─── Card hover lift ─── */
@@ -268,10 +326,10 @@
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px hsl(var(--primary) / 0.1),
-              0 8px 16px -8px hsl(0 0% 0% / 0.2);
-  border-color: hsl(var(--primary) / 0.3);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 48px -12px rgba(22, 163, 74, 0.15),
+              0 12px 24px -8px rgba(0, 0, 0, 0.12);
+  border-color: hsl(var(--primary) / 0.4);
 }
 
 /* ─── Scrollbar ─── */
@@ -323,9 +381,9 @@
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 500;
-  color: #0369a1;
-  background: #e0f2fe;
-  border: 1px solid #7dd3fc;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
   border-radius: 9999px;
 }
 
@@ -459,7 +517,7 @@
 
 .upload-zone:hover {
   border-color: var(--brand-start);
-  background: rgba(106, 109, 255, 0.04);
+  background: rgba(22, 163, 74, 0.04);
 }
 
 .upload-zone .upload-zone-icon {
@@ -473,7 +531,7 @@
 
 /* ─── Feature icon shadow ─── */
 .feature-icon {
-  box-shadow: 0 14px 30px rgba(106, 109, 255, 0.45);
+  box-shadow: 0 14px 30px rgba(22, 163, 74, 0.45);
 }
 
 /* ─── Hero input placeholder ─── */

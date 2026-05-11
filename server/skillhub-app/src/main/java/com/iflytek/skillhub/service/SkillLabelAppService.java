@@ -77,6 +77,16 @@ public class SkillLabelAppService {
         return toDtos(skillLabelService.listSkillLabels(skillId));
     }
 
+    public Map<Long, List<SkillLabelDto>> listSkillLabelsBySkillIds(List<Long> skillIds) {
+        if (skillIds == null || skillIds.isEmpty()) {
+            return Map.of();
+        }
+        return skillIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toMap(Function.identity(), this::listSkillLabelsBySkillId));
+    }
+
     @Transactional
     public SkillLabelDto attachLabel(String namespaceSlug,
                                      String skillSlug,

@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.dto;
 
+import java.util.List;
+
 public record PublishResponse(
         Long skillId,
         String namespace,
@@ -7,5 +9,6 @@ public record PublishResponse(
         String version,
         String status,
         int fileCount,
-        long totalSize
+        long totalSize,
+        List<String> labels
 ) {}

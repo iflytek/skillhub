@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.portal;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -23,6 +24,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
+import com.iflytek.skillhub.service.SkillLabelAppService;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -63,6 +65,9 @@ class SkillPublishControllerTest {
     @MockBean
     private SkillHubMetrics skillHubMetrics;
 
+    @MockBean
+    private SkillLabelAppService skillLabelAppService;
+
     @Test
     void publish_recordsMetricsAfterSuccess() throws Exception {
         SkillVersion version = new SkillVersion(12L, "1.0.0", "usr_1");
@@ -77,7 +82,8 @@ class SkillPublishControllerTest {
             eq("usr_1"),
             eq(SkillVisibility.PUBLIC),
             eq(Set.of("SUPER_ADMIN")),
-            eq(false)))
+            eq(false),
+            isNull()))
             .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
 
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -128,7 +134,8 @@ class SkillPublishControllerTest {
             eq("usr_1"),
             eq(SkillVisibility.PUBLIC),
             eq(Set.of("SUPER_ADMIN")),
-            eq(true)))
+            eq(true),
+            isNull()))
             .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
 
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -184,7 +191,7 @@ class SkillPublishControllerTest {
 
         verify(skillPublishService, never()).publishFromEntries(
             eq("global"), anyList(), eq("usr_1"),
-            eq(SkillVisibility.PUBLIC), eq(Set.of("SUPER_ADMIN")), eq(false));
+            eq(SkillVisibility.PUBLIC), eq(Set.of("SUPER_ADMIN")), eq(false), isNull());
     }
 
     @Test
@@ -198,7 +205,7 @@ class SkillPublishControllerTest {
         given(skillPublishService.publishFromEntries(
             eq("global"), ArgumentMatchers.<List<PackageEntry>>any(),
             eq("usr_1"), eq(SkillVisibility.PUBLIC),
-            eq(Set.of("SUPER_ADMIN")), eq(true)))
+            eq(Set.of("SUPER_ADMIN")), eq(true), isNull()))
             .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
 
         PlatformPrincipal principal = new PlatformPrincipal(
@@ -218,6 +225,61 @@ class SkillPublishControllerTest {
                 .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void publish_acceptsLabelsAndSummaryOverride() throws Exception {
+        SkillVersion version = new SkillVersion(12L, "1.0.0", "usr_1");
+        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        version.setFileCount(1);
+        version.setTotalSize(128L);
+        ReflectionTestUtils.setField(version, "id", 34L);
+
+        given(skillPublishService.publishFromEntries(
+            eq("global"),
+            ArgumentMatchers.<List<PackageEntry>>any(),
+            eq("usr_1"),
+            eq(SkillVisibility.PUBLIC),
+            eq(Set.of("SUPER_ADMIN")),
+            eq(false),
+            eq("Request summary")))
+            .willReturn(new SkillPublishService.PublishResult(12L, "demo-skill", version));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+            "usr_1",
+            "publisher",
+            "publisher@example.com",
+            "",
+            "local",
+            Set.of("SUPER_ADMIN")
+        );
+        var auth = new UsernamePasswordAuthenticationToken(
+            principal,
+            null,
+            List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "skill.zip",
+            "application/zip",
+            buildZipBytes()
+        );
+
+        mockMvc.perform(multipart("/api/v1/skills/global/publish")
+                .file(file)
+                .param("visibility", "PUBLIC")
+                .param("labels", "official", " official ", "featured")
+                .param("summary", " Request summary ")
+                .param("description", "Description fallback")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.labels[0]").value("official"))
+            .andExpect(jsonPath("$.data.labels[1]").value("featured"));
+
+        verify(skillLabelAppService).attachLabel(eq("global"), eq("demo-skill"), eq("official"), eq("usr_1"), eq(java.util.Map.of()), isNull());
+        verify(skillLabelAppService).attachLabel(eq("global"), eq("demo-skill"), eq("featured"), eq("usr_1"), eq(java.util.Map.of()), isNull());
     }
 
     private byte[] buildZipBytes() throws Exception {

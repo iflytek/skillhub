@@ -143,7 +143,19 @@ public class SkillPublishService {
             SkillVisibility visibility,
             java.util.Set<String> platformRoles,
             boolean confirmWarnings) {
-        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles, confirmWarnings, false, false);
+        return publishFromEntries(namespaceSlug, entries, publisherId, visibility, platformRoles, confirmWarnings, null);
+    }
+
+    @Transactional
+    public PublishResult publishFromEntries(
+            String namespaceSlug,
+            List<PackageEntry> entries,
+            String publisherId,
+            SkillVisibility visibility,
+            java.util.Set<String> platformRoles,
+            boolean confirmWarnings,
+            String summaryOverride) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles, confirmWarnings, false, false, summaryOverride);
     }
 
     /**
@@ -184,7 +196,8 @@ public class SkillPublishService {
                 Set.of(),
                 confirmWarnings,  // confirmWarnings: honour caller's choice for rerelease
                 false,  // forceAutoPublish=false: respect visibility rules
-                true
+                true,
+                null
         );
     }
 
@@ -196,7 +209,8 @@ public class SkillPublishService {
             Set<String> platformRoles,
             boolean confirmWarnings,
             boolean forceAutoPublish,
-            boolean bypassMembershipCheck) {
+            boolean bypassMembershipCheck,
+            String summaryOverride) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
@@ -411,7 +425,10 @@ public class SkillPublishService {
 
         // 12. Update skill metadata and move the published pointer for auto-publish flows
         skill.setDisplayName(metadata.name());
-        skill.setSummary(metadata.description());
+        String resolvedSummary = summaryOverride != null && !summaryOverride.isBlank()
+                ? summaryOverride.trim()
+                : metadata.description();
+        skill.setSummary(resolvedSummary);
         if (autoPublish || visibility == SkillVisibility.PRIVATE) {
             // Update latestVersionId for autoPublish or PRIVATE skill (UPLOADED status)
             skill.setLatestVersionId(version.getId());
