@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 
 import com.iflytek.skillhub.auth.config.LdapProperties;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.ldap.LdapAuthService;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -321,4 +323,5 @@ class LocalAuthServiceTest {
             .isEqualTo(HttpStatus.UNAUTHORIZED);
 
         verify(ldapAuthService, never()).login(any(), any());
+    }
 }

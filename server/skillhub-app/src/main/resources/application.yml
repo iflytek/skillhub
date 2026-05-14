@@ -214,6 +214,8 @@ management:
   health:
     mail:
       enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
+    ldap:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -221,9 +223,6 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-  health:
-    ldap:
-      enabled: false
   metrics:
     tags:
       application: skillhub
