@@ -91,9 +91,11 @@ if [[ -n "$UNPUSHED_COMMITS" ]] || [[ -n "$UNPUSHED_RELEASE_TAGS" ]]; then
   echo "  1. Retry push (if the previous failure was temporary, e.g., network issue):" >&2
   if [[ -n "$UNPUSHED_RELEASE_TAGS" ]]; then
     FIRST_TAG="$(echo "$UNPUSHED_RELEASE_TAGS" | head -n1)"
-    echo "     git push origin $CURRENT_BRANCH $FIRST_TAG" >&2
+    BUMP_VER="${FIRST_TAG#cli-v}"
+    echo "     git push origin HEAD:refs/heads/cli-bump-${BUMP_VER}" >&2
+    echo "     git push origin $FIRST_TAG" >&2
   else
-    echo "     git push origin $CURRENT_BRANCH" >&2
+    echo "     git push origin HEAD:refs/heads/cli-bump-<version>" >&2
   fi
   echo "" >&2
   echo "  2. Rollback and retry release (if you want to start fresh):" >&2
@@ -163,8 +165,13 @@ git -C "$REPO_ROOT" commit -m "chore(cli): bump version to $NEW_VERSION"
 log_stage "creating tag $TAG"
 git -C "$REPO_ROOT" tag "$TAG"
 
-log_stage "pushing commit and tag to origin (atomic)"
-git -C "$REPO_ROOT" push --atomic origin "$CURRENT_BRANCH" "$TAG"
+BUMP_BRANCH="cli-bump-${NEW_VERSION}"
+log_stage "pushing version bump to branch $BUMP_BRANCH (main requires PR)"
+git -C "$REPO_ROOT" push origin "HEAD:refs/heads/$BUMP_BRANCH"
+
+log_stage "pushing tag $TAG to origin"
+git -C "$REPO_ROOT" push origin "$TAG"
 
 log_stage "release triggered — CI workflow will build and publish"
 log_stage "watch progress at: https://github.com/iflytek/skillhub/actions/workflows/release-cli.yml"
+log_stage "open a PR to merge the version bump: https://github.com/iflytek/skillhub/compare/$BUMP_BRANCH"
