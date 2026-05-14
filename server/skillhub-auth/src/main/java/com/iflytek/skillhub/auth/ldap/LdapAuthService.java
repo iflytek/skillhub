@@ -139,6 +139,7 @@ public class LdapAuthService {
      */
     private String findUserDn(String username) {
         DirContext ctx = null;
+        javax.naming.NamingEnumeration<SearchResult> results = null;
         try {
             ctx = createLdapContext();
             String searchFilter = "(" + ldapProperties.getUserSearchAttribute() + "={0})";
@@ -150,8 +151,8 @@ public class LdapAuthService {
             searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             searchControls.setReturningAttributes(new String[0]);
 
-            javax.naming.NamingEnumeration<SearchResult> results = ctx.search(searchBase, searchFilter, new Object[]{username}, searchControls);
-            
+            results = ctx.search(searchBase, searchFilter, new Object[]{username}, searchControls);
+
             if (results.hasMore()) {
                 SearchResult result = results.next();
                 return result.getNameInNamespace();
@@ -160,6 +161,14 @@ public class LdapAuthService {
         } catch (Exception e) {
             return null;
         } finally {
+            // Close NamingEnumeration to prevent resource leaks
+            if (results != null) {
+                try {
+                    results.close();
+                } catch (Exception e) {
+                    log.warn("Failed to close LDAP search results", e);
+                }
+            }
             closeContext(ctx);
         }
     }
@@ -246,7 +255,7 @@ public class LdapAuthService {
     private UserAccount findOrCreateLdapUser(String username, Attributes attributes) {
         String email = getAttributeValue(attributes, "mail");
         String displayName = getAttributeValue(attributes, "displayName");
-        
+
         if (displayName == null || displayName.isEmpty()) {
             displayName = getAttributeValue(attributes, "cn");
         }
@@ -255,7 +264,7 @@ public class LdapAuthService {
         }
 
         UserAccount user = null;
-        
+
         // Try to find by email first
         if (email != null && !email.isEmpty()) {
             user = userAccountRepository.findByEmailIgnoreCase(email.toLowerCase()).orElse(null);
@@ -263,8 +272,10 @@ public class LdapAuthService {
 
         // If not found, create a new user
         if (user == null) {
-            String normalizedEmail = email != null ? email.toLowerCase() : null;
-            
+            // Use a unique identifier based on username if email is missing
+            // This prevents creating duplicate accounts for users without email
+            String normalizedEmail = email != null ? email.toLowerCase() : "ldap:" + username + "@internal";
+
             user = new UserAccount(
                 "usr_" + UUID.randomUUID(),
                 displayName,
