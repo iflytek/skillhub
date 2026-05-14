@@ -63,6 +63,9 @@ class LocalAuthServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 默认禁用 LDAP，确保原有测试不受影响
+        given(ldapProperties.isEnabled()).willReturn(false);
+
         service = new LocalAuthService(
             credentialRepository,
             userAccountRepository,
@@ -257,4 +260,65 @@ class LocalAuthServiceTest {
             .isInstanceOf(AuthFlowException.class)
             .hasMessageContaining("validation.auth.local.email.notBlank");
     }
+
+    @Test
+    void login_withUnknownUsername_fallsBackToLdap_whenEnabled() {
+        // Given
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        UserAccount ldapUser = new UserAccount("usr_ldap", "ldapuser", "ldapuser@example.com", null);
+        ldapUser.setStatus(UserStatus.ACTIVE);
+        PlatformPrincipal ldapPrincipal = new PlatformPrincipal(
+            "usr_ldap",
+            "ldapuser",
+            "ldapuser@example.com",
+            null,
+            "ldap",
+            Set.of("USER")
+        );
+
+        given(ldapAuthService.login("ldapuser", "LdapPassword123!")).willReturn(ldapPrincipal);
+
+        // When
+        var principal = service.login("ldapuser", "LdapPassword123!");
+
+        // Then
+        assertThat(principal.userId()).isEqualTo("usr_ldap");
+        assertThat(principal.displayName()).isEqualTo("ldapuser");
+        assertThat(principal.email()).isEqualTo("ldapuser@example.com");
+        verify(ldapAuthService).login("ldapuser", "LdapPassword123!");
+    }
+
+    @Test
+    void login_withUnknownUsername_fails_whenLdapAuthenticationFails() {
+        // Given
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "WrongPassword"))
+            .willThrow(new AuthFlowException(HttpStatus.UNAUTHORIZED, "LDAP authentication failed"));
+
+        // When & Then
+        assertThatThrownBy(() -> service.login("ldapuser", "WrongPassword"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(ldapAuthService).login("ldapuser", "WrongPassword");
+    }
+
+    @Test
+    void login_withUnknownUsername_fails_whenLdapDisabled() {
+        // Given
+        given(credentialRepository.findByUsernameIgnoreCase("localuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> service.login("localuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(ldapAuthService, never()).login(any(), any());
 }
