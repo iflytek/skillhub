@@ -63,6 +63,7 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  authSsoEnabled?: string
 }
 
 declare global {
@@ -160,6 +161,16 @@ export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfi
     enabled: parseBooleanFlag(config.authSessionBootstrapEnabled) && !!provider,
     provider: provider || undefined,
     auto: parseBooleanFlag(config.authSessionBootstrapAuto),
+  }
+}
+
+export type SsoRuntimeConfig = {
+  enabled: boolean
+}
+
+export function getSsoRuntimeConfig(): SsoRuntimeConfig {
+  return {
+    enabled: parseBooleanFlag(getRuntimeConfig().authSsoEnabled),
   }
 }
 

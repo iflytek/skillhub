@@ -224,6 +224,7 @@
     "enterpriseSsoAutoHint": "当前部署已启用自动 {{name}} 探测。若未成功，你仍可继续使用现有登录方式。",
     "enterpriseSsoAction": "尝试 {{name}} 登录",
     "enterpriseSsoSubmitting": "正在尝试 {{name}} 登录...",
+    "ssoLogin": "企业 SSO 登录",
     "agreementPrefix": "登录即表示你同意我们的",
     "terms": "服务条款",
     "and": "和",

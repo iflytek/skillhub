@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { getDirectAuthRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
+import { SsoLoginEntry } from '@/features/auth/sso-login-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
 import { usePasswordLogin } from '@/features/auth/use-password-login'
 import { Button } from '@/shared/ui/button'
@@ -87,6 +88,8 @@ export function LoginPage() {
               methodDisplayName={bootstrapMethod?.displayName}
               onAuthenticated={() => navigate({ to: returnTo })}
             />
+
+            <SsoLoginEntry />
 
             <Tabs defaultValue="password" className="space-y-6">
               <TabsList className="grid w-full grid-cols-2">

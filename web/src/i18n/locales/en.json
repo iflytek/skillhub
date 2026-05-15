@@ -224,6 +224,7 @@
     "enterpriseSsoAutoHint": "This deployment has automatic {{name}} probing enabled. If it does not succeed, you can continue with the standard login methods.",
     "enterpriseSsoAction": "Try {{name}}",
     "enterpriseSsoSubmitting": "Trying {{name}}...",
+    "ssoLogin": "Enterprise SSO Login",
     "agreementPrefix": "By logging in, you agree to our",
     "terms": "Terms of Service",
     "and": "and",

@@ -24,6 +24,7 @@ vi.mock('lucide-react', () => ({
 
 vi.mock('@/api/client', () => ({
   getDirectAuthRuntimeConfig: () => ({ enabled: false }),
+  getSsoRuntimeConfig: () => ({ enabled: false }),
 }))
 
 vi.mock('@/features/auth/login-button', () => ({
