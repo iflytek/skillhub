@@ -20,7 +20,12 @@ export function SsoLoginEntry() {
       type="button"
       variant="outline"
       onClick={() => {
-        window.location.href = '/api/v1/auth/sso/login'
+        const searchParams = new URLSearchParams(window.location.search)
+        const returnTo = searchParams.get('returnTo')
+        const loginUrl = returnTo
+          ? '/api/v1/auth/sso/login?returnTo=' + encodeURIComponent(returnTo)
+          : '/api/v1/auth/sso/login'
+        window.location.href = loginUrl
       }}
     >
       {t('login.ssoLogin')}

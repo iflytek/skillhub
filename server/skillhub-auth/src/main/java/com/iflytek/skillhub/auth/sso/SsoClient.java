@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.auth.sso;
 
+import java.time.Duration;
 import java.util.Map;
 
 import com.iflytek.skillhub.auth.config.SsoProperties;
@@ -20,7 +21,10 @@ public class SsoClient {
 
     public SsoClient(SsoProperties properties, RestTemplateBuilder restTemplateBuilder) {
         this.properties = properties;
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate = restTemplateBuilder
+                .connectTimeout(Duration.ofSeconds(5))
+                .readTimeout(Duration.ofSeconds(10))
+                .build();
     }
 
     /**

@@ -47,7 +47,7 @@ public class SsoIdentityService {
     @Transactional
     public PlatformPrincipal resolveOrCreate(SsoUser ssoUser) {
         IdentityBinding binding = bindingRepo
-                .findByProviderCodeAndSubject(PROVIDER_CODE, ssoUser.account())
+                .findByProviderCodeAndSubject(PROVIDER_CODE, ssoUser.id())
                 .orElse(null);
 
         UserAccount user;
@@ -69,7 +69,7 @@ public class SsoIdentityService {
             globalNamespaceMembershipService.ensureMember(user.getId());
 
             binding = new IdentityBinding(user.getId(), PROVIDER_CODE,
-                    ssoUser.account(), ssoUser.account());
+                    ssoUser.id(), ssoUser.account());
             bindingRepo.save(binding);
         }
 

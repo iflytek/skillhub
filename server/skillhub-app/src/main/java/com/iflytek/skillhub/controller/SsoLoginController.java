@@ -51,10 +51,15 @@ public class SsoLoginController {
      * Initiates SSO login by redirecting the browser to the SSO login page.
      */
     @GetMapping("/login")
-    public void ssoLogin(HttpServletResponse response) throws IOException {
+    public void ssoLogin(@RequestParam(value = "returnTo", required = false) String returnTo,
+                         HttpServletRequest request,
+                         HttpServletResponse response) throws IOException {
         if (!properties.isEnabled()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "SSO login is disabled");
             return;
+        }
+        if (returnTo != null) {
+            request.getSession().setAttribute("ssoReturnTo", returnTo);
         }
         String ssoLoginUrl = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl())
                 .path("/login")
@@ -82,7 +87,11 @@ public class SsoLoginController {
             SsoUser ssoUser = ssoClient.validateTicket(ticket);
             var principal = ssoIdentityService.resolveOrCreate(ssoUser);
             platformSessionService.establishSession(principal, request);
-            response.sendRedirect("/");
+            String returnTo = (String) request.getSession().getAttribute("ssoReturnTo");
+            if (returnTo != null) {
+                request.getSession().removeAttribute("ssoReturnTo");
+            }
+            response.sendRedirect(returnTo != null ? returnTo : "/");
         } catch (TicketValidationException e) {
             log.warn("SSO ticket validation failed: {}", e.getMessage());
             response.sendRedirect("/login?error=sso_auth_failed");
