@@ -35,7 +35,8 @@ public class SsoClient {
     public SsoUser validateTicket(String ticket) {
         var request = Map.of(
                 "Ticket", ticket,
-                "Url", properties.getClientUrl()
+                "Url", properties.getClientUrl(),
+                "Token", properties.getClientToken()
         );
         var validateUrl = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl())
                 .path(properties.getValidatePath())
