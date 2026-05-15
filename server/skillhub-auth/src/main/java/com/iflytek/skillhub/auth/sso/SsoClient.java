@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import com.iflytek.skillhub.auth.config.SsoProperties;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -19,12 +19,12 @@ public class SsoClient {
     private final SsoProperties properties;
     private final RestTemplate restTemplate;
 
-    public SsoClient(SsoProperties properties, RestTemplateBuilder restTemplateBuilder) {
+    public SsoClient(SsoProperties properties) {
         this.properties = properties;
-        this.restTemplate = restTemplateBuilder
-                .connectTimeout(Duration.ofSeconds(5))
-                .readTimeout(Duration.ofSeconds(10))
-                .build();
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
+        factory.setReadTimeout((int) Duration.ofSeconds(10).toMillis());
+        this.restTemplate = new RestTemplate(factory);
     }
 
     /**
