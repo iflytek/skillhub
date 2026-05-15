@@ -65,9 +65,6 @@ class LocalAuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        // 默认禁用 LDAP，确保原有测试不受影响
-        given(ldapProperties.isEnabled()).willReturn(false);
-
         service = new LocalAuthService(
             credentialRepository,
             userAccountRepository,
@@ -176,6 +173,7 @@ class LocalAuthServiceTest {
     @Test
     void login_withUnknownUsername_stillPerformsDummyPasswordCheck() {
         given(credentialRepository.findByUsernameIgnoreCase("ghost")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(false);
         given(passwordEncoder.matches(eq("bad"), eq("$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu")))
             .willReturn(false);
 
