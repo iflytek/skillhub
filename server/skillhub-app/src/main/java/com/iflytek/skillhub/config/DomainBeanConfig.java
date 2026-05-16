@@ -1,5 +1,11 @@
 package com.iflytek.skillhub.config;
 
+import com.iflytek.skillhub.domain.bundle.SkillBundleDraftService;
+import com.iflytek.skillhub.domain.bundle.SkillBundleItemRepository;
+import com.iflytek.skillhub.domain.bundle.SkillBundleRepository;
+import com.iflytek.skillhub.domain.bundle.SkillBundleReviewService;
+import com.iflytek.skillhub.domain.bundle.SkillBundleReviewTaskRepository;
+import com.iflytek.skillhub.domain.bundle.SkillBundleVersionRepository;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
@@ -40,5 +46,20 @@ public class DomainBeanConfig {
     @Bean
     public VisibilityChecker visibilityChecker() {
         return new VisibilityChecker();
+    }
+
+    @Bean
+    public SkillBundleDraftService skillBundleDraftService(SkillBundleRepository bundleRepository,
+                                                           SkillBundleVersionRepository versionRepository,
+                                                           SkillBundleItemRepository itemRepository,
+                                                           SkillBundleDraftService.SkillBundleItemSourceResolver resolver) {
+        return new SkillBundleDraftService(bundleRepository, versionRepository, itemRepository, resolver);
+    }
+
+    @Bean
+    public SkillBundleReviewService skillBundleReviewService(SkillBundleRepository bundleRepository,
+                                                             SkillBundleVersionRepository versionRepository,
+                                                             SkillBundleReviewTaskRepository reviewTaskRepository) {
+        return new SkillBundleReviewService(bundleRepository, versionRepository, reviewTaskRepository);
     }
 }
