@@ -79,7 +79,8 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                 toLifecycleVersion(headlineVersion),
                 toLifecycleVersion(publishedVersion),
                 toLifecycleVersion(ownerPreviewVersion),
-                projection.resolutionMode().name()
+                projection.resolutionMode().name(),
+                List.of()
         );
     }
 

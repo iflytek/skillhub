@@ -65,14 +65,14 @@ export function Layout() {
       <div
         className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90 pointer-events-none z-0"
         style={{
-          background: 'radial-gradient(ellipse at 70% 20%, rgba(184,94,255,0.25) 0%, rgba(106,109,255,0.15) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse at 70% 20%, rgba(22,163,74,0.20) 0%, rgba(21,128,61,0.12) 40%, transparent 70%)',
           filter: 'blur(60px)',
         }}
       />
 
       {/* Header */}
       <header className={getAppHeaderClassName(isHeaderElevated)} style={{ borderColor: 'hsl(var(--border))' }}>
-        <Link to="/" className="text-xl font-semibold tracking-tight text-brand-gradient">
+        <Link to="/" className="hover-lift text-xl font-semibold tracking-tight text-brand-gradient">
           SkillHub
         </Link>
 
@@ -87,8 +87,8 @@ export function Layout() {
                 to={item.to}
                 className={
                   active
-                    ? 'px-4 py-1.5 rounded-full bg-brand-gradient text-white shadow-sm'
-                    : 'hover:opacity-80 transition-opacity duration-150'
+                    ? 'hover-lift px-4 py-1.5 rounded-full bg-brand-gradient text-white shadow-sm'
+                    : 'hover-lift hover:opacity-80 transition-opacity duration-150'
                 }
               >
                 {item.label}
@@ -106,7 +106,7 @@ export function Layout() {
             <Link
               to="/login"
               search={{ returnTo: '' }}
-              className="hover:opacity-80 transition-opacity"
+              className="hover-lift hover:opacity-80 transition-opacity"
             >
               {t('nav.login')}
             </Link>
@@ -132,75 +132,11 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t rounded-t-2xl mt-auto" style={{ background: '#F1F5F9', borderColor: 'hsl(var(--border))' }}>
-        <div className="max-w-6xl mx-auto px-6 md:px-12 py-10">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10 md:gap-12">
-            <div className="flex-shrink-0">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm bg-brand-gradient">
-                  S
-                </div>
-                <span className="text-lg font-bold text-brand-gradient">SkillHub</span>
-              </div>
-              <p className="text-sm max-w-xs" style={{ color: 'hsl(var(--text-secondary))' }}>
-                {t('layout.footerDescription')}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-12 md:gap-16">
-              <div>
-                <h4 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                  {t('nav.home')}
-                </h4>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <Link to="/" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('nav.home')}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/search"
-                      search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
-                      className="hover:opacity-80 transition-opacity"
-                      style={{ color: 'hsl(var(--text-secondary))' }}
-                    >
-                      {t('nav.search')}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/dashboard" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('nav.dashboard')}
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                  {t('footer.resources')}
-                </h4>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('footer.docs')}
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('footer.api')}
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('footer.community')}
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+      <footer className="relative z-10 border-t mt-auto" style={{ background: '#F1F5F9', borderColor: 'hsl(var(--border))' }}>
+        <div className="max-w-6xl mx-auto px-6 md:px-12 py-5">
           <div
-            className="mt-10 pt-6 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs"
-            style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs"
+            style={{ color: 'hsl(var(--muted-foreground))' }}
           >
             <span>{t('footer.copyright')}</span>
             <div className="flex items-center gap-2">

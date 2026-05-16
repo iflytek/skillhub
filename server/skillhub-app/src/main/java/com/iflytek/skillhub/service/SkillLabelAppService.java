@@ -77,6 +77,24 @@ public class SkillLabelAppService {
         return toDtos(skillLabelService.listSkillLabels(skillId));
     }
 
+    public Map<Long, List<SkillLabelDto>> listSkillLabelsBySkillIds(List<Long> skillIds) {
+        if (skillIds == null || skillIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> normalizedSkillIds = skillIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (normalizedSkillIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, List<SkillLabel>> labelsBySkillId = skillLabelService.listSkillLabelsBySkillIds(normalizedSkillIds)
+                .stream()
+                .collect(Collectors.groupingBy(SkillLabel::getSkillId));
+        return toDtosBySkillId(labelsBySkillId);
+    }
+
     @Transactional
     public SkillLabelDto attachLabel(String namespaceSlug,
                                      String skillSlug,
@@ -95,6 +113,31 @@ public class SkillLabelAppService {
         afterCommit(() -> labelSearchSyncService.rebuildSkill(skill.getId()));
         recordAudit("SKILL_LABEL_ATTACH", userId, skill.getId(), auditContext, "{\"labelSlug\":\"" + labelSlug + "\"}");
         return toDtos(List.of(attached)).getFirst();
+    }
+
+    @Transactional
+    public List<SkillLabelDto> attachLabels(String namespaceSlug,
+                                            String skillSlug,
+                                            List<String> labelSlugs,
+                                            String userId,
+                                            Map<Long, NamespaceRole> userNsRoles,
+                                            AuditRequestContext auditContext) {
+        if (labelSlugs == null || labelSlugs.isEmpty()) {
+            return List.of();
+        }
+        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId);
+        List<SkillLabel> attachedLabels = skillLabelService.attachLabels(
+                skill.getId(),
+                labelSlugs,
+                userId,
+                normalizeRoles(userNsRoles),
+                platformRoles(userId)
+        );
+        afterCommit(() -> labelSearchSyncService.rebuildSkill(skill.getId()));
+        for (String labelSlug : labelSlugs) {
+            recordAudit("SKILL_LABEL_ATTACH", userId, skill.getId(), auditContext, "{\"labelSlug\":\"" + labelSlug + "\"}");
+        }
+        return toDtos(attachedLabels);
     }
 
     @Transactional
@@ -142,6 +185,41 @@ public class SkillLabelAppService {
                 })
                 .sorted(java.util.Comparator.comparing(SkillLabelDto::type).thenComparing(SkillLabelDto::slug))
                 .toList();
+    }
+
+    private Map<Long, List<SkillLabelDto>> toDtosBySkillId(Map<Long, List<SkillLabel>> labelsBySkillId) {
+        if (labelsBySkillId.isEmpty()) {
+            return Map.of();
+        }
+        List<SkillLabel> allSkillLabels = labelsBySkillId.values().stream()
+                .flatMap(List::stream)
+                .toList();
+        List<Long> labelIds = allSkillLabels.stream()
+                .map(SkillLabel::getLabelId)
+                .distinct()
+                .toList();
+        Map<Long, LabelDefinition> definitionsById = labelDefinitionService.listByIds(labelIds).stream()
+                .collect(Collectors.toMap(LabelDefinition::getId, Function.identity()));
+        Map<Long, List<LabelTranslation>> translationsByLabelId = labelDefinitionService.listTranslationsByLabelIds(labelIds);
+
+        return labelsBySkillId.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .filter(skillLabel -> definitionsById.containsKey(skillLabel.getLabelId()))
+                                .map(skillLabel -> {
+                                    LabelDefinition definition = definitionsById.get(skillLabel.getLabelId());
+                                    return new SkillLabelDto(
+                                            definition.getSlug(),
+                                            definition.getType().name(),
+                                            labelLocalizationService.resolveDisplayName(
+                                                    definition.getSlug(),
+                                                    translationsByLabelId.getOrDefault(definition.getId(), List.of()))
+                                    );
+                                })
+                                .sorted(java.util.Comparator.comparing(SkillLabelDto::type).thenComparing(SkillLabelDto::slug))
+                                .toList()
+                ));
     }
 
     private Skill resolveSkill(String namespaceSlug, String skillSlug, String userId) {

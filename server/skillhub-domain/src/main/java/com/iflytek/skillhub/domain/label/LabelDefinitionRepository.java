@@ -13,6 +13,7 @@ public interface LabelDefinitionRepository {
     List<LabelDefinition> findByVisibleInFilterTrueAndTypeOrderBySortOrderAscIdAsc(LabelType type);
     List<LabelDefinition> findByVisibleInFilterTrueOrderBySortOrderAscSlugAsc();
     List<LabelDefinition> findByIdIn(List<Long> ids);
+    List<LabelDefinition> findBySlugIn(List<String> slugs);
     long count();
     LabelDefinition save(LabelDefinition labelDefinition);
     <S extends LabelDefinition> List<S> saveAll(Iterable<S> labelDefinitions);

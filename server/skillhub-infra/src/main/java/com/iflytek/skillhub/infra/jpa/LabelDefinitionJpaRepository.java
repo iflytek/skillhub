@@ -19,4 +19,5 @@ public interface LabelDefinitionJpaRepository extends JpaRepository<LabelDefinit
     List<LabelDefinition> findByVisibleInFilterTrueAndTypeOrderBySortOrderAscIdAsc(LabelType type);
     List<LabelDefinition> findByVisibleInFilterTrueOrderBySortOrderAscSlugAsc();
     List<LabelDefinition> findByIdIn(List<Long> ids);
+    List<LabelDefinition> findBySlugIn(List<String> slugs);
 }

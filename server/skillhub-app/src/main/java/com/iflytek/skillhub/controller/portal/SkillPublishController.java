@@ -3,21 +3,25 @@ package com.iflytek.skillhub.controller.portal;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
-import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PublishResponse;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import com.iflytek.skillhub.service.SkillPublishAppService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Upload endpoints for skill packages.
@@ -29,18 +33,18 @@ import java.util.List;
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
 public class SkillPublishController extends BaseApiController {
 
-    private final SkillPublishService skillPublishService;
     private final SkillPackageArchiveExtractor skillPackageArchiveExtractor;
     private final SkillHubMetrics skillHubMetrics;
+    private final SkillPublishAppService skillPublishAppService;
 
-    public SkillPublishController(SkillPublishService skillPublishService,
-                                  SkillPackageArchiveExtractor skillPackageArchiveExtractor,
+    public SkillPublishController(SkillPackageArchiveExtractor skillPackageArchiveExtractor,
                                   ApiResponseFactory responseFactory,
-                                  SkillHubMetrics skillHubMetrics) {
+                                  SkillHubMetrics skillHubMetrics,
+                                  SkillPublishAppService skillPublishAppService) {
         super(responseFactory);
-        this.skillPublishService = skillPublishService;
         this.skillPackageArchiveExtractor = skillPackageArchiveExtractor;
         this.skillHubMetrics = skillHubMetrics;
+        this.skillPublishAppService = skillPublishAppService;
     }
 
     /**
@@ -54,8 +58,14 @@ public class SkillPublishController extends BaseApiController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("visibility") String visibility,
             @RequestParam(value = "confirmWarnings", defaultValue = "false") boolean confirmWarnings,
+            @RequestParam(value = "labels", required = false) List<String> labels,
+            @RequestParam(value = "summary", required = false) String summary,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
             @AuthenticationPrincipal PlatformPrincipal principal) throws IOException {
 
+        List<String> normalizedLabels = normalizeLabels(labels);
+        String summaryOverride = resolveSummaryOverride(summary, description);
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
 
         List<PackageEntry> entries;
@@ -75,14 +85,18 @@ public class SkillPublishController extends BaseApiController {
                     String.join("\n", extractionWarnings));
         }
 
-        SkillPublishService.PublishResult publishResult = skillPublishService.publishFromEntries(
+        SkillPublishAppService.PublishOutcome publishOutcome = skillPublishAppService.publishFromEntries(
                 namespace,
                 entries,
                 principal.userId(),
                 skillVisibility,
                 principal.platformRoles(),
-                confirmWarnings
+                confirmWarnings,
+                summaryOverride,
+                normalizedLabels,
+                userNsRoles == null ? Map.of() : userNsRoles
         );
+        var publishResult = publishOutcome.publishResult();
 
         PublishResponse response = new PublishResponse(
                 publishResult.skillId(),
@@ -91,10 +105,34 @@ public class SkillPublishController extends BaseApiController {
                 publishResult.version().getVersion(),
                 publishResult.version().getStatus().name(),
                 publishResult.version().getFileCount(),
-                publishResult.version().getTotalSize()
+                publishResult.version().getTotalSize(),
+                publishOutcome.labels()
         );
         skillHubMetrics.incrementSkillPublish(namespace, publishResult.version().getStatus().name());
 
         return ok("response.success.published", response);
+    }
+
+    private List<String> normalizeLabels(List<String> labels) {
+        if (labels == null) {
+            return Collections.emptyList();
+        }
+        return labels.stream()
+                .map(String::trim)
+                .filter(label -> !label.isBlank())
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(LinkedHashSet::new),
+                        List::copyOf
+                ));
+    }
+
+    private String resolveSummaryOverride(String summary, String description) {
+        if (summary != null && !summary.isBlank()) {
+            return summary.trim();
+        }
+        if (description != null && !description.isBlank()) {
+            return description.trim();
+        }
+        return null;
     }
 }

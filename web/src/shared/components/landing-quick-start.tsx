@@ -58,7 +58,7 @@ function CompactCopyButton({ text }: { text: string }) {
       onClick={handleCopy}
       aria-label={label}
       title={label}
-      className="absolute right-2.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border bg-white transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+      className="no-hover-lift absolute right-2.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border bg-white transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
       style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
     >
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -66,7 +66,7 @@ function CompactCopyButton({ text }: { text: string }) {
   )
 }
 
-export function LandingQuickStartSection() {
+export function LandingQuickStartSection({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<LandingQuickStartTabId>('agent')
   const baseUrl = useMemo(() => getAppBaseUrl(), [])
@@ -99,6 +99,72 @@ export function LandingQuickStartSection() {
   ]
 
   const currentTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
+
+  if (compact) {
+    return (
+      <div
+        className="flex h-full w-full flex-col rounded-2xl border-2 bg-white p-6 pt-8 shadow-lg"
+        style={{ borderColor: '#158940' }}
+      >
+        <div className="mb-5">
+          <h3 className="text-2xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>
+            {t('landing.quickStart.title')}
+          </h3>
+          <p className="text-sm mt-2" style={{ color: 'hsl(var(--text-secondary))' }}>
+            {t('landing.quickStart.description', { defaultValue: t('landing.quickStart.subtitle') })}
+          </p>
+        </div>
+
+        <div
+          className="mb-5 grid grid-cols-2 gap-2 rounded-xl p-1.5"
+          style={{ background: 'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.92) 100%)' }}
+        >
+          {tabs.map((tab) => {
+            const isActive = tab.id === currentTab.id
+            const Icon = tab.id === 'agent' ? Bot : UserRound
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                aria-pressed={isActive}
+                className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                style={{
+                  background: isActive ? 'rgba(255,255,255,0.96)' : 'transparent',
+                  color: isActive ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+                  boxShadow: isActive ? '0 4px 12px rgba(15, 23, 42, 0.08)' : 'none',
+                }}
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex flex-1 flex-col pb-2">
+          <div className="flex flex-1 items-center justify-center py-2">
+            <p className="text-center text-sm font-medium leading-relaxed" style={{ color: 'hsl(var(--foreground))' }}>
+              {currentTab.description}
+            </p>
+          </div>
+          <div
+            className="relative rounded-xl border bg-slate-50/90 px-4 py-3.5 pr-12 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+            style={{ borderColor: 'hsl(var(--border))' }}
+          >
+            <code
+              className="line-clamp-2 break-all font-mono text-sm"
+              style={{ color: currentTab.id === 'agent' ? '#16A34A' : '#0F172A' }}
+            >
+              {currentTab.command}
+            </code>
+            <CompactCopyButton text={currentTab.command} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <section className="relative z-10 w-full px-6 py-14 md:py-16" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
@@ -156,9 +222,9 @@ export function LandingQuickStartSection() {
               className="relative rounded-2xl border bg-slate-50/90 px-4 py-3 pr-14 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
               style={{ borderColor: 'hsl(var(--border))' }}
             >
-              <div className="overflow-x-auto whitespace-nowrap">
+              <div>
                 <code
-                  className="font-mono text-sm md:text-base"
+                  className="font-mono text-sm md:text-base break-all"
                   style={{ color: currentTab.id === 'agent' ? '#16A34A' : '#0F172A' }}
                 >
                   {currentTab.command}

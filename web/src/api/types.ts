@@ -167,6 +167,7 @@ export interface SkillSummary {
   ratingAvg?: number
   ratingCount: number
   namespace: string
+  labels?: LabelItem[]
   updatedAt: string
   canSubmitPromotion: boolean
   headlineVersion?: SkillLifecycleVersion
@@ -350,6 +351,7 @@ export interface PublishResult {
   status: string
   fileCount: number
   totalSize: number
+  labels?: string[]
 }
 
 export interface SkillDeleteResult {

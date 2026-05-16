@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class SkillSearchAppServiceTest {
@@ -55,17 +56,22 @@ class SkillSearchAppServiceTest {
     @Mock
     private RbacService rbacService;
 
+    @Mock
+    private SkillLabelAppService skillLabelAppService;
+
     private SkillSearchAppService service;
 
     @BeforeEach
     void setUp() {
+        lenient().when(skillLabelAppService.listSkillLabelsBySkillIds(anyList())).thenReturn(Map.of());
         service = new SkillSearchAppService(
                 searchQueryService,
                 skillRepository,
                 namespaceRepository,
                 namespaceService,
                 new SkillLifecycleProjectionService(skillVersionRepository),
-                rbacService
+                rbacService,
+                skillLabelAppService
         );
     }
 

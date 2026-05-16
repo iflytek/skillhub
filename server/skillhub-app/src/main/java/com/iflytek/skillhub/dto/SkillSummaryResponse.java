@@ -2,6 +2,7 @@ package com.iflytek.skillhub.dto;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 public record SkillSummaryResponse(
         Long id,
@@ -20,5 +21,6 @@ public record SkillSummaryResponse(
         SkillLifecycleVersionResponse headlineVersion,
         SkillLifecycleVersionResponse publishedVersion,
         SkillLifecycleVersionResponse ownerPreviewVersion,
-        String resolutionMode
+        String resolutionMode,
+        List<SkillLabelDto> labels
 ) {}
