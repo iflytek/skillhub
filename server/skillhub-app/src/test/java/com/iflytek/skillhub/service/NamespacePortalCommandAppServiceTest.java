@@ -21,6 +21,7 @@ import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.dto.MemberResponse;
+import com.iflytek.skillhub.dto.MemberRequest;
 import com.iflytek.skillhub.dto.MessageResponse;
 import com.iflytek.skillhub.dto.NamespaceLifecycleRequest;
 import com.iflytek.skillhub.dto.NamespaceRequest;
@@ -86,6 +87,23 @@ class NamespacePortalCommandAppServiceTest {
 
         assertThat(response.message()).isEqualTo("Namespace deleted successfully");
         verify(namespaceService).deleteNamespace(7L, "owner-1");
+    }
+
+    @Test
+    void batchAddMembers_missingNamespaceThrowsBadRequest() {
+        when(namespaceService.getNamespaceBySlug("team-missing")).thenReturn(null);
+
+        DomainBadRequestException ex = assertThrows(
+                DomainBadRequestException.class,
+                () -> service.batchAddMembers(
+                        "team-missing",
+                        java.util.List.of(new MemberRequest("user-1", NamespaceRole.MEMBER)),
+                        "owner-1"
+                )
+        );
+
+        assertThat(ex.messageCode()).isEqualTo("error.namespace.slug.notFound");
+        assertThat(ex.messageArgs()).containsExactly("team-missing");
     }
 
     private Namespace namespace(Long id, String slug) {

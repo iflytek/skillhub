@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.BatchMemberRequest;
@@ -71,7 +72,7 @@ public class NamespacePortalCommandAppService {
 
     @Transactional
     public NamespaceResponse updateNamespace(String slug, NamespaceRequest request, String userId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         Namespace updated = namespaceService.updateNamespace(
                 namespace.getId(),
                 request.displayName(),
@@ -84,7 +85,7 @@ public class NamespacePortalCommandAppService {
 
     @Transactional
     public MessageResponse deleteNamespace(String slug, String userId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         namespaceService.deleteNamespace(namespace.getId(), userId);
         return new MessageResponse("Namespace deleted successfully");
     }
@@ -147,7 +148,7 @@ public class NamespacePortalCommandAppService {
 
     @Transactional
     public MemberResponse addMember(String slug, String memberUserId, com.iflytek.skillhub.domain.namespace.NamespaceRole role, String operatorUserId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         NamespaceMember member = namespaceMemberService.addMember(
                 namespace.getId(),
                 memberUserId,
@@ -161,7 +162,7 @@ public class NamespacePortalCommandAppService {
     // Intentionally not @Transactional: each addMember runs in its own transaction
     // so partial success is possible (some members added even if others fail).
     public BatchMemberResponse batchAddMembers(String slug, List<MemberRequest> members, String operatorUserId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         Long namespaceId = namespace.getId();
 
         List<BatchMemberResult> results = new ArrayList<>();
@@ -195,7 +196,7 @@ public class NamespacePortalCommandAppService {
 
     @Transactional
     public MessageResponse removeMember(String slug, String memberUserId, String operatorUserId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         namespaceMemberService.removeMember(namespace.getId(), memberUserId, operatorUserId);
         return new MessageResponse("Member removed successfully");
     }
@@ -205,7 +206,7 @@ public class NamespacePortalCommandAppService {
                                            String userId,
                                            UpdateMemberRoleRequest request,
                                            String operatorUserId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         NamespaceMember member = namespaceMemberService.updateMemberRole(
                 namespace.getId(),
                 userId,
@@ -217,9 +218,17 @@ public class NamespacePortalCommandAppService {
 
     @Transactional
     public MessageResponse transferOwnership(String slug, String newOwnerId, String currentOwnerId) {
-        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        Namespace namespace = requireNamespace(slug);
         namespaceMemberService.transferOwnership(namespace.getId(), currentOwnerId, newOwnerId);
         return new MessageResponse("Ownership transferred successfully");
+    }
+
+    private Namespace requireNamespace(String slug) {
+        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        if (namespace == null) {
+            throw new DomainBadRequestException("error.namespace.slug.notFound", slug);
+        }
+        return namespace;
     }
 
     private boolean canCreateNamespace(PlatformPrincipal principal) {

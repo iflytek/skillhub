@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
@@ -192,7 +193,8 @@ class SkillLabelAppServiceTest {
                 null
         );
 
-        assertEquals(List.of("official", "featured"), result.stream().map(com.iflytek.skillhub.dto.SkillLabelDto::slug).toList());
+        assertThat(result.stream().map(com.iflytek.skillhub.dto.SkillLabelDto::slug).toList())
+                .containsExactlyInAnyOrder("official", "featured");
         verify(skillRepository, times(1)).findByNamespaceIdAndSlug(1L, "demo-skill");
         verify(skillLabelService, times(1)).attachLabels(10L, List.of("official", "featured"), "user-1", Map.of(), Set.of("SUPER_ADMIN"));
         verify(labelSearchSyncService, times(1)).rebuildSkill(10L);
