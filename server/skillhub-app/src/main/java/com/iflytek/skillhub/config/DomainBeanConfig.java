@@ -1,5 +1,8 @@
 package com.iflytek.skillhub.config;
 
+import com.iflytek.skillhub.domain.media.MediaAssetRepository;
+import com.iflytek.skillhub.domain.media.MediaAssetService;
+import com.iflytek.skillhub.domain.media.MediaValidator;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
@@ -40,5 +43,13 @@ public class DomainBeanConfig {
     @Bean
     public VisibilityChecker visibilityChecker() {
         return new VisibilityChecker();
+    }
+
+    @Bean
+    public MediaAssetService mediaAssetService(MediaAssetRepository repository,
+                                               MediaValidator mediaValidator,
+                                               MediaAssetService.MediaStorage storage,
+                                               MediaAssetService.MediaHasher hasher) {
+        return new MediaAssetService(repository, mediaValidator, storage, hasher);
     }
 }
