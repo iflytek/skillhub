@@ -1,5 +1,10 @@
 package com.iflytek.skillhub.config;
 
+import com.iflytek.skillhub.domain.promotion.PromotionCampaignRepository;
+import com.iflytek.skillhub.domain.promotion.PromotionCampaignService;
+import com.iflytek.skillhub.domain.promotion.PromotionEventLogRepository;
+import com.iflytek.skillhub.domain.promotion.PromotionSlotRepository;
+import com.iflytek.skillhub.domain.promotion.PromotionTargetGuard;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
@@ -40,5 +45,13 @@ public class DomainBeanConfig {
     @Bean
     public VisibilityChecker visibilityChecker() {
         return new VisibilityChecker();
+    }
+
+    @Bean
+    public PromotionCampaignService promotionCampaignService(PromotionSlotRepository slotRepository,
+                                                             PromotionCampaignRepository campaignRepository,
+                                                             PromotionEventLogRepository eventLogRepository,
+                                                             PromotionTargetGuard targetGuard) {
+        return new PromotionCampaignService(slotRepository, campaignRepository, eventLogRepository, targetGuard);
     }
 }
