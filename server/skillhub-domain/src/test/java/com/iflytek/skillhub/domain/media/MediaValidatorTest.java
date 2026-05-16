@@ -60,7 +60,7 @@ class MediaValidatorTest {
 
     @Test
     void acceptsJpegWithMatchingDeclaredType() {
-        byte[] header = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
+        byte[] header = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0x00, 0x10};
         MediaType type = validator.validateAndClassify(header, 200, "image/jpeg");
         assertThat(type).isEqualTo(MediaType.IMAGE);
     }
