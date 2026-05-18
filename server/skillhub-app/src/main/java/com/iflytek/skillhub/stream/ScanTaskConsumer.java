@@ -23,7 +23,9 @@ import java.util.Comparator;
 import java.util.Map;
 
 public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.ScanTaskPayload> {
-    private static final Path SCAN_TEMP_DIR = Paths.get("/tmp/skillhub-scans").toAbsolutePath().normalize();
+    private static final Path SCAN_TEMP_DIR = Paths.get(System.getProperty("java.io.tmpdir"), "skillhub-scans")
+            .toAbsolutePath()
+            .normalize();
 
     private final SecurityScanner securityScanner;
     private final SecurityScanService securityScanService;

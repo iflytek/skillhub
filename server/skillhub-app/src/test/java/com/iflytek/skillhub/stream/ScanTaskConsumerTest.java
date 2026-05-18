@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 class ScanTaskConsumerTest {
-    private static final Path SCAN_TEMP_DIR = Path.of("/tmp/skillhub-scans");
+    private static final Path SCAN_TEMP_DIR = Path.of(System.getProperty("java.io.tmpdir"), "skillhub-scans");
 
     @Test
     void processBusiness_andMarkCompleted_updatesAuditAndCleansTempDirectory() throws Exception {
@@ -131,7 +131,7 @@ class ScanTaskConsumerTest {
         ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
                 "task-3",
                 77L,
-                "/tmp/retry",
+                Path.of(System.getProperty("java.io.tmpdir"), "retry").toString(),
                 null,
                 ScannerType.SKILL_SCANNER
         );
@@ -141,7 +141,7 @@ class ScanTaskConsumerTest {
         assertThat(producer.publishedTask).isEqualTo(new ScanTask(
                 "task-3",
                 77L,
-                "/tmp/retry",
+                Path.of(System.getProperty("java.io.tmpdir"), "retry").toString(),
                 null,
                 null,
                 producer.publishedTask.createdAtMillis(),

@@ -17,6 +17,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 /**
  * Tests for {@link SkillBundleDraftService} validation and persistence rules.
@@ -117,15 +118,19 @@ class SkillBundleDraftServiceTest {
             setField(v, "id", 120L);
             return v;
         });
-        given(resolver.resolveRegistryItem(1L, 11L)).willReturn(
-                new SkillBundleDraftService.SkillBundleItemSnapshot(
+        given(resolver.resolveRegistryItems(List.of(item(1L, 11L, true, 10)))).willReturn(
+                List.of(new SkillBundleDraftService.SkillBundleItemSnapshot(
                         "global", "code-review", "Code Review", "1.3.0",
-                        "Audit interface boundaries.", Instant.now()));
+                        "Audit interface boundaries.", Instant.parse("2026-05-01T00:00:00Z"))));
 
         SkillBundleVersion saved = service.buildDraft(cmd, "alice");
 
         assertThat(saved.getId()).isEqualTo(120L);
+        assertThat(saved.getManifestJson()).contains("\"coordinate\":\"@global/code-review\"");
+        assertThat(saved.getManifestJson()).contains("\"roleDescription\":\"role\"");
+        assertThat(saved.getLockJson()).contains("\"skillVersionId\":11");
         verify(itemRepository).save(any(SkillBundleItem.class));
+        verify(resolver, times(1)).resolveRegistryItems(List.of(item(1L, 11L, true, 10)));
     }
 
     private SkillBundleDraftService.BuildDraftCommand command(SkillBundleType type,
@@ -134,7 +139,7 @@ class SkillBundleDraftServiceTest {
                                                               List<SkillBundleDraftService.DraftItem> items) {
         return new SkillBundleDraftService.BuildDraftCommand(
                 5L, "ops", "Ops", "summary", "1.0.0", 1L,
-                type, projectTypes, roleTags, items, "{}", "{}", "key");
+                type, projectTypes, roleTags, items, "key");
     }
 
     private SkillBundleDraftService.DraftItem item(Long skillId, Long versionId, boolean required, int order) {

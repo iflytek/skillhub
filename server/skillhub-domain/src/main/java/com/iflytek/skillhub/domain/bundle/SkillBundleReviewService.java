@@ -25,6 +25,10 @@ public class SkillBundleReviewService {
     }
 
     public SkillBundleReviewTask submitForReview(Long bundleVersionId, String submitter) {
+        return submitForReview(bundleVersionId, submitter, Instant.now());
+    }
+
+    public SkillBundleReviewTask submitForReview(Long bundleVersionId, String submitter, Instant now) {
         SkillBundleVersion version = versionRepository.findById(bundleVersionId)
                 .orElseThrow(() -> new SkillBundleException("error.skillBundle.version.notFound"));
         if (version.getStatus() != SkillBundleVersionStatus.DRAFT
@@ -46,7 +50,7 @@ public class SkillBundleReviewService {
 
         SkillBundleReviewTask task = reviewTaskRepository.findByBundleVersionId(bundleVersionId)
                 .orElseGet(() -> new SkillBundleReviewTask(bundleVersionId, bundle.getNamespaceId(), submitter));
-        task.setStatus("PENDING");
+        task.resubmit(submitter, now);
         return reviewTaskRepository.save(task);
     }
 

@@ -1,7 +1,13 @@
 package com.iflytek.skillhub.domain.bundle;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -18,6 +24,7 @@ import java.util.Objects;
  * </ul>
  */
 public class SkillBundleDraftService {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final SkillBundleRepository bundleRepository;
     private final SkillBundleVersionRepository versionRepository;
@@ -47,12 +54,14 @@ public class SkillBundleDraftService {
             throw new SkillBundleException("error.skillBundle.version.duplicate");
         }
 
+        List<ResolvedDraftItem> resolvedItems = resolveItems(command.items());
         SkillBundleVersion version = versionRepository.save(new SkillBundleVersion(
                 bundle.getId(), command.version(), command.versionSort(),
-                command.manifestJson(), command.lockJson(), command.bundleStorageKey()));
+                buildManifestJson(command, resolvedItems), buildLockJson(resolvedItems), command.bundleStorageKey()));
 
-        for (DraftItem item : command.items()) {
-            SkillBundleItemSnapshot snapshot = itemSourceResolver.resolveRegistryItem(item.skillId(), item.skillVersionId());
+        for (ResolvedDraftItem resolved : resolvedItems) {
+            DraftItem item = resolved.item();
+            SkillBundleItemSnapshot snapshot = resolved.snapshot();
             SkillBundleItem entity = new SkillBundleItem(
                     version.getId(), BundleItemSourceType.REGISTRY,
                     snapshot.namespaceSlug(), snapshot.skillSlug(), snapshot.version(),
@@ -64,6 +73,85 @@ public class SkillBundleDraftService {
             itemRepository.save(entity);
         }
         return version;
+    }
+
+    private List<ResolvedDraftItem> resolveItems(List<DraftItem> items) {
+        List<SkillBundleItemSnapshot> snapshots = itemSourceResolver.resolveRegistryItems(items);
+        if (snapshots == null || snapshots.size() != items.size()) {
+            throw new SkillBundleException("error.skillBundle.item.versionNotFound");
+        }
+        List<ResolvedDraftItem> resolved = new ArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            resolved.add(new ResolvedDraftItem(items.get(i), snapshots.get(i)));
+        }
+        return resolved;
+    }
+
+    private String buildManifestJson(BuildDraftCommand command, List<ResolvedDraftItem> resolvedItems) {
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("schemaVersion", 1);
+        root.put("slug", command.slug());
+        root.put("displayName", command.displayName());
+        root.put("version", command.version());
+        root.put("type", command.bundleType().name());
+        root.put("targetProjectTypes", safeList(command.targetProjectTypes()));
+        root.put("roleTags", safeList(command.roleTags()));
+        root.put("items", orderedItems(resolvedItems).stream().map(this::manifestItem).toList());
+        return toJson(root);
+    }
+
+    private String buildLockJson(List<ResolvedDraftItem> resolvedItems) {
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("schemaVersion", 1);
+        root.put("items", orderedItems(resolvedItems).stream().map(this::lockItem).toList());
+        return toJson(root);
+    }
+
+    private List<ResolvedDraftItem> orderedItems(List<ResolvedDraftItem> resolvedItems) {
+        return resolvedItems.stream()
+                .sorted(Comparator.comparingInt((ResolvedDraftItem item) -> item.item().installOrder())
+                        .thenComparing(item -> item.snapshot().namespaceSlug())
+                        .thenComparing(item -> item.snapshot().skillSlug()))
+                .toList();
+    }
+
+    private Map<String, Object> manifestItem(ResolvedDraftItem resolved) {
+        DraftItem item = resolved.item();
+        SkillBundleItemSnapshot snapshot = resolved.snapshot();
+        Map<String, Object> node = lockItem(resolved);
+        node.put("sourceType", BundleItemSourceType.REGISTRY.name());
+        node.put("displayName", snapshot.displayName());
+        node.put("summary", snapshot.summary());
+        node.put("roleDescription", item.roleDescription());
+        node.put("required", item.required());
+        node.put("installOrder", item.installOrder());
+        return node;
+    }
+
+    private Map<String, Object> lockItem(ResolvedDraftItem resolved) {
+        DraftItem item = resolved.item();
+        SkillBundleItemSnapshot snapshot = resolved.snapshot();
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("skillId", item.skillId());
+        node.put("skillVersionId", item.skillVersionId());
+        node.put("namespaceSlug", snapshot.namespaceSlug());
+        node.put("skillSlug", snapshot.skillSlug());
+        node.put("coordinate", "@" + snapshot.namespaceSlug() + "/" + snapshot.skillSlug());
+        node.put("version", snapshot.version());
+        node.put("publishedAt", snapshot.publishedAt() == null ? null : snapshot.publishedAt().toString());
+        return node;
+    }
+
+    private List<String> safeList(List<String> values) {
+        return values == null ? List.of() : List.copyOf(values);
+    }
+
+    private String toJson(Object payload) {
+        try {
+            return MAPPER.writeValueAsString(payload);
+        } catch (JsonProcessingException e) {
+            throw new SkillBundleException("error.skillBundle.manifest.invalid");
+        }
     }
 
     private void validateCommand(BuildDraftCommand command) {
@@ -97,8 +185,6 @@ public class SkillBundleDraftService {
                                     List<String> targetProjectTypes,
                                     List<String> roleTags,
                                     List<DraftItem> items,
-                                    String manifestJson,
-                                    String lockJson,
                                     String bundleStorageKey) {}
 
     public record DraftItem(Long skillId,
@@ -114,11 +200,19 @@ public class SkillBundleDraftService {
                                           String summary,
                                           Instant publishedAt) {}
 
+    private record ResolvedDraftItem(DraftItem item, SkillBundleItemSnapshot snapshot) {}
+
     /**
      * Resolves a published skill version snapshot for a bundle item.
      * Implementations live in {@code skillhub-app} so the domain layer doesn't depend on JPA.
      */
     public interface SkillBundleItemSourceResolver {
         SkillBundleItemSnapshot resolveRegistryItem(Long skillId, Long skillVersionId);
+
+        default List<SkillBundleItemSnapshot> resolveRegistryItems(List<DraftItem> items) {
+            return items.stream()
+                    .map(item -> resolveRegistryItem(item.skillId(), item.skillVersionId()))
+                    .toList();
+        }
     }
 }

@@ -67,7 +67,7 @@ public class SkillBundleAppService {
                 request.items().stream().map(item -> new SkillBundleDraftService.DraftItem(
                         item.skillId(), item.skillVersionId(), item.roleDescription(),
                         item.required(), item.installOrder())).toList(),
-                "{}", "{}", placeholderStorageKey(namespaceSlug, request.slug(), request.version())
+                placeholderStorageKey(namespaceSlug, request.slug(), request.version())
         );
 
         SkillBundleVersion version = draftService.buildDraft(command, creator);
@@ -76,7 +76,7 @@ public class SkillBundleAppService {
 
     @Transactional
     public SkillBundleReviewTask submitForReview(Long bundleVersionId, String submitter) {
-        return reviewService.submitForReview(bundleVersionId, submitter);
+        return reviewService.submitForReview(bundleVersionId, submitter, clock.instant());
     }
 
     @Transactional
@@ -142,14 +142,21 @@ public class SkillBundleAppService {
         // semver MAJOR.MINOR.PATCH packed into a sortable long; pre-release parts ignored.
         String[] parts = version.split("[.+-]");
         long sort = 0;
-        for (int i = 0; i < Math.min(3, parts.length); i++) {
-            try {
-                sort = sort * 1_000_000L + Long.parseLong(parts[i]);
-            } catch (NumberFormatException ignored) {
-                break;
-            }
+        for (int i = 0; i < 3; i++) {
+            sort = sort * 1_000_000L + parseVersionPart(parts, i);
         }
         return sort;
+    }
+
+    private long parseVersionPart(String[] parts, int index) {
+        if (index >= parts.length) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(parts[index]);
+        } catch (NumberFormatException ignored) {
+            return 0L;
+        }
     }
 
     private String placeholderStorageKey(String namespaceSlug, String slug, String version) {

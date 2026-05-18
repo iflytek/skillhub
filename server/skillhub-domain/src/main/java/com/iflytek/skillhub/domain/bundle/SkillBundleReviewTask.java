@@ -67,4 +67,13 @@ public class SkillBundleReviewTask {
     public void setReviewedBy(String reviewedBy) { this.reviewedBy = reviewedBy; }
     public void setReviewComment(String reviewComment) { this.reviewComment = reviewComment; }
     public void setReviewedAt(Instant reviewedAt) { this.reviewedAt = reviewedAt; }
+
+    public void resubmit(String submitter, Instant submittedAt) {
+        this.status = "PENDING";
+        this.submittedBy = submitter;
+        this.submittedAt = submittedAt;
+        this.reviewedBy = null;
+        this.reviewComment = null;
+        this.reviewedAt = null;
+    }
 }

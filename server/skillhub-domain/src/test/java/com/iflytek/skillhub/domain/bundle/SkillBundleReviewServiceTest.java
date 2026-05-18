@@ -83,6 +83,33 @@ class SkillBundleReviewServiceTest {
     }
 
     @Test
+    void submitForReview_refreshesAuditFieldsWhenExistingTaskIsResubmitted() {
+        SkillBundleVersion version = draftVersion(BundleValidationStatus.PASSED);
+        version.setStatus(SkillBundleVersionStatus.REJECTED);
+        SkillBundle bundle = bundleStub();
+        SkillBundleReviewTask existing = pendingTask("alice");
+        existing.setReviewedBy("admin");
+        existing.setReviewComment("needs work");
+        existing.setReviewedAt(Instant.parse("2026-05-20T10:00:00Z"));
+        Instant resubmittedAt = Instant.parse("2026-06-02T10:00:00Z");
+        given(versionRepository.findById(120L)).willReturn(Optional.of(version));
+        given(bundleRepository.findById(99L)).willReturn(Optional.of(bundle));
+        given(reviewTaskRepository.findByBundleVersionId(120L)).willReturn(Optional.of(existing));
+        given(reviewTaskRepository.save(any(SkillBundleReviewTask.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+        given(versionRepository.save(any(SkillBundleVersion.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        SkillBundleReviewTask task = service.submitForReview(120L, "bob", resubmittedAt);
+
+        org.assertj.core.api.Assertions.assertThat(task.getStatus()).isEqualTo("PENDING");
+        org.assertj.core.api.Assertions.assertThat(task.getSubmittedBy()).isEqualTo("bob");
+        org.assertj.core.api.Assertions.assertThat(task.getSubmittedAt()).isEqualTo(resubmittedAt);
+        org.assertj.core.api.Assertions.assertThat(task.getReviewedBy()).isNull();
+        org.assertj.core.api.Assertions.assertThat(task.getReviewComment()).isNull();
+        org.assertj.core.api.Assertions.assertThat(task.getReviewedAt()).isNull();
+    }
+
+    @Test
     void approve_blockedWhenSubmitterIsReviewer() {
         SkillBundleReviewTask task = pendingTask("alice");
         given(reviewTaskRepository.findById(7L)).willReturn(Optional.of(task));

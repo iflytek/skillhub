@@ -27,8 +27,9 @@ import java.util.UUID;
 public class SecurityScanService {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityScanService.class);
-    private static final String TEMP_DIR = "/tmp/skillhub-scans";
-    private static final Path TEMP_BASE_DIR = Paths.get(TEMP_DIR).toAbsolutePath().normalize();
+    private static final Path TEMP_BASE_DIR = Paths.get(System.getProperty("java.io.tmpdir"), "skillhub-scans")
+            .toAbsolutePath()
+            .normalize();
 
     private final SecurityAuditRepository auditRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -122,7 +123,7 @@ public class SecurityScanService {
 
     private Path saveTempDirectory(Long versionId, List<PackageEntry> entries) {
         try {
-            Path skillDir = TEMP_BASE_DIR.resolve(String.valueOf(versionId)).normalize();
+            Path skillDir = TEMP_BASE_DIR.resolve(versionId + "-" + UUID.randomUUID()).normalize();
             Files.createDirectories(skillDir);
             for (PackageEntry entry : entries) {
                 Path filePath = resolveSafeChild(skillDir, entry.path());
