@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.domain.promotion;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,11 +54,6 @@ public class PromotionCampaignService {
 
         targetGuard.assertPromotable(command.targetType(), command.targetId(), command.targetVersionId());
 
-        long currentActive = campaignRepository.countActiveBySlot(slot.getSlotCode(), now);
-        if (currentActive >= slot.getMaxActiveItems()) {
-            throw new PromotionException("error.promotion.campaign.timeConflict");
-        }
-
         PromotionCampaign campaign = new PromotionCampaign(
                 command.targetType(),
                 command.targetId(),
@@ -65,7 +62,8 @@ public class PromotionCampaignService {
                 command.priority(),
                 command.startsAt(),
                 command.endsAt(),
-                submitter
+                submitter,
+                now
         );
         campaign.setSubtitle(command.subtitle());
         campaign.setCoverMediaId(command.coverMediaId());
@@ -73,6 +71,7 @@ public class PromotionCampaignService {
         campaign.setReason(command.reason());
         campaign.setTargetVersionId(command.targetVersionId());
         campaign.setStatus(PromotionCampaignStatus.PENDING_REVIEW);
+        assertSlotCapacityAvailable(campaign, now);
         return campaignRepository.save(campaign);
     }
 
@@ -86,6 +85,7 @@ public class PromotionCampaignService {
             throw new PromotionException("error.promotion.campaign.selfReview");
         }
         targetGuard.assertPromotable(campaign.getTargetType(), campaign.getTargetId(), campaign.getTargetVersionId());
+        assertSlotCapacityAvailable(campaign, now);
 
         PromotionCampaignStatus next = computeApprovedState(campaign, now);
         int updated = campaignRepository.updateStatusWithVersion(
@@ -127,9 +127,107 @@ public class PromotionCampaignService {
     }
 
     public SchedulerSweepResult runScheduledSweep(Instant now) {
-        int activated = campaignRepository.markScheduledAsActive(now);
+        int activated = activateEligibleScheduledCampaigns(now);
         int ended = campaignRepository.markActiveAsEnded(now);
         return new SchedulerSweepResult(activated, ended);
+    }
+
+    private void assertSlotCapacityAvailable(PromotionCampaign campaign, Instant now) {
+        if (!now.isBefore(campaign.getEndsAt())) {
+            return;
+        }
+        PromotionSlot slot = slotRepository.findBySlotCode(campaign.getSlotCode())
+                .orElseThrow(() -> new PromotionException("error.promotion.slot.notFound"));
+        Instant checkedStartsAt = max(campaign.getStartsAt(), now);
+        if (!campaign.getEndsAt().isAfter(checkedStartsAt)) {
+            return;
+        }
+        List<PromotionCampaign> candidates = campaignRepository.findCapacityCandidates(
+                campaign.getSlotCode(), checkedStartsAt, campaign.getEndsAt());
+        if (exceedsCapacity(candidates, campaign, checkedStartsAt, campaign.getEndsAt(), slot.getMaxActiveItems())) {
+            throw new PromotionException("error.promotion.campaign.timeConflict");
+        }
+    }
+
+    private int activateEligibleScheduledCampaigns(Instant now) {
+        List<PromotionCampaign> due = campaignRepository.findReadyToActivate(now).stream()
+                .sorted(Comparator.comparing(PromotionCampaign::getStartsAt)
+                        .thenComparing(Comparator.comparing(PromotionCampaign::getPriority).reversed())
+                        .thenComparing(PromotionCampaign::getId))
+                .toList();
+
+        int activated = 0;
+        for (PromotionCampaign campaign : due) {
+            try {
+                assertActivationCapacityAvailable(campaign, now);
+                int updated = campaignRepository.updateStatusWithVersion(
+                        campaign.getId(), PromotionCampaignStatus.ACTIVE,
+                        campaign.getReviewedBy(), campaign.getReviewComment(), campaign.getVersion());
+                activated += updated;
+            } catch (PromotionException ignored) {
+                // Keep over-capacity scheduled items queued for an operator-visible fix.
+            }
+        }
+        return activated;
+    }
+
+    private void assertActivationCapacityAvailable(PromotionCampaign campaign, Instant now) {
+        PromotionSlot slot = slotRepository.findBySlotCode(campaign.getSlotCode())
+                .orElseThrow(() -> new PromotionException("error.promotion.slot.notFound"));
+        long activeNow = campaignRepository.findActiveBySlot(campaign.getSlotCode(), now).stream()
+                .filter(c -> !Objects.equals(c.getId(), campaign.getId()))
+                .count();
+        if (activeNow >= slot.getMaxActiveItems()) {
+            throw new PromotionException("error.promotion.campaign.timeConflict");
+        }
+    }
+
+    private boolean exceedsCapacity(List<PromotionCampaign> existing,
+                                    PromotionCampaign candidate,
+                                    Instant startsAt,
+                                    Instant endsAt,
+                                    int maxActiveItems) {
+        List<Instant> boundaries = new ArrayList<>();
+        boundaries.add(startsAt);
+        boundaries.add(endsAt);
+        for (PromotionCampaign campaign : existing) {
+            if (Objects.equals(campaign.getId(), candidate.getId())) {
+                continue;
+            }
+            Instant overlapStart = max(campaign.getStartsAt(), startsAt);
+            Instant overlapEnd = min(campaign.getEndsAt(), endsAt);
+            if (overlapStart.isBefore(overlapEnd)) {
+                boundaries.add(overlapStart);
+                boundaries.add(overlapEnd);
+            }
+        }
+
+        return boundaries.stream()
+                .distinct()
+                .filter(point -> point.isBefore(endsAt))
+                .anyMatch(point -> overlappingCount(existing, candidate, point) > maxActiveItems);
+    }
+
+    private int overlappingCount(List<PromotionCampaign> existing, PromotionCampaign candidate, Instant point) {
+        int count = isActiveAt(candidate, point) ? 1 : 0;
+        for (PromotionCampaign campaign : existing) {
+            if (!Objects.equals(campaign.getId(), candidate.getId()) && isActiveAt(campaign, point)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean isActiveAt(PromotionCampaign campaign, Instant point) {
+        return !campaign.getStartsAt().isAfter(point) && campaign.getEndsAt().isAfter(point);
+    }
+
+    private Instant max(Instant left, Instant right) {
+        return left.isAfter(right) ? left : right;
+    }
+
+    private Instant min(Instant left, Instant right) {
+        return left.isBefore(right) ? left : right;
     }
 
     private PromotionCampaignStatus computeApprovedState(PromotionCampaign campaign, Instant now) {

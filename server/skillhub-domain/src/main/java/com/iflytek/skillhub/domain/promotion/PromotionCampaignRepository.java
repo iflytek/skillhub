@@ -18,7 +18,15 @@ public interface PromotionCampaignRepository {
 
     List<PromotionCampaign> findActiveBySlot(String slotCode, Instant now);
 
-    long countActiveBySlot(String slotCode, Instant now);
+    /**
+     * Returns campaigns that may consume slot capacity inside the requested window.
+     *
+     * <p>PENDING_REVIEW campaigns are intentionally excluded because capacity is
+     * reserved at approval time, not at submission time.
+     */
+    List<PromotionCampaign> findCapacityCandidates(String slotCode, Instant startsAt, Instant endsAt);
+
+    List<PromotionCampaign> findReadyToActivate(Instant now);
 
     /**
      * Optimistically transitions a campaign's status. Returns the number of rows updated;
@@ -29,8 +37,6 @@ public interface PromotionCampaignRepository {
                                 String reviewedBy,
                                 String reviewComment,
                                 Integer expectedVersion);
-
-    int markScheduledAsActive(Instant now);
 
     int markActiveAsEnded(Instant now);
 }

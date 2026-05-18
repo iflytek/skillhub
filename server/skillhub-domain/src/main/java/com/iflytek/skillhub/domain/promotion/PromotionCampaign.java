@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.promotion;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * Operational promotion campaign placing a skill or skill bundle into a slot for a time window.
@@ -72,16 +73,16 @@ public class PromotionCampaign {
     private Integer version = 1;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = Instant.now();
+    private Instant updatedAt;
 
     protected PromotionCampaign() {}
 
     public PromotionCampaign(PromotionTargetType targetType, Long targetId, String slotCode,
                              String title, int priority, Instant startsAt, Instant endsAt,
-                             String submittedBy) {
+                             String submittedBy, Instant createdAt) {
         this.targetType = targetType;
         this.targetId = targetId;
         this.slotCode = slotCode;
@@ -90,6 +91,8 @@ public class PromotionCampaign {
         this.startsAt = startsAt;
         this.endsAt = endsAt;
         this.submittedBy = submittedBy;
+        this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
+        this.updatedAt = createdAt;
     }
 
     public Long getId() { return id; }

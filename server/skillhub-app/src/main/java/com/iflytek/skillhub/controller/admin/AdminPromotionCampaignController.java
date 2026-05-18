@@ -2,7 +2,6 @@ package com.iflytek.skillhub.controller.admin;
 
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus;
-import com.iflytek.skillhub.domain.promotion.PromotionEventType;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PageResponse;
@@ -10,7 +9,6 @@ import com.iflytek.skillhub.dto.promotion.CreatePromotionCampaignRequest;
 import com.iflytek.skillhub.dto.promotion.PromotionCampaignResponse;
 import com.iflytek.skillhub.dto.promotion.PromotionCampaignReviewRequest;
 import com.iflytek.skillhub.service.promotion.PromotionCampaignAppService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,15 +63,5 @@ public class AdminPromotionCampaignController extends BaseApiController {
                                                                      @RequestParam(defaultValue = "0") int page,
                                                                      @RequestParam(defaultValue = "20") int size) {
         return ok("response.success.read", appService.listByStatus(status, page, size));
-    }
-
-    @PostMapping("/{id}/events/{eventType}")
-    public ApiResponse<Void> recordEvent(@PathVariable Long id,
-                                         @PathVariable PromotionEventType eventType,
-                                         @RequestAttribute(value = "userId", required = false) String userId,
-                                         HttpServletRequest httpRequest) {
-        String requestId = httpRequest.getHeader("X-Request-Id");
-        appService.recordEvent(id, eventType, userId, null, requestId);
-        return ok("response.success.created", null);
     }
 }

@@ -113,5 +113,5 @@ export const promotionCampaignApi = {
       body: JSON.stringify({ comment: comment ?? null }),
     }),
   recordEvent: (id: number, eventType: 'IMPRESSION' | 'CLICK' | 'DOWNLOAD' | 'INSTALL'): Promise<void> =>
-    request(`/api/v1/admin/promotion-campaigns/${id}/events/${eventType}`, { method: 'POST' }),
+    request(`/api/v1/promotion-slots/campaigns/${id}/events/${eventType}`, { method: 'POST' }),
 }

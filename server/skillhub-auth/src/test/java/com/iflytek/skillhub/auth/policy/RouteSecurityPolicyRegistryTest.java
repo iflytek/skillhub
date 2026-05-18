@@ -59,6 +59,24 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_shouldKeepPromotionSlotsAndEventsAnonymous() {
+        boolean slotLookup = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/promotion-slots/**".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+        boolean eventRecord = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.POST
+                        && "/api/v1/promotion-slots/campaigns/*/events/*".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL);
+
+        assertTrue(slotLookup);
+        assertTrue(eventRecord);
+        assertTrue(registry.authorizeApiToken("GET", "/api/v1/promotion-slots/HOME_HERO", Set.of()).allowed());
+        assertTrue(registry.authorizeApiToken("POST",
+                "/api/v1/promotion-slots/campaigns/7/events/CLICK", Set.of()).allowed());
+    }
+
+    @Test
     void authorizationPolicies_shouldRequireAuthenticationForNamespaceDiscovery() {
         boolean matchedV1 = registry.authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.GET

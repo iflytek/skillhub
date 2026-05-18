@@ -122,7 +122,7 @@ class AdminPromotionCampaignControllerTest {
         PromotionCampaign campaign = new PromotionCampaign(
                 PromotionTargetType.SKILL_BUNDLE, 88L, "HOME_HERO",
                 "Title", 80, Instant.parse("2026-06-01T00:00:00Z"), Instant.parse("2026-06-30T23:59:59Z"),
-                "alice");
+                "alice", Instant.parse("2026-05-20T00:00:00Z"));
         campaign.setStatus(PromotionCampaignStatus.PENDING_REVIEW);
         try {
             java.lang.reflect.Field f = PromotionCampaign.class.getDeclaredField("id");

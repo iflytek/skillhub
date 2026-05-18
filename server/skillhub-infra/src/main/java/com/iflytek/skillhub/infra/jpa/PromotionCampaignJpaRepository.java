@@ -37,14 +37,30 @@ public interface PromotionCampaignJpaRepository extends JpaRepository<PromotionC
     List<PromotionCampaign> findActiveBySlot(@Param("slotCode") String slotCode, @Param("now") Instant now);
 
     @Query("""
-        SELECT COUNT(c) FROM PromotionCampaign c
+        SELECT c FROM PromotionCampaign c
         WHERE c.slotCode = :slotCode
-          AND c.status = com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus.ACTIVE
-          AND c.startsAt <= :now
-          AND c.endsAt   >  :now
+          AND c.status IN (
+              com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus.SCHEDULED,
+              com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus.ACTIVE
+          )
+          AND c.startsAt < :endsAt
+          AND c.endsAt   > :startsAt
+        ORDER BY c.startsAt ASC, c.endsAt ASC, c.id ASC
     """)
     @Override
-    long countActiveBySlot(@Param("slotCode") String slotCode, @Param("now") Instant now);
+    List<PromotionCampaign> findCapacityCandidates(@Param("slotCode") String slotCode,
+                                                   @Param("startsAt") Instant startsAt,
+                                                   @Param("endsAt") Instant endsAt);
+
+    @Query("""
+        SELECT c FROM PromotionCampaign c
+        WHERE c.status = com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus.SCHEDULED
+          AND c.startsAt <= :now
+          AND c.endsAt   >  :now
+        ORDER BY c.startsAt ASC, c.priority DESC, c.id ASC
+    """)
+    @Override
+    List<PromotionCampaign> findReadyToActivate(@Param("now") Instant now);
 
     @Override
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -62,19 +78,6 @@ public interface PromotionCampaignJpaRepository extends JpaRepository<PromotionC
                                 @Param("reviewedBy") String reviewedBy,
                                 @Param("reviewComment") String reviewComment,
                                 @Param("expectedVersion") Integer expectedVersion);
-
-    @Override
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-        UPDATE PromotionCampaign c
-        SET c.status = com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus.ACTIVE,
-            c.updatedAt = CURRENT_TIMESTAMP,
-            c.version = c.version + 1
-        WHERE c.status = com.iflytek.skillhub.domain.promotion.PromotionCampaignStatus.SCHEDULED
-          AND c.startsAt <= :now
-          AND c.endsAt   >  :now
-    """)
-    int markScheduledAsActive(@Param("now") Instant now);
 
     @Override
     @Modifying(clearAutomatically = true, flushAutomatically = true)

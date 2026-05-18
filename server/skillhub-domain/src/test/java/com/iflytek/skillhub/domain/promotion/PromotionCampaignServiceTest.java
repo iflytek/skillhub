@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +52,8 @@ class PromotionCampaignServiceTest {
     void createCampaign_persistsPendingReviewAndDelegatesGuard() {
         PromotionSlot slot = enabledSlot("HOME_HERO", 5);
         given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(slot));
-        given(campaignRepository.countActiveBySlot("HOME_HERO", now)).willReturn(0L);
+        given(campaignRepository.findCapacityCandidates("HOME_HERO",
+                now.plus(1, ChronoUnit.DAYS), now.plus(7, ChronoUnit.DAYS))).willReturn(List.of());
         given(campaignRepository.save(any(PromotionCampaign.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -64,6 +66,8 @@ class PromotionCampaignServiceTest {
         verify(campaignRepository).save(captor.capture());
         assertThat(captor.getValue().getSubmittedBy()).isEqualTo("alice");
         assertThat(captor.getValue().getSlotCode()).isEqualTo("HOME_HERO");
+        assertThat(captor.getValue().getCreatedAt()).isEqualTo(now);
+        assertThat(captor.getValue().getUpdatedAt()).isEqualTo(now);
     }
 
     @Test
@@ -89,10 +93,16 @@ class PromotionCampaignServiceTest {
     }
 
     @Test
-    void createCampaign_rejectsWhenSlotIsAtCapacity() {
+    void createCampaign_rejectsWhenFutureWindowWouldExceedCapacity() {
         PromotionSlot slot = enabledSlot("HOME_HERO", 2);
         given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(slot));
-        given(campaignRepository.countActiveBySlot("HOME_HERO", now)).willReturn(2L);
+        PromotionCampaign first = campaign(2L, PromotionCampaignStatus.SCHEDULED, "bob",
+                now.plus(2, ChronoUnit.DAYS), now.plus(3, ChronoUnit.DAYS));
+        PromotionCampaign second = campaign(3L, PromotionCampaignStatus.ACTIVE, "carol",
+                now.plus(2, ChronoUnit.DAYS), now.plus(4, ChronoUnit.DAYS));
+        given(campaignRepository.findCapacityCandidates("HOME_HERO",
+                now.plus(1, ChronoUnit.DAYS), now.plus(7, ChronoUnit.DAYS)))
+                .willReturn(List.of(first, second));
 
         assertThatThrownBy(() -> service.createCampaign(sampleCommand(), "alice", now))
                 .isInstanceOf(PromotionException.class)
@@ -114,6 +124,9 @@ class PromotionCampaignServiceTest {
     void approveCampaign_movesToScheduledWhenStartsLater() {
         PromotionCampaign campaign = pendingCampaign("alice", now.plus(1, ChronoUnit.DAYS), now.plus(7, ChronoUnit.DAYS));
         given(campaignRepository.findById(1L)).willReturn(Optional.of(campaign), Optional.of(campaign));
+        given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(enabledSlot("HOME_HERO", 5)));
+        given(campaignRepository.findCapacityCandidates("HOME_HERO",
+                now.plus(1, ChronoUnit.DAYS), now.plus(7, ChronoUnit.DAYS))).willReturn(List.of());
         given(campaignRepository.updateStatusWithVersion(eq(1L), eq(PromotionCampaignStatus.SCHEDULED),
                 eq("admin"), eq("ok"), eq(1))).willReturn(1);
 
@@ -127,6 +140,9 @@ class PromotionCampaignServiceTest {
     void approveCampaign_movesToActiveWhenInsideWindow() {
         PromotionCampaign campaign = pendingCampaign("alice", now.minus(1, ChronoUnit.HOURS), now.plus(7, ChronoUnit.DAYS));
         given(campaignRepository.findById(1L)).willReturn(Optional.of(campaign), Optional.of(campaign));
+        given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(enabledSlot("HOME_HERO", 5)));
+        given(campaignRepository.findCapacityCandidates("HOME_HERO", now, now.plus(7, ChronoUnit.DAYS)))
+                .willReturn(List.of());
         given(campaignRepository.updateStatusWithVersion(eq(1L), eq(PromotionCampaignStatus.ACTIVE),
                 anyString(), any(), anyInt())).willReturn(1);
 
@@ -151,6 +167,9 @@ class PromotionCampaignServiceTest {
     void approveCampaign_throwsOnConcurrentUpdate() {
         PromotionCampaign campaign = pendingCampaign("alice", now.plus(1, ChronoUnit.DAYS), now.plus(7, ChronoUnit.DAYS));
         given(campaignRepository.findById(1L)).willReturn(Optional.of(campaign));
+        given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(enabledSlot("HOME_HERO", 5)));
+        given(campaignRepository.findCapacityCandidates("HOME_HERO",
+                now.plus(1, ChronoUnit.DAYS), now.plus(7, ChronoUnit.DAYS))).willReturn(List.of());
         given(campaignRepository.updateStatusWithVersion(anyLong(), any(), anyString(), any(), anyInt())).willReturn(0);
 
         assertThatThrownBy(() -> service.approveCampaign(1L, "ok", "admin", now))
@@ -186,13 +205,41 @@ class PromotionCampaignServiceTest {
 
     @Test
     void runScheduledSweep_returnsActivatedAndEndedCounts() {
-        given(campaignRepository.markScheduledAsActive(now)).willReturn(3);
+        PromotionCampaign first = campaign(1L, PromotionCampaignStatus.SCHEDULED, "alice",
+                now.minus(1, ChronoUnit.HOURS), now.plus(1, ChronoUnit.DAYS));
+        PromotionCampaign second = campaign(2L, PromotionCampaignStatus.SCHEDULED, "bob",
+                now.minus(30, ChronoUnit.MINUTES), now.plus(1, ChronoUnit.DAYS));
+        given(campaignRepository.findReadyToActivate(now)).willReturn(List.of(first, second));
+        given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(enabledSlot("HOME_HERO", 3)));
+        given(campaignRepository.findActiveBySlot("HOME_HERO", now)).willReturn(List.of());
+        given(campaignRepository.updateStatusWithVersion(eq(1L), eq(PromotionCampaignStatus.ACTIVE), any(), any(), eq(1)))
+                .willReturn(1);
+        given(campaignRepository.updateStatusWithVersion(eq(2L), eq(PromotionCampaignStatus.ACTIVE), any(), any(), eq(1)))
+                .willReturn(1);
         given(campaignRepository.markActiveAsEnded(now)).willReturn(1);
 
         PromotionCampaignService.SchedulerSweepResult result = service.runScheduledSweep(now);
 
-        assertThat(result.activated()).isEqualTo(3);
+        assertThat(result.activated()).isEqualTo(2);
         assertThat(result.ended()).isEqualTo(1);
+    }
+
+    @Test
+    void runScheduledSweep_skipsCampaignWhenSlotCapacityIsFullAtActivationTime() {
+        PromotionCampaign due = campaign(1L, PromotionCampaignStatus.SCHEDULED, "alice",
+                now.minus(1, ChronoUnit.HOURS), now.plus(1, ChronoUnit.DAYS));
+        PromotionCampaign active = campaign(2L, PromotionCampaignStatus.ACTIVE, "bob",
+                now.minus(1, ChronoUnit.HOURS), now.plus(1, ChronoUnit.DAYS));
+        given(campaignRepository.findReadyToActivate(now)).willReturn(List.of(due));
+        given(slotRepository.findBySlotCode("HOME_HERO")).willReturn(Optional.of(enabledSlot("HOME_HERO", 1)));
+        given(campaignRepository.findActiveBySlot("HOME_HERO", now)).willReturn(List.of(active));
+        given(campaignRepository.markActiveAsEnded(now)).willReturn(0);
+
+        PromotionCampaignService.SchedulerSweepResult result = service.runScheduledSweep(now);
+
+        assertThat(result.activated()).isZero();
+        verify(campaignRepository, never()).updateStatusWithVersion(anyLong(), eq(PromotionCampaignStatus.ACTIVE),
+                any(), any(), anyInt());
     }
 
     private PromotionSlot enabledSlot(String code, int max) {
@@ -205,9 +252,19 @@ class PromotionCampaignServiceTest {
     private PromotionCampaign pendingCampaign(String submitter, Instant startsAt, Instant endsAt) {
         PromotionCampaign campaign = new PromotionCampaign(
                 PromotionTargetType.SKILL_BUNDLE, 88L, "HOME_HERO",
-                "Title", 80, startsAt, endsAt, submitter);
+                "Title", 80, startsAt, endsAt, submitter, now);
         campaign.setStatus(PromotionCampaignStatus.PENDING_REVIEW);
         setField(campaign, "id", 1L);
+        return campaign;
+    }
+
+    private PromotionCampaign campaign(Long id, PromotionCampaignStatus status, String submitter,
+                                       Instant startsAt, Instant endsAt) {
+        PromotionCampaign campaign = new PromotionCampaign(
+                PromotionTargetType.SKILL_BUNDLE, 88L, "HOME_HERO",
+                "Title", 80, startsAt, endsAt, submitter, now);
+        campaign.setStatus(status);
+        setField(campaign, "id", id);
         return campaign;
     }
 

@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { promotionCampaignApi } from './api'
 
@@ -109,6 +111,8 @@ describe('promotionCampaignApi', () => {
     await promotionCampaignApi.recordEvent(7, 'CLICK')
 
     const [, init] = mockFetch.mock.calls[0]
+    const [url] = mockFetch.mock.calls[0]
+    expect(String(url)).toContain('/api/v1/promotion-slots/campaigns/7/events/CLICK')
     const headers = init.headers as Headers
     expect(headers.get('X-XSRF-TOKEN')).toBe('abc-123')
   })

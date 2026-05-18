@@ -59,6 +59,9 @@ public class DefaultPromotionTargetGuard implements PromotionTargetGuard {
         }
         SkillVersion version = skillVersionRepository.findById(resolvedVersionId)
                 .orElseThrow(() -> new PromotionException("error.promotion.target.versionNotFound"));
+        if (!skillId.equals(version.getSkillId())) {
+            throw new PromotionException("error.promotion.target.versionMismatch");
+        }
         if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
             throw new PromotionException("error.promotion.target.versionNotPublished");
         }
