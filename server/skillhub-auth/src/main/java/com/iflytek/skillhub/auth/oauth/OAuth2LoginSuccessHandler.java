@@ -47,10 +47,10 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String returnTo = oauthLoginFlowService.consumeReturnTo(request.getSession(false));
         if (returnTo != null) {
             getRedirectStrategy().sendRedirect(request, response, returnTo);
+            // The default branch below clears these via super; clear here too so both paths behave consistently.
+            clearAuthenticationAttributes(request);
             return;
         }
-        
-        // Use default target URL (/dashboard)
         super.onAuthenticationSuccess(request, response, authentication);
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 import java.util.List;
 import java.util.Map;
@@ -57,6 +58,42 @@ class OAuth2LoginHandlersTest {
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
         assertThat(session.getAttribute("platformPrincipal")).isEqualTo(principal);
         assertThat(session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNotNull();
+    }
+
+    /**
+     * Regression test: when an unauthenticated client hits a protected API endpoint, Spring Security
+     * caches that request. With {@code SavedRequestAwareAuthenticationSuccessHandler} the post-login
+     * redirect would resolve to the cached API URL, leaving the user staring at raw JSON instead of
+     * the dashboard. The handler must ignore the saved request and fall back to the default target.
+     */
+    @Test
+    void successHandler_ignoresSavedApiRequestAndRedirectsToDefault() throws Exception {
+        OAuthLoginFlowService oauthLoginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
+                new com.iflytek.skillhub.auth.session.PlatformSessionService(),
+                oauthLoginFlowService
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setMethod("GET");
+        request.setRequestURI("/api/web/skills");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        // Simulate Spring Security saving the API request that triggered login.
+        new HttpSessionRequestCache().saveRequest(request, response);
+
+        var principal = new com.iflytek.skillhub.auth.rbac.PlatformPrincipal(
+                "user-1", "User", "user@example.com", null, "github", Set.of()
+        );
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                new DefaultOAuth2User(List.of(), Map.of("platformPrincipal", principal, "login", "user"), "login"),
+                null,
+                List.of()
+        );
+        org.mockito.Mockito.when(oauthLoginFlowService.consumeReturnTo(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(null);
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/dashboard");
     }
 
     @Test
