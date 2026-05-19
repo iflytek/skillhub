@@ -172,6 +172,7 @@ class SecurityScanServiceTest {
     void processScanResult_updatesAuditAndMovesVersionToPendingReview() {
         SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
 
         given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
                 .willReturn(Optional.of(audit));
@@ -207,6 +208,54 @@ class SecurityScanServiceTest {
         assertThat(audit.getScannedAt()).isNotNull();
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PENDING_REVIEW);
         verify(auditRepository).save(audit);
+        verify(skillVersionRepository).save(version);
+    }
+
+    @Test
+    void triggerScan_shouldNotChangeStatusWhenVersionAlreadyPublished() throws Exception {
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        PackageEntry entry = new PackageEntry(
+                "README.md",
+                "# demo".getBytes(),
+                6L,
+                "text/markdown"
+        );
+
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        service.triggerScan(42L, List.of(entry), "publisher-1");
+
+        verify(auditRepository).save(org.mockito.ArgumentMatchers.any(SecurityAudit.class));
+        verify(scanTaskProducer).publishScanTask(org.mockito.ArgumentMatchers.any(ScanTask.class));
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
+    }
+
+    @Test
+    void processScanResult_shouldNotChangeStatusWhenVersionAlreadyPublished() {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        SecurityScanResponse response = new SecurityScanResponse(
+                "scan-456",
+                SecurityVerdict.SAFE,
+                0,
+                null,
+                List.of(),
+                0.5
+        );
+
+        service.processScanResult(42L, ScannerType.SKILL_SCANNER, response);
+
+        assertThat(audit.getVerdict()).isEqualTo(SecurityVerdict.SAFE);
+        assertThat(audit.getIsSafe()).isTrue();
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
         verify(skillVersionRepository).save(version);
     }
 

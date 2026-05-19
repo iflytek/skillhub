@@ -43,6 +43,7 @@ class ClawHubRegistryFacadeTest {
                                 "time-skill",
                                 "Time Skill",
                                 "summary",
+                                "PUBLIC",
                                 "ACTIVE",
                                 12L,
                                 3,

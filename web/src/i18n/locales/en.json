@@ -103,7 +103,12 @@
       "tip": "💡 Tip: Visit the skill detail page for one-click install commands with environment variables",
       "tabs": {
         "agent": "I am Agent",
-        "human": "I am Human"
+        "human": "I am Human",
+        "cli": "CLI"
+      },
+      "cli": {
+        "description": "Install the SkillHub CLI locally to run skillhub install for skills.",
+        "command": "npm i -g @astron-team/skillhub"
       },
       "agent": {
         "description": "Send a prompt to your Agent to set up the SkillHub Registry",
@@ -212,7 +217,7 @@
     "forgotPassword": "Forgot password?",
     "noAccount": "Don't have an account?",
     "register": "Sign up now",
-    "oauthHint": "After GitHub authentication, you will be automatically redirected back to this site.",
+    "oauthHint": "After OAuth authentication, you will be automatically redirected back to this site.",
     "passwordCompatHint": "This deployment has the password compatibility layer enabled. The form will route to {{name}} instead of the fixed local account endpoint.",
     "enterpriseSsoTitle": "Enterprise SSO",
     "enterpriseSsoHint": "This deployment has the compatibility layer enabled. If your browser already has a {{name}} session, you can try establishing a SkillHub session directly.",
@@ -314,6 +319,8 @@
     "platformRoles": "Platform Roles",
     "starsAndRatings": "Stars & Ratings",
     "viewStars": "View My Stars",
+    "subscriptions": "Subscriptions",
+    "viewSubscriptions": "View My Subscriptions",
     "mySkillsTitle": "My Skills",
     "openMySkills": "View My Skills",
     "mySkillsPreviewDescription": "Showing your 5 most recent skills. Open a skill or go to My Skills to view all.",
@@ -326,7 +333,8 @@
     "reportsTitle": "Report Management",
     "viewReports": "View skill reports",
     "previewMore": "...",
-    "previewMoreLabel": "View All"
+    "previewMoreLabel": "View All",
+    "userId": "User ID"
   },
   "mySkills": {
     "title": "My Skills",
@@ -340,6 +348,7 @@
       "HIDDEN": "Hidden"
     },
     "publishNew": "Publish New Skill",
+    "update": "Update",
     "archive": "Archive",
     "unarchive": "Restore",
     "statusArchived": "Archived",
@@ -424,6 +433,7 @@
     "unfreeze": "Unfreeze",
     "archive": "Archive",
     "restore": "Restore",
+    "delete": "Delete",
     "activeHint": "This namespace is fully active and can continue managing members, reviews, and skill publishing.",
     "frozenHint": "This namespace is frozen. Members can still view it, but it is read-only and cannot publish or change membership.",
     "archivedHint": "This namespace is archived. Public entry points are hidden, but you can still view and restore it from the dashboard.",
@@ -436,6 +446,8 @@
     "archiveConfirmDescription": "\"{{name}}\" will be hidden from public entry points and only remain recoverable from the dashboard.",
     "restoreConfirmTitle": "Restore namespace",
     "restoreConfirmDescription": "\"{{name}}\" will return to an active operating state.",
+    "deleteConfirmTitle": "Delete namespace",
+    "deleteConfirmDescription": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
     "freezeSuccessTitle": "Namespace frozen",
     "freezeSuccessDescription": "\"{{name}}\" is now read-only.",
     "freezeErrorTitle": "Failed to freeze namespace",
@@ -448,6 +460,9 @@
     "restoreSuccessTitle": "Namespace restored",
     "restoreSuccessDescription": "\"{{name}}\" can operate normally again.",
     "restoreErrorTitle": "Failed to restore namespace",
+    "deleteSuccessTitle": "Namespace deleted",
+    "deleteSuccessDescription": "\"{{name}}\" has been permanently deleted.",
+    "deleteErrorTitle": "Failed to delete namespace",
     "emptyTitle": "No namespaces yet",
     "emptyDescription": "Create a namespace to organize your skills"
   },
@@ -518,6 +533,11 @@
     "subtitle": "View your starred skills",
     "empty": "No starred skills yet"
   },
+  "subscriptions": {
+    "title": "My Subscriptions",
+    "subtitle": "Skills you subscribed to for updates",
+    "empty": "You haven't subscribed to any skills yet."
+  },
   "promotions": {
     "title": "Promotion Review",
     "subtitle": "Review team skill promotion requests to global namespace",
@@ -544,6 +564,8 @@
     "filterDisabled": "Disabled",
     "empty": "No user data",
     "colUsername": "Username",
+    "colUserId": "User ID",
+    "copyUserId": "Copy user ID for {{username}}",
     "colEmail": "Email",
     "colStatus": "Status",
     "colRole": "Role",
@@ -699,7 +721,8 @@
     "reviewHint": "Some changes require admin review before taking effect.",
     "partiallyAppliedTitle": "Partially Applied",
     "partiallyAppliedDescription": "Some changes were applied immediately. Others are pending admin review.",
-    "noChanges": "No changes to save."
+    "noChanges": "No changes to save.",
+    "userId": "User ID"
   },
   "security": {
     "title": "Security Settings",
@@ -903,6 +926,14 @@
     "filesAdded": "Added",
     "filesRemoved": "Removed",
     "filesChanged": "Changed",
+    "expandDiff": "Show diff",
+    "collapseDiff": "Hide diff",
+    "binaryFileNotice": "Binary file — cannot display diff",
+    "largeFileWarning": "This file is large. Rendering may be slow.",
+    "diffLoadError": "Failed to load file content",
+    "diffRetry": "Retry",
+    "diffViewUnified": "Unified",
+    "diffViewSplit": "Split",
     "rereleaseVersion": "Re-release",
     "rereleaseDialogTitle": "Re-release from version",
     "rereleaseDialogDescription": "Create a new published version based on v{{version}}.",
@@ -944,6 +975,27 @@
       "copied": "Copied",
       "defaultDescription": "A useful skill"
     }
+  },
+  "skillCompare": {
+    "pageTitle": "Version Compare",
+    "filesChanged": "{{count}} files changed",
+    "searchFiles": "Search files",
+    "errorLoadingCompare": "Failed to load version comparison",
+    "loadDiff": "Load diff",
+    "loading": "Loading...",
+    "totalFiles": "Files",
+    "addedLines": "Added lines",
+    "removedLines": "Removed lines",
+    "baseVersion": "Base version",
+    "headVersion": "Head version",
+    "fileList": "File list",
+    "binaryFile": "Binary file — cannot display diff",
+    "truncatedFile": "Diff output is truncated",
+    "notEnoughPublishedVersions": "Publish at least two versions before comparing.",
+    "noFilesFound": "No matching files found.",
+    "changeTypeAdded": "Added",
+    "changeTypeModified": "Modified",
+    "changeTypeRemoved": "Removed"
   },
   "reports": {
     "title": "Skill Reports",
@@ -1059,7 +1111,64 @@
     "removeConfirmDescription": "After removal, user {{userId}} will lose access to this namespace.",
     "removeSuccessTitle": "Member removed",
     "removeSuccessDescription": "User {{userId}} has been removed from this namespace.",
-    "removeErrorTitle": "Failed to remove member"
+    "removeErrorTitle": "Failed to remove member",
+    "searchEmptyMemberHint": "If the user is already in this namespace, they won't appear here — check the member list to confirm.",
+    "transferOwnership": "Transfer Ownership",
+    "transferDialogTitle": "Transfer Namespace Ownership",
+    "transferDialogDescription": "Transfer ownership to another member. You will become an ADMIN.",
+    "transferWarning": "This action cannot be undone. After transfer, you will no longer be the owner.",
+    "transferNewOwnerLabel": "New owner",
+    "transferSelectPlaceholder": "Select a member",
+    "transferNoCandidates": "No other members available to transfer ownership to.",
+    "transferConfirmSlugPrompt": "Type the namespace slug to confirm",
+    "transferConfirmSlugHint": "Type {{slug}} to confirm",
+    "transferConfirmAction": "Transfer Ownership",
+    "transferring": "Transferring...",
+    "transferSuccessTitle": "Ownership transferred",
+    "transferSuccessDescription": "{{userId}} is now the owner of this namespace.",
+    "transferErrorTitle": "Failed to transfer ownership",
+    "batchImport": "Batch Import",
+    "batchDialogTitle": "Batch Import Members",
+    "batchDialogDescription": "Upload a CSV file to add multiple members at once. Each row should contain a user ID and role.",
+    "batchStepUpload": "Upload CSV",
+    "batchStepPreview": "Preview",
+    "batchStepResults": "Results",
+    "batchDownloadTemplate": "Download CSV template",
+    "batchDropHint": "Drag a CSV file here, or click to select",
+    "batchFormatHint": "Only .csv format supported",
+    "batchParseError": "Failed to parse CSV file",
+    "batchEmptyFile": "CSV file is empty or contains no valid rows",
+    "batchPreviewTitle": "Preview ({{count}} rows)",
+    "batchColUserId": "User ID",
+    "batchColRole": "Role",
+    "batchColStatus": "Status",
+    "batchValidationMissingUserId": "Missing user ID",
+    "batchValidationInvalidRole": "Invalid role (must be MEMBER or ADMIN)",
+    "batchValidationDuplicate": "Duplicate user ID",
+    "batchValidationValid": "Ready",
+    "batchValidRows": "{{valid}} valid, {{invalid}} invalid",
+    "batchSubmitting": "Importing...",
+    "batchSubmit": "Import {{count}} members",
+    "batchResultTitle": "Import Results",
+    "batchResultSummary": "{{success}} succeeded, {{failure}} failed out of {{total}} total",
+    "batchResultSuccess": "Added",
+    "batchResultAlreadyMember": "Already a member",
+    "batchResultUserNotFound": "User not found",
+    "batchResultInvalidRole": "Invalid role",
+    "batchResultUnknownError": "Unknown error",
+    "batchDone": "Done",
+    "batchBack": "Back"
+  },
+  "namespaceEdit": {
+    "editButton": "Edit",
+    "dialogTitle": "Edit Namespace",
+    "displayNameLabel": "Display Name",
+    "displayNameRequired": "Display name is required",
+    "descriptionLabel": "Description",
+    "saveAction": "Save",
+    "saving": "Saving...",
+    "saveSuccess": "Namespace updated successfully",
+    "saveErrorTitle": "Failed to update namespace"
   },
   "upload": {
     "dropHint": "Drop to upload...",
@@ -1149,6 +1258,10 @@
     "starred": "Starred",
     "star": "Star"
   },
+  "subscribeButton": {
+    "subscribed": "Subscribed",
+    "subscribe": "Subscribe"
+  },
   "skillCard": {
     "starred": "Starred",
     "starredAction": "Click to unstar",
@@ -1173,6 +1286,7 @@
       "myNamespaces": "My Namespaces",
       "governance": "Governance Center",
       "stars": "Starred",
+      "subscriptions": "My Subscriptions",
       "reviews": "Review Management",
       "promotions": "Promotion Management",
       "reports": "Report Management",

@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog'
 import { Label } from '@/shared/ui/label'
+import { CopyButton } from '@/shared/components/copy-button'
 import {
   useAdminUsers,
   useApproveUser,
@@ -213,6 +214,7 @@ export function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('adminUsers.colUsername')}</TableHead>
+                  <TableHead>{t('adminUsers.colUserId')}</TableHead>
                   <TableHead>{t('adminUsers.colEmail')}</TableHead>
                   <TableHead>{t('adminUsers.colStatus')}</TableHead>
                   <TableHead>{t('adminUsers.colRole')}</TableHead>
@@ -224,6 +226,12 @@ export function AdminUsersPage() {
                 {data.items.map((user) => (
                   <TableRow key={user.userId}>
                     <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-muted-foreground min-w-0 max-w-[14rem] truncate" title={user.userId}>{user.userId}</span>
+                        <CopyButton text={user.userId} ariaLabel={t('adminUsers.copyUserId', { username: user.username })} />
+                      </div>
+                    </TableCell>
                     <TableCell>{user.email || '-'}</TableCell>
                     <TableCell>
                       <span

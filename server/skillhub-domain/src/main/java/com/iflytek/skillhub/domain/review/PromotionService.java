@@ -16,6 +16,7 @@ import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.*;
 import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -197,15 +198,16 @@ public class PromotionService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
-        syncPromotionRequestState(request, ReviewTaskStatus.APPROVED, reviewerId, comment);
-        entityManager.detach(request);
-        PromotionRequest approvedRequest = request;
+        PromotionRequest approvedRequest = promotionRequestRepository.findById(promotionId)
+                .orElseThrow(() -> new DomainNotFoundException("promotion.not_found", promotionId));
 
         Skill sourceSkill = skillRepository.findById(approvedRequest.getSourceSkillId())
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", approvedRequest.getSourceSkillId()));
 
         SkillVersion sourceVersion = skillVersionRepository.findById(approvedRequest.getSourceVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", approvedRequest.getSourceVersionId()));
+
+        assertTargetSkillNotExists(approvedRequest, sourceSkill);
 
         // Create new skill in global namespace
         Skill newSkill = new Skill(approvedRequest.getTargetNamespaceId(), sourceSkill.getSlug(),
@@ -215,7 +217,11 @@ public class PromotionService {
         newSkill.setSourceSkillId(sourceSkill.getId());
         newSkill.setCreatedBy(reviewerId);
         newSkill.setUpdatedBy(reviewerId);
-        newSkill = skillRepository.save(newSkill);
+        try {
+            newSkill = skillRepository.save(newSkill);
+        } catch (DataIntegrityViolationException ex) {
+            throw duplicateTargetSkillConflict(sourceSkill.getSlug(), ex);
+        }
 
         // Create new version copying metadata from source
         SkillVersion newVersion = new SkillVersion(newSkill.getId(), sourceVersion.getVersion(),
@@ -228,6 +234,8 @@ public class PromotionService {
         newVersion.setManifestJson(sourceVersion.getManifestJson());
         newVersion.setFileCount(sourceVersion.getFileCount());
         newVersion.setTotalSize(sourceVersion.getTotalSize());
+        newVersion.setBundleReady(sourceVersion.isBundleReady());
+        newVersion.setDownloadReady(sourceVersion.isDownloadReady());
         newVersion = skillVersionRepository.save(newVersion);
 
         // Update skill's latest version
@@ -262,6 +270,24 @@ public class PromotionService {
         );
 
         return savedRequest;
+    }
+
+    private void assertTargetSkillNotExists(PromotionRequest approvedRequest, Skill sourceSkill) {
+        skillRepository.findByNamespaceIdAndSlugAndOwnerId(
+                approvedRequest.getTargetNamespaceId(),
+                sourceSkill.getSlug(),
+                sourceSkill.getOwnerId()
+        ).ifPresent(existing -> {
+            throw duplicateTargetSkillConflict(sourceSkill.getSlug(), null);
+        });
+    }
+
+    private DomainBadRequestException duplicateTargetSkillConflict(String slug, Exception cause) {
+        DomainBadRequestException ex = new DomainBadRequestException("promotion.target_skill_conflict", slug);
+        if (cause != null) {
+            ex.initCause(cause);
+        }
+        return ex;
     }
 
     /**

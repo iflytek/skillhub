@@ -16,7 +16,9 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +30,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Projects the authenticated principal into request attributes consumed by the controller layer.
  */
 @Component
+@Order(SecurityProperties.DEFAULT_FILTER_ORDER + 1)
 public class AuthContextFilter extends OncePerRequestFilter {
 
     private final NamespaceMemberRepository namespaceMemberRepository;

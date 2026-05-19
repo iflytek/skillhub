@@ -39,6 +39,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -90,7 +91,8 @@ class NamespacePortalControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].slug").value("team-a"))
                 .andExpect(jsonPath("$.data[0].status").value("ARCHIVED"))
-                .andExpect(jsonPath("$.data[0].currentUserRole").value("OWNER"));
+                .andExpect(jsonPath("$.data[0].currentUserRole").value("OWNER"))
+                .andExpect(jsonPath("$.data[0].canDelete").value(false));
     }
 
     @Test
@@ -142,6 +144,20 @@ class NamespacePortalControllerTest {
                 .andExpect(jsonPath("$.data.slug").value("team-a"))
                 .andExpect(jsonPath("$.data.displayName").value("Team A+"))
                 .andExpect(jsonPath("$.data.description").value("Updated description"));
+    }
+
+    @Test
+    void deleteNamespace_returnsSuccessMessage() throws Exception {
+        Namespace existing = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(existing);
+
+        mockMvc.perform(delete("/api/v1/namespaces/team-a")
+                        .with(csrf())
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.message").value("Namespace deleted successfully"));
     }
 
     @Test

@@ -102,11 +102,6 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         Set<Long> memberNamespaceIds = query.visibilityScope().memberNamespaceIds().isEmpty()
                 ? Set.of(-1L)
                 : query.visibilityScope().memberNamespaceIds();
-        Set<Long> adminNamespaceIds = query.visibilityScope().adminNamespaceIds().isEmpty()
-                ? Set.of(-1L)
-                : query.visibilityScope().adminNamespaceIds();
-        boolean platformWideAccess = query.visibilityScope().platformWideAccess();
-
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT d.skill_id ");
         sql.append("FROM skill_search_document d ");
@@ -118,9 +113,6 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         sql.append("AND (d.visibility = 'PUBLIC' ");
         if (query.visibilityScope().userId() != null) {
             sql.append("OR (d.visibility = 'NAMESPACE_ONLY' AND d.namespace_id IN :memberNamespaceIds) ");
-            sql.append("OR (d.visibility = 'NAMESPACE_ONLY' AND :platformWideAccess = TRUE) ");
-            sql.append("OR (d.visibility = 'PRIVATE' AND (d.namespace_id IN :adminNamespaceIds OR d.owner_id = :userId)) ");
-            sql.append("OR (d.visibility = 'PRIVATE' AND :platformWideAccess = TRUE) ");
         }
         sql.append(") ");
 
@@ -131,7 +123,6 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         sql.append("AND (n.status <> 'ARCHIVED' ");
         if (query.visibilityScope().userId() != null) {
             sql.append("OR d.namespace_id IN :memberNamespaceIds ");
-            sql.append("OR :platformWideAccess = TRUE ");
         }
         sql.append(") ");
 
@@ -195,9 +186,6 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         if (query.visibilityScope().userId() != null) {
             nativeQuery.setParameter("memberNamespaceIds", memberNamespaceIds);
-            nativeQuery.setParameter("adminNamespaceIds", adminNamespaceIds);
-            nativeQuery.setParameter("platformWideAccess", platformWideAccess);
-            nativeQuery.setParameter("userId", query.visibilityScope().userId());
         }
 
         if (query.namespaceId() != null) {
@@ -242,9 +230,6 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         if (query.visibilityScope().userId() != null) {
             countQuery.setParameter("memberNamespaceIds", memberNamespaceIds);
-            countQuery.setParameter("adminNamespaceIds", adminNamespaceIds);
-            countQuery.setParameter("platformWideAccess", platformWideAccess);
-            countQuery.setParameter("userId", query.visibilityScope().userId());
         }
 
         if (query.namespaceId() != null) {

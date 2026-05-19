@@ -56,4 +56,16 @@ public class MeController extends BaseApiController {
 
         return ok("response.success.read", mySkillAppService.listMyStars(principal.userId(), page, size));
     }
+
+    @GetMapping("/subscriptions")
+    public ApiResponse<PageResponse<SkillSummaryResponse>> listMySubscriptions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @AuthenticationPrincipal PlatformPrincipal principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("error.auth.required");
+        }
+
+        return ok("response.success.read", mySkillAppService.listMySubscriptions(principal.userId(), page, size));
+    }
 }

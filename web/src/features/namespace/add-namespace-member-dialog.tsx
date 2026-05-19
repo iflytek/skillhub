@@ -183,7 +183,10 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">{t('members.searchEmpty')}</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{t('members.searchEmpty')}</p>
+                  <p className="text-xs text-muted-foreground">{t('members.searchEmptyMemberHint')}</p>
+                </div>
               )}
             </div>
           ) : null}

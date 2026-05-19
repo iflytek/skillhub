@@ -5,9 +5,10 @@ import { useCopyToClipboard } from '@/shared/lib/clipboard'
 interface CopyButtonProps {
   text: string
   className?: string
+  ariaLabel?: string
 }
 
-export function CopyButton({ text, className }: CopyButtonProps) {
+export function CopyButton({ text, className, ariaLabel }: CopyButtonProps) {
   const { t } = useTranslation()
   const [copied, copy] = useCopyToClipboard()
 
@@ -25,6 +26,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
       size="sm"
       onClick={handleCopy}
       className={className}
+      aria-label={ariaLabel}
     >
       {copied ? t('copyButton.copied') : t('copyButton.copy')}
     </Button>

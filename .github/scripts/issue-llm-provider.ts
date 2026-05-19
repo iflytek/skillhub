@@ -37,6 +37,35 @@ export async function requestOpenAiCompatibleJson(
   throw lastError ?? new Error("LLM request failed for an unknown reason.");
 }
 
+export async function requestOpenAiCompatibleMarkdown(
+  config: IssueLlmConfig,
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<string> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= config.maxAttempts; attempt += 1) {
+    try {
+      return await requestOnceMarkdown(config, systemPrompt, userPrompt);
+    } catch (error) {
+      const normalized = normalizeRequestError(
+        error,
+        attempt,
+        config.maxAttempts,
+      );
+      lastError = normalized;
+
+      if (!shouldRetry(error) || attempt >= config.maxAttempts) {
+        throw normalized;
+      }
+
+      await sleep(resolveRetryDelay(error, config.retryBackoffMs, attempt));
+    }
+  }
+
+  throw lastError ?? new Error("LLM request failed for an unknown reason.");
+}
+
 async function requestOnce(
   config: IssueLlmConfig,
   systemPrompt: string,
@@ -83,6 +112,57 @@ async function requestOnce(
     }
 
     return extractJsonObject(text);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function requestOnceMarkdown(
+  config: IssueLlmConfig,
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+
+  try {
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: config.model,
+        temperature: config.temperature,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const message =
+        `LLM request failed with status ${response.status}: ${await response
+          .text()}`;
+      throw new RetryableHttpError(
+        message,
+        response.status,
+        response.headers.get("retry-after"),
+      );
+    }
+
+    const payload = (await response.json()) as OpenAiCompatibleResponse;
+    const content = payload.choices?.[0]?.message?.content;
+    const text = normalizeMessageContent(content);
+
+    if (!text) {
+      throw new Error("LLM response did not include message content.");
+    }
+
+    return text;
   } finally {
     clearTimeout(timeout);
   }

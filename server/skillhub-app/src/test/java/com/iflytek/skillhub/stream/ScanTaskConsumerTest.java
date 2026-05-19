@@ -482,6 +482,11 @@ class ScanTaskConsumerTest {
         }
 
         @Override
+        public boolean existsByNamespaceId(Long namespaceId) {
+            return false;
+        }
+
+        @Override
         public void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds) {
             throw unsupported();
         }

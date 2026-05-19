@@ -1,15 +1,22 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bot, Check, Copy, UserRound } from 'lucide-react'
+import { Bot, Check, Copy, Terminal, UserRound } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
 
-type LandingQuickStartTabId = 'agent' | 'human'
+type LandingQuickStartTabId = 'agent' | 'human' | 'cli'
 
 interface LandingQuickStartTab {
   id: LandingQuickStartTabId
   label: string
   description: string
   command: string
+}
+
+const tabIcons: Record<LandingQuickStartTabId, LucideIcon> = {
+  agent: Bot,
+  human: UserRound,
+  cli: Terminal,
 }
 
 /**
@@ -83,6 +90,12 @@ export function LandingQuickStartSection() {
       description: t('landing.quickStart.human.description'),
       command: t('landing.quickStart.human.command'),
     },
+    {
+      id: 'cli',
+      label: t('landing.quickStart.tabs.cli'),
+      description: t('landing.quickStart.cli.description'),
+      command: t('landing.quickStart.cli.command'),
+    },
   ]
 
   const currentTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
@@ -104,12 +117,12 @@ export function LandingQuickStartSection() {
           style={{ borderColor: 'hsl(var(--border-card))' }}
         >
           <div
-            className="grid grid-cols-2 gap-2 rounded-2xl p-1.5"
+            className="grid grid-cols-1 gap-2 rounded-2xl p-1.5 md:grid-cols-3"
             style={{ background: 'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.92) 100%)' }}
           >
             {tabs.map((tab) => {
               const isActive = tab.id === currentTab.id
-              const Icon = tab.id === 'agent' ? Bot : UserRound
+              const Icon = tabIcons[tab.id]
 
               return (
                 <button

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillVersionCompare, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
 import { getSkillDetailQueryKey } from './query-keys'
@@ -30,6 +30,13 @@ async function getSkillFiles(namespace: string, slug: string, version: string): 
 async function getSkillVersionDetail(namespace: string, slug: string, version: string): Promise<SkillVersionDetail> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   return fetchJson<SkillVersionDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}`)
+}
+
+async function getSkillVersionCompare(namespace: string, slug: string, from: string, to: string): Promise<SkillVersionCompare> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillVersionCompare>(
+    `${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  )
 }
 
 async function getSkillDocumentation(namespace: string, slug: string, version: string, path: string): Promise<string> {
@@ -113,6 +120,14 @@ export function useSkillVersionDetail(namespace: string, slug: string, version?:
     queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
     queryFn: () => getSkillVersionDetail(namespace, slug, version!),
     enabled: enabled && !!namespace && !!slug && !!version,
+  })
+}
+
+export function useSkillVersionCompare(namespace: string, slug: string, from?: string, to?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', 'compare', from, to],
+    queryFn: () => getSkillVersionCompare(namespace, slug, from!, to!),
+    enabled: enabled && !!namespace && !!slug && !!from && !!to,
   })
 }
 

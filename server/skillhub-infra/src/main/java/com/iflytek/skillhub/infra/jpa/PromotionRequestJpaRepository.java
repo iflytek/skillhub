@@ -25,6 +25,8 @@ public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRe
 
     Page<PromotionRequest> findByStatus(ReviewTaskStatus status, Pageable pageable);
 
+    boolean existsByTargetNamespaceId(Long targetNamespaceId);
+
     void deleteBySourceSkillIdOrTargetSkillId(Long sourceSkillId, Long targetSkillId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

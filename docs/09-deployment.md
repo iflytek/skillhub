@@ -197,7 +197,47 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
 - 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
 
-## 8 裸金属上线清单
+## 8 OIDC 登录配置
+
+SkillHub 复用 Spring Security OAuth2 Client 的 OIDC 支持。前端不需要单独
+配置回调页；登录页会从 `/api/v1/auth/methods` 读取后端暴露的
+`OAUTH_REDIRECT` 方法并跳转到 `/oauth2/authorization/{registrationId}`。
+
+生产环境接入 OIDC 时，为后端增加一组 OAuth2 client registration 配置即可。
+下面以 `oidc` 作为 registration id：
+
+```bash
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=replace-me
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=replace-me
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_PROVIDER=oidc
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_AUTHORIZATION_GRANT_TYPE=authorization_code
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_REDIRECT_URI={baseUrl}/login/oauth2/code/{registrationId}
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_SCOPE=openid,profile,email
+SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_NAME=OIDC
+SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=https://idp.example.com/realms/skillhub
+```
+
+要接入多个 OIDC IdP，使用不同 registration id，例如 `okta`、`keycloak`，
+并把上面的环境变量中的 `OIDC` 替换为对应大写 id。registration id 会作为
+`identity_binding.provider_code`，请保持稳定。
+
+> **警告：Registration ID 冲突**
+>
+> 每个 OIDC 提供商必须使用唯一的 registration ID。Registration ID 作为
+> `identity_binding.provider_code` 存储在数据库中，用于将外部身份映射到平台
+> 用户。如果两个不同的 IdP 使用了相同的 registration ID（例如都使用 `oidc`），
+> 会导致不同 IdP 的用户 `sub` 值空间混用，可能出现身份绑定错误或账户冲突。
+>
+> 建议使用有意义的 registration ID，例如 `okta`、`keycloak`、`azure-ad`，
+> 而不是通用的 `oidc`。一旦投入使用，不要更改 registration ID，否则现有用户
+> 将无法登录。
+
+Docker Compose 发布模板默认只透传常用变量。若使用 OIDC，请通过 compose
+override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `server`
+容器。Kubernetes 部署同理，将这些变量放入 `backend-deployment.yaml` 的
+`server` 容器环境变量或统一的配置管理系统中。
+
+## 9 裸金属上线清单
 
 推荐顺序：
 
@@ -223,7 +263,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
    - 立即修改管理员密码
    - 如果后续完全走 OAuth，可将 `BOOTSTRAP_ADMIN_ENABLED=false`
 
-## 9 可观测性
+## 10 可观测性
 
 | 维度 | 方案 |
 |------|------|
@@ -231,7 +271,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 | 日志 | 容器 stdout / stderr |
 | 指标 | Spring Boot Actuator，后续可接 Prometheus |
 
-## 10 安全扫描服务
+## 11 安全扫描服务
 
 如果要启用 `skill-scanner` 后端链路，当前仓库建议按下面的方式部署：
 
@@ -252,7 +292,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 - `scripts/verify-scanner.sh`
 - `docs/security-scanning.md`
 
-## 11 数据迁移
+## 12 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

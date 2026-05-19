@@ -1,0 +1,305 @@
+name: Release CLI
+
+on:
+  push:
+    tags: ['cli-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. cli-v0.1.5)'
+        required: true
+      skip_npm:
+        description: 'Skip npm publish'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-cli-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+      package_name: ${{ steps.extract.outputs.package_name }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Validate tag (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+
+          # Verify tag exists
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "ERROR: Tag '$TAG' does not exist in the repository" >&2
+            exit 1
+          fi
+
+          # Verify current checkout matches the tag
+          TAG_SHA=$(git rev-parse "refs/tags/$TAG^{commit}")
+          CURRENT_SHA=$(git rev-parse HEAD)
+
+          if [ "$TAG_SHA" != "$CURRENT_SHA" ]; then
+            echo "ERROR: Current checkout SHA does not match tag '$TAG'" >&2
+            echo "  Tag SHA:     $TAG_SHA" >&2
+            echo "  Current SHA: $CURRENT_SHA" >&2
+            echo "" >&2
+            echo "This indicates the checkout did not switch to the specified tag." >&2
+            exit 1
+          fi
+
+          echo "✓ Tag '$TAG' validated (SHA: $TAG_SHA)"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Extract version from tag
+        id: extract
+        working-directory: cli
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if [[ ! "$TAG" =~ ^cli-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+            echo "Invalid tag format: $TAG (expected cli-vX.Y.Z)"
+            exit 1
+          fi
+          VERSION="${BASH_REMATCH[1]}"
+
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "Version set to: $VERSION"
+          echo "Package name: $PACKAGE_NAME"
+
+      - name: Install dependencies
+        working-directory: cli
+        run: bun install --frozen-lockfile
+
+      - name: Run linter
+        working-directory: cli
+        run: bun run lint
+
+      - name: Run type check
+        working-directory: cli
+        run: bun run typecheck
+
+      - name: Run tests
+        working-directory: cli
+        run: bun test
+
+      - name: Build CLI
+        working-directory: cli
+        run: bun run build
+
+      - name: Verify built CLI
+        working-directory: cli
+        run: |
+          node dist/index.js version
+          RUNTIME_VERSION=$(node dist/index.js version | sed -E 's/^SkillHub CLI //')
+          if [ "$RUNTIME_VERSION" != "${{ steps.extract.outputs.version }}" ]; then
+            echo "Version mismatch: runtime=$RUNTIME_VERSION, tag=${{ steps.extract.outputs.version }}"
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-dist
+          path: |
+            cli/dist/
+            cli/package.json
+            cli/README.md
+            cli/LICENSE
+          retention-days: 7
+
+  publish-npm:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_npm }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Set version from tag
+        working-directory: cli
+        run: |
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Install dependencies
+        working-directory: cli
+        run: bun install --frozen-lockfile
+
+      - name: Build CLI
+        working-directory: cli
+        run: bun run build
+
+      - name: Check if version exists on npm
+        id: check_npm
+        env:
+          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
+        run: |
+          PACKAGE_NAME="${{ needs.build-and-test.outputs.package_name }}"
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+
+          # Three-state check: success (exists) / 404 (missing) / error (fail job)
+          set +e
+          NPM_OUTPUT=$(npm view "${PACKAGE_NAME}@${VERSION}" version --registry "$NPM_REGISTRY" 2>&1)
+          NPM_EXIT_CODE=$?
+          set -e
+
+          if [ $NPM_EXIT_CODE -eq 0 ]; then
+            # Success: version exists on registry
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION already exists on registry, skipping publish"
+          elif echo "$NPM_OUTPUT" | grep -Eiq '(E404|404 Not Found|is not in this registry|Not found)'; then
+            # Explicit 404: version does not exist
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION does not exist on registry, proceeding with publish"
+          else
+            # Uncertain state: network error, auth failure, registry error, etc.
+            echo "ERROR: Failed to check npm registry (exit code: $NPM_EXIT_CODE)" >&2
+            echo "Output: $NPM_OUTPUT" >&2
+            echo "" >&2
+            echo "This could be due to:" >&2
+            echo "  - Network connectivity issues" >&2
+            echo "  - Registry service errors (5xx)" >&2
+            echo "  - Authentication/authorization failures" >&2
+            echo "  - DNS or TLS problems" >&2
+            echo "" >&2
+            echo "Cannot safely determine if version exists. Failing job to prevent silent skip." >&2
+            exit 1
+          fi
+
+      - name: Configure npm authentication
+        if: steps.check_npm.outputs.exists == 'false'
+        env:
+          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          REGISTRY_HOST="${NPM_REGISTRY#http://}"
+          REGISTRY_HOST="${REGISTRY_HOST#https://}"
+          REGISTRY_HOST="${REGISTRY_HOST%/}"
+
+          cat > ~/.npmrc <<EOF
+          registry=${NPM_REGISTRY}
+          //${REGISTRY_HOST}/:_authToken=${NPM_TOKEN}
+          always-auth=true
+          EOF
+
+      - name: Publish to npm
+        if: steps.check_npm.outputs.exists == 'false'
+        working-directory: cli
+        env:
+          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
+        run: |
+          npm publish --access public --registry "$NPM_REGISTRY"
+          echo "Published ${{ needs.build-and-test.outputs.package_name }}@${{ needs.build-and-test.outputs.version }}"
+
+  create-release:
+    needs: [build-and-test, publish-npm]
+    runs-on: ubuntu-latest
+    # Only create the GitHub Release after npm publish has actually succeeded
+    # (or was explicitly skipped via skip_npm=true). This prevents a
+    # half-released state where Release exists but `npm install -g` fails.
+    if: ${{ always() && needs.build-and-test.result == 'success' && (needs.publish-npm.result == 'success' || (inputs.skip_npm && needs.publish-npm.result == 'skipped')) }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-dist
+          path: cli-release
+
+      - name: Create release archives
+        run: |
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+
+          # Create tar.gz
+          tar -czf "skillhub-cli-${VERSION}.tar.gz" -C cli-release .
+
+          # Create zip
+          (cd cli-release && zip -r "../skillhub-cli-${VERSION}.zip" .)
+
+          # Generate checksums
+          sha256sum "skillhub-cli-${VERSION}.tar.gz" > "skillhub-cli-${VERSION}.tar.gz.sha256"
+          sha256sum "skillhub-cli-${VERSION}.zip" > "skillhub-cli-${VERSION}.zip.sha256"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+          PACKAGE_NAME="${{ needs.build-and-test.outputs.package_name }}"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping"
+            exit 0
+          fi
+
+          # Generate release notes
+          cat > release-notes.md <<EOF
+          # SkillHub CLI ${VERSION}
+
+          ## Installation
+
+          ### npm
+          \`\`\`bash
+          npm install -g ${PACKAGE_NAME}@${VERSION}
+          \`\`\`
+
+          ### From source
+          Download and extract the archive, then:
+          \`\`\`bash
+          npm install -g .
+          \`\`\`
+
+          ## Verify installation
+          \`\`\`bash
+          skillhub version
+          \`\`\`
+
+          ## Changes
+          See commit history for details.
+          EOF
+
+          gh release create "$TAG" \
+            --title "CLI ${VERSION}" \
+            --notes-file release-notes.md \
+            "skillhub-cli-${VERSION}.tar.gz" \
+            "skillhub-cli-${VERSION}.tar.gz.sha256" \
+            "skillhub-cli-${VERSION}.zip" \
+            "skillhub-cli-${VERSION}.zip.sha256"

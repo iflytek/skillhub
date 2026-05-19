@@ -2,15 +2,22 @@ package com.iflytek.skillhub.compat;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.auth.entity.ApiToken;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillSearchAppService;
@@ -39,6 +46,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -68,6 +76,15 @@ class ClawHubCompatControllerTest {
     private SkillQueryService skillQueryService;
 
     @MockBean
+    private ApiTokenService apiTokenService;
+
+    @MockBean
+    private UserAccountRepository userAccountRepository;
+
+    @MockBean
+    private UserRoleBindingRepository userRoleBindingRepository;
+
+    @MockBean
     private CompatSkillLookupService compatSkillLookupService;
 
     @MockBean
@@ -85,6 +102,7 @@ class ClawHubCompatControllerTest {
                                 "my-skill",
                                 "My Skill",
                                 "test summary",
+                                "PUBLIC",
                                 "ACTIVE",
                                 10L,
                                 5,
@@ -109,6 +127,56 @@ class ClawHubCompatControllerTest {
                 .andExpect(jsonPath("$.results[0].slug").value("my-skill"))
                 .andExpect(jsonPath("$.results[0].summary").value("test summary"))
                 .andExpect(jsonPath("$.results[0].version").value("1.2.0"));
+    }
+
+    @Test
+    void search_withBearerToken_shouldProjectNamespaceRolesIntoRequestContext() throws Exception {
+        ApiToken token = new ApiToken("user-7", "cli", "sk_test", "hash", "[]");
+        UserAccount user = new UserAccount("user-7", "Alice", "alice@example.com", null);
+        var nsRoles = java.util.Map.of(9L, NamespaceRole.MEMBER);
+
+        when(apiTokenService.validateToken("raw-token")).thenReturn(Optional.of(token));
+        when(userAccountRepository.findById("user-7")).thenReturn(Optional.of(user));
+        when(userRoleBindingRepository.findByUserId("user-7")).thenReturn(List.of());
+        when(namespaceMemberRepository.findByUserId("user-7"))
+                .thenReturn(List.of(new NamespaceMember(9L, "user-7", NamespaceRole.MEMBER)));
+        when(skillSearchAppService.search("token-search", null, "relevance", 0, 20, "user-7", nsRoles))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
+
+        mockMvc.perform(get("/api/v1/search")
+                        .param("q", "token-search")
+                        .header("Authorization", "Bearer raw-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results").isArray());
+
+        verify(skillSearchAppService).search("token-search", null, "relevance", 0, 20, "user-7", nsRoles);
+        verify(apiTokenService).touchLastUsed(same(token));
+    }
+
+    @Test
+    void downloadQuery_withBearerToken_shouldProjectNamespaceRolesIntoRequestContext() throws Exception {
+        ApiToken token = new ApiToken("user-7", "cli", "sk_test", "hash", "[]");
+        UserAccount user = new UserAccount("user-7", "Alice", "alice@example.com", null);
+        var nsRoles = java.util.Map.of(9L, NamespaceRole.MEMBER);
+
+        when(apiTokenService.validateToken("raw-token")).thenReturn(Optional.of(token));
+        when(userAccountRepository.findById("user-7")).thenReturn(Optional.of(user));
+        when(userRoleBindingRepository.findByUserId("user-7")).thenReturn(List.of());
+        when(namespaceMemberRepository.findByUserId("user-7"))
+                .thenReturn(List.of(new NamespaceMember(9L, "user-7", NamespaceRole.MEMBER)));
+        when(compatSkillLookupService.findByLegacySlug("private-skill"))
+                .thenReturn(legacyCompatContext("team-ai", "private-skill"));
+        when(compatSkillLookupService.canAccess(any(), eq("user-7"), eq(nsRoles))).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/download")
+                        .param("slug", "private-skill")
+                        .param("version", "latest")
+                        .header("Authorization", "Bearer raw-token"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "/api/v1/skills/team-ai/private-skill/download"));
+
+        verify(compatSkillLookupService).canAccess(any(), eq("user-7"), eq(nsRoles));
+        verify(apiTokenService).touchLastUsed(same(token));
     }
 
     @Test

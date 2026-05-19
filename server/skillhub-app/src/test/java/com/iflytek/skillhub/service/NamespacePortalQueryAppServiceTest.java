@@ -55,11 +55,13 @@ class NamespacePortalQueryAppServiceTest {
         when(namespaceAccessPolicy.canUnfreeze(alpha, NamespaceRole.OWNER)).thenReturn(false);
         when(namespaceAccessPolicy.canArchive(alpha, NamespaceRole.OWNER)).thenReturn(true);
         when(namespaceAccessPolicy.canRestore(alpha, NamespaceRole.OWNER)).thenReturn(false);
+        when(namespaceService.canDelete(alpha, NamespaceRole.OWNER)).thenReturn(true);
         when(namespaceAccessPolicy.isImmutable(zeta)).thenReturn(false);
         when(namespaceAccessPolicy.canFreeze(zeta, NamespaceRole.ADMIN)).thenReturn(true);
         when(namespaceAccessPolicy.canUnfreeze(zeta, NamespaceRole.ADMIN)).thenReturn(false);
         when(namespaceAccessPolicy.canArchive(zeta, NamespaceRole.ADMIN)).thenReturn(true);
         when(namespaceAccessPolicy.canRestore(zeta, NamespaceRole.ADMIN)).thenReturn(false);
+        when(namespaceService.canDelete(zeta, NamespaceRole.ADMIN)).thenReturn(false);
 
         var response = service.listMyNamespaces(Map.of(
                 2L, NamespaceRole.ADMIN,
@@ -69,8 +71,10 @@ class NamespacePortalQueryAppServiceTest {
         assertThat(response).hasSize(2);
         assertThat(response.get(0).slug()).isEqualTo("alpha");
         assertThat(response.get(0).currentUserRole()).isEqualTo(NamespaceRole.OWNER);
+        assertThat(response.get(0).canDelete()).isTrue();
         assertThat(response.get(1).slug()).isEqualTo("zeta");
         assertThat(response.get(1).currentUserRole()).isEqualTo(NamespaceRole.ADMIN);
+        assertThat(response.get(1).canDelete()).isFalse();
     }
 
     @Test

@@ -71,6 +71,7 @@ const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'Sea
 const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
+const SkillVersionComparePage = createLazyRouteComponent(() => import('@/pages/skill-version-compare'), 'SkillVersionComparePage')
 const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
 const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
 const PublishPage = createLazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
@@ -104,6 +105,7 @@ const PromotionsPage = createRoleProtectedRouteComponent(
   ['SKILL_ADMIN', 'SUPER_ADMIN'],
 )
 const MyStarsPage = createLazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage')
+const MySubscriptionsPage = createLazyRouteComponent(() => import('@/pages/dashboard/subscriptions'), 'MySubscriptionsPage')
 const NotificationsPage = createLazyRouteComponent(() => import('@/pages/notifications'), 'NotificationsPage')
 const TokensPage = createLazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage')
 const CliAuthPage = createLazyRouteComponent(() => import('@/pages/cli-auth'), 'CliAuthPage')
@@ -230,6 +232,16 @@ const skillDetailRoute = createRoute({
   component: SkillDetailPage,
 })
 
+const skillVersionCompareRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/space/$namespace/$slug/compare',
+  validateSearch: (search: Record<string, unknown>): { from: string; to: string } => ({
+    from: typeof search.from === 'string' ? search.from : '',
+    to: typeof search.to === 'string' ? search.to : '',
+  }),
+  component: SkillVersionComparePage,
+})
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard',
@@ -248,6 +260,10 @@ const dashboardPublishRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/publish',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { namespace?: string; visibility?: string } => ({
+    namespace: typeof search.namespace === 'string' && search.namespace ? search.namespace : undefined,
+    visibility: typeof search.visibility === 'string' && search.visibility ? search.visibility : undefined,
+  }),
   component: PublishPage,
 })
 
@@ -319,6 +335,13 @@ const dashboardStarsRoute = createRoute({
   path: 'dashboard/stars',
   beforeLoad: requireAuth,
   component: MyStarsPage,
+})
+
+const dashboardSubscriptionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/subscriptions',
+  beforeLoad: requireAuth,
+  component: MySubscriptionsPage,
 })
 
 const dashboardNotificationsRoute = createRoute({
@@ -412,6 +435,7 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   namespaceRoute,
   skillDetailRoute,
+  skillVersionCompareRoute,
   dashboardRoute,
   dashboardSkillsRoute,
   dashboardPublishRoute,
@@ -425,6 +449,7 @@ const routeTree = rootRoute.addChildren([
   dashboardReviewDetailRoute,
   dashboardPromotionsRoute,
   dashboardStarsRoute,
+  dashboardSubscriptionsRoute,
   dashboardNotificationsRoute,
   dashboardTokensRoute,
   cliAuthRoute,

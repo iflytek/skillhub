@@ -2,12 +2,16 @@ package com.iflytek.skillhub.domain.namespace;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Field;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,6 +29,15 @@ class NamespaceServiceTest {
 
     @Mock
     private NamespaceAccessPolicy namespaceAccessPolicy;
+
+    @Mock
+    private SkillRepository skillRepository;
+
+    @Mock
+    private ReviewTaskRepository reviewTaskRepository;
+
+    @Mock
+    private PromotionRequestRepository promotionRequestRepository;
 
     @InjectMocks
     private NamespaceService namespaceService;
@@ -194,5 +207,94 @@ class NamespaceServiceTest {
 
         assertThrows(DomainForbiddenException.class, () ->
                 namespaceService.assertMember(namespaceId, userId));
+    }
+
+    @Test
+    void deleteNamespace_shouldDeleteMembersAndNamespaceForOwner() {
+        Long namespaceId = 1L;
+        String operatorUserId = "owner-1";
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canDelete(namespace, NamespaceRole.OWNER)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
+        when(skillRepository.existsByNamespaceId(namespaceId)).thenReturn(false);
+        when(reviewTaskRepository.existsByNamespaceId(namespaceId)).thenReturn(false);
+        when(promotionRequestRepository.existsByTargetNamespaceId(namespaceId)).thenReturn(false);
+
+        namespaceService.deleteNamespace(namespaceId, operatorUserId);
+
+        verify(namespaceMemberRepository).deleteByNamespaceId(namespaceId);
+        verify(namespaceRepository).delete(namespace);
+    }
+
+    @Test
+    void deleteNamespace_shouldRejectAdminUser() {
+        Long namespaceId = 1L;
+        String operatorUserId = "admin-1";
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canDelete(namespace, NamespaceRole.ADMIN)).thenReturn(false);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.ADMIN)));
+
+        DomainForbiddenException exception = assertThrows(DomainForbiddenException.class, () ->
+                namespaceService.deleteNamespace(namespaceId, operatorUserId));
+
+        assertEquals("error.namespace.owner.required", exception.messageCode());
+        verify(namespaceRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteNamespace_shouldRejectNamespaceWithDependentData() {
+        Long namespaceId = 1L;
+        String operatorUserId = "owner-1";
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canDelete(namespace, NamespaceRole.OWNER)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
+        when(skillRepository.existsByNamespaceId(namespaceId)).thenReturn(true);
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
+                namespaceService.deleteNamespace(namespaceId, operatorUserId));
+
+        assertEquals("error.namespace.delete.hasDependencies", exception.messageCode());
+        verify(namespaceMemberRepository, never()).deleteByNamespaceId(namespaceId);
+        verify(namespaceRepository, never()).delete(any());
+    }
+
+    @Test
+    void canDelete_shouldReturnFalseWhenRoleCannotDelete() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+
+        assertFalse(namespaceService.canDelete(namespace, NamespaceRole.ADMIN));
+        verify(skillRepository, never()).existsByNamespaceId(any());
+    }
+
+    @Test
+    void canDelete_shouldReflectDependencyChecksForOwner() {
+        Long namespaceId = 1L;
+        Namespace namespace = new Namespace("team-a", "Team A", "owner-1");
+        when(namespaceAccessPolicy.canDelete(namespace, NamespaceRole.OWNER)).thenReturn(true);
+        setField(namespace, "id", namespaceId);
+        when(skillRepository.existsByNamespaceId(namespaceId)).thenReturn(false);
+        when(reviewTaskRepository.existsByNamespaceId(namespaceId)).thenReturn(false);
+        when(promotionRequestRepository.existsByTargetNamespaceId(namespaceId)).thenReturn(true);
+
+        assertFalse(namespaceService.canDelete(namespace, NamespaceRole.OWNER));
+    }
+
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (ReflectiveOperationException e) {
+            fail(e);
+        }
     }
 }

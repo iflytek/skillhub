@@ -14,8 +14,8 @@
   │
   ▼
 ┌─────────────────────────────┐
-│  Layer 1: OAuth2 Login      │  Spring Security OAuth2 Client
-│  (一期 GitHub，可扩展)        │  授权码模式 (Authorization Code)
+│  Layer 1: OAuth2/OIDC Login │  Spring Security OAuth2 Client
+│  (GitHub/GitLab/OIDC 可扩展) │  授权码模式 (Authorization Code)
 │  Layer 1b: Session Bootstrap│  显式被动会话引导（默认关闭）
 └─────────────┬───────────────┘
               │ OAuth2User
@@ -100,7 +100,7 @@ astron:
 
 后续新增 OAuth Provider（Google、GitLab、微信）时，准入策略与 Provider 无关，统一在 AccessPolicy 层判定，不需要重做入驻逻辑。
 
-## 3. Web 认证流程（OAuth2 Authorization Code）
+## 3. Web 认证流程（OAuth2 / OIDC Authorization Code）
 
 ```
 浏览器点击"登录"
@@ -124,7 +124,7 @@ Spring Security 自动完成:
   ③ 触发自定义 OAuth2UserService
     │
     ▼
-CustomOAuth2UserService:
+CustomOAuth2UserService / CustomOidcUserService:
   ① 从 OAuth2User 提取 provider + externalId → 构建 OAuthClaims
   ② AccessPolicy.evaluate(claims) → 准入判定
   │
@@ -141,6 +141,21 @@ AuthenticationSuccessHandler:
   ① 创建 Spring Session (Redis)
   ② 重定向到前端页面 (可配置的 redirect_uri)
 ```
+
+OIDC 登录沿用同一条业务链路，但由 Spring Security 的 `oidcUserService`
+分支处理。`CustomOidcUserService` 会把标准 OIDC claims 映射为
+`OAuthClaims`：
+
+- `provider`：Spring OAuth2 client registration id，例如 `okta`、`keycloak`
+  或 `oidc`
+- `subject`：OIDC `sub`
+- `email` / `emailVerified`：`email` 与 `email_verified`
+- `providerLogin`：优先 `preferred_username`，其次 `name`、`email`、`sub`
+- `picture` 会同步为 `avatar_url`，供现有头像同步逻辑复用
+
+因此 OIDC 不需要新增数据库表；现有 `identity_binding(provider_code,
+subject)` 可以保存任意 OIDC issuer 下的稳定用户标识。不同 IdP 应使用不同
+registration id，避免多个 issuer 的 `sub` 值空间混用。
 
 ### 3.1 统一 Session 建立约束
 

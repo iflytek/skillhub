@@ -15,6 +15,7 @@ public class S3StorageProperties {
     private String secretKey;
     private String region = "us-east-1";
     private boolean forcePathStyle = true;
+    private boolean disableChunkedEncoding = false;
     private boolean autoCreateBucket = false;
     private Duration presignExpiry = Duration.ofMinutes(10);
     private Integer maxConnections = 100;
@@ -36,6 +37,8 @@ public class S3StorageProperties {
     public void setRegion(String region) { this.region = region; }
     public boolean isForcePathStyle() { return forcePathStyle; }
     public void setForcePathStyle(boolean forcePathStyle) { this.forcePathStyle = forcePathStyle; }
+    public boolean isDisableChunkedEncoding() { return disableChunkedEncoding; }
+    public void setDisableChunkedEncoding(boolean disableChunkedEncoding) { this.disableChunkedEncoding = disableChunkedEncoding; }
     public boolean isAutoCreateBucket() { return autoCreateBucket; }
     public void setAutoCreateBucket(boolean autoCreateBucket) { this.autoCreateBucket = autoCreateBucket; }
     public Duration getPresignExpiry() { return presignExpiry; }

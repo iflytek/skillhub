@@ -6,7 +6,7 @@ export function buildSkillSearchUrl(params: SearchParams) {
   const queryParams = new URLSearchParams()
   const normalizedQuery = normalizeSearchQuery(params.q ?? '')
 
-  if (normalizedQuery) {
+  if (params.q !== undefined) {
     queryParams.append('q', normalizedQuery)
   }
 

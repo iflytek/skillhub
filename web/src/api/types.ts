@@ -121,6 +121,7 @@ export interface ManagedNamespace extends Namespace {
   canUnfreeze: boolean
   canArchive: boolean
   canRestore: boolean
+  canDelete: boolean
 }
 
 export interface NamespaceMember {
@@ -139,12 +140,27 @@ export interface NamespaceCandidateUser {
   status: string
 }
 
+export interface BatchMemberResult {
+  userId: string
+  role: string
+  success: boolean
+  error?: string
+}
+
+export interface BatchMemberResponse {
+  totalCount: number
+  successCount: number
+  failureCount: number
+  results: BatchMemberResult[]
+}
+
 // Skill types
 export interface SkillSummary {
   id: number
   slug: string
   displayName: string
   summary?: string
+  visibility?: string
   status?: string
   downloadCount: number
   starCount: number
@@ -257,6 +273,47 @@ export interface SkillFile {
   fileSize: number
   contentType: string
   sha256: string
+}
+
+export interface SkillVersionCompareLine {
+  type: 'CONTEXT' | 'ADD' | 'DELETE' | string
+  content: string
+  oldLineNumber: number | null
+  newLineNumber: number | null
+}
+
+export interface SkillVersionCompareHunk {
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  lines: SkillVersionCompareLine[]
+}
+
+export interface SkillVersionCompareFile {
+  path: string
+  changeType: 'ADDED' | 'MODIFIED' | 'REMOVED' | string
+  oldSize: number | null
+  newSize: number | null
+  binary: boolean
+  truncated: boolean
+  hunks: SkillVersionCompareHunk[]
+}
+
+export interface SkillVersionCompareSummary {
+  totalFiles: number
+  addedFiles: number
+  modifiedFiles: number
+  removedFiles: number
+  addedLines: number
+  removedLines: number
+}
+
+export interface SkillVersionCompare {
+  from: string
+  to: string
+  summary: SkillVersionCompareSummary
+  files: SkillVersionCompareFile[]
 }
 
 export interface SkillTag {

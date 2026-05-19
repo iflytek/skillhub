@@ -58,6 +58,11 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     }
 
     @Override
+    public boolean existsByNamespaceId(Long namespaceId) {
+        return delegate.existsByNamespaceId(namespaceId);
+    }
+
+    @Override
     public Skill save(Skill skill) {
         return jpaDelegate.save(skill);
     }
@@ -85,6 +90,16 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     @Override
     public void incrementDownloadCount(Long skillId) {
         delegate.incrementDownloadCount(skillId);
+    }
+
+    @Override
+    public void incrementSubscriptionCount(Long skillId) {
+        delegate.incrementSubscriptionCount(skillId);
+    }
+
+    @Override
+    public void decrementSubscriptionCount(Long skillId) {
+        delegate.decrementSubscriptionCount(skillId);
     }
 
     @Override

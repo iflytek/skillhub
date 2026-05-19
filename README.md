@@ -101,6 +101,30 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 If deployment runs into problems, clear the existing runtime home and retry.
 
+## SkillHub CLI
+
+Install and manage Agent skills from the command line:
+
+```bash
+# Install CLI
+npm install -g @astron-team/skillhub
+
+# Or run directly
+npx @astron-team/skillhub@latest version
+
+# Login
+skillhub login --token sk_xxx --registry https://skill.xfyun.cn
+
+# Search and install skills
+skillhub search pdf
+skillhub install pdf-parser --agent codex
+
+# List installed skills
+skillhub list
+```
+
+📖 Full guide: [docs/skillhub/en/guide/cli.md](docs/skillhub/en/guide/cli.md)
+
 ### Prerequisites
 
 - Docker & Docker Compose

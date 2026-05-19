@@ -104,6 +104,63 @@ set_env_value() {
   mv "${tmp}" .env.release
 }
 
+get_env_value() {
+  key="$1"
+  default_value="${2:-}"
+  value="$(grep -E "^${key}=" .env.release | tail -n 1 | cut -d= -f2- || true)"
+
+  if [[ -n "${value}" ]]; then
+    printf '%s' "${value}"
+  else
+    printf '%s' "${default_value}"
+  fi
+}
+
+wait_for_postgres_ready() {
+  postgres_user="$1"
+  postgres_db="$2"
+
+  for attempt in $(seq 1 60); do
+    if docker compose --env-file .env.release -f compose.release.yml exec -T postgres \
+      pg_isready -U "${postgres_user}" -d "${postgres_db}" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    sleep 2
+  done
+
+  echo "PostgreSQL did not become ready in time" >&2
+  docker compose --env-file .env.release -f compose.release.yml logs postgres >&2 || true
+  exit 1
+}
+
+ensure_postgres_password_matches_env() {
+  postgres_user="$(get_env_value "POSTGRES_USER" "skillhub")"
+  postgres_db="$(get_env_value "POSTGRES_DB" "skillhub")"
+  postgres_password="$(get_env_value "POSTGRES_PASSWORD" "skillhub_demo")"
+
+  if [[ -z "${postgres_password}" ]]; then
+    echo "POSTGRES_PASSWORD must not be empty" >&2
+    exit 1
+  fi
+
+  wait_for_postgres_ready "${postgres_user}" "${postgres_db}"
+
+  docker compose --env-file .env.release -f compose.release.yml exec -T postgres \
+    psql -U "${postgres_user}" -d "${postgres_db}" \
+    -v ON_ERROR_STOP=1 \
+    -v password="${postgres_password}" <<'SQL' >/dev/null
+SELECT format('ALTER ROLE %I WITH PASSWORD %L', current_user, :'password');
+\gexec
+SQL
+
+  docker compose --env-file .env.release -f compose.release.yml exec -T \
+    -e PGPASSWORD="${postgres_password}" postgres \
+    psql -h 127.0.0.1 -U "${postgres_user}" -d "${postgres_db}" \
+    -v ON_ERROR_STOP=1 \
+    -c 'select current_user;' >/dev/null
+}
+
 cd "${runtime_dir}"
 
 test -f .env.release
@@ -123,6 +180,8 @@ run_url=${run_url}
 METADATA
 
 docker compose --env-file .env.release -f compose.release.yml pull
+docker compose --env-file .env.release -f compose.release.yml up -d postgres
+ensure_postgres_password_matches_env
 docker compose --env-file .env.release -f compose.release.yml up -d
 docker compose --env-file .env.release -f compose.release.yml ps
 

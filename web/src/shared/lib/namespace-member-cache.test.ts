@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { appendNamespaceMember, replaceNamespaceMemberRole } from './namespace-member-cache'
-import type { NamespaceMember } from '@/api/types'
+import type { NamespaceMember, PagedResponse } from '@/api/types'
 
 const baseMember = (overrides: Partial<NamespaceMember>): NamespaceMember => ({
   id: 1,
@@ -10,32 +10,57 @@ const baseMember = (overrides: Partial<NamespaceMember>): NamespaceMember => ({
   ...overrides,
 })
 
+const basePage = (items: NamespaceMember[]): PagedResponse<NamespaceMember> => ({
+  items,
+  total: items.length,
+  page: 0,
+  size: 20,
+})
+
 describe('appendNamespaceMember', () => {
   it('appends a newly added member with the returned role', () => {
-    const members = [baseMember({})]
+    const page = basePage([baseMember({})])
     const addedMember = baseMember({ id: 2, userId: 'user-2', role: 'ADMIN' })
 
-    expect(appendNamespaceMember(members, addedMember)).toEqual([
-      members[0],
-      addedMember,
-    ])
+    const result = appendNamespaceMember(page, addedMember)
+    expect(result.items).toEqual([page.items[0], addedMember])
+    expect(result.total).toBe(2)
   })
 
   it('replaces the existing member when the same user is returned again', () => {
-    const members = [baseMember({ role: 'MEMBER' })]
+    const page = basePage([baseMember({ role: 'MEMBER' })])
     const updatedMember = baseMember({ role: 'ADMIN' })
 
-    expect(appendNamespaceMember(members, updatedMember)).toEqual([updatedMember])
+    const result = appendNamespaceMember(page, updatedMember)
+    expect(result.items).toEqual([updatedMember])
+    expect(result.total).toBe(1)
+  })
+
+  it('handles undefined page', () => {
+    const addedMember = baseMember({ id: 2, userId: 'user-2', role: 'ADMIN' })
+
+    const result = appendNamespaceMember(undefined, addedMember)
+    expect(result.items).toEqual([addedMember])
+    expect(result.total).toBe(1)
   })
 })
 
 describe('replaceNamespaceMemberRole', () => {
   it('updates the member role in the current list', () => {
-    const members = [baseMember({}), baseMember({ id: 2, userId: 'user-2', role: 'MEMBER' })]
-
-    expect(replaceNamespaceMemberRole(members, 'user-2', 'ADMIN')).toEqual([
-      members[0],
-      { ...members[1], role: 'ADMIN' },
+    const page = basePage([
+      baseMember({}),
+      baseMember({ id: 2, userId: 'user-2', role: 'MEMBER' }),
     ])
+
+    const result = replaceNamespaceMemberRole(page, 'user-2', 'ADMIN')
+    expect(result?.items).toEqual([
+      page.items[0],
+      { ...page.items[1], role: 'ADMIN' },
+    ])
+  })
+
+  it('handles undefined page', () => {
+    const result = replaceNamespaceMemberRole(undefined, 'user-2', 'ADMIN')
+    expect(result).toBeUndefined()
   })
 })

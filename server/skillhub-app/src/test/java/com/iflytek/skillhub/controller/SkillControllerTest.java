@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -161,6 +162,7 @@ class SkillControllerTest {
                         "ACTIVE",
                         10L,
                         2,
+                        0,
                         null,
                         0,
                         false,
@@ -237,5 +239,66 @@ class SkillControllerTest {
         mockMvc.perform(get("/api/v1/skills/team/demo/versions"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].downloadAvailable").value(false));
+    }
+
+    @Test
+    void compareVersionsShouldReturnStructuredDiffEnvelope() throws Exception {
+        when(skillQueryService.compareVersions(
+                eq("team"),
+                eq("demo"),
+                eq("1.0.0"),
+                eq("1.1.0"),
+                eq((String) null),
+                eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(new SkillQueryService.SkillVersionCompareDTO(
+                        "1.0.0",
+                        "1.1.0",
+                        new SkillQueryService.SkillVersionCompareSummaryDTO(1, 0, 1, 0, 2, 1),
+                        List.of(new SkillQueryService.SkillVersionCompareFileDTO(
+                                "README.md",
+                                "MODIFIED",
+                                10L,
+                                12L,
+                                false,
+                                false,
+                                List.of(new SkillQueryService.SkillVersionCompareHunkDTO(
+                                        1,
+                                        2,
+                                        1,
+                                        3,
+                                        List.of(
+                                                new SkillQueryService.SkillVersionCompareLineDTO("CONTEXT", "# Demo", 1, 1),
+                                                new SkillQueryService.SkillVersionCompareLineDTO("DELETE", "old", 2, null),
+                                                new SkillQueryService.SkillVersionCompareLineDTO("ADD", "new", null, 2)
+                                        )))))));
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/compare")
+                        .param("from", "1.0.0")
+                        .param("to", "1.1.0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.from").value("1.0.0"))
+                .andExpect(jsonPath("$.data.to").value("1.1.0"))
+                .andExpect(jsonPath("$.data.summary.totalFiles").value(1))
+                .andExpect(jsonPath("$.data.files[0].path").value("README.md"))
+                .andExpect(jsonPath("$.data.files[0].hunks[0].lines[1].type").value("DELETE"));
+    }
+
+    @Test
+    void compareVersionsShouldRejectSameVersion() throws Exception {
+        when(skillQueryService.compareVersions(
+                eq("team"),
+                eq("demo"),
+                eq("1.0.0"),
+                eq("1.0.0"),
+                eq((String) null),
+                eq(Map.<Long, NamespaceRole>of())))
+                .thenThrow(new DomainBadRequestException("error.skill.version.compare.same"));
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/compare")
+                        .param("from", "1.0.0")
+                        .param("to", "1.0.0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
     }
 }

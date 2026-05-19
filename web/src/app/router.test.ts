@@ -39,4 +39,10 @@ describe('router', () => {
     // In test environment, flatRoutes may not be populated until router is used
     expect(router.routeTree).toBeDefined()
   })
+
+  it('registers the skill version compare route', () => {
+    const children = (router.routeTree.children ?? []) as Array<{ fullPath?: string; path?: string }>
+    const childPaths = children.map((route) => route.fullPath ?? route.path)
+    expect(childPaths).toContain('/space/$namespace/$slug/compare')
+  })
 })

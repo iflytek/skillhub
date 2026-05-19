@@ -5,6 +5,8 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.BatchMemberRequest;
+import com.iflytek.skillhub.dto.BatchMemberResponse;
 import com.iflytek.skillhub.dto.MemberRequest;
 import com.iflytek.skillhub.dto.MemberResponse;
 import com.iflytek.skillhub.dto.MessageResponse;
@@ -14,6 +16,7 @@ import com.iflytek.skillhub.dto.NamespaceLifecycleRequest;
 import com.iflytek.skillhub.dto.NamespaceRequest;
 import com.iflytek.skillhub.dto.NamespaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.TransferOwnershipRequest;
 import com.iflytek.skillhub.dto.UpdateMemberRoleRequest;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
@@ -93,6 +96,14 @@ public class NamespaceController extends BaseApiController {
                 namespacePortalCommandAppService.updateNamespace(slug, request, userId));
     }
 
+    @DeleteMapping("/namespaces/{slug}")
+    public ApiResponse<MessageResponse> deleteNamespace(
+            @PathVariable String slug,
+            @RequestAttribute("userId") String userId) {
+        return ok("response.success.deleted",
+                namespacePortalCommandAppService.deleteNamespace(slug, userId));
+    }
+
     @PostMapping("/namespaces/{slug}/freeze")
     public ApiResponse<NamespaceResponse> freezeNamespace(@PathVariable String slug,
                                                           @RequestBody(required = false) NamespaceLifecycleRequest request,
@@ -167,6 +178,15 @@ public class NamespaceController extends BaseApiController {
                 namespacePortalCommandAppService.addMember(slug, request.userId(), request.role(), userId));
     }
 
+    @PostMapping("/namespaces/{slug}/members/batch")
+    public ApiResponse<BatchMemberResponse> batchAddMembers(
+            @PathVariable String slug,
+            @Valid @RequestBody BatchMemberRequest request,
+            @RequestAttribute("userId") String userId) {
+        return ok("response.success.created",
+                namespacePortalCommandAppService.batchAddMembers(slug, request.members(), userId));
+    }
+
     @DeleteMapping("/namespaces/{slug}/members/{userId}")
     public ApiResponse<MessageResponse> removeMember(
             @PathVariable String slug,
@@ -184,5 +204,14 @@ public class NamespaceController extends BaseApiController {
             @RequestAttribute("userId") String operatorUserId) {
         return ok("response.success.updated",
                 namespacePortalCommandAppService.updateMemberRole(slug, userId, request, operatorUserId));
+    }
+
+    @PostMapping("/namespaces/{slug}/transfer-ownership")
+    public ApiResponse<MessageResponse> transferOwnership(
+            @PathVariable String slug,
+            @Valid @RequestBody TransferOwnershipRequest request,
+            @RequestAttribute("userId") String currentOwnerId) {
+        return ok("response.success.updated",
+                namespacePortalCommandAppService.transferOwnership(slug, request.newOwnerId(), currentOwnerId));
     }
 }

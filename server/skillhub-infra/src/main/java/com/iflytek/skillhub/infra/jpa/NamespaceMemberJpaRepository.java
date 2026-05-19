@@ -22,5 +22,6 @@ public interface NamespaceMemberJpaRepository
     List<NamespaceMember> findByUserId(String userId);
     Page<NamespaceMember> findByNamespaceId(Long namespaceId, Pageable pageable);
     List<NamespaceMember> findByNamespaceIdAndRoleIn(Long namespaceId, Collection<NamespaceRole> roles);
+    void deleteByNamespaceId(Long namespaceId);
     void deleteByNamespaceIdAndUserId(Long namespaceId, String userId);
 }

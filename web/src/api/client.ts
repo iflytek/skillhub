@@ -40,6 +40,7 @@ import type {
   AdminLabelInput,
   LabelDefinition,
   LabelItem,
+  BatchMemberResponse,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -674,9 +675,19 @@ export const namespaceApi = {
     })
   },
 
-  async listMembers(slug: string): Promise<NamespaceMember[]> {
-    const page = await fetchJson<{ items: NamespaceMember[] }>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members`)
-    return page.items
+  async delete(slug: string): Promise<void> {
+    await fetchJson<void>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listMembers(slug: string, params?: { page?: number; size?: number }): Promise<PagedResponse<NamespaceMember>> {
+    const queryPage = params?.page ?? 0
+    const querySize = params?.size ?? 20
+    return fetchJson<PagedResponse<NamespaceMember>>(
+      `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members?page=${queryPage}&size=${querySize}`,
+    )
   },
 
   async searchMemberCandidates(slug: string, search: string, size = 10): Promise<NamespaceCandidateUser[]> {
@@ -702,6 +713,16 @@ export const namespaceApi = {
     })
   },
 
+  async batchAddMembers(slug: string, members: Array<{ userId: string; role: string }>): Promise<BatchMemberResponse> {
+    return fetchJson<BatchMemberResponse>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/batch`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ members }),
+    })
+  },
+
   async updateMemberRole(slug: string, userId: string, role: string): Promise<NamespaceMember> {
     return fetchJson<NamespaceMember>(
       `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}/role`,
@@ -719,6 +740,33 @@ export const namespaceApi = {
     await fetchJson<void>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}`, {
       method: 'DELETE',
       headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async update(slug: string, request: { displayName?: string; description?: string }): Promise<Namespace> {
+    const body: Record<string, string> = {}
+    if (request.displayName !== undefined) {
+      body.displayName = request.displayName.trim()
+    }
+    if (request.description !== undefined) {
+      body.description = request.description === '' ? '' : request.description.trim()
+    }
+    return fetchJson<Namespace>(`/api/v1/namespaces/${normalizeNamespaceSlug(slug)}`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(body),
+    })
+  },
+
+  async transferOwnership(slug: string, newOwnerUserId: string): Promise<{ message: string }> {
+    return fetchJson<{ message: string }>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/transfer-ownership`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ newOwnerId: newOwnerUserId.trim() }),
     })
   },
 }
@@ -1005,6 +1053,30 @@ export const meApi = {
 
       hasMore = (page + 1) * response.size < response.total && response.items.length > 0
       page += 1
+    }
+
+    return items
+  },
+
+  async getSubscriptionsPage(params?: { page?: number; size?: number }): Promise<{ items: SkillSummary[]; total: number; page: number; size: number }> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params?.page ?? 0))
+    searchParams.set('size', String(params?.size ?? 12))
+    return fetchJson<{ items: SkillSummary[]; total: number; page: number; size: number }>(`${WEB_API_PREFIX}/me/subscriptions?${searchParams.toString()}`)
+  },
+
+  async getSubscriptions(): Promise<SkillSummary[]> {
+    const items: SkillSummary[] = []
+    let page = 0
+    const size = 100
+    let hasMore = true
+
+    while (hasMore) {
+      const response = await meApi.getSubscriptionsPage({ page, size })
+      items.push(...response.items)
+
+      hasMore = (page + 1) * response.size < response.total && response.items.length > 0
+      page++
     }
 
     return items

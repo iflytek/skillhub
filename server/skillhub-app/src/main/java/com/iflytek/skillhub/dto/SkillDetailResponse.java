@@ -14,6 +14,7 @@ public record SkillDetailResponse(
         String status,
         Long downloadCount,
         Integer starCount,
+        Integer subscriptionCount,
         BigDecimal ratingAvg,
         Integer ratingCount,
         boolean hidden,

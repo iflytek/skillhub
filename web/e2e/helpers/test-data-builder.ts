@@ -15,6 +15,7 @@ export interface SeededNamespace {
   currentUserRole?: string
   canUnfreeze?: boolean
   canRestore?: boolean
+  canDelete?: boolean
 }
 
 export interface SeededSkill {
@@ -466,11 +467,26 @@ export class E2eTestDataBuilder {
   }
 
   async approveReview(reviewTaskId: number, comment = 'Approved by Playwright E2E'): Promise<void> {
-    await parseEnvelope<ReviewTaskSummary>(
-      await this.request.post(`/api/web/reviews/${reviewTaskId}/approve`, {
-        data: { comment },
-      }),
-    )
+    let lastError: unknown
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      try {
+        await parseEnvelope<ReviewTaskSummary>(
+          await this.request.post(`/api/web/reviews/${reviewTaskId}/approve`, {
+            data: { comment },
+          }),
+        )
+        return
+      } catch (error) {
+        lastError = error
+        const message = error instanceof Error ? error.message : ''
+        const isScanInProgress = message.includes('扫描') || message.toLowerCase().includes('scan is still in progress')
+        if (!isScanInProgress) {
+          throw error
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('approveReview timed out')
   }
 
   async searchNamespaceMemberCandidates(slug: string, search: string): Promise<NamespaceCandidate[]> {

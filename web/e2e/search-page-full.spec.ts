@@ -41,7 +41,19 @@ test.describe('Search Input (Real API)', () => {
 
   // TC_SEARCH_INPUT_003 P0 - empty search shows the default discovery list
   test('TC_SEARCH_INPUT_003: empty search shows the default discovery list', async ({ page }) => {
+    const emptyQueryResponse = page.waitForResponse((response) => {
+      if (!response.url().includes('/api/web/skills?')) {
+        return false
+      }
+
+      const url = new URL(response.url())
+      return response.status() === 200
+        && url.searchParams.has('q')
+        && url.searchParams.get('q') === ''
+    })
+
     await page.goto(searchUrl(''))
+    await emptyQueryResponse
     await expect(page).toHaveURL(/\/search/)
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 10_000 })
   })
@@ -228,6 +240,7 @@ test.describe('Search Results (Real API)', () => {
     await page.goto(searchUrl(basicSeed!.keyword))
     await page.waitForLoadState('networkidle')
     const cards = getSearchCards(page)
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 })
     const visibleCount = await cards.count()
     const countText = await page.getByText(/\d+\s+skills found/i).textContent()
     const totalMatch = countText?.match(/\d+/)

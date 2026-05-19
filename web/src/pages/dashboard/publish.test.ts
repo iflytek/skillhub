@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const useSearchMock = vi.fn()
+const selectRecords: Array<{ value?: string }> = []
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
+  useSearch: () => useSearchMock(),
 }))
 
 vi.mock('react-i18next', async () => {
@@ -23,7 +29,10 @@ vi.mock('@/shared/ui/button', () => ({
 }))
 
 vi.mock('@/shared/ui/select', () => ({
-  Select: ({ children }: { children: unknown }) => children,
+  Select: ({ children, value }: { children: unknown; value?: string }) => {
+    selectRecords.push({ value })
+    return children
+  },
   SelectContent: ({ children }: { children: unknown }) => children,
   SelectItem: ({ children }: { children: unknown }) => children,
   SelectTrigger: ({ children }: { children: unknown }) => children,
@@ -64,6 +73,30 @@ vi.mock('@/api/client', () => ({
 import { PublishPage } from './publish'
 
 describe('PublishPage', () => {
+  beforeEach(() => {
+    selectRecords.length = 0
+    useSearchMock.mockReturnValue({
+      namespace: '  team-ai  ',
+      visibility: 'private',
+    })
+  })
+
+  it('prefills namespace and visibility from route search params', () => {
+    renderToStaticMarkup(createElement(PublishPage))
+
+    expect(selectRecords[0]?.value).toBe('team-ai')
+    expect(selectRecords[1]?.value).toBe('PRIVATE')
+  })
+
+  it('falls back to public visibility when search params are missing', () => {
+    useSearchMock.mockReturnValue({})
+
+    renderToStaticMarkup(createElement(PublishPage))
+
+    expect(selectRecords[0]?.value).toBe('__select_namespace__')
+    expect(selectRecords[1]?.value).toBe('PUBLIC')
+  })
+
   it('exports a named component function', () => {
     expect(typeof PublishPage).toBe('function')
   })

@@ -59,10 +59,20 @@ public class SkillPublishController extends BaseApiController {
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
 
         List<PackageEntry> entries;
+        List<String> extractionWarnings;
         try {
-            entries = skillPackageArchiveExtractor.extract(file);
+            SkillPackageArchiveExtractor.ExtractionResult extractionResult =
+                    skillPackageArchiveExtractor.extractWithWarnings(file);
+            entries = extractionResult.entries();
+            extractionWarnings = extractionResult.warnings();
         } catch (IllegalArgumentException e) {
             throw new DomainBadRequestException("error.skill.publish.package.invalid", e.getMessage());
+        }
+
+        if (!confirmWarnings && !extractionWarnings.isEmpty()) {
+            throw new DomainBadRequestException(
+                    "error.skill.publish.precheck.confirmRequired",
+                    String.join("\n", extractionWarnings));
         }
 
         SkillPublishService.PublishResult publishResult = skillPublishService.publishFromEntries(

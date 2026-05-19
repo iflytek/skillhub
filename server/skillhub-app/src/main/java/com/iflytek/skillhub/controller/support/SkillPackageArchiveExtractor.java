@@ -18,6 +18,8 @@ import java.util.zip.ZipInputStream;
 @Component
 public class SkillPackageArchiveExtractor {
 
+    public record ExtractionResult(List<PackageEntry> entries, List<String> warnings) {}
+
     private final long maxTotalPackageSize;
     private final long maxSingleFileSize;
     private final int maxFileCount;
@@ -43,6 +45,11 @@ public class SkillPackageArchiveExtractor {
             ZipEntry zipEntry;
             while ((zipEntry = zis.getNextEntry()) != null) {
                 if (zipEntry.isDirectory()) {
+                    zis.closeEntry();
+                    continue;
+                }
+
+                if (isOsMetadataEntry(zipEntry.getName())) {
                     zis.closeEntry();
                     continue;
                 }
@@ -76,6 +83,11 @@ public class SkillPackageArchiveExtractor {
         return stripSingleRootDirectory(entries);
     }
 
+    public ExtractionResult extractWithWarnings(MultipartFile file) throws IOException {
+        List<PackageEntry> entries = extract(file);
+        return promoteSingleSkillMdDirectory(entries);
+    }
+
     /**
      * If all file paths share a single root directory prefix (e.g., "my-skill/xxx"),
      * strip that prefix. Otherwise return entries unchanged.
@@ -105,6 +117,58 @@ public class SkillPackageArchiveExtractor {
                         e.size(),
                         e.contentType()))
                 .toList();
+    }
+
+    static ExtractionResult promoteSingleSkillMdDirectory(List<PackageEntry> entries) {
+        boolean hasRootSkillMd = entries.stream()
+                .anyMatch(e -> SkillPackagePolicy.SKILL_MD_PATH.equals(e.path()));
+        if (hasRootSkillMd) {
+            return new ExtractionResult(entries, List.of());
+        }
+
+        Set<String> skillMdDirs = new HashSet<>();
+        for (PackageEntry entry : entries) {
+            int slashIndex = entry.path().indexOf('/');
+            if (slashIndex > 0) {
+                String relativePath = entry.path().substring(slashIndex + 1);
+                if (SkillPackagePolicy.SKILL_MD_PATH.equals(relativePath)) {
+                    skillMdDirs.add(entry.path().substring(0, slashIndex));
+                }
+            }
+        }
+
+        if (skillMdDirs.isEmpty()) {
+            return new ExtractionResult(entries, List.of());
+        }
+        if (skillMdDirs.size() > 1) {
+            throw new IllegalArgumentException(
+                    "Ambiguous package: SKILL.md found in multiple directories: " + skillMdDirs);
+        }
+
+        String prefix = skillMdDirs.iterator().next() + "/";
+        List<PackageEntry> promoted = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+
+        for (PackageEntry entry : entries) {
+            if (entry.path().startsWith(prefix)) {
+                promoted.add(new PackageEntry(
+                        entry.path().substring(prefix.length()),
+                        entry.content(),
+                        entry.size(),
+                        entry.contentType()));
+            } else {
+                warnings.add("Ignored file outside skill directory: " + entry.path());
+            }
+        }
+
+        return new ExtractionResult(promoted, warnings);
+    }
+
+    private static boolean isOsMetadataEntry(String name) {
+        String normalized = name.replace('\\', '/');
+        if (normalized.startsWith("__MACOSX/") || normalized.equals("__MACOSX")) return true;
+        String fileName = normalized.contains("/") ? normalized.substring(normalized.lastIndexOf('/') + 1) : normalized;
+        return fileName.equals(".DS_Store") || fileName.startsWith("._");
     }
 
     private byte[] readEntry(ZipInputStream zis, String path) throws IOException {

@@ -79,6 +79,16 @@ export function resolveNotificationDisplay(item: NotificationItem, language: str
         title: zh ? '技能发布成功' : 'Skill published',
         description: skillName ? (zh ? `${skillName}${versionSuffix} 已发布。` : `${skillName}${versionSuffix} was published.`) : '',
       }
+    case 'SUBSCRIPTION_NEW_VERSION':
+      return {
+        title: zh ? '订阅技能更新' : 'Subscribed skill updated',
+        description: skillName ? (zh ? `${skillName}${versionSuffix} 发布了新版本。` : `${skillName}${versionSuffix} published a new version.`) : '',
+      }
+    case 'SUBSCRIPTION_VERSION_YANKED':
+      return {
+        title: zh ? '订阅技能版本撤回' : 'Subscribed skill version yanked',
+        description: skillName ? (zh ? `${skillName}${versionSuffix} 版本已撤回。` : `${skillName}${versionSuffix} version was yanked.`) : '',
+      }
     default:
       return {
         title: item.title,

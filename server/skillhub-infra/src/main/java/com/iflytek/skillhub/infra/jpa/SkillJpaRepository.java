@@ -23,6 +23,7 @@ public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRep
     List<Skill> findByIdIn(List<Long> ids);
     List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
     Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
+    boolean existsByNamespaceId(Long namespaceId);
 
     @Override
     default List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status) {
@@ -43,6 +44,16 @@ public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRep
     @Transactional
     @Query("UPDATE Skill s SET s.downloadCount = s.downloadCount + 1 WHERE s.id = :skillId")
     void incrementDownloadCount(@Param("skillId") Long skillId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Skill s SET s.subscriptionCount = s.subscriptionCount + 1 WHERE s.id = :skillId")
+    void incrementSubscriptionCount(@Param("skillId") Long skillId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Skill s SET s.subscriptionCount = CASE WHEN s.subscriptionCount > 0 THEN s.subscriptionCount - 1 ELSE 0 END WHERE s.id = :skillId")
+    void decrementSubscriptionCount(@Param("skillId") Long skillId);
 
     List<Skill> findBySlug(String slug);
 

@@ -15,6 +15,7 @@ public interface ReviewTaskRepository {
     Page<ReviewTask> findByStatus(ReviewTaskStatus status, Pageable pageable);
     Page<ReviewTask> findByNamespaceIdAndStatus(Long namespaceId, ReviewTaskStatus status, Pageable pageable);
     Page<ReviewTask> findBySubmittedByAndStatus(String submittedBy, ReviewTaskStatus status, Pageable pageable);
+    boolean existsByNamespaceId(Long namespaceId);
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
     void delete(ReviewTask reviewTask);
     int updateStatusWithVersion(Long id, ReviewTaskStatus status, String reviewedBy,

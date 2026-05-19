@@ -1,16 +1,20 @@
 import { useTranslation } from 'react-i18next'
+import { Pencil } from 'lucide-react'
 import type { Namespace } from '@/api/types'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
+import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/utils'
+import { EditNamespaceDialog } from './edit-namespace-dialog'
 
 interface NamespaceHeaderProps {
   namespace: Namespace
+  canEdit?: boolean
 }
 
 /**
  * Header block for namespace pages and namespace-oriented dashboard views.
  */
-export function NamespaceHeader({ namespace }: NamespaceHeaderProps) {
+export function NamespaceHeader({ namespace, canEdit = false }: NamespaceHeaderProps) {
   const { t } = useTranslation()
   const statusLabel = namespace.status === 'FROZEN'
     ? t('namespaceStatus.frozen')
@@ -59,6 +63,14 @@ export function NamespaceHeader({ namespace }: NamespaceHeaderProps) {
           </div>
         ) : null}
       </div>
+      {canEdit ? (
+        <EditNamespaceDialog namespace={namespace}>
+          <Button type="button" variant="outline" size="sm" aria-label={t('namespaceEdit.editButton')}>
+            <Pencil className="mr-1 h-4 w-4" />
+            {t('namespaceEdit.editButton')}
+          </Button>
+        </EditNamespaceDialog>
+      ) : null}
     </div>
   )
 }

@@ -216,7 +216,7 @@ class SkillSearchAppServiceTest {
     }
 
     @Test
-    void search_shouldGrantPlatformWideAccessToSuperAdmin() {
+    void search_shouldNotGrantPlatformWideAccessToSuperAdminInPortal() {
         when(searchQueryService.search(any()))
                 .thenReturn(new SearchResult(List.of(), 0, 0, 20));
         when(rbacService.getUserRoleCodes("admin-1")).thenReturn(Set.of("SUPER_ADMIN", "USER"));
@@ -228,7 +228,7 @@ class SkillSearchAppServiceTest {
 
         SearchVisibilityScope scope = captor.getValue().visibilityScope();
         assertEquals("admin-1", scope.userId());
-        assertEquals(true, scope.platformWideAccess());
+        assertEquals(false, scope.platformWideAccess());
     }
 
     private void setField(Object target, String fieldName, Object value) {

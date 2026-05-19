@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
+import com.iflytek.skillhub.domain.social.SkillSubscriptionRepository;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.repository.MySkillQueryRepository;
@@ -32,6 +33,7 @@ public class MySkillAppService {
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillStarRepository skillStarRepository;
+    private final SkillSubscriptionRepository skillSubscriptionRepository;
     private final MySkillQueryRepository mySkillQueryRepository;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
 
@@ -39,11 +41,13 @@ public class MySkillAppService {
             SkillRepository skillRepository,
             SkillVersionRepository skillVersionRepository,
             SkillStarRepository skillStarRepository,
+            SkillSubscriptionRepository skillSubscriptionRepository,
             MySkillQueryRepository mySkillQueryRepository,
             SkillLifecycleProjectionService skillLifecycleProjectionService) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillStarRepository = skillStarRepository;
+        this.skillSubscriptionRepository = skillSubscriptionRepository;
         this.mySkillQueryRepository = mySkillQueryRepository;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
     }
@@ -88,6 +92,30 @@ public class MySkillAppService {
         List<SkillSummaryResponse> items = mySkillQueryRepository.getSkillSummaries(orderedSkills, userId);
 
         return new PageResponse<>(items, starPage.getTotalElements(), starPage.getNumber(), starPage.getSize());
+    }
+
+    public PageResponse<SkillSummaryResponse> listMySubscriptions(String userId, int page, int size) {
+        Page<com.iflytek.skillhub.domain.social.SkillSubscription> subPage = skillSubscriptionRepository.findByUserId(
+                userId,
+                PageRequest.of(page, size)
+        );
+        List<com.iflytek.skillhub.domain.social.SkillSubscription> subs = subPage.getContent();
+
+        List<Long> skillIds = subs.stream()
+                .map(com.iflytek.skillhub.domain.social.SkillSubscription::getSkillId)
+                .distinct()
+                .toList();
+        java.util.Map<Long, Skill> skillsById = skillIds.isEmpty()
+                ? java.util.Map.of()
+                : skillRepository.findByIdIn(skillIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Skill::getId, java.util.function.Function.identity()));
+        List<Skill> orderedSkills = subs.stream()
+                .map(sub -> skillsById.get(sub.getSkillId()))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        List<SkillSummaryResponse> items = mySkillQueryRepository.getSkillSummaries(orderedSkills, userId);
+
+        return new PageResponse<>(items, subPage.getTotalElements(), subPage.getNumber(), subPage.getSize());
     }
 
     private Page<Skill> filterSkillsByLifecycle(String userId,

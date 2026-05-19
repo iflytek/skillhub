@@ -92,7 +92,8 @@ public class NamespacePortalQueryAppService {
                 .map(namespace -> MyNamespaceResponse.from(
                         namespace,
                         namespaceRoles.get(namespace.getId()),
-                        namespaceAccessPolicy))
+                        namespaceAccessPolicy,
+                        namespaceService.canDelete(namespace, namespaceRoles.get(namespace.getId()))))
                 .toList();
     }
 

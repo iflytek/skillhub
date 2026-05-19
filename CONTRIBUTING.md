@@ -6,6 +6,10 @@ SkillHub is a self-hosted registry for agent skills. Contributions should
 preserve the existing architecture and product direction documented in
 [`docs/`](./docs).
 
+AI coding agents working in this repository should follow the rules in
+[`AGENTS.md`](./AGENTS.md), which documents repository architecture,
+dependency rules, and agent-specific conventions.
+
 ## Before You Start
 
 - Read [`README.md`](./README.md) for local development commands.

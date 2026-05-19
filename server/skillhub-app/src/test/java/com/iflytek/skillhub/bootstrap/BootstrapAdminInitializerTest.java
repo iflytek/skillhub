@@ -73,7 +73,6 @@ class BootstrapAdminInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        when(localCredentialRepository.existsByUsernameIgnoreCase("admin")).thenReturn(false);
         when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode("ChangeMe!2026")).thenReturn("encoded-password");
@@ -111,7 +110,8 @@ class BootstrapAdminInitializerTest {
     @Test
     void shouldSkipWhenBootstrapAdminCredentialAlreadyExists() {
         bootstrapAdminProperties.setEnabled(true);
-        when(localCredentialRepository.existsByUsernameIgnoreCase("admin")).thenReturn(true);
+        LocalCredential conflictingCredential = new LocalCredential("someone-else", "admin", "encoded-password");
+        when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(conflictingCredential));
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
 
@@ -122,12 +122,69 @@ class BootstrapAdminInitializerTest {
     }
 
     @Test
+    void shouldStillEnsureRoleAndMembershipWhenBootstrapCredentialExistsForConfiguredUser() throws Exception {
+        bootstrapAdminProperties.setEnabled(true);
+        Namespace global = new Namespace("global", "Global", "system");
+        setField(global, "id", 1L);
+
+        Role superAdminRole = new Role();
+        setField(superAdminRole, "id", 1L);
+        setField(superAdminRole, "code", "SUPER_ADMIN");
+
+        LocalCredential existingCredential = new LocalCredential("docker-admin", "admin", "encoded-password");
+
+        when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(existingCredential));
+        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
+        when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
+        when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin")).thenReturn(Optional.empty());
+
+        initializer.run(new DefaultApplicationArguments(new String[0]));
+
+        verify(localCredentialRepository, never()).save(any(LocalCredential.class));
+        verify(userRoleBindingRepository).save(any(UserRoleBinding.class));
+        verify(namespaceMemberRepository).save(any(NamespaceMember.class));
+    }
+
+    @Test
+    void shouldPreserveExistingUserProfileWhenBackfillingRoleAndMembership() throws Exception {
+        bootstrapAdminProperties.setEnabled(true);
+        Namespace global = new Namespace("global", "Global", "system");
+        setField(global, "id", 1L);
+
+        Role superAdminRole = new Role();
+        setField(superAdminRole, "id", 1L);
+        setField(superAdminRole, "code", "SUPER_ADMIN");
+
+        LocalCredential existingCredential = new LocalCredential("docker-admin", "admin", "encoded-password");
+        UserAccount existingUser = new UserAccount("docker-admin", "Existing Admin", "existing-admin@example.com", null);
+
+        when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(existingCredential));
+        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.of(existingUser));
+        when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
+        when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "docker-admin")).thenReturn(Optional.empty());
+
+        initializer.run(new DefaultApplicationArguments(new String[0]));
+
+        assertEquals("Existing Admin", existingUser.getDisplayName());
+        assertEquals("existing-admin@example.com", existingUser.getEmail());
+        verify(userAccountRepository, never()).save(any(UserAccount.class));
+        verify(localCredentialRepository, never()).save(any(LocalCredential.class));
+        verify(userRoleBindingRepository).save(any(UserRoleBinding.class));
+        verify(namespaceMemberRepository).save(any(NamespaceMember.class));
+    }
+
+    @Test
     void shouldSkipWhenBootstrapAdminIsDisabled() {
         bootstrapAdminProperties.setEnabled(false);
 
         initializer.run(new DefaultApplicationArguments(new String[0]));
 
-        verify(localCredentialRepository, never()).existsByUsernameIgnoreCase(any());
+        verify(localCredentialRepository, never()).findByUsernameIgnoreCase(any());
         verify(userAccountRepository, never()).save(any(UserAccount.class));
     }
 

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.dto.ApiResponse;
@@ -69,5 +70,26 @@ class GlobalExceptionHandlerTest {
         ApiResponse<?> body = (ApiResponse<?>) response.getBody();
         assertThat(body.code()).isEqualTo(408);
         assertThat(body.msg()).isEqualTo("Request timed out");
+    }
+
+    @Test
+    void handleSessionInvalidated_shouldReturn401ForSessionException() {
+        when(request.getMethod()).thenReturn("GET");
+        when(sensitiveLogSanitizer.sanitizeRequestTarget(request)).thenReturn("/api/v1/skills");
+
+        IllegalStateException ex = new IllegalStateException("Session was invalidated");
+        ResponseEntity<ApiResponse<Void>> response = handler.handleSessionInvalidated(ex, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo(401);
+    }
+
+    @Test
+    void handleSessionInvalidated_shouldRethrowNonSessionException() {
+        IllegalStateException ex = new IllegalStateException("Some other error");
+
+        assertThatThrownBy(() -> handler.handleSessionInvalidated(ex, request))
+                .isSameAs(ex);
     }
 }

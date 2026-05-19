@@ -16,6 +16,18 @@ describe('buildSkillSearchUrl', () => {
   it('returns the base skills endpoint when no search params are provided', () => {
     expect(buildSkillSearchUrl({})).toBe('/api/web/skills')
   })
+
+  it('keeps an empty q parameter when the search query is an empty string', () => {
+    expect(buildSkillSearchUrl({ q: '' })).toBe('/api/web/skills?q=')
+  })
+
+  it('normalizes whitespace-only queries to an empty q parameter', () => {
+    expect(buildSkillSearchUrl({
+      q: '   ',
+      sort: 'relevance',
+      page: 0,
+    })).toBe('/api/web/skills?q=&sort=relevance&page=0')
+  })
 })
 
 describe('shouldEnableNamespaceMemberCandidates', () => {

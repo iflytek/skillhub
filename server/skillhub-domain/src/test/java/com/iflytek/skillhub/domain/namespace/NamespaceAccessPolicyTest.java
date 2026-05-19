@@ -54,4 +54,16 @@ class NamespaceAccessPolicyTest {
         assertThat(policy.canRestore(namespace, NamespaceRole.OWNER)).isTrue();
         assertThat(policy.canRestore(namespace, NamespaceRole.ADMIN)).isFalse();
     }
+
+    @Test
+    void deleteIsOwnerOnlyForTeamNamespaces() {
+        Namespace namespace = new Namespace("team-a", "Team A", "owner");
+        namespace.setType(NamespaceType.TEAM);
+
+        assertThat(policy.canDelete(namespace, NamespaceRole.OWNER)).isTrue();
+        assertThat(policy.canDelete(namespace, NamespaceRole.ADMIN)).isFalse();
+
+        namespace.setType(NamespaceType.GLOBAL);
+        assertThat(policy.canDelete(namespace, NamespaceRole.OWNER)).isFalse();
+    }
 }

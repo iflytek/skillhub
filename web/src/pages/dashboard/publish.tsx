@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { UploadZone } from '@/features/publish/upload-zone'
 import {
@@ -9,6 +9,7 @@ import {
   isPrecheckFailureMessage,
   isVersionExistsMessage,
 } from '@/features/publish/publish-error-utils'
+import { normalizePublishPrefill } from '@/features/publish/publish-prefill'
 import { Button } from '@/shared/ui/button'
 import {
   Select,
@@ -32,9 +33,11 @@ const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
 export function PublishPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const search = useSearch({ from: '/dashboard/publish' })
+  const prefill = normalizePublishPrefill(search)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [namespaceSlug, setNamespaceSlug] = useState<string>('')
-  const [visibility, setVisibility] = useState<string>('PUBLIC')
+  const [namespaceSlug, setNamespaceSlug] = useState<string>(prefill.namespace)
+  const [visibility, setVisibility] = useState<string>(prefill.visibility)
   const [warningDialogOpen, setWarningDialogOpen] = useState(false)
   const [precheckWarnings, setPrecheckWarnings] = useState<string[]>([])
 
@@ -44,6 +47,11 @@ export function PublishPage() {
   const namespaceOnlyLabel = selectedNamespace?.type === 'GLOBAL'
     ? t('publish.visibilityOptions.loggedInUsersOnly')
     : t('publish.visibilityOptions.namespaceOnly')
+
+  useEffect(() => {
+    setNamespaceSlug(prefill.namespace)
+    setVisibility(prefill.visibility)
+  }, [prefill.namespace, prefill.visibility])
 
   const handleRemoveSelectedFile = () => {
     setSelectedFile(null)

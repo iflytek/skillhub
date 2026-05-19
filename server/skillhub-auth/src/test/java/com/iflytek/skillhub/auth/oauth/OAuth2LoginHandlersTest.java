@@ -61,7 +61,7 @@ class OAuth2LoginHandlersTest {
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
         assertThat(session.getAttribute("platformPrincipal")).isEqualTo(principal);
         assertThat(securityContext).isNotNull();
-        assertThat(securityContext.getAuthentication()).isSameAs(authentication);
+        assertThat(securityContext.getAuthentication().getPrincipal()).isEqualTo(principal);
     }
 
     @Test

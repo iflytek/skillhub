@@ -16,12 +16,15 @@ public interface SkillRepository {
     List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
     Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
     List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status);
+    boolean existsByNamespaceId(Long namespaceId);
     Skill save(Skill skill);
     void flush();
     void delete(Skill skill);
     List<Skill> findByOwnerId(String ownerId);
     Page<Skill> findByOwnerId(String ownerId, Pageable pageable);
     void incrementDownloadCount(Long skillId);
+    void incrementSubscriptionCount(Long skillId);
+    void decrementSubscriptionCount(Long skillId);
     List<Skill> findBySlug(String slug);
     List<Skill> findByNamespaceSlugAndSlug(String namespaceSlug, String slug);
 }

@@ -15,7 +15,7 @@ import java.util.Set;
  */
 public final class SkillPackagePolicy {
 
-    public static final int MAX_FILE_COUNT = 100;
+    public static final int MAX_FILE_COUNT = 500;
     public static final long MAX_SINGLE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     public static final long MAX_TOTAL_PACKAGE_SIZE = 100 * 1024 * 1024; // 100MB
     public static final String SKILL_MD_PATH = "SKILL.md";

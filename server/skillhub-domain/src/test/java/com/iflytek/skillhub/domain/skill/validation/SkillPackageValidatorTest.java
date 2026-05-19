@@ -101,14 +101,19 @@ class SkillPackageValidatorTest {
             Body
             """;
 
+        // Use a custom validator with a small file count limit to test the logic
+        SkillPackageValidator smallValidator = new SkillPackageValidator(
+                new SkillMetadataParser(), 10, SkillPackagePolicy.MAX_SINGLE_FILE_SIZE,
+                SkillPackagePolicy.MAX_TOTAL_PACKAGE_SIZE, SkillPackagePolicy.ALLOWED_EXTENSIONS);
+
         List<PackageEntry> entries = new ArrayList<>();
         entries.add(new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown"));
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 11; i++) {
             entries.add(new PackageEntry("file" + i + ".txt", "content".getBytes(), 7, "text/plain"));
         }
 
-        ValidationResult result = validator.validate(entries);
+        ValidationResult result = smallValidator.validate(entries);
 
         assertFalse(result.passed());
         assertTrue(result.errors().stream().anyMatch(e -> e.contains("Too many files")));

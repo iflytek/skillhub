@@ -19,6 +19,8 @@ interface ConfirmDialogProps {
   cancelText?: string
   variant?: 'default' | 'destructive'
   onConfirm: () => void | Promise<void>
+  contentTestId?: string
+  confirmButtonTestId?: string
 }
 
 export function ConfirmDialog({
@@ -30,6 +32,8 @@ export function ConfirmDialog({
   cancelText,
   variant = 'default',
   onConfirm,
+  contentTestId,
+  confirmButtonTestId,
 }: ConfirmDialogProps) {
   const { t } = useTranslation()
   const resolvedConfirmText = confirmText ?? t('dialog.confirm')
@@ -41,7 +45,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent data-testid={contentTestId}>
         <DialogHeader className="min-w-0 text-center sm:text-center">
           <DialogTitle className="text-center">{title}</DialogTitle>
           {description && <DialogDescription className="text-center break-all">{description}</DialogDescription>}
@@ -50,7 +54,7 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {resolvedCancelText}
           </Button>
-          <Button variant={variant} onClick={handleConfirm}>
+          <Button data-testid={confirmButtonTestId} variant={variant} onClick={handleConfirm}>
             {resolvedConfirmText}
           </Button>
         </DialogFooter>

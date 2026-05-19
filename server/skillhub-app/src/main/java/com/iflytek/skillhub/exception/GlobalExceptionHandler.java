@@ -95,6 +95,17 @@ public class GlobalExceptionHandler {
                 apiResponseFactory.error(403, "error.forbidden"));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSessionInvalidated(
+            IllegalStateException ex, HttpServletRequest request) {
+        if (ex.getMessage() != null && ex.getMessage().contains("Session was invalidated")) {
+            logHandledException(HttpStatus.UNAUTHORIZED, "error.session.expired", request);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(apiResponseFactory.error(401, "error.session.expired"));
+        }
+        throw ex;
+    }
+
     @ExceptionHandler(StorageAccessException.class)
     public ResponseEntity<ApiResponse<Void>> handleStorageAccess(StorageAccessException ex, HttpServletRequest request) {
         metrics.incrementStorageAccessFailure(ex.getOperation());

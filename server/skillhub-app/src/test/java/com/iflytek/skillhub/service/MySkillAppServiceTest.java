@@ -15,6 +15,7 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.social.SkillStar;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
+import com.iflytek.skillhub.domain.social.SkillSubscriptionRepository;
 import com.iflytek.skillhub.repository.JpaMySkillQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ class MySkillAppServiceTest {
     private SkillStarRepository skillStarRepository;
 
     @Mock
+    private SkillSubscriptionRepository skillSubscriptionRepository;
+
+    @Mock
     private PromotionRequestRepository promotionRequestRepository;
 
     private MySkillAppService service;
@@ -69,6 +73,7 @@ class MySkillAppServiceTest {
                 skillRepository,
                 skillVersionRepository,
                 skillStarRepository,
+                skillSubscriptionRepository,
                 mySkillQueryRepository,
                 skillLifecycleProjectionService
         );

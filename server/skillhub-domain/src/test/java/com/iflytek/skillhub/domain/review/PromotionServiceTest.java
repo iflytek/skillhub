@@ -19,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -90,6 +91,8 @@ class PromotionServiceTest {
         sv.setManifestJson("{\"version\":\"1.0.0\"}");
         sv.setFileCount(3);
         sv.setTotalSize(1024L);
+        sv.setBundleReady(true);
+        sv.setDownloadReady(true);
         return sv;
     }
 
@@ -117,6 +120,16 @@ class PromotionServiceTest {
         PromotionRequest pr = new PromotionRequest(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID);
         setField(pr, "id", PROMOTION_ID);
         return pr;
+    }
+
+    private PromotionRequest approvedPromotion(PromotionRequest original, String comment) {
+        PromotionRequest approved = createPendingPromotion();
+        approved.setStatus(ReviewTaskStatus.APPROVED);
+        approved.setReviewedBy(REVIEWER_ID);
+        approved.setReviewComment(comment);
+        approved.setReviewedAt(Instant.now(CLOCK));
+        setField(approved, "version", original.getVersion() + 1);
+        return approved;
     }
 
     private List<SkillFile> createSourceFiles() {
@@ -347,6 +360,7 @@ class PromotionServiceTest {
         @Test
         void shouldNotifySubmitterWhenPromotionApproved() {
             PromotionRequest request = createPendingPromotion();
+            PromotionRequest approvedRequest = approvedPromotion(request, "ok");
             Skill sourceSkill = createSourceSkill();
             SkillVersion sourceVersion = createPublishedVersion();
             Skill newSkill = new Skill(TARGET_NAMESPACE_ID, "my-skill", REVIEWER_ID, SkillVisibility.PUBLIC);
@@ -354,7 +368,8 @@ class PromotionServiceTest {
             SkillVersion newVersion = new SkillVersion(NEW_SKILL_ID, sourceVersion.getVersion(), REVIEWER_ID);
             setField(newVersion, "id", NEW_VERSION_ID);
 
-            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(request));
+            when(promotionRequestRepository.findById(PROMOTION_ID))
+                    .thenReturn(Optional.of(request), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(request, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, request.getVersion()))
@@ -364,6 +379,7 @@ class PromotionServiceTest {
             when(skillRepository.save(any(Skill.class))).thenReturn(newSkill);
             when(skillVersionRepository.save(any(SkillVersion.class))).thenReturn(newVersion);
             when(skillFileRepository.findByVersionId(SOURCE_VERSION_ID)).thenReturn(List.of());
+            when(promotionRequestRepository.save(approvedRequest)).thenReturn(approvedRequest);
 
             promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "ok", Set.of("SKILL_ADMIN"));
 
@@ -393,11 +409,13 @@ class PromotionServiceTest {
         @Test
         void shouldApprovePromotionSuccessfully() {
             PromotionRequest pr = createPendingPromotion();
+            PromotionRequest approvedRequest = approvedPromotion(pr, "LGTM");
             Skill sourceSkill = createSourceSkill();
             SkillVersion sourceVersion = createPublishedVersion();
             List<SkillFile> sourceFiles = createSourceFiles();
 
-            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
+            when(promotionRequestRepository.findById(PROMOTION_ID))
+                    .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "LGTM", null, pr.getVersion()))
@@ -416,7 +434,7 @@ class PromotionServiceTest {
             });
             when(skillFileRepository.findByVersionId(SOURCE_VERSION_ID)).thenReturn(sourceFiles);
             when(skillFileRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
-            when(promotionRequestRepository.save(pr)).thenReturn(pr);
+            when(promotionRequestRepository.save(approvedRequest)).thenReturn(approvedRequest);
 
             PromotionRequest result = promotionService.approvePromotion(
                     PROMOTION_ID, REVIEWER_ID, "LGTM", Set.of("SKILL_ADMIN"));
@@ -450,6 +468,8 @@ class PromotionServiceTest {
             assertEquals(3, newVersion.getFileCount());
             assertEquals(1024L, newVersion.getTotalSize());
             assertEquals(Instant.now(CLOCK), newVersion.getPublishedAt());
+            assertTrue(newVersion.isBundleReady());
+            assertTrue(newVersion.isDownloadReady());
 
             // Verify files copied
             @SuppressWarnings("unchecked")
@@ -467,8 +487,8 @@ class PromotionServiceTest {
             assertEquals(REVIEWER_ID, event.publisherId());
 
             // Verify targetSkillId updated on promotion request
-            verify(promotionRequestRepository).save(pr);
-            assertEquals(NEW_SKILL_ID, pr.getTargetSkillId());
+            verify(promotionRequestRepository).save(approvedRequest);
+            assertEquals(NEW_SKILL_ID, approvedRequest.getTargetSkillId());
         }
 
         @Test
@@ -512,12 +532,38 @@ class PromotionServiceTest {
         }
 
         @Test
-        void shouldCopyDisplayNameAndSummaryToNewSkill() {
+        void shouldTranslateDuplicateTargetSkillIntoBadRequest() {
             PromotionRequest pr = createPendingPromotion();
+            PromotionRequest approvedRequest = approvedPromotion(pr, "ok");
             Skill sourceSkill = createSourceSkill();
             SkillVersion sourceVersion = createPublishedVersion();
 
-            when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
+            when(promotionRequestRepository.findById(PROMOTION_ID))
+                    .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
+            when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
+            when(promotionRequestRepository.updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "ok", null, pr.getVersion()))
+                    .thenReturn(1);
+            when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
+            when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(skillRepository.save(any(Skill.class)))
+                    .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+
+            DomainBadRequestException ex = assertThrows(DomainBadRequestException.class,
+                    () -> promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "ok", Set.of("SKILL_ADMIN")));
+
+            assertEquals("promotion.target_skill_conflict", ex.messageCode());
+        }
+
+        @Test
+        void shouldCopyDisplayNameAndSummaryToNewSkill() {
+            PromotionRequest pr = createPendingPromotion();
+            PromotionRequest approvedRequest = approvedPromotion(pr, "ok");
+            Skill sourceSkill = createSourceSkill();
+            SkillVersion sourceVersion = createPublishedVersion();
+
+            when(promotionRequestRepository.findById(PROMOTION_ID))
+                    .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(any(), any(), any(), any(), any(), any())).thenReturn(1);
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
@@ -543,6 +589,7 @@ class PromotionServiceTest {
             assertEquals("My Skill", newSkill.getDisplayName());
             assertEquals("A test skill", newSkill.getSummary());
         }
+
     }
 
     @Nested

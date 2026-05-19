@@ -4,6 +4,7 @@
  * Deployments inject `/runtime-config.js` at startup, and this file guarantees the app sees either
  * that config or a safe fallback object before importing the main entry.
  */
+import './legacy-polyfills'
 async function loadRuntimeConfig() {
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
@@ -16,14 +17,16 @@ async function loadRuntimeConfig() {
 }
 
 function ensureRuntimeConfigFallback() {
-  window.__SKILLHUB_RUNTIME_CONFIG__ ??= {
-    apiBaseUrl: '',
-    appBaseUrl: '',
-    authDirectEnabled: 'false',
-    authDirectProvider: '',
-    authSessionBootstrapEnabled: 'false',
-    authSessionBootstrapProvider: '',
-    authSessionBootstrapAuto: 'false',
+  if (!window.__SKILLHUB_RUNTIME_CONFIG__) {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = {
+      apiBaseUrl: '',
+      appBaseUrl: '',
+      authDirectEnabled: 'false',
+      authDirectProvider: '',
+      authSessionBootstrapEnabled: 'false',
+      authSessionBootstrapProvider: '',
+      authSessionBootstrapAuto: 'false',
+    }
   }
 }
 

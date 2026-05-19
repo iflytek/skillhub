@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const originalWindow = globalThis.window
+const originalDocument = globalThis.document
 
 function setMockWindow(runtimeConfig?: Window['__SKILLHUB_RUNTIME_CONFIG__']) {
   Object.defineProperty(globalThis, 'window', {
@@ -39,6 +40,7 @@ import {
   fetchText,
   getDirectAuthRuntimeConfig,
   getSessionBootstrapRuntimeConfig,
+  namespaceApi,
 } from './client'
 
 beforeEach(() => {
@@ -47,6 +49,16 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+
+  if (originalDocument) {
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: originalDocument,
+    })
+  } else {
+    Reflect.deleteProperty(globalThis, 'document')
+  }
 
   if (originalWindow) {
     Object.defineProperty(globalThis, 'window', {
@@ -110,6 +122,41 @@ describe('fetchText', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.example.com/skill_hub/api/v1/auth/me',
       expect.objectContaining({
+        headers: expect.any(Headers),
+      }),
+    )
+  })
+})
+
+describe('namespaceApi.delete', () => {
+  it('sends a DELETE request to the normalized namespace endpoint', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: {
+        cookie: 'XSRF-TOKEN=test-token',
+      },
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: null,
+        timestamp: '2026-05-07T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await namespaceApi.delete('@team-delete')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/web/namespaces/team-delete',
+      expect.objectContaining({
+        method: 'DELETE',
         headers: expect.any(Headers),
       }),
     )

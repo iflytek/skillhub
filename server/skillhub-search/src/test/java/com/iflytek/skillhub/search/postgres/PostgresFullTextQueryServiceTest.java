@@ -393,7 +393,35 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
-    void platformWideAccessShouldBypassNamespaceVisibilityRestrictions() {
+    void authenticatedQueriesShouldNotBindUnusedAdminNamespaceIdsParameter() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "issue331",
+                null,
+                new SearchVisibilityScope("user-1", Set.of(7L), Set.of(9L)),
+                "relevance",
+                0,
+                20
+        ));
+
+        verify(nativeQuery, never()).setParameter("adminNamespaceIds", Set.of(9L));
+        verify(countQuery, never()).setParameter("adminNamespaceIds", Set.of(9L));
+    }
+
+    @Test
+    void platformWideAccessShouldNotBypassVisibilityInPortalSearch() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);
         Query countQuery = mock(Query.class);
@@ -418,12 +446,12 @@ class PostgresFullTextQueryServiceTest {
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        // Portal search should not include platformWideAccess bypass logic
         assertThat(sqlCaptor.getAllValues().getFirst())
-                .contains("OR (d.visibility = 'NAMESPACE_ONLY' AND :platformWideAccess = TRUE)")
-                .contains("OR (d.visibility = 'PRIVATE' AND :platformWideAccess = TRUE)")
-                .contains("OR :platformWideAccess = TRUE");
-        verify(nativeQuery).setParameter("platformWideAccess", true);
-        verify(countQuery).setParameter("platformWideAccess", true);
+                .doesNotContain("platformWideAccess")
+                .doesNotContain("PRIVATE");
+        verify(nativeQuery, never()).setParameter("platformWideAccess", true);
+        verify(countQuery, never()).setParameter("platformWideAccess", true);
     }
 
     @Test

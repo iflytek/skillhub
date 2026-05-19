@@ -168,6 +168,63 @@ set_env_value() {
   mv "$tmp" "$ENV_FILE"
 }
 
+get_env_value() {
+  key="$1"
+  default_value="${2:-}"
+  value="$(grep "^$key=" "$ENV_FILE" | tail -n 1 | cut -d= -f2- || true)"
+
+  if [ -n "$value" ]; then
+    printf '%s' "$value"
+  else
+    printf '%s' "$default_value"
+  fi
+}
+
+wait_for_postgres_ready() {
+  postgres_user="$1"
+  postgres_db="$2"
+  attempt=1
+
+  while [ "$attempt" -le 60 ]; do
+    if run_compose exec -T postgres pg_isready -U "$postgres_user" -d "$postgres_db" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    attempt=$((attempt + 1))
+    sleep 2
+  done
+
+  echo "PostgreSQL did not become ready in time." >&2
+  run_compose logs postgres >&2 || true
+  exit 1
+}
+
+ensure_postgres_password_matches_env() {
+  postgres_user="$(get_env_value "POSTGRES_USER" "skillhub")"
+  postgres_db="$(get_env_value "POSTGRES_DB" "skillhub")"
+  postgres_password="$(get_env_value "POSTGRES_PASSWORD" "skillhub_demo")"
+
+  if [ -z "$postgres_password" ]; then
+    echo "POSTGRES_PASSWORD must not be empty." >&2
+    exit 1
+  fi
+
+  wait_for_postgres_ready "$postgres_user" "$postgres_db"
+
+  run_compose exec -T postgres \
+    psql -U "$postgres_user" -d "$postgres_db" \
+    -v ON_ERROR_STOP=1 \
+    -v password="$postgres_password" <<'SQL' >/dev/null
+SELECT format('ALTER ROLE %I WITH PASSWORD %L', current_user, :'password');
+\gexec
+SQL
+
+  run_compose exec -T -e "PGPASSWORD=$postgres_password" postgres \
+    psql -h 127.0.0.1 -U "$postgres_user" -d "$postgres_db" \
+    -v ON_ERROR_STOP=1 \
+    -c 'select current_user;' >/dev/null
+}
+
 prepare_runtime_files() {
   mkdir -p "$SKILLHUB_HOME"
   download_file "$SKILLHUB_RAW_BASE/compose.release.yml" "$COMPOSE_FILE"
@@ -235,6 +292,8 @@ prepare_runtime_files
 
 case "$COMMAND" in
   up)
+    run_compose up -d postgres
+    ensure_postgres_password_matches_env
     if [ "$DISABLE_SCANNER" = "true" ]; then
       SKILLHUB_SECURITY_SCANNER_ENABLED=false run_compose up -d --scale skill-scanner=0
     else

@@ -11,7 +11,7 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "skillhub.publish")
 public class SkillPublishProperties {
 
-    private int maxFileCount = 100;
+    private int maxFileCount = 500;
     private long maxSingleFileSize = 10 * 1024 * 1024;  // 10MB
     private long maxPackageSize = 100 * 1024 * 1024;
     private Set<String> allowedFileExtensions = new LinkedHashSet<>(SkillPackagePolicy.ALLOWED_EXTENSIONS);

@@ -14,6 +14,10 @@ import com.iflytek.skillhub.dto.ResolveVersionResponse;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
+import com.iflytek.skillhub.dto.SkillVersionCompareFileResponse;
+import com.iflytek.skillhub.dto.SkillVersionCompareHunkResponse;
+import com.iflytek.skillhub.dto.SkillVersionCompareLineResponse;
+import com.iflytek.skillhub.dto.SkillVersionCompareResponse;
 import com.iflytek.skillhub.dto.SkillVersionDetailResponse;
 import com.iflytek.skillhub.dto.SkillVersionResponse;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
@@ -86,6 +90,7 @@ public class SkillController extends BaseApiController {
                 detail.status(),
                 detail.downloadCount(),
                 detail.starCount(),
+                detail.subscriptionCount(),
                 detail.ratingAvg(),
                 detail.ratingCount(),
                 detail.hidden(),
@@ -171,6 +176,27 @@ public class SkillController extends BaseApiController {
                 detail.manifestJson()
         );
         return ok("response.success.read", response);
+    }
+
+    @GetMapping("/{namespace}/{slug}/versions/compare")
+    public ApiResponse<SkillVersionCompareResponse> compareVersions(
+            @PathVariable String namespace,
+            @PathVariable String slug,
+            @RequestParam("from") String from,
+            @RequestParam("to") String to,
+            @RequestAttribute(value = "userId", required = false) String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+
+        SkillQueryService.SkillVersionCompareDTO compare = skillQueryService.compareVersions(
+                namespace,
+                slug,
+                from,
+                to,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of()
+        );
+
+        return ok("response.success.read", toCompareResponse(compare));
     }
 
     /**
@@ -419,5 +445,52 @@ public class SkillController extends BaseApiController {
             return null;
         }
         return new SkillLifecycleVersionResponse(projection.id(), projection.version(), projection.status());
+    }
+
+    private SkillVersionCompareResponse toCompareResponse(SkillQueryService.SkillVersionCompareDTO compare) {
+        return new SkillVersionCompareResponse(
+                compare.from(),
+                compare.to(),
+                new SkillVersionCompareResponse.SkillVersionCompareSummaryResponse(
+                        compare.summary().totalFiles(),
+                        compare.summary().addedFiles(),
+                        compare.summary().modifiedFiles(),
+                        compare.summary().removedFiles(),
+                        compare.summary().addedLines(),
+                        compare.summary().removedLines()
+                ),
+                compare.files().stream().map(this::toCompareFileResponse).toList()
+        );
+    }
+
+    private SkillVersionCompareFileResponse toCompareFileResponse(SkillQueryService.SkillVersionCompareFileDTO file) {
+        return new SkillVersionCompareFileResponse(
+                file.path(),
+                file.changeType(),
+                file.oldSize(),
+                file.newSize(),
+                file.binary(),
+                file.truncated(),
+                file.hunks().stream().map(this::toCompareHunkResponse).toList()
+        );
+    }
+
+    private SkillVersionCompareHunkResponse toCompareHunkResponse(SkillQueryService.SkillVersionCompareHunkDTO hunk) {
+        return new SkillVersionCompareHunkResponse(
+                hunk.oldStart(),
+                hunk.oldLines(),
+                hunk.newStart(),
+                hunk.newLines(),
+                hunk.lines().stream().map(this::toCompareLineResponse).toList()
+        );
+    }
+
+    private SkillVersionCompareLineResponse toCompareLineResponse(SkillQueryService.SkillVersionCompareLineDTO line) {
+        return new SkillVersionCompareLineResponse(
+                line.type(),
+                line.content(),
+                line.oldLineNumber(),
+                line.newLineNumber()
+        );
     }
 }

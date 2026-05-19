@@ -28,6 +28,8 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
 
     Page<ReviewTask> findBySubmittedByAndStatus(String submittedBy, ReviewTaskStatus status, Pageable pageable);
 
+    boolean existsByNamespaceId(Long namespaceId);
+
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
 
     @Modifying

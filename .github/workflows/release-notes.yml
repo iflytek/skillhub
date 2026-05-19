@@ -1,0 +1,46 @@
+name: AI Release Notes
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to generate release notes for (e.g. v0.3.0)"
+        required: true
+      prev_tag:
+        description: "Previous tag (auto-detect if empty)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+        with:
+          deno-version: v2.x
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES_LLM_BASE_URL: ${{ vars.RELEASE_NOTES_LLM_BASE_URL || 'https://models.inference.ai.azure.com' }}
+          RELEASE_NOTES_LLM_API_KEY: ${{ secrets.RELEASE_NOTES_LLM_API_KEY || github.token }}
+          RELEASE_NOTES_LLM_MODEL: ${{ vars.RELEASE_NOTES_LLM_MODEL || 'gpt-4o-mini' }}
+          ISSUE_TRIAGE_LLM_BASE_URL: ${{ vars.ISSUE_TRIAGE_LLM_BASE_URL }}
+          ISSUE_TRIAGE_LLM_API_KEY: ${{ secrets.ISSUE_TRIAGE_LLM_API_KEY }}
+          ISSUE_TRIAGE_LLM_MODEL: ${{ vars.ISSUE_TRIAGE_LLM_MODEL }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          PREV="${{ github.event.inputs.prev_tag }}"
+          ARGS="--owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }} --tag $TAG"
+          [ -n "$PREV" ] && ARGS="$ARGS --prev-tag $PREV"
+
+          deno run --allow-env --allow-net --allow-run --allow-read \
+            .github/scripts/release-notes.ts $ARGS

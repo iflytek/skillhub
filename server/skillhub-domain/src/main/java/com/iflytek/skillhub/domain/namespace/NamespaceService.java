@@ -1,7 +1,10 @@
 package com.iflytek.skillhub.domain.namespace;
 
+import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +19,22 @@ public class NamespaceService {
     private final NamespaceRepository namespaceRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final NamespaceAccessPolicy namespaceAccessPolicy;
+    private final SkillRepository skillRepository;
+    private final ReviewTaskRepository reviewTaskRepository;
+    private final PromotionRequestRepository promotionRequestRepository;
 
     public NamespaceService(NamespaceRepository namespaceRepository,
                            NamespaceMemberRepository namespaceMemberRepository,
-                           NamespaceAccessPolicy namespaceAccessPolicy) {
+                           NamespaceAccessPolicy namespaceAccessPolicy,
+                           SkillRepository skillRepository,
+                           ReviewTaskRepository reviewTaskRepository,
+                           PromotionRequestRepository promotionRequestRepository) {
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.namespaceAccessPolicy = namespaceAccessPolicy;
+        this.skillRepository = skillRepository;
+        this.reviewTaskRepository = reviewTaskRepository;
+        this.promotionRequestRepository = promotionRequestRepository;
     }
 
     /**
@@ -103,12 +115,33 @@ public class NamespaceService {
     }
 
     /**
+     * Permanently deletes an empty team namespace after ownership checks.
+     */
+    @Transactional
+    public void deleteNamespace(Long namespaceId, String operatorUserId) {
+        Namespace namespace = getNamespace(namespaceId);
+        assertNotImmutable(namespace);
+
+        NamespaceRole role = requireRole(namespaceId, operatorUserId);
+        if (!namespaceAccessPolicy.canDelete(namespace, role)) {
+            throw new DomainForbiddenException("error.namespace.owner.required");
+        }
+        assertNoDependentData(namespaceId);
+
+        namespaceMemberRepository.deleteByNamespaceId(namespaceId);
+        namespaceRepository.delete(namespace);
+    }
+
+    public boolean canDelete(Namespace namespace, NamespaceRole role) {
+        return namespaceAccessPolicy.canDelete(namespace, role)
+                && !hasDependentData(namespace.getId());
+    }
+
+    /**
      * Ensures the caller holds an owner or admin membership in the namespace.
      */
     public void assertAdminOrOwner(Long namespaceId, String userId) {
-        NamespaceRole role = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
-                .map(NamespaceMember::getRole)
-                .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
+        NamespaceRole role = requireRole(namespaceId, userId);
         if (role != NamespaceRole.OWNER && role != NamespaceRole.ADMIN) {
             throw new DomainForbiddenException("error.namespace.admin.required");
         }
@@ -131,6 +164,24 @@ public class NamespaceService {
         if (namespaceAccessPolicy.isImmutable(namespace)) {
             throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
         }
+    }
+
+    private NamespaceRole requireRole(Long namespaceId, String userId) {
+        return namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
+                .map(NamespaceMember::getRole)
+                .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
+    }
+
+    private void assertNoDependentData(Long namespaceId) {
+        if (hasDependentData(namespaceId)) {
+            throw new DomainBadRequestException("error.namespace.delete.hasDependencies");
+        }
+    }
+
+    private boolean hasDependentData(Long namespaceId) {
+        return skillRepository.existsByNamespaceId(namespaceId)
+                || reviewTaskRepository.existsByNamespaceId(namespaceId)
+                || promotionRequestRepository.existsByTargetNamespaceId(namespaceId);
     }
 
     private void assertWritable(Namespace namespace) {
