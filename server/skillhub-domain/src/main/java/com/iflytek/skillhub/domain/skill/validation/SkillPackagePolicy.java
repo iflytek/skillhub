@@ -68,9 +68,7 @@ public final class SkillPackagePolicy {
         int lastSlash = canonical.lastIndexOf('/');
         String fileName = lastSlash >= 0 ? canonical.substring(lastSlash + 1) : canonical;
         if (fileName.equalsIgnoreCase(SKILL_MD_PATH)) {
-            canonical = lastSlash >= 0
-                    ? canonical.substring(0, lastSlash + 1) + SKILL_MD_PATH
-                    : SKILL_MD_PATH;
+            canonical = canonical.substring(0, lastSlash + 1) + SKILL_MD_PATH;
         }
 
         return canonical;
