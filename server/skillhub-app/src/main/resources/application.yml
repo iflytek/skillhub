@@ -69,6 +69,14 @@ spring:
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET:placeholder}
+            scope:
+              - dingtalk
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: ${OAUTH2_DINGTALK_DISPLAY_NAME:钉钉}
         provider:
           github:
             user-info-uri: https://api.github.com/user
@@ -77,6 +85,11 @@ spring:
             token-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/token
             user-info-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/api/v4/user
             user-name-attribute: username
+          dingtalk:
+            authorization-uri: https://login.dingtalk.com/oauth2/auth
+            token-uri: https://api.dingtalk.com/v1.0/oauth2/userAccessToken
+            user-info-uri: https://api.dingtalk.com/v1.0/contact/users/me
+            user-name-attribute: openId
   servlet:
     multipart:
       max-file-size: 100MB
