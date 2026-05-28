@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.oauth;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -9,6 +10,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
@@ -16,14 +19,16 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import com.iflytek.skillhub.auth.identity.IdentityBindingService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
-import com.iflytek.skillhub.domain.user.UserStatus;
 
 /**
  * OAuth2UserService for DingTalk — handles DingTalk's non-standard user info
  * endpoint which uses a custom header {@code x-acs-dingtalk-access-token}
  * instead of the standard {@code Authorization: Bearer} header.
+ *
+ * <p>After fetching user info, this service delegates to
+ * {@link OAuthLoginFlowService#authenticate(OAuthClaims)} for access policy
+ * evaluation and identity binding, consistent with the standard OAuth2 flow.
  */
 @Component
 public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
@@ -31,14 +36,14 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
     private static final Logger log = LoggerFactory.getLogger(DingTalkOAuth2UserService.class);
 
     private final RestTemplate restTemplate;
-    private final IdentityBindingService identityBindingService;
     private final DingTalkClaimsExtractor claimsExtractor;
+    private final OAuthLoginFlowService oauthLoginFlowService;
 
-    public DingTalkOAuth2UserService(IdentityBindingService identityBindingService,
-                                      DingTalkClaimsExtractor claimsExtractor) {
+    public DingTalkOAuth2UserService(DingTalkClaimsExtractor claimsExtractor,
+                                      OAuthLoginFlowService oauthLoginFlowService) {
         this.restTemplate = new RestTemplate();
-        this.identityBindingService = identityBindingService;
         this.claimsExtractor = claimsExtractor;
+        this.oauthLoginFlowService = oauthLoginFlowService;
     }
 
     @Override
@@ -65,22 +70,28 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
         userAttributes.putIfAbsent("nickName", attributes.get("nick"));
         userAttributes.putIfAbsent("avatarUrl", attributes.get("avatarUrl"));
 
-        // Extract claims and create PlatformPrincipal
+        // Extract claims
         OAuthClaims claims = claimsExtractor.extract(userRequest, new DefaultOAuth2User(
                 java.util.Collections.emptyList(), userAttributes, "openId"));
 
         log.info("DingTalk OAuth2 login: subject={}, providerLogin={}", claims.subject(), claims.providerLogin());
 
-        // Bind or create user account
-        PlatformPrincipal principal = identityBindingService.bindOrCreate(claims, UserStatus.ACTIVE);
+        // Delegate to OAuthLoginFlowService for access policy evaluation and identity binding
+        PlatformPrincipal principal = oauthLoginFlowService.authenticate(claims);
 
-        // Put platformPrincipal in attributes for OAuth2LoginSuccessHandler
+        // Build OAuth2User with principal and authorities, consistent with CustomOAuth2UserService
         userAttributes.put("platformPrincipal", principal);
+        userAttributes.put("providerLogin", principal.userId());
+
+        var authorities = new LinkedHashSet<GrantedAuthority>();
+        principal.platformRoles().stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .forEach(authorities::add);
 
         return new DefaultOAuth2User(
-                java.util.Collections.emptyList(),
+                authorities,
                 userAttributes,
-                "openId"
+                "providerLogin"
         );
     }
 }
