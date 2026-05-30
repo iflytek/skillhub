@@ -74,8 +74,8 @@ public class LdapAuthService {
             throw new AuthFlowException(HttpStatus.SERVICE_UNAVAILABLE, "error.auth.ldap.disabled");
         }
 
-        log.debug("LDAP URL: {}, Base: {}, SearchBase: {}, SearchAttr: {}", 
-            ldapProperties.getUrl(), 
+        log.debug("LDAP host: {}, base: {}, searchBase: {}, searchAttr: {}",
+            safeLogHost(ldapProperties.getUrl()),
             ldapProperties.getBase(),
             ldapProperties.getUserSearchBase(),
             ldapProperties.getUserSearchAttribute());
@@ -138,6 +138,12 @@ public class LdapAuthService {
      * Finds the DN (Distinguished Name) of a user in LDAP.
      */
     private String findUserDn(String username) {
+        // LDAP injection prevention: validate username before search
+        if (!isValidUsername(username)) {
+            log.warn("Invalid username format for LDAP search: {}", username);
+            return null;
+        }
+
         DirContext ctx = null;
         javax.naming.NamingEnumeration<SearchResult> results = null;
         try {
@@ -181,12 +187,16 @@ public class LdapAuthService {
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, ldapProperties.getUrl());
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
-        
+
+        // Connection timeout: 5 seconds for connect, 10 seconds for read
+        env.put("com.sun.jndi.ldap.connect.timeout", "5000");
+        env.put("com.sun.jndi.ldap.read.timeout", "10000");
+
         if (ldapProperties.getUsername() != null && !ldapProperties.getUsername().isEmpty()) {
             env.put(Context.SECURITY_PRINCIPAL, ldapProperties.getUsername());
             env.put(Context.SECURITY_CREDENTIALS, ldapProperties.getPassword());
         }
-        
+
         return new InitialDirContext(env);
     }
 
@@ -204,9 +214,33 @@ public class LdapAuthService {
     }
 
     /**
+     * Safely extracts host from LDAP URL for logging, avoiding credential exposure.
+     * Handles formats like: ldap://host:389, ldap://user:pass@host:389, ldaps://host
+     */
+    private String safeLogHost(String url) {
+        if (url == null || url.isEmpty()) {
+            return "";
+        }
+        try {
+            // Remove protocol prefix
+            String withoutProtocol = url.replaceFirst("^ldaps?://", "");
+            // Extract host:port or just host
+            int atIndex = withoutProtocol.indexOf('@');
+            if (atIndex > 0) {
+                withoutProtocol = withoutProtocol.substring(atIndex + 1);
+            }
+            int colonIndex = withoutProtocol.indexOf(':');
+            return colonIndex > 0 ? withoutProtocol.substring(0, colonIndex) : withoutProtocol;
+        } catch (Exception e) {
+            return "[url-parse-error]";
+        }
+    }
+
+    /**
      * Authenticates a user against the LDAP server using their DN and password.
      */
     private boolean authenticateLdap(String userDn, String password) {
+        DirContext ctx = null;
         try {
             Hashtable<String, String> env = new Hashtable<>();
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
@@ -214,12 +248,15 @@ public class LdapAuthService {
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
             env.put(Context.SECURITY_PRINCIPAL, userDn);
             env.put(Context.SECURITY_CREDENTIALS, password);
+            env.put("com.sun.jndi.ldap.connect.timeout", "5000");
+            env.put("com.sun.jndi.ldap.read.timeout", "10000");
 
-            DirContext ctx = new InitialDirContext(env);
-            ctx.close();
+            ctx = new InitialDirContext(env);
             return true;
         } catch (NamingException e) {
             return false;
+        } finally {
+            closeContext(ctx);
         }
     }
 
@@ -227,24 +264,28 @@ public class LdapAuthService {
      * Retrieves user attributes from LDAP.
      */
     private Attributes getUserAttributes(String userDn) {
+        DirContext ctx = null;
         try {
             Hashtable<String, String> env = new Hashtable<>();
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
             env.put(Context.PROVIDER_URL, ldapProperties.getUrl());
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
-            
+            env.put("com.sun.jndi.ldap.connect.timeout", "5000");
+            env.put("com.sun.jndi.ldap.read.timeout", "10000");
+
             // Use bind DN if configured, otherwise anonymous bind
             if (ldapProperties.getUsername() != null && !ldapProperties.getUsername().isEmpty()) {
                 env.put(Context.SECURITY_PRINCIPAL, ldapProperties.getUsername());
                 env.put(Context.SECURITY_CREDENTIALS, ldapProperties.getPassword());
             }
-            
-            DirContext ctx = new InitialDirContext(env);
+
+            ctx = new InitialDirContext(env);
             Attributes attrs = ctx.getAttributes(new LdapName(userDn));
-            ctx.close();
             return attrs;
         } catch (Exception e) {
             return null;
+        } finally {
+            closeContext(ctx);
         }
     }
 
@@ -272,8 +313,11 @@ public class LdapAuthService {
 
         // If not found, create a new user
         if (user == null) {
-            // Use a unique identifier based on username if email is missing
-            // This prevents creating duplicate accounts for users without email
+            // For LDAP users without email, use "ldap:{username}@internal" as a unique identifier.
+            // This format:
+            // 1. Prevents duplicate accounts when email attribute is missing
+            // 2. Clearly identifies the account origin (LDAP vs local)
+            // 3. Follows email format to satisfy the email NOT NULL constraint
             String normalizedEmail = email != null ? email.toLowerCase() : "ldap:" + username + "@internal";
 
             user = new UserAccount(
@@ -321,5 +365,17 @@ public class LdapAuthService {
             "ldap",
             roles
         );
+    }
+
+    /**
+     * Validates username to prevent LDAP injection attacks.
+     * Allows only alphanumeric characters and underscores, 3-64 characters.
+     */
+    private boolean isValidUsername(String username) {
+        if (username == null || username.isEmpty()) {
+            return false;
+        }
+        // Allow alphanumeric, underscore, hyphen, dot, and @ for UPN formats
+        return username.matches("^[A-Za-z0-9_@.\\-]{3,64}$");
     }
 }

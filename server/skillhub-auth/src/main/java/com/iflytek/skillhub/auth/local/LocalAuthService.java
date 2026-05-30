@@ -134,9 +134,9 @@ public class LocalAuthService {
             // Fallback to LDAP authentication if enabled
             if (ldapProperties.isEnabled()) {
                 log.info("Local user not found, attempting LDAP authentication for username: {}", username);
-                log.debug("LDAP enabled: {}, URL: {}, Base: {}", 
-                    ldapProperties.isEnabled(), 
-                    ldapProperties.getUrl(), 
+                log.debug("LDAP enabled: {}, host: {}, base: {}",
+                    ldapProperties.isEnabled(),
+                    safeLogHost(ldapProperties.getUrl()),
                     ldapProperties.getBase());
                 try {
                     PlatformPrincipal ldapPrincipal = ldapAuthService.login(username, password);
@@ -269,6 +269,26 @@ public class LocalAuthService {
         }
         if (!EMAIL_PATTERN.matcher(email).matches()) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.invalid");
+        }
+    }
+
+    /**
+     * Safely extracts host from LDAP URL for logging, avoiding credential exposure.
+     */
+    private static String safeLogHost(String url) {
+        if (url == null || url.isEmpty()) {
+            return "";
+        }
+        try {
+            String withoutProtocol = url.replaceFirst("^ldaps?://", "");
+            int atIndex = withoutProtocol.indexOf('@');
+            if (atIndex > 0) {
+                withoutProtocol = withoutProtocol.substring(atIndex + 1);
+            }
+            int colonIndex = withoutProtocol.indexOf(':');
+            return colonIndex > 0 ? withoutProtocol.substring(0, colonIndex) : withoutProtocol;
+        } catch (Exception e) {
+            return "[url-parse-error]";
         }
     }
 }

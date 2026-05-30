@@ -15,6 +15,10 @@ spring:
     basename: messages
   application:
     name: skillhub
+  ldap:
+    # Prevent spring-boot-starter-data-ldap AutoConfiguration from attempting
+    # to initialize LDAP connections when LDAP is not configured
+    urls: ""
   lifecycle:
     timeout-per-shutdown-phase: 30s
   jpa:
@@ -105,6 +109,8 @@ skillhub:
       email-from-address: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS:noreply@skillhub.local}
       email-from-name: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME:SkillHub}
   ldap:
+    # LDAP authentication configuration
+    # Set enabled to true and configure url/base/username/password to enable LDAP authentication
     enabled: ${SKILLHUB_LDAP_ENABLED:false}
     url: ${SKILLHUB_LDAP_URL:}
     base: ${SKILLHUB_LDAP_BASE:}
