@@ -287,6 +287,11 @@ export function SkillDetailPage() {
 
   // Download a single file from the skill version
   const handleDownloadFile = () => {
+    const isAnonymousAllowed = namespace === 'global' && skill?.visibility === 'PUBLIC'
+    if (!user && !isAnonymousAllowed) {
+      requireLogin()
+      return
+    }
     if (!previewNode || !selectedVersion) return
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
     const url = buildApiUrl(
@@ -302,7 +307,8 @@ export function SkillDetailPage() {
   }
 
   const handleDownload = async () => {
-    if (!user) {
+    const isAnonymousAllowed = namespace === 'global' && skill?.visibility === 'PUBLIC'
+    if (!user && !isAnonymousAllowed) {
       requireLogin()
       return
     }
