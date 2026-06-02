@@ -449,9 +449,9 @@ Status code mapping:
 
 | Status | Meaning |
 | --- | --- |
-| `400` | Malformed request, invalid resource ID grammar, unsupported action, or missing idempotency key. |
+| `400` | Malformed request, invalid resource ID grammar, missing/unsupported contract version, unsupported action, or missing idempotency key. |
 | `401` | Missing or invalid service authentication. |
-| `403` | Missing, invalid, mismatched, expired, replayed, `LIMIT`, or denied Control Tower decision context. |
+| `403` | Wrong service principal or scope; missing, invalid, mismatched, expired, replayed, `LIMIT`, or denied Control Tower decision context. |
 | `404` | Resource not found or not lifecycle-visible for the requested operation. |
 | `409` | Idempotency conflict, lifecycle conflict, duplicate version, or stale publish/review state. |
 | `422` | Package validation, scanner policy, or warning-confirmation failure. |

@@ -20,6 +20,22 @@
       "body": {
         "data": null,
         "error": {
+          "code": "CONTRACT_VERSION_UNSUPPORTED",
+          "message": "The integration contract version is not supported.",
+          "details": {
+            "header": "X-SkillHub-Integration-Contract",
+            "expected": "librechat-skillhub-hermes.v1",
+            "received": "librechat-skillhub-hermes.v0"
+          }
+        },
+        "requestId": "req_fixture"
+      }
+    },
+    {
+      "status": 400,
+      "body": {
+        "data": null,
+        "error": {
           "code": "IDEMPOTENCY_KEY_REQUIRED",
           "message": "This mutating operation requires an idempotency key.",
           "details": {}
@@ -63,6 +79,21 @@
           "code": "SERVICE_AUTH_REQUIRED",
           "message": "Trusted service authentication is required.",
           "details": {}
+        },
+        "requestId": "req_fixture"
+      }
+    },
+    {
+      "status": 403,
+      "body": {
+        "data": null,
+        "error": {
+          "code": "SERVICE_PRINCIPAL_FORBIDDEN",
+          "message": "The authenticated service principal is not allowed to call this endpoint.",
+          "details": {
+            "requiredScope": "control-tower:capability-read",
+            "principal": "librechat:registry-adapter"
+          }
         },
         "requestId": "req_fixture"
       }
@@ -319,6 +350,40 @@
       "expectedErrorCode": "SERVICE_AUTH_REQUIRED"
     },
     {
+      "name": "invalid_service_bearer_capabilities",
+      "method": "GET",
+      "path": "/internal/integrations/librechat/skillhub/capabilities",
+      "headers": {
+        "Authorization": "Bearer invalid-service-token",
+        "X-SkillHub-Integration-Contract": "librechat-skillhub-hermes.v1"
+      },
+      "expectedStatus": 401,
+      "expectedErrorCode": "SERVICE_AUTH_REQUIRED"
+    },
+    {
+      "name": "valid_decision_token_without_service_auth_download",
+      "method": "POST",
+      "path": "/internal/integrations/librechat/skillhub/skills/download",
+      "headers": {
+        "X-SkillHub-Integration-Contract": "librechat-skillhub-hermes.v1",
+        "X-Control-Tower-Decision-Token": "install_download.token"
+      },
+      "bodyUtf8": "{\"resourceId\":\"skillhub:@team/summarizer@1.2.3\",\"purpose\":\"install\"}",
+      "expectedStatus": 401,
+      "expectedErrorCode": "SERVICE_AUTH_REQUIRED"
+    },
+    {
+      "name": "wrong_service_principal_capabilities",
+      "method": "GET",
+      "path": "/internal/integrations/librechat/skillhub/capabilities",
+      "headers": {
+        "Authorization": "Bearer librechat-service-token",
+        "X-SkillHub-Integration-Contract": "librechat-skillhub-hermes.v1"
+      },
+      "expectedStatus": 403,
+      "expectedErrorCode": "SERVICE_PRINCIPAL_FORBIDDEN"
+    },
+    {
       "name": "missing_contract_header_download",
       "method": "POST",
       "path": "/internal/integrations/librechat/skillhub/skills/download",
@@ -329,6 +394,19 @@
       "bodyUtf8": "{\"resourceId\":\"skillhub:@team/summarizer@1.2.3\",\"purpose\":\"install\"}",
       "expectedStatus": 400,
       "expectedErrorCode": "CONTRACT_VERSION_REQUIRED"
+    },
+    {
+      "name": "wrong_contract_header_download",
+      "method": "POST",
+      "path": "/internal/integrations/librechat/skillhub/skills/download",
+      "headers": {
+        "Authorization": "Bearer librechat-service-token",
+        "X-SkillHub-Integration-Contract": "librechat-skillhub-hermes.v0",
+        "X-Control-Tower-Decision-Token": "install_download.token"
+      },
+      "bodyUtf8": "{\"resourceId\":\"skillhub:@team/summarizer@1.2.3\",\"purpose\":\"install\"}",
+      "expectedStatus": 400,
+      "expectedErrorCode": "CONTRACT_VERSION_UNSUPPORTED"
     },
     {
       "name": "missing_decision_token_download",

@@ -19,6 +19,8 @@ Fixture signing material is intentionally embedded for local contract tests only
 
 Token and body-hash fixtures use exact `bodyUtf8` strings. Consumers must hash those bytes directly and must not reserialize the parsed `body` object.
 
+`fixtureTokenRefs` keys are contract-test metadata only. They point to reusable token fixtures and must not appear in HTTP request bodies, response payloads, or runtime envelopes.
+
 Traceability:
 
 | Fixture | Primary Contract Coverage |

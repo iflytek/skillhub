@@ -9,7 +9,7 @@
       "path": "/internal/integrations/librechat/skillhub/capabilities",
       "query": "limit=2&updatedAfter=2026-05-29T10%3A00%3A00Z",
       "headers": {
-        "Authorization": "Bearer librechat-service-token",
+        "Authorization": "Bearer control-tower-service-token",
         "X-SkillHub-Integration-Contract": "librechat-skillhub-hermes.v1"
       },
       "response": {
@@ -44,11 +44,13 @@
         "Authorization": "Bearer librechat-service-token",
         "X-SkillHub-Integration-Contract": "librechat-skillhub-hermes.v1"
       },
+      "fixtureTokenRefs": {
+        "items[0].decisionToken": "decision-token.allow.json#tokens.hydrate_view.token"
+      },
       "body": {
         "items": [
           {
             "resourceId": "skillhub:@team/summarizer@1.2.3",
-            "decisionTokenRef": "hydrate_view.token",
             "decisionToken": "eyJhY3Rpb24iOiJza2lsbC52aWV3IiwiYXVkIjoic2tpbGxodWIiLCJkZWNpc2lvbiI6IkFMTE9XIiwiZXhwIjoxNzgwMDUwMDAwLCJleHRlcm5hbFVzZXJJZCI6ImxpYnJlY2hhdF91c2VyXzQ1NiIsImV4dGVybmFsV29ya3NwYWNlSWQiOiJ3b3Jrc3BhY2VfNzg5IiwiaWF0IjoxNzgwMDQ5NzAwLCJpc3MiOiJjb250cm9sLXRvd2VyIiwia2lkIjoiY3Qtc2tpbGxodWItZml4dHVyZS1lZDI1NTE5LTIwMjYtMDUiLCJtZXRob2QiOiJQT1NUIiwibm9uY2UiOiIwMUhaU0tJTExIVUJGSVhUVVJFMDAwMDAwMDAwMDAxIiwicGF0aCI6Ii9pbnRlcm5hbC9pbnRlZ3JhdGlvbnMvbGlicmVjaGF0L3NraWxsaHViL3NraWxscy9oeWRyYXRlIiwicG9saWN5VmVyc2lvbiI6IjIwMjYtMDUtMjlUMTA6MTU6MDBaIiwicmVzb3VyY2VJZCI6InNraWxsaHViOkB0ZWFtL3N1bW1hcml6ZXJAMS4yLjMiLCJyZXNvdXJjZVR5cGUiOiJTS0lMTF9WRVJTSU9OIiwic3ViIjoiY3Rfc3ViamVjdF8xMjMifQ.v1.ed25519=kSHjYhBdH5hGN81VfJ2PdWc-uywJ4-LJ1Ydh6vmu_0A1M_Jo7lR1fgdAnSdvVK_9hQuoM3tNarrk6yH-ZV1JAw"
           }
         ]
@@ -81,7 +83,7 @@
           "requestId": "req_fixture"
         }
       },
-      "bodyUtf8": "{\"items\":[{\"resourceId\":\"skillhub:@team/summarizer@1.2.3\",\"decisionTokenRef\":\"hydrate_view.token\",\"decisionToken\":\"eyJhY3Rpb24iOiJza2lsbC52aWV3IiwiYXVkIjoic2tpbGxodWIiLCJkZWNpc2lvbiI6IkFMTE9XIiwiZXhwIjoxNzgwMDUwMDAwLCJleHRlcm5hbFVzZXJJZCI6ImxpYnJlY2hhdF91c2VyXzQ1NiIsImV4dGVybmFsV29ya3NwYWNlSWQiOiJ3b3Jrc3BhY2VfNzg5IiwiaWF0IjoxNzgwMDQ5NzAwLCJpc3MiOiJjb250cm9sLXRvd2VyIiwia2lkIjoiY3Qtc2tpbGxodWItZml4dHVyZS1lZDI1NTE5LTIwMjYtMDUiLCJtZXRob2QiOiJQT1NUIiwibm9uY2UiOiIwMUhaU0tJTExIVUJGSVhUVVJFMDAwMDAwMDAwMDAxIiwicGF0aCI6Ii9pbnRlcm5hbC9pbnRlZ3JhdGlvbnMvbGlicmVjaGF0L3NraWxsaHViL3NraWxscy9oeWRyYXRlIiwicG9saWN5VmVyc2lvbiI6IjIwMjYtMDUtMjlUMTA6MTU6MDBaIiwicmVzb3VyY2VJZCI6InNraWxsaHViOkB0ZWFtL3N1bW1hcml6ZXJAMS4yLjMiLCJyZXNvdXJjZVR5cGUiOiJTS0lMTF9WRVJTSU9OIiwic3ViIjoiY3Rfc3ViamVjdF8xMjMifQ.v1.ed25519=kSHjYhBdH5hGN81VfJ2PdWc-uywJ4-LJ1Ydh6vmu_0A1M_Jo7lR1fgdAnSdvVK_9hQuoM3tNarrk6yH-ZV1JAw\"}]}",
+      "bodyUtf8": "{\"items\":[{\"resourceId\":\"skillhub:@team/summarizer@1.2.3\",\"decisionToken\":\"eyJhY3Rpb24iOiJza2lsbC52aWV3IiwiYXVkIjoic2tpbGxodWIiLCJkZWNpc2lvbiI6IkFMTE9XIiwiZXhwIjoxNzgwMDUwMDAwLCJleHRlcm5hbFVzZXJJZCI6ImxpYnJlY2hhdF91c2VyXzQ1NiIsImV4dGVybmFsV29ya3NwYWNlSWQiOiJ3b3Jrc3BhY2VfNzg5IiwiaWF0IjoxNzgwMDQ5NzAwLCJpc3MiOiJjb250cm9sLXRvd2VyIiwia2lkIjoiY3Qtc2tpbGxodWItZml4dHVyZS1lZDI1NTE5LTIwMjYtMDUiLCJtZXRob2QiOiJQT1NUIiwibm9uY2UiOiIwMUhaU0tJTExIVUJGSVhUVVJFMDAwMDAwMDAwMDAxIiwicGF0aCI6Ii9pbnRlcm5hbC9pbnRlZ3JhdGlvbnMvbGlicmVjaGF0L3NraWxsaHViL3NraWxscy9oeWRyYXRlIiwicG9saWN5VmVyc2lvbiI6IjIwMjYtMDUtMjlUMTA6MTU6MDBaIiwicmVzb3VyY2VJZCI6InNraWxsaHViOkB0ZWFtL3N1bW1hcml6ZXJAMS4yLjMiLCJyZXNvdXJjZVR5cGUiOiJTS0lMTF9WRVJTSU9OIiwic3ViIjoiY3Rfc3ViamVjdF8xMjMifQ.v1.ed25519=kSHjYhBdH5hGN81VfJ2PdWc-uywJ4-LJ1Ydh6vmu_0A1M_Jo7lR1fgdAnSdvVK_9hQuoM3tNarrk6yH-ZV1JAw\"}]}",
       "authNotes": [
         "Hydrate is the only V1 per-item token exception and must not send X-Control-Tower-Decision-Token.",
         "If any item token is missing, invalid, expired, replayed, or mismatched, the whole response is 403 with no registry data."
