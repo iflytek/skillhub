@@ -2,12 +2,23 @@
 
 ## Status
 
-Draft for review.
+Retired historical draft. Do not follow this plan for new Glaux implementation work.
+
+Glaux has pivoted away from LibreChat in favor of Control Tower-governed Hermes Desktop/Web. The
+active roadmap is in the parent Glaux workspace:
+
+- `../docs/phase-1-implementation-plan.md`
+- `../docs/hermes-desktop-transition-plan.md`
+- `../docs/decisions/ADR-002-hermes-desktop-frontend-pivot.md`
+
+This plan remains only as historical SkillHub integration evidence. New implementation should mine
+frontend-agnostic SkillHub lessons from it when useful, but must not build LibreChat-specific
+routes, service credentials, profile-pin storage, or runtime sync contracts from this document.
 
 ## Principles
 
 - Land the feature in small, independently testable slices.
-- Keep SkillHub, Control Tower, LibreChat, and Hermes changes behind feature flags until the full flow is ready.
+- Keep SkillHub, Control Tower, Hermes Desktop/Web, and Hermes Agent changes behind feature flags until the full flow is ready.
 - Prefer additive contracts and adapters over replacing existing systems in one step.
 - Do not trust browser-supplied authorization state.
 - Treat Control Tower permission as necessary and SkillHub lifecycle enforcement as still mandatory.

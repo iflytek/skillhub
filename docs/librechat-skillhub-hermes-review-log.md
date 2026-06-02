@@ -2,7 +2,15 @@
 
 ## Status
 
-Patched after fifth review. Review dispositions are recorded in-repo, the PRD is explicitly unignored for normal git review, and the Phase 0 fixture pack exists under `docs/contracts/librechat-skillhub-hermes/v1/`. The fixture pack is a seed contract, but Phase 0 is not complete until each participating repo has a real fixture validation command. SkillHub lifecycle code alignment for pending-review withdrawal and direct-publish scanner distribution gating also remain unresolved until the implementation changes land.
+Retired historical review log. The reviewed LibreChat SkillHub Hermes documentation set has been
+superseded by the Glaux Hermes Desktop/Web pivot. Current planning lives in the parent Glaux
+workspace at `../docs/phase-1-implementation-plan.md`,
+`../docs/hermes-desktop-transition-plan.md`, and
+`../docs/decisions/ADR-002-hermes-desktop-frontend-pivot.md`.
+
+This log is kept only for historical traceability of the retired LibreChat-centered design. Its
+open blockers must not be used as the active implementation queue unless a current Glaux plan
+explicitly reintroduces the same requirement.
 
 ## Review Scope
 

@@ -2,17 +2,29 @@
 
 ## Status
 
-Draft for review.
+Retired historical draft. Do not use this document as the active Glaux implementation design.
+
+Glaux has pivoted away from LibreChat as the governed frontend. The current design direction is
+Control Tower-governed Hermes Desktop/Web, documented in the parent Glaux workspace:
+
+- `../docs/phase-1-implementation-plan.md`
+- `../docs/hermes-desktop-transition-plan.md`
+- `../docs/decisions/ADR-002-hermes-desktop-frontend-pivot.md`
+
+This document remains as historical SkillHub integration evidence. New work should preserve
+frontend-agnostic SkillHub registry, lifecycle, scanner, artifact, and audit lessons where useful,
+but must not implement LibreChat-specific adapters, profile-pin flows, or runtime sync routes from
+this draft as current product requirements.
 
 ## Decision Summary
 
-- SkillHub is the source of truth for shared and published skills.
-- LibreChat is the user-facing surface and keeps local skills as private drafts.
+- Historical direction: SkillHub is the source of truth for shared and published skills.
+- Retired direction: LibreChat is the user-facing surface and keeps local skills as private drafts.
 - Control Tower is the policy authority for skill access and runtime governance.
-- Hermes consumes pinned SkillHub skill versions from LibreChat user profiles.
-- SkillHub is internal behind LibreChat in the integrated deployment.
+- Retired direction: Hermes consumes pinned SkillHub skill versions from LibreChat user profiles.
+- Retired direction: SkillHub is internal behind LibreChat in the integrated deployment.
 - Runtime action naming uses `skill.invoke`.
-- Runtime bundle sync goes through LibreChat; Hermes does not call SkillHub directly in V1.
+- Retired direction: runtime bundle sync goes through LibreChat; Hermes does not call SkillHub directly in V1.
 - Control Tower decisions authorize integrated operations, while SkillHub lifecycle and package safety remain independent enforcement layers.
 
 ## System Roles

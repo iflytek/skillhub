@@ -2,17 +2,33 @@
 
 ## Status
 
-Draft for review.
+Retired historical draft. Do not use this document as the active Glaux implementation plan.
+
+Glaux has pivoted away from LibreChat as the governed frontend. The current direction is
+Control Tower-governed Hermes Desktop/Web, with Hermes Desktop as the shared React frontend and
+Control Tower as the governance authority. Current planning lives in the Glaux workspace docs:
+
+- `../docs/phase-1-implementation-plan.md`
+- `../docs/hermes-desktop-transition-plan.md`
+- `../docs/decisions/ADR-002-hermes-desktop-frontend-pivot.md`
+
+This document remains in the SkillHub repository only as historical design evidence for skill
+registry concepts. New implementation must not add LibreChat routes, service credentials, profile
+pin stores, or runtime sync paths from this PRD unless a future Glaux plan reintroduces them.
 
 ## Related Documents
 
 - Product requirements: this document.
 - Technical design: `docs/librechat-skillhub-hermes-design.md`.
 - Implementation plan: `docs/librechat-skillhub-hermes-implementation-plan.md`.
+- Superseding Glaux plan: `../docs/phase-1-implementation-plan.md` in the parent Glaux workspace.
 - Existing SkillHub lifecycle authority: `docs/14-skill-lifecycle.md`.
 - Existing SkillHub API conventions: `docs/06-api-design.md`.
 
-When these documents disagree, the lifecycle document remains authoritative for SkillHub state transitions, and this PRD remains authoritative for product scope and user-facing behavior. Scanner findings, artifact fingerprint checks, and download readiness are safety overlays on top of lifecycle state; they must not be modeled as replacement lifecycle states in this integration.
+When these historical documents disagree with current Glaux docs, the current Glaux docs win. The
+SkillHub lifecycle document remains authoritative for SkillHub state transitions. Scanner findings,
+artifact fingerprint checks, and download readiness are still useful safety-overlay concepts, but
+LibreChat-specific product scope and user-facing behavior in this PRD are retired.
 
 ## Background
 
