@@ -1,19 +1,33 @@
 package com.iflytek.skillhub.ratelimit;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 /**
  * Resolves the best-effort client IP address from proxy-aware request headers.
+ * Only trusts proxy headers (X-Forwarded-For, Forwarded, X-Real-IP) when the immediate
+ * client is in the trusted-proxies list. Otherwise falls back to remoteAddr.
  */
 @Component
 public class ClientIpResolver {
 
     private static final Pattern FORWARDED_FOR_PATTERN = Pattern.compile("for=\"?\\[?([^;,\"]+)\\]?\"?");
+    private final List<String> trustedProxies;
+
+    public ClientIpResolver(RateLimitProperties properties) {
+        this.trustedProxies = properties.getTrustedProxies();
+    }
 
     public String resolve(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
+
+        if (!isTrustedProxy(remoteAddr)) {
+            return normalizeCandidate(remoteAddr);
+        }
+
         String forwarded = trimToNull(request.getHeader("Forwarded"));
         if (forwarded != null) {
             Matcher matcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
@@ -32,7 +46,14 @@ public class ClientIpResolver {
             return normalizeCandidate(xRealIp);
         }
 
-        return normalizeCandidate(request.getRemoteAddr());
+        return normalizeCandidate(remoteAddr);
+    }
+
+    private boolean isTrustedProxy(String ip) {
+        if (trustedProxies.isEmpty()) {
+            return false;
+        }
+        return trustedProxies.contains(ip);
     }
 
     private String trimToNull(String value) {

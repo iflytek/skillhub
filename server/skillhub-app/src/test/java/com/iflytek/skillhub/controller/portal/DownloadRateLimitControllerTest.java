@@ -85,7 +85,8 @@ class DownloadRateLimitControllerTest {
                 });
 
         ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
-        verify(rateLimiter, times(2)).tryAcquire(keyCaptor.capture(), anyInt(), anyInt());
+        verify(rateLimiter, times(3)).tryAcquire(keyCaptor.capture(), anyInt(), anyInt());
+        assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:global:ip:"));
         assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:download:ip:") && key.endsWith(":ns:global:slug:demo-skill:version:1.0.0"));
         assertThat(keyCaptor.getAllValues()).anyMatch(key -> key.startsWith("ratelimit:download:anon:") && key.endsWith(":ns:global:slug:demo-skill:version:1.0.0"));
     }

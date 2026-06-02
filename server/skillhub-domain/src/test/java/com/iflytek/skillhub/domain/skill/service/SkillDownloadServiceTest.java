@@ -340,6 +340,27 @@ class SkillDownloadServiceTest {
         verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
     }
 
+    @Test
+    void testDownloadByTag_RejectsPathTraversalTagNames() {
+        String[] maliciousTagNames = {
+            "../etc/passwd",
+            "..%2fetc%2fpasswd",
+            "%2e%2e/etc",
+            "stable\0evil",
+            "%00null",
+            "a/b",
+            "a\\b",
+            "%5c",
+            "%2F"
+        };
+        for (String tagName : maliciousTagNames) {
+            assertThrows(DomainBadRequestException.class,
+                    () -> service.downloadByTag("ns", "skill", tagName, null, Map.of()),
+                    "Expected rejection for tag: " + tagName);
+        }
+        verifyNoInteractions(namespaceRepository, skillRepository);
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);

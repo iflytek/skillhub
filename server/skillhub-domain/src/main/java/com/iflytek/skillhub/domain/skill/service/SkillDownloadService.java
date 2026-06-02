@@ -137,6 +137,7 @@ public class SkillDownloadService {
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
 
+        validateTagName(tagName);
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
         assertCanDownload(namespace, skill, currentUserId, userNsRoles);
@@ -310,6 +311,20 @@ public class SkillDownloadService {
                 // Note: This check is already done in assertCanDownload via visibilityChecker
             }
             default -> throw new DomainBadRequestException("error.skill.version.notDownloadable", version.getVersion());
+        }
+    }
+
+    private void validateTagName(String tagName) {
+        if (tagName == null || tagName.isEmpty()) {
+            throw new DomainBadRequestException("error.skill.tag.notFound", tagName);
+        }
+        // Reject path traversal attempts: literal dots, URL-encoded variants, null bytes
+        if (tagName.contains("..") || tagName.contains("%2e") || tagName.contains("%2E")
+                || tagName.contains("\0") || tagName.contains("%00")
+                || tagName.contains("/") || tagName.contains("\\")
+                || tagName.contains("%2f") || tagName.contains("%2F")
+                || tagName.contains("%5c") || tagName.contains("%5C")) {
+            throw new DomainBadRequestException("error.skill.tag.invalidName", tagName);
         }
     }
 }

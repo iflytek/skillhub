@@ -28,19 +28,22 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private final ApiResponseFactory apiResponseFactory;
     private final ObjectMapper objectMapper;
     private final SkillHubMetrics metrics;
+    private final RateLimitProperties rateLimitProperties;
 
     public RateLimitInterceptor(RateLimiter rateLimiter,
                                 ClientIpResolver clientIpResolver,
                                 AnonymousDownloadIdentityService anonymousDownloadIdentityService,
                                 ApiResponseFactory apiResponseFactory,
                                 ObjectMapper objectMapper,
-                                SkillHubMetrics metrics) {
+                                SkillHubMetrics metrics,
+                                RateLimitProperties rateLimitProperties) {
         this.rateLimiter = rateLimiter;
         this.clientIpResolver = clientIpResolver;
         this.anonymousDownloadIdentityService = anonymousDownloadIdentityService;
         this.apiResponseFactory = apiResponseFactory;
         this.objectMapper = objectMapper;
         this.metrics = metrics;
+        this.rateLimitProperties = rateLimitProperties;
     }
 
     @Override
@@ -88,9 +91,24 @@ public class RateLimitInterceptor implements HandlerInterceptor {
                                         RateLimit rateLimit,
                                         int limit,
                                         String resourceSuffix) {
+        String clientIp = clientIpResolver.resolve(request);
+
+        // Check global per-IP limit first
+        RateLimitProperties.GlobalIpLimit globalLimit = rateLimitProperties.getGlobalIpLimit();
+        if (globalLimit.isEnabled()) {
+            boolean globalAllowed = rateLimiter.tryAcquire(
+                    "ratelimit:global:ip:" + clientIp,
+                    globalLimit.getMaxRequests(),
+                    globalLimit.getWindowSeconds()
+            );
+            if (!globalAllowed) {
+                return false;
+            }
+        }
+
         if (!"download".equals(rateLimit.category())) {
             return rateLimiter.tryAcquire(
-                    "ratelimit:" + rateLimit.category() + ":ip:" + clientIpResolver.resolve(request) + resourceSuffix,
+                    "ratelimit:" + rateLimit.category() + ":ip:" + clientIp + resourceSuffix,
                     limit,
                     rateLimit.windowSeconds()
             );

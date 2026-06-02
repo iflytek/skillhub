@@ -139,6 +139,11 @@ skillhub:
       candidate-multiplier: 8
       max-candidates: 120
   ratelimit:
+    trusted-proxies: ${SKILLHUB_RATE_LIMIT_TRUSTED_PROXIES:}
+    global-ip-limit:
+      enabled: ${SKILLHUB_RATE_LIMIT_GLOBAL_IP_ENABLED:true}
+      max-requests: ${SKILLHUB_RATE_LIMIT_GLOBAL_IP_MAX:300}
+      window-seconds: ${SKILLHUB_RATE_LIMIT_GLOBAL_IP_WINDOW:60}
     download:
       anonymous-cookie-name: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_NAME:skillhub_anon_dl}
       anonymous-cookie-max-age: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_MAX_AGE:P30D}
