@@ -77,7 +77,6 @@ __pycache__/
 .superpowers/
 docs/agents/
 docs/prds/*
-!docs/prds/librechat-skillhub-hermes-prd.md
 docs/requirements/
 docs/review/
 docs/superpowers/
