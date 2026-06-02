@@ -7,8 +7,8 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.stereotype.Component;
 
 /**
- * OAuth2 authorization request resolver that preserves a sanitized post-login redirect target in
- * the HTTP session.
+ * OAuth2 authorization request resolver that preserves a sanitized post-login
+ * redirect target in the HTTP session.
  */
 @Component
 public class SkillHubOAuth2AuthorizationRequestResolver

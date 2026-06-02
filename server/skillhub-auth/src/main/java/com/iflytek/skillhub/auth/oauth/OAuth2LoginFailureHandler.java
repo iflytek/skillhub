@@ -3,6 +3,8 @@ package com.iflytek.skillhub.auth.oauth;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -16,6 +18,8 @@ import java.io.IOException;
 @Component
 public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(OAuth2LoginFailureHandler.class);
+
     private final OAuthLoginFlowService oauthLoginFlowService;
 
     public OAuth2LoginFailureHandler(OAuthLoginFlowService oauthLoginFlowService) {
@@ -26,6 +30,7 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                                          AuthenticationException exception)
             throws IOException, ServletException {
+        log.error("OAuth2 login failed: type={}, message={}", exception.getClass().getSimpleName(), exception.getMessage(), exception);
         String returnTo = oauthLoginFlowService.consumeReturnTo(request.getSession(false));
         String redirectTarget = oauthLoginFlowService.resolveFailureRedirect(exception, returnTo);
         if (redirectTarget != null) {

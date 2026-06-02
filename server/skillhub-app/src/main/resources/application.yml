@@ -73,7 +73,7 @@ spring:
             client-id: ${OAUTH2_DINGTALK_CLIENT_ID:placeholder}
             client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET:placeholder}
             scope:
-              - openid
+              - corpid
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_DINGTALK_DISPLAY_NAME:钉钉}

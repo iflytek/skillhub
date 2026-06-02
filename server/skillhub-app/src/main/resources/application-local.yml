@@ -22,6 +22,9 @@ spring:
           github:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID:local-placeholder}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID:local-placeholder}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET:local-placeholder}
 
 skillhub:
   auth:
@@ -54,5 +57,4 @@ skillhub:
 
 logging:
   level:
-    com.iflytek.skillhub: INFO
-    org.springframework.security: WARN
+    com.iflytek.skillhub.auth: DEBUG

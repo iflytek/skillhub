@@ -48,7 +48,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * Central Spring Security configuration for browser sessions, API tokens, and
  * public versus protected endpoints.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {

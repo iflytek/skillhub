@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,6 +42,7 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
     private final DingTalkClaimsExtractor claimsExtractor;
     private final OAuthLoginFlowService oauthLoginFlowService;
 
+    @Autowired
     public DingTalkOAuth2UserService(DingTalkClaimsExtractor claimsExtractor,
                                       OAuthLoginFlowService oauthLoginFlowService) {
         this.restTemplate = buildRestTemplate();
