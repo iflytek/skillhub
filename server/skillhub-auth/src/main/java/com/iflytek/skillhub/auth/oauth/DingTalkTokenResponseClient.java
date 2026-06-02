@@ -6,6 +6,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
@@ -15,6 +16,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenRespon
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 
@@ -31,7 +33,23 @@ import java.util.Map;
 public class DingTalkTokenResponseClient implements OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public DingTalkTokenResponseClient() {
+        this.restTemplate = buildRestTemplate();
+    }
+
+    /** Package-visible constructor for unit testing with a mock RestTemplate. */
+    DingTalkTokenResponseClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    private static RestTemplate buildRestTemplate() {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        return new RestTemplate(factory);
+    }
 
     @Override
     public OAuth2AccessTokenResponse getTokenResponse(OAuth2AuthorizationCodeGrantRequest authorizationCodeGrantRequest)
@@ -65,15 +83,30 @@ public class DingTalkTokenResponseClient implements OAuth2AccessTokenResponseCli
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             try {
                 JsonNode json = MAPPER.readTree(response.getBody());
-                String accessToken = json.get("accessToken").asText();
-                if (accessToken == null || accessToken.isEmpty()) {
+
+                JsonNode accessTokenNode = json.get("accessToken");
+                if (accessTokenNode == null || accessTokenNode.isNull()) {
                     throw new OAuth2AuthenticationException(
                             new OAuth2Error("token_response_missing_field",
-                                    "DingTalk token response missing accessToken", null));
+                                    "DingTalk token response missing accessToken field", null));
                 }
+                String accessToken = accessTokenNode.asText();
+                if (accessToken.isEmpty()) {
+                    throw new OAuth2AuthenticationException(
+                            new OAuth2Error("token_response_missing_field",
+                                    "DingTalk token response has empty accessToken", null));
+                }
+
+                // Only include non-sensitive fields in additional parameters
+                Map<String, Object> safeParams = new java.util.LinkedHashMap<>();
+                JsonNode expireInNode = json.get("expireIn");
+                if (expireInNode != null && !expireInNode.isNull()) {
+                    safeParams.put("expireIn", expireInNode.asLong());
+                }
+
                 return OAuth2AccessTokenResponse.withToken(accessToken)
                         .tokenType(OAuth2AccessToken.TokenType.BEARER)
-                        .additionalParameters(Collections.singletonMap("raw_response", response.getBody()))
+                        .additionalParameters(safeParams)
                         .build();
             } catch (OAuth2AuthenticationException e) {
                 throw e;

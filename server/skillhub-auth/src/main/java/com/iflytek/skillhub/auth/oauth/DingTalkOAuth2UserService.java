@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -41,14 +43,32 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
 
     public DingTalkOAuth2UserService(DingTalkClaimsExtractor claimsExtractor,
                                       OAuthLoginFlowService oauthLoginFlowService) {
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = buildRestTemplate();
         this.claimsExtractor = claimsExtractor;
         this.oauthLoginFlowService = oauthLoginFlowService;
+    }
+
+    /** Package-visible constructor for unit testing with a mock RestTemplate. */
+    DingTalkOAuth2UserService(DingTalkClaimsExtractor claimsExtractor,
+                               OAuthLoginFlowService oauthLoginFlowService,
+                               RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+        this.claimsExtractor = claimsExtractor;
+        this.oauthLoginFlowService = oauthLoginFlowService;
+    }
+
+    private static RestTemplate buildRestTemplate() {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        return new RestTemplate(factory);
     }
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
         String accessToken = userRequest.getAccessToken().getTokenValue();
+        String userInfoUri = userRequest.getClientRegistration().getProviderDetails()
+                .getUserInfoEndpoint().getUri();
 
         // Fetch user info using DingTalk's custom header
         HttpHeaders headers = new HttpHeaders();
@@ -56,7 +76,7 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
         ResponseEntity<Map> response = restTemplate.exchange(
-                "https://api.dingtalk.com/v1.0/contact/users/me",
+                userInfoUri,
                 HttpMethod.GET,
                 requestEntity,
                 Map.class
@@ -70,9 +90,9 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
         userAttributes.putIfAbsent("nickName", attributes.get("nick"));
         userAttributes.putIfAbsent("avatarUrl", attributes.get("avatarUrl"));
 
-        // Extract claims
+        // Extract claims — use unionId as the name attribute (cross-app unique identity)
         OAuthClaims claims = claimsExtractor.extract(userRequest, new DefaultOAuth2User(
-                java.util.Collections.emptyList(), userAttributes, "openId"));
+                java.util.Collections.emptyList(), userAttributes, "unionId"));
 
         log.info("DingTalk OAuth2 login: subject={}, providerLogin={}", claims.subject(), claims.providerLogin());
 
