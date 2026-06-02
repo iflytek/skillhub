@@ -5,7 +5,7 @@
 Retired historical draft. Do not follow this plan for new Glaux implementation work.
 
 Glaux has pivoted away from LibreChat in favor of Control Tower-governed Hermes Desktop/Web. The
-active roadmap is in the parent Glaux workspace:
+active roadmap is in the parent Glaux workspace. From the SkillHub repository root:
 
 - `../docs/phase-1-implementation-plan.md`
 - `../docs/hermes-desktop-transition-plan.md`

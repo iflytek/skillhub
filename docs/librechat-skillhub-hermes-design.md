@@ -5,7 +5,8 @@
 Retired historical draft. Do not use this document as the active Glaux implementation design.
 
 Glaux has pivoted away from LibreChat as the governed frontend. The current design direction is
-Control Tower-governed Hermes Desktop/Web, documented in the parent Glaux workspace:
+Control Tower-governed Hermes Desktop/Web, documented in the parent Glaux workspace. From the
+SkillHub repository root:
 
 - `../docs/phase-1-implementation-plan.md`
 - `../docs/hermes-desktop-transition-plan.md`

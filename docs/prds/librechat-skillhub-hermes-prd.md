@@ -6,7 +6,8 @@ Retired historical draft. Do not use this document as the active Glaux implement
 
 Glaux has pivoted away from LibreChat as the governed frontend. The current direction is
 Control Tower-governed Hermes Desktop/Web, with Hermes Desktop as the shared React frontend and
-Control Tower as the governance authority. Current planning lives in the Glaux workspace docs:
+Control Tower as the governance authority. Current planning lives in the Glaux workspace docs
+next to this SkillHub checkout. From the SkillHub repository root:
 
 - `../docs/phase-1-implementation-plan.md`
 - `../docs/hermes-desktop-transition-plan.md`
@@ -21,7 +22,7 @@ pin stores, or runtime sync paths from this PRD unless a future Glaux plan reint
 - Product requirements: this document.
 - Technical design: `docs/librechat-skillhub-hermes-design.md`.
 - Implementation plan: `docs/librechat-skillhub-hermes-implementation-plan.md`.
-- Superseding Glaux plan: `../docs/phase-1-implementation-plan.md` in the parent Glaux workspace.
+- Superseding Glaux plan from the SkillHub repository root: `../docs/phase-1-implementation-plan.md`.
 - Existing SkillHub lifecycle authority: `docs/14-skill-lifecycle.md`.
 - Existing SkillHub API conventions: `docs/06-api-design.md`.
 

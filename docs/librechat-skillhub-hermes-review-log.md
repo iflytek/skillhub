@@ -4,7 +4,7 @@
 
 Retired historical review log. The reviewed LibreChat SkillHub Hermes documentation set has been
 superseded by the Glaux Hermes Desktop/Web pivot. Current planning lives in the parent Glaux
-workspace at `../docs/phase-1-implementation-plan.md`,
+workspace. From the SkillHub repository root, see `../docs/phase-1-implementation-plan.md`,
 `../docs/hermes-desktop-transition-plan.md`, and
 `../docs/decisions/ADR-002-hermes-desktop-frontend-pivot.md`.
 
