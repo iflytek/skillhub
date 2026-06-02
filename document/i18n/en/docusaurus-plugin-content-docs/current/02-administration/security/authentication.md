@@ -19,6 +19,20 @@ SkillHub supports multiple authentication methods to meet different enterprise s
    OAUTH2_GITHUB_CLIENT_SECRET=your-client-secret
    ```
 
+### DingTalk OAuth2
+
+1. Create an H5 micro-app on [DingTalk Open Platform](https://open-dev.dingtalk.com/) and obtain AppKey and AppSecret
+2. Enable the `Contact.User.Read` permission (required for fetching user info)
+3. Publish the app version to activate OAuth2 credentials
+4. Set the callback URL to `{baseUrl}/login/oauth2/code/dingtalk`
+5. Configure environment variables:
+   ```bash
+   OAUTH2_DINGTALK_CLIENT_ID=your-appkey
+   OAUTH2_DINGTALK_CLIENT_SECRET=your-appsecret
+   ```
+
+> DingTalk uses `corpid` scope (not standard OIDC `openid`). Users are identified by `unionId`.
+
 ### Extend OAuth Provider
 
 The architecture supports extending to other OAuth providers like GitLab, Gitee, etc.

@@ -51,6 +51,9 @@ SkillHub 通过环境变量进行配置，主要配置项如下：
 |---------|------|--------|
 | `OAUTH2_GITHUB_CLIENT_ID` | GitHub OAuth Client ID | - |
 | `OAUTH2_GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | - |
+| `OAUTH2_DINGTALK_CLIENT_ID` | 钉钉 OAuth AppKey | - |
+| `OAUTH2_DINGTALK_CLIENT_SECRET` | 钉钉 OAuth AppSecret | - |
+| `OAUTH2_DINGTALK_DISPLAY_NAME` | 钉钉登录按钮显示名 | `钉钉` |
 
 ### 首登管理员配置
 

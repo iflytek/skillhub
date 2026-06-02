@@ -51,6 +51,9 @@ SkillHub is configured through environment variables. The main configuration ite
 |---------------------|-------------|---------------|
 | `OAUTH2_GITHUB_CLIENT_ID` | GitHub OAuth Client ID | - |
 | `OAUTH2_GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | - |
+| `OAUTH2_DINGTALK_CLIENT_ID` | DingTalk OAuth AppKey | - |
+| `OAUTH2_DINGTALK_CLIENT_SECRET` | DingTalk OAuth AppSecret | - |
+| `OAUTH2_DINGTALK_DISPLAY_NAME` | DingTalk login button display name | `钉钉` |
 
 ### Bootstrap Admin Configuration
 
