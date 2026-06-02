@@ -76,7 +76,8 @@ __pycache__/
 # Superpowers (AI planning artifacts)
 .superpowers/
 docs/agents/
-docs/prds/
+docs/prds/*
+!docs/prds/librechat-skillhub-hermes-prd.md
 docs/requirements/
 docs/review/
 docs/superpowers/

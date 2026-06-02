@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "librechat-skillhub-hermes.contracts.v1",
+  "invalid": [
+    {
+      "resourceId": "skillhub:team/summarizer",
+      "reason": "missing namespace @ marker"
+    },
+    {
+      "resourceId": "skillhub:@Team/Summarizer@1.2.3",
+      "reason": "namespace and slug must be normalized lowercase"
+    },
+    {
+      "resourceId": "skillhub:@team/summarizer@latest",
+      "reason": "latest is a tag and must be resolved to an exact version"
+    },
+    {
+      "resourceId": "skillhub:@team/summarizer@1/2",
+      "reason": "version contains slash"
+    },
+    {
+      "resourceId": "skillhub:@team/summarizer@1 2",
+      "reason": "version contains whitespace"
+    },
+    {
+      "resourceId": "skillhub:@team/summarizer@1@2",
+      "reason": "version contains @"
+    },
+    {
+      "resourceId": "skillhub:@team/summarizer@1%2F2",
+      "reason": "version contains percent-encoded characters; integrated versions must use the allowed version grammar"
+    },
+    {
+      "resourceId": "skillhub:review-task:",
+      "reason": "review task public ID is required"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "librechat-skillhub-hermes.contracts.v1",
+  "fixtureValidationClock": "2026-05-29T10:16:00Z",
+  "responses": [
+    {
+      "name": "allow_install",
+      "decisions": [
+        {
+          "action": "skill.install",
+          "resourceType": "SKILL_VERSION",
+          "resourceId": "skillhub:@team/summarizer@1.2.3",
+          "decision": "ALLOW",
+          "policyVersion": "2026-05-29T10:15:00Z",
+          "safeExplanation": "Allowed by workspace skill policy.",
+          "obligations": [],
+          "decisionTokenRef": "decision-token.allow.json#tokens.install_download.token",
+          "decisionToken": "eyJhY3Rpb24iOiJza2lsbC5pbnN0YWxsIiwiYXVkIjoic2tpbGxodWIiLCJib2R5U2hhMjU2Ijoic2hhMjU2OjVkN2UxNjBiYjdiOTBmMmU1ZWUwNmFkYzM2YmU1ODNhMzI3YWM0NmU4OWVkNDc2MjI2N2UzODg0MzBlZmJlNjMiLCJkZWNpc2lvbiI6IkFMTE9XIiwiZXhwIjoxNzgwMDUwMDAwLCJleHRlcm5hbFVzZXJJZCI6ImxpYnJlY2hhdF91c2VyXzQ1NiIsImV4dGVybmFsV29ya3NwYWNlSWQiOiJ3b3Jrc3BhY2VfNzg5IiwiaWF0IjoxNzgwMDQ5NzAwLCJpc3MiOiJjb250cm9sLXRvd2VyIiwia2lkIjoiY3Qtc2tpbGxodWItZml4dHVyZS1lZDI1NTE5LTIwMjYtMDUiLCJtZXRob2QiOiJQT1NUIiwibm9uY2UiOiIwMUhaU0tJTExIVUJGSVhUVVJFMDAwMDAwMDAwMDAzIiwicGF0aCI6Ii9pbnRlcm5hbC9pbnRlZ3JhdGlvbnMvbGlicmVjaGF0L3NraWxsaHViL3NraWxscy9kb3dubG9hZCIsInBvbGljeVZlcnNpb24iOiIyMDI2LTA1LTI5VDEwOjE1OjAwWiIsInJlc291cmNlSWQiOiJza2lsbGh1YjpAdGVhbS9zdW1tYXJpemVyQDEuMi4zIiwicmVzb3VyY2VUeXBlIjoiU0tJTExfVkVSU0lPTiIsInN1YiI6ImN0X3N1YmplY3RfMTIzIn0.v1.ed25519=JSlzF1ASyEH2et6X_7SGkXvnVW2DSMtLmjSJHskWH1VbdlnPY-QPb9u3z-SKaxXTiZQ6Q8fhcxQJe9-8eEjPDQ"
+        }
+      ]
+    },
+    {
+      "name": "deny_install_no_token",
+      "decisions": [
+        {
+          "action": "skill.install",
+          "resourceType": "SKILL_VERSION",
+          "resourceId": "skillhub:@team/summarizer@1.2.3",
+          "decision": "DENY",
+          "policyVersion": "2026-05-29T10:15:00Z",
+          "safeExplanation": "Workspace policy does not allow installing this skill.",
+          "obligations": []
+        }
+      ]
+    },
+    {
+      "name": "limit_requires_recheck_no_token",
+      "decisions": [
+        {
+          "action": "skill.install",
+          "resourceType": "SKILL_VERSION",
+          "resourceId": "skillhub:@team/summarizer@1.2.3",
+          "decision": "LIMIT",
+          "policyVersion": "2026-05-29T10:15:00Z",
+          "safeExplanation": "Additional approval is required before install.",
+          "obligations": [
+            {
+              "type": "approval.required"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

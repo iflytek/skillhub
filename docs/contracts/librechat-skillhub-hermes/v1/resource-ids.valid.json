@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "librechat-skillhub-hermes.contracts.v1",
+  "valid": [
+    {
+      "resourceType": "SKILL_NAMESPACE",
+      "resourceId": "skillhub:@team",
+      "parts": {
+        "namespace": "team"
+      }
+    },
+    {
+      "resourceType": "SKILL",
+      "resourceId": "skillhub:@team/summarizer",
+      "parts": {
+        "namespace": "team",
+        "slug": "summarizer"
+      }
+    },
+    {
+      "resourceType": "SKILL_VERSION",
+      "resourceId": "skillhub:@team/summarizer@1.2.3",
+      "parts": {
+        "namespace": "team",
+        "slug": "summarizer",
+        "version": "1.2.3"
+      }
+    },
+    {
+      "resourceType": "SKILL_VERSION",
+      "resourceId": "skillhub:@team/summarizer@20260529.101500",
+      "parts": {
+        "namespace": "team",
+        "slug": "summarizer",
+        "version": "20260529.101500"
+      }
+    },
+    {
+      "resourceType": "SKILL_VERSION",
+      "resourceId": "skillhub:@team/summarizer@1.2.3-beta.1+build.7",
+      "parts": {
+        "namespace": "team",
+        "slug": "summarizer",
+        "version": "1.2.3-beta.1+build.7"
+      }
+    },
+    {
+      "resourceType": "SKILL_REVIEW_TASK",
+      "resourceId": "skillhub:review-task:rtask_01HZSKILLHUBFIXTURE",
+      "parts": {
+        "reviewTaskPublicId": "rtask_01HZSKILLHUBFIXTURE"
+      }
+    }
+  ]
+}
