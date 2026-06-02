@@ -1,8 +1,9 @@
-# Hermes Desktop SkillHub Governance Plan
+# Hermes Agent App SkillHub Governance Plan
 
 ## Status
 
-Current SkillHub planning note for the Glaux Hermes Desktop/Web pivot.
+Current SkillHub planning note for the Glaux Hermes Agent desktop/web app baseline captured in
+ADR-005.
 
 The earlier frontend integration draft and its fixtures are removed and are not part of the active
 SkillHub implementation backlog. New work must not add retired frontend routes, service
@@ -13,21 +14,21 @@ decision record reintroduces that surface.
 
 This SkillHub note is derived from the current Glaux workspace plan:
 
-- `../docs/phase-1-implementation-plan.md`
-- `../docs/hermes-desktop-transition-plan.md`
-- `../docs/decisions/ADR-002-hermes-desktop-frontend-pivot.md`
+- `../../docs/phase-1-implementation-plan.md`
+- `../../docs/hermes-agent-app-integration-plan.md`
+- `../../docs/decisions/ADR-005-hermes-agent-app-integration.md`
 
 When this note disagrees with those parent Glaux documents, the parent Glaux documents win. The
 SkillHub-local lifecycle authority remains `docs/14-skill-lifecycle.md`.
 
 ## Direction
 
-Glaux now uses Hermes Desktop/Web as the governed frontend and Control Tower as the policy
-authority. SkillHub remains the shared skill registry and catalog reference. SkillHub owns package
-validation, scanner state, lifecycle transitions, review workflow, artifact storage, download
-readiness, and audit evidence. Control Tower owns policy decisions, client entitlements, envelopes,
-and runtime authorization. Hermes Desktop/Web displays and applies the resulting permissions, but
-does not become a policy authority.
+Glaux now uses Hermes Agent desktop/web apps as the governed app surfaces and Control Tower as the
+policy authority. SkillHub remains the shared skill registry and catalog reference. SkillHub owns
+package validation, scanner state, lifecycle transitions, review workflow, artifact storage,
+download readiness, and audit evidence. Control Tower owns policy decisions, client entitlements,
+envelopes, and runtime authorization. Hermes Agent apps display and apply the resulting
+permissions, but do not become a policy authority.
 
 SkillHub integration work should therefore be frontend-agnostic. Any internal or cross-service
 contract should be named around SkillHub, Control Tower, Hermes client entitlements, or generic
@@ -113,7 +114,7 @@ Verification:
 
 - Does the change preserve SkillHub lifecycle, scanner, package, and audit enforcement after policy
   approval?
-- Are all new externally visible shapes frontend-agnostic or Hermes Desktop/Web generic?
+- Are all new externally visible shapes frontend-agnostic or Hermes Agent app generic?
 - Can Control Tower derive policy resources without re-parsing untrusted skill metadata?
-- Can Hermes Desktop/Web display the state without expanding access locally?
+- Can Hermes Agent apps display the state without expanding access locally?
 - Do tests prove denial and disabled-state behavior, not just successful catalog reads?
