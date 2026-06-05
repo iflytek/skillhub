@@ -5,6 +5,7 @@ import { resolveRegistry, resolveToken } from '../services/registry-service'
 import { removeLocalSkill } from '../services/remove-service'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import { parseSkillName } from '../shared/skill-name-parser'
 
 export interface RemoveCommandOptions {
   agent?: string[] | undefined
@@ -17,7 +18,7 @@ export interface RemoveCommandOptions {
   json?: boolean | undefined
 }
 
-export async function removeCommand(slug: string, options: RemoveCommandOptions): Promise<string> {
+export async function removeCommand(skillNameArg: string, options: RemoveCommandOptions): Promise<string> {
   if (options.all && options.agent?.length) {
     throw new CliError('--all cannot be used with --agent', EXIT.usage)
   }
@@ -29,9 +30,12 @@ export async function removeCommand(slug: string, options: RemoveCommandOptions)
   const credentialsStore = new CredentialsStore()
   const registry = resolveRegistry(options, process.env, await configStore.read())
 
+  const parsed = parseSkillName(skillNameArg)
+  const namespace = options.namespace ?? parsed.namespace
+  const slug = parsed.slug
+
   if (options.remote) {
     const token = resolveToken(options, process.env, await credentialsStore.getToken(registry))
-    const namespace = options.namespace ?? 'global'
 
     if (!options.hard && process.stdout.isTTY) {
       const prompts = await import('prompts')

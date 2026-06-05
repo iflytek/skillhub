@@ -318,26 +318,38 @@ class SkillDownloadServiceTest {
     }
 
     @Test
-    void testDownloadVersion_RejectsAnonymousForTeamNamespacePublicSkill() throws Exception {
+    void testDownloadVersion_AllowsAnonymousForTeamNamespacePublicSkill() throws Exception {
         Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
         setId(namespace, 2L);
         namespace.setType(NamespaceType.TEAM);
 
         Skill skill = new Skill(2L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
         setId(skill, 1L);
+        skill.setDisplayName("Demo Skill");
         skill.setStatus(SkillStatus.ACTIVE);
         skill.setLatestVersionId(10L);
 
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+
         when(namespaceRepository.findBySlug("team-ai")).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(2L, "demo-skill")).thenReturn(List.of(skill));
+        when(visibilityChecker.canAccess(skill, null, Map.of())).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, "1.0.0")).thenReturn(Optional.of(version));
+        when(objectStorageService.exists("packages/1/10/bundle.zip")).thenReturn(false);
+        when(skillFileRepository.findByVersionId(10L)).thenReturn(List.of(
+                new SkillFile(10L, "SKILL.md", 4L, "text/markdown", "hash", "skills/1/10/SKILL.md")));
+        when(objectStorageService.exists("skills/1/10/SKILL.md")).thenReturn(true);
+        when(objectStorageService.getObject("skills/1/10/SKILL.md")).thenReturn(new ByteArrayInputStream("test".getBytes()));
 
-        assertThrows(DomainForbiddenException.class, () ->
-                service.downloadVersion("team-ai", "demo-skill", "1.0.0", null, Map.of()));
+        SkillDownloadService.DownloadResult result = service.downloadVersion("team-ai", "demo-skill", "1.0.0", null, Map.of());
 
-        verify(visibilityChecker, never()).canAccess(any(), any(), anyMap());
-        verify(skillRepository, never()).incrementDownloadCount(anyLong());
-        verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
-        verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
+        assertNotNull(result);
+        assertEquals("Demo Skill-1.0.0.zip", result.filename());
+        verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
+        verify(eventPublisher).publishEvent(any(SkillDownloadedEvent.class));
     }
 
     private void setId(Object entity, Long id) throws Exception {
