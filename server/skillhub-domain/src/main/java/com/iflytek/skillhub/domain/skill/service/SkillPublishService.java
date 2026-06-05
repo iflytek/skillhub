@@ -564,6 +564,14 @@ public class SkillPublishService {
             throw new DomainBadRequestException("error.skill.version.exists", version.getVersion());
         }
 
+        // FK 约束 fk_skill_latest_version 阻止删除 skill_version 当 skill.latest_version_id 还指向它。
+        // 必须先解开引用并 flush，让 PG 在 delete 时看不到引用。
+        if (version.getId().equals(skill.getLatestVersionId())) {
+            skill.setLatestVersionId(null);
+            skillRepository.save(skill);
+            skillRepository.flush();
+        }
+
         reviewTaskRepository.findBySkillVersionIdAndStatus(version.getId(), ReviewTaskStatus.PENDING)
                 .ifPresent(reviewTaskRepository::delete);
 
@@ -579,10 +587,6 @@ public class SkillPublishService {
         securityScanService.softDeleteByVersionId(version.getId());
         skillVersionRepository.delete(version);
         skillVersionRepository.flush();
-
-        if (version.getId().equals(skill.getLatestVersionId())) {
-            skill.setLatestVersionId(null);
-        }
     }
 
     private String resolveNamespaceSlug(Long namespaceId) {

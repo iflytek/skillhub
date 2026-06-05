@@ -182,12 +182,15 @@ public class SkillGovernanceService {
         deleteStorageAfterCommit(skill, namespaceSlug, storageKeys);
         skillFileRepository.deleteByVersionId(version.getId());
         securityScanService.softDeleteByVersionId(version.getId());
-        skillVersionRepository.delete(version);
+        // FK 约束 fk_skill_latest_version 阻止删除 skill_version 当 skill.latest_version_id 还指向它。
+        // 必须先解开引用并 flush，让 PG 在 delete 时看不到引用。
         if (version.getId().equals(skill.getLatestVersionId())) {
             skill.setLatestVersionId(findLatestPublishedVersionId(skill.getId()));
             skill.setUpdatedBy(actorUserId);
             skillRepository.save(skill);
+            skillRepository.flush();
         }
+        skillVersionRepository.delete(version);
         auditLogService.record(
                 actorUserId,
                 "DELETE_SKILL_VERSION",
