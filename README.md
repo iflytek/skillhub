@@ -436,6 +436,9 @@ namespace `my-space` plus skill slug `my-skill`.
 
 📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
 
+For a governed social-account example, see the
+[X/Twitter workflow skill recipe](./docs/skillhub/en/guide/social-workflow-skill.md).
+
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
 [AstronClaw](https://agent.xfyun.cn/astron-claw) is a cloud AI assistant built on OpenClaw's core capabilities, providing 24/7 online service through enterprise platforms like WeChat Work, DingTalk, and Feishu. It features a built-in skill system with over 130 official skills. You can connect it to a self-hosted SkillHub registry to enable one-click skill installation, search repository, dialogue-based automatic installation, and even custom skills management within your organization.
