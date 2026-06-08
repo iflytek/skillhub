@@ -42,7 +42,7 @@ public class IdempotencyCleanupTask {
         Instant threshold = Instant.now(clock).minusSeconds(STALE_THRESHOLD_MINUTES * 60);
         int updated = idempotencyRecordRepository.markStaleAsFailed(threshold);
         if (updated > 0) {
-            logger.info("Marked {} stale processing records as failed", updated);
+            logger.info("Marked {} stale processing records as failed before threshold={}", updated, threshold);
         }
     }
 }
