@@ -131,6 +131,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("AND d.namespace_id = :namespaceId ");
         }
 
+        if (query.ownerId() != null) {
+            sql.append("AND d.owner_id = :ownerId ");
+        }
+
         if (query.labelSlugs() != null && !query.labelSlugs().isEmpty()) {
             sql.append("AND d.skill_id IN (");
             sql.append("SELECT sl.skill_id FROM skill_label sl ");
@@ -192,6 +196,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             nativeQuery.setParameter("namespaceId", query.namespaceId());
         }
 
+        if (query.ownerId() != null) {
+            nativeQuery.setParameter("ownerId", query.ownerId());
+        }
+
         if (query.labelSlugs() != null && !query.labelSlugs().isEmpty()) {
             nativeQuery.setParameter("labelSlugs", query.labelSlugs());
         }
@@ -234,6 +242,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
         if (query.namespaceId() != null) {
             countQuery.setParameter("namespaceId", query.namespaceId());
+        }
+
+        if (query.ownerId() != null) {
+            countQuery.setParameter("ownerId", query.ownerId());
         }
 
         if (query.labelSlugs() != null && !query.labelSlugs().isEmpty()) {

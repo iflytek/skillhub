@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
  * application service and visibility scope.
  */
 @RestController
-@RequestMapping({"/api/web/skills"})
 public class SkillSearchController extends BaseApiController {
     private static final Pattern NON_NEGATIVE_INTEGER = Pattern.compile("\\d+");
     private static final String DEFAULT_SORT = "newest";
@@ -34,12 +33,13 @@ public class SkillSearchController extends BaseApiController {
         this.skillSearchAppService = skillSearchAppService;
     }
 
-    @GetMapping
+    @GetMapping("/api/web/skills")
     @RateLimit(category = "search", authenticated = 60, anonymous = 20)
     public ApiResponse<SkillSearchAppService.SearchResponse> search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String namespace,
             @RequestParam(name = "label", required = false) java.util.List<String> labels,
+            @RequestParam(required = false) String ownerId,
             @Parameter(schema = @Schema(defaultValue = DEFAULT_SORT))
             @RequestParam(required = false) String sort,
             @Parameter(schema = @Schema(type = "integer", defaultValue = "0", minimum = "0"))
@@ -56,6 +56,38 @@ public class SkillSearchController extends BaseApiController {
                 parseNonNegativeInt(page, DEFAULT_PAGE),
                 parsePositiveInt(size, DEFAULT_SIZE),
                 labels,
+                ownerId,
+                userId,
+                userNsRoles
+        );
+
+        return ok("response.success.read", response);
+    }
+
+    @GetMapping("/api/v1/namespaces/{namespace}/skills")
+    @RateLimit(category = "search", authenticated = 60, anonymous = 20)
+    public ApiResponse<SkillSearchAppService.SearchResponse> listNamespaceSkills(
+            @PathVariable String namespace,
+            @RequestParam(required = false) String q,
+            @RequestParam(name = "label", required = false) java.util.List<String> labels,
+            @RequestParam(required = false) String ownerId,
+            @Parameter(schema = @Schema(defaultValue = DEFAULT_SORT))
+            @RequestParam(required = false) String sort,
+            @Parameter(schema = @Schema(type = "integer", defaultValue = "0", minimum = "0"))
+            @RequestParam(required = false) String page,
+            @Parameter(schema = @Schema(type = "integer", defaultValue = "20", minimum = "1"))
+            @RequestParam(required = false) String size,
+            @RequestAttribute(value = "userId", required = false) String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+
+        SkillSearchAppService.SearchResponse response = skillSearchAppService.search(
+                q,
+                namespace,
+                normalizeSort(sort),
+                parseNonNegativeInt(page, DEFAULT_PAGE),
+                parsePositiveInt(size, DEFAULT_SIZE),
+                labels,
+                ownerId,
                 userId,
                 userNsRoles
         );

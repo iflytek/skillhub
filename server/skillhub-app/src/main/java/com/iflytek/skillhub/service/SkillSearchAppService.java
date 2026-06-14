@@ -68,7 +68,7 @@ public class SkillSearchAppService {
             int size,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
-        return search(keyword, namespaceSlug, sortBy, page, size, List.of(), userId, userNsRoles);
+        return search(keyword, namespaceSlug, sortBy, page, size, List.of(), null, userId, userNsRoles);
     }
 
     public SearchResponse search(
@@ -80,12 +80,25 @@ public class SkillSearchAppService {
             List<String> labelSlugs,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return search(keyword, namespaceSlug, sortBy, page, size, labelSlugs, null, userId, userNsRoles);
+    }
+
+    public SearchResponse search(
+            String keyword,
+            String namespaceSlug,
+            String sortBy,
+            int page,
+            int size,
+            List<String> labelSlugs,
+            String ownerId,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
 
         Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles);
 
         SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
 
-        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, labelSlugs, scope);
+        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, labelSlugs, normalizeOwnerId(ownerId), scope);
     }
 
     private Long resolveNamespaceId(String namespaceSlug, String userId, Map<Long, NamespaceRole> userNsRoles) {
@@ -133,6 +146,7 @@ public class SkillSearchAppService {
             int page,
             int size,
             List<String> labelSlugs,
+            String ownerId,
             SearchVisibilityScope scope) {
         SearchResult result = searchQueryService.search(new SearchQuery(
                 keyword,
@@ -141,10 +155,18 @@ public class SkillSearchAppService {
                 sortBy,
                 page,
                 size,
-                normalizeLabelSlugs(labelSlugs)
+                normalizeLabelSlugs(labelSlugs),
+                ownerId
         ));
         List<SkillSummaryResponse> pageItems = mapVisibleSkillSummaries(result.skillIds());
         return new SearchResponse(pageItems, result.total(), page, size);
+    }
+
+    private String normalizeOwnerId(String ownerId) {
+        if (ownerId == null || ownerId.isBlank()) {
+            return null;
+        }
+        return ownerId.trim();
     }
 
     private List<String> normalizeLabelSlugs(List<String> labelSlugs) {

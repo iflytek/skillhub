@@ -296,6 +296,40 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void ownerFilterShouldBeAppliedToSearchAndCountQueries() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "review",
+                7L,
+                new SearchVisibilityScope("viewer-1", Set.of(7L), Set.of()),
+                "newest",
+                0,
+                20,
+                List.of(),
+                "owner-1"
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("AND d.namespace_id = :namespaceId");
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("AND d.owner_id = :ownerId");
+        verify(nativeQuery).setParameter("ownerId", "owner-1");
+        verify(countQuery).setParameter("ownerId", "owner-1");
+    }
+
+    @Test
     void downloadsSortShouldNotBindRelevanceOnlyParameters() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);

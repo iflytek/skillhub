@@ -198,6 +198,30 @@ class SkillSearchAppServiceTest {
     }
 
     @Test
+    void search_shouldNormalizeAndPassOwnerIdFilter() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search("skill", null, "newest", 0, 20, List.of(), " owner-1 ", null, null);
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        assertEquals("owner-1", captor.getValue().ownerId());
+    }
+
+    @Test
+    void search_shouldIgnoreBlankOwnerIdFilter() {
+        when(searchQueryService.search(any()))
+                .thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search("skill", null, "newest", 0, 20, List.of(), " ", null, null);
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        assertEquals(null, captor.getValue().ownerId());
+    }
+
+    @Test
     void search_shouldIncludeMemberNamespacesInVisibilityScope() {
         when(searchQueryService.search(any()))
                 .thenReturn(new SearchResult(List.of(), 0, 0, 20));

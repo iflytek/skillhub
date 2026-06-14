@@ -74,6 +74,25 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizationPolicies_shouldRequireAuthenticationForNamespaceSkillListing() {
+        boolean matched = registry.authorizationPolicies().stream()
+                .anyMatch(policy -> policy.method() == HttpMethod.GET
+                        && "/api/v1/namespaces/*/skills".equals(policy.pattern())
+                        && policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED);
+
+        assertTrue(matched);
+    }
+
+    @Test
+    void apiTokenPolicy_shouldAllowNamespaceSkillListingWithoutMutationScope() {
+        assertTrue(registry.authorizeApiToken(
+                "GET",
+                "/api/v1/namespaces/team-a/skills",
+                Set.of()
+        ).allowed());
+    }
+
+    @Test
     void authorizationPolicies_shouldNotDeclareNamespaceBundleDownloadRoutes() {
         String v1Route = "/api/v1/namespaces/*/skills/" + "download";
         String webRoute = "/api/web/namespaces/*/skills/" + "download";

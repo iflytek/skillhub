@@ -6,13 +6,13 @@ spring:
   flyway:
     enabled: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/skillhub
-    username: skillhub
-    password: skillhub_dev
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:15432/skillhub}
+    username: ${SPRING_DATASOURCE_USERNAME:skillhub}
+    password: ${SPRING_DATASOURCE_PASSWORD:skillhub_dev}
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
   session:
     store-type: redis
   security:

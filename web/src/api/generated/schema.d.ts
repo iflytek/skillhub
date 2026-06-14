@@ -2948,6 +2948,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/namespaces/{namespace}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listNamespaceSkills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -8493,6 +8509,7 @@ export interface operations {
                 q?: string;
                 namespace?: string;
                 label?: string[];
+                ownerId?: string;
                 sort?: string;
                 page?: number;
                 size?: number;
@@ -9938,6 +9955,8 @@ export interface operations {
                 page?: number;
                 size?: number;
                 filter?: string;
+                q?: string;
+                namespace?: string;
             };
             header?: never;
             path?: never;
@@ -9962,6 +9981,8 @@ export interface operations {
                 page?: number;
                 size?: number;
                 filter?: string;
+                q?: string;
+                namespace?: string;
             };
             header?: never;
             path?: never;
@@ -10397,6 +10418,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ClawHubResolveResponse"];
+                };
+            };
+        };
+    };
+    listNamespaceSkills: {
+        parameters: {
+            query?: {
+                q?: string;
+                label?: string[];
+                ownerId?: string;
+                sort?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSearchResponse"];
                 };
             };
         };
