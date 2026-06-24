@@ -4,6 +4,7 @@ import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
 import { RoleGuard } from '@/shared/components/role-guard'
 import { createRequireAuth } from '@/shared/lib/auth-route'
+import { clearDynamicImportReloadGuard, recoverFromDynamicImportError } from '@/shared/lib/dynamic-import-recovery'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
 /**
@@ -25,7 +26,12 @@ function createLazyRouteComponent<TModule extends Record<string, unknown>>(
   // Lazy route modules are wrapped in a uniform suspense fallback so route transitions behave
   // consistently across public and dashboard pages.
   const LazyComponent = lazy(async () => {
-    const module = await importer()
+    const module = await importer().catch((error) => {
+      if (recoverFromDynamicImportError(error)) {
+        return new Promise<never>(() => {})
+      }
+      throw error
+    })
     return { default: module[exportName] as ComponentType<Record<string, unknown>> }
   })
 
@@ -475,6 +481,10 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   defaultNotFoundComponent: DefaultNotFound,
+})
+
+router.subscribe('onResolved', () => {
+  clearDynamicImportReloadGuard()
 })
 
 declare module '@tanstack/react-router' {
