@@ -90,6 +90,20 @@ class AdminUserAppServiceTest {
     }
 
     @Test
+    void updateUserRole_nonSuperAdminCannotDemoteSuperAdmin() {
+        when(userAccountRepository.findById("user-1"))
+                .thenReturn(Optional.of(user("user-1", "alice", "alice@example.com", UserStatus.ACTIVE)));
+        when(userRoleBindingRepository.findByUserId("user-1"))
+                .thenReturn(List.of(new UserRoleBinding("user-1", role("SUPER_ADMIN"))));
+
+        assertThrows(DomainForbiddenException.class,
+                () -> service.updateUserRole("user-1", "USER", Set.of("USER_ADMIN")));
+
+        verify(userRoleBindingRepository, never()).deleteByUserId(any());
+        verify(userRoleBindingRepository, never()).save(any(UserRoleBinding.class));
+    }
+
+    @Test
     void updateUserRole_rejectsSystemAccount() {
         when(userAccountRepository.findById("builtin-skill-publisher"))
                 .thenReturn(Optional.of(systemUser()));

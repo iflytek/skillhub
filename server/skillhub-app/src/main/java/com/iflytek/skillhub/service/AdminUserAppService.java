@@ -84,9 +84,9 @@ public class AdminUserAppService {
         rejectSystemAccountMutation(user);
         String normalizedRoleCode = normalizeRoleCode(roleCode);
 
-        if ("SUPER_ADMIN".equals(normalizedRoleCode)
-                && (actorPlatformRoles == null || !actorPlatformRoles.contains("SUPER_ADMIN"))) {
-            throw new DomainForbiddenException("error.admin.user.role.superAdmin.assignDenied");
+        if (isSuperAdminRoleMutation(user.getId(), normalizedRoleCode)
+                && !isSuperAdmin(actorPlatformRoles)) {
+            throw new DomainForbiddenException("error.admin.user.role.superAdmin.changeDenied");
         }
 
         userRoleBindingRepository.deleteByUserId(user.getId());
@@ -149,6 +149,18 @@ public class AdminUserAppService {
                         .sorted()
                         .toList()
         ));
+    }
+
+    private boolean isSuperAdminRoleMutation(String userId, String normalizedRoleCode) {
+        if ("SUPER_ADMIN".equals(normalizedRoleCode)) {
+            return true;
+        }
+        return userRoleBindingRepository.findByUserId(userId).stream()
+                .anyMatch(binding -> "SUPER_ADMIN".equals(binding.getRole().getCode()));
+    }
+
+    private boolean isSuperAdmin(Set<String> actorPlatformRoles) {
+        return actorPlatformRoles != null && actorPlatformRoles.contains("SUPER_ADMIN");
     }
 
     private Set<String> withDefaultUserRole(List<String> roles) {
