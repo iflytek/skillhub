@@ -19,6 +19,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const languages = [
     { code: 'zh', name: '中文' },
     { code: 'en', name: 'English' },
+    { code: 'ko', name: '한국어' },
   ]
 
   // 获取当前语言的主要代码（去掉地区代码）
