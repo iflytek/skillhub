@@ -29,6 +29,10 @@ vi.mock('./locales/zh.json', () => ({
   default: { greeting: '你好' },
 }))
 
+vi.mock('./locales/ru.json', () => ({
+  default: { greeting: 'Привет' },
+}))
+
 // Import triggers the side-effect initialization
 await import('./config')
 
@@ -54,11 +58,13 @@ describe('i18n config', () => {
     expect(initOptions.detection.caches).toEqual(['localStorage'])
   })
 
-  it('registers both english and chinese resource bundles', () => {
+  it('registers english, russian and chinese resource bundles', () => {
     const initOptions = initMock.mock.calls[0][0]
     expect(initOptions.resources).toHaveProperty('en')
+    expect(initOptions.resources).toHaveProperty('ru')
     expect(initOptions.resources).toHaveProperty('zh')
     expect(initOptions.resources.en).toHaveProperty('translation')
+    expect(initOptions.resources.ru).toHaveProperty('translation')
     expect(initOptions.resources.zh).toHaveProperty('translation')
   })
 })

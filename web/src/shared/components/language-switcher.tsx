@@ -19,11 +19,15 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const languages = [
     { code: 'zh', name: '中文' },
     { code: 'en', name: 'English' },
+    { code: 'ru', name: 'Русский' },
   ]
 
-  // 获取当前语言的主要代码（去掉地区代码）
-  const currentLangCode = i18n.language?.split('-')[0] || 'zh'
-  const currentLanguage = languages.find((lang) => lang.code === currentLangCode) || languages[0]
+  // Primary language code only (strip region, e.g. ru-RU → ru).
+  const currentLangCode = i18n.language?.split('-')[0] || 'en'
+  const currentLanguage =
+    languages.find((lang) => lang.code === currentLangCode)
+    || languages.find((lang) => lang.code === 'en')
+    || languages[0]
 
   const changeLanguage = (langCode: string) => {
     i18n.changeLanguage(langCode)
