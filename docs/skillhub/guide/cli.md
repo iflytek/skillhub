@@ -83,6 +83,8 @@ skillhub login --token sk_xxx --registry https://skillhub.example.com
 
 `login` 会验证 token 有效性，然后将 token 存储到 `~/.skillhub/credentials.json`，同时将 registry 写入 `~/.skillhub/config.json`。
 
+API Token 请求被拒绝时，CLI 会显示服务端返回的具体原因和 `Request ID`。排查问题时可使用该 ID 对照服务端日志；非 API Token 的授权失败仍只显示通用信息。
+
 ### 查看当前身份
 
 ```bash

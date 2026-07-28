@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.auth.token.ApiTokenAccessDeniedException;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,21 +39,24 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
     public void handle(HttpServletRequest request,
                        HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
-        String reason = accessDeniedException.getMessage();
+        ApiTokenAccessDeniedException apiTokenException =
+                accessDeniedException instanceof ApiTokenAccessDeniedException typedException
+                        ? typedException
+                        : null;
         logger.info(
                 "Forbidden API request [requestId={}, method={}, path={}, reason={}, detail={}]",
                 MDC.get("requestId"),
                 request.getMethod(),
                 sensitiveLogSanitizer.sanitizeRequestTarget(request),
                 accessDeniedException.getClass().getSimpleName(),
-                reason
+                apiTokenException != null ? apiTokenException.getMessage() : null
         );
-        // Callers previously saw a bare "Forbidden" whether their token lacked
-        // a scope, the endpoint was closed to API tokens, or the path simply
-        // did not exist — so clients guess, and their guesses mislead. The
-        // filters already compute an exact reason; pass it through.
-        ApiResponse<Void> body = reason != null && !reason.isBlank()
-                ? apiResponseFactory.error(403, "error.forbidden.detail", reason)
+        ApiResponse<Void> body = apiTokenException != null
+                ? apiResponseFactory.error(
+                        403,
+                        apiTokenException.getMessageCode(),
+                        apiTokenException.getMessageArgs()
+                )
                 : apiResponseFactory.error(403, "error.forbidden");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

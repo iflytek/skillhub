@@ -52,6 +52,11 @@ export interface DryRunResponse {
   resolvedVersion: string | null
 }
 
+interface ErrorEnvelope {
+  msg?: unknown
+  requestId?: unknown
+}
+
 export class SkillHubClient {
   constructor(
     readonly registry: string,
@@ -88,8 +93,11 @@ export class SkillHubClient {
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       throw new CliError('authentication failed', EXIT.auth, { registry: this.registry, next: 'run `skillhub login`' })
+    }
+    if (response.status === 403) {
+      throw await this.createAccessDeniedError(response)
     }
     if (response.status === 404) {
       throw new CliError('skill or version not found', EXIT.generic, { registry: this.registry })
@@ -155,7 +163,7 @@ export class SkillHubClient {
       throw new CliError('authentication failed', EXIT.auth, { registry: this.registry, next: 'run `skillhub login`' })
     }
     if (response.status === 403) {
-      throw new CliError('access denied — token may lack required scope', EXIT.auth, { registry: this.registry, next: 'regenerate token with required scopes or run `skillhub login`' })
+      throw await this.createAccessDeniedError(response)
     }
     if (response.status === 404) {
       throw new CliError('resource not found', EXIT.generic, { registry: this.registry })
@@ -170,6 +178,26 @@ export class SkillHubClient {
     }
     const body = await response.json()
     return body.data as T
+  }
+
+  private async createAccessDeniedError(response: Response): Promise<CliError> {
+    const error = await this.readErrorEnvelope(response)
+    return new CliError(error.message ?? 'access denied', EXIT.auth, {
+      registry: this.registry,
+      ...(error.requestId ? { requestId: error.requestId } : {})
+    })
+  }
+
+  private async readErrorEnvelope(response: Response): Promise<{ message?: string; requestId?: string }> {
+    try {
+      const body = await response.json() as ErrorEnvelope
+      return {
+        ...(typeof body.msg === 'string' && body.msg.trim() ? { message: body.msg } : {}),
+        ...(typeof body.requestId === 'string' && body.requestId.trim() ? { requestId: body.requestId } : {})
+      }
+    } catch {
+      return {}
+    }
   }
 
   private headers(): HeadersInit {

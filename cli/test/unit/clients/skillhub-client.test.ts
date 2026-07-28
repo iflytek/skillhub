@@ -37,12 +37,21 @@ describe('SkillHubClient', () => {
   })
 
   test('download() throws auth error on 403', async () => {
-    const fetchImpl = (async () => new Response(null, { status: 403 })) as unknown as typeof fetch
+    const fetchImpl = (async () => Response.json({
+      code: 403,
+      msg: 'API token is missing required scope: skill:read',
+      requestId: 'req-download'
+    }, { status: 403 })) as unknown as typeof fetch
     const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
-    const err = expect(client.download('ns', 'slug')).rejects
-    await err.toBeInstanceOf(CliError)
-    await err.toHaveProperty('message', 'authentication failed')
-    await err.toHaveProperty('exitCode', EXIT.auth)
+
+    await expect(client.download('ns', 'slug')).rejects.toMatchObject({
+      message: 'API token is missing required scope: skill:read',
+      exitCode: EXIT.auth,
+      details: {
+        registry: 'http://registry.test',
+        requestId: 'req-download'
+      }
+    })
   })
 
   test('download() throws not-found error on 404', async () => {
@@ -158,6 +167,35 @@ describe('SkillHubClient', () => {
   })
 
   // --- handleJsonResponse() non-2xx classification ---
+
+  test('whoami() surfaces server reason and request ID on 403', async () => {
+    const fetchImpl = (async () => Response.json({
+      code: 403,
+      msg: 'API token cannot access endpoint: /api/cli/v1/whoami',
+      requestId: 'req-610'
+    }, { status: 403 })) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    await expect(client.whoami()).rejects.toMatchObject({
+      message: 'API token cannot access endpoint: /api/cli/v1/whoami',
+      exitCode: EXIT.auth,
+      details: {
+        registry: 'http://registry.test',
+        requestId: 'req-610'
+      }
+    })
+  })
+
+  test('whoami() falls back to generic access denied when 403 body is invalid', async () => {
+    const fetchImpl = (async () => new Response('not-json', { status: 403 })) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    await expect(client.whoami()).rejects.toMatchObject({
+      message: 'access denied',
+      exitCode: EXIT.auth,
+      details: { registry: 'http://registry.test' }
+    })
+  })
 
   test('whoami() throws generic error on 500', async () => {
     const fetchImpl = (async () => new Response(null, { status: 500 })) as unknown as typeof fetch

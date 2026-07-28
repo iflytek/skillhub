@@ -16,11 +16,13 @@ describe('renderError', () => {
   test('renders human error without stack trace', () => {
     const error = new CliError('registry unreachable', 3, {
       registry: 'https://registry.example.com',
+      requestId: 'req-610',
       next: 'check network or pass --registry'
     })
     expect(renderError(error, false)).toBe([
       'Error: registry unreachable',
       'Context: registry https://registry.example.com',
+      'Request ID: req-610',
       'Next: check network or pass --registry'
     ].join('\n'))
   })

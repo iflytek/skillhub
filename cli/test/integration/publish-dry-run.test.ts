@@ -172,5 +172,6 @@ describe('publish --dry-run', () => {
 
     expect(result.exitCode).toBe(2)
     expect(result.stderr).toContain('scope')
+    expect(result.stderr).toContain('Request ID: req-test-forbidden')
   })
 })

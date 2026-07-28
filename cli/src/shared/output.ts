@@ -30,6 +30,9 @@ export function renderError(error: unknown, json: boolean): string {
   if (typeof cliError.details.path === 'string') {
     lines.push(`Context: path ${cliError.details.path}`)
   }
+  if (typeof cliError.details.requestId === 'string') {
+    lines.push(`Request ID: ${cliError.details.requestId}`)
+  }
   if (typeof cliError.details.next === 'string') {
     lines.push(`Next: ${cliError.details.next}`)
   }

@@ -83,6 +83,8 @@ skillhub login --token sk_xxx --registry https://skillhub.example.com
 
 `login` validates the token, stores it in `~/.skillhub/credentials.json`, and writes the registry to `~/.skillhub/config.json`.
 
+When an API-token request is denied, the CLI shows the safe reason returned by the server and its `Request ID`. Use that ID to correlate the failure with server logs. Other authorization failures continue to use a generic message.
+
 ### Check Current Identity
 
 ```bash

@@ -17,8 +17,10 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -38,7 +40,9 @@ class ApiTokenScopeFilterTest {
 
     @Test
     void shouldDenyApiTokenWithoutRequiredScope() throws Exception {
+        AtomicReference<Exception> deniedException = new AtomicReference<>();
         AccessDeniedHandler handler = (request, response, accessDeniedException) -> {
+            deniedException.set(accessDeniedException);
             response.sendError(HttpServletResponse.SC_FORBIDDEN, accessDeniedException.getMessage());
         };
         ApiTokenScopeFilter filter = new ApiTokenScopeFilter(scopeService, handler);
@@ -69,6 +73,12 @@ class ApiTokenScopeFilterTest {
 
         assertEquals(HttpServletResponse.SC_FORBIDDEN, response.getStatus());
         assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:publish"));
+        ApiTokenAccessDeniedException exception = assertInstanceOf(
+                ApiTokenAccessDeniedException.class,
+                deniedException.get()
+        );
+        assertEquals("error.apiToken.scope.missing", exception.getMessageCode());
+        assertEquals("skill:publish", exception.getMessageArgs()[0]);
         verify(chain, never()).doFilter(request, response);
     }
 
