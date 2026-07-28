@@ -32,6 +32,9 @@ function createLazyRouteComponent<TModule extends Record<string, unknown>>(
       }
       throw error
     })
+    // Router resolution can finish before React.lazy imports the route module. Only clear the
+    // one-time reload guard after the chunk itself has loaded successfully.
+    clearDynamicImportReloadGuard()
     return { default: module[exportName] as ComponentType<Record<string, unknown>> }
   })
 
@@ -481,10 +484,6 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   defaultNotFoundComponent: DefaultNotFound,
-})
-
-router.subscribe('onResolved', () => {
-  clearDynamicImportReloadGuard()
 })
 
 declare module '@tanstack/react-router' {
