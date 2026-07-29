@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 
@@ -12,9 +13,9 @@ interface RouteErrorProps {
 export function RouteError({ error, reset }: RouteErrorProps) {
   const { t } = useTranslation()
 
-  if (typeof console !== 'undefined') {
+  useEffect(() => {
     console.error('[RouteError]', error)
-  }
+  }, [error])
 
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-6 text-center">

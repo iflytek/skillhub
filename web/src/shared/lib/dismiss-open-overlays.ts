@@ -7,8 +7,25 @@ const OPEN_OVERLAY_SELECTOR = [
   '[role="dialog"][data-state="open"]',
 ].join(',')
 
+function dispatchPointer(target: EventTarget, type: 'pointerdown' | 'pointerup') {
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      pointerType: 'mouse',
+      button: 0,
+      buttons: type === 'pointerdown' ? 1 : 0,
+      clientX: 0,
+      clientY: 0,
+    }),
+  )
+}
+
 /**
  * Dismiss open Radix overlays before a route unmounts their triggers.
+ *
+ * Prefer pointer/outside-dismiss (Radix listens for these) over synthetic Escape,
+ * which is often ignored because `isTrusted === false`.
  *
  * Call only on pathname changes (not search debounce) to avoid closing UI while
  * typing on /search.
@@ -26,12 +43,13 @@ export function dismissOpenOverlays(): void {
     document.activeElement.blur()
   }
 
-  document.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      key: 'Escape',
-      code: 'Escape',
-      bubbles: true,
-      cancelable: true,
-    }),
-  )
+  // Dialog: overlay pointerdown is the trusted dismiss path in Radix.
+  document.querySelectorAll('[data-radix-dialog-overlay]').forEach((overlay) => {
+    dispatchPointer(overlay, 'pointerdown')
+    dispatchPointer(overlay, 'pointerup')
+  })
+
+  // Select / DropdownMenu: outside pointerdown on body closes open content.
+  dispatchPointer(document.body, 'pointerdown')
+  dispatchPointer(document.body, 'pointerup')
 }

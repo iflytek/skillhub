@@ -71,15 +71,17 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-x-clip" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
-      {/* Decorative gradient orb */}
-      <div
-        className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90 pointer-events-none z-0"
-        style={{
-          background: 'radial-gradient(ellipse at 70% 20%, rgba(184,94,255,0.25) 0%, rgba(106,109,255,0.15) 40%, transparent 70%)',
-          filter: 'blur(60px)',
-        }}
-      />
+    <div className="min-h-screen flex flex-col relative" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
+      {/* Clip only the decorative layer so in-tree Select/Dropdown are not cropped. */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-x-clip" aria-hidden>
+        <div
+          className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full opacity-90"
+          style={{
+            background: 'radial-gradient(ellipse at 70% 20%, rgba(184,94,255,0.25) 0%, rgba(106,109,255,0.15) 40%, transparent 70%)',
+            filter: 'blur(60px)',
+          }}
+        />
+      </div>
 
       {/* Header */}
       <header className={getAppHeaderClassName(isHeaderElevated)} style={{ borderColor: 'hsl(var(--border))' }}>

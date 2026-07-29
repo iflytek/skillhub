@@ -11,23 +11,27 @@ describe('dismissOpenOverlays', () => {
   })
 
   it('does nothing when no open overlay is present', () => {
-    const dispatch = vi.spyOn(document, 'dispatchEvent')
+    const dispatch = vi.spyOn(document.body, 'dispatchEvent')
     dismissOpenOverlays()
     expect(dispatch).not.toHaveBeenCalled()
   })
 
-  it('dispatches Escape when an open dialog is present', () => {
+  it('pointer-dismisses dialog overlay when an open dialog is present', () => {
+    const overlay = document.createElement('div')
+    overlay.setAttribute('data-radix-dialog-overlay', '')
+    document.body.appendChild(overlay)
+
     const dialog = document.createElement('div')
     dialog.setAttribute('role', 'dialog')
     dialog.setAttribute('data-state', 'open')
     document.body.appendChild(dialog)
 
-    const dispatch = vi.spyOn(document, 'dispatchEvent')
+    const overlayDispatch = vi.spyOn(overlay, 'dispatchEvent')
+    const bodyDispatch = vi.spyOn(document.body, 'dispatchEvent')
+
     dismissOpenOverlays()
 
-    expect(dispatch).toHaveBeenCalledOnce()
-    const event = dispatch.mock.calls[0]?.[0] as KeyboardEvent
-    expect(event).toBeInstanceOf(KeyboardEvent)
-    expect(event.key).toBe('Escape')
+    expect(overlayDispatch.mock.calls.some(([event]) => (event as Event).type === 'pointerdown')).toBe(true)
+    expect(bodyDispatch.mock.calls.some(([event]) => (event as Event).type === 'pointerdown')).toBe(true)
   })
 })

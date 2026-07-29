@@ -34,6 +34,7 @@ import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { getHeadlineVersion, getOwnerPreviewVersion, getPublishedVersion } from '@/shared/lib/skill-lifecycle'
+import { navigateAfterOverlays } from '@/shared/lib/navigate-after-overlays'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -549,7 +550,9 @@ export function SkillDetailPage() {
         t('skillDetail.deleteSkillSuccessDescription', { skill: skill.displayName }),
       )
       setDeleteSkillInputOpen(false)
-      navigate({ to: resolveDeletedSkillReturnTo(search.returnTo) })
+      navigateAfterOverlays(() => {
+        navigate({ to: resolveDeletedSkillReturnTo(search.returnTo) })
+      })
       queryClient.removeQueries({ queryKey: ['skills', namespace, slug] })
       queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
     } catch (error) {
@@ -586,7 +589,9 @@ export function SkillDetailPage() {
         t('skillDetail.withdrawReviewSuccessDescription', { version: withdrawVersionTarget }),
       )
       setWithdrawVersionTarget(null)
-      navigate({ to: '/dashboard/skills' })
+      navigateAfterOverlays(() => {
+        navigate({ to: '/dashboard/skills' })
+      })
     } catch (error) {
       toast.error(t('skillDetail.withdrawReviewErrorTitle'), error instanceof Error ? error.message : '')
       throw error
