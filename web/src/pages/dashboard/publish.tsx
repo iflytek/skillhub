@@ -25,6 +25,7 @@ import { usePublishSkill } from '@/shared/hooks/use-skill-queries'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { navigateAfterOverlays } from '@/shared/lib/navigate-after-overlays'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
@@ -92,7 +93,9 @@ export function PublishPage() {
           t('publish.pendingReviewDescription', { skill: skillLabel })
         )
       }
-      navigate({ to: '/dashboard/skills' })
+      navigateAfterOverlays(() => {
+        navigate({ to: '/dashboard/skills' })
+      })
     } catch (error) {
       if (error instanceof ApiError && error.status === 408) {
         toast.error(t('publish.timeoutTitle'), t('publish.timeoutDescription'))
@@ -197,7 +200,6 @@ export function PublishPage() {
         <div className="space-y-3">
           <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           <UploadZone
-            key={selectedFile ? `${selectedFile.name}-${selectedFile.lastModified}` : 'empty'}
             onFileSelect={handleFileSelect}
             disabled={publishMutation.isPending}
           />

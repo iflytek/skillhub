@@ -1524,6 +1524,11 @@
       }
     }
   },
+  "routeError": {
+    "title": "出现错误",
+    "description": "页面遇到意外错误。请重置后继续。若在无扩展的隐私窗口中仍反复出现，请反馈问题。",
+    "reset": "重置"
+  },
   "notification": {
     "title": "通知",
     "empty": "暂无通知",

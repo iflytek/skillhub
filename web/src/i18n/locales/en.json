@@ -1523,6 +1523,11 @@
       }
     }
   },
+  "routeError": {
+    "title": "Something went wrong",
+    "description": "The page hit an unexpected error. Reset to continue. If this keeps happening in a private window without extensions, please report it.",
+    "reset": "Reset"
+  },
   "notification": {
     "title": "Notifications",
     "empty": "No notifications",

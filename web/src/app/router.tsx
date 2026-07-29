@@ -3,6 +3,7 @@ import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
 import { RoleGuard } from '@/shared/components/role-guard'
+import { RouteError } from '@/shared/components/route-error'
 import { createRequireAuth } from '@/shared/lib/auth-route'
 import { clearDynamicImportReloadGuard, recoverFromDynamicImportError } from '@/shared/lib/dynamic-import-recovery'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
@@ -157,6 +158,7 @@ function DefaultNotFound() {
 const rootRoute = createRootRoute({
   component: Layout,
   notFoundComponent: DefaultNotFound,
+  errorComponent: RouteError,
 })
 
 const requireAuth = createRequireAuth(getCurrentUser)
@@ -484,6 +486,7 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   defaultNotFoundComponent: DefaultNotFound,
+  defaultErrorComponent: RouteError,
 })
 
 declare module '@tanstack/react-router' {

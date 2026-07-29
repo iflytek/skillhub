@@ -1,10 +1,11 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 import { NotificationBell } from '@/features/notification/notification-bell'
+import { dismissOpenOverlays } from '@/shared/lib/dismiss-open-overlays'
 import { getAppHeaderClassName } from './layout-header-style'
 import { getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
 
@@ -24,6 +25,7 @@ export function Layout() {
   })
   const { user, isLoading } = useAuth()
   const [isHeaderElevated, setIsHeaderElevated] = useState(false)
+  const previousPathnameRef = useRef(pathname)
   const contentLayoutPathname = resolveAppMainContentPathname(pathname, resolvedPathname)
   const mainContentLayout = getAppMainContentLayout(contentLayoutPathname)
 
@@ -39,6 +41,15 @@ export function Layout() {
       window.removeEventListener('scroll', updateHeaderElevation)
     }
   }, [])
+
+  // Pathname-only: search debounce on /search must not dismiss overlays mid-typing.
+  useEffect(() => {
+    if (previousPathnameRef.current === pathname) {
+      return
+    }
+    previousPathnameRef.current = pathname
+    dismissOpenOverlays()
+  }, [pathname])
 
   const navItems: Array<{
     label: string

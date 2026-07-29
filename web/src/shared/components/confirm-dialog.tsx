@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Dialog,
@@ -36,11 +36,17 @@ export function ConfirmDialog({
   confirmButtonTestId,
 }: ConfirmDialogProps) {
   const { t } = useTranslation()
+  const openRef = useRef(open)
+  openRef.current = open
   const resolvedConfirmText = confirmText ?? t('dialog.confirm')
   const resolvedCancelText = cancelText ?? t('dialog.cancel')
+
   const handleConfirm = async () => {
     await onConfirm()
-    onOpenChange(false)
+    // Skip close if the caller already closed (e.g. publish success + navigate).
+    if (openRef.current) {
+      onOpenChange(false)
+    }
   }
 
   return (

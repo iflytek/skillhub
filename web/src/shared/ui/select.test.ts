@@ -4,6 +4,7 @@ import {
   SELECT_ITEM_CLASS_NAME,
   SELECT_SCROLL_BUTTON_CLASS_NAME,
   SELECT_TRIGGER_CLASS_NAME,
+  SelectContent,
   normalizeSelectValue,
 } from './select'
 
@@ -26,6 +27,11 @@ describe('shared select contract', () => {
     expect(SELECT_ITEM_CLASS_NAME).toContain('data-[disabled]:opacity-50')
     expect(SELECT_CONTENT_CLASS_NAME).toContain('data-[state=open]:animate-in')
     expect(SELECT_CONTENT_CLASS_NAME).not.toContain('data-[state=closed]:animate-out')
+  })
+
+  it('exports SelectContent as an in-tree content component', () => {
+    expect(SelectContent).toBeDefined()
+    expect(SelectContent.displayName).toBeDefined()
   })
 
   it('keeps the dropdown and selected items visually discoverable', () => {
