@@ -1,6 +1,6 @@
 import type { SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
-import { useStar } from '@/features/social/use-star'
+import { useStarredIdSet } from '@/features/social/use-star'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
@@ -18,8 +18,9 @@ interface SkillCardProps {
  */
 export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
   const { isAuthenticated } = useAuth()
-  const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)
-  const showStarredHighlight = highlightStarred && isAuthenticated && starStatus?.starred
+  // Batch highlight via shared ['skills','stars'] — never N× useStar per grid row.
+  const { starredIds } = useStarredIdSet(highlightStarred && isAuthenticated)
+  const showStarredHighlight = highlightStarred && isAuthenticated && starredIds.has(skill.id)
   const headlineVersion = getHeadlineVersion(skill)
   const isInteractive = typeof onClick === 'function'
 

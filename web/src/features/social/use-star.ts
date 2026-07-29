@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, fetchJson, getCsrfHeaders, WEB_API_PREFIX } from '@/api/client'
+import { useMyStars } from '@/shared/hooks/use-user-queries'
 
 interface StarStatus {
   starred: boolean
@@ -15,7 +17,7 @@ async function getStarStatus(skillId: number): Promise<StarStatus> {
     const starred = await fetchJson<boolean>(`${WEB_API_PREFIX}/skills/${skillId}/star`)
     return { starred }
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404)) {
       return { starred: false }
     }
     throw error
@@ -41,7 +43,25 @@ export function useStar(skillId: number, enabled = true) {
     queryKey: ['skills', skillId, 'star'],
     queryFn: () => getStarStatus(skillId),
     enabled: !!skillId && enabled,
+    // List cards / shells must not toast+flushSync on transient star failures.
+    meta: { skipGlobalErrorHandler: true },
   })
+}
+
+/**
+ * Shared starred-id set for list highlight (search/home/landing).
+ *
+ * One `['skills', 'stars']` query is reused across every SkillCard mount instead of
+ * N× per-skill `/star` requests that re-render the grid as each response arrives.
+ */
+export function useStarredIdSet(enabled = true) {
+  const query = useMyStars(enabled)
+  const starredIds = useMemo(
+    () => new Set((query.data ?? []).map((skill) => skill.id)),
+    [query.data],
+  )
+
+  return { ...query, starredIds }
 }
 
 export function useToggleStar(skillId: number) {

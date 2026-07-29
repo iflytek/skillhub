@@ -15,6 +15,11 @@ describe('use-star module exports', () => {
     expect(typeof mod.useStar).toBe('function')
   })
 
+  it('exports useStarredIdSet as a function', () => {
+    expect(mod.useStarredIdSet).toBeDefined()
+    expect(typeof mod.useStarredIdSet).toBe('function')
+  })
+
   it('exports useToggleStar as a function', () => {
     expect(mod.useToggleStar).toBeDefined()
     expect(typeof mod.useToggleStar).toBe('function')

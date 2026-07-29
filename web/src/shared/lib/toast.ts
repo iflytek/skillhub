@@ -22,21 +22,42 @@ function withDefaultToaster(options?: ExternalToast): ExternalToast {
   }
 }
 
+/**
+ * Sonner applies toast state with ReactDOM.flushSync. Calling that mid-commit
+ * (e.g. QueryCache onError while /search remounts cards) races React 19 DOM
+ * reconciliation → removeChild / insertBefore. Defer past the current turn.
+ */
+function scheduleToast(run: () => void) {
+  if (typeof globalThis.window === 'undefined') {
+    run()
+    return
+  }
+  globalThis.setTimeout(run, 0)
+}
+
 export const toast = {
   success: (message: string, description?: string, options?: ExternalToast) => {
-    sonnerToast.success(message, { description, ...withDefaultToaster(options) })
+    scheduleToast(() => {
+      sonnerToast.success(message, { description, ...withDefaultToaster(options) })
+    })
   },
   error: (message: string, description?: string, options?: ExternalToast) => {
-    sonnerToast.error(truncateErrorMessage(message) ?? message, {
-      description: truncateErrorMessage(description),
-      ...withDefaultToaster(options),
+    scheduleToast(() => {
+      sonnerToast.error(truncateErrorMessage(message) ?? message, {
+        description: truncateErrorMessage(description),
+        ...withDefaultToaster(options),
+      })
     })
   },
   warning: (message: string, description?: string, options?: ExternalToast) => {
-    sonnerToast.warning(message, { description, ...withDefaultToaster(options) })
+    scheduleToast(() => {
+      sonnerToast.warning(message, { description, ...withDefaultToaster(options) })
+    })
   },
   info: (message: string, description?: string, options?: ExternalToast) => {
-    sonnerToast.info(message, { description, ...withDefaultToaster(options) })
+    scheduleToast(() => {
+      sonnerToast.info(message, { description, ...withDefaultToaster(options) })
+    })
   },
   promise: <T,>(
     promise: Promise<T>,
