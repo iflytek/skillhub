@@ -216,11 +216,13 @@ export function SkillDetailPage() {
         window.innerHeight,
       )
 
-      setOverviewMaxHeight(nextMaxHeight)
-      setIsOverviewCollapsible(nextCollapsible)
+      // Bail out when ResizeObserver/layout noise repeats the same values to avoid
+      // re-render storms that race with body portals (Select, DropdownMenu, Dialog).
+      setOverviewMaxHeight((current) => (current === nextMaxHeight ? current : nextMaxHeight))
+      setIsOverviewCollapsible((current) => (current === nextCollapsible ? current : nextCollapsible))
 
       if (!nextCollapsible) {
-        setIsOverviewExpanded(false)
+        setIsOverviewExpanded((current) => (current ? false : current))
       }
     }
 
