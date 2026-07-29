@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -50,6 +51,11 @@ class DingTalkTokenResponseClientTest {
 
         assertThat(response.getAccessToken().getTokenValue()).isEqualTo("dt_access_token_123");
         assertThat(response.getAccessToken().getTokenType()).isEqualTo(OAuth2AccessToken.TokenType.BEARER);
+        assertThat(response.getAccessToken().getIssuedAt()).isNotNull();
+        assertThat(response.getAccessToken().getExpiresAt()).isNotNull();
+        assertThat(Duration.between(
+                response.getAccessToken().getIssuedAt(),
+                response.getAccessToken().getExpiresAt())).isEqualTo(Duration.ofSeconds(7200));
         assertThat(response.getAdditionalParameters().get("expireIn")).isEqualTo(7200L);
         // Verify raw_response is NOT included (sensitive data leak fix)
         assertThat(response.getAdditionalParameters().containsKey("raw_response")).isFalse();
@@ -112,14 +118,19 @@ class DingTalkTokenResponseClientTest {
     @Test
     void getTokenResponse_throwsOnHttpError() {
         mockServer.expect(requestTo("https://api.dingtalk.com/v1.0/oauth2/userAccessToken"))
-                .andRespond(withServerError());
+                .andRespond(withServerError().body("sensitive-upstream-response"));
 
         assertThatThrownBy(() -> client.getTokenResponse(authorizationCodeGrantRequest()))
-                .isInstanceOf(OAuth2AuthenticationException.class);
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .satisfies(ex -> {
+                    OAuth2AuthenticationException oauthException = (OAuth2AuthenticationException) ex;
+                    assertThat(oauthException.getError().getErrorCode()).isEqualTo("token_exchange_io_error");
+                    assertThat(oauthException.getMessage()).doesNotContain("sensitive-upstream-response");
+                });
     }
 
     @Test
-    void getTokenResponse_doesNotIncludeExpireInWhenMissing() {
+    void getTokenResponse_throwsWhenExpireInIsMissing() {
         mockServer.expect(requestTo("https://api.dingtalk.com/v1.0/oauth2/userAccessToken"))
                 .andRespond(withSuccess(
                         """
@@ -130,11 +141,29 @@ class DingTalkTokenResponseClientTest {
                         MediaType.APPLICATION_JSON
                 ));
 
-        OAuth2AccessTokenResponse response = client.getTokenResponse(authorizationCodeGrantRequest());
+        assertThatThrownBy(() -> client.getTokenResponse(authorizationCodeGrantRequest()))
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex)
+                        .getError().getErrorCode()).isEqualTo("token_response_invalid_expiry"));
+    }
 
-        assertThat(response.getAccessToken().getTokenValue()).isEqualTo("dt_access_token_123");
-        assertThat(response.getAdditionalParameters().containsKey("expireIn")).isFalse();
-        assertThat(response.getAdditionalParameters().containsKey("raw_response")).isFalse();
+    @Test
+    void getTokenResponse_throwsWhenExpireInIsNonPositive() {
+        mockServer.expect(requestTo("https://api.dingtalk.com/v1.0/oauth2/userAccessToken"))
+                .andRespond(withSuccess(
+                        """
+                        {
+                          "accessToken": "dt_access_token_123",
+                          "expireIn": 0
+                        }
+                        """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        assertThatThrownBy(() -> client.getTokenResponse(authorizationCodeGrantRequest()))
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex)
+                        .getError().getErrorCode()).isEqualTo("token_response_invalid_expiry"));
     }
 
     private OAuth2AuthorizationCodeGrantRequest authorizationCodeGrantRequest() {

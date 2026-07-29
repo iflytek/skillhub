@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.oauth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -8,7 +9,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
@@ -20,10 +23,10 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
-import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 
 class DingTalkOAuth2UserServiceTest {
 
@@ -62,7 +65,7 @@ class DingTalkOAuth2UserServiceTest {
 
         // Mock OAuthLoginFlowService to return a principal
         PlatformPrincipal principal = new PlatformPrincipal(
-                "user-union123", "测试用户", "union123@dingtalk.local",
+                "user-union123", "测试用户", null,
                 "https://example.com/avatar.jpg", "dingtalk", Set.of("USER")
         );
         when(oauthLoginFlowService.authenticate(any(OAuthClaims.class))).thenReturn(principal);
@@ -98,7 +101,7 @@ class DingTalkOAuth2UserServiceTest {
                 ));
 
         PlatformPrincipal principal = new PlatformPrincipal(
-                "user-union789", "自定义用户", "union789@dingtalk.local",
+                "user-union789", "自定义用户", null,
                 null, "dingtalk", Set.of("USER")
         );
         when(oauthLoginFlowService.authenticate(any(OAuthClaims.class))).thenReturn(principal);
@@ -107,6 +110,45 @@ class DingTalkOAuth2UserServiceTest {
 
         assertThat(oauth2User.getName()).isEqualTo("user-union789");
         mockServer.verify();
+    }
+
+    @Test
+    void loadUser_supportsOpenIdFallbackWhenUnionIdIsMissing() {
+        mockServer.expect(requestTo("https://api.dingtalk.com/v1.0/contact/users/me"))
+                .andRespond(withSuccess(
+                        """
+                        {
+                          "openId": "open456",
+                          "nick": "测试用户"
+                        }
+                        """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "user-open456", "测试用户", null, null, "dingtalk", Set.of("USER")
+        );
+        when(oauthLoginFlowService.authenticate(any(OAuthClaims.class))).thenReturn(principal);
+
+        OAuth2User oauth2User = service.loadUser(userRequest());
+
+        assertThat(oauth2User.getName()).isEqualTo("user-open456");
+        assertThat(oauth2User.getAttributes().get(DingTalkOAuth2Constants.SUBJECT_ATTRIBUTE))
+                .isEqualTo("open456");
+    }
+
+    @Test
+    void loadUser_wrapsHttpFailureWithoutExposingResponseBody() {
+        mockServer.expect(requestTo("https://api.dingtalk.com/v1.0/contact/users/me"))
+                .andRespond(withServerError().body("sensitive-upstream-response"));
+
+        assertThatThrownBy(() -> service.loadUser(userRequest()))
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .satisfies(ex -> {
+                    OAuth2AuthenticationException oauthException = (OAuth2AuthenticationException) ex;
+                    assertThat(oauthException.getError().getErrorCode()).isEqualTo("user_info_request_failed");
+                    assertThat(oauthException.getMessage()).doesNotContain("sensitive-upstream-response");
+                });
     }
 
     private OAuth2UserRequest userRequest() {

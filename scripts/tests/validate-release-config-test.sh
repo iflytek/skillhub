@@ -150,6 +150,31 @@ write_env "$invalid_redis_sentinel_check_env" "release-download-secret-32-bytes-
 printf '%s\n' "SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST=yes" >>"$invalid_redis_sentinel_check_env"
 expect_fail "$invalid_redis_sentinel_check_env" "SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST must be true or false"
 
+dingtalk_env="$tmp/dingtalk.env"
+write_env "$dingtalk_env" "release-download-secret-32-bytes-minimum"
+cat >>"$dingtalk_env" <<EOF
+SPRING_PROFILES_ACTIVE=docker,dingtalk
+OAUTH2_DINGTALK_CLIENT_ID=ding-client-id
+OAUTH2_DINGTALK_CLIENT_SECRET=ding-client-secret
+EOF
+"$SCRIPT" "$dingtalk_env" >/dev/null
+
+dingtalk_missing_secret_env="$tmp/dingtalk-missing-secret.env"
+write_env "$dingtalk_missing_secret_env" "release-download-secret-32-bytes-minimum"
+cat >>"$dingtalk_missing_secret_env" <<EOF
+SPRING_PROFILES_ACTIVE=docker,dingtalk
+OAUTH2_DINGTALK_CLIENT_ID=ding-client-id
+EOF
+expect_fail "$dingtalk_missing_secret_env" "OAUTH2_DINGTALK_CLIENT_SECRET is required"
+
+dingtalk_disabled_env="$tmp/dingtalk-disabled.env"
+write_env "$dingtalk_disabled_env" "release-download-secret-32-bytes-minimum"
+cat >>"$dingtalk_disabled_env" <<EOF
+OAUTH2_DINGTALK_CLIENT_ID=ding-client-id
+OAUTH2_DINGTALK_CLIENT_SECRET=ding-client-secret
+EOF
+expect_fail "$dingtalk_disabled_env" "SPRING_PROFILES_ACTIVE must include dingtalk"
+
 draft_env="$tmp/draft.env"
 while IFS= read -r line || [[ -n "$line" ]]; do
   case "$line" in
@@ -162,5 +187,12 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   esac
 done <"$REPO_ROOT/.env.release.draft" >"$draft_env"
 expect_fail "$draft_env" "POSTGRES_PASSWORD"
+
+grep -Fq 'OAUTH2_DINGTALK_CLIENT_ID: ${OAUTH2_DINGTALK_CLIENT_ID:-}' "$REPO_ROOT/compose.release.yml" \
+  || fail "compose.release.yml does not pass OAUTH2_DINGTALK_CLIENT_ID"
+grep -Fq 'key: oauth2-dingtalk-client-secret' "$REPO_ROOT/deploy/k8s/base/backend-deployment.yaml" \
+  || fail "Kubernetes deployment does not pass the DingTalk client secret"
+grep -Fq 'spring-profiles-active: docker' "$REPO_ROOT/deploy/k8s/base/configmap.yaml" \
+  || fail "Kubernetes config does not expose Spring profile activation"
 
 echo "validate-release-config-test passed"

@@ -34,14 +34,14 @@ class DingTalkClaimsExtractorTest {
 
         assertThat(claims.provider()).isEqualTo("dingtalk");
         assertThat(claims.subject()).isEqualTo("union123");
-        assertThat(claims.email()).isEqualTo("union123@dingtalk.local");
-        assertThat(claims.emailVerified()).isTrue();
+        assertThat(claims.email()).isNull();
+        assertThat(claims.emailVerified()).isFalse();
         assertThat(claims.providerLogin()).isEqualTo("测试用户");
     }
 
     @Test
-    void extract_throwsWhenUnionIdIsMissing() {
-        assertThatThrownBy(() -> extractor.extract(
+    void extract_fallsBackToOpenId() {
+        OAuthClaims claims = extractor.extract(
                 userRequest(),
                 new DefaultOAuth2User(
                         java.util.List.of(),
@@ -51,25 +51,60 @@ class DingTalkClaimsExtractorTest {
                         ),
                         "openId"
                 )
-        )).isInstanceOf(OAuth2AuthenticationException.class)
-                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex).getError().getErrorCode()).isEqualTo("missing_union_id"));
+        );
+
+        assertThat(claims.subject()).isEqualTo("open456");
     }
 
     @Test
-    void extract_throwsWhenUnionIdIsEmpty() {
-        assertThatThrownBy(() -> extractor.extract(
+    void extract_fallsBackToUserIdWhenHigherPriorityIdentifiersAreBlank() {
+        OAuthClaims claims = extractor.extract(
                 userRequest(),
                 new DefaultOAuth2User(
                         java.util.List.of(),
                         Map.of(
-                                "unionId", "",
-                                "openId", "open456",
+                                "unionId", " ",
+                                "openId", "",
+                                "userId", "user789",
                                 "nick", "测试用户"
                         ),
-                        "openId"
+                        "userId"
+                )
+        );
+
+        assertThat(claims.subject()).isEqualTo("user789");
+    }
+
+    @Test
+    void extract_preservesRealEmailWithoutClaimingVerification() {
+        OAuthClaims claims = extractor.extract(
+                userRequest(),
+                new DefaultOAuth2User(
+                        java.util.List.of(),
+                        Map.of(
+                                "unionId", "union123",
+                                "email", "user@example.com"
+                        ),
+                        "unionId"
+                )
+        );
+
+        assertThat(claims.email()).isEqualTo("user@example.com");
+        assertThat(claims.emailVerified()).isFalse();
+    }
+
+    @Test
+    void extract_throwsWhenAllStableIdentifiersAreMissing() {
+        assertThatThrownBy(() -> extractor.extract(
+                userRequest(),
+                new DefaultOAuth2User(
+                        java.util.List.of(),
+                        Map.of("nick", "测试用户"),
+                        "nick"
                 )
         )).isInstanceOf(OAuth2AuthenticationException.class)
-                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex).getError().getErrorCode()).isEqualTo("missing_union_id"));
+                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex)
+                        .getError().getErrorCode()).isEqualTo("missing_subject"));
     }
 
     @Test

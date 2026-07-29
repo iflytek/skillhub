@@ -62,6 +62,8 @@ cp secret.yaml.example secret.yaml
 | bootstrap-admin-password | Admin password | Yes |
 | oauth2-github-client-id | GitHub OAuth ID | No |
 | oauth2-github-client-secret | GitHub OAuth secret | No |
+| oauth2-dingtalk-client-id | DingTalk OAuth AppKey | No |
+| oauth2-dingtalk-client-secret | DingTalk OAuth AppSecret | No |
 | skill-scanner-llm-api-key | LLM API key | No |
 | skill-scanner-llm-base-url | Local/custom LLM service base URL | No |
 | skill-scanner-llm-model | LLM model name used by the scanner | No |
@@ -171,6 +173,7 @@ kubectl apply -k overlays/with-infra/  # or overlays/external/
 |---|---|---|
 | redis-host | redis | Redis host address |
 | redis-port | 6379 | Redis port |
+| spring-profiles-active | docker | Set to `docker,dingtalk` to enable DingTalk login |
 | storage-base-path | /var/lib/skillhub/storage | Skill storage path |
 | skillhub-storage-provider | local | Storage type (local/s3) |
 | skill-scanner-enabled | true | Enable scanner |
@@ -182,6 +185,18 @@ kubectl apply -k overlays/with-infra/  # or overlays/external/
 | bootstrap-admin-display-name | Platform Admin | Admin display name |
 | bootstrap-admin-email | admin@example.com | Admin email |
 | session-cookie-secure | false | Set to true for HTTPS |
+| oauth2-dingtalk-display-name | 钉钉 | DingTalk login display name |
+
+### DingTalk OAuth2
+
+DingTalk login is disabled by default. Set `spring-profiles-active` in the
+ConfigMap to `docker,dingtalk`, then provide `oauth2-dingtalk-client-id` and
+`oauth2-dingtalk-client-secret` in the Secret. Configure the callback URL in
+DingTalk Open Platform as `{public-site-url}/login/oauth2/code/dingtalk`. The
+authorization scope is fixed to `openid`.
+
+See the [official DingTalk tutorial](https://developers.dingtalk.com/document/orgapp/tutorial-obtaining-user-personal-information)
+for the authorization contract.
 
 ### Storage Configuration
 

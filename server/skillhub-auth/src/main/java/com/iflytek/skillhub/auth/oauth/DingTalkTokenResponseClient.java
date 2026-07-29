@@ -2,6 +2,8 @@ package com.iflytek.skillhub.auth.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.util.Map;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,11 +16,9 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
-
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Map;
 
 /**
  * Custom token response client for DingTalk (钉钉).
@@ -74,10 +74,14 @@ public class DingTalkTokenResponseClient implements OAuth2AccessTokenResponseCli
         ResponseEntity<String> response;
         try {
             response = restTemplate.postForEntity(tokenUri, new HttpEntity<>(tokenRequest, headers), String.class);
-        } catch (Exception e) {
+        } catch (RestClientResponseException e) {
             throw new OAuth2AuthenticationException(
                     new OAuth2Error("token_exchange_io_error",
-                            "Failed to exchange code for DingTalk access token: " + e.getMessage(), null), e);
+                            "DingTalk token exchange failed with HTTP " + e.getStatusCode().value(), null));
+        } catch (RestClientException e) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("token_exchange_io_error",
+                            "DingTalk token exchange request failed", null));
         }
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -91,21 +95,31 @@ public class DingTalkTokenResponseClient implements OAuth2AccessTokenResponseCli
                                     "DingTalk token response missing accessToken field", null));
                 }
                 String accessToken = accessTokenNode.asText();
-                if (accessToken.isEmpty()) {
+                if (accessToken.isBlank()) {
                     throw new OAuth2AuthenticationException(
                             new OAuth2Error("token_response_missing_field",
                                     "DingTalk token response has empty accessToken", null));
                 }
 
-                // Only include non-sensitive fields in additional parameters
-                Map<String, Object> safeParams = new java.util.LinkedHashMap<>();
                 JsonNode expireInNode = json.get("expireIn");
-                if (expireInNode != null && !expireInNode.isNull()) {
-                    safeParams.put("expireIn", expireInNode.asLong());
+                if (expireInNode == null || !expireInNode.isIntegralNumber() || !expireInNode.canConvertToLong()) {
+                    throw new OAuth2AuthenticationException(
+                            new OAuth2Error("token_response_invalid_expiry",
+                                    "DingTalk token response has invalid expireIn field", null));
                 }
+                long expireInSeconds = expireInNode.longValue();
+                if (expireInSeconds <= 0) {
+                    throw new OAuth2AuthenticationException(
+                            new OAuth2Error("token_response_invalid_expiry",
+                                    "DingTalk token response has non-positive expireIn field", null));
+                }
+
+                // Only include non-sensitive fields in additional parameters.
+                Map<String, Object> safeParams = Map.of("expireIn", expireInSeconds);
 
                 return OAuth2AccessTokenResponse.withToken(accessToken)
                         .tokenType(OAuth2AccessToken.TokenType.BEARER)
+                        .expiresIn(expireInSeconds)
                         .additionalParameters(safeParams)
                         .build();
             } catch (OAuth2AuthenticationException e) {
@@ -113,7 +127,7 @@ public class DingTalkTokenResponseClient implements OAuth2AccessTokenResponseCli
             } catch (Exception e) {
                 throw new OAuth2AuthenticationException(
                         new OAuth2Error("token_parse_error",
-                                "Failed to parse DingTalk token response", null), e);
+                                "Failed to parse DingTalk token response", null));
             }
         }
 

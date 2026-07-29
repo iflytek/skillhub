@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: dingtalk
+  security:
+    oauth2:
+      client:
+        registration:
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET}
+            scope:
+              - openid
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: ${OAUTH2_DINGTALK_DISPLAY_NAME:钉钉}
+        provider:
+          dingtalk:
+            authorization-uri: https://login.dingtalk.com/oauth2/auth
+            token-uri: https://api.dingtalk.com/v1.0/oauth2/userAccessToken
+            user-info-uri: https://api.dingtalk.com/v1.0/contact/users/me
+            user-name-attribute: unionId

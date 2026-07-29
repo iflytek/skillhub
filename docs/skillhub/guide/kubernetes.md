@@ -62,6 +62,8 @@ cp secret.yaml.example secret.yaml
 | bootstrap-admin-password | 管理员密码 | 是 |
 | oauth2-github-client-id | GitHub OAuth ID | 否 |
 | oauth2-github-client-secret | GitHub OAuth 密钥 | 否 |
+| oauth2-dingtalk-client-id | 钉钉 OAuth AppKey | 否 |
+| oauth2-dingtalk-client-secret | 钉钉 OAuth AppSecret | 否 |
 | skill-scanner-llm-api-key | LLM API 密钥 | 否 |
 | skill-scanner-llm-base-url | 本地/自定义 LLM 服务地址 | 否 |
 | skill-scanner-llm-model | Scanner 使用的 LLM 模型名 | 否 |
@@ -171,6 +173,7 @@ kubectl apply -k overlays/with-infra/  # 或 overlays/external/
 |---|---|---|
 | redis-host | redis | Redis 主机地址 |
 | redis-port | 6379 | Redis 端口 |
+| spring-profiles-active | docker | 启用钉钉登录时改为 `docker,dingtalk` |
 | storage-base-path | /var/lib/skillhub/storage | 技能存储路径 |
 | skillhub-storage-provider | local | 存储类型（local/s3） |
 | skill-scanner-enabled | true | 是否启用扫描器 |
@@ -182,6 +185,16 @@ kubectl apply -k overlays/with-infra/  # 或 overlays/external/
 | bootstrap-admin-display-name | Platform Admin | 管理员显示名称 |
 | bootstrap-admin-email | admin@example.com | 管理员邮箱 |
 | session-cookie-secure | false | HTTPS 环境设为 true |
+| oauth2-dingtalk-display-name | 钉钉 | 钉钉登录入口显示名称 |
+
+### 钉钉 OAuth2
+
+钉钉登录默认关闭。将 ConfigMap 的 `spring-profiles-active` 改为
+`docker,dingtalk`，并在 Secret 中填写 `oauth2-dingtalk-client-id` 与
+`oauth2-dingtalk-client-secret` 后才会注册登录入口。钉钉开放平台的回调地址应为
+`{站点公网地址}/login/oauth2/code/dingtalk`，授权 scope 固定为 `openid`。
+
+完整授权契约参见[钉钉官方教程](https://developers.dingtalk.com/document/orgapp/tutorial-obtaining-user-personal-information)。
 
 ### 存储配置
 

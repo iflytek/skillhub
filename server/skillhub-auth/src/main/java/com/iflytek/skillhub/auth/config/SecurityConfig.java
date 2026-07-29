@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.config;
 
 import com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService;
 import com.iflytek.skillhub.auth.oauth.CustomOidcUserService;
+import com.iflytek.skillhub.auth.oauth.DingTalkOAuth2Constants;
 import com.iflytek.skillhub.auth.oauth.DingTalkOAuth2UserService;
 import com.iflytek.skillhub.auth.oauth.DingTalkTokenResponseClient;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
@@ -48,7 +49,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * Central Spring Security configuration for browser sessions, API tokens, and
  * public versus protected endpoints.
  */
-@Configuration(proxyBeanMethods = false)
+@Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -203,7 +204,7 @@ public class SecurityConfig {
         }
     }
 
-static boolean hasSessionCookie(HttpServletRequest request) {
+    static boolean hasSessionCookie(HttpServletRequest request) {
         if (request.getRequestedSessionId() != null) {
             return true;
         }
@@ -235,7 +236,8 @@ static boolean hasSessionCookie(HttpServletRequest request) {
 
         @Override
         public OAuth2User loadUser(OAuth2UserRequest userRequest) {
-            if ("dingtalk".equals(userRequest.getClientRegistration().getRegistrationId())) {
+            if (DingTalkOAuth2Constants.REGISTRATION_ID.equals(
+                    userRequest.getClientRegistration().getRegistrationId())) {
                 return dingTalkService.loadUser(userRequest);
             }
             return defaultService.loadUser(userRequest);
@@ -258,7 +260,8 @@ static boolean hasSessionCookie(HttpServletRequest request) {
 
         @Override
         public OAuth2AccessTokenResponse getTokenResponse(OAuth2AuthorizationCodeGrantRequest authorizationCodeGrantRequest) {
-            if ("dingtalk".equals(authorizationCodeGrantRequest.getClientRegistration().getRegistrationId())) {
+            if (DingTalkOAuth2Constants.REGISTRATION_ID.equals(
+                    authorizationCodeGrantRequest.getClientRegistration().getRegistrationId())) {
                 return dingTalkClient.getTokenResponse(authorizationCodeGrantRequest);
             }
             return defaultClient.getTokenResponse(authorizationCodeGrantRequest);

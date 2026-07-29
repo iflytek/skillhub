@@ -1,12 +1,12 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -16,13 +16,14 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
-
-import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 
 /**
  * OAuth2UserService for DingTalk — handles DingTalk's non-standard user info
@@ -35,8 +36,6 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
  */
 @Component
 public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
-
-    private static final Logger log = LoggerFactory.getLogger(DingTalkOAuth2UserService.class);
 
     private final RestTemplate restTemplate;
     private final DingTalkClaimsExtractor claimsExtractor;
@@ -74,29 +73,40 @@ public class DingTalkOAuth2UserService implements OAuth2UserService<OAuth2UserRe
 
         // Fetch user info using DingTalk's custom header
         HttpHeaders headers = new HttpHeaders();
-        headers.set("x-acs-dingtalk-access-token", accessToken);
+        headers.set(DingTalkOAuth2Constants.ACCESS_TOKEN_HEADER, accessToken);
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                userInfoUri,
-                HttpMethod.GET,
-                requestEntity,
-                Map.class
-        );
+        ResponseEntity<Map<String, Object>> response;
+        try {
+            response = restTemplate.exchange(
+                    userInfoUri,
+                    HttpMethod.GET,
+                    requestEntity,
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+        } catch (RestClientResponseException e) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("user_info_request_failed",
+                            "DingTalk user-info request failed with HTTP " + e.getStatusCode().value(), null));
+        } catch (RestClientException e) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("user_info_request_failed",
+                            "DingTalk user-info request failed", null));
+        }
 
         Map<String, Object> attributes = response.getBody() != null ? response.getBody() : Map.of();
 
-        // Map DingTalk response to standard attributes
         Map<String, Object> userAttributes = new HashMap<>(attributes);
-        userAttributes.putIfAbsent("openId", attributes.get("openId"));
-        userAttributes.putIfAbsent("nickName", attributes.get("nick"));
-        userAttributes.putIfAbsent("avatarUrl", attributes.get("avatarUrl"));
+        if (attributes.get("avatarUrl") != null) {
+            userAttributes.putIfAbsent("avatar_url", attributes.get("avatarUrl"));
+        }
 
-        // Extract claims — use unionId as the name attribute (cross-app unique identity)
+        String subject = claimsExtractor.resolveSubject(userAttributes);
+        userAttributes.put(DingTalkOAuth2Constants.SUBJECT_ATTRIBUTE, subject);
+
         OAuthClaims claims = claimsExtractor.extract(userRequest, new DefaultOAuth2User(
-                java.util.Collections.emptyList(), userAttributes, "unionId"));
-
-        log.info("DingTalk OAuth2 login: subject={}, providerLogin={}", claims.subject(), claims.providerLogin());
+                java.util.Collections.emptyList(), userAttributes, DingTalkOAuth2Constants.SUBJECT_ATTRIBUTE));
 
         // Delegate to OAuthLoginFlowService for access policy evaluation and identity binding
         PlatformPrincipal principal = oauthLoginFlowService.authenticate(claims);
