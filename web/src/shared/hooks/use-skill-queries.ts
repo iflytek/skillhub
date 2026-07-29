@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillVersionCompare, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
@@ -64,6 +64,9 @@ export function useSearchSkills(params: SearchParams) {
     queryKey: ['skills', 'search', params],
     queryFn: () => searchSkills(params),
     enabled: params.starredOnly !== true,
+    // Keep prior results while typing/debouncing so the grid is not swapped for
+    // skeletons (unmount churn that races header portals under React 19).
+    placeholderData: keepPreviousData,
   })
 }
 

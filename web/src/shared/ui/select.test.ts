@@ -24,6 +24,8 @@ describe('shared select contract', () => {
     expect(SELECT_CONTENT_CLASS_NAME).toContain('text-popover-foreground')
     expect(SELECT_ITEM_CLASS_NAME).toContain('focus:bg-accent')
     expect(SELECT_ITEM_CLASS_NAME).toContain('data-[disabled]:opacity-50')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('data-[state=open]:animate-in')
+    expect(SELECT_CONTENT_CLASS_NAME).not.toContain('data-[state=closed]:animate-out')
   })
 
   it('keeps the dropdown and selected items visually discoverable', () => {
