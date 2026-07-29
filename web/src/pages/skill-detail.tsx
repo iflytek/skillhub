@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -16,6 +16,7 @@ import {
   getOverviewCollapseMaxHeight,
   OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT,
   shouldCollapseOverview,
+  shouldReleaseOverviewLayoutQuiet,
 } from '@/features/skill/overview-collapse'
 import { resolveSkillActionErrorTitle } from '@/features/skill/skill-action-error'
 import { isPrecheckConfirmationMessage, extractPrecheckWarnings } from '@/features/publish/publish-error-utils'
@@ -150,6 +151,8 @@ export function SkillDetailPage() {
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
+  const overviewLayoutQuietRef = useRef(false)
+  const overviewQuietGenerationRef = useRef(0)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const { user, hasRole } = useAuth()
   const detailQueriesEnabled = isSkillDetailQueriesEnabled(skillDeleted)
@@ -206,7 +209,7 @@ export function SkillDetailPage() {
     }
 
     const updateOverviewState = () => {
-      if (!overviewContentRef.current) {
+      if (!overviewContentRef.current || overviewLayoutQuietRef.current) {
         return
       }
 
@@ -241,19 +244,32 @@ export function SkillDetailPage() {
     return () => {
       window.removeEventListener('resize', updateOverviewState)
       resizeObserver?.disconnect()
+      overviewQuietGenerationRef.current += 1
+      overviewLayoutQuietRef.current = false
     }
   }, [readme])
 
   const handleToggleOverview = () => {
-    if (!isOverviewExpanded) {
-      setIsOverviewExpanded(true)
-      return
-    }
-
-    setIsOverviewExpanded(false)
-    requestAnimationFrame(() => {
-      overviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Quiet ResizeObserver for the expand/collapse commit (no max-height transition).
+    const quietGeneration = overviewQuietGenerationRef.current + 1
+    overviewQuietGenerationRef.current = quietGeneration
+    overviewLayoutQuietRef.current = true
+    const expanding = !isOverviewExpanded
+    startTransition(() => {
+      setIsOverviewExpanded(expanding)
     })
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (shouldReleaseOverviewLayoutQuiet(overviewQuietGenerationRef.current, quietGeneration)) {
+          overviewLayoutQuietRef.current = false
+        }
+      })
+    })
+    if (!expanding) {
+      requestAnimationFrame(() => {
+        overviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
   }
 
   const refreshSkill = () => {
@@ -303,7 +319,7 @@ export function SkillDetailPage() {
     setPreviewDialogOpen(true)
   }
 
-  const handlePackageMarkdownLinkClick = (
+  const handlePackageMarkdownLinkClick = useCallback((
     href: string,
     event: MouseEvent<HTMLAnchorElement>,
     currentFilePath: string | null | undefined,
@@ -323,15 +339,15 @@ export function SkillDetailPage() {
     }
 
     toast.error(t('skillDetail.packageLinkMissingTitle'), t('skillDetail.packageLinkMissingDescription'))
-  }
+  }, [files, t])
 
-  const handleOverviewLinkClick = (href: string, event: MouseEvent<HTMLAnchorElement>) => {
+  const handleOverviewLinkClick = useCallback((href: string, event: MouseEvent<HTMLAnchorElement>) => {
     handlePackageMarkdownLinkClick(href, event, documentationPath)
-  }
+  }, [documentationPath, handlePackageMarkdownLinkClick])
 
-  const handlePreviewLinkClick = (href: string, event: MouseEvent<HTMLAnchorElement>) => {
+  const handlePreviewLinkClick = useCallback((href: string, event: MouseEvent<HTMLAnchorElement>) => {
     handlePackageMarkdownLinkClick(href, event, previewNode?.path)
-  }
+  }, [handlePackageMarkdownLinkClick, previewNode?.path])
 
   // Download a single file from the skill version
   const handleDownloadFile = () => {
@@ -891,7 +907,7 @@ export function SkillDetailPage() {
                 <div ref={overviewSectionRef} className="space-y-4">
                   <div
                     className={cn(
-                      'relative overflow-hidden transition-[max-height] duration-300 ease-out',
+                      'relative overflow-hidden',
                       !isOverviewExpanded && isOverviewCollapsible && 'rounded-2xl',
                     )}
                     style={!isOverviewExpanded && isOverviewCollapsible ? { maxHeight: `${overviewMaxHeight}px` } : undefined}

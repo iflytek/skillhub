@@ -4,6 +4,7 @@ import {
   OVERVIEW_COLLAPSE_MOBILE_VIEWPORT_RATIO,
   getOverviewCollapseMaxHeight,
   shouldCollapseOverview,
+  shouldReleaseOverviewLayoutQuiet,
 } from './overview-collapse'
 
 describe('overview collapse helpers', () => {
@@ -20,5 +21,10 @@ describe('overview collapse helpers', () => {
 
     expect(shouldCollapseOverview(maxHeight, 1280, 900)).toBe(false)
     expect(shouldCollapseOverview(maxHeight + 1, 1280, 900)).toBe(true)
+  })
+
+  it('releases overview layout quiet only for the latest toggle generation', () => {
+    expect(shouldReleaseOverviewLayoutQuiet(2, 2)).toBe(true)
+    expect(shouldReleaseOverviewLayoutQuiet(3, 2)).toBe(false)
   })
 })

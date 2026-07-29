@@ -32,4 +32,24 @@ describe('MarkdownRenderer links', () => {
 
     expect(screen.getByRole('link', { name: 'Usage' }).getAttribute('href')).toBe('docs/usage.md')
   })
+
+  it('marks the document container as notranslate', () => {
+    const { container } = render(<MarkdownRenderer content="Hello" />)
+    const root = container.firstElementChild as HTMLElement
+
+    expect(root.getAttribute('translate')).toBe('no')
+    expect(root.classList.contains('notranslate')).toBe(true)
+  })
+
+  it('keeps the same content root when re-rendered with a stable onLinkClick', () => {
+    const onLinkClick = vi.fn()
+    const { container, rerender } = render(
+      <MarkdownRenderer content="[Usage](docs/usage.md)" onLinkClick={onLinkClick} />,
+    )
+    const firstRoot = container.firstElementChild
+
+    rerender(<MarkdownRenderer content="[Usage](docs/usage.md)" onLinkClick={onLinkClick} />)
+
+    expect(container.firstElementChild).toBe(firstRoot)
+  })
 })

@@ -6,6 +6,7 @@ import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 import { NotificationBell } from '@/features/notification/notification-bell'
 import { dismissOpenOverlays } from '@/shared/lib/dismiss-open-overlays'
+import { syncDocumentLanguage } from '@/shared/lib/document-language'
 import { getAppHeaderClassName } from './layout-header-style'
 import { getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
 
@@ -16,7 +17,7 @@ import { getAppMainContentLayout, resolveAppMainContentPathname } from './layout
  * fallback used while lazy route modules are loading.
  */
 export function Layout() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { pathname, resolvedPathname } = useRouterState({
     select: (s) => ({
       pathname: s.location.pathname,
@@ -28,6 +29,10 @@ export function Layout() {
   const previousPathnameRef = useRef(pathname)
   const contentLayoutPathname = resolveAppMainContentPathname(pathname, resolvedPathname)
   const mainContentLayout = getAppMainContentLayout(contentLayoutPathname)
+
+  useEffect(() => {
+    syncDocumentLanguage(i18n.resolvedLanguage ?? i18n.language)
+  }, [i18n.language, i18n.resolvedLanguage])
 
   useEffect(() => {
     const updateHeaderElevation = () => {

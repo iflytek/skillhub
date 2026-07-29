@@ -1,4 +1,4 @@
-import { useMemo, type MouseEvent } from 'react'
+import { memo, useMemo, type MouseEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
@@ -21,7 +21,7 @@ interface MarkdownRendererProps {
  * dedicated UI sections and should not appear twice in the document body.
  * Memoized to prevent re-parsing on every render.
  */
-export function MarkdownRenderer({ content, className, onLinkClick }: MarkdownRendererProps) {
+function MarkdownRendererComponent({ content, className, onLinkClick }: MarkdownRendererProps) {
   const containerClassName = [
     className,
     'max-w-none break-words text-sm text-foreground/90 [overflow-wrap:anywhere]',
@@ -36,7 +36,7 @@ export function MarkdownRenderer({ content, className, onLinkClick }: MarkdownRe
   )
 
   return (
-    <div className={containerClassName}>
+    <div className={cn(containerClassName, 'notranslate')} translate="no">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkInferCodeLanguage]}
         rehypePlugins={[rehypeSanitize, [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
@@ -207,3 +207,6 @@ export function MarkdownRenderer({ content, className, onLinkClick }: MarkdownRe
     </div>
   )
 }
+
+/** Memoized so collapse/expand parent state does not re-parse large skill docs. */
+export const MarkdownRenderer = memo(MarkdownRendererComponent)

@@ -13,3 +13,8 @@ export function getOverviewCollapseMaxHeight(viewportWidth: number, viewportHeig
 export function shouldCollapseOverview(contentHeight: number, viewportWidth: number, viewportHeight: number) {
   return contentHeight > getOverviewCollapseMaxHeight(viewportWidth, viewportHeight)
 }
+
+/** True when a quiet-window rAF may clear the ResizeObserver mute flag. */
+export function shouldReleaseOverviewLayoutQuiet(activeGeneration: number, scheduledGeneration: number) {
+  return activeGeneration === scheduledGeneration
+}
