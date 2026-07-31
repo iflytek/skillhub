@@ -1,0 +1,26 @@
+{
+  "latest": "2026-W31",
+  "reports": [
+    {
+      "week": "2026-W31",
+      "title": "SkillHub 开源周报｜2026 年第 31 周",
+      "period": "2026-07-23—2026-07-30",
+      "snapshot": "2026-07-30 16:36 Asia/Shanghai",
+      "path": "reports/2026-W31/"
+    },
+    {
+      "week": "2026-W30",
+      "title": "SkillHub 开源周报｜2026 年第 30 周",
+      "period": "2026-07-16—2026-07-23",
+      "snapshot": "2026-07-23 22:00 Asia/Shanghai",
+      "path": "reports/2026-W30/"
+    },
+    {
+      "week": "2026-W29",
+      "title": "SkillHub 开源周报｜2026 年第 29 周",
+      "period": "2026-07-09—2026-07-16",
+      "snapshot": "2026-07-23 22:00 Asia/Shanghai",
+      "path": "reports/2026-W29/"
+    }
+  ]
+}

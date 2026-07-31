@@ -1,0 +1,4 @@
+interface:
+  display_name: "生成 SkillHub 开源周报"
+  short_description: "生成精炼总览与详情 Tab 的 SkillHub 开源周报"
+  default_prompt: "使用 $generate-skillhub-weekly-report 生成本周 SkillHub 开源周报，按上一个完整自然周统计，更新周报站点并完成构建与校验。"

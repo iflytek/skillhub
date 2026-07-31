@@ -69,6 +69,7 @@ package-lock.json
 .tmp/
 tmp/
 __pycache__/
+weekly/_site/
 
 # Git worktrees
 .worktrees/

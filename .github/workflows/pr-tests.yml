@@ -88,7 +88,10 @@ jobs:
           filters: |
             docs:
               - 'docs/skillhub/**'
+              - 'weekly/**'
+              - '.agents/skills/generate-skillhub-weekly-report/**'
               - '.github/workflows/pr-tests.yml'
+              - '.github/workflows/deploy-docs.yml'
 
       - name: Set up Node.js
         if: steps.changed.outputs.docs == 'true'
@@ -105,3 +108,18 @@ jobs:
       - name: Build VitePress site
         if: steps.changed.outputs.docs == 'true'
         run: cd docs/skillhub && npm run build
+
+      - name: Build and validate weekly reports
+        if: steps.changed.outputs.docs == 'true'
+        run: |
+          cd weekly
+          python3 scripts/build_site.py
+          python3 scripts/validate_site.py _site
+
+      - name: Assemble Pages artifact layout
+        if: steps.changed.outputs.docs == 'true'
+        run: |
+          mkdir -p docs/skillhub/.vitepress/dist/weekly
+          cp -R weekly/_site/. docs/skillhub/.vitepress/dist/weekly/
+          test -f docs/skillhub/.vitepress/dist/weekly/index.html
+          test -f docs/skillhub/.vitepress/dist/weekly/archive.html
