@@ -68,7 +68,9 @@ export function handleApiError(error: unknown): void {
   }
 
   if (status === 403) {
-    toast.error(i18n.t('apiError.forbidden'))
+    // The backend may attach a specific business message (e.g. a disabled account or an
+    // LDAP conflict); prefer it over the generic forbidden text.
+    toast.error(error.serverMessage || i18n.t('apiError.forbidden'))
     return
   }
 
@@ -78,7 +80,9 @@ export function handleApiError(error: unknown): void {
   }
 
   if (status >= 500) {
-    toast.error(i18n.t('apiError.serverError'))
+    // The backend returns localized operational messages for service-level failures such as
+    // "directory unavailable" or "TLS misconfiguration"; surface them when present.
+    toast.error(error.serverMessage || i18n.t('apiError.serverError'))
     return
   }
 

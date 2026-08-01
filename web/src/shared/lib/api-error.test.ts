@@ -57,6 +57,30 @@ describe('handleApiError', () => {
     expect(errorSpy).toHaveBeenLastCalledWith('Server said no')
   })
 
+  it('shows the server message for 403 errors when present', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('apiError.forbidden', 403, '账号已被禁用，请联系管理员'))
+
+    expect(errorSpy).toHaveBeenLastCalledWith('账号已被禁用，请联系管理员')
+  })
+
+  it('shows the server message for 5xx errors when present', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('apiError.serverError', 503, '目录服务器暂时不可用，请稍后重试'))
+
+    expect(errorSpy).toHaveBeenLastCalledWith('目录服务器暂时不可用，请稍后重试')
+  })
+
+  it('falls back to generic text for 403/5xx without a server message', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('apiError.forbidden', 403))
+
+    expect(errorSpy).toHaveBeenLastCalledWith(i18n.t('apiError.forbidden'))
+  })
+
   it('shows network error message when status is 0 (network disconnected)', async () => {
     const { ApiError, handleApiError } = await import('./api-error')
 

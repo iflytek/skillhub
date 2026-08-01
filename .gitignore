@@ -55,6 +55,7 @@ target/
 coverage/
 dist/
 node_modules/
+.pnpm-store/
 *.tsbuildinfo
 package-lock.json
 
