@@ -64,11 +64,16 @@ class LocalAuthServiceTest {
     @Mock
     private org.springframework.beans.factory.ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
 
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     private LocalAuthService service;
 
     @BeforeEach
     void setUp() {
         org.mockito.Mockito.lenient().when(ldapAuthServiceProvider.getIfAvailable()).thenReturn(ldapAuthService);
+        org.mockito.Mockito.lenient().when(transactionManager.getTransaction(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(org.mockito.Mockito.mock(org.springframework.transaction.TransactionStatus.class));
         service = new LocalAuthService(
             credentialRepository,
             userAccountRepository,
@@ -78,7 +83,8 @@ class LocalAuthServiceTest {
             passwordEncoder,
             CLOCK,
             ldapProperties,
-            ldapAuthServiceProvider
+            ldapAuthServiceProvider,
+            transactionManager
         );
     }
 

@@ -24,6 +24,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -53,6 +55,13 @@ public class LocalAuthService {
     private final Clock clock;
     private final LdapProperties ldapProperties;
     private final ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
+    /**
+     * Transaction boundary for the local-credential login path. The {@code login} method itself
+     * is intentionally NOT transactional: the LDAP fallback performs directory network calls
+     * (up to connect+read timeout) and must not hold a database connection/transaction open
+     * while blocked on the directory. Only the local credential database work is wrapped.
+     */
+    private final TransactionTemplate transactionTemplate;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -62,7 +71,8 @@ public class LocalAuthService {
                             PasswordEncoder passwordEncoder,
                             Clock clock,
                             LdapProperties ldapProperties,
-                            ObjectProvider<LdapAuthService> ldapAuthServiceProvider) {
+                            ObjectProvider<LdapAuthService> ldapAuthServiceProvider,
+                            PlatformTransactionManager transactionManager) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -72,6 +82,7 @@ public class LocalAuthService {
         this.clock = clock;
         this.ldapProperties = ldapProperties;
         this.ldapAuthServiceProvider = ldapAuthServiceProvider;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -122,11 +133,10 @@ public class LocalAuthService {
      * establish a web session.
      * If the user is not found locally, falls back to LDAP authentication if enabled.
      */
-    @Transactional
     public PlatformPrincipal login(String username, String password) {
         String normalizedUsername = normalizeUsername(username);
-        LocalCredential credential = credentialRepository.findByUsernameIgnoreCase(normalizedUsername)
-            .orElse(null);
+        LocalCredential credential = transactionTemplate.execute(status ->
+            credentialRepository.findByUsernameIgnoreCase(normalizedUsername).orElse(null));
 
         if (credential == null) {
             // Blur timing to prevent username enumeration
@@ -170,21 +180,23 @@ public class LocalAuthService {
             throw invalidCredentials();
         }
 
-        UserAccount user = userAccountRepository.findById(credential.getUserId())
-            .orElseThrow(() -> new IllegalStateException("User not found for local credential"));
+        return transactionTemplate.execute(status -> {
+            UserAccount user = userAccountRepository.findById(credential.getUserId())
+                .orElseThrow(() -> new IllegalStateException("User not found for local credential"));
 
-        ensureUserCanLogin(user);
-        ensureNotLocked(credential);
+            ensureUserCanLogin(user);
+            ensureNotLocked(credential);
 
-        if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
-            handleFailedLogin(credential);
-            throw invalidCredentials();
-        }
+            if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
+                handleFailedLogin(credential);
+                throw invalidCredentials();
+            }
 
-        credential.setFailedAttempts(0);
-        credential.setLockedUntil(null);
-        credentialRepository.save(credential);
-        return buildPrincipal(user);
+            credential.setFailedAttempts(0);
+            credential.setLockedUntil(null);
+            credentialRepository.save(credential);
+            return buildPrincipal(user);
+        });
     }
 
     /**
