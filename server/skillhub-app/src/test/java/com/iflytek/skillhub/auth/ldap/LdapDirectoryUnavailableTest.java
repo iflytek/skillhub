@@ -10,10 +10,12 @@ import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import jakarta.persistence.EntityManager;
 import java.io.IOException;
 import java.net.ServerSocket;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * Integration coverage for the "directory unavailable" error classification required by the
@@ -37,7 +39,9 @@ class LdapDirectoryUnavailableTest {
             mock(UserAccountRepository.class),
             mock(UserRoleBindingRepository.class),
             mock(GlobalNamespaceMembershipService.class),
-            mock(IdentityBindingRepository.class));
+            mock(IdentityBindingRepository.class),
+            mock(EntityManager.class),
+            mock(PlatformTransactionManager.class));
 
         assertThatThrownBy(() -> svc.login("alice", "secret"))
             .isInstanceOf(AuthFlowException.class)

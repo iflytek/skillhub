@@ -121,6 +121,11 @@ skillhub:
     email-attribute: ${SKILLHUB_LDAP_EMAIL_ATTRIBUTE:mail}
     connect-timeout-millis: ${SKILLHUB_LDAP_CONNECT_TIMEOUT_MILLIS:5000}
     read-timeout-millis: ${SKILLHUB_LDAP_READ_TIMEOUT_MILLIS:10000}
+    # Custom trust store for LDAPS certificate validation (internal/self-signed CAs).
+    # Leave empty to use the JVM default trust store.
+    tls-trust-store: ${SKILLHUB_LDAP_TLS_TRUST_STORE:}
+    tls-trust-store-password: ${SKILLHUB_LDAP_TLS_TRUST_STORE_PASSWORD:}
+    tls-trust-store-type: ${SKILLHUB_LDAP_TLS_TRUST_STORE_TYPE:JKS}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:

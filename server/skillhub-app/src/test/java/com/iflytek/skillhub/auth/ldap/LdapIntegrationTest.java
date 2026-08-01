@@ -14,6 +14,7 @@ import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import jakarta.persistence.EntityManager;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -44,7 +45,6 @@ import org.testcontainers.utility.MountableFile;
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers(disabledWithoutDocker = true)
-@Transactional
 class LdapIntegrationTest {
 
     private static final String BASE_DN = "dc=example,dc=org";
@@ -133,7 +133,7 @@ class LdapIntegrationTest {
     }
 
     @Test
-    void repeatLogin_returnsSameAccount_andDoesNotDuplicate() {
+    void repeatLogin_returnsSameAccount_andDoesNotDuplicate() throws Exception {
         PlatformPrincipal first = localAuthService.login("alice", "alice123");
         PlatformPrincipal second = localAuthService.login("alice", "alice123");
 
@@ -141,7 +141,11 @@ class LdapIntegrationTest {
         Optional<UserAccount> account = userAccountRepository.findByEmailIgnoreCase("alice@example.com");
         assertThat(account).isPresent();
         assertThat(account.get().getId()).isEqualTo(first.userId());
-        assertThat(identityBindingRepository.findAll()).hasSize(1);
+        // Exactly one binding exists for this subject; no duplicate provisioning happened.
+        Optional<IdentityBinding> binding =
+            identityBindingRepository.findByProviderCodeAndSubject("ldap", directoryEntryUuid("alice"));
+        assertThat(binding).isPresent();
+        assertThat(binding.get().getUserId()).isEqualTo(first.userId());
     }
 
     @Test
@@ -154,7 +158,7 @@ class LdapIntegrationTest {
     }
 
     @Test
-    void emailCollision_returnsConflict_andDoesNotTakeOverExistingAccount() {
+    void emailCollision_returnsConflict_andDoesNotTakeOverExistingAccount() throws Exception {
         UserAccount local = new UserAccount("usr_local_carol", "Carol Local", "carol@example.com", null);
         userAccountRepository.save(local);
 
@@ -170,12 +174,23 @@ class LdapIntegrationTest {
         Optional<UserAccount> untouched = userAccountRepository.findById(local.getId());
         assertThat(untouched).isPresent();
         assertThat(untouched.get().getDisplayName()).isEqualTo("Carol Local");
-        assertThat(identityBindingRepository.findAll()).isEmpty();
+        assertThat(identityBindingRepository.findByProviderCodeAndSubject("ldap", directoryEntryUuid("carol")))
+            .isEmpty();
     }
 
     @Test
     void wrongPassword_returnsUnauthorized() {
         assertThatThrownBy(() -> localAuthService.login("alice", "wrong-password"))
+            .isInstanceOf(AuthFlowException.class)
+            .satisfies(e -> assertThat(((AuthFlowException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+    }
+
+    @Test
+    void emptyPassword_returnsUnauthorized_notServerError() {
+        // Direct service-level coverage: a null password must be classified as a credential
+        // failure (401), never a NullPointerException/500. (The HTTP layer already rejects
+        // blank passwords via @NotBlank; this guards service-level callers.)
+        assertThatThrownBy(() -> localAuthService.login("alice", null))
             .isInstanceOf(AuthFlowException.class)
             .satisfies(e -> assertThat(((AuthFlowException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
     }
@@ -208,7 +223,9 @@ class LdapIntegrationTest {
             mock(UserAccountRepository.class),
             mock(UserRoleBindingRepository.class),
             mock(GlobalNamespaceMembershipService.class),
-            mock(IdentityBindingRepository.class));
+            mock(IdentityBindingRepository.class),
+            mock(EntityManager.class),
+            mock(PlatformTransactionManager.class));
 
         assertThatThrownBy(() -> svc.login("alice", "alice123"))
             .isInstanceOf(AuthFlowException.class)

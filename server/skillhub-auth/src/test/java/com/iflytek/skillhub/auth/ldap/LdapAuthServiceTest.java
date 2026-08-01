@@ -21,12 +21,14 @@ import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import java.lang.reflect.Method;
 import java.util.Optional;
+import jakarta.persistence.EntityManager;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * Behavior-level unit tests for {@link LdapAuthService} identity provisioning.
@@ -47,6 +49,8 @@ class LdapAuthServiceTest {
     private UserRoleBindingRepository userRoleBindingRepository;
     private GlobalNamespaceMembershipService globalNamespaceMembershipService;
     private IdentityBindingRepository identityBindingRepository;
+    private EntityManager entityManager;
+    private PlatformTransactionManager transactionManager;
     private LdapAuthService ldapAuthService;
 
     @BeforeEach
@@ -56,12 +60,16 @@ class LdapAuthServiceTest {
         userRoleBindingRepository = mock(UserRoleBindingRepository.class);
         globalNamespaceMembershipService = mock(GlobalNamespaceMembershipService.class);
         identityBindingRepository = mock(IdentityBindingRepository.class);
+        entityManager = mock(EntityManager.class);
+        transactionManager = mock(PlatformTransactionManager.class);
         ldapAuthService = new LdapAuthService(
             ldapProperties,
             userAccountRepository,
             userRoleBindingRepository,
             globalNamespaceMembershipService,
-            identityBindingRepository);
+            identityBindingRepository,
+            entityManager,
+            transactionManager);
     }
 
     /** Directory attributes: subject=entryUUID, email=mail, displayName=displayName. */
@@ -95,7 +103,7 @@ class LdapAuthServiceTest {
         assertThat(created.getDisplayName()).isEqualTo(DISPLAY_NAME);
         assertThat(created.getEmail()).isEqualTo(EMAIL);
         verify(globalNamespaceMembershipService).ensureMember(created.getId());
-        verify(identityBindingRepository).save(any(IdentityBinding.class));
+        verify(identityBindingRepository).saveAndFlush(any(IdentityBinding.class));
     }
 
     @Test
@@ -118,7 +126,7 @@ class LdapAuthServiceTest {
         verify(userAccountRepository, never()).save(org.mockito.ArgumentMatchers.argThat(
             u -> !existingUserId.equals(u.getId())));
         // Critical: no new binding written on repeat login
-        verify(identityBindingRepository, never()).save(any(IdentityBinding.class));
+        verify(identityBindingRepository, never()).saveAndFlush(any(IdentityBinding.class));
     }
 
     @Test
@@ -165,7 +173,7 @@ class LdapAuthServiceTest {
 
         // No account created, no binding written
         verify(userAccountRepository, never()).save(any(UserAccount.class));
-        verify(identityBindingRepository, never()).save(any(IdentityBinding.class));
+        verify(identityBindingRepository, never()).saveAndFlush(any(IdentityBinding.class));
     }
 
     @Test
@@ -186,7 +194,7 @@ class LdapAuthServiceTest {
         // Then — placeholder email follows the ldap:{username}@internal convention
         assertThat(created.getEmail()).isEqualTo("ldap:bob@internal");
         verify(userAccountRepository, never()).findByEmailIgnoreCase(any());
-        verify(identityBindingRepository).save(any(IdentityBinding.class));
+        verify(identityBindingRepository).saveAndFlush(any(IdentityBinding.class));
     }
 
     @Test
@@ -242,6 +250,67 @@ class LdapAuthServiceTest {
 
         // Then — display name falls back to the configured cn attribute
         assertThat(created.getDisplayName()).isEqualTo("Common Name");
+    }
+
+    @Test
+    void returningUser_emailCollision_refusesSilentUpdate_throwsConflict() throws Exception {
+        // Given — the LDAP subject is bound, but the directory now reports an email that already
+        // belongs to a different account. The refresh must refuse to adopt it (409), matching the
+        // first-login email-collision rule.
+        String userId = "usr_alice";
+        UserAccount existing = new UserAccount(userId, "Alice", "alice@example.com", null);
+        existing.setStatus(UserStatus.ACTIVE);
+        UserAccount other = new UserAccount("usr_other", "Other User", "other@example.com", null);
+        given(identityBindingRepository.findByProviderCodeAndSubject("ldap", SUBJECT))
+            .willReturn(Optional.of(new IdentityBinding(userId, "ldap", SUBJECT, "alice")));
+        given(userAccountRepository.findById(userId)).willReturn(Optional.of(existing));
+        given(userAccountRepository.findByEmailIgnoreCase("other@example.com")).willReturn(Optional.of(other));
+
+        AuthFlowException thrown = null;
+        try {
+            invokeFindOrCreate("alice", directoryAttributes(SUBJECT, "other@example.com", "Alice"));
+        } catch (java.lang.reflect.InvocationTargetException ite) {
+            thrown = (AuthFlowException) ite.getCause();
+        }
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(thrown.getMessageCode()).isEqualTo("error.auth.ldap.emailConflict");
+        // The user's own email must remain untouched.
+        assertThat(existing.getEmail()).isEqualTo("alice@example.com");
+    }
+
+    @Test
+    void returningUser_sameEmail_isAllowedToRefresh() throws Exception {
+        // Given — the directory reports the same email the bound account already owns; the
+        // collision lookup must exclude the user's own account.
+        String userId = "usr_alice";
+        UserAccount existing = new UserAccount(userId, "Alice", "alice@example.com", null);
+        existing.setStatus(UserStatus.ACTIVE);
+        given(identityBindingRepository.findByProviderCodeAndSubject("ldap", SUBJECT))
+            .willReturn(Optional.of(new IdentityBinding(userId, "ldap", SUBJECT, "alice")));
+        given(userAccountRepository.findById(userId)).willReturn(Optional.of(existing));
+        given(userAccountRepository.save(any(UserAccount.class))).willAnswer(inv -> inv.getArgument(0));
+
+        UserAccount result = invokeFindOrCreate("alice",
+            directoryAttributes(SUBJECT, "alice@example.com", "Alice Smith"));
+
+        assertThat(result.getId()).isEqualTo(userId);
+        assertThat(result.getEmail()).isEqualTo("alice@example.com");
+    }
+
+    @Test
+    void buildJndiEnvironment_includesCustomTrustStoreSettings() {
+        ldapProperties.setUrl("ldaps://ldap.example.com:636");
+        ldapProperties.setTlsTrustStorePath("/certs/ldap-truststore.jks");
+        ldapProperties.setTlsTrustStorePassword("secret");
+        ldapProperties.setTlsTrustStoreType("PKCS12");
+
+        java.util.Hashtable<String, String> env = ldapAuthService.buildJndiEnvironment(null, null);
+
+        assertThat(env)
+            .containsEntry("javax.net.ssl.trustStore", "/certs/ldap-truststore.jks")
+            .containsEntry("javax.net.ssl.trustStorePassword", "secret")
+            .containsEntry("javax.net.ssl.trustStoreType", "PKCS12");
     }
 
     @Test

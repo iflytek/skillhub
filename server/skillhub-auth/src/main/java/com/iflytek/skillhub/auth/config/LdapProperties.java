@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
 
 /**
  * Configuration properties for LDAP authentication.
@@ -78,6 +79,42 @@ public class LdapProperties {
      * LDAP read timeout in milliseconds.
      */
     private int readTimeoutMillis = 10000;
+
+    /**
+     * Path to a custom trust store used for LDAPS certificate validation. When empty,
+     * the JVM default trust store is used. Configure this for directories signed by
+     * internal/self-signed CAs.
+     */
+    private String tlsTrustStorePath = "";
+
+    /**
+     * Password for the custom trust store. Only used when {@link #tlsTrustStorePath} is set.
+     */
+    private String tlsTrustStorePassword = "";
+
+    /**
+     * Trust store type (JKS, PKCS12). Defaults to JKS for compatibility.
+     */
+    private String tlsTrustStoreType = "JKS";
+
+    @PostConstruct
+    void validate() {
+        if (!enabled) {
+            return;
+        }
+        if (url == null || url.isBlank()) {
+            throw new IllegalStateException("skillhub.ldap.url must be configured when LDAP is enabled");
+        }
+        if (base == null || base.isBlank()) {
+            throw new IllegalStateException("skillhub.ldap.base must be configured when LDAP is enabled");
+        }
+        if (connectTimeoutMillis <= 0) {
+            throw new IllegalStateException("skillhub.ldap.connect-timeout-millis must be a positive number");
+        }
+        if (readTimeoutMillis <= 0) {
+            throw new IllegalStateException("skillhub.ldap.read-timeout-millis must be a positive number");
+        }
+    }
 
     public boolean isEnabled() {
         return enabled;
@@ -181,5 +218,29 @@ public class LdapProperties {
 
     public void setReadTimeoutMillis(int readTimeoutMillis) {
         this.readTimeoutMillis = readTimeoutMillis;
+    }
+
+    public String getTlsTrustStorePath() {
+        return tlsTrustStorePath;
+    }
+
+    public void setTlsTrustStorePath(String tlsTrustStorePath) {
+        this.tlsTrustStorePath = tlsTrustStorePath;
+    }
+
+    public String getTlsTrustStorePassword() {
+        return tlsTrustStorePassword;
+    }
+
+    public void setTlsTrustStorePassword(String tlsTrustStorePassword) {
+        this.tlsTrustStorePassword = tlsTrustStorePassword;
+    }
+
+    public String getTlsTrustStoreType() {
+        return tlsTrustStoreType;
+    }
+
+    public void setTlsTrustStoreType(String tlsTrustStoreType) {
+        this.tlsTrustStoreType = tlsTrustStoreType;
     }
 }

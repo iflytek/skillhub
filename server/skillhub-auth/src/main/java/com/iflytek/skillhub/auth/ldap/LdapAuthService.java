@@ -13,9 +13,11 @@ import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
 import java.security.cert.CertificateException;
 import java.util.Hashtable;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import jakarta.persistence.EntityManager;
 import javax.net.ssl.SSLException;
 import javax.naming.AuthenticationException;
 import javax.naming.CommunicationException;
@@ -31,10 +33,13 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.TransactionDefinition;
 
 /**
  * Handles LDAP authentication for enterprise directory integration.
@@ -55,22 +60,47 @@ public class LdapAuthService {
     // LDAP attribute names only allow ASCII letters, digits, and hyphens.
     private static final Pattern ATTRIBUTE_NAME_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9-]*$");
 
+    /**
+     * Signals that a concurrent first login wrote the same LDAP subject binding first. The
+     * provisioning (sub-)transaction has already been rolled back cleanly; callers must
+     * re-resolve the identity by subject in a fresh transaction.
+     */
+    private static final class LdapBindingRaceException extends RuntimeException {
+        LdapBindingRaceException(Throwable cause) {
+            super(cause);
+        }
+    }
+
     private final LdapProperties ldapProperties;
     private final UserAccountRepository userAccountRepository;
     private final UserRoleBindingRepository userRoleBindingRepository;
     private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
     private final IdentityBindingRepository identityBindingRepository;
+    private final EntityManager entityManager;
+    /**
+     * Programmatic REQUIRES_NEW template for account/binding provisioning. A separate physical
+     * transaction is required so a failed concurrent insert (which marks its transaction
+     * rollback-only) can be rolled back cleanly and the identity re-resolved in a fresh
+     * transaction. Spring's annotation-driven propagation cannot be used here because the
+     * provisioning methods are invoked internally (self-invocation bypasses the proxy).
+     */
+    private final TransactionTemplate ldapProvisioningTx;
 
     public LdapAuthService(LdapProperties ldapProperties,
                            UserAccountRepository userAccountRepository,
                            UserRoleBindingRepository userRoleBindingRepository,
                            GlobalNamespaceMembershipService globalNamespaceMembershipService,
-                           IdentityBindingRepository identityBindingRepository) {
+                           IdentityBindingRepository identityBindingRepository,
+                           EntityManager entityManager,
+                           PlatformTransactionManager transactionManager) {
         this.ldapProperties = ldapProperties;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
         this.globalNamespaceMembershipService = globalNamespaceMembershipService;
         this.identityBindingRepository = identityBindingRepository;
+        this.entityManager = entityManager;
+        this.ldapProvisioningTx = new TransactionTemplate(transactionManager);
+        this.ldapProvisioningTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
@@ -82,9 +112,8 @@ public class LdapAuthService {
     * @return PlatformPrincipal if authentication succeeds
     * @throws AuthFlowException if authentication fails
     */
-    @Transactional
     public PlatformPrincipal login(String username, String password) {
-        log.info("Starting LDAP authentication for username: {}", username);
+        log.debug("Starting LDAP authentication for username: {}", username);
 
         if (!ldapProperties.isEnabled()) {
             log.warn("LDAP authentication is not enabled");
@@ -131,15 +160,23 @@ public class LdapAuthService {
             throw new AuthFlowException(HttpStatus.SERVICE_UNAVAILABLE, "error.auth.ldap.directoryUnavailable");
         }
 
-        // Find or create local user account anchored on the stable LDAP subject
+        // Find or create local user account anchored on the stable LDAP subject. Account and
+        // binding creation run in their own (sub-)transaction; a concurrent first login for the
+        // same subject is recovered by re-resolving the identity in a fresh transaction.
         log.debug("Finding or creating local user account for username: {}", username);
-        UserAccount user = findOrCreateLdapUser(username, userAttributes);
+        UserAccount user;
+        try {
+            user = ldapProvisioningTx.execute(status -> findOrCreateLdapUser(username, userAttributes));
+        } catch (LdapBindingRaceException e) {
+            log.warn("Concurrent first login detected for LDAP subject of username {}; resolving existing account", username);
+            user = ldapProvisioningTx.execute(status -> resolveReturningUser(userAttributes, username));
+        }
 
         // Check if user can login (status check)
         log.debug("Checking user status for user: {}, status: {}", username, user.getStatus());
         ensureUserCanLogin(user);
 
-        log.info("LDAP authentication successful for username: {}", username);
+        log.debug("LDAP authentication successful for username: {}", username);
         return buildPrincipal(user);
     }
 
@@ -230,6 +267,14 @@ public class LdapAuthService {
      consistent across search, bind, and attribute-read operations.
      */
     private DirContext createLdapContext(String principal, String credentials) throws NamingException {
+        return new InitialDirContext(buildJndiEnvironment(principal, credentials));
+    }
+
+    /**
+     * Builds the JNDI environment for one LDAP operation. Package-private so tests can assert
+     * connection/timeout/TLS settings without opening a real directory connection.
+     */
+    Hashtable<String, String> buildJndiEnvironment(String principal, String credentials) {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, ldapProperties.getUrl());
@@ -244,7 +289,15 @@ public class LdapAuthService {
             env.put(Context.SECURITY_PRINCIPAL, bindPrincipal);
             env.put(Context.SECURITY_CREDENTIALS, bindCredentials);
         }
-        return new InitialDirContext(env);
+        // LDAPS certificate validation uses the JVM default trust store unless a custom store is
+        // configured; this lets operators trust internal/self-signed directory CAs.
+        String trustStorePath = ldapProperties.getTlsTrustStorePath();
+        if (trustStorePath != null && !trustStorePath.isEmpty()) {
+            env.put("javax.net.ssl.trustStore", trustStorePath);
+            env.put("javax.net.ssl.trustStorePassword", ldapProperties.getTlsTrustStorePassword());
+            env.put("javax.net.ssl.trustStoreType", ldapProperties.getTlsTrustStoreType());
+        }
+        return env;
     }
 
     /**
@@ -305,6 +358,13 @@ public class LdapAuthService {
      * Authenticates a user against the LDAP server using their DN and password.
      */
     private boolean authenticateLdap(String userDn, String password) {
+        // Reject null/empty passwords explicitly: a null value would otherwise reach
+        // Hashtable.put (NPE -> 500), and an empty password could be accepted by directories
+        // that allow anonymous/weak binds. Treat both as credential failures (401).
+        if (password == null || password.isEmpty()) {
+            log.debug("LDAP bind rejected: empty password for DN {}", userDn);
+            return false;
+        }
         DirContext ctx = null;
         try {
             // Bind as the authenticating user to verify credentials (shared factory handles env).
@@ -374,16 +434,10 @@ public class LdapAuthService {
      *   <li>Duplicate accounts for email-less LDAP users on repeated logins</li>
      * </ul>
      */
-    private UserAccount findOrCreateLdapUser(String username, Attributes attributes) {
+    UserAccount findOrCreateLdapUser(String username, Attributes attributes) {
         String subject = getAttributeValue(attributes, ldapProperties.getSubjectAttribute());
         String email = getAttributeValue(attributes, ldapProperties.getEmailAttribute());
-       String displayName = getAttributeValue(attributes, ldapProperties.getDisplayNameAttribute());
-       if (displayName == null || displayName.isEmpty()) {
-            displayName = getAttributeValue(attributes, ldapProperties.getDisplayNameFallbackAttribute());
-       }
-        if (displayName == null || displayName.isEmpty()) {
-            displayName = username;
-        }
+        String displayName = resolveDisplayName(attributes, username);
 
         if (subject == null || subject.isEmpty()) {
             log.error("LDAP entry for {} has no stable subject attribute '{}'; cannot bind identity",
@@ -444,10 +498,52 @@ public class LdapAuthService {
         user = userAccountRepository.save(user);
         globalNamespaceMembershipService.ensureMember(user.getId());
 
-        IdentityBinding newBinding = new IdentityBinding(user.getId(), LDAP_PROVIDER, subject, username);
-        identityBindingRepository.save(newBinding);
+        try {
+            IdentityBinding newBinding = new IdentityBinding(user.getId(), LDAP_PROVIDER, subject, username);
+            // saveAndFlush surfaces the unique (provider_code, subject) constraint immediately, so
+            // a concurrent first login for the same subject is detected here and the whole
+            // sub-transaction (account + membership + binding) is rolled back.
+            identityBindingRepository.saveAndFlush(newBinding);
+        } catch (DataIntegrityViolationException e) {
+            // A concurrent first login for the same subject committed its binding first. Clear the
+            // failed persist state (otherwise Hibernate throws AssertionFailure while rolling back
+            // the session), then signal the race so the identity is re-resolved in a fresh
+            // transaction. The insert failure already marked this sub-transaction rollback-only,
+            // so it can never be committed with the re-resolved state.
+            entityManager.clear();
+            throw new LdapBindingRaceException(e);
+        }
 
         return user;
+    }
+
+    /**
+     * Re-resolves a returning LDAP user in a fresh transaction after a concurrent first-login
+     * race. Called only when the racing transaction has committed its binding, so the lookup is
+     * guaranteed to hit the existing account.
+     */
+    UserAccount resolveReturningUser(Attributes attributes, String username) {
+        String subject = getAttributeValue(attributes, ldapProperties.getSubjectAttribute());
+        String email = getAttributeValue(attributes, ldapProperties.getEmailAttribute());
+        String displayName = resolveDisplayName(attributes, username);
+        IdentityBinding binding = identityBindingRepository
+            .findByProviderCodeAndSubject(LDAP_PROVIDER, subject)
+            .orElseThrow(() -> new IllegalStateException("No LDAP binding found after race for subject " + subject));
+        UserAccount user = userAccountRepository.findById(binding.getUserId())
+            .orElseThrow(() -> new IllegalStateException("User not found for LDAP binding " + subject));
+        updateFromAttributes(user, displayName, email);
+        return userAccountRepository.save(user);
+    }
+
+    private String resolveDisplayName(Attributes attributes, String username) {
+        String displayName = getAttributeValue(attributes, ldapProperties.getDisplayNameAttribute());
+        if (displayName == null || displayName.isEmpty()) {
+            displayName = getAttributeValue(attributes, ldapProperties.getDisplayNameFallbackAttribute());
+        }
+        if (displayName == null || displayName.isEmpty()) {
+            displayName = username;
+        }
+        return displayName;
     }
 
     private void updateFromAttributes(UserAccount user, String displayName, String email) {
@@ -455,7 +551,19 @@ public class LdapAuthService {
             user.setDisplayName(displayName);
         }
         if (email != null && !email.isEmpty()) {
-            user.setEmail(email.toLowerCase());
+            String normalizedEmail = email.toLowerCase(Locale.ROOT);
+            // A bound user may update their own email, but must never silently adopt an email
+            // that already belongs to a different account (same rule as first login).
+            if (user.getEmail() == null || !user.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                UserAccount existingByEmail = userAccountRepository
+                    .findByEmailIgnoreCase(normalizedEmail).orElse(null);
+                if (existingByEmail != null && !existingByEmail.getId().equals(user.getId())) {
+                    log.warn("LDAP user {} email {} collides with another account {} on refresh; refusing to update",
+                        user.getDisplayName(), normalizedEmail, existingByEmail.getId());
+                    throw new AuthFlowException(HttpStatus.CONFLICT, "error.auth.ldap.emailConflict");
+                }
+            }
+            user.setEmail(normalizedEmail);
         }
     }
 
@@ -549,6 +657,7 @@ public class LdapAuthService {
             ldapProperties.getUserSearchAttribute(),
             ldapProperties.getSubjectAttribute(),
             ldapProperties.getDisplayNameAttribute(),
+            ldapProperties.getDisplayNameFallbackAttribute(),
             ldapProperties.getEmailAttribute()
         };
         for (String name : attrNames) {

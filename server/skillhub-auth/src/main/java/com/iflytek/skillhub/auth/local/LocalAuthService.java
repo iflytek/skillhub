@@ -139,14 +139,14 @@ public class LocalAuthService {
                     log.warn("LDAP is enabled but LdapAuthService bean is unavailable; rejecting login for username: {}", username);
                     throw invalidCredentials();
                 }
-                log.info("Local user not found, attempting LDAP authentication for username: {}", username);
+                log.debug("Local user not found, attempting LDAP authentication for username: {}", username);
                 log.debug("LDAP enabled: {}, host: {}, base: {}",
                     ldapProperties.isEnabled(),
                     LdapAuthService.safeLogHost(ldapProperties.getUrl()),
                     ldapProperties.getBase());
                 try {
                     PlatformPrincipal ldapPrincipal = ldapAuthService.login(username, password);
-                    log.info("LDAP authentication successful for username: {}", username);
+                    log.debug("LDAP authentication successful for username: {}", username);
                     return ldapPrincipal;
                 } catch (AuthFlowException e) {
                     log.warn("LDAP authentication failed for username: {}, error: {}", username, e.getMessage());
