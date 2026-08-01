@@ -15,10 +15,6 @@ spring:
     basename: messages
   application:
     name: skillhub
-  ldap:
-    # Prevent spring-boot-starter-data-ldap AutoConfiguration from attempting
-    # to initialize LDAP connections when LDAP is not configured
-    urls: ""
   lifecycle:
     timeout-per-shutdown-phase: 30s
   jpa:
@@ -118,6 +114,13 @@ skillhub:
     password: ${SKILLHUB_LDAP_PASSWORD:}
     user-search-attribute: ${SKILLHUB_LDAP_USER_SEARCH_ATTRIBUTE:uid}
     user-search-base: ${SKILLHUB_LDAP_USER_SEARCH_BASE:}
+    # Stable directory identifier used as the LDAP identity subject (entryUUID for OpenLDAP, objectGUID for AD)
+    subject-attribute: ${SKILLHUB_LDAP_SUBJECT_ATTRIBUTE:entryUUID}
+    display-name-attribute: ${SKILLHUB_LDAP_DISPLAY_NAME_ATTRIBUTE:displayName}
+    display-name-fallback-attribute: ${SKILLHUB_LDAP_DISPLAY_NAME_FALLBACK_ATTRIBUTE:cn}
+    email-attribute: ${SKILLHUB_LDAP_EMAIL_ATTRIBUTE:mail}
+    connect-timeout-millis: ${SKILLHUB_LDAP_CONNECT_TIMEOUT_MILLIS:5000}
+    read-timeout-millis: ${SKILLHUB_LDAP_READ_TIMEOUT_MILLIS:10000}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:

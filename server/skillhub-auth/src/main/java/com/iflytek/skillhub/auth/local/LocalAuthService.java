@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -51,7 +52,7 @@ public class LocalAuthService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final LdapProperties ldapProperties;
-    private final LdapAuthService ldapAuthService;
+    private final ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -61,7 +62,7 @@ public class LocalAuthService {
                             PasswordEncoder passwordEncoder,
                             Clock clock,
                             LdapProperties ldapProperties,
-                            LdapAuthService ldapAuthService) {
+                            ObjectProvider<LdapAuthService> ldapAuthServiceProvider) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -70,7 +71,7 @@ public class LocalAuthService {
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
         this.ldapProperties = ldapProperties;
-        this.ldapAuthService = ldapAuthService;
+        this.ldapAuthServiceProvider = ldapAuthServiceProvider;
     }
 
     /**
@@ -133,10 +134,15 @@ public class LocalAuthService {
             
             // Fallback to LDAP authentication if enabled
             if (ldapProperties.isEnabled()) {
+                LdapAuthService ldapAuthService = ldapAuthServiceProvider.getIfAvailable();
+                if (ldapAuthService == null) {
+                    log.warn("LDAP is enabled but LdapAuthService bean is unavailable; rejecting login for username: {}", username);
+                    throw invalidCredentials();
+                }
                 log.info("Local user not found, attempting LDAP authentication for username: {}", username);
                 log.debug("LDAP enabled: {}, host: {}, base: {}",
                     ldapProperties.isEnabled(),
-                    safeLogHost(ldapProperties.getUrl()),
+                    LdapAuthService.safeLogHost(ldapProperties.getUrl()),
                     ldapProperties.getBase());
                 try {
                     PlatformPrincipal ldapPrincipal = ldapAuthService.login(username, password);
@@ -144,7 +150,17 @@ public class LocalAuthService {
                     return ldapPrincipal;
                 } catch (AuthFlowException e) {
                     log.warn("LDAP authentication failed for username: {}, error: {}", username, e.getMessage());
-                    // LDAP authentication failed, throw invalid credentials
+                    // Propagate account-state, availability, and email-conflict errors instead of
+                    // masking them as invalid credentials, so the frontend can show the right message.
+                    // A 409 emailConflict is only reached after a successful LDAP bind, so the
+                    // credentials are valid; masking it as 401 would mislead the user into thinking
+                    // their password is wrong. Only genuine credential failures (userNotFound /
+                    // invalidCredentials) fall back to the generic response to avoid enumeration.
+                    HttpStatus status = e.getStatus();
+                    if (status == HttpStatus.FORBIDDEN || status == HttpStatus.SERVICE_UNAVAILABLE
+                        || status == HttpStatus.CONFLICT) {
+                        throw e;
+                    }
                     throw invalidCredentials();
                 }
             } else {
@@ -269,26 +285,6 @@ public class LocalAuthService {
         }
         if (!EMAIL_PATTERN.matcher(email).matches()) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "validation.auth.local.email.invalid");
-        }
-    }
-
-    /**
-     * Safely extracts host from LDAP URL for logging, avoiding credential exposure.
-     */
-    private static String safeLogHost(String url) {
-        if (url == null || url.isEmpty()) {
-            return "";
-        }
-        try {
-            String withoutProtocol = url.replaceFirst("^ldaps?://", "");
-            int atIndex = withoutProtocol.indexOf('@');
-            if (atIndex > 0) {
-                withoutProtocol = withoutProtocol.substring(atIndex + 1);
-            }
-            int colonIndex = withoutProtocol.indexOf(':');
-            return colonIndex > 0 ? withoutProtocol.substring(0, colonIndex) : withoutProtocol;
-        } catch (Exception e) {
-            return "[url-parse-error]";
         }
     }
 }

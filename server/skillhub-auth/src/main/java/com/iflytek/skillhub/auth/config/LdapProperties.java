@@ -44,6 +44,40 @@ public class LdapProperties {
      * Search base for user lookup (relative to base).
      */
     private String userSearchBase = "";
+ 
+    /**
+     * Stable directory identifier attribute used as the LDAP identity subject.
+     * OpenLDAP uses "entryUUID", Active Directory uses "objectGUID".
+     */
+    private String subjectAttribute = "entryUUID";
+
+    /**
+     * LDAP attribute mapped to the local display name.
+     */
+    private String displayNameAttribute = "displayName";
+
+    /**
+     * Fallback LDAP attribute for the display name when the primary
+     * {@link #displayNameAttribute} is absent or empty. Defaults to {@code cn}
+     * (common name), the conventional fallback for directories that do not
+     * populate a dedicated display name.
+     */
+    private String displayNameFallbackAttribute = "cn";
+
+    /**
+     * LDAP attribute mapped to the local email.
+     */
+    private String emailAttribute = "mail";
+
+    /**
+     * LDAP connection timeout in milliseconds.
+     */
+    private int connectTimeoutMillis = 5000;
+
+    /**
+     * LDAP read timeout in milliseconds.
+     */
+    private int readTimeoutMillis = 10000;
 
     public boolean isEnabled() {
         return enabled;
@@ -99,5 +133,53 @@ public class LdapProperties {
 
     public void setUserSearchBase(String userSearchBase) {
         this.userSearchBase = userSearchBase;
+    }
+
+    public String getSubjectAttribute() {
+        return subjectAttribute;
+    }
+
+    public void setSubjectAttribute(String subjectAttribute) {
+        this.subjectAttribute = subjectAttribute;
+    }
+
+    public String getDisplayNameAttribute() {
+        return displayNameAttribute;
+    }
+
+    public void setDisplayNameAttribute(String displayNameAttribute) {
+        this.displayNameAttribute = displayNameAttribute;
+    }
+
+    public String getDisplayNameFallbackAttribute() {
+        return displayNameFallbackAttribute;
+    }
+
+    public void setDisplayNameFallbackAttribute(String displayNameFallbackAttribute) {
+        this.displayNameFallbackAttribute = displayNameFallbackAttribute;
+    }
+
+    public String getEmailAttribute() {
+        return emailAttribute;
+    }
+
+    public void setEmailAttribute(String emailAttribute) {
+        this.emailAttribute = emailAttribute;
+    }
+
+    public int getConnectTimeoutMillis() {
+        return connectTimeoutMillis;
+    }
+
+    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+        this.connectTimeoutMillis = connectTimeoutMillis;
+    }
+
+    public int getReadTimeoutMillis() {
+        return readTimeoutMillis;
+    }
+
+    public void setReadTimeoutMillis(int readTimeoutMillis) {
+        this.readTimeoutMillis = readTimeoutMillis;
     }
 }

@@ -61,10 +61,14 @@ class LocalAuthServiceTest {
     @Mock
     private LdapAuthService ldapAuthService;
 
+    @Mock
+    private org.springframework.beans.factory.ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
+
     private LocalAuthService service;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(ldapAuthServiceProvider.getIfAvailable()).thenReturn(ldapAuthService);
         service = new LocalAuthService(
             credentialRepository,
             userAccountRepository,
@@ -74,7 +78,7 @@ class LocalAuthServiceTest {
             passwordEncoder,
             CLOCK,
             ldapProperties,
-            ldapAuthService
+            ldapAuthServiceProvider
         );
     }
 
@@ -306,6 +310,56 @@ class LocalAuthServiceTest {
             .isEqualTo(HttpStatus.UNAUTHORIZED);
 
         verify(ldapAuthService).login("ldapuser", "WrongPassword");
+    }
+
+    @Test
+    void login_withUnknownUsername_propagatesServiceUnavailable_whenLdapDirectoryDown() {
+        // Given — LDAP directory unavailable should surface as 503, not be masked as 401
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "password"))
+            .willThrow(new AuthFlowException(HttpStatus.SERVICE_UNAVAILABLE, "error.auth.ldap.directoryUnavailable"));
+
+        // When & Then — 503 must propagate so the frontend can show "try again later"
+        assertThatThrownBy(() -> service.login("ldapuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void login_withUnknownUsername_propagatesForbidden_whenLdapAccountDisabled() {
+        // Given — a disabled LDAP account (403) should propagate, not be masked as 401
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "password"))
+            .willThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.ldap.disabled"));
+
+        // When & Then — 403 must propagate so the frontend can show "account disabled"
+        assertThatThrownBy(() -> service.login("ldapuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void login_withUnknownUsername_propagatesEmailConflict_whenEmailCollidesWithExistingAccount() {
+        // Given — an email-conflict (409) is only raised after a successful LDAP bind, so the
+        // credentials are valid; it must propagate so the frontend can guide the user to an
+        // explicit account-link flow rather than reporting a misleading "wrong password".
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "password"))
+            .willThrow(new AuthFlowException(HttpStatus.CONFLICT, "error.auth.ldap.emailConflict"));
+
+        // When & Then — 409 is propagated, not masked as 401
+        assertThatThrownBy(() -> service.login("ldapuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
