@@ -1,0 +1,45 @@
+dn: uid=alice,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: alice
+cn: Alice Smith
+sn: Smith
+displayName: Alice Smith
+mail: alice@example.com
+userPassword: alice123
+
+dn: uid=bob,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: bob
+cn: Bob Jones
+sn: Jones
+userPassword: bob123
+
+dn: uid=carol,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: carol
+cn: Carol King
+sn: King
+displayName: Carol King
+mail: carol@example.com
+userPassword: carol123
+
+dn: uid=dave,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: dave
+cn: Dave Miller
+sn: Miller
+displayName: Dave Miller
+mail: dave@example.com
+userPassword: dave123

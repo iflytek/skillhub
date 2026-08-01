@@ -1,0 +1,4 @@
+dn: uid=dave,dc=example,dc=org
+changetype: modify
+replace: displayName
+displayName: Dave D. Miller
