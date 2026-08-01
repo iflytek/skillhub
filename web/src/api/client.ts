@@ -13,6 +13,7 @@ import type {
   MergeInitiateRequest,
   MergeInitiateResponse,
   MergeVerifyRequest,
+  LdapBindRequest,
   ReviewSkillDetail,
   ReviewTask,
   PromotionTask,
@@ -435,6 +436,18 @@ export const accountApi = {
 
   async confirmMerge(request: MergeConfirmRequest): Promise<void> {
     await fetchJson<void>('/api/v1/account/merge/confirm', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+}
+
+export const ldapApi = {
+  async bindIdentity(request: LdapBindRequest): Promise<void> {
+    await fetchJson<void>('/api/v1/auth/ldap/bind', {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',

@@ -757,7 +757,15 @@
     "confirming": "Confirming...",
     "confirm": "Confirm & Complete Merge",
     "confirmSuccess": "Account merge completed",
-    "confirmError": "Merge confirmation failed"
+    "confirmError": "Merge confirmation failed",
+    "ldapBindTitle": "Bind LDAP Account",
+    "ldapBindDesc": "Enter your LDAP directory username and password to attach the directory identity to this account; LDAP login becomes available afterwards.",
+    "ldapUsername": "LDAP Username",
+    "ldapPassword": "LDAP Password",
+    "ldapBinding": "Binding...",
+    "ldapBind": "Bind",
+    "ldapBindSuccess": "LDAP identity bound successfully; you can now sign in with LDAP",
+    "ldapBindError": "LDAP binding failed"
   },
   "namespace": {
     "notFound": "Namespace not found",

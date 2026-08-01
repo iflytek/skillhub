@@ -28,6 +28,7 @@ import javax.naming.directory.BasicAttributes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
@@ -51,6 +52,7 @@ class LdapAuthServiceTest {
     private IdentityBindingRepository identityBindingRepository;
     private EntityManager entityManager;
     private PlatformTransactionManager transactionManager;
+    private LdapContextSource ldapContextSource;
     private LdapAuthService ldapAuthService;
 
     @BeforeEach
@@ -62,8 +64,10 @@ class LdapAuthServiceTest {
         identityBindingRepository = mock(IdentityBindingRepository.class);
         entityManager = mock(EntityManager.class);
         transactionManager = mock(PlatformTransactionManager.class);
+        ldapContextSource = mock(LdapContextSource.class);
         ldapAuthService = new LdapAuthService(
             ldapProperties,
+            ldapContextSource,
             userAccountRepository,
             userRoleBindingRepository,
             globalNamespaceMembershipService,
@@ -127,6 +131,26 @@ class LdapAuthServiceTest {
             u -> !existingUserId.equals(u.getId())));
         // Critical: no new binding written on repeat login
         verify(identityBindingRepository, never()).saveAndFlush(any(IdentityBinding.class));
+    }
+
+    @Test
+    void staleBindingForDeletedAccount_isRemovedAndAccountRecreated() throws Exception {
+        // Given — the binding points to an account that no longer exists
+        IdentityBinding stale = new IdentityBinding("usr_deleted", "ldap", SUBJECT, "alice");
+        given(identityBindingRepository.findByProviderCodeAndSubject("ldap", SUBJECT))
+            .willReturn(Optional.of(stale));
+        given(userAccountRepository.findById("usr_deleted")).willReturn(Optional.empty());
+        given(userAccountRepository.findByEmailIgnoreCase(EMAIL)).willReturn(Optional.empty());
+        given(userAccountRepository.save(any(UserAccount.class))).willAnswer(inv -> inv.getArgument(0));
+
+        // When — the same subject logs in again
+        UserAccount created = invokeFindOrCreate("alice", directoryAttributes(SUBJECT, EMAIL, DISPLAY_NAME));
+
+        // Then — the stale binding is removed and a fresh account is provisioned
+        assertThat(created.getEmail()).isEqualTo(EMAIL);
+        assertThat(created.getId()).isNotEqualTo("usr_deleted");
+        verify(identityBindingRepository).delete(stale);
+        verify(identityBindingRepository).saveAndFlush(any(IdentityBinding.class));
     }
 
     @Test
@@ -211,6 +235,7 @@ class LdapAuthServiceTest {
         } catch (java.lang.reflect.InvocationTargetException ite) {
             AuthFlowException cause = (AuthFlowException) ite.getCause();
             assertThat(cause.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(cause.getMessageCode()).isEqualTo("error.auth.ldap.invalidConfiguration");
         } catch (Throwable t) {
             throw new AssertionError(t);
         }
@@ -299,21 +324,6 @@ class LdapAuthServiceTest {
     }
 
     @Test
-    void buildJndiEnvironment_includesCustomTrustStoreSettings() {
-        ldapProperties.setUrl("ldaps://ldap.example.com:636");
-        ldapProperties.setTlsTrustStorePath("/certs/ldap-truststore.jks");
-        ldapProperties.setTlsTrustStorePassword("secret");
-        ldapProperties.setTlsTrustStoreType("PKCS12");
-
-        java.util.Hashtable<String, String> env = ldapAuthService.buildJndiEnvironment(null, null);
-
-        assertThat(env)
-            .containsEntry("javax.net.ssl.trustStore", "/certs/ldap-truststore.jks")
-            .containsEntry("javax.net.ssl.trustStorePassword", "secret")
-            .containsEntry("javax.net.ssl.trustStoreType", "PKCS12");
-    }
-
-    @Test
     void isTlsFailure_detectsSslHandshakeInCauseChain() {
         javax.naming.CommunicationException comm = new javax.naming.CommunicationException("LDAP connect failed");
         comm.initCause(new javax.net.ssl.SSLHandshakeException("PKIX path building failed"));
@@ -326,6 +336,14 @@ class LdapAuthServiceTest {
         javax.naming.CommunicationException comm = new javax.naming.CommunicationException("LDAP connect failed");
         comm.initCause(new java.io.IOException("TLS handshake failed",
             new java.security.cert.CertificateException("not trusted")));
+
+        assertThat(LdapAuthService.isTlsFailure(comm)).isTrue();
+    }
+
+    @Test
+    void isTlsFailure_detectsCertPathValidatorWithoutSslException() {
+        javax.naming.CommunicationException comm = new javax.naming.CommunicationException("LDAP connect failed");
+        comm.initCause(new java.security.cert.CertPathValidatorException("path does not validate"));
 
         assertThat(LdapAuthService.isTlsFailure(comm)).isTrue();
     }

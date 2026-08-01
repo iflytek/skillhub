@@ -3,19 +3,24 @@ package com.iflytek.skillhub.auth.ldap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.iflytek.skillhub.auth.local.LocalAuthService;
+import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
-import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
+import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -64,9 +69,14 @@ class ConcurrentLdapFirstLoginTest {
     @Autowired
     private IdentityBindingRepository identityBindingRepository;
 
-    // Namespace seeding is unrelated to the concurrency behavior under test.
-    @MockBean
-    private GlobalNamespaceMembershipService globalNamespaceMembershipService;
+    @Autowired
+    private NamespaceRepository namespaceRepository;
+
+    @BeforeEach
+    void ensureGlobalNamespace() {
+        namespaceRepository.findBySlug("global")
+            .orElseGet(() -> namespaceRepository.save(new Namespace("global", "Global", "bootstrap")));
+    }
 
     @BeforeAll
     static void seedDirectory() throws Exception {
@@ -113,6 +123,44 @@ class ConcurrentLdapFirstLoginTest {
             assertThat(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).isPresent();
         } finally {
             pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void concurrentFirstLogin_differentSubjectsSameEmail_oneAccountAndOneConflict() throws Exception {
+        // Two distinct LDAP subjects share one email and log in for the first time at the same
+        // moment. The email-collision check must be serialized: exactly one provisioning succeeds
+        // and the other receives 409 — never two accounts with the same email.
+        long bindingsBefore = identityBindingRepository.findAll().size();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Object> eve = pool.submit(() -> (Object) localAuthService.login("eve", "eve123"));
+            Future<Object> frank = pool.submit(() -> (Object) localAuthService.login("frank", "frank123"));
+
+            List<Object> results = List.of(unwrap(eve), unwrap(frank));
+            long successes = results.stream().filter(PlatformPrincipal.class::isInstance).count();
+            long conflicts = results.stream()
+                .filter(t -> t instanceof AuthFlowException e && e.getStatus() == HttpStatus.CONFLICT)
+                .count();
+
+            assertThat(successes).as("exactly one of the two first logins succeeds").isEqualTo(1);
+            assertThat(conflicts).as("the other login is refused with 409").isEqualTo(1);
+            assertThat(userAccountRepository.findByEmailIgnoreCase("shared@example.com"))
+                .as("the successful login provisioned exactly one account for the shared email")
+                .isPresent();
+            assertThat(identityBindingRepository.findAll())
+                .as("only the successful subject is bound (one new binding, none for the 409 loser)")
+                .hasSize((int) bindingsBefore + 1);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private static Object unwrap(Future<?> future) throws Exception {
+        try {
+            return future.get();
+        } catch (ExecutionException e) {
+            return e.getCause();
         }
     }
 }

@@ -1,20 +1,46 @@
 package com.iflytek.skillhub.auth.config;
 
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.ldap.core.support.LdapContextSource;
 
 /**
- * LDAP configuration marker.
+ * LDAP connection configuration, created only when {@code skillhub.ldap.enabled=true}.
  * <p>
- * The actual LDAP connection handling is encapsulated inside {@code LdapAuthService}, which
- * uses JNDI {@code DirContext} directly. This avoids maintaining a parallel Spring LDAP
- * {@code LdapTemplate}/{@code LdapContextSource} bean graph whose configuration source
- * ({@code spring.ldap.*}) would diverge from the application-level {@code skillhub.ldap.*}
- * properties consumed by {@link LdapProperties}.
- * <p>
- * {@link LdapProperties} is a standalone {@code @Component} and is always available; the
- * {@code LdapAuthService} bean itself is conditionally created only when
- * {@code skillhub.ldap.enabled=true}.
+ * The context source is the single place that maps {@link LdapProperties} onto JNDI
+ * connection settings (URL, base, bind credentials, connect/read timeouts). A custom
+ * trust store for LDAPS is installed JVM-wide before the context starts by
+ * {@link LdapTrustStoreEnvironmentPostProcessor} (the JDK LDAP provider has no per-context
+ * trust-store injection point).
  */
 @Configuration
+@ConditionalOnProperty(prefix = "skillhub.ldap", name = "enabled", havingValue = "true")
 public class LdapAutoConfiguration {
+
+    @Bean
+    public LdapContextSource ldapContextSource(LdapProperties ldapProperties) {
+        LdapContextSource contextSource = new LdapContextSource();
+        contextSource.setUrl(ldapProperties.getUrl());
+        // The search base is applied explicitly by LdapAuthService (user-search-base + base), so
+        // the context source must stay root-relative; otherwise the base would be applied twice
+        // and every search would fail.
+        if (ldapProperties.getUsername() != null && !ldapProperties.getUsername().isEmpty()) {
+            contextSource.setUserDn(ldapProperties.getUsername());
+            contextSource.setPassword(ldapProperties.getPassword());
+        }
+        contextSource.setPooled(false);
+
+        Map<String, Object> baseEnvironment = new HashMap<>();
+        baseEnvironment.put("com.sun.jndi.ldap.connect.timeout",
+            String.valueOf(ldapProperties.getConnectTimeoutMillis()));
+        baseEnvironment.put("com.sun.jndi.ldap.read.timeout",
+            String.valueOf(ldapProperties.getReadTimeoutMillis()));
+        contextSource.setBaseEnvironmentProperties(baseEnvironment);
+
+        contextSource.afterPropertiesSet();
+        return contextSource;
+    }
 }

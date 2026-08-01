@@ -43,3 +43,39 @@ sn: Miller
 displayName: Dave Miller
 mail: dave@example.com
 userPassword: dave123
+
+dn: uid=eve,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: eve
+cn: Eve Adams
+sn: Adams
+displayName: Eve Adams
+mail: shared@example.com
+userPassword: eve123
+
+dn: uid=frank,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: frank
+cn: Frank Brown
+sn: Brown
+displayName: Frank Brown
+mail: shared@example.com
+userPassword: frank123
+
+dn: uid=grace,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: grace
+cn: Grace Smith
+sn: Smith
+displayName: Grace Smith
+mail: grace@example.com
+userPassword: grace123

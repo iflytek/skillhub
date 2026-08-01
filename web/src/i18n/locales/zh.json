@@ -757,7 +757,15 @@
     "confirming": "确认中...",
     "confirm": "确认并完成合并",
     "confirmSuccess": "账号合并已完成",
-    "confirmError": "确认合并失败"
+    "confirmError": "确认合并失败",
+    "ldapBindTitle": "绑定 LDAP 账号",
+    "ldapBindDesc": "输入 LDAP 目录用户名和密码，将目录身份绑定到当前账号；绑定后即可使用 LDAP 登录。",
+    "ldapUsername": "LDAP 用户名",
+    "ldapPassword": "LDAP 密码",
+    "ldapBinding": "绑定中...",
+    "ldapBind": "绑定",
+    "ldapBindSuccess": "LDAP 身份绑定成功，现在可以使用 LDAP 登录",
+    "ldapBindError": "LDAP 绑定失败"
   },
   "namespace": {
     "notFound": "命名空间不存在",

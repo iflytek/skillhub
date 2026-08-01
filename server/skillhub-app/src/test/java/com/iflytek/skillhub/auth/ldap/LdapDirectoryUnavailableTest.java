@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
@@ -34,8 +35,14 @@ class LdapDirectoryUnavailableTest {
         props.setUrl("ldap://127.0.0.1:" + freePort());
         props.setBase("dc=example,dc=org");
 
+        LdapContextSource contextSource = new LdapContextSource();
+        contextSource.setUrl(props.getUrl());
+        contextSource.setPooled(false);
+        contextSource.afterPropertiesSet();
+
         LdapAuthService svc = new LdapAuthService(
             props,
+            contextSource,
             mock(UserAccountRepository.class),
             mock(UserRoleBindingRepository.class),
             mock(GlobalNamespaceMembershipService.class),
