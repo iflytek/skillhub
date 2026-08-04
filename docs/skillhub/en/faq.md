@@ -323,6 +323,21 @@ xargs -a skills.txt -I {} skillhub install "{}" --dir "$target_dir"
 
 Since **SkillHub Server v0.2.12**, public skills support anonymous search and install. Note that an invalid bearer token now fails the command instead of falling back to anonymous access — update or remove the stale credential in that case.
 
+## Q: Why does the account merge page say that merging is temporarily unavailable?
+
+A: The legacy account merge flow could not independently prove control of the primary and
+secondary accounts, so it has been isolated as a security measure. Until the replacement
+double-reauthentication flow is available:
+
+- Continue using the two accounts separately.
+- Do not ask an administrator to edit the database or manually move identity bindings, roles,
+  namespace memberships, local credentials, or API tokens.
+- Existing `account_merge_request` rows are retained but cannot be completed.
+- Authenticated API clients calling the legacy routes receive `503 Service Unavailable`.
+
+Normal login, existing identity binding lookup, namespace operations, and skill operations are not
+affected.
+
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:

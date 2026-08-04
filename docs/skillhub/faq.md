@@ -323,6 +323,19 @@ xargs -a skills.txt -I {} skillhub install "{}" --dir "$target_dir"
 
 自 **SkillHub Server v0.2.12** 起，公开技能支持匿名搜索与安装；如果配置了无效的 Bearer Token，命令会直接失败而不再回退匿名访问，遇到这种情况请更新凭据或先移除无效 Token。
 
+## Q: 为什么账号合并页面显示暂时不可用？
+
+A: 旧的账号合并流程不能分别证明主账号和次账号的控制权，因此已被安全隔离。在新的
+双重重新认证流程上线前：
+
+- 请继续分别使用两个账号。
+- 不要让管理员直接修改数据库、移动 identity binding、角色、namespace membership、
+  本地凭据或 API Token。
+- 已存在的 `account_merge_request` 记录会被保留，但不会继续执行。
+- 如果 API 客户端仍调用旧接口，已认证请求会收到 `503 Service Unavailable`。
+
+这不会影响普通登录、身份绑定读取、Namespace 或 Skill 操作。
+
 ## Q: 遇到问题怎么办？
 
 A: 可以通过以下方式获取帮助：

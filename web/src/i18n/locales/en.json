@@ -765,26 +765,9 @@
     "submit": "Update Password"
   },
   "accounts": {
-    "initiateTitle": "Initiate Account Merge",
-    "initiateDesc": "Enter the secondary account identifier. Supports local username or `provider:subject` format for external identities.",
-    "secondaryLabel": "Secondary Identifier",
-    "secondaryPlaceholder": "e.g.: other_user or github:123456",
-    "initiating": "Initiating...",
-    "initiate": "Initiate Merge",
-    "initiateSuccess": "Merge request created, secondary={{secondaryUserId}}",
-    "initiateError": "Failed to initiate merge",
-    "verifyTitle": "Verify & Complete Merge",
-    "verifyDesc": "Complete token verification first, then confirm to execute data migration.",
-    "mergeRequestId": "Merge Request ID",
-    "verificationToken": "Verification Token",
-    "verifying": "Verifying...",
-    "verify": "Complete Merge",
-    "verifySuccess": "Verification successful, confirm to execute the merge",
-    "verifyError": "Merge verification failed",
-    "confirming": "Confirming...",
-    "confirm": "Confirm & Complete Merge",
-    "confirmSuccess": "Account merge completed",
-    "confirmError": "Merge confirmation failed"
+    "unavailableTitle": "Account merging is temporarily unavailable",
+    "unavailableDescription": "The previous flow could not independently verify control of both accounts, so it has been disabled during a security redesign.",
+    "unavailableOperatorAction": "Do not ask an administrator to complete a merge in the database. Keep using the accounts separately until the secure flow is available."
   },
   "namespace": {
     "notFound": "Namespace not found",

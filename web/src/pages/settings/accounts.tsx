@@ -1,138 +1,25 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useConfirmAccountMerge, useInitiateAccountMerge, useVerifyAccountMerge } from '@/features/auth/use-account-merge'
-import { truncateErrorMessage } from '@/shared/lib/error-display'
-import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Input } from '@/shared/ui/input'
 
 /**
- * Account linking settings page for the multi-step account merge workflow.
- * The route intentionally keeps all three steps visible because operators often
- * need to paste ids or tokens across systems while completing the merge.
+ * Account merge is intentionally unavailable until the platform can prove independent control of
+ * both accounts. Keep the settings route so existing links remain valid, but do not render any
+ * legacy identifier, token, verification, or confirmation controls.
  */
 export function AccountSettingsPage() {
   const { t } = useTranslation()
-  const [secondaryIdentifier, setSecondaryIdentifier] = useState('')
-  const [mergeRequestId, setMergeRequestId] = useState('')
-  const [verificationToken, setVerificationToken] = useState('')
-  const [statusMessage, setStatusMessage] = useState('')
-
-  const initiateMutation = useInitiateAccountMerge()
-  const verifyMutation = useVerifyAccountMerge()
-  const confirmMutation = useConfirmAccountMerge()
-
-  /**
-   * Starts the merge flow and surfaces the request id plus verification token
-   * returned by the backend for the following steps.
-   */
-  async function handleInitiate(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setStatusMessage('')
-    try {
-      const result = await initiateMutation.mutateAsync({ secondaryIdentifier })
-      setMergeRequestId(String(result.mergeRequestId))
-      setVerificationToken(result.verificationToken)
-      setStatusMessage(t('accounts.initiateSuccess', { secondaryUserId: result.secondaryUserId }))
-    } catch (error) {
-      setStatusMessage(
-        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.initiateError')) ?? t('accounts.initiateError'),
-      )
-    }
-  }
-
-  /**
-   * Verifies ownership of the secondary account before the final merge step.
-   */
-  async function handleVerify(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setStatusMessage('')
-    try {
-      await verifyMutation.mutateAsync({
-        mergeRequestId: Number(mergeRequestId),
-        verificationToken,
-      })
-      setStatusMessage(t('accounts.verifySuccess'))
-    } catch (error) {
-      setStatusMessage(
-        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.verifyError')) ?? t('accounts.verifyError'),
-      )
-    }
-  }
-
-  /**
-   * Finalizes the merge after verification has succeeded.
-   */
-  async function handleConfirm() {
-    setStatusMessage('')
-    try {
-      await confirmMutation.mutateAsync({ mergeRequestId: Number(mergeRequestId) })
-      setStatusMessage(t('accounts.confirmSuccess'))
-    } catch (error) {
-      setStatusMessage(
-        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.confirmError')) ?? t('accounts.confirmError'),
-      )
-    }
-  }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl">
       <Card className="glass-strong">
         <CardHeader>
-          <CardTitle>{t('accounts.initiateTitle')}</CardTitle>
-          <CardDescription>{t('accounts.initiateDesc')}</CardDescription>
+          <CardTitle>{t('accounts.unavailableTitle')}</CardTitle>
+          <CardDescription>{t('accounts.unavailableDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleInitiate}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="secondary-identifier">{t('accounts.secondaryLabel')}</label>
-              <Input
-                id="secondary-identifier"
-                value={secondaryIdentifier}
-                onChange={(event) => setSecondaryIdentifier(event.target.value)}
-                placeholder={t('accounts.secondaryPlaceholder')}
-              />
-            </div>
-            <Button type="submit" disabled={initiateMutation.isPending}>
-              {initiateMutation.isPending ? t('accounts.initiating') : t('accounts.initiate')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card className="glass-strong">
-        <CardHeader>
-          <CardTitle>{t('accounts.verifyTitle')}</CardTitle>
-          <CardDescription>{t('accounts.verifyDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleVerify}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="merge-request-id">{t('accounts.mergeRequestId')}</label>
-              <Input
-                id="merge-request-id"
-                value={mergeRequestId}
-                onChange={(event) => setMergeRequestId(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="merge-token">{t('accounts.verificationToken')}</label>
-              <Input
-                id="merge-token"
-                value={verificationToken}
-                onChange={(event) => setVerificationToken(event.target.value)}
-              />
-            </div>
-            <Button type="submit" disabled={verifyMutation.isPending}>
-              {verifyMutation.isPending ? t('accounts.verifying') : t('accounts.verify')}
-            </Button>
-          </form>
-          <div className="mt-4">
-            <Button type="button" onClick={handleConfirm} disabled={confirmMutation.isPending || !mergeRequestId}>
-              {confirmMutation.isPending ? t('accounts.confirming') : t('accounts.confirm')}
-            </Button>
-          </div>
-          {statusMessage ? <p className="mt-4 text-sm text-muted-foreground">{statusMessage}</p> : null}
+          <p className="text-sm text-muted-foreground">
+            {t('accounts.unavailableOperatorAction')}
+          </p>
         </CardContent>
       </Card>
     </div>

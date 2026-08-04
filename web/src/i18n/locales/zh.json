@@ -765,26 +765,9 @@
     "submit": "更新密码"
   },
   "accounts": {
-    "initiateTitle": "发起账号合并",
-    "initiateDesc": "输入 secondary 账号标识。支持本地用户名，或 `provider:subject` 格式的外部身份。",
-    "secondaryLabel": "Secondary 标识",
-    "secondaryPlaceholder": "例如：other_user 或 github:123456",
-    "initiating": "发起中...",
-    "initiate": "发起合并",
-    "initiateSuccess": "已创建合并请求，secondary={{secondaryUserId}}",
-    "initiateError": "发起合并失败",
-    "verifyTitle": "验证并完成合并",
-    "verifyDesc": "先完成 token 验证，再单独确认执行数据迁移。",
-    "mergeRequestId": "Merge Request ID",
-    "verificationToken": "Verification Token",
-    "verifying": "验证中...",
-    "verify": "完成合并",
-    "verifySuccess": "验证成功，确认后将执行正式合并",
-    "verifyError": "验证合并失败",
-    "confirming": "确认中...",
-    "confirm": "确认并完成合并",
-    "confirmSuccess": "账号合并已完成",
-    "confirmError": "确认合并失败"
+    "unavailableTitle": "账号合并暂时不可用",
+    "unavailableDescription": "旧流程无法分别证明两个账号的控制权，因此在安全重构完成前已被停用。",
+    "unavailableOperatorAction": "请勿让管理员通过数据库手工完成合并。在安全流程上线前，请继续分别使用两个账号。"
   },
   "namespace": {
     "notFound": "命名空间不存在",

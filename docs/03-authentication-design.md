@@ -352,16 +352,29 @@ public class OAuthClaimsExtractor {
 
 同一个员工通过不同 OAuth Provider 登录时，可能产生多个 `user_account`。
 
-一期策略：默认关闭自动合并，仅支持管理员手动合并。
+当前策略：不自动合并，旧的手动合并流程也已临时隔离。旧流程把次账号 verification
+token 直接返回给主账号会话，不能分别证明两个账号的控制权，因此不能继续作为管理员或
+用户合并入口。
 
 - 一期 GitHub-only：不需要自动合并，每个 Provider 登录独立创建用户
-- 多 Provider 上线时，再引入显式绑定/合并流程（用户主动发起 + 邮箱验证确认）
-- 管理员可在后台手动合并两个 user_account（合并 identity_binding、迁移 skill ownership、合并角色取并集）
+- 多 Provider 上线时，再引入显式 Identity Link 和安全 Account Merge
+- email、username、display name 或主账号会话拿到的 token 均不能证明次账号所有权
+- 安全 Account Merge 必须要求主、次账号分别完成 fresh reauthentication
+- 在安全流程上线前，`/api/v1/account/merge/initiate`、`verify`、`confirm` 对已认证请求
+  统一返回 `503 Service Unavailable`
 
 合并操作规则：
 - 合并操作写入审计日志
 - 合并后原 user_account 标记为 `MERGED`，保留记录不物理删除
-- 预留扩展位：未来可配置 `astron.identity.auto-merge-on-verified-email=true` 开启基于已验证邮箱的自动合并
+- 不提供按 email 自动合并；即使 Provider 声明 email 已验证，也不能替代对两个账号控制权
+  的分别证明。未来绑定/合并必须使用显式、可审计的重新认证流程。
+- 旧 `account_merge_request` 记录保留用于审计和未来迁移，但不得通过 SQL 手工改为
+  `VERIFIED`/`COMPLETED`，也不得手工迁移身份、角色、membership、凭据或 Token
+- 回滚到仍包含旧合并实现的镜像会重新暴露该安全问题；如必须回滚，应先在网关阻断
+  `/api/v1/account/merge/*`
+
+未来安全流程的完整验收条件见
+[`22-secure-account-merge-acceptance-design.md`](./22-secure-account-merge-acceptance-design.md)。
 
 ## 5. CLI 认证（OAuth Device Flow + 平台凭证）
 

@@ -1,3 +1,7 @@
+/** @vitest-environment jsdom */
+
+import { render, screen } from '@testing-library/react'
+import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('react-i18next', async () => {
@@ -10,36 +14,17 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-vi.mock('@/features/auth/use-account-merge', () => ({
-  useInitiateAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useVerifyAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useConfirmAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}))
-
-vi.mock('@/shared/lib/error-display', () => ({
-  truncateErrorMessage: (v: string) => v,
-}))
-
-vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
-}))
-
-vi.mock('@/shared/ui/card', () => ({
-  Card: ({ children }: { children: unknown }) => children,
-  CardContent: ({ children }: { children: unknown }) => children,
-  CardDescription: ({ children }: { children: unknown }) => children,
-  CardHeader: ({ children }: { children: unknown }) => children,
-  CardTitle: ({ children }: { children: unknown }) => children,
-}))
-
-vi.mock('@/shared/ui/input', () => ({
-  Input: () => null,
-}))
-
 import { AccountSettingsPage } from './accounts'
 
 describe('AccountSettingsPage', () => {
-  it('exports a named component function', () => {
-    expect(typeof AccountSettingsPage).toBe('function')
+  it('shows the temporary isolation notice without legacy merge controls', () => {
+    const { container } = render(createElement(AccountSettingsPage))
+
+    expect(screen.getByText('accounts.unavailableTitle')).toBeTruthy()
+    expect(screen.getByText('accounts.unavailableDescription')).toBeTruthy()
+    expect(screen.getByText('accounts.unavailableOperatorAction')).toBeTruthy()
+    expect(container.querySelector('form')).toBeNull()
+    expect(container.querySelector('input')).toBeNull()
+    expect(container.querySelector('button')).toBeNull()
   })
 })
