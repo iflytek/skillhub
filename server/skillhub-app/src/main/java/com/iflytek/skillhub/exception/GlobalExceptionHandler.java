@@ -10,17 +10,25 @@ import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.security.SensitiveLogSanitizer;
 import com.iflytek.skillhub.storage.StorageAccessException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Translates application, domain, auth, and infrastructure exceptions into the platform's JSON API
@@ -81,6 +89,48 @@ public class GlobalExceptionHandler {
         logHandledException(HttpStatus.BAD_REQUEST, "error.badRequest", request);
         return ResponseEntity.badRequest().body(
                 apiResponseFactory.error(400, "error.badRequest"));
+    }
+
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleMvcBadRequest(Exception ex, HttpServletRequest request) {
+        logHandledException(HttpStatus.BAD_REQUEST, "error.badRequest", request);
+        return ResponseEntity.badRequest().body(
+                apiResponseFactory.error(400, "error.badRequest"));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotAllowed(
+            HttpRequestMethodNotSupportedException ex,
+            HttpServletRequest request) {
+        logHandledException(HttpStatus.METHOD_NOT_ALLOWED, "error.methodNotAllowed", request);
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+        Set<HttpMethod> supportedMethods = ex.getSupportedHttpMethods();
+        if (supportedMethods != null && !supportedMethods.isEmpty()) {
+            response.allow(supportedMethods.toArray(HttpMethod[]::new));
+        }
+        return response.body(apiResponseFactory.error(405, "error.methodNotAllowed"));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnsupportedMediaType(
+            HttpMediaTypeNotSupportedException ex,
+            HttpServletRequest request) {
+        logHandledException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "error.unsupportedMediaType", request);
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
+                apiResponseFactory.error(415, "error.unsupportedMediaType"));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotAcceptable(
+            HttpMediaTypeNotAcceptableException ex,
+            HttpServletRequest request) {
+        logHandledException(HttpStatus.NOT_ACCEPTABLE, "error.notAcceptable", request);
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(
+                apiResponseFactory.error(406, "error.notAcceptable"));
     }
 
     @ExceptionHandler(SecurityException.class)

@@ -29,10 +29,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.StaticMessageSource;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
@@ -59,6 +67,11 @@ class GlobalExceptionHandlerTest {
     void setUp() {
         StaticMessageSource messageSource = new StaticMessageSource();
         messageSource.addMessage("error.request.timeout", java.util.Locale.getDefault(), "Request timed out");
+        messageSource.addMessage("error.badRequest", java.util.Locale.getDefault(), "Invalid request");
+        messageSource.addMessage("error.methodNotAllowed", java.util.Locale.getDefault(), "HTTP method is not supported");
+        messageSource.addMessage("error.unsupportedMediaType", java.util.Locale.getDefault(), "Unsupported media type");
+        messageSource.addMessage("error.notAcceptable", java.util.Locale.getDefault(),
+                "Requested response media type is not acceptable");
         requestIdAccessor = new RequestIdAccessor();
         ApiResponseFactory responseFactory = new ApiResponseFactory(
                 messageSource,
@@ -175,6 +188,82 @@ class GlobalExceptionHandlerTest {
                 .isSameAs(ex);
     }
 
+    @Test
+    void handleMvcBadRequest_shouldReturn400WithoutUnhandledErrorLog() {
+        attachAppender();
+        prepareClientErrorRequest("POST", "/api/v1/skills?bad=value");
+
+        List<Exception> exceptions = List.of(
+                new MissingServletRequestParameterException("namespace", "String"),
+                new HttpMessageNotReadableException("Malformed request body"),
+                new MethodArgumentTypeMismatchException(
+                        "bad-value", Long.class, "id", null, new NumberFormatException("bad-value"))
+        );
+
+        for (Exception exception : exceptions) {
+            ResponseEntity<ApiResponse<Void>> response = handler.handleMvcBadRequest(exception, request);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().code()).isEqualTo(400);
+        }
+        assertThat(loggedMessages()).anySatisfy(message -> assertThat(message)
+                .contains("status=400")
+                .contains("code=error.badRequest")
+                .doesNotContain("Unhandled API exception"));
+    }
+
+    @Test
+    void handleMethodNotAllowed_shouldReturn405AndAllowHeader() {
+        attachAppender();
+        prepareClientErrorRequest("DELETE", "/api/v1/skills/demo");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleMethodNotAllowed(
+                new HttpRequestMethodNotSupportedException("DELETE", List.of("GET", "POST")), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        assertThat(response.getHeaders().getAllow()).containsExactlyInAnyOrder(HttpMethod.GET, HttpMethod.POST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo(405);
+        assertThat(loggedMessages()).anySatisfy(message -> assertThat(message)
+                .contains("status=405")
+                .contains("code=error.methodNotAllowed"));
+    }
+
+    @Test
+    void handleUnsupportedMediaType_shouldReturn415() {
+        attachAppender();
+        prepareClientErrorRequest("POST", "/api/v1/skills");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleUnsupportedMediaType(
+                new HttpMediaTypeNotSupportedException(
+                        MediaType.APPLICATION_XML,
+                        List.of(MediaType.APPLICATION_JSON)), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo(415);
+        assertThat(loggedMessages()).anySatisfy(message -> assertThat(message)
+                .contains("status=415")
+                .contains("code=error.unsupportedMediaType"));
+    }
+
+    @Test
+    void handleNotAcceptable_shouldReturn406() {
+        attachAppender();
+        prepareClientErrorRequest("GET", "/api/v1/skills");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleNotAcceptable(
+                new HttpMediaTypeNotAcceptableException(List.of(MediaType.APPLICATION_JSON)), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_ACCEPTABLE);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo(406);
+        assertThat(loggedMessages()).anySatisfy(message -> assertThat(message)
+                .contains("status=406")
+                .contains("code=error.notAcceptable"));
+    }
+
     private void authenticateRequest() {
         PlatformPrincipal principal = new PlatformPrincipal(
                 STABLE_USER_ID,
@@ -186,6 +275,11 @@ class GlobalExceptionHandlerTest {
         );
         when(request.getUserPrincipal()).thenReturn(
                 new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+    }
+
+    private void prepareClientErrorRequest(String method, String sanitizedTarget) {
+        when(request.getMethod()).thenReturn(method);
+        when(sensitiveLogSanitizer.sanitizeRequestTarget(request)).thenReturn(sanitizedTarget);
     }
 
     private void attachAppender() {
