@@ -193,6 +193,16 @@ make generate-api           # 重新生成 OpenAPI 类型
 ./scripts/smoke-test.sh http://localhost:8080  # 运行冒烟测试
 ```
 
+管理员标签管理冒烟测试只会在显式提供当前管理员凭证时运行：
+
+```bash
+SMOKE_ADMIN_USERNAME=admin SMOKE_ADMIN_PASSWORD='current-password' \
+  ./scripts/smoke-test.sh http://localhost:8080
+```
+
+持久化环境只跑非管理员冒烟检查时，可设置 `SMOKE_ADMIN_CHECKS=false`。
+脚本不再回退使用 bootstrap 管理员默认密码。
+
 说明：不要在 `server/` 下直接执行 `./mvnw -pl skillhub-app clean test`。`skillhub-app` 依赖同仓库的 sibling modules，单独 clean 构建时会回退到本地 Maven 仓库里的旧产物并出现大量 `cannot find symbol` / 签名不匹配错误。需要使用 `-am`，或者直接使用上面的 `make test-backend-app` / `make build-backend-app`。
 
 ### 项目结构

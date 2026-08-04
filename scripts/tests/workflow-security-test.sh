@@ -77,6 +77,8 @@ grep -Fq 'bash scripts/tests/validate-release-config-test.sh' "$PR_SCRIPTS_WORKF
   || fail "pr-scripts must run validate-release-config-test"
 grep -Fq 'bash scripts/tests/nginx-forwarded-proto-test.sh' "$PR_SCRIPTS_WORKFLOW" \
   || fail "pr-scripts must run nginx-forwarded-proto-test"
+grep -Fq 'bash scripts/tests/smoke-test-admin-mode-test.sh' "$PR_SCRIPTS_WORKFLOW" \
+  || fail "pr-scripts must run smoke-test-admin-mode-test"
 grep -Fq 'bash scripts/tests/runtime-secret-test.sh' "$PR_SCRIPTS_WORKFLOW" \
   || fail "pr-scripts must run runtime-secret-test"
 grep -Fq 'bash scripts/tests/dev-web-host-test.sh' "$PR_SCRIPTS_WORKFLOW" \

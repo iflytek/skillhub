@@ -38,5 +38,6 @@ jobs:
       - run: bash scripts/tests/runtime-secret-test.sh
       - run: bash scripts/tests/validate-release-config-test.sh
       - run: bash scripts/tests/nginx-forwarded-proto-test.sh
+      - run: bash scripts/tests/smoke-test-admin-mode-test.sh
       - run: bash scripts/tests/dev-web-host-test.sh
       - run: bash scripts/tests/workflow-security-test.sh

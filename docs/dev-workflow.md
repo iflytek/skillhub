@@ -129,6 +129,12 @@ This will:
 4. Run smoke tests against the API
 5. Print pass/fail summary
 
+`scripts/smoke-test.sh` separates bootstrap creation from smoke credentials.
+Admin smoke checks run only when `SMOKE_ADMIN_USERNAME` and
+`SMOKE_ADMIN_PASSWORD` are provided. Use `SMOKE_ADMIN_CHECKS=false` when testing
+a persistent environment where the current admin password is not part of the
+smoke run.
+
 If all tests pass, the environment stays running at:
 - Web UI: http://localhost
 - Backend API: http://localhost:8080

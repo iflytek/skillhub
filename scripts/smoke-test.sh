@@ -31,6 +31,12 @@ check() {
   fi
 }
 
+finish() {
+  echo
+  echo "Results: $PASS passed, $FAIL failed"
+  [[ "$FAIL" -eq 0 ]]
+}
+
 echo "=== SkillHub Smoke Test ==="
 echo "Target: $BASE_URL"
 echo
@@ -113,8 +119,30 @@ else
 fi
 
 # ---- Label Management (requires admin) ----
-ADMIN_USERNAME="${BOOTSTRAP_ADMIN_USERNAME:-admin}"
-ADMIN_PASSWORD="${BOOTSTRAP_ADMIN_PASSWORD:-ChangeMe!2026}"
+SMOKE_ADMIN_CHECKS="${SMOKE_ADMIN_CHECKS:-auto}"
+SMOKE_ADMIN_USERNAME="${SMOKE_ADMIN_USERNAME:-}"
+SMOKE_ADMIN_PASSWORD="${SMOKE_ADMIN_PASSWORD:-}"
+ADMIN_CONFIG_FAILED=0
+if [[ "$SMOKE_ADMIN_CHECKS" != "auto" && "$SMOKE_ADMIN_CHECKS" != "true" && "$SMOKE_ADMIN_CHECKS" != "false" ]]; then
+  echo "FAIL: SMOKE_ADMIN_CHECKS must be auto, true, or false"
+  FAIL=$((FAIL + 1))
+  ADMIN_CONFIG_FAILED=1
+fi
+if [[ "$SMOKE_ADMIN_CHECKS" == "true" && ( -z "$SMOKE_ADMIN_USERNAME" || -z "$SMOKE_ADMIN_PASSWORD" ) ]]; then
+  echo "FAIL: SMOKE_ADMIN_CHECKS=true requires SMOKE_ADMIN_USERNAME and SMOKE_ADMIN_PASSWORD"
+  FAIL=$((FAIL + 1))
+  ADMIN_CONFIG_FAILED=1
+fi
+if [[ "$ADMIN_CONFIG_FAILED" -ne 0 ]]; then
+  finish
+  exit $?
+fi
+if [[ "$SMOKE_ADMIN_CHECKS" == "false" || ( "$SMOKE_ADMIN_CHECKS" == "auto" && ( -z "$SMOKE_ADMIN_USERNAME" || -z "$SMOKE_ADMIN_PASSWORD" ) ) ]]; then
+  echo "SKIP: Admin label management (set SMOKE_ADMIN_USERNAME and SMOKE_ADMIN_PASSWORD to enable)"
+  finish
+  exit $?
+fi
+
 ADMIN_COOKIE_JAR="$(mktemp)"
 LABEL_SLUG="smoke-label-$(date +%s)"
 
@@ -134,7 +162,7 @@ ADMIN_LOGIN_STATUS="$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" \
   -c "$ADMIN_COOKIE_JAR" \
   -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$ADMIN_USERNAME\",\"password\":\"$ADMIN_PASSWORD\"}" || true)"
+  -d "{\"username\":\"$SMOKE_ADMIN_USERNAME\",\"password\":\"$SMOKE_ADMIN_PASSWORD\"}" || true)"
 if [[ "$ADMIN_LOGIN_STATUS" == "200" ]]; then
   echo "PASS: Admin login (HTTP $ADMIN_LOGIN_STATUS)"
   PASS=$((PASS + 1))
@@ -196,8 +224,4 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-echo
-echo "Results: $PASS passed, $FAIL failed"
-if [[ "$FAIL" -ne 0 ]]; then
-  exit 1
-fi
+finish

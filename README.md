@@ -400,6 +400,18 @@ Run it against a local backend:
 ./scripts/smoke-test.sh http://localhost:8080
 ```
 
+Admin label-management smoke checks run only when current admin credentials are
+supplied explicitly:
+
+```bash
+SMOKE_ADMIN_USERNAME=admin SMOKE_ADMIN_PASSWORD='current-password' \
+  ./scripts/smoke-test.sh http://localhost:8080
+```
+
+Use `SMOKE_ADMIN_CHECKS=false` for persistent environments where only non-admin
+smoke checks should run. The script no longer falls back to bootstrap admin
+password defaults.
+
 ## Architecture
 
 ```
