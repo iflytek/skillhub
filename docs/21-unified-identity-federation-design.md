@@ -379,8 +379,9 @@ Registry 和 capability；同时使用 C 处理长尾和高运维成本协议。
 
 决定如下：
 
-1. 第一个核心架构 PR（在 P0 安全热修之后）只引入统一身份核心并迁移现有
-   OAuth/OIDC，不增加新协议。
+1. 第一个核心架构阶段（在 P0 安全热修之后）只引入统一身份核心并迁移现有
+   OAuth/OIDC，不增加新协议。所有阶段统一在 #628 和本设计 PR 中跟踪，不再拆出
+   子 issue 或并行 PR。
 2. Provider Adapter 按 Browser、Credential、Passive 等交互类型分别集成，不建立万能
    `authenticate(Object credentials)`。
 3. 第一阶段是构建时可信模块，不提供运行时第三方 JAR。
@@ -479,7 +480,7 @@ trusted-gateway
 非法值直接判定为 `MISCONFIGURED`。OIDC issuer、SAML entityID 和 HTTPS Authority 则按
 对应协议验证后的 UTF-8 精确字节参与 hash。
 
-PR 1 必须固化以下测试向量，避免不同实现生成不同数据库值：
+阶段 1 必须固化以下测试向量，避免不同实现生成不同数据库值：
 
 | protocol | canonicalAuthority | SHA-256 fingerprint |
 |---|---|---|
@@ -701,7 +702,7 @@ interface TrustedProviderRouteResolver {
 ```
 
 `TrustedRouteIdentity` 由服务端注册的 callback path、`ClientRegistration` 或管理员启用的
-Provider route 构造，不能来自 query、Header、Token claim 或 Adapter 返回值。PR 1 增加
+Provider route 构造，不能来自 query、Header、Token claim 或 Adapter 返回值。阶段 1 增加
 ArchUnit/模块依赖测试，保证 Adapter package 不能依赖 Handle 实现、Assertion Factory、
 Principal Factory 或 Session package。
 
@@ -719,11 +720,11 @@ ResolvedProviderHandle + ProviderAuthenticationResult
 
 `IdentityAssertionFactory`、`IdentityAssertion`、`ProviderReference`、
 `ExternalSubject` 和事务服务放在核心内部 package，不作为 Provider SPI 导出；示例中的
-Java 定义是领域结构说明，不表示它们必须是 `public`。PR 4 拆出 Provider SPI 时，SPI
+Java 定义是领域结构说明，不表示它们必须是 `public`。阶段 4 拆出 Provider SPI 时，SPI
 模块只导出 `ProviderAuthenticationResult` 及其输入值对象，不能导出 Assertion 构造
 路径。
 
-这样 PR 1 即使尚未拆 Maven 模块，也能通过 Java package 可见性防止正常代码直接
+这样阶段 1 即使尚未拆 Maven 模块，也能通过 Java package 可见性防止正常代码直接
 `new IdentityAssertion(...)`。运行在同一 JVM 内的恶意可信模块仍可使用反射，因此真正
 的不可信集成必须继续放在外部 Broker；本方案不宣称 package 可见性是安全沙箱。
 
@@ -801,7 +802,7 @@ public record ProtocolAuthenticationEvidence(
 - `ProtocolAuthenticationEvidence` 不包含原始 Token、Ticket、Cookie 或密码。
 
 核心拥有 `IdentityAssertionFactory`，从当前受信路由和
-`TrustedProviderDescriptorSource` 取得 Provider Instance；PR 4 之后该 Source 由完整
+`TrustedProviderDescriptorSource` 取得 Provider Instance；阶段 4 之后该 Source 由完整
 Provider Registry 提供。Factory 执行：
 
 1. 固定 `providerCode` 和 Authority，忽略上游响应中的同名字段。
@@ -843,27 +844,27 @@ interface TrustedProviderDescriptorSource {
 每种 Subject 的 canonicalizer，以及 11.3 节定义的 `AttributeRule` 和 Provider Instance
 assurance policy。
 
-PR 1 尚未建设完整 Provider Registry，因此先提供一个仅覆盖现有 GitHub/GitLab/OIDC
+阶段 1 尚未建设完整 Provider Registry，因此先提供一个仅覆盖现有 GitHub/GitLab/OIDC
 配置的静态实现，并由 `ProviderAuthorityLockService` 负责持久化 Authority：
 
 - Provider code 必须能解析到现有 Spring Security `ClientRegistration`。
 - protocol、Authority 和 claims extractor 来自服务端受信配置及内置规则。
 - 未注册、重复或无法唯一确定 Authority 的配置在启动时或首次使用时 fail closed。
-- PR 1 使用最小 `identity_provider_state` 表完成 Authority pin 和跨重启变化检测。
+- 阶段 1 使用最小 `identity_provider_state` 表完成 Authority pin 和跨重启变化检测。
 - 兼容期 `AuthMethodCatalog` 必须使用同一 descriptor source 和 Authority 状态过滤登录
   方法；未注册、歧义、未 pin 或 mismatch 的 Provider 不得展示，也不能等到 callback
   才失败。
-- PR 1 对非空 `alternateSubjects` fail closed；PR 2 完成 typed Subject 表和冲突约束后
+- 阶段 1 对非空 `alternateSubjects` fail closed；阶段 2 完成 typed Subject 表和冲突约束后
   才允许保存 Alias。
-- PR 1 启动 reconciliation 的顺序固定为：读取唯一 descriptor source → 对每个启用的
+- 阶段 1 启动 reconciliation 的顺序固定为：读取唯一 descriptor source → 对每个启用的
   Provider 执行 Authority compare-and-set pin → 重新读取持久化状态 → 投影 Provider
   state 和 `AuthMethodCatalog`。Catalog 不能直接投影尚未复读的内存配置，也不能在 pin
   失败时保留旧的 READY 项。
-- PR 1 通过 compatibility provisioning adapter 保持现有 GitHub/GitLab/OIDC 的建号、
-  PENDING 和 membership 行为；它只是迁移入口，不引入第二套 Policy。PR 3 上线正式
+- 阶段 1 通过 compatibility provisioning adapter 保持现有 GitHub/GitLab/OIDC 的建号、
+  PENDING 和 membership 行为；它只是迁移入口，不引入第二套 Policy。阶段 3 上线正式
   `ProvisioningPolicy` 后删除 compatibility adapter，并用行为回归测试证明切换等价。
 
-PR 4 用完整 Provider Registry 替换该静态实现，但保留
+阶段 4 用完整 Provider Registry 替换该静态实现，但保留
 `TrustedProviderDescriptorSource` 和 `ProviderAuthorityLockService` 语义，避免
 Facade 反向依赖具体注册中心。
 
@@ -985,7 +986,7 @@ public sealed interface IdentityLoginOutcome {
 `PendingApproval`。`ACCOUNT_PENDING` 是该 outcome 的 `reasonCode` 和审计 code，不作为
 异常路径；Web 层统一映射到 403/等待审批提示页，且不得建立 Session。
 
-`LinkRequired` 只返回稳定 reason code，不返回目标账号或可直接完成绑定的 token。PR 5
+`LinkRequired` 只返回稳定 reason code，不返回目标账号或可直接完成绑定的 token。阶段 5
 中的显式 Link 流程必须在用户认证现有账号后重新认证目标 Provider，不依赖首次碰撞请求
 携带外部凭证。
 
@@ -1183,10 +1184,10 @@ LEGACY_UNPINNED
 
 阶段所有权：
 
-- PR 1 至 PR 3：`TrustedProviderDescriptorSource` 解析现有静态配置，
+- 阶段 1 至阶段 3：`TrustedProviderDescriptorSource` 解析现有静态配置，
   `ProviderAuthorityLockService` 独占 `identity_provider_state` 的 pin、读取、状态转换
   和兼容目录过滤职责。
-- PR 4：Provider Registry 组合 descriptor source、Authority Lock 和 capability 状态，
+- 阶段 4：Provider Registry 组合 descriptor source、Authority Lock 和 capability 状态，
   成为统一查询入口；它复用已有 Service，不重新实现或绕过 Authority compare-and-set。
 
 ### 9.4 第一阶段不做运行时插件
@@ -1328,7 +1329,7 @@ PostgreSQL 使用两层保证：
 
 这样 primary 替换可以在同一事务内先降级旧 primary、再提升新 primary，而事务提交时
 不能留下零 primary 或两个 primary。Binding 撤销、primary 撤销和迁移都必须通过同一个
-Domain Service；PR 2 的 PostgreSQL 测试必须覆盖零 primary、双 primary 和原子替换。
+Domain Service；阶段 2 的 PostgreSQL 测试必须覆盖零 primary、双 primary 和原子替换。
 
 “至少一个 primary”的下界约束必须分两阶段启用，不能和 additive DDL 一起在混合版本
 窗口立即生效：
@@ -1340,8 +1341,8 @@ Domain Service；PR 2 的 PostgreSQL 测试必须覆盖零 primary、双 primary
    数据，然后由独立 Flyway migration 启用 deferred constraint trigger。该 migration
    是发布门禁，不与第一阶段镜像混跑。
 
-PR 2 必须用真实的 PR 1 版本应用或兼容 fixture 在同一 PostgreSQL schema 上执行一次旧版
-首次绑定写入，证明 Expand 阶段不会拒绝旧写；随后升级到 PR 2 完成回填，再验证 Contract
+阶段 2 必须用真实的阶段 1 版本应用或兼容 fixture 在同一 PostgreSQL schema 上执行一次旧版
+首次绑定写入，证明 Expand 阶段不会拒绝旧写；随后升级到阶段 2 完成回填，再验证 Contract
 gate 能启用并拒绝零 primary。只用新版本 repository 模拟旧写不算滚动升级证据。
 
 如果未来需要对 Subject 加密或 HMAC lookup，另开安全设计；第一阶段沿用当前 raw subject
@@ -1752,7 +1753,7 @@ aliases:
 钉钉官方“根据 sns 临时授权码获取用户信息”文档说明了 `unionId`/`openId` 返回字段：
 [DingTalk user information](https://open.dingtalk.com/document/orgapp/obtain-the-user-information-based-on-the-sns-temporary-authorization)。
 但 `unionId/openId/userId` 在不同应用类型、企业授权关系和新版 OAuth2 接口下的精确唯一
-范围，目前仍视为**待官方契约和真实租户 fixture 验证的假设**。PR 8 开始前必须形成
+范围，目前仍视为**待官方契约和真实租户 fixture 验证的假设**。阶段 8 开始前必须形成
 Authority × subject type 决策表；未完成时不得把 fallback 顺序作为稳定 Binding 契约。
 
 要求：
@@ -1875,7 +1876,7 @@ SCIM 模块独立于外部登录核心：
 - group 先进入 entitlement/mapping 层，不能直接授予 `SUPER_ADMIN`。
 - SCIM binding 与 login binding 不按 email 自动合并。
 
-第一阶段只做独立详细设计，不与统一登录核心同 PR 实现。
+第一阶段只做独立详细设计，不与统一登录核心同阶段实现。
 
 ## 15. Auth Method Catalog
 
@@ -2084,7 +2085,7 @@ GitHub/GitLab/OIDC：
 ### 18.4 滚动升级
 
 - Flyway 只做 additive DDL。
-- 部署 PR 1 前冻结所有现有 Provider 的 protocol/Authority 配置；混合版本窗口内不得变更
+- 部署阶段 1 前冻结所有现有 Provider 的 protocol/Authority 配置；混合版本窗口内不得变更
   这些字段，并在发布检查中确认所有 Pod 使用同一配置。旧 Pod 不具备 Authority Lock，
   因此显式 Authority 迁移只能在旧 Pod 全部退出后进行。
 - 新协议默认关闭，所有 Pod 升级完成后再启用。
@@ -2092,7 +2093,7 @@ GitHub/GitLab/OIDC：
 - 不依赖旧 Pod 无法识别的新 Session record 字段。
 - Provider Authority pin 使用 6.3 节的数据库 compare-and-set；相同 fingerprint 的 Pod
   收敛，不同 fingerprint 的 Pod 触发 `AUTHORITY_MISMATCH`。
-- PR 2 的 Subject schema 按 10.3 节拆成 Expand 和 Contract gate 两次 migration；
+- 阶段 2 的 Subject schema 按 10.3 节拆成 Expand 和 Contract gate 两次 migration；
   Expand 窗口不启用“至少一个 primary”trigger，旧 Pod 全部退出、回填校验完成后才启用。
 
 ### 18.5 回滚
@@ -2102,9 +2103,9 @@ GitHub/GitLab/OIDC：
 - 新增表和列保留，不执行 down migration。
 - 若新 Adapter 已创建旧代码无法识别的 Binding，回滚前必须评估对应用户登录路径。
 - 在尚未产生 Binding/Subject revocation 且 Contract gate 尚未启用时，可以按双写数据回滚
-  到 PR 1 兼容版本。
+  到阶段 1 兼容版本。
 - 一旦提交第一条 `REVOKED` Binding/Subject，最低可回滚版本提升为“首个理解并强制过滤
-  revocation 状态的 PR 2 发布版本”；禁止回滚到只读取旧 `identity_binding.subject` 且
+  revocation 状态的阶段 2 发布版本”；禁止回滚到只读取旧 `identity_binding.subject` 且
   不认识 revocation 的版本，否则被撤销身份会重新获得登录能力。此后只能前向修复或执行
   经审计的数据恢复方案。
 
@@ -2112,18 +2113,18 @@ GitHub/GitLab/OIDC：
 
 ### 19.1 分阶段核心测试矩阵
 
-目标能力的测试必须在其实现 PR 中落地，不能把后续数据库和 Profile Sync 能力提前写成
-PR 1 的验收条件：
+目标能力的测试必须在其实现阶段中落地，不能把后续数据库和 Profile Sync 能力提前写成
+阶段 1 的验收条件：
 
 | 阶段 | 必须验证 |
 |---|---|
-| P0 / PR 0A、0B、0C | 未验证 email 不能通过 `EMAIL_DOMAIN`；未验证 email 不写入可信资料；`PENDING/DISABLED/MERGED/system` 状态；PENDING 审批通过补 membership；旧 Merge 不能绕过次账号控制权证明 |
-| PR 1 | 受信 Provider descriptor 来源；未注册/歧义 Authority fail closed；Authority fingerprint、测试向量、compare-and-set、跨重启 mismatch、粘性状态和同 Authority 恢复；primary Subject 缺失、类型非法、过长；非空 Alias fail closed；GitHub/GitLab/OIDC 回归；本地登录复用 Guard/Principal Factory；只有 `Authenticated` outcome 建立 Session |
-| PR 2 | typed Subject 与 Alias；同一 Binding 多 Alias 命中；Alias 命中不同账号；legacy primary 单事务升级；零/双 primary 拒绝；并发首次登录；旧数据库、滚动升级和回滚 |
-| PR 3 | Profile Sync 来源和覆盖策略；`AUTO/APPROVAL/EXISTING_BINDING_ONLY`；email collision → 仅含 reason code 的 `LINK_REQUIRED` 安全提示；PENDING 重复登录、批准和拒绝语义；事务失败不留下孤立账号或 Binding |
-| PR 4 | Registry 状态；disabled/misconfigured Provider 不展示且不联网；旧登录目录兼容；Provider Conformance Kit |
-| PR 5 | Identity Link：当前账号 fresh reauthentication、目标 Provider 再认证、重放/过期、解绑最后登录方式 |
-| PR 6 | Account Merge：主次账号独立控制权证明、冲突预览、Session/API Token 处理和原子迁移 |
+| P0 / 阶段 0A、0B、0C | 未验证 email 不能通过 `EMAIL_DOMAIN`；未验证 email 不写入可信资料；`PENDING/DISABLED/MERGED/system` 状态；PENDING 审批通过补 membership；旧 Merge 不能绕过次账号控制权证明 |
+| 阶段 1 | 受信 Provider descriptor 来源；未注册/歧义 Authority fail closed；Authority fingerprint、测试向量、compare-and-set、跨重启 mismatch、粘性状态和同 Authority 恢复；primary Subject 缺失、类型非法、过长；非空 Alias fail closed；GitHub/GitLab/OIDC 回归；本地登录复用 Guard/Principal Factory；只有 `Authenticated` outcome 建立 Session |
+| 阶段 2 | typed Subject 与 Alias；同一 Binding 多 Alias 命中；Alias 命中不同账号；legacy primary 单事务升级；零/双 primary 拒绝；并发首次登录；旧数据库、滚动升级和回滚 |
+| 阶段 3 | Profile Sync 来源和覆盖策略；`AUTO/APPROVAL/EXISTING_BINDING_ONLY`；email collision → 仅含 reason code 的 `LINK_REQUIRED` 安全提示；PENDING 重复登录、批准和拒绝语义；事务失败不留下孤立账号或 Binding |
+| 阶段 4 | Registry 状态；disabled/misconfigured Provider 不展示且不联网；旧登录目录兼容；Provider Conformance Kit |
+| 阶段 5 | Identity Link：当前账号 fresh reauthentication、目标 Provider 再认证、重放/过期、解绑最后登录方式 |
+| 阶段 6 | Account Merge：主次账号独立控制权证明、冲突预览、Session/API Token 处理和原子迁移 |
 
 并发和唯一约束必须在 PostgreSQL 上验证；H2 不能证明 JSONB、部分唯一索引和真实竞争行为。
 
@@ -2169,53 +2170,55 @@ PR 1 的验收条件：
 
 ### 19.5 `big-main` 和测试机验收
 
-每个协议 PR：
+每个协议阶段：
 
 1. 先完成范围内单元/集成测试。
-2. 合入 `big-main`，不直接进入 `main`。
+2. 进入 `big-main` 或等价的集成验证分支，不直接进入 `main`。
 3. 构建新的 Server/Web 镜像。
 4. 在专用测试机部署新镜像，不重启测试机器。
 5. 验证旧 Provider 回归和新 Provider 最小完整链路。
 6. 检查日志、审计、指标和数据库迁移。
 7. 人工验证对应登录 UI、错误页和账号设置。
 8. 记录镜像、commit、测试命令和结果。
-9. 全部通过后再由维护者决定进入 `main`。
+9. 全部通过后再由维护者决定是否把主 PR 更新到可进入 `main` 的状态。
 
 ## 20. 分阶段实施计划
 
-每个 PR 必须聚焦，不把协议、核心、数据库大迁移和 UI 重构混在一起。
+本工作统一在父 issue #628 和主设计/实现 PR #630 中跟踪。为降低认证边界风险，主 PR
+内部仍按阶段提交和验收；每个阶段必须聚焦，不把协议、核心、数据库大迁移和 UI 重构混在
+一起。原先拆出的子 issue/PR 关闭后，其范围、验收和证据回收到本节。
 
 依赖关系：
 
 ```text
-PR 0A / PR 0B / PR 0C：安全热修
+阶段 0A / 阶段 0B / 阶段 0C：安全热修
         │
         ▼
-PR 1：统一身份核心 + Authority Lock + 现有 OAuth/OIDC 迁移
+阶段 1：统一身份核心 + Authority Lock + 现有 OAuth/OIDC 迁移
         │
         ▼
-PR 2：Binding V2 + typed Subject/Alias
+阶段 2：Binding V2 + typed Subject/Alias
         │
         ▼
-PR 3：Profile Sync + Provisioning Policy
+阶段 3：Profile Sync + Provisioning Policy
         │
         ▼
-PR 4：Provider Registry + Adapter 契约冻结
-        ├→ PR 5：Identity Link
-        ├→ PR 6：Account Merge
-        ├→ PR 7：LDAP/AD
-        ├→ PR 8：DingTalk
-        └→ PR 9：CAS
+阶段 4：Provider Registry + Adapter 契约冻结
+        ├→ 阶段 5：Identity Link
+        ├→ 阶段 6：Account Merge
+        ├→ 阶段 7：LDAP/AD
+        ├→ 阶段 8：DingTalk
+        └→ 阶段 9：CAS
 ```
 
-“身份核心稳定”在本计划中的可观察定义是 PR 1 至 PR 4 已完成验收，而不是仅合入接口
-文件。PR 5、PR 6 与协议 Adapter 可以在 PR 4 后并行；但某 Provider 如果启用 `AUTO` 或
-`APPROVAL` 且可能发生 email collision，在 PR 5 完成前只能安全返回 `LINK_REQUIRED`，
+“身份核心稳定”在本计划中的可观察定义是阶段 1 至阶段 4 已完成验收，而不是仅合入接口
+文件。阶段 5、阶段 6 与协议 Adapter 可以在阶段 4 后并行；但某 Provider 如果启用
+`AUTO` 或 `APPROVAL` 且可能发生 email collision，在阶段 5 完成前只能安全返回 `LINK_REQUIRED`，
 不能用临时 email 自动绑定绕过显式 Link 流程。
 
 ### P0：安全热修
 
-#### PR 0A：email 和账号状态不变量
+#### 阶段 0A：email 和账号状态不变量
 
 范围：
 
@@ -2229,7 +2232,7 @@ PR 4：Provider Registry + Adapter 契约冻结
 - GitHub/GitLab/OIDC 现有测试通过。
 - 未验证 email 准入测试通过。
 
-#### PR 0B：PENDING 审批补齐基础 membership
+#### 阶段 0B：PENDING 审批补齐基础 membership
 
 范围：
 
@@ -2237,17 +2240,17 @@ PR 4：Provider Registry + Adapter 契约冻结
   membership 放入同一事务。
 - 覆盖重复审批、事务失败、批准后登录和拒绝后登录测试。
 
-#### PR 0C：隔离不安全的旧 Account Merge
+#### 阶段 0C：隔离不安全的旧 Account Merge
 
 范围：
 
 - 先禁止或隔离当前不能证明次账号所有权的 merge 流程。
 - 返回稳定错误和运维说明，不把 verification token 暴露给主账号会话。
-- 为 PR 6 的安全 Account Merge 编写独立验收设计；P0 不夹带迁移实现。
+- 为阶段 6 的安全 Account Merge 编写独立验收设计；P0 不夹带迁移实现。
 
 ### P1：统一身份核心
 
-#### PR 1：第一个核心架构 PR，只做统一身份核心
+#### 阶段 1：第一个核心架构阶段，只做统一身份核心
 
 范围：
 
@@ -2291,13 +2294,13 @@ PR 4：Provider Registry + Adapter 契约冻结
 - 现有三类 OAuth/OIDC 登录行为无回归。
 - Provider code、Authority、Subject 和属性映射只能来自受信 descriptor。
 - 相同 Provider code 跨重启切换 Authority 时 fail closed。
-- 非空 Alias 在 PR 2 前 fail closed。
+- 非空 Alias 在阶段 2 前 fail closed。
 - 已迁移的 GitHub/GitLab/OIDC Adapter 无法直接构造 Principal；历史
-  `DirectAuthProvider`/`PassiveSessionAuthenticator` 的全局收口属于 PR 4。
+  `DirectAuthProvider`/`PassiveSessionAuthenticator` 的全局收口属于阶段 4。
 - 只有 Authenticated outcome 建立 Session。
-- 19.1 节 PR 1 测试子集通过。
+- 19.1 节阶段 1 测试子集通过。
 
-#### PR 2：Binding V2 和 typed Subject/Alias
+#### 阶段 2：Binding V2 和 typed Subject/Alias
 
 范围：
 
@@ -2315,7 +2318,7 @@ PR 4：Provider Registry + Adapter 契约冻结
 - rolling upgrade 和回滚路径有测试证据。
 - 每个 ACTIVE Binding 恰有一个 ACTIVE primary。
 
-#### PR 3：Profile Sync 和 Provisioning Policy
+#### 阶段 3：Profile Sync 和 Provisioning Policy
 
 范围：
 
@@ -2330,10 +2333,10 @@ PR 4：Provider Registry + Adapter 契约冻结
 - 用户/管理员资料不被外部登录覆盖。
 - PENDING 审批链路完整。
 - email collision 不自动绑定。
-- PR 5 完成前，`LINK_REQUIRED` 只提供安全提示和已有账号登录入口，不生成可直接完成绑定
+- 阶段 5 完成前，`LINK_REQUIRED` 只提供安全提示和已有账号登录入口，不生成可直接完成绑定
   的 challenge/token。
 
-#### PR 4：Provider Registry 和旧 SPI 收口
+#### 阶段 4：Provider Registry 和旧 SPI 收口
 
 范围：
 
@@ -2350,7 +2353,7 @@ PR 4：Provider Registry + Adapter 契约冻结
 - disabled/misconfigured Provider 不出现在目录且不联网。
 - 旧前端登录目录 API 保持兼容。
 
-#### PR 5：显式 Identity Link
+#### 阶段 5：显式 Identity Link
 
 范围：
 
@@ -2365,9 +2368,9 @@ PR 4：Provider Registry + Adapter 契约冻结
 - 无法只凭 email 或 username 创建 Binding。
 - Link 重放、过期、并发消费和最后登录方式测试通过。
 
-#### PR 6：安全 Account Merge
+#### 阶段 6：安全 Account Merge
 
-Account Merge 使用独立设计和 PR，不把高风险的数据迁移藏在 Identity Link 中。
+Account Merge 使用独立设计和阶段验收，不把高风险的数据迁移藏在 Identity Link 中。
 
 范围：
 
@@ -2385,17 +2388,17 @@ Account Merge 使用独立设计和 PR，不把高风险的数据迁移藏在 Id
 
 ### P2：当前明确协议需求
 
-PR 1 至 PR 4 完成且 Adapter Interface 冻结后，以下 Adapter 可以由维护者或外部贡献者
-开发。可以并行编码，但必须逐个进入 `big-main` 和测试机验证。
+阶段 1 至阶段 4 完成且 Adapter Interface 冻结后，以下 Adapter 可以由维护者或外部贡献者
+开发。可以并行编码，但必须逐个进入 `big-main` 或等价集成验证分支，并完成测试机验证。
 
-#### PR 7：LDAP/AD Adapter
+#### 阶段 7：LDAP/AD Adapter
 
 - 可邀请 #437 原作者迁移。
 - 不复用按 email 建号/复用账号逻辑。
 - OpenLDAP、AD fixture、LDAPS/StartTLS。
 - 真实升级和重复登录测试。
 
-#### PR 8：DingTalk Adapter
+#### 阶段 8：DingTalk Adapter
 
 - 可邀请 #467 原作者迁移。
 - 复用经过 Review 的 token/userinfo transport。
@@ -2405,7 +2408,7 @@ PR 1 至 PR 4 完成且 Adapter Interface 冻结后，以下 Adapter 可以由�
 DingTalk 的目标支持等级是 Native Tier 1。实现可以来自社区，但合入后由项目承担 Tier 1
 的兼容、安全和维护责任。
 
-#### PR 9：CAS Adapter
+#### 阶段 9：CAS Adapter
 
 - 从 #464 复用协议和测试思路。
 - 使用成熟 CAS Client。
@@ -2418,14 +2421,14 @@ LDAP 和 DingTalk 不要求必须由维护者亲自编码。更准确的规则�
 
 ### P3：Broker 与企业扩展
 
-#### PR 10：Broker 集成指南
+#### 阶段 10：Broker 集成指南
 
 - Keycloak LDAP/Kerberos/SAML → OIDC → SkillHub。
 - authentik Source/Proxy → OIDC → SkillHub。
 - Dex LDAP/SAML Connector → OIDC → SkillHub。
 - Provider Authority、claim 和 email assurance 配置示例。
 
-#### PR 11：Trusted Gateway Assertion
+#### 阶段 11：Trusted Gateway Assertion
 
 - mTLS 或签名 JWT。
 - Header stripping。
@@ -2434,11 +2437,11 @@ LDAP 和 DingTalk 不要求必须由维护者亲自编码。更准确的规则�
 
 #### SAML 原生决策点
 
-满足真实需求、测试 IdP 和维护责任门槛后，再创建原生 SAML PR；否则保持 Broker 支持。
+满足真实需求、测试 IdP 和维护责任门槛后，再进入原生 SAML 阶段；否则保持 Broker 支持。
 
 ### P4：生命周期和权限映射
 
-#### PR 12：SCIM 2.0 独立设计与最小实现
+#### 阶段 12：SCIM 2.0 独立设计与最小实现
 
 - User lifecycle。
 - Group lifecycle。
@@ -2446,7 +2449,7 @@ LDAP 和 DingTalk 不要求必须由维护者亲自编码。更准确的规则�
 - SCIM binding。
 - 不建立登录 Session。
 
-#### PR 13：External Entitlement Mapping
+#### 阶段 13：External Entitlement Mapping
 
 - 外部 group/claim → 中间 entitlement。
 - 管理员显式配置 → platform/namespace role。
@@ -2472,9 +2475,9 @@ LDAP 和 DingTalk 不要求必须由维护者亲自编码。更准确的规则�
 
 ### 21.2 Adapter 合入要求
 
-每个 Adapter PR 必须：
+每个 Adapter 阶段必须：
 
-- 一个协议一个 PR。
+- 一个协议一个阶段。
 - 基于已合并的核心 Interface。
 - 不自行创建平台账号或角色。
 - 不注册绕过核心的 Controller/Filter。
@@ -2495,12 +2498,12 @@ LDAP 和 DingTalk 不要求必须由维护者亲自编码。更准确的规则�
    - 自己迁移到新 Adapter；
    - 同意维护者提取协议客户端和测试；
    - 由其他社区贡献者接手。
-4. 替代实现真正进入 `main` 后再决定是否以 superseded 关闭。
+4. 主 PR 中的替代实现真正进入 `main` 后再决定是否以 superseded 关闭。
 5. 关闭或替代时保留需求来源、设计探索和原作者贡献说明。
 
 ## 22. 待决问题
 
-以下问题不阻塞设计批准，但必须在对应实现 PR 前决定：
+以下问题不阻塞设计批准，但必须在对应实现阶段前决定：
 
 1. Provider Authority 的管理员迁移命令和审批流程。
 2. Subject 是否需要 HMAC lookup/加密存储，以及密钥轮换方案。
@@ -2525,7 +2528,7 @@ LDAP 和 DingTalk 不要求必须由维护者亲自编码。更准确的规则�
 - [ ] 同意 SCIM 使用独立 Provisioning 链路。
 - [ ] 同意第一阶段不做运行时 JAR 插件。
 - [ ] 同意原生 + Broker 混合协议策略。
-- [ ] 同意第一个核心架构 PR（在 P0 安全热修之后）不夹带 LDAP、DingTalk、CAS。
+- [ ] 同意第一个核心架构阶段（在 P0 安全热修之后）不夹带 LDAP、DingTalk、CAS。
 - [ ] 同意协议 Adapter 可以由外部贡献者实现。
 - [ ] 同意所有协议先进入 `big-main` 和测试机验收。
 
