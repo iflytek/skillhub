@@ -400,6 +400,18 @@ Run it against a local backend:
 ./scripts/smoke-test.sh http://localhost:8080
 ```
 
+Local Compose and staging runs can keep using one backend URL. For an ingress
+deployment where the public URL exposes application APIs but keeps Actuator on
+the backend service, set a separate Actuator target:
+
+```bash
+ACTUATOR_BASE_URL=http://skillhub-server:8080 \
+  ./scripts/smoke-test.sh https://skillhub.example.com
+```
+
+The health check requires an Actuator JSON response, so an HTML SPA fallback is
+reported as a routing or target error instead of a successful health response.
+
 Admin label-management smoke checks run only when current admin credentials are
 supplied explicitly:
 
