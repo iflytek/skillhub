@@ -59,7 +59,7 @@ public class AuthContextFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
-        if (!routeSecurityPolicyRegistry.shouldProjectRequestContext(request.getRequestURI())) {
+        if (!routeSecurityPolicyRegistry.shouldProjectRequestContext(requestPath(request))) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -86,6 +86,14 @@ public class AuthContextFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath != null && !servletPath.isBlank()) {
+            return servletPath;
+        }
+        return request.getRequestURI();
     }
 
     private boolean isInactiveUser(String userId) {
