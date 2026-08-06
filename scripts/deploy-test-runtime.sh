@@ -187,26 +187,35 @@ if [[ -n "${web_base_path}" ]]; then
   normalized_web_base_path="$(normalize_base_path "${web_base_path}")"
 fi
 
+helper_supports_sub_path=true
 if [[ -n "${public_url}" || -n "${web_base_path}" ]]; then
   helper_help="$(sudo /usr/local/bin/skillhub-test-deploy --help 2>&1 || true)"
   if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
      ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
+    helper_supports_sub_path=false
     echo "HK deploy helper is outdated: /usr/local/bin/skillhub-test-deploy" >&2
-    echo "Install the current scripts/skillhub-test-deploy-remote.sh on the HK machine before sub-path validation." >&2
-    echo "Required helper options: --public-url and --web-base-path" >&2
-    exit 1
+    echo "Falling back to a web image with the requested base path baked at build time." >&2
+    echo "Update scripts/skillhub-test-deploy-remote.sh on the HK machine to let runtime env write SKILLHUB_PUBLIC_BASE_URL and SKILLHUB_WEB_API_BASE_URL." >&2
   fi
 fi
 
 deploy_status=0
-sudo /usr/local/bin/skillhub-test-deploy \
-  --deploy-tag "${deploy_tag}" \
-  --immutable-tag "${immutable_tag}" \
-  --merged-sha "${merged_sha}" \
-  --pr-csv "${pr_csv}" \
-  --run-url "${run_url}" \
-  --public-url "${public_url}" \
-  --web-base-path "${web_base_path}" || deploy_status=$?
+deploy_args=(
+  --deploy-tag "${deploy_tag}"
+  --immutable-tag "${immutable_tag}"
+  --merged-sha "${merged_sha}"
+  --pr-csv "${pr_csv}"
+  --run-url "${run_url}"
+)
+
+if [[ "${helper_supports_sub_path}" == "true" ]]; then
+  deploy_args+=(
+    --public-url "${public_url}"
+    --web-base-path "${web_base_path}"
+  )
+fi
+
+sudo /usr/local/bin/skillhub-test-deploy "${deploy_args[@]}" || deploy_status=$?
 
 web_health_paths=("/nginx-health")
 if [[ -n "${normalized_web_base_path}" && "${normalized_web_base_path}" != "/" ]]; then

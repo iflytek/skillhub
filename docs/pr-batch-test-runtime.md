@@ -66,8 +66,11 @@ For sub-path validation, the installed helper must support:
 - `--public-url`
 - `--web-base-path`
 
-`scripts/deploy-test-runtime.sh` checks this before deployment and fails fast if the
-HK helper is outdated.
+The workflow checks this before building images. If the HK helper is outdated,
+the workflow still bakes the requested web base path into the web image so
+`/skillhub/runtime-config.js` and `/skillhub/api/...` routing can be validated.
+However, update the helper before treating `SKILLHUB_PUBLIC_BASE_URL` and
+`SKILLHUB_WEB_API_BASE_URL` as runtime-configured on the HK machine.
 
 ## Recommended usage
 
