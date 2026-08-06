@@ -17,11 +17,11 @@ When you trigger the workflow manually, it:
 3. verifies that every PR is still open and targets the chosen base branch
 4. merges the selected PR heads onto the base branch in the exact order you supplied
 5. fails fast if any PR conflicts with the base branch or with an earlier PR in the batch
-6. builds `server`, `web`, and `scanner` images for `linux/amd64`
-7. pushes both a floating tag and an immutable tag to GHCR
-8. SSHes into the HK test machine as a dedicated deploy user
-9. updates the selected non-secret runtime fields in `/opt/skillhub-runtime/.env.release`
-10. calls a root-owned deployment wrapper through `sudo`
+6. SSHes into the HK test machine as a dedicated deploy user and checks the remote helper version
+7. builds `server`, `web`, and `scanner` images for `linux/amd64`
+8. pushes both a floating tag and an immutable tag to GHCR
+9. calls a root-owned deployment wrapper through `sudo`
+10. updates the selected non-secret runtime fields in `/opt/skillhub-runtime/.env.release`
 11. runs `docker compose pull && docker compose up -d` through the remote wrapper
 
 The floating tag is the shared environment channel. By default it is
