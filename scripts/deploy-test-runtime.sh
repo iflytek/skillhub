@@ -195,24 +195,24 @@ cleanup_skillhub_test_space() {
   echo "HK disk before SkillHub image cleanup:" >&2
   df -h /var/lib/docker /var/lib/containerd 2>/dev/null || df -h / >&2
 
-  docker container ls -aq \
+  sudo docker container ls -aq \
     --filter "name=skillhub-runtime-" \
     --filter "status=exited" |
     while read -r container_id; do
       [[ -n "${container_id}" ]] || continue
-      docker container rm "${container_id}" >/dev/null 2>&1 || true
+      sudo docker container rm "${container_id}" >/dev/null 2>&1 || true
     done
 
   running_image_ids="$(
-    docker ps --format '{{.Image}}' |
+    sudo docker ps --format '{{.Image}}' |
       while read -r image_ref; do
         [[ -n "${image_ref}" ]] || continue
-        docker image inspect --format '{{.Id}}' "${image_ref}" 2>/dev/null || true
+        sudo docker image inspect --format '{{.Id}}' "${image_ref}" 2>/dev/null || true
       done |
       sort -u
   )"
 
-  docker image ls --format '{{.Repository}} {{.Tag}} {{.ID}}' |
+  sudo docker image ls --format '{{.Repository}} {{.Tag}} {{.ID}}' |
     while read -r repository tag image_id; do
       case "${repository}" in
         ghcr.io/iflytek/skillhub-server|ghcr.io/iflytek/skillhub-web|ghcr.io/iflytek/skillhub-scanner) ;;
@@ -230,7 +230,7 @@ cleanup_skillhub_test_space() {
       fi
 
       echo "Removing old SkillHub test image ${repository}:${tag}" >&2
-      docker image rm "${repository}:${tag}" >/dev/null 2>&1 || true
+      sudo docker image rm "${repository}:${tag}" >/dev/null 2>&1 || true
     done
 
   echo "HK disk after SkillHub image cleanup:" >&2
