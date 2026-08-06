@@ -119,6 +119,22 @@ ssh_opts=(
   -p "${ssh_port}"
 )
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+runtime_files=(
+  "compose.release.yml"
+  ".env.release.example"
+)
+
+for runtime_file in "${runtime_files[@]}"; do
+  [[ -f "${repo_root}/${runtime_file}" ]] || {
+    echo "Missing local runtime file for HK deployment: ${runtime_file}" >&2
+    exit 1
+  }
+done
+
+tar -C "${repo_root}" -cf - "${runtime_files[@]}" | ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" \
+  'set -euo pipefail; runtime_dir="/opt/skillhub-runtime"; mkdir -p "${runtime_dir}"; tar -xf - -C "${runtime_dir}"'
+
 ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" bash -s -- \
   "${deploy_tag}" \
   "${immutable_tag}" \
