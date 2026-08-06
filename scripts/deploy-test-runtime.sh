@@ -191,6 +191,52 @@ normalize_base_path() {
   printf '%s' "${value}"
 }
 
+cleanup_skillhub_test_space() {
+  echo "HK disk before SkillHub image cleanup:" >&2
+  df -h /var/lib/docker /var/lib/containerd 2>/dev/null || df -h / >&2
+
+  docker container ls -aq \
+    --filter "name=skillhub-runtime-" \
+    --filter "status=exited" |
+    while read -r container_id; do
+      [[ -n "${container_id}" ]] || continue
+      docker container rm "${container_id}" >/dev/null 2>&1 || true
+    done
+
+  running_image_ids="$(
+    docker ps --format '{{.Image}}' |
+      while read -r image_ref; do
+        [[ -n "${image_ref}" ]] || continue
+        docker image inspect --format '{{.Id}}' "${image_ref}" 2>/dev/null || true
+      done |
+      sort -u
+  )"
+
+  docker image ls --format '{{.Repository}} {{.Tag}} {{.ID}}' |
+    while read -r repository tag image_id; do
+      case "${repository}" in
+        ghcr.io/iflytek/skillhub-server|ghcr.io/iflytek/skillhub-web|ghcr.io/iflytek/skillhub-scanner) ;;
+        *) continue ;;
+      esac
+
+      case "${tag}" in
+        manual-test-hk*) ;;
+        *) continue ;;
+      esac
+
+      if grep -Fxq "${image_id}" <<<"${running_image_ids}"; then
+        echo "Keeping running SkillHub image ${repository}:${tag}" >&2
+        continue
+      fi
+
+      echo "Removing old SkillHub test image ${repository}:${tag}" >&2
+      docker image rm "${repository}:${tag}" >/dev/null 2>&1 || true
+    done
+
+  echo "HK disk after SkillHub image cleanup:" >&2
+  df -h /var/lib/docker /var/lib/containerd 2>/dev/null || df -h / >&2
+}
+
 if [[ -n "${public_url}" ]]; then
   if [[ ! "${public_url}" =~ ^https?://[^[:space:]/?#]+(:[0-9]+)?(/[^[:space:]?#]*)?$ ]]; then
     echo "Invalid public URL: ${public_url}" >&2
@@ -202,6 +248,8 @@ normalized_web_base_path=""
 if [[ -n "${web_base_path}" ]]; then
   normalized_web_base_path="$(normalize_base_path "${web_base_path}")"
 fi
+
+cleanup_skillhub_test_space
 
 helper_supports_sub_path=true
 if [[ -n "${public_url}" || -n "${web_base_path}" ]]; then
