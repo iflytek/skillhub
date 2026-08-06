@@ -187,6 +187,17 @@ if [[ -n "${web_base_path}" ]]; then
   normalized_web_base_path="$(normalize_base_path "${web_base_path}")"
 fi
 
+if [[ -n "${public_url}" || -n "${web_base_path}" ]]; then
+  helper_help="$(sudo /usr/local/bin/skillhub-test-deploy --help 2>&1 || true)"
+  if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
+     ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
+    echo "HK deploy helper is outdated: /usr/local/bin/skillhub-test-deploy" >&2
+    echo "Install the current scripts/skillhub-test-deploy-remote.sh on the HK machine before sub-path validation." >&2
+    echo "Required helper options: --public-url and --web-base-path" >&2
+    exit 1
+  fi
+fi
+
 deploy_status=0
 sudo /usr/local/bin/skillhub-test-deploy \
   --deploy-tag "${deploy_tag}" \

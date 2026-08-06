@@ -53,6 +53,22 @@ The remote machine should expose a root-owned deployment command at:
 The dedicated deploy user is expected to have passwordless sudo access to
 that command only.
 
+Install or update that command from the repository copy when the workflow changes:
+
+```bash
+sudo install -o root -g root -m 0755 \
+  scripts/skillhub-test-deploy-remote.sh \
+  /usr/local/bin/skillhub-test-deploy
+```
+
+For sub-path validation, the installed helper must support:
+
+- `--public-url`
+- `--web-base-path`
+
+`scripts/deploy-test-runtime.sh` checks this before deployment and fails fast if the
+HK helper is outdated.
+
 ## Recommended usage
 
 Open the workflow in GitHub Actions and fill in:
