@@ -195,24 +195,30 @@ cleanup_skillhub_test_space() {
   echo "HK disk before SkillHub image cleanup:" >&2
   df -h /var/lib/docker /var/lib/containerd 2>/dev/null || df -h / >&2
 
-  sudo docker container ls -aq \
+  if ! sudo -n docker version >/dev/null 2>&1; then
+    echo "Skipping pre-deploy Docker cleanup: passwordless sudo docker is not available for the SSH deploy user." >&2
+    echo "Use the HK deploy helper cleanup support or a separately authorized root maintenance session when disk space is insufficient." >&2
+    return 0
+  fi
+
+  sudo -n docker container ls -aq \
     --filter "name=skillhub-runtime-" \
     --filter "status=exited" |
     while read -r container_id; do
       [[ -n "${container_id}" ]] || continue
-      sudo docker container rm "${container_id}" >/dev/null 2>&1 || true
+      sudo -n docker container rm "${container_id}" >/dev/null 2>&1 || true
     done
 
   running_image_ids="$(
-    sudo docker ps --format '{{.Image}}' |
+    sudo -n docker ps --format '{{.Image}}' |
       while read -r image_ref; do
         [[ -n "${image_ref}" ]] || continue
-        sudo docker image inspect --format '{{.Id}}' "${image_ref}" 2>/dev/null || true
+        sudo -n docker image inspect --format '{{.Id}}' "${image_ref}" 2>/dev/null || true
       done |
       sort -u
   )"
 
-  sudo docker image ls --format '{{.Repository}} {{.Tag}} {{.ID}}' |
+  sudo -n docker image ls --no-trunc --format '{{.Repository}} {{.Tag}} {{.ID}}' |
     while read -r repository tag image_id; do
       case "${repository}" in
         ghcr.io/iflytek/skillhub-server|ghcr.io/iflytek/skillhub-web|ghcr.io/iflytek/skillhub-scanner) ;;
@@ -230,7 +236,7 @@ cleanup_skillhub_test_space() {
       fi
 
       echo "Removing old SkillHub test image ${repository}:${tag}" >&2
-      sudo docker image rm "${repository}:${tag}" >/dev/null 2>&1 || true
+      sudo -n docker image rm "${repository}:${tag}" >/dev/null 2>&1 || true
     done
 
   echo "HK disk after SkillHub image cleanup:" >&2
