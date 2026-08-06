@@ -119,22 +119,6 @@ ssh_opts=(
   -p "${ssh_port}"
 )
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-runtime_files=(
-  "compose.release.yml"
-  ".env.release.example"
-)
-
-for runtime_file in "${runtime_files[@]}"; do
-  [[ -f "${repo_root}/${runtime_file}" ]] || {
-    echo "Missing local runtime file for HK deployment: ${runtime_file}" >&2
-    exit 1
-  }
-done
-
-tar -C "${repo_root}" -cf - "${runtime_files[@]}" | ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" \
-  'set -euo pipefail; runtime_dir="/opt/skillhub-runtime"; mkdir -p "${runtime_dir}"; tar -xf - -C "${runtime_dir}"'
-
 ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" bash -s -- \
   "${deploy_tag}" \
   "${immutable_tag}" \
@@ -152,24 +136,6 @@ pr_csv="$4"
 run_url="${5:-}"
 public_url="${6:-}"
 web_base_path="${7:-}"
-runtime_dir="/opt/skillhub-runtime"
-env_file="${runtime_dir}/.env.release"
-env_example_file="${runtime_dir}/.env.release.example"
-
-set_env_value() {
-  local key="$1"
-  local value="$2"
-  local tmp
-
-  tmp="$(mktemp "${env_file}.tmp.XXXXXX")"
-  if grep -q "^${key}=" "${env_file}"; then
-    sed "s|^${key}=.*|${key}=${value}|" "${env_file}" >"${tmp}"
-  else
-    cp "${env_file}" "${tmp}"
-    printf '%s=%s\n' "${key}" "${value}" >>"${tmp}"
-  fi
-  mv "${tmp}" "${env_file}"
-}
 
 normalize_base_path() {
   local value="$1"
@@ -209,38 +175,16 @@ normalize_base_path() {
   printf '%s' "${value}"
 }
 
-if [[ ! -f "${env_file}" ]]; then
-  if [[ ! -f "${env_example_file}" ]]; then
-    echo "Missing HK runtime env file: ${env_file}" >&2
-    echo "Missing HK runtime env example: ${env_example_file}" >&2
-    echo "Initialize the HK runtime directory with scripts/runtime.sh before deployment." >&2
-    exit 1
-  fi
-
-  old_umask="$(umask)"
-  umask 077
-  cp "${env_example_file}" "${env_file}"
-  umask "${old_umask}"
-  echo "Initialized HK runtime env file from ${env_example_file}"
-fi
-
 if [[ -n "${public_url}" ]]; then
   if [[ ! "${public_url}" =~ ^https?://[^[:space:]/?#]+(:[0-9]+)?(/[^[:space:]?#]*)?$ ]]; then
     echo "Invalid public URL: ${public_url}" >&2
     exit 1
   fi
-  set_env_value "SKILLHUB_PUBLIC_BASE_URL" "${public_url%/}"
 fi
 
 normalized_web_base_path=""
 if [[ -n "${web_base_path}" ]]; then
   normalized_web_base_path="$(normalize_base_path "${web_base_path}")"
-  set_env_value "SKILLHUB_WEB_BASE_PATH" "${normalized_web_base_path}"
-  if [[ "${normalized_web_base_path}" == "/" ]]; then
-    set_env_value "SKILLHUB_WEB_API_BASE_URL" ""
-  else
-    set_env_value "SKILLHUB_WEB_API_BASE_URL" "${normalized_web_base_path%/}"
-  fi
 fi
 
 deploy_status=0
@@ -249,14 +193,9 @@ sudo /usr/local/bin/skillhub-test-deploy \
   --immutable-tag "${immutable_tag}" \
   --merged-sha "${merged_sha}" \
   --pr-csv "${pr_csv}" \
-  --run-url "${run_url}" || deploy_status=$?
-
-if [[ ! -r /opt/skillhub-runtime/manual-test-deployment.txt ]] || \
-   ! grep -Fq "deploy_tag=${deploy_tag}" /opt/skillhub-runtime/manual-test-deployment.txt || \
-   ! grep -Fq "immutable_tag=${immutable_tag}" /opt/skillhub-runtime/manual-test-deployment.txt; then
-  echo "HK deployment metadata does not match the requested image tags." >&2
-  exit 1
-fi
+  --run-url "${run_url}" \
+  --public-url "${public_url}" \
+  --web-base-path "${web_base_path}" || deploy_status=$?
 
 web_health_paths=("/nginx-health")
 if [[ -n "${normalized_web_base_path}" && "${normalized_web_base_path}" != "/" ]]; then
