@@ -13,6 +13,7 @@ SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
 SKILLHUB_PUBLIC_BASE_URL_VALUE="${SKILLHUB_PUBLIC_BASE_URL:-}"
+SKILLHUB_WEB_BASE_PATH_VALUE="${SKILLHUB_WEB_BASE_PATH:-}"
 SKILLHUB_ALIYUN_REGISTRY="${SKILLHUB_ALIYUN_REGISTRY:-crpi-ptu2rqimrigtq0qx.cn-hangzhou.personal.cr.aliyuncs.com}"
 SKILLHUB_ALIYUN_NAMESPACE="${SKILLHUB_ALIYUN_NAMESPACE:-skill_hub}"
 SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
@@ -89,6 +90,11 @@ while [ "$#" -gt 0 ]; do
       SKILLHUB_PUBLIC_BASE_URL_VALUE="$2"
       shift 2
       ;;
+    --base-path)
+      [ "$#" -ge 2 ] || { echo "Missing value for --base-path" >&2; exit 1; }
+      SKILLHUB_WEB_BASE_PATH_VALUE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<EOF
 Usage: sh runtime.sh [up|down|clean|ps|logs|pull] [options]
@@ -100,6 +106,7 @@ Options:
   --home <dir>          Store runtime files in a specific directory
   --ref <git-ref>       Download runtime files from a specific Git ref
   --public-url <url>    Public access URL (e.g. https://skill.example.com)
+  --base-path <path>    Serve Web UI under a sub-path, e.g. /skillhub/
   --server-image <img>  Override backend image repository
   --web-image <img>     Override frontend image repository
   --scanner-image <img> Override scanner image repository
@@ -181,6 +188,46 @@ set_env_value() {
   umask "$old_umask"
   mv "$tmp" "$ENV_FILE"
   secure_env_file
+}
+
+normalize_base_path() {
+  value="$1"
+  [ -n "$value" ] || { echo "--base-path must not be empty" >&2; exit 1; }
+
+  case "$value" in
+    /)
+      printf '/'
+      return 0
+      ;;
+    /*/) ;;
+    /*) value="$value/" ;;
+    *) value="/$value/" ;;
+  esac
+
+  case "$value" in
+    *//*|*[!A-Za-z0-9._~/-]*)
+      echo "--base-path contains unsupported characters: $value" >&2
+      exit 1
+      ;;
+  esac
+
+  case "$value" in
+    */./*|*/../*)
+      echo "--base-path must not contain '.' or '..' path segments: $value" >&2
+      exit 1
+      ;;
+  esac
+
+  first_segment=${value#/}
+  first_segment=${first_segment%%/*}
+  case "$first_segment" in
+    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+      echo "--base-path must not start with a reserved SkillHub path segment: $first_segment" >&2
+      exit 1
+      ;;
+  esac
+
+  printf '%s' "$value"
 }
 
 secure_env_file() {
@@ -357,6 +404,16 @@ prepare_runtime_files() {
 
   if [ -n "$SKILLHUB_PUBLIC_BASE_URL_VALUE" ]; then
     set_env_value "SKILLHUB_PUBLIC_BASE_URL" "$SKILLHUB_PUBLIC_BASE_URL_VALUE"
+  fi
+
+  if [ -n "$SKILLHUB_WEB_BASE_PATH_VALUE" ]; then
+    normalized_base_path="$(normalize_base_path "$SKILLHUB_WEB_BASE_PATH_VALUE")"
+    set_env_value "SKILLHUB_WEB_BASE_PATH" "$normalized_base_path"
+    if [ "$normalized_base_path" = "/" ]; then
+      set_env_value "SKILLHUB_WEB_API_BASE_URL" ""
+    else
+      set_env_value "SKILLHUB_WEB_API_BASE_URL" "${normalized_base_path%/}"
+    fi
   fi
 
   if [ "$DISABLE_SCANNER" = "true" ]; then

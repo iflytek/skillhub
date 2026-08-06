@@ -120,4 +120,18 @@ grep -Fq "SKILLHUB_SECURITY_SCANNER_ENABLED=false" "$home_no_scanner/.env.releas
 grep -Fq -- "up -d --no-deps --scale skill-scanner=0 server web" "$home_no_scanner/docker.log" \
   || fail "runtime --no-scanner should start server/web without waiting on scanner dependencies"
 
+home_sub_path="$tmp/sub-path"
+stdout_sub_path="$tmp/sub-path.out"
+mkdir -p "$home_sub_path"
+run_runtime "$home_sub_path" "$bin_dir" "$stdout_sub_path" \
+  --public-url http://localhost/skillhub \
+  --base-path skillhub
+
+grep -Fq "SKILLHUB_PUBLIC_BASE_URL=http://localhost/skillhub" "$home_sub_path/.env.release" \
+  || fail "runtime should persist the public URL for sub-path deployments"
+grep -Fq "SKILLHUB_WEB_BASE_PATH=/skillhub/" "$home_sub_path/.env.release" \
+  || fail "runtime should normalize and persist SKILLHUB_WEB_BASE_PATH"
+grep -Fq "SKILLHUB_WEB_API_BASE_URL=/skillhub" "$home_sub_path/.env.release" \
+  || fail "runtime should align SKILLHUB_WEB_API_BASE_URL with the base path"
+
 echo "runtime-secret-test passed"

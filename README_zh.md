@@ -235,6 +235,9 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 # 阿里云镜像（国内推荐）
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
+
+# 通过反向代理部署到子路径
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com/skillhub --base-path /skillhub/
 ```
 
 ### 配置参数说明
@@ -242,12 +245,18 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 | 参数 | 说明 | 示例 |
 |------|------|------|
 | `--public-url <url>` | 公网访问地址（推荐配置） | `--public-url https://skill.example.com` |
+| `--base-path <path>` | 将 Web UI 发布到反向代理子路径，并同步配置同源 API 路由 | `--base-path /skillhub/` |
 | `--version <tag>` | 指定镜像版本 | `--version v0.2.0` |
 | `--aliyun` | 使用阿里云镜像（国内推荐） | `--aliyun` |
 | `--home <dir>` | 指定运行时目录 | `--home /opt/skillhub` |
 | `--no-scanner` | 禁用安全扫描服务 | `--no-scanner` |
 
 > **重要**：生产环境请务必配置 `--public-url`，确保 CLI 安装命令和 Agent 设置指引显示正确的地址。
+
+如果通过 `/skillhub/` 这类子路径对外发布，需要让公网地址和前端基础路径保持一致。
+例如 `--public-url https://skill.example.com/skillhub --base-path /skillhub/`
+会写入 `SKILLHUB_PUBLIC_BASE_URL=https://skill.example.com/skillhub`、
+`SKILLHUB_WEB_BASE_PATH=/skillhub/` 和 `SKILLHUB_WEB_API_BASE_URL=/skillhub`。
 
 ### 使用 Kubernetes
 

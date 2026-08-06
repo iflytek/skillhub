@@ -246,6 +246,9 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 # Aliyun mirror (recommended for users in China)
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
+
+# Sub-path deployment behind a reverse proxy
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com/skillhub --base-path /skillhub/
 ```
 
 **Deployment parameters:**
@@ -253,12 +256,19 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `--public-url <url>` | Public access URL (recommended) | `--public-url https://skill.example.com` |
+| `--base-path <path>` | Serve the Web UI under a reverse-proxy sub-path. Also sets same-origin API routing for that path. | `--base-path /skillhub/` |
 | `--version <tag>` | Specific image tag | `--version v0.2.0` |
 | `--aliyun` | Use Aliyun mirror (China) | `--aliyun` |
 | `--home <dir>` | Runtime directory | `--home /opt/skillhub` |
 | `--no-scanner` | Disable security scanner | `--no-scanner` |
 
 > **Important**: Configure `--public-url` for production deployments to ensure CLI install commands and Agent setup instructions display the correct URLs.
+
+For sub-path deployments, keep the public URL and base path aligned. For example,
+`--public-url https://skill.example.com/skillhub --base-path /skillhub/` writes
+`SKILLHUB_PUBLIC_BASE_URL=https://skill.example.com/skillhub`,
+`SKILLHUB_WEB_BASE_PATH=/skillhub/`, and `SKILLHUB_WEB_API_BASE_URL=/skillhub`
+into the runtime environment.
 
 **Manual deployment:**
 
@@ -308,6 +318,9 @@ enables the bootstrap admin by default, so zero-config quickstart via
 Recommended production baseline:
 
 - set `SKILLHUB_PUBLIC_BASE_URL` to the final HTTPS entrypoint
+- if the service is published under a sub-path such as `/skillhub/`, set
+  `SKILLHUB_WEB_BASE_PATH=/skillhub/` and `SKILLHUB_WEB_API_BASE_URL=/skillhub`
+  as well, or use `runtime.sh --base-path /skillhub/`
 - keep PostgreSQL / Redis bound to `127.0.0.1`
 - use external S3 / OSS via `SKILLHUB_STORAGE_S3_*`
 - change `BOOTSTRAP_ADMIN_PASSWORD` to a strong password (`validate-release-config.sh` rejects the default `ChangeMe!2026`)
