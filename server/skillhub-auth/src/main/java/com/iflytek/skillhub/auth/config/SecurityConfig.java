@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService;
 import com.iflytek.skillhub.auth.oauth.CustomOidcUserService;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
+import com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport;
 import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
 import com.iflytek.skillhub.auth.mock.MockAuthFilter;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
@@ -152,12 +153,8 @@ public class SecurityConfig {
             )
             .logout(logout -> logout
                 .logoutUrl("/api/v1/auth/logout")
-                // Redirect to the deployment root honoring any sub-path prefix (X-Forwarded-Prefix
-                // is reflected into the context path), so logout does not escape a sub-path deployment.
-                .logoutSuccessHandler((request, response, authentication) -> {
-                    String contextPath = request.getContextPath();
-                    response.sendRedirect(((contextPath == null) ? "" : contextPath) + "/");
-                })
+                .logoutSuccessHandler((request, response, authentication) ->
+                    response.sendRedirect(OAuthLoginRedirectSupport.webRoot(request)))
                 .invalidateHttpSession(true)
                 .deleteCookies("SESSION")
             )

@@ -108,6 +108,15 @@ class OAuth2LoginHandlersTest {
         assertThat(response.getRedirectedUrl()).isEqualTo("/skillhub/dashboard/publish");
     }
 
+    @Test
+    void deploymentPathSupport_returnsPrefixedApiAndWebRoot() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setContextPath("/skillhub");
+
+        assertThat(OAuthLoginRedirectSupport.apiBase(request)).isEqualTo("/skillhub/api/v1");
+        assertThat(OAuthLoginRedirectSupport.webRoot(request)).isEqualTo("/skillhub/");
+    }
+
     /**
      * Regression test: when an unauthenticated client hits a protected API endpoint, Spring Security
      * caches that request. With {@code SavedRequestAwareAuthenticationSuccessHandler} the post-login
