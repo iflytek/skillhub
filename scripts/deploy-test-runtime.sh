@@ -119,15 +119,74 @@ ssh_opts=(
   -p "${ssh_port}"
 )
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-remote_script="${script_dir}/skillhub-test-deploy-remote.sh"
-[[ -f "${remote_script}" ]] || { echo "Missing remote deploy script: ${remote_script}" >&2; exit 1; }
-
-ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" sudo bash -s -- \
+ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" bash -s -- \
   "${deploy_tag}" \
   "${immutable_tag}" \
   "${merged_sha}" \
   "${pr_csv}" \
   "${run_url}" \
   "${public_url}" \
-  "${web_base_path}" <"${remote_script}"
+  "${web_base_path}" <<'EOF'
+set -euo pipefail
+
+deploy_tag="$1"
+immutable_tag="$2"
+merged_sha="$3"
+pr_csv="$4"
+run_url="${5:-}"
+public_url="${6:-}"
+web_base_path="${7:-}"
+
+set +e
+sudo /usr/local/bin/skillhub-test-deploy \
+  --deploy-tag "${deploy_tag}" \
+  --immutable-tag "${immutable_tag}" \
+  --merged-sha "${merged_sha}" \
+  --pr-csv "${pr_csv}" \
+  --run-url "${run_url}"
+deploy_status=$?
+set -e
+
+if [[ ! -r /opt/skillhub-runtime/manual-test-deployment.txt ]] || \
+   ! grep -Fq "deploy_tag=${deploy_tag}" /opt/skillhub-runtime/manual-test-deployment.txt || \
+   ! grep -Fq "immutable_tag=${immutable_tag}" /opt/skillhub-runtime/manual-test-deployment.txt; then
+  echo "HK deployment metadata does not match the requested image tags." >&2
+  exit 1
+fi
+
+web_health_paths=("/nginx-health")
+if [[ -n "${web_base_path}" && "${web_base_path}" != "/" ]]; then
+  normalized_web_base_path="${web_base_path}"
+  case "${normalized_web_base_path}" in
+    /*/) ;;
+    /*) normalized_web_base_path="${normalized_web_base_path}/" ;;
+    *) normalized_web_base_path="/${normalized_web_base_path}/" ;;
+  esac
+  web_health_paths+=("${normalized_web_base_path%/}/nginx-health")
+fi
+
+for health_path in "${web_health_paths[@]}"; do
+  ready=false
+  for attempt in $(seq 1 60); do
+    health_body="$(curl -fsS "http://127.0.0.1:8081${health_path}" 2>/dev/null || true)"
+    if [[ "${health_body}" == "ok" ]]; then
+      ready=true
+      break
+    fi
+    sleep 2
+  done
+
+  if [[ "${ready}" != "true" ]]; then
+    echo "HK runtime web health check failed: http://127.0.0.1:8081${health_path}" >&2
+    exit 1
+  fi
+done
+
+if [[ -n "${public_url}" ]]; then
+  curl -fsS "${public_url%/}/runtime-config.js" | grep -Fq "window.__SKILLHUB_RUNTIME_CONFIG__"
+fi
+
+if [[ "${deploy_status}" -ne 0 ]]; then
+  echo "HK deploy helper exited with ${deploy_status}, but post-deploy runtime checks passed." >&2
+fi
+EOF
