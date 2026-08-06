@@ -137,15 +137,13 @@ run_url="${5:-}"
 public_url="${6:-}"
 web_base_path="${7:-}"
 
-set +e
+deploy_status=0
 sudo /usr/local/bin/skillhub-test-deploy \
   --deploy-tag "${deploy_tag}" \
   --immutable-tag "${immutable_tag}" \
   --merged-sha "${merged_sha}" \
   --pr-csv "${pr_csv}" \
-  --run-url "${run_url}"
-deploy_status=$?
-set -e
+  --run-url "${run_url}" || deploy_status=$?
 
 if [[ ! -r /opt/skillhub-runtime/manual-test-deployment.txt ]] || \
    ! grep -Fq "deploy_tag=${deploy_tag}" /opt/skillhub-runtime/manual-test-deployment.txt || \
