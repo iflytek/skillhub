@@ -136,6 +136,82 @@ pr_csv="$4"
 run_url="${5:-}"
 public_url="${6:-}"
 web_base_path="${7:-}"
+runtime_dir="/opt/skillhub-runtime"
+env_file="${runtime_dir}/.env.release"
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  local tmp
+
+  tmp="$(mktemp "${env_file}.tmp.XXXXXX")"
+  if grep -q "^${key}=" "${env_file}"; then
+    sed "s|^${key}=.*|${key}=${value}|" "${env_file}" >"${tmp}"
+  else
+    cp "${env_file}" "${tmp}"
+    printf '%s=%s\n' "${key}" "${value}" >>"${tmp}"
+  fi
+  mv "${tmp}" "${env_file}"
+}
+
+normalize_base_path() {
+  local value="$1"
+
+  if [[ -z "${value}" || "${value}" == "/" ]]; then
+    printf '/'
+    return 0
+  fi
+
+  case "${value}" in
+    /*/) ;;
+    /*) value="${value}/" ;;
+    *) value="/${value}/" ;;
+  esac
+
+  case "${value}" in
+    *//*|*[!A-Za-z0-9._~/-]*)
+      echo "Invalid web base path: ${value}" >&2
+      exit 1
+      ;;
+    */./*|*/../*)
+      echo "Web base path must not contain '.' or '..' path segments: ${value}" >&2
+      exit 1
+      ;;
+  esac
+
+  local first_segment
+  first_segment="${value#/}"
+  first_segment="${first_segment%%/*}"
+  case "${first_segment}" in
+    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+      echo "Web base path must not start with reserved SkillHub path segment: ${first_segment}" >&2
+      exit 1
+      ;;
+  esac
+
+  printf '%s' "${value}"
+}
+
+[[ -f "${env_file}" ]] || { echo "Missing HK runtime env file: ${env_file}" >&2; exit 1; }
+
+if [[ -n "${public_url}" ]]; then
+  if [[ ! "${public_url}" =~ ^https?://[^[:space:]/?#]+(:[0-9]+)?(/[^[:space:]?#]*)?$ ]]; then
+    echo "Invalid public URL: ${public_url}" >&2
+    exit 1
+  fi
+  set_env_value "SKILLHUB_PUBLIC_BASE_URL" "${public_url%/}"
+fi
+
+normalized_web_base_path=""
+if [[ -n "${web_base_path}" ]]; then
+  normalized_web_base_path="$(normalize_base_path "${web_base_path}")"
+  set_env_value "SKILLHUB_WEB_BASE_PATH" "${normalized_web_base_path}"
+  if [[ "${normalized_web_base_path}" == "/" ]]; then
+    set_env_value "SKILLHUB_WEB_API_BASE_URL" ""
+  else
+    set_env_value "SKILLHUB_WEB_API_BASE_URL" "${normalized_web_base_path%/}"
+  fi
+fi
 
 deploy_status=0
 sudo /usr/local/bin/skillhub-test-deploy \
@@ -153,13 +229,7 @@ if [[ ! -r /opt/skillhub-runtime/manual-test-deployment.txt ]] || \
 fi
 
 web_health_paths=("/nginx-health")
-if [[ -n "${web_base_path}" && "${web_base_path}" != "/" ]]; then
-  normalized_web_base_path="${web_base_path}"
-  case "${normalized_web_base_path}" in
-    /*/) ;;
-    /*) normalized_web_base_path="${normalized_web_base_path}/" ;;
-    *) normalized_web_base_path="/${normalized_web_base_path}/" ;;
-  esac
+if [[ -n "${normalized_web_base_path}" && "${normalized_web_base_path}" != "/" ]]; then
   web_health_paths+=("${normalized_web_base_path%/}/nginx-health")
 fi
 
