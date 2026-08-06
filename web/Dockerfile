@@ -14,8 +14,16 @@ ENV SKILLHUB_TRUST_FORWARDED_PROTO=false
 # to it and generates matching Nginx routing without repeating the value at runtime.
 # Placeholder builds (the default) intentionally write no file and default to '/'.
 ARG VITE_BASE_PATH=/__SKILLHUB_WEB_BASE_PATH__/
+ARG SKILLHUB_PUBLIC_BASE_URL=
+ARG SKILLHUB_WEB_API_BASE_URL=
 RUN if [ "$VITE_BASE_PATH" != "/__SKILLHUB_WEB_BASE_PATH__/" ]; then \
       mkdir -p /etc/skillhub && printf '%s' "$VITE_BASE_PATH" > /etc/skillhub/baked-base-path; \
+    fi; \
+    if [ -n "$SKILLHUB_PUBLIC_BASE_URL" ]; then \
+      mkdir -p /etc/skillhub && printf '%s' "$SKILLHUB_PUBLIC_BASE_URL" > /etc/skillhub/baked-public-base-url; \
+    fi; \
+    if [ -n "$SKILLHUB_WEB_API_BASE_URL" ]; then \
+      mkdir -p /etc/skillhub && printf '%s' "$SKILLHUB_WEB_API_BASE_URL" > /etc/skillhub/baked-api-base-url; \
     fi
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY --from=build /app/src/docs/skill.md.template /usr/share/nginx/html/registry/skill.md.template

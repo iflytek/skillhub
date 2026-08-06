@@ -209,13 +209,17 @@ if [[ -n "${public_url}" || -n "${web_base_path}" ]]; then
   if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
      ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
     if [[ -n "${remote_helper_path}" && -f "${remote_helper_path}" ]]; then
-      echo "HK deploy helper is outdated; installing bundled helper from ${remote_helper_path}." >&2
-      sudo install -m 0755 "${remote_helper_path}" /usr/local/bin/skillhub-test-deploy
-      helper_help="$(sudo /usr/local/bin/skillhub-test-deploy --help 2>&1 || true)"
-      if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
-         ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
+      echo "HK deploy helper is outdated; trying to install bundled helper from ${remote_helper_path}." >&2
+      if sudo -n install -m 0755 "${remote_helper_path}" /usr/local/bin/skillhub-test-deploy; then
+        helper_help="$(sudo /usr/local/bin/skillhub-test-deploy --help 2>&1 || true)"
+        if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
+           ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
+          helper_supports_sub_path=false
+          echo "Bundled HK deploy helper still does not support sub-path options." >&2
+        fi
+      else
         helper_supports_sub_path=false
-        echo "Bundled HK deploy helper still does not support sub-path options." >&2
+        echo "Cannot install bundled HK deploy helper without passwordless sudo; falling back to the existing helper." >&2
       fi
     else
       helper_supports_sub_path=false

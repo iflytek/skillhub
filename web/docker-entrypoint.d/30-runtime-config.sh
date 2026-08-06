@@ -6,6 +6,17 @@ set -eu
 : "${SKILLHUB_WEB_AUTH_DIRECT_ENABLED:=false}"
 : "${SKILLHUB_WEB_AUTH_DIRECT_PROVIDER:=}"
 
+baked_api_base_url_file="${SKILLHUB_WEB_BAKED_API_BASE_URL_FILE:-/etc/skillhub/baked-api-base-url}"
+baked_public_base_url_file="${SKILLHUB_WEB_BAKED_PUBLIC_BASE_URL_FILE:-/etc/skillhub/baked-public-base-url}"
+
+if [ -z "$SKILLHUB_WEB_API_BASE_URL" ] && [ -f "$baked_api_base_url_file" ]; then
+  SKILLHUB_WEB_API_BASE_URL=$(cat "$baked_api_base_url_file")
+fi
+
+if [ -z "$SKILLHUB_PUBLIC_BASE_URL" ] && [ -f "$baked_public_base_url_file" ]; then
+  SKILLHUB_PUBLIC_BASE_URL=$(cat "$baked_public_base_url_file")
+fi
+
 # Session-bootstrap variables are defaulted here so envsubst writes
 # `authSessionBootstrapEnabled: "false"` into runtime-config.js instead of leaving
 # the literal `${...}` placeholder. They are intentionally NOT exposed in

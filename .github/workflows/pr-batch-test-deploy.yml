@@ -143,6 +143,27 @@ jobs:
           cache-from: type=gha,scope=manual-test-server
           cache-to: type=gha,mode=max,scope=manual-test-server
 
+      - name: Resolve frontend runtime defaults
+        id: web-runtime
+        env:
+          PUBLIC_URL: ${{ inputs.public_url }}
+          WEB_BASE_PATH: ${{ inputs.web_base_path }}
+        run: |
+          public_url="${PUBLIC_URL%/}"
+          web_base_path="${WEB_BASE_PATH}"
+          api_base_url=""
+
+          if [[ -n "${web_base_path}" && "${web_base_path}" != "/" ]]; then
+            case "${web_base_path}" in
+              /*/) api_base_url="${web_base_path%/}" ;;
+              /*) api_base_url="${web_base_path}" ;;
+              *) api_base_url="/${web_base_path%/}" ;;
+            esac
+          fi
+
+          echo "public_url=${public_url}" >> "${GITHUB_OUTPUT}"
+          echo "api_base_url=${api_base_url}" >> "${GITHUB_OUTPUT}"
+
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
@@ -151,6 +172,8 @@ jobs:
           platforms: ${{ env.DOCKER_PLATFORM }}
           build-args: |
             VITE_BASE_PATH=${{ inputs.web_base_path || '/__SKILLHUB_WEB_BASE_PATH__/' }}
+            SKILLHUB_PUBLIC_BASE_URL=${{ steps.web-runtime.outputs.public_url }}
+            SKILLHUB_WEB_API_BASE_URL=${{ steps.web-runtime.outputs.api_base_url }}
           push: true
           provenance: false
           sbom: false
