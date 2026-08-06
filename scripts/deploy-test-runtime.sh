@@ -138,6 +138,7 @@ public_url="${6:-}"
 web_base_path="${7:-}"
 runtime_dir="/opt/skillhub-runtime"
 env_file="${runtime_dir}/.env.release"
+env_example_file="${runtime_dir}/.env.release.example"
 
 set_env_value() {
   local key="$1"
@@ -192,7 +193,20 @@ normalize_base_path() {
   printf '%s' "${value}"
 }
 
-[[ -f "${env_file}" ]] || { echo "Missing HK runtime env file: ${env_file}" >&2; exit 1; }
+if [[ ! -f "${env_file}" ]]; then
+  if [[ ! -f "${env_example_file}" ]]; then
+    echo "Missing HK runtime env file: ${env_file}" >&2
+    echo "Missing HK runtime env example: ${env_example_file}" >&2
+    echo "Initialize the HK runtime directory with scripts/runtime.sh before deployment." >&2
+    exit 1
+  fi
+
+  old_umask="$(umask)"
+  umask 077
+  cp "${env_example_file}" "${env_file}"
+  umask "${old_umask}"
+  echo "Initialized HK runtime env file from ${env_example_file}"
+fi
 
 if [[ -n "${public_url}" ]]; then
   if [[ ! "${public_url}" =~ ^https?://[^[:space:]/?#]+(:[0-9]+)?(/[^[:space:]?#]*)?$ ]]; then
