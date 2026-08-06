@@ -119,6 +119,20 @@ ssh_opts=(
   -p "${ssh_port}"
 )
 
+remote_helper_path=""
+if [[ -n "${public_url}" || -n "${web_base_path}" ]]; then
+  remote_helper_path="/tmp/skillhub-test-deploy-${deploy_tag}.sh"
+  scp \
+    -i "${ssh_key_file}" \
+    -o BatchMode=yes \
+    -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=accept-new \
+    -o ConnectTimeout=10 \
+    -P "${ssh_port}" \
+    scripts/skillhub-test-deploy-remote.sh \
+    "${ssh_user}@${ssh_host}:${remote_helper_path}"
+fi
+
 ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" bash -s -- \
   "${deploy_tag}" \
   "${immutable_tag}" \
@@ -126,7 +140,8 @@ ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" bash -s -- \
   "${pr_csv}" \
   "${run_url}" \
   "${public_url}" \
-  "${web_base_path}" <<'EOF'
+  "${web_base_path}" \
+  "${remote_helper_path}" <<'EOF'
 set -euo pipefail
 
 deploy_tag="$1"
@@ -136,6 +151,7 @@ pr_csv="$4"
 run_url="${5:-}"
 public_url="${6:-}"
 web_base_path="${7:-}"
+remote_helper_path="${8:-}"
 
 normalize_base_path() {
   local value="$1"
@@ -192,10 +208,21 @@ if [[ -n "${public_url}" || -n "${web_base_path}" ]]; then
   helper_help="$(sudo /usr/local/bin/skillhub-test-deploy --help 2>&1 || true)"
   if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
      ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
-    helper_supports_sub_path=false
-    echo "HK deploy helper is outdated: /usr/local/bin/skillhub-test-deploy" >&2
-    echo "Falling back to a web image with the requested base path baked at build time." >&2
-    echo "Update scripts/skillhub-test-deploy-remote.sh on the HK machine to let runtime env write SKILLHUB_PUBLIC_BASE_URL and SKILLHUB_WEB_API_BASE_URL." >&2
+    if [[ -n "${remote_helper_path}" && -f "${remote_helper_path}" ]]; then
+      echo "HK deploy helper is outdated; installing bundled helper from ${remote_helper_path}." >&2
+      sudo install -m 0755 "${remote_helper_path}" /usr/local/bin/skillhub-test-deploy
+      helper_help="$(sudo /usr/local/bin/skillhub-test-deploy --help 2>&1 || true)"
+      if ! grep -Fq -- "--public-url" <<<"${helper_help}" || \
+         ! grep -Fq -- "--web-base-path" <<<"${helper_help}"; then
+        helper_supports_sub_path=false
+        echo "Bundled HK deploy helper still does not support sub-path options." >&2
+      fi
+    else
+      helper_supports_sub_path=false
+      echo "HK deploy helper is outdated: /usr/local/bin/skillhub-test-deploy" >&2
+      echo "Falling back to a web image with the requested base path baked at build time." >&2
+      echo "Update scripts/skillhub-test-deploy-remote.sh on the HK machine to let runtime env write SKILLHUB_PUBLIC_BASE_URL and SKILLHUB_WEB_API_BASE_URL." >&2
+    fi
   fi
 fi
 
