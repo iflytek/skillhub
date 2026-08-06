@@ -17,6 +17,16 @@ on:
         required: false
         default: manual-test-hk
         type: string
+      public_url:
+        description: "Public URL configured on the HK runtime"
+        required: false
+        default: https://skill.xf-yun.com.cn
+        type: string
+      web_base_path:
+        description: "Optional Web UI base path for HK runtime, for example /skillhub/"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: pr-batch-test-runtime
@@ -145,7 +155,9 @@ jobs:
             --immutable-tag "${{ steps.batch.outputs.immutable_tag }}" \
             --merged-sha "${{ steps.batch.outputs.merged_sha }}" \
             --pr-csv "${{ steps.batch.outputs.pr_csv }}" \
-            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --public-url "${{ inputs.public_url }}" \
+            --web-base-path "${{ inputs.web_base_path }}"
 
       - name: Publish final summary
         run: |
@@ -153,6 +165,8 @@ jobs:
             echo "### HK manual test runtime updated"
             echo
             echo "- URL: \`https://skill.xf-yun.com.cn\`"
+            echo "- Public URL: \`${{ inputs.public_url }}\`"
+            echo "- Web base path: \`${{ inputs.web_base_path || '/' }}\`"
             echo "- Base ref: \`${{ steps.batch.outputs.base_ref }}\`"
             echo "- Floating tag: \`${{ steps.batch.outputs.deploy_tag }}\`"
             echo "- Immutable tag: \`${{ steps.batch.outputs.immutable_tag }}\`"

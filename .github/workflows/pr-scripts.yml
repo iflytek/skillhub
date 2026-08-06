@@ -13,6 +13,7 @@ on:
       - 'web/docker-entrypoint.d/**'
       - '.github/workflows/pr-cli.yml'
       - '.github/workflows/pr-e2e.yml'
+      - '.github/workflows/pr-batch-test-deploy.yml'
       - '.github/workflows/pr-helm-chart.yml'
       - '.github/workflows/pr-tests.yml'
       - '.github/workflows/publish-chart.yml'

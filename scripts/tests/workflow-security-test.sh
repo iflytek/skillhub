@@ -55,6 +55,8 @@ grep -Fq '.github/workflows/pr-cli.yml' "$PR_SCRIPTS_WORKFLOW" \
   || fail "pr-scripts must run when PR CLI workflow changes"
 grep -Fq '.github/workflows/pr-e2e.yml' "$PR_SCRIPTS_WORKFLOW" \
   || fail "pr-scripts must run when PR E2E workflow changes"
+grep -Fq '.github/workflows/pr-batch-test-deploy.yml' "$PR_SCRIPTS_WORKFLOW" \
+  || fail "pr-scripts must run when PR batch deploy workflow changes"
 grep -Fq '.github/workflows/pr-helm-chart.yml' "$PR_SCRIPTS_WORKFLOW" \
   || fail "pr-scripts must run when PR Helm Chart workflow changes"
 grep -Fq '.github/workflows/pr-tests.yml' "$PR_SCRIPTS_WORKFLOW" \

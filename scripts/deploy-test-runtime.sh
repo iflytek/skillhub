@@ -16,6 +16,8 @@ Options:
   --merged-sha <sha>         Synthetic merge commit SHA
   --pr-csv <list>            Comma-separated PR numbers
   --run-url <url>            GitHub Actions run URL
+  --public-url <url>         Public URL configured on the remote runtime
+  --web-base-path <path>     Optional Web UI base path, for example /skillhub/
 EOF
 }
 
@@ -28,6 +30,8 @@ immutable_tag=""
 merged_sha=""
 pr_csv=""
 run_url=""
+public_url=""
+web_base_path=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -76,6 +80,16 @@ while [[ $# -gt 0 ]]; do
       run_url="$2"
       shift 2
       ;;
+    --public-url)
+      [[ $# -ge 2 ]] || { echo "Missing value for --public-url" >&2; exit 1; }
+      public_url="$2"
+      shift 2
+      ;;
+    --web-base-path)
+      [[ $# -ge 2 ]] || { echo "Missing value for --web-base-path" >&2; exit 1; }
+      web_base_path="$2"
+      shift 2
+      ;;
     --help|-h)
       usage
       exit 0
@@ -105,24 +119,15 @@ ssh_opts=(
   -p "${ssh_port}"
 )
 
-ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" bash -s -- \
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+remote_script="${script_dir}/skillhub-test-deploy-remote.sh"
+[[ -f "${remote_script}" ]] || { echo "Missing remote deploy script: ${remote_script}" >&2; exit 1; }
+
+ssh "${ssh_opts[@]}" "${ssh_user}@${ssh_host}" sudo bash -s -- \
   "${deploy_tag}" \
   "${immutable_tag}" \
   "${merged_sha}" \
   "${pr_csv}" \
-  "${run_url}" <<'EOF'
-set -euo pipefail
-
-deploy_tag="$1"
-immutable_tag="$2"
-merged_sha="$3"
-pr_csv="$4"
-run_url="${5:-}"
-
-sudo /usr/local/bin/skillhub-test-deploy \
-  --deploy-tag "${deploy_tag}" \
-  --immutable-tag "${immutable_tag}" \
-  --merged-sha "${merged_sha}" \
-  --pr-csv "${pr_csv}" \
-  --run-url "${run_url}"
-EOF
+  "${run_url}" \
+  "${public_url}" \
+  "${web_base_path}" <"${remote_script}"
