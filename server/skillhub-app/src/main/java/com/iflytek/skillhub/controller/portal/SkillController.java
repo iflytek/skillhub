@@ -37,6 +37,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -74,10 +75,15 @@ public class SkillController extends BaseApiController {
             @PathVariable String namespace,
             @PathVariable String slug,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
-                namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of());
+                namespace,
+                slug,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles));
 
         SkillDetailResponse response = new SkillDetailResponse(
                 detail.id(),
@@ -121,14 +127,16 @@ public class SkillController extends BaseApiController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         Page<SkillVersion> versions = skillQueryService.listVersions(
                 namespace,
                 slug,
                 userId,
                 userNsRoles != null ? userNsRoles : Map.of(),
-                PageRequest.of(page, size));
+                PageRequest.of(page, size),
+                normalizePlatformRoles(platformRoles));
 
         PageResponse<SkillVersionResponse> response = PageResponse.from(versions.map(v -> new SkillVersionResponse(
                 v.getId(),
@@ -154,14 +162,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String version,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillQueryService.SkillVersionDetailDTO detail = skillQueryService.getVersionDetail(
                 namespace,
                 slug,
                 version,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         SkillVersionDetailResponse response = new SkillVersionDetailResponse(
@@ -185,7 +195,8 @@ public class SkillController extends BaseApiController {
             @RequestParam("from") String from,
             @RequestParam("to") String to,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillQueryService.SkillVersionCompareDTO compare = skillQueryService.compareVersions(
                 namespace,
@@ -193,7 +204,8 @@ public class SkillController extends BaseApiController {
                 from,
                 to,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         return ok("response.success.read", toCompareResponse(compare));
@@ -209,14 +221,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String version,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         List<SkillFile> files = skillQueryService.listFiles(
                 namespace,
                 slug,
                 version,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         List<SkillFileResponse> response = files.stream()
@@ -238,14 +252,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String tagName,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         List<SkillFile> files = skillQueryService.listFilesByTag(
                 namespace,
                 slug,
                 tagName,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         List<SkillFileResponse> response = files.stream()
@@ -272,7 +288,8 @@ public class SkillController extends BaseApiController {
             @PathVariable String version,
             @RequestParam("path") String path,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         InputStream content = skillQueryService.getFileContent(
                 namespace,
@@ -280,7 +297,8 @@ public class SkillController extends BaseApiController {
                 version,
                 path,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         return ResponseEntity.ok()
@@ -295,7 +313,8 @@ public class SkillController extends BaseApiController {
             @PathVariable String tagName,
             @RequestParam("path") String path,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         InputStream content = skillQueryService.getFileContentByTag(
                 namespace,
@@ -303,7 +322,8 @@ public class SkillController extends BaseApiController {
                 tagName,
                 path,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         return ResponseEntity.ok()
@@ -323,7 +343,8 @@ public class SkillController extends BaseApiController {
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) String hash,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
                 namespace,
@@ -332,7 +353,8 @@ public class SkillController extends BaseApiController {
                 tag,
                 hash,
                 userId,
-                userNsRoles != null ? userNsRoles : Map.of()
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles)
         );
 
         ResolveVersionResponse response = new ResolveVersionResponse(
@@ -356,10 +378,15 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadLatest(
-                namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of());
+                namespace,
+                slug,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles));
 
         return buildDownloadResponse(request, result);
     }
@@ -372,10 +399,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String version,
             HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadVersion(
-                namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of());
+                namespace,
+                slug,
+                version,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles));
 
         return buildDownloadResponse(request, result);
     }
@@ -388,10 +421,16 @@ public class SkillController extends BaseApiController {
             @PathVariable String tagName,
             HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
 
         SkillDownloadService.DownloadResult result = skillDownloadService.downloadByTag(
-                namespace, slug, tagName, userId, userNsRoles != null ? userNsRoles : Map.of());
+                namespace,
+                slug,
+                tagName,
+                userId,
+                userNsRoles != null ? userNsRoles : Map.of(),
+                normalizePlatformRoles(platformRoles));
 
         return buildDownloadResponse(request, result);
     }
@@ -416,6 +455,10 @@ public class SkillController extends BaseApiController {
                 .contentType(MediaType.parseMediaType(result.contentType()))
                 .contentLength(result.contentLength())
                 .body(new InputStreamResource(result.openContent()));
+    }
+
+    private Set<String> normalizePlatformRoles(Set<String> platformRoles) {
+        return platformRoles != null ? platformRoles : Set.of();
     }
 
     private boolean shouldRedirectToPresignedUrl(HttpServletRequest request, String presignedUrl) {

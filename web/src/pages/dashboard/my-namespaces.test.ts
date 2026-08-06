@@ -12,6 +12,13 @@ const restoreMutateAsync = vi.fn()
 const deleteMutateAsync = vi.fn()
 
 let mockNamespaces: ManagedNamespace[] = []
+let mockNamespacePage = {
+  items: [] as ManagedNamespace[],
+  total: 0,
+  page: 0,
+  size: 20,
+}
+let mockPlatformRoles: string[] = []
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -28,7 +35,7 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({ hasRole: () => false }),
+  useAuth: () => ({ hasRole: (role: string) => mockPlatformRoles.includes(role) }),
 }))
 
 vi.mock('@/shared/ui/button', () => ({
@@ -75,7 +82,17 @@ vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useArchiveNamespace: () => ({ mutateAsync: archiveMutateAsync }),
   useDeleteNamespace: () => ({ mutateAsync: deleteMutateAsync }),
   useFreezeNamespace: () => ({ mutateAsync: freezeMutateAsync }),
-  useMyNamespaces: () => ({ data: mockNamespaces, isLoading: false }),
+  useMyNamespacesPage: () => ({
+    data: mockNamespacePage.total > 0 || mockNamespacePage.items.length > 0
+      ? mockNamespacePage
+      : {
+          items: mockNamespaces,
+          total: mockNamespaces.length,
+          page: 0,
+          size: 20,
+        },
+    isLoading: false,
+  }),
   useRestoreNamespace: () => ({ mutateAsync: restoreMutateAsync }),
   useUnfreezeNamespace: () => ({ mutateAsync: unfreezeMutateAsync }),
 }))
@@ -85,7 +102,7 @@ vi.mock('@/shared/lib/toast', () => ({
 }))
 
 import { MyNamespacesPage } from './my-namespaces'
-import { executeNamespaceAction, resolveNamespaceActionCopy } from './my-namespaces'
+import { executeNamespaceAction, resolveNamespaceActionCopy, resolveValidNamespacePage } from './my-namespaces'
 
 function buildNamespace(overrides: Partial<ManagedNamespace> = {}): ManagedNamespace {
   return {
@@ -115,6 +132,13 @@ describe('MyNamespacesPage', () => {
     restoreMutateAsync.mockReset()
     deleteMutateAsync.mockReset()
     mockNamespaces = []
+    mockNamespacePage = {
+      items: mockNamespaces,
+      total: 0,
+      page: 0,
+      size: 20,
+    }
+    mockPlatformRoles = []
   })
 
   it('exports a named component function', () => {
@@ -135,6 +159,55 @@ describe('MyNamespacesPage', () => {
     const html = renderToStaticMarkup(createElement(MyNamespacesPage))
 
     expect(html).not.toContain('myNamespaces.delete')
+  })
+
+  it('hides namespace-scoped actions for super admins without namespace membership', () => {
+    mockPlatformRoles = ['SUPER_ADMIN']
+    mockNamespaces = [buildNamespace({ currentUserRole: undefined })]
+
+    const html = renderToStaticMarkup(createElement(MyNamespacesPage))
+
+    expect(html).toContain('Team ML')
+    expect(html).toContain('myNamespaces.roleUnknown')
+    expect(html).not.toContain('myNamespaces.manageMembers')
+    expect(html).not.toContain('myNamespaces.reviewTasks')
+  })
+
+  it('shows namespace-scoped actions for namespace members', () => {
+    mockNamespaces = [buildNamespace({ currentUserRole: 'ADMIN' })]
+    mockNamespacePage = {
+      items: mockNamespaces,
+      total: 1,
+      page: 0,
+      size: 20,
+    }
+
+    const html = renderToStaticMarkup(createElement(MyNamespacesPage))
+
+    expect(html).toContain('myNamespaces.manageMembers')
+    expect(html).toContain('myNamespaces.reviewTasks')
+  })
+
+  it('renders pagination when more namespaces exist than the current page contains', () => {
+    mockNamespaces = [buildNamespace({ id: 1, slug: 'team-a', displayName: 'Team A' })]
+    mockNamespacePage = {
+      items: mockNamespaces,
+      total: 41,
+      page: 1,
+      size: 20,
+    }
+
+    const html = renderToStaticMarkup(createElement(MyNamespacesPage))
+
+    expect(html).toContain('Team A')
+    expect(html).toContain('pagination.prev')
+    expect(html).toContain('pagination.next')
+  })
+
+  it('backs up to the last valid page when a delete empties the current page', () => {
+    expect(resolveValidNamespacePage(2, 40, 20)).toBe(1)
+    expect(resolveValidNamespacePage(1, 40, 20)).toBe(1)
+    expect(resolveValidNamespacePage(1, 0, 20)).toBe(0)
   })
 
   it('routes delete actions to the delete mutation and emits success feedback', async () => {

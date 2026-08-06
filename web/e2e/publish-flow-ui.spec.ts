@@ -35,7 +35,7 @@ test.describe('Publish Flow UI (Real API)', () => {
       const namespaceTrigger = page.locator('#namespace')
       await expect(namespaceTrigger).toBeVisible()
       await namespaceTrigger.click()
-      const namespaceOption = page.getByRole('option', {
+      const namespaceOption = page.getByRole('dialog').getByRole('button', {
         name: new RegExp(`\\(@${namespace.slug}\\)`),
       }).first()
       await expect(namespaceOption).toBeVisible()

@@ -87,10 +87,11 @@
 
 Public API 的可见性规则：
 - `PUBLIC` 技能：若存在已发布版本，则已登录用户可访问；匿名访问仍受下载/resolve 端点的 namespace 类型限制
-- `NAMESPACE_ONLY` 技能：仅该命名空间成员可访问（需登录）
+- `NAMESPACE_ONLY` 技能：该命名空间成员可访问（需登录）；非成员 `SUPER_ADMIN` 仅在平台 namespace 读取语义下可读取已发布版本
 - `PRIVATE` 技能：owner 本人 + 该 namespace 的 ADMIN 以上可访问（需登录）
 - 若 `latest_version_id = null`，即使 `visibility=PUBLIC`，skill 也不会对外公开，只有 owner 可访问
 - `hidden=true` 时，普通访客不可访问；仅 owner 或该 namespace 的 `ADMIN` / `OWNER` 可访问
+- `SUPER_ADMIN` 的平台 namespace 读取语义不会穿透 `PRIVATE`、`hidden=true` 或未发布版本，也不会赋予非成员 namespace 写权限、成员管理权限或团队审核任务处理权限
 
 `GET /api/v1/skills/{namespace}/{slug}/versions/{version}` 的 `data` 字段除版本基础信息外，还必须包含：
 
@@ -330,10 +331,14 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 |------|------|------|
 | GET | `/api/v1/admin/audit-logs` | 审计日志查询 |
 
-## 7.7 Namespace 管理 API（需命名空间 OWNER 或 ADMIN）
+## 7.7 Namespace API
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | `/api/v1/me/namespaces` | 当前用户可见 namespace，保持历史数组响应；成员看到所属 namespace，`SUPER_ADMIN` 可见全部 namespace |
+| GET | `/api/v1/me/namespaces/page` | 当前用户可见 namespace 分页响应 `{ items, total, page, size }`；query 支持 `page`、`size`、`sort`、`status`、`type`、`q`、`slug`、`roles` |
+| GET | `/api/v1/namespaces` | namespace 列表；普通用户按 membership 返回 active namespace，`SUPER_ADMIN` 可读 active namespace |
+| GET | `/api/v1/namespaces/{slug}` | namespace 详情；成员可读所属 namespace，`SUPER_ADMIN` 可读非成员 namespace，包括 archived namespace |
 | POST | `/api/v1/namespaces` | 创建命名空间 |
 | PUT | `/api/v1/namespaces/{slug}` | 更新命名空间信息 |
 | GET | `/api/v1/namespaces/{slug}/members` | 成员列表 |
@@ -344,6 +349,8 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 | POST | `/api/v1/reviews/{id}/approve` | 空间管理员审核通过 |
 | POST | `/api/v1/reviews/{id}/reject` | 空间管理员审核拒绝 |
 | POST | `/api/v1/promotions` | 申请提升到全局 |
+
+`/api/web` 暴露同名 Web 端点，契约与 `/api/v1` 一致。`/me/namespaces/page` 的 `page` 为 0 基页码，`size` 默认 20 且后端上限 100；`sort` 仅支持 `slug,asc` / `slug,desc`，默认 `slug,asc`。非成员 `SUPER_ADMIN` 读取 namespace 时 `currentUserRole` 为空，成员管理、团队审核入口和写操作仍需 namespace `OWNER` / `ADMIN` membership 或对应平台治理权限。
 
 ## 7.8 `latest` 语义说明
 

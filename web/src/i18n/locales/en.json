@@ -403,6 +403,20 @@
     },
     "publishSkill": "Publish Skill"
   },
+  "namespacePicker": {
+    "placeholder": "Select namespace",
+    "title": "Select namespace",
+    "description": "Search or browse namespaces without loading the entire registry.",
+    "search": "Search namespaces",
+    "searchPlaceholder": "Search by slug or display name",
+    "loading": "Loading namespaces...",
+    "empty": "No namespaces found",
+    "error": "Failed to load namespaces",
+    "retry": "Retry",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{current}} of {{total}}"
+  },
   "myNamespaces": {
     "title": "My Namespaces",
     "subtitle": "Manage your namespaces and teams",
@@ -478,6 +492,9 @@
     "pageSubtitle": "Manage access credentials for CLI and API"
   },
   "reviews": {
+    "namespaceLoadError": "Failed to load namespace review access.",
+    "loadingNamespaceAccess": "Loading namespace review access...",
+    "retryNamespaceLoad": "Retry",
     "title": "Review Center",
     "subtitle": "Manage platform review tasks",
     "typeSkill": "Skill Reviews",
@@ -790,7 +807,9 @@
     "notFound": "Namespace not found",
     "skillList": "Skills",
     "emptyTitle": "No skills",
-    "emptyDescription": "No skills have been published in this namespace yet"
+    "emptyDescription": "No skills have been published in this namespace yet",
+    "skillListErrorTitle": "Unable to load skills",
+    "skillListErrorDescription": "The namespace exists, but its skill list could not be loaded. Please try again later."
   },
   "skillDetail": {
     "back": "Back",
@@ -1348,6 +1367,9 @@
     },
     "namespace": "Namespace",
     "selectNamespace": "Select namespace",
+    "namespaceUnavailable": "The selected namespace is not active or is no longer available.",
+    "namespaceValidationError": "Failed to validate the selected namespace.",
+    "retryNamespaceValidation": "Retry validation",
     "visibility": "Visibility",
     "visibilityOptions": {
       "public": "Public",

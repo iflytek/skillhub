@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -91,10 +92,19 @@ public class SkillDownloadService {
             String skillSlug,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return downloadLatest(namespaceSlug, skillSlug, currentUserId, userNsRoles, Set.of());
+    }
+
+    public DownloadResult downloadLatest(
+            String namespaceSlug,
+            String skillSlug,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertCanDownload(namespace, skill, currentUserId, userNsRoles);
+        assertCanDownload(namespace, skill, currentUserId, userNsRoles, platformRoles);
 
         if (skill.getLatestVersionId() == null) {
             throw new DomainBadRequestException("error.skill.version.latest.unavailable", skillSlug);
@@ -116,10 +126,20 @@ public class SkillDownloadService {
             String versionStr,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return downloadVersion(namespaceSlug, skillSlug, versionStr, currentUserId, userNsRoles, Set.of());
+    }
+
+    public DownloadResult downloadVersion(
+            String namespaceSlug,
+            String skillSlug,
+            String versionStr,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertCanDownload(namespace, skill, currentUserId, userNsRoles);
+        assertCanDownload(namespace, skill, currentUserId, userNsRoles, platformRoles);
 
         SkillVersion version = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), versionStr)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionStr));
@@ -136,10 +156,20 @@ public class SkillDownloadService {
             String tagName,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return downloadByTag(namespaceSlug, skillSlug, tagName, currentUserId, userNsRoles, Set.of());
+    }
+
+    public DownloadResult downloadByTag(
+            String namespaceSlug,
+            String skillSlug,
+            String tagName,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertCanDownload(namespace, skill, currentUserId, userNsRoles);
+        assertCanDownload(namespace, skill, currentUserId, userNsRoles, platformRoles);
 
         SkillTag tag = skillTagRepository.findBySkillIdAndTagName(skill.getId(), tagName)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.tag.notFound", tagName));
@@ -278,15 +308,20 @@ public class SkillDownloadService {
     private void assertCanDownload(Namespace namespace,
                                    Skill skill,
                                    String currentUserId,
-                                   Map<Long, NamespaceRole> userNsRoles) {
+                                   Map<Long, NamespaceRole> userNsRoles,
+                                   Set<String> platformRoles) {
         if (currentUserId == null && !isAnonymousDownloadAllowed(skill)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
+        boolean canAccess = isSuperAdmin(platformRoles)
+                ? visibilityChecker.canAccessForNamespaceRead(skill, currentUserId, userNsRoles, true)
+                : visibilityChecker.canAccess(skill, currentUserId, userNsRoles);
+        if (!canAccess) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED
-                && !isNamespaceMember(namespace.getId(), currentUserId, userNsRoles)) {
+                && !isNamespaceMember(namespace.getId(), currentUserId, userNsRoles)
+                && !isSuperAdmin(platformRoles)) {
             throw new DomainForbiddenException("error.namespace.archived", namespace.getSlug());
         }
     }
@@ -297,6 +332,10 @@ public class SkillDownloadService {
 
     private boolean isNamespaceMember(Long namespaceId, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
         return currentUserId != null && userNsRoles != null && userNsRoles.containsKey(namespaceId);
+    }
+
+    private boolean isSuperAdmin(Set<String> platformRoles) {
+        return platformRoles != null && platformRoles.contains("SUPER_ADMIN");
     }
 
     private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {

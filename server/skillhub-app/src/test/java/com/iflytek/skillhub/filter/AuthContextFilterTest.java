@@ -3,7 +3,9 @@ package com.iflytek.skillhub.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -42,6 +44,8 @@ class AuthContextFilterTest {
 
     private final NamespaceMemberRepository namespaceMemberRepository = mock(NamespaceMemberRepository.class);
     private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
+    private final UserRoleBindingRepository userRoleBindingRepository = mock(UserRoleBindingRepository.class);
+    private final PlatformSessionService platformSessionService = mock(PlatformSessionService.class);
     private final AuthContextFilter filter;
 
     AuthContextFilterTest() {
@@ -53,6 +57,8 @@ class AuthContextFilterTest {
         filter = new AuthContextFilter(
                 namespaceMemberRepository,
                 userAccountRepository,
+                userRoleBindingRepository,
+                platformSessionService,
                 apiResponseFactory,
                 new ObjectMapper().registerModule(new JavaTimeModule()),
                 true,

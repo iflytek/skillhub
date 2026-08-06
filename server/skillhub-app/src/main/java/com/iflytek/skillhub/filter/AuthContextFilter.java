@@ -1,8 +1,12 @@
 package com.iflytek.skillhub.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.auth.session.PlatformSessionService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -14,7 +18,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +41,8 @@ public class AuthContextFilter extends OncePerRequestFilter {
 
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final UserAccountRepository userAccountRepository;
+    private final UserRoleBindingRepository userRoleBindingRepository;
+    private final PlatformSessionService platformSessionService;
     private final ApiResponseFactory apiResponseFactory;
     private final ObjectMapper objectMapper;
     private final boolean enforceActiveUserCheck;
@@ -42,12 +50,16 @@ public class AuthContextFilter extends OncePerRequestFilter {
 
     public AuthContextFilter(NamespaceMemberRepository namespaceMemberRepository,
                              UserAccountRepository userAccountRepository,
+                             UserRoleBindingRepository userRoleBindingRepository,
+                             PlatformSessionService platformSessionService,
                              ApiResponseFactory apiResponseFactory,
                              ObjectMapper objectMapper,
                              @Value("${skillhub.auth.enforce-active-user-check:true}") boolean enforceActiveUserCheck,
                              RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.userAccountRepository = userAccountRepository;
+        this.userRoleBindingRepository = userRoleBindingRepository;
+        this.platformSessionService = platformSessionService;
         this.apiResponseFactory = apiResponseFactory;
         this.objectMapper = objectMapper;
         this.enforceActiveUserCheck = enforceActiveUserCheck;
@@ -75,8 +87,9 @@ public class AuthContextFilter extends OncePerRequestFilter {
                 );
                 return;
             }
+            principal = refreshSessionRolesIfNeeded(principal, request);
             request.setAttribute("userId", principal.userId());
-            request.setAttribute("platformRoles", principal.platformRoles() != null ? principal.platformRoles() : java.util.Set.of());
+            request.setAttribute("platformRoles", platformRoles(principal));
             Map<Long, NamespaceRole> userNsRoles = namespaceMemberRepository.findByUserId(principal.userId()).stream()
                     .collect(Collectors.toMap(
                             NamespaceMember::getNamespaceId,
@@ -103,6 +116,36 @@ public class AuthContextFilter extends OncePerRequestFilter {
         return userAccountRepository.findById(userId)
                 .map(user -> !user.isActive())
                 .orElse(true);
+    }
+
+    private PlatformPrincipal refreshSessionRolesIfNeeded(PlatformPrincipal principal, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || !(session.getAttribute("platformPrincipal") instanceof PlatformPrincipal)) {
+            return principal;
+        }
+
+        List<UserRoleBinding> roleBindings = userRoleBindingRepository.findByUserId(principal.userId());
+        Set<String> freshRoles = PlatformRoleDefaults.withDefaultUserRole(
+                (roleBindings != null ? roleBindings : List.<UserRoleBinding>of()).stream()
+                        .map(binding -> binding.getRole().getCode())
+                        .collect(Collectors.toSet()));
+        if (freshRoles.equals(platformRoles(principal))) {
+            return principal;
+        }
+
+        PlatformPrincipal refreshedPrincipal = new PlatformPrincipal(
+                principal.userId(),
+                principal.displayName(),
+                principal.email(),
+                principal.avatarUrl(),
+                principal.oauthProvider(),
+                freshRoles);
+        platformSessionService.establishSession(refreshedPrincipal, request, false);
+        return refreshedPrincipal;
+    }
+
+    private Set<String> platformRoles(PlatformPrincipal principal) {
+        return principal.platformRoles() != null ? principal.platformRoles() : Set.of();
     }
 
     private void clearAuthentication(HttpServletRequest request) {

@@ -172,6 +172,115 @@ describe('namespaceApi.delete', () => {
   })
 })
 
+describe('namespaceApi.listMine', () => {
+  it('keeps the compatibility endpoint as a current user namespace array', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: [{
+          id: 1,
+          slug: 'team-a',
+          displayName: 'Team A',
+          type: 'TEAM',
+          status: 'ACTIVE',
+          createdAt: '2026-05-07T00:00:00Z',
+          immutable: false,
+          canFreeze: false,
+          canUnfreeze: false,
+          canArchive: false,
+          canRestore: false,
+          canDelete: false,
+        }],
+        timestamp: '2026-05-07T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const namespaces = await namespaceApi.listMine()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/web/me/namespaces',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      }),
+    )
+    expect(namespaces).toEqual([expect.objectContaining({ slug: 'team-a' })])
+  })
+})
+
+describe('namespaceApi.listMinePage', () => {
+  it('requests a bounded page of current user namespaces', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: {
+          items: [],
+          total: 0,
+          page: 2,
+          size: 25,
+        },
+        timestamp: '2026-05-07T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const page = await namespaceApi.listMinePage({ page: 2, size: 25 })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/web/me/namespaces/page?page=2&size=25',
+      expect.objectContaining({
+        headers: expect.any(Headers),
+      }),
+    )
+    expect(page).toEqual({
+      items: [],
+      total: 0,
+      page: 2,
+      size: 25,
+    })
+  })
+
+  it('encodes namespace filters without issuing an unbounded request', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: 'https://api.example.com' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: { items: [], total: 0, page: 1, size: 20 },
+        timestamp: '2026-05-07T00:00:00Z',
+        requestId: 'req-filtered',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await namespaceApi.listMinePage({
+      page: 1,
+      size: 20,
+      status: 'ACTIVE',
+      type: 'TEAM',
+      q: 'team ai',
+      slug: 'team-ai',
+      sort: ['slug,desc'],
+      roles: ['OWNER', 'ADMIN'],
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.example.com/api/web/me/namespaces/page?page=1&size=20&sort=slug%2Cdesc&status=ACTIVE&type=TEAM&q=team+ai&slug=team-ai&roles=OWNER&roles=ADMIN',
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    )
+  })
+})
+
 describe('getDirectAuthRuntimeConfig', () => {
   it('returns disabled when no runtime config is present', () => {
     const config = getDirectAuthRuntimeConfig()

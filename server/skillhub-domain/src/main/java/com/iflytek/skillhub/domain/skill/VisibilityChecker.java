@@ -33,6 +33,26 @@ public class VisibilityChecker {
         };
     }
 
+    /**
+     * Applies portal namespace-read semantics without turning the caller into a namespace member.
+     * The override exposes published namespace-visible skills, but never private, hidden, or
+     * unpublished skills.
+     */
+    public boolean canAccessForNamespaceRead(
+            Skill skill,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNamespaceRoles,
+            boolean namespaceReadAllowed) {
+        if (canAccess(skill, currentUserId, userNamespaceRoles)) {
+            return true;
+        }
+        return namespaceReadAllowed
+                && !skill.isHidden()
+                && skill.getStatus() == SkillStatus.ACTIVE
+                && skill.getLatestVersionId() != null
+                && skill.getVisibility() == SkillVisibility.NAMESPACE_ONLY;
+    }
+
     private boolean isOwner(Skill skill, String currentUserId) {
         return currentUserId != null && skill.getOwnerId().equals(currentUserId);
     }

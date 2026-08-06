@@ -403,6 +403,20 @@
     },
     "publishSkill": "发布技能"
   },
+  "namespacePicker": {
+    "placeholder": "选择命名空间",
+    "title": "选择命名空间",
+    "description": "通过搜索或分页浏览命名空间，无需加载全部数据。",
+    "search": "搜索命名空间",
+    "searchPlaceholder": "按标识或显示名称搜索",
+    "loading": "正在加载命名空间...",
+    "empty": "未找到命名空间",
+    "error": "命名空间加载失败",
+    "retry": "重试",
+    "previous": "上一页",
+    "next": "下一页",
+    "page": "第 {{current}} / {{total}} 页"
+  },
   "myNamespaces": {
     "title": "我的命名空间",
     "subtitle": "管理你的命名空间和团队",
@@ -478,6 +492,9 @@
     "pageSubtitle": "管理 CLI 和 API 使用的访问凭证"
   },
   "reviews": {
+    "namespaceLoadError": "无法加载命名空间审核权限。",
+    "loadingNamespaceAccess": "正在加载命名空间审核权限...",
+    "retryNamespaceLoad": "重试",
     "title": "审核中心",
     "subtitle": "管理平台审核事务",
     "typeSkill": "技能审核",
@@ -790,7 +807,9 @@
     "notFound": "命名空间不存在",
     "skillList": "技能列表",
     "emptyTitle": "暂无技能",
-    "emptyDescription": "该命名空间下还没有发布任何技能"
+    "emptyDescription": "该命名空间下还没有发布任何技能",
+    "skillListErrorTitle": "无法加载技能列表",
+    "skillListErrorDescription": "命名空间存在，但技能列表暂时无法加载，请稍后重试。"
   },
   "skillDetail": {
     "back": "返回上一页",
@@ -1349,6 +1368,9 @@
     },
     "namespace": "命名空间",
     "selectNamespace": "选择命名空间",
+    "namespaceUnavailable": "所选命名空间未启用或已不可用。",
+    "namespaceValidationError": "无法校验所选命名空间。",
+    "retryNamespaceValidation": "重新校验",
     "visibility": "可见性",
     "visibilityOptions": {
       "public": "公开",

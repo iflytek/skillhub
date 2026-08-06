@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { FileCheck2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import {
   buildNamespaceReviewsPath,
   canAccessGlobalReviewCenter,
-  getPreferredNamespaceReviewEntry,
 } from '@/features/review/review-paths'
+import { useNamespaceReviewEntry } from '@/features/review/use-namespace-review-entry'
 import {
   Table,
   TableBody,
@@ -40,7 +40,6 @@ export function ReviewsPage() {
   const navigate = useNavigate()
   const search = useSearch({ from: '/dashboard/reviews' })
   const { hasRole, user } = useAuth()
-  const { data: myNamespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const [pages, setPages] = useState<Record<ReviewStatus, number>>({
     PENDING: 0,
     APPROVED: 0,
@@ -52,7 +51,12 @@ export function ReviewsPage() {
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
   const hasGlobalReviewAccess = canAccessGlobalReviewCenter(user?.platformRoles)
-  const namespaceReviewEntry = getPreferredNamespaceReviewEntry(myNamespaces)
+  const {
+    namespaceReviewEntry,
+    isLoadingNamespaces,
+    hasNamespaceQueryError,
+    retryNamespaceQueries,
+  } = useNamespaceReviewEntry(hasGlobalReviewAccess)
   const showTypeTabs = isSkillAdmin && isUserAdmin
 
   // Determine default top-level tab
@@ -62,7 +66,7 @@ export function ReviewsPage() {
   const skillReviewEnabled = hasGlobalReviewAccess && isSkillAdmin && activeType === 'skill'
 
   useEffect(() => {
-    if (hasGlobalReviewAccess || isLoadingNamespaces) {
+    if (hasGlobalReviewAccess || isLoadingNamespaces || hasNamespaceQueryError) {
       return
     }
 
@@ -72,7 +76,7 @@ export function ReviewsPage() {
     }
 
     void navigate({ to: '/dashboard', replace: true })
-  }, [hasGlobalReviewAccess, isLoadingNamespaces, namespaceReviewEntry, navigate])
+  }, [hasGlobalReviewAccess, hasNamespaceQueryError, isLoadingNamespaces, namespaceReviewEntry, navigate])
 
   const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'PENDING')
   const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'APPROVED')
@@ -250,7 +254,16 @@ export function ReviewsPage() {
       <div className="space-y-8 animate-fade-up">
         <DashboardPageHeader title={t('reviews.title')} subtitle={t('reviews.subtitle')} />
         <Card className="p-8 text-center text-muted-foreground">
-          Loading...
+          {hasNamespaceQueryError ? (
+            <div className="space-y-3">
+              <p>{t('reviews.namespaceLoadError')}</p>
+              <Button type="button" variant="outline" onClick={() => retryNamespaceQueries()}>
+                {t('reviews.retryNamespaceLoad')}
+              </Button>
+            </div>
+          ) : (
+            t('reviews.loadingNamespaceAccess')
+          )}
         </Card>
       </div>
     )

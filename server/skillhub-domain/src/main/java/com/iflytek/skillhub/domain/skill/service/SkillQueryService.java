@@ -198,15 +198,34 @@ public class SkillQueryService {
             String skillSlug,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return getSkillDetail(namespaceSlug, skillSlug, currentUserId, userNsRoles, Set.of());
+    }
+
+    public SkillDetailDTO getSkillDetail(
+            String namespaceSlug,
+            String skillSlug,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
         if (namespace.getStatus() == com.iflytek.skillhub.domain.namespace.NamespaceStatus.ARCHIVED
-                && !isNamespaceMember(namespace.getId(), currentUserId, userNsRoles)) {
+                && !isNamespaceMember(namespace.getId(), currentUserId, userNsRoles)
+                && !isSuperAdmin(platformRoles)) {
             throw new DomainForbiddenException("error.namespace.archived", namespaceSlug);
         }
 
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
+        if (skill.getStatus() != SkillStatus.ACTIVE
+                && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
+        }
+
+        if (!visibilityChecker.canAccessForNamespaceRead(
+                skill,
+                currentUserId,
+                userNsRoles,
+                isSuperAdmin(platformRoles))) {
             throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
         }
 
@@ -251,15 +270,6 @@ public class SkillQueryService {
         );
     }
 
-    public SkillDetailDTO getSkillDetail(
-            String namespaceSlug,
-            String skillSlug,
-            String currentUserId,
-            Map<Long, NamespaceRole> userNsRoles,
-            Set<String> platformRoles) {
-        return getSkillDetail(namespaceSlug, skillSlug, currentUserId, userNsRoles);
-    }
-
     /**
      * Lists skills within a namespace after filtering out records the caller is
      * not allowed to discover.
@@ -296,9 +306,19 @@ public class SkillQueryService {
             String version,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return getVersionDetail(namespaceSlug, skillSlug, version, currentUserId, userNsRoles, Set.of());
+    }
+
+    public SkillVersionDetailDTO getVersionDetail(
+            String namespaceSlug,
+            String skillSlug,
+            String version,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
         SkillVersion skillVersion = findVersion(skill, version);
         assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
 
@@ -322,13 +342,32 @@ public class SkillQueryService {
             String toVersion,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return compareVersions(
+                namespaceSlug,
+                skillSlug,
+                fromVersion,
+                toVersion,
+                currentUserId,
+                userNsRoles,
+                Set.of()
+        );
+    }
+
+    public SkillVersionCompareDTO compareVersions(
+            String namespaceSlug,
+            String skillSlug,
+            String fromVersion,
+            String toVersion,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         if (Objects.equals(fromVersion, toVersion)) {
             throw new DomainBadRequestException("error.skill.version.compare.same");
         }
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
 
         SkillVersion from = findVersion(skill, fromVersion);
         SkillVersion to = findVersion(skill, toVersion);
@@ -385,9 +424,19 @@ public class SkillQueryService {
             String version,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return listFiles(namespaceSlug, skillSlug, version, currentUserId, userNsRoles, Set.of());
+    }
+
+    public List<SkillFile> listFiles(
+            String namespaceSlug,
+            String skillSlug,
+            String version,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
         assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
@@ -401,9 +450,19 @@ public class SkillQueryService {
             String tagName,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return listFilesByTag(namespaceSlug, skillSlug, tagName, currentUserId, userNsRoles, Set.of());
+    }
+
+    public List<SkillFile> listFilesByTag(
+            String namespaceSlug,
+            String skillSlug,
+            String tagName,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
         SkillVersion skillVersion = resolveVersionEntity(skill, null, tagName, null);
         return availableFiles(skillVersion.getId());
     }
@@ -419,9 +478,20 @@ public class SkillQueryService {
             String filePath,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return getFileContent(namespaceSlug, skillSlug, version, filePath, currentUserId, userNsRoles, Set.of());
+    }
+
+    public InputStream getFileContent(
+            String namespaceSlug,
+            String skillSlug,
+            String version,
+            String filePath,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
 
         SkillVersion skillVersion = findVersion(skill, version);
         assertPreviewAccessible(skill, skillVersion, version, currentUserId, userNsRoles);
@@ -438,9 +508,20 @@ public class SkillQueryService {
             String filePath,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return getFileContentByTag(namespaceSlug, skillSlug, tagName, filePath, currentUserId, userNsRoles, Set.of());
+    }
+
+    public InputStream getFileContentByTag(
+            String namespaceSlug,
+            String skillSlug,
+            String tagName,
+            String filePath,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
         SkillVersion skillVersion = resolveVersionEntity(skill, null, tagName, null);
         SkillFile file = findFile(skillVersion, filePath);
         return readFileContent(file);
@@ -451,9 +532,18 @@ public class SkillQueryService {
                                            String currentUserId,
                                            Map<Long, NamespaceRole> userNsRoles,
                                            Pageable pageable) {
+        return listVersions(namespaceSlug, skillSlug, currentUserId, userNsRoles, pageable, Set.of());
+    }
+
+    public Page<SkillVersion> listVersions(String namespaceSlug,
+                                           String skillSlug,
+                                           String currentUserId,
+                                           Map<Long, NamespaceRole> userNsRoles,
+                                           Pageable pageable,
+                                           Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
         List<SkillVersion> visibleVersions;
         if (canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
             visibleVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
@@ -551,13 +641,25 @@ public class SkillQueryService {
             String hash,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return resolveVersion(namespaceSlug, skillSlug, version, tag, hash, currentUserId, userNsRoles, Set.of());
+    }
+
+    public ResolvedVersionDTO resolveVersion(
+            String namespaceSlug,
+            String skillSlug,
+            String version,
+            String tag,
+            String hash,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         if (version != null && !version.isBlank() && tag != null && !tag.isBlank()) {
             throw new DomainBadRequestException("error.skill.resolve.versionTag.conflict");
         }
 
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
-        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
         SkillVersion resolved = resolveVersionEntity(skill, version, tag, hash);
         assertInstallableVersion(resolved, resolved.getVersion());
         String fingerprint = computeFingerprint(resolved);
@@ -811,7 +913,18 @@ public class SkillQueryService {
             Skill skill,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
-        if (namespace.getStatus() == NamespaceStatus.ARCHIVED && !isNamespaceMember(skill.getNamespaceId(), currentUserId, userNsRoles)) {
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, Set.of());
+    }
+
+    private void assertPublishedAccessible(
+            Namespace namespace,
+            Skill skill,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
+        if (namespace.getStatus() == NamespaceStatus.ARCHIVED
+                && !isNamespaceMember(skill.getNamespaceId(), currentUserId, userNsRoles)
+                && !isSuperAdmin(platformRoles)) {
             throw new DomainForbiddenException("error.namespace.archived", namespace.getSlug());
         }
         if (skill.getStatus() != SkillStatus.ACTIVE && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
@@ -820,7 +933,11 @@ public class SkillQueryService {
         if (skill.isHidden() && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
+        if (!visibilityChecker.canAccessForNamespaceRead(
+                skill,
+                currentUserId,
+                userNsRoles,
+                isSuperAdmin(platformRoles))) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
     }
@@ -861,6 +978,10 @@ public class SkillQueryService {
 
     private boolean isOwner(Skill skill, String currentUserId) {
         return currentUserId != null && skill.getOwnerId().equals(currentUserId);
+    }
+
+    private boolean isSuperAdmin(Set<String> platformRoles) {
+        return platformRoles != null && platformRoles.contains("SUPER_ADMIN");
     }
 
     private boolean isNamespaceMember(Long namespaceId, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {

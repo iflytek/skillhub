@@ -1,4 +1,8 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
+
+const useMyNamespacesPageMock = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ slug: 'test-ns' }),
@@ -52,7 +56,7 @@ vi.mock('@/shared/ui/select', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
-  useMyNamespaces: () => ({ data: [] }),
+  useMyNamespacesPage: (...args: unknown[]) => useMyNamespacesPageMock(...args),
   useNamespaceDetail: () => ({ data: null, isLoading: false }),
   useNamespaceMembers: () => ({ data: [], isLoading: false, error: null }),
   useRemoveNamespaceMember: () => ({ mutateAsync: vi.fn() }),
@@ -68,5 +72,15 @@ import { NamespaceMembersPage } from './namespace-members'
 describe('NamespaceMembersPage', () => {
   it('exports a named component function', () => {
     expect(typeof NamespaceMembersPage).toBe('function')
+  })
+
+  it('loads only the current namespace membership entry', () => {
+    useMyNamespacesPageMock.mockReturnValue({
+      data: { items: [], total: 0, page: 0, size: 1 },
+    })
+
+    renderToStaticMarkup(createElement(NamespaceMembersPage))
+
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({ page: 0, size: 1, slug: 'test-ns' }, true)
   })
 })

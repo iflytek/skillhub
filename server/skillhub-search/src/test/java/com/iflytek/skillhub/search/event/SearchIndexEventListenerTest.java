@@ -2,6 +2,7 @@ package com.iflytek.skillhub.search.event;
 
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.event.SkillStatusChangedEvent;
+import com.iflytek.skillhub.domain.event.SkillVersionYankedEvent;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchRebuildService;
@@ -32,5 +33,15 @@ class SearchIndexEventListenerTest {
         listener.onSkillStatusChanged(new SkillStatusChangedEvent(42L, SkillStatus.ACTIVE, SkillStatus.ARCHIVED));
 
         verify(searchIndexService).remove(42L);
+    }
+
+    @Test
+    void yankedVersionShouldTriggerSkillRebuild() {
+        SearchRebuildService searchRebuildService = mock(SearchRebuildService.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+        SearchIndexEventListener listener = new SearchIndexEventListener(searchRebuildService, searchIndexService);
+
+        listener.onSkillVersionYanked(new SkillVersionYankedEvent(42L, 100L, "admin-1"));
+        verify(searchRebuildService).rebuildBySkill(42L);
     }
 }

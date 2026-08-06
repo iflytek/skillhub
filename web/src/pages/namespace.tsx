@@ -26,7 +26,7 @@ export function NamespacePage() {
   }, [namespace])
 
   const { data: namespaceData, isLoading: isLoadingNamespace } = useNamespaceDetail(namespace)
-  const { data: skillsData, isLoading: isLoadingSkills } = useSearchSkills({
+  const { data: skillsData, isLoading: isLoadingSkills, error: skillsError } = useSearchSkills({
     namespace,
     page,
     size: PAGE_SIZE,
@@ -59,6 +59,11 @@ export function NamespacePage() {
         <h2 className="text-2xl font-bold font-heading">{t('namespace.skillList')}</h2>
         {isLoadingSkills ? (
           <SkeletonList count={6} />
+        ) : skillsError ? (
+          <EmptyState
+            title={t('namespace.skillListErrorTitle')}
+            description={t('namespace.skillListErrorDescription')}
+          />
         ) : skillsData && skillsData.items.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

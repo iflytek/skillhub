@@ -47,30 +47,9 @@ vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useNamespaceDetail: () => useNamespaceDetailMock(),
 }))
 
+const useSearchSkillsMock = vi.fn()
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
-  useSearchSkills: () => ({
-    data: {
-      items: [
-        {
-          id: 1,
-          displayName: 'Demo Skill',
-          summary: 'summary',
-          namespace: 'global',
-          slug: 'demo',
-          downloadCount: 1,
-          starCount: 1,
-          ratingCount: 0,
-          updatedAt: '2026-03-20T00:00:00Z',
-          canSubmitPromotion: false,
-          publishedVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
-        },
-      ],
-      total: 1,
-      page: 0,
-      size: 20,
-    },
-    isLoading: false,
-  }),
+  useSearchSkills: () => useSearchSkillsMock(),
 }))
 
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -82,6 +61,30 @@ describe('NamespacePage', () => {
     useNamespaceDetailMock.mockReturnValue({
       data: { id: 1, slug: 'global', displayName: 'Global', type: 'GLOBAL', status: 'ACTIVE' },
       isLoading: false,
+    })
+    useSearchSkillsMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            displayName: 'Demo Skill',
+            summary: 'summary',
+            namespace: 'global',
+            slug: 'demo',
+            downloadCount: 1,
+            starCount: 1,
+            ratingCount: 0,
+            updatedAt: '2026-03-20T00:00:00Z',
+            canSubmitPromotion: false,
+            publishedVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+          },
+        ],
+        total: 1,
+        page: 0,
+        size: 20,
+      },
+      isLoading: false,
+      error: null,
     })
   })
 
@@ -104,5 +107,18 @@ describe('NamespacePage', () => {
 
     expect(buttonRecords).toHaveLength(0)
     expect(html).not.toContain('type="checkbox"')
+  })
+
+  it('renders a skill-list error state instead of the empty namespace state when skill loading fails', () => {
+    useSearchSkillsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('namespace read failed'),
+    })
+
+    const html = renderToStaticMarkup(<NamespacePage />)
+
+    expect(html).toContain('namespace.skillListErrorTitle')
+    expect(html).not.toContain('namespace.emptyTitle')
   })
 })

@@ -189,4 +189,24 @@ class VisibilityCheckerTest {
         boolean canAccess = checker.canAccess(privateSkill, OTHER_USER_ID, Map.of(), Set.of());
         assertFalse(canAccess);
     }
+
+    @Test
+    void testNamespaceReadOverrideAllowsOnlyPublishedNamespaceVisibleSkills() {
+        Skill archivedNamespaceOnlySkill = new Skill(
+                NAMESPACE_ID, "archived-namespace-skill", OWNER_ID, SkillVisibility.NAMESPACE_ONLY);
+        archivedNamespaceOnlySkill.setLatestVersionId(14L);
+        archivedNamespaceOnlySkill.setStatus(SkillStatus.ARCHIVED);
+
+        assertTrue(checker.canAccessForNamespaceRead(namespaceOnlySkill, OTHER_USER_ID, Map.of(), true));
+        assertFalse(checker.canAccessForNamespaceRead(privateSkill, OTHER_USER_ID, Map.of(), true));
+        assertFalse(checker.canAccessForNamespaceRead(hiddenPublicSkill, OTHER_USER_ID, Map.of(), true));
+        assertFalse(checker.canAccessForNamespaceRead(unpublishedPublicSkill, OTHER_USER_ID, Map.of(), true));
+        assertFalse(checker.canAccessForNamespaceRead(archivedNamespaceOnlySkill, OTHER_USER_ID, Map.of(), true));
+    }
+
+    @Test
+    void testNamespaceReadOverrideDoesNotChangeOrdinaryAccessWhenDisabled() {
+        assertFalse(checker.canAccessForNamespaceRead(namespaceOnlySkill, OTHER_USER_ID, Map.of(), false));
+        assertTrue(checker.canAccessForNamespaceRead(publicSkill, OTHER_USER_ID, Map.of(), false));
+    }
 }

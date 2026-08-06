@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import {
-  useMyNamespaces,
+  useMyNamespacesPage,
   useNamespaceDetail,
   useNamespaceMembers,
   useRemoveNamespaceMember,
@@ -50,7 +50,7 @@ export function NamespaceMembersPage() {
 
   const { data: namespace, isLoading: isLoadingNamespace } = useNamespaceDetail(slug)
   const { data: membersPage, isLoading: isLoadingMembers, error: membersError } = useNamespaceMembers(slug, page, MEMBER_PAGE_SIZE)
-  const { data: myNamespaces } = useMyNamespaces()
+  const { data: myNamespacesPage } = useMyNamespacesPage({ page: 0, size: 1, slug }, !!slug)
   const updateRoleMutation = useUpdateNamespaceMemberRole()
   const removeMemberMutation = useRemoveNamespaceMember()
 
@@ -58,7 +58,7 @@ export function NamespaceMembersPage() {
   const totalMembers = membersPage?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalMembers / MEMBER_PAGE_SIZE))
 
-  const currentNamespace = myNamespaces?.find((item) => item.slug === slug)
+  const currentNamespace = myNamespacesPage?.items.find((item) => item.slug === slug)
   const currentUserRole = currentNamespace?.currentUserRole
   const isReadOnly = namespace?.type === 'GLOBAL' || namespace?.status !== 'ACTIVE'
   // Membership changes are only allowed in active team namespaces and only for

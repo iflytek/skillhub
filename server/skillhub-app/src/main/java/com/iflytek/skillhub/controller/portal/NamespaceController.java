@@ -3,6 +3,8 @@ package com.iflytek.skillhub.controller.portal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.BatchMemberRequest;
@@ -23,12 +25,17 @@ import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import com.iflytek.skillhub.service.NamespacePortalCommandAppService;
 import com.iflytek.skillhub.service.NamespacePortalQueryAppService;
 import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,23 +68,56 @@ public class NamespaceController extends BaseApiController {
     @GetMapping("/namespaces")
     public ApiResponse<PageResponse<NamespaceResponse>> listNamespaces(
             Pageable pageable,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return ok("response.success.read", namespacePortalQueryAppService.listNamespaces(pageable, userNsRoles));
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
+        return ok("response.success.read",
+                namespacePortalQueryAppService.listNamespaces(pageable, userNsRoles, normalizePlatformRoles(platformRoles)));
     }
 
     @GetMapping("/me/namespaces")
     public ApiResponse<List<MyNamespaceResponse>> listMyNamespaces(
             @RequestAttribute("userId") String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return ok("response.success.read", namespacePortalQueryAppService.listMyNamespaces(userNsRoles));
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
+        return ok("response.success.read",
+                namespacePortalQueryAppService.listMyNamespaces(userNsRoles, normalizePlatformRoles(platformRoles)));
+    }
+
+    @GetMapping("/me/namespaces/page")
+    public ApiResponse<PageResponse<MyNamespaceResponse>> listMyNamespacesPage(
+            @Parameter(description = "Zero-based page index.", schema = @Schema(type = "integer", format = "int32", defaultValue = "0", minimum = "0"))
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size. Values above the namespace list limit are bounded by the backend.", schema = @Schema(type = "integer", format = "int32", defaultValue = "20", minimum = "1"))
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort criteria in property,direction form. Only slug sorting is honored; defaults to slug,asc.", example = "slug,asc")
+            @RequestParam(required = false) List<String> sort,
+            @RequestParam(required = false) NamespaceStatus status,
+            @RequestParam(required = false) NamespaceType type,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String slug,
+            @RequestParam(required = false) Set<NamespaceRole> roles,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
+        return ok("response.success.read",
+                namespacePortalQueryAppService.listMyNamespaces(
+                        myNamespacesPageable(page, size, sort),
+                        userNsRoles,
+                        normalizePlatformRoles(platformRoles),
+                        status,
+                        type,
+                        q,
+                        slug,
+                        roles));
     }
 
     @GetMapping("/namespaces/{slug}")
     public ApiResponse<NamespaceResponse> getNamespace(@PathVariable String slug,
                                                        @RequestAttribute("userId") String userId,
-                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                       @RequestAttribute(value = "platformRoles", required = false) Set<String> platformRoles) {
         return ok("response.success.read",
-                namespacePortalQueryAppService.getNamespace(slug, userId, userNsRoles));
+                namespacePortalQueryAppService.getNamespace(slug, userId, userNsRoles, normalizePlatformRoles(platformRoles)));
     }
 
     @PostMapping("/namespaces")
@@ -163,6 +203,48 @@ public class NamespaceController extends BaseApiController {
                 : Set.of();
         return ok("response.success.read",
                 namespacePortalQueryAppService.listMembers(slug, pageable, userId, platformRoles));
+    }
+
+    private Set<String> normalizePlatformRoles(Set<String> platformRoles) {
+        return platformRoles != null
+                ? platformRoles
+                : Set.of();
+    }
+
+    private Pageable myNamespacesPageable(int page, int size, List<String> sort) {
+        return PageRequest.of(
+                Math.max(page, 0),
+                Math.max(size, 1),
+                myNamespacesSort(sort)
+        );
+    }
+
+    private Sort myNamespacesSort(List<String> sort) {
+        if (sort == null || sort.isEmpty()) {
+            return Sort.unsorted();
+        }
+        List<Sort.Order> orders = new ArrayList<>();
+        for (String rawSort : sort) {
+            Sort.Order order = slugOrder(rawSort);
+            if (order != null) {
+                orders.add(order);
+            }
+        }
+        return orders.isEmpty() ? Sort.unsorted() : Sort.by(orders);
+    }
+
+    private Sort.Order slugOrder(String rawSort) {
+        if (rawSort == null || rawSort.isBlank()) {
+            return null;
+        }
+        String[] tokens = rawSort.split(",");
+        if (!"slug".equals(tokens[0].trim())) {
+            return null;
+        }
+        Sort.Direction direction = tokens.length > 1
+                ? Sort.Direction.fromOptionalString(tokens[1].trim()).orElse(Sort.Direction.ASC)
+                : Sort.Direction.ASC;
+        return new Sort.Order(direction, "slug");
     }
 
     @GetMapping("/namespaces/{slug}/member-candidates")

@@ -49,6 +49,22 @@ import type {
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
 
+type OperationQuery<Operation> = Operation extends { parameters: { query?: infer Query } } ? NonNullable<Query> : never
+type OperationData<Operation> = Operation extends {
+  responses: {
+    200: {
+      content: {
+        '*/*': infer Envelope
+      }
+    }
+  }
+} ? Envelope extends { data?: infer Data } ? NonNullable<Data> : never : never
+
+type ListMyNamespacesPageOperation = paths['/api/web/me/namespaces/page']['get']
+
+export type MyNamespacePageParams = OperationQuery<ListMyNamespacesPageOperation>
+export type MyNamespacePageResponse = OperationData<ListMyNamespacesPageOperation> & PagedResponse<ManagedNamespace>
+
 /**
  * Front-end API foundation for generated OpenAPI calls and hand-written convenience wrappers.
  *
@@ -655,6 +671,27 @@ export const namespaceApi = {
 
   async listMine(): Promise<ManagedNamespace[]> {
     return fetchJson<ManagedNamespace[]>(`${WEB_API_PREFIX}/me/namespaces`)
+  },
+
+  async listMinePage(params: MyNamespacePageParams = {}): Promise<MyNamespacePageResponse> {
+    const page = params.page ?? 0
+    const size = params.size ?? 20
+    const query = new URLSearchParams({ page: String(page), size: String(size) })
+    params.sort?.forEach((sort) => query.append('sort', sort))
+    if (params.status) {
+      query.set('status', params.status)
+    }
+    if (params.type) {
+      query.set('type', params.type)
+    }
+    if (params.q?.trim()) {
+      query.set('q', params.q.trim())
+    }
+    if (params.slug?.trim()) {
+      query.set('slug', normalizeNamespaceSlug(params.slug))
+    }
+    params.roles?.forEach((role) => query.append('roles', role))
+    return fetchJson<MyNamespacePageResponse>(`${WEB_API_PREFIX}/me/namespaces/page?${query.toString()}`)
   },
 
   async getDetail(slug: string): Promise<Namespace> {

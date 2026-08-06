@@ -1,8 +1,13 @@
 import type { ReactNode } from 'react'
+import type { ManagedNamespace } from '@/api/types'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as mod from './user-menu'
 import { UserMenu } from './user-menu'
+
+const useMyNamespacesPageMock = vi.hoisted(() => vi.fn(() => ({
+  data: { items: [] as ManagedNamespace[], total: 0, page: 0, size: 1 },
+})))
 
 vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react')
@@ -63,7 +68,7 @@ vi.mock('@/api/client', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
-  useMyNamespaces: () => ({ data: [] }),
+  useMyNamespacesPage: useMyNamespacesPageMock,
 }))
 
 /**
@@ -77,6 +82,10 @@ describe('user-menu module exports', () => {
 })
 
 describe('UserMenu security settings visibility', () => {
+  beforeEach(() => {
+    useMyNamespacesPageMock.mockClear()
+  })
+
   it('shows security settings when password changes are allowed, independent of OAuth provider', () => {
     const html = renderToStaticMarkup(
       <UserMenu
@@ -104,5 +113,70 @@ describe('UserMenu security settings visibility', () => {
     )
 
     expect(html).not.toContain('user.menu.security')
+  })
+
+  it('shows reviews for namespace admins without platform review roles', () => {
+    useMyNamespacesPageMock.mockReturnValue({
+      data: { items: [
+        {
+          id: 10,
+          slug: 'team-admin',
+          displayName: 'Team Admin',
+          type: 'TEAM',
+          status: 'ACTIVE',
+          immutable: false,
+          canFreeze: false,
+          canUnfreeze: false,
+          canArchive: false,
+          canRestore: false,
+          canDelete: false,
+          currentUserRole: 'ADMIN',
+          createdAt: '',
+        },
+      ], total: 1, page: 0, size: 1 },
+    })
+
+    const html = renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Namespace Admin',
+          platformRoles: ['USER'],
+        }}
+      />,
+    )
+
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({
+      page: 0,
+      size: 1,
+      status: 'ACTIVE',
+      type: 'TEAM',
+      roles: ['OWNER', 'ADMIN'],
+    }, true)
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({
+      page: 0,
+      size: 1,
+      type: 'TEAM',
+      roles: ['OWNER', 'ADMIN'],
+    }, false)
+    expect(html).toContain('user.menu.reviews')
+  })
+
+  it('disables namespace membership loading while rendering the global menu for platform reviewers', () => {
+    renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Super Admin',
+          platformRoles: ['SUPER_ADMIN'],
+        }}
+      />,
+    )
+
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({
+      page: 0,
+      size: 1,
+      status: 'ACTIVE',
+      type: 'TEAM',
+      roles: ['OWNER', 'ADMIN'],
+    }, false)
   })
 })

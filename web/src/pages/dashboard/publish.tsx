@@ -17,19 +17,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  normalizeSelectValue,
 } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { usePublishSkill } from '@/shared/hooks/use-skill-queries'
-import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
+import { useMyNamespacesPage } from '@/shared/hooks/use-namespace-queries'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { navigateAfterOverlays } from '@/shared/lib/navigate-after-overlays'
+import { NamespacePicker } from '@/shared/components/namespace-picker'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
-
-const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
 
 export function PublishPage() {
   const { t } = useTranslation()
@@ -42,9 +40,19 @@ export function PublishPage() {
   const [warningDialogOpen, setWarningDialogOpen] = useState(false)
   const [precheckWarnings, setPrecheckWarnings] = useState<string[]>([])
 
-  const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
+  const {
+    data: selectedNamespacePage,
+    isLoading: isLoadingSelectedNamespace,
+    error: selectedNamespaceError,
+    refetch: refetchSelectedNamespace,
+  } = useMyNamespacesPage({
+    page: 0,
+    size: 1,
+    status: 'ACTIVE',
+    ...(namespaceSlug ? { slug: namespaceSlug } : {}),
+  }, !!namespaceSlug)
   const publishMutation = usePublishSkill()
-  const selectedNamespace = namespaces?.find((ns) => ns.slug === namespaceSlug)
+  const selectedNamespace = selectedNamespacePage?.items.find((ns) => ns.slug === namespaceSlug)
   const namespaceOnlyLabel = selectedNamespace?.type === 'GLOBAL'
     ? t('publish.visibilityOptions.loggedInUsersOnly')
     : t('publish.visibilityOptions.namespaceOnly')
@@ -67,7 +75,7 @@ export function PublishPage() {
   }
 
   const publishSkill = async (confirmWarnings = false) => {
-    if (!selectedFile || !namespaceSlug) {
+    if (!selectedFile || !namespaceSlug || !selectedNamespace) {
       toast.error(t('publish.selectRequired'))
       return
     }
@@ -159,28 +167,26 @@ export function PublishPage() {
       <Card className="p-8 space-y-8">
         <div className="space-y-3">
           <Label htmlFor="namespace" className="text-sm font-semibold font-heading">{t('publish.namespace')}</Label>
-          {isLoadingNamespaces ? (
-            <div className="h-11 animate-shimmer rounded-lg" />
-          ) : (
-            <Select
-              value={normalizeSelectValue(namespaceSlug) ?? EMPTY_NAMESPACE_VALUE}
-              onValueChange={(value) => {
-                setNamespaceSlug(value === EMPTY_NAMESPACE_VALUE ? '' : value)
-              }}
-            >
-              <SelectTrigger id="namespace">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={EMPTY_NAMESPACE_VALUE}>{t('publish.selectNamespace')}</SelectItem>
-                {namespaces?.map((ns) => (
-                  <SelectItem key={ns.id} value={ns.slug}>
-                    {ns.displayName} (@{ns.slug})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <NamespacePicker
+            id="namespace"
+            accessibleLabel={t('publish.namespace')}
+            value={namespaceSlug}
+            onValueChange={setNamespaceSlug}
+            status="ACTIVE"
+            disabled={publishMutation.isPending}
+          />
+          {namespaceSlug && !isLoadingSelectedNamespace ? (
+            selectedNamespaceError ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-destructive">{t('publish.namespaceValidationError')}</p>
+                <Button type="button" size="sm" variant="outline" onClick={() => refetchSelectedNamespace()}>
+                  {t('publish.retryNamespaceValidation')}
+                </Button>
+              </div>
+            ) : !selectedNamespace ? (
+              <p className="text-sm text-destructive">{t('publish.namespaceUnavailable')}</p>
+            ) : null
+          ) : null}
         </div>
 
         <div className="space-y-3">
@@ -230,7 +236,7 @@ export function PublishPage() {
           className="w-full text-primary-foreground disabled:text-primary-foreground"
           size="lg"
           onClick={handlePublish}
-          disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
+          disabled={!selectedFile || !namespaceSlug || !selectedNamespace || publishMutation.isPending}
         >
           {publishMutation.isPending ? t('publish.publishing') : t('publish.confirm')}
         </Button>

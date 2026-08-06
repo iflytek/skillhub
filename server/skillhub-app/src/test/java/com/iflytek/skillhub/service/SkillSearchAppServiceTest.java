@@ -128,6 +128,23 @@ class SkillSearchAppServiceTest {
     }
 
     @Test
+    void search_shouldAllowSuperAdminToReadArchivedNamespaceSkillsWithoutMembership() {
+        Namespace archivedNamespace = new Namespace("archived-team", "Archived Team", "owner-1");
+        setField(archivedNamespace, "id", 1L);
+        archivedNamespace.setStatus(NamespaceStatus.ARCHIVED);
+        when(rbacService.getUserRoleCodes("super-1")).thenReturn(Set.of("SUPER_ADMIN"));
+        when(namespaceService.getNamespaceBySlug("archived-team")).thenReturn(archivedNamespace);
+        when(searchQueryService.search(any())).thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search("skill", "archived-team", "newest", 0, 20, "super-1", Map.of());
+
+        ArgumentCaptor<SearchQuery> captor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(captor.capture());
+        assertEquals(1L, captor.getValue().namespaceId());
+        assertEquals(Set.of(1L), captor.getValue().visibilityScope().memberNamespaceIds());
+    }
+
+    @Test
     void search_shouldExcludeHiddenSkillsForRegularUsers() {
         Skill visibleSkill = new Skill(1L, "visible-skill", "owner-1", SkillVisibility.PUBLIC);
         setField(visibleSkill, "id", 10L);

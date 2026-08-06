@@ -401,6 +401,41 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void portalSearchShouldRequirePublishedNonYankedLatestWithoutDownloadReadiness() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                "demo",
+                null,
+                SearchVisibilityScope.anonymous(),
+                "newest",
+                0,
+                12,
+                List.of(),
+                false
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues()).allSatisfy(sql -> assertThat(sql)
+                .contains("JOIN skill_version latest ON latest.id = s.latest_version_id")
+                .contains("AND latest.status = 'PUBLISHED'")
+                .contains("AND latest.yanked_at IS NULL")
+                .doesNotContain("latest.download_ready = TRUE"));
+    }
+
+    @Test
     void installableLatestFilterShouldApplyToSearchAndCountQueries() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);

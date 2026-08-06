@@ -13,6 +13,7 @@ import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ public class SkillSearchAppService {
     private final NamespaceService namespaceService;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
     private final RbacService rbacService;
+    private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
     public SkillSearchAppService(
             SearchQueryService searchQueryService,
@@ -81,9 +83,10 @@ public class SkillSearchAppService {
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
 
-        Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles);
+        Set<String> platformRoles = userId != null ? rbacService.getUserRoleCodes(userId) : Set.of();
+        Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles, platformRoles);
 
-        SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
+        SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles, platformRoles, namespaceId);
 
         return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, labelSlugs, scope, false);
     }
@@ -96,35 +99,46 @@ public class SkillSearchAppService {
             int size,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
-        Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles);
-        SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
+        Set<String> platformRoles = userId != null ? rbacService.getUserRoleCodes(userId) : Set.of();
+        Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles, platformRoles);
+        SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles, platformRoles, namespaceId);
         return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, List.of(), scope, true);
     }
 
-    private Long resolveNamespaceId(String namespaceSlug, String userId, Map<Long, NamespaceRole> userNsRoles) {
+    private Long resolveNamespaceId(String namespaceSlug,
+                                    String userId,
+                                    Map<Long, NamespaceRole> userNsRoles,
+                                    Set<String> platformRoles) {
         if (namespaceSlug == null || namespaceSlug.isBlank()) {
             return null;
+        }
+        if (hasSuperAdminRole(platformRoles)) {
+            return namespaceService.getNamespaceBySlug(namespaceSlug).getId();
         }
         return namespaceService.getNamespaceBySlugForRead(namespaceSlug, userId, userNsRoles != null ? userNsRoles : Map.of()).getId();
     }
 
-    private SearchVisibilityScope buildVisibilityScope(String userId, Map<Long, NamespaceRole> userNsRoles) {
+    private SearchVisibilityScope buildVisibilityScope(String userId,
+                                                       Map<Long, NamespaceRole> userNsRoles,
+                                                       Set<String> platformRoles,
+                                                       Long selectedNamespaceId) {
         if (userId == null) {
             return SearchVisibilityScope.anonymous();
         }
 
         Map<Long, NamespaceRole> normalizedRoles = userNsRoles != null ? userNsRoles : Map.of();
-        Set<Long> memberNamespaceIds = normalizedRoles.keySet();
+        Set<Long> memberNamespaceIds = new HashSet<>(normalizedRoles.keySet());
+        if (hasSuperAdminRole(platformRoles) && selectedNamespaceId != null) {
+            memberNamespaceIds.add(selectedNamespaceId);
+        }
         Set<Long> adminNamespaceIds = normalizedRoles.entrySet().stream()
                 .filter(e -> e.getValue() == NamespaceRole.ADMIN)
                 .map(Map.Entry::getKey)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
         adminNamespaceIds.addAll(normalizedRoles.entrySet().stream()
                 .filter(e -> e.getValue() == NamespaceRole.OWNER)
                 .map(Map.Entry::getKey)
                 .toList());
-
-        Set<String> platformRoles = rbacService.getUserRoleCodes(userId);
 
         return new SearchVisibilityScope(
                 userId,
@@ -132,6 +146,10 @@ public class SkillSearchAppService {
                 adminNamespaceIds,
                 hasPlatformWideReadAccess(platformRoles)
         );
+    }
+
+    private boolean hasSuperAdminRole(Set<String> platformRoles) {
+        return platformRoles != null && platformRoles.contains(SUPER_ADMIN_ROLE);
     }
 
     private boolean hasPlatformWideReadAccess(Set<String> platformRoles) {

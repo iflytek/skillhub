@@ -5,13 +5,12 @@ import { useAuth } from '@/features/auth/use-auth'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { NamespacePicker } from '@/shared/components/namespace-picker'
 import { Pagination } from '@/shared/components/pagination'
 import { useArchiveSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
-import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { useMySkills, useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 import { useDebounce } from '@/shared/hooks/use-debounce'
 import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPendingOwnerPreview } from '@/shared/lib/skill-lifecycle'
@@ -22,8 +21,6 @@ import { ApiError } from '@/api/client'
 import { getMySkillEmptyStateKey, getMySkillFilters, type MySkillFilter } from './my-skill-filters'
 
 const PAGE_SIZE = 10
-const ALL_NAMESPACES_VALUE = '__all_namespaces__'
-
 /**
  * Dashboard page for skills owned by the current user.
  *
@@ -91,8 +88,6 @@ export function MySkillsPage() {
     q: keyword || undefined,
     namespace: namespaceFilter || undefined,
   })
-  const { data: namespaceOptions } = useMyNamespaces()
-
   const skills = skillPage?.items ?? []
   const totalPages = skillPage ? Math.max(Math.ceil(skillPage.total / skillPage.size), 1) : 1
   const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
@@ -302,24 +297,15 @@ export function MySkillsPage() {
             aria-label={t('mySkills.searchPlaceholder')}
             className="sm:max-w-md"
           />
-          <Select
-            value={namespaceFilter || ALL_NAMESPACES_VALUE}
-            onValueChange={(value) => {
-              updateSearch({ namespace: value === ALL_NAMESPACES_VALUE ? undefined : value, page: 0 })
-            }}
-          >
-            <SelectTrigger aria-label={t('mySkills.namespaceFilterLabel')} className="sm:max-w-[14rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_NAMESPACES_VALUE}>{t('mySkills.namespaceFilterAll')}</SelectItem>
-              {(namespaceOptions ?? []).map((ns: { id: number; slug: string }) => (
-                <SelectItem key={ns.id} value={ns.slug}>
-                  @{ns.slug}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="sm:w-[14rem]">
+            <NamespacePicker
+              value={namespaceFilter}
+              onValueChange={(value) => {
+                updateSearch({ namespace: value || undefined, page: 0 })
+              }}
+              emptyValueLabel={t('mySkills.namespaceFilterAll')}
+            />
+          </div>
           {hasActiveSearch ? (
             <Button
               type="button"

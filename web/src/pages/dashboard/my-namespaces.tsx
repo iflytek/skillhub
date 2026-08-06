@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
@@ -8,16 +8,19 @@ import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Pagination } from '@/shared/components/pagination'
 import { CreateNamespaceDialog } from '@/features/namespace/create-namespace-dialog'
 import {
   useArchiveNamespace,
   useDeleteNamespace,
   useFreezeNamespace,
-  useMyNamespaces,
+  useMyNamespacesPage,
   useRestoreNamespace,
   useUnfreezeNamespace,
 } from '@/shared/hooks/use-namespace-queries'
 import { toast } from '@/shared/lib/toast'
+
+const PAGE_SIZE = 20
 
 type PendingNamespaceAction =
   | { action: 'freeze'; slug: string; name: string }
@@ -139,6 +142,12 @@ export async function executeNamespaceAction(
   }
 }
 
+export function resolveValidNamespacePage(currentPage: number, total: number, size: number) {
+  const safeSize = Math.max(size, 1)
+  const lastPage = Math.max(Math.ceil(total / safeSize) - 1, 0)
+  return Math.min(Math.max(currentPage, 0), lastPage)
+}
+
 /**
  * Dashboard page for namespaces the current user can manage or review. It owns
  * namespace lifecycle actions because each action combines permissions, copy,
@@ -149,13 +158,26 @@ export function MyNamespacesPage() {
   const { t } = useTranslation()
   const { hasRole } = useAuth()
   const canCreateNamespace = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
+  const [page, setPage] = useState(0)
   const [pendingAction, setPendingAction] = useState<PendingNamespaceAction | null>(null)
-  const { data: namespaces, isLoading } = useMyNamespaces()
+  const { data: namespacePage, isLoading } = useMyNamespacesPage({ page, size: PAGE_SIZE })
   const freezeMutation = useFreezeNamespace()
   const unfreezeMutation = useUnfreezeNamespace()
   const archiveMutation = useArchiveNamespace()
   const restoreMutation = useRestoreNamespace()
   const deleteMutation = useDeleteNamespace()
+  const namespaces = namespacePage?.items ?? []
+  const totalPages = namespacePage ? Math.max(Math.ceil(namespacePage.total / namespacePage.size), 1) : 1
+
+  useEffect(() => {
+    if (!namespacePage) {
+      return
+    }
+    const validPage = resolveValidNamespacePage(page, namespacePage.total, namespacePage.size)
+    if (validPage !== page) {
+      setPage(validPage)
+    }
+  }, [namespacePage, page])
 
   const handleNamespaceClick = (slug: string) => {
     navigate({ to: `/space/${encodeURIComponent(slug)}` })
@@ -247,127 +269,134 @@ export function MyNamespacesPage() {
         ) : undefined}
       />
 
-      {namespaces && namespaces.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {namespaces.map((namespace, idx) => (
-            <Card
-              key={namespace.id}
-              data-testid={`namespace-card-${namespace.slug}`}
-              className={`p-6 cursor-pointer group animate-fade-up delay-${Math.min(idx + 1, 6)}`}
-              onClick={() => handleNamespaceClick(namespace.slug)}
-            >
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold font-heading text-lg group-hover:text-primary transition-colors">
-                        {namespace.displayName}
-                      </h3>
-                      <NamespaceBadge
-                        type={namespace.type}
-                        name={namespace.type === 'GLOBAL' ? t('myNamespaces.typeGlobal') : t('myNamespaces.typeTeam')}
-                      />
-                      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${resolveStatusClassName(namespace.status)}`}>
-                        {resolveStatusLabel(namespace.status)}
-                      </span>
-                    </div>
-                    {namespace.description && (
-                      <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
-                        {namespace.description}
-                      </p>
-                    )}
-                    <div className="text-sm text-muted-foreground font-mono">@{namespace.slug}</div>
-                    <div className="mt-3 rounded-lg border border-border/50 bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">
-                      {resolveHint(namespace.status, namespace.type)}
-                    </div>
-                    <div className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground/80">
-                      {t('myNamespaces.roleLabel')}: {namespace.currentUserRole ?? t('myNamespaces.roleUnknown')}
+      {namespaces.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {namespaces.map((namespace, idx) => (
+              <Card
+                key={namespace.id}
+                data-testid={`namespace-card-${namespace.slug}`}
+                className={`p-6 cursor-pointer group animate-fade-up delay-${Math.min(idx + 1, 6)}`}
+                onClick={() => handleNamespaceClick(namespace.slug)}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold font-heading text-lg group-hover:text-primary transition-colors">
+                          {namespace.displayName}
+                        </h3>
+                        <NamespaceBadge
+                          type={namespace.type}
+                          name={namespace.type === 'GLOBAL' ? t('myNamespaces.typeGlobal') : t('myNamespaces.typeTeam')}
+                        />
+                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${resolveStatusClassName(namespace.status)}`}>
+                          {resolveStatusLabel(namespace.status)}
+                        </span>
+                      </div>
+                      {namespace.description && (
+                        <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
+                          {namespace.description}
+                        </p>
+                      )}
+                      <div className="text-sm text-muted-foreground font-mono">@{namespace.slug}</div>
+                      <div className="mt-3 rounded-lg border border-border/50 bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">
+                        {resolveHint(namespace.status, namespace.type)}
+                      </div>
+                      <div className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground/80">
+                        {t('myNamespaces.roleLabel')}: {namespace.currentUserRole ?? t('myNamespaces.roleUnknown')}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex flex-wrap gap-3">
+                    {namespace.type === 'TEAM' && Boolean(namespace.currentUserRole) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => handleMembersClick(namespace.slug, e)}
+                      >
+                        {t('myNamespaces.manageMembers')}
+                      </Button>
+                    )}
+                    {Boolean(namespace.currentUserRole) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => handleReviewsClick(namespace.slug, e)}
+                      >
+                        {t('myNamespaces.reviewTasks')}
+                      </Button>
+                    )}
+                    {namespace.canFreeze && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPendingAction({ action: 'freeze', slug: namespace.slug, name: namespace.displayName })
+                        }}
+                      >
+                        {t('myNamespaces.freeze')}
+                      </Button>
+                    )}
+                    {namespace.canUnfreeze && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPendingAction({ action: 'unfreeze', slug: namespace.slug, name: namespace.displayName })
+                        }}
+                      >
+                        {t('myNamespaces.unfreeze')}
+                      </Button>
+                    )}
+                    {namespace.canArchive && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPendingAction({ action: 'archive', slug: namespace.slug, name: namespace.displayName })
+                        }}
+                      >
+                        {t('myNamespaces.archive')}
+                      </Button>
+                    )}
+                    {namespace.canRestore && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPendingAction({ action: 'restore', slug: namespace.slug, name: namespace.displayName })
+                        }}
+                      >
+                        {t('myNamespaces.restore')}
+                      </Button>
+                    )}
+                    {namespace.canDelete && (
+                      <Button
+                        data-testid={`delete-namespace-${namespace.slug}`}
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPendingAction({ action: 'delete', slug: namespace.slug, name: namespace.displayName })
+                        }}
+                      >
+                        {t('myNamespaces.delete')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {namespace.type === 'TEAM' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => handleMembersClick(namespace.slug, e)}
-                    >
-                      {t('myNamespaces.manageMembers')}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleReviewsClick(namespace.slug, e)}
-                  >
-                    {t('myNamespaces.reviewTasks')}
-                  </Button>
-                  {namespace.canFreeze && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingAction({ action: 'freeze', slug: namespace.slug, name: namespace.displayName })
-                      }}
-                    >
-                      {t('myNamespaces.freeze')}
-                    </Button>
-                  )}
-                  {namespace.canUnfreeze && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingAction({ action: 'unfreeze', slug: namespace.slug, name: namespace.displayName })
-                      }}
-                    >
-                      {t('myNamespaces.unfreeze')}
-                    </Button>
-                  )}
-                  {namespace.canArchive && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingAction({ action: 'archive', slug: namespace.slug, name: namespace.displayName })
-                      }}
-                    >
-                      {t('myNamespaces.archive')}
-                    </Button>
-                  )}
-                  {namespace.canRestore && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingAction({ action: 'restore', slug: namespace.slug, name: namespace.displayName })
-                      }}
-                    >
-                      {t('myNamespaces.restore')}
-                    </Button>
-                  )}
-                  {namespace.canDelete && (
-                    <Button
-                      data-testid={`delete-namespace-${namespace.slug}`}
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingAction({ action: 'delete', slug: namespace.slug, name: namespace.displayName })
-                      }}
-                    >
-                      {t('myNamespaces.delete')}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+          {namespacePage && namespacePage.total > namespacePage.size ? (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          ) : null}
+        </>
       ) : (
         <EmptyState
           title={t('myNamespaces.emptyTitle')}

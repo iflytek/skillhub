@@ -1,11 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole, BatchMemberResponse, PagedResponse } from '@/api/types'
-import { namespaceApi } from '@/api/client'
+import { namespaceApi, type MyNamespacePageParams } from '@/api/client'
 import { replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
 import { shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
-async function getMyNamespaces(): Promise<ManagedNamespace[]> {
-  return namespaceApi.listMine()
+const MY_NAMESPACES_PAGE_SIZE = 20
+
+function normalizeMyNamespacePageParams(params: MyNamespacePageParams = {}): MyNamespacePageParams {
+  const q = params.q?.trim()
+  const slug = params.slug?.trim()
+  return {
+    page: params.page ?? 0,
+    size: params.size ?? MY_NAMESPACES_PAGE_SIZE,
+    ...(params.status ? { status: params.status } : {}),
+    ...(params.type ? { type: params.type } : {}),
+    ...(q ? { q } : {}),
+    ...(slug ? { slug } : {}),
+    ...(params.sort?.length ? { sort: [...params.sort] } : {}),
+    ...(params.roles?.length ? { roles: [...params.roles] } : {}),
+  }
+}
+
+async function getMyNamespacesPage(params: MyNamespacePageParams): Promise<PagedResponse<ManagedNamespace>> {
+  return namespaceApi.listMinePage(params)
 }
 
 async function createNamespace(request: CreateNamespaceRequest): Promise<Namespace> {
@@ -51,10 +68,12 @@ function invalidateNamespaceQueries(queryClient: ReturnType<typeof useQueryClien
   queryClient.invalidateQueries({ queryKey: ['reviews'] })
 }
 
-export function useMyNamespaces() {
+export function useMyNamespacesPage(params: MyNamespacePageParams = {}, enabled = true) {
+  const normalizedParams = normalizeMyNamespacePageParams(params)
   return useQuery({
-    queryKey: ['namespaces', 'my'],
-    queryFn: getMyNamespaces,
+    queryKey: ['namespaces', 'my', normalizedParams],
+    queryFn: () => getMyNamespacesPage(normalizedParams),
+    enabled,
   })
 }
 

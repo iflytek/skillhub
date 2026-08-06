@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const navigateMock = vi.fn()
 const buttonRecords: Array<{ label: string; onClick?: ((event?: { stopPropagation: () => void }) => void) | undefined }> = []
 const useMySkillsMock = vi.fn()
+const useMyNamespacesPageMock = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -72,7 +73,7 @@ vi.mock('@/shared/hooks/use-user-queries', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
-  useMyNamespaces: () => ({ data: [] }),
+  useMyNamespacesPage: (...args: unknown[]) => useMyNamespacesPageMock(...args),
 }))
 
 vi.mock('@/shared/hooks/use-debounce', () => ({
@@ -114,6 +115,13 @@ describe('MySkillsPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     buttonRecords.length = 0
+    useMyNamespacesPageMock.mockReset()
+    useMyNamespacesPageMock.mockReturnValue({
+      data: { items: [], total: 0, page: 0, size: 20 },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
     useMySkillsMock.mockReturnValue({
       data: {
         items: [
@@ -135,6 +143,12 @@ describe('MySkillsPage', () => {
       },
       isLoading: false,
     })
+  })
+
+  it('loads only the first namespace picker page while the picker is closed', () => {
+    renderToStaticMarkup(createElement(MySkillsPage))
+
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({ page: 0, size: 20 }, false)
   })
 
   it('navigates to publish page with namespace and visibility when update is clicked', () => {

@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
-import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
-import { buildGlobalReviewsPath, canAccessReviewCenter } from '@/features/review/review-paths'
+import { buildGlobalReviewsPath, canAccessGlobalReviewCenter } from '@/features/review/review-paths'
+import { useNamespaceReviewEntry } from '@/features/review/use-namespace-review-entry'
 import { clearSessionScopedQueries } from '@/features/notification/notification-session'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { withBasePath } from '@/shared/lib/base-path'
@@ -26,7 +26,6 @@ interface UserMenuProps {
 export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { data: myNamespaces } = useMyNamespaces()
   const rootRef = useRef<HTMLDivElement | null>(null)
   const closeTimerRef = useRef<number | null>(null)
   const [isHovered, setIsHovered] = useState(false)
@@ -38,7 +37,9 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
   const isAuditor = hasRole('AUDITOR') || hasRole('SUPER_ADMIN')
   const isSuperAdmin = hasRole('SUPER_ADMIN')
-  const reviewCenterVisible = canAccessReviewCenter(user.platformRoles, myNamespaces)
+  const hasGlobalReviewAccess = canAccessGlobalReviewCenter(user.platformRoles)
+  const { namespaceReviewEntry } = useNamespaceReviewEntry(hasGlobalReviewAccess)
+  const reviewCenterVisible = hasGlobalReviewAccess || namespaceReviewEntry !== null
   const canChangePassword = user.canChangePassword === true
   const open = isHovered || isClickOpen
 

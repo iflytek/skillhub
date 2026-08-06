@@ -82,11 +82,21 @@
 | namespace MEMBER | 可读 | 可读 | 不可读 | 不可读 | 仅自己是 owner 时可读 |
 | skill owner | 可读 | 可读 | 可读 | 可读 | 可读 |
 | namespace ADMIN / OWNER | 可读 | 可读 | 可读 | 可读 | 不可读，除非本人也是 skill owner |
-| SKILL_ADMIN / SUPER_ADMIN（仅平台角色） | 与普通登录用户一致；普通读路径不会因为平台角色自动穿透 private / hidden / unpublished |
+| SKILL_ADMIN（仅平台角色） | 与普通登录用户一致；普通读路径不会因为平台角色自动穿透 private / hidden / unpublished |
+| SUPER_ADMIN（仅平台角色） | 可通过平台 namespace 读取语义读取已发布 `NAMESPACE_ONLY`；不可读 `PRIVATE`、`hidden=true`、未发布版本，除非同时满足 owner 或 namespace 管理者条件 |
 
 补充：
 - `hidden=true` 时，可读权限会收敛为“skill owner 或 namespace `ADMIN` / `OWNER`”
 - `visibility=PUBLIC` 也不意味着未发布 skill 可见；当 `latest_version_id` 为空时，只有 owner 能读
+- `SUPER_ADMIN` 的 namespace 读取语义用于平台可见性与详情巡检，可覆盖 archived namespace 的读取入口；它不会把非成员自动提升为 namespace 成员，也不会扩大成员管理、团队审核任务或 namespace 写权限
+
+#### 1.3.1.1 Namespace 读取与会话角色刷新
+
+- `GET /api/v1/me/namespaces` 保持历史数组响应；`GET /api/v1/me/namespaces/page` 提供分页响应 `{ items, total, page, size }`。
+- namespace 成员只看到自己所属 namespace；`SUPER_ADMIN` 可看到全部 `ACTIVE`、`FROZEN`、`ARCHIVED` namespace。
+- 非成员 `SUPER_ADMIN` 在 namespace 卡片与详情中的 `currentUserRole` 为空，成员管理、团队审核入口、冻结/归档/删除等写能力仍按 namespace membership 或专门平台治理权限判断。
+- 已登录 session 在受保护请求入口会用持久化平台角色刷新权限快照；授予或撤销 `SUPER_ADMIN` 后，namespace 读链路不依赖用户先访问 `/api/v1/auth/me` 才生效。
+- `/me/namespaces/page` 的分页 query 为 `page`、`size`、`sort`；`size` 后端上限为 100，`sort` 仅支持 `slug,asc` / `slug,desc`，默认 `slug,asc`。
 
 #### 1.3.2 Version 状态读取
 

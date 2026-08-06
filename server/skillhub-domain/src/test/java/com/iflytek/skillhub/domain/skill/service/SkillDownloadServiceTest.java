@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.zip.ZipInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -212,6 +213,56 @@ class SkillDownloadServiceTest {
         verify(skillRepository, never()).incrementDownloadCount(anyLong());
         verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
         verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
+    }
+
+    @Test
+    void testDownloadLatest_ShouldAllowSuperAdminForArchivedNamespaceOnlySkillWithoutMembership() throws Exception {
+        String namespaceSlug = "archived";
+        String skillSlug = "namespace-only-skill";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+        Set<String> platformRoles = Set.of("SUPER_ADMIN");
+
+        Namespace namespace = new Namespace(namespaceSlug, "Archived", "owner-1");
+        setId(namespace, 1L);
+        namespace.setStatus(com.iflytek.skillhub.domain.namespace.NamespaceStatus.ARCHIVED);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.NAMESPACE_ONLY);
+        setId(skill, 1L);
+        skill.setDisplayName("Namespace Only Skill");
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(10L);
+
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setDownloadReady(true);
+        ObjectMetadata metadata = new ObjectMetadata(4L, "application/zip", Instant.now());
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(visibilityChecker.canAccessForNamespaceRead(skill, "super-1", userNsRoles, true)).thenReturn(true);
+        when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+        when(objectStorageService.exists("packages/1/10/bundle.zip")).thenReturn(true);
+        when(objectStorageService.getMetadata("packages/1/10/bundle.zip")).thenReturn(metadata);
+        when(objectStorageService.getObject("packages/1/10/bundle.zip"))
+                .thenReturn(new ByteArrayInputStream("test".getBytes()));
+        when(objectStorageService.generatePresignedUrl(
+                eq("packages/1/10/bundle.zip"),
+                any(),
+                eq("Namespace Only Skill-1.0.0.zip")))
+                .thenReturn(null);
+
+        SkillDownloadService.DownloadResult result = service.downloadLatest(
+                namespaceSlug,
+                skillSlug,
+                "super-1",
+                userNsRoles,
+                platformRoles
+        );
+
+        assertEquals("Namespace Only Skill-1.0.0.zip", result.filename());
+        assertNotNull(result.openContent());
+        verify(skillRepository).incrementDownloadCount(1L);
+        verify(skillVersionStatsRepository).incrementDownloadCount(10L, 1L);
     }
 
     @Test

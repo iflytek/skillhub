@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller.portal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -22,6 +23,7 @@ import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.ratelimit.RateLimiter;
 import java.io.ByteArrayInputStream;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +61,7 @@ class DownloadRateLimitControllerTest {
     @Test
     void anonymousDownloadUsesIpAndSignedCookieBuckets() throws Exception {
         given(rateLimiter.tryAcquire(anyString(), anyInt(), anyInt())).willReturn(true);
-        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", null, Map.of()))
+        given(skillDownloadService.downloadVersion("global", "demo-skill", "1.0.0", null, Map.of(), Set.of()))
                 .willReturn(new SkillDownloadService.DownloadResult(
                         () -> new ByteArrayInputStream("zip".getBytes()),
                         "demo-skill-1.0.0.zip",
@@ -101,6 +103,7 @@ class DownloadRateLimitControllerTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value(429));
 
-        verify(skillDownloadService, never()).downloadVersion(anyString(), anyString(), anyString(), anyString(), any());
+        verify(skillDownloadService, never()).downloadVersion(
+                anyString(), anyString(), anyString(), anyString(), any(), anySet());
     }
 }

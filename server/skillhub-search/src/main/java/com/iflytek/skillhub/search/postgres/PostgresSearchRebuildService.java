@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchRebuildService;
 import com.iflytek.skillhub.search.SearchTextTokenizer;
@@ -92,11 +93,17 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
 
     @Override
     public void rebuildAll() {
-        List<SkillSearchDocument> documents = skillRepository.findAll().stream()
-                .filter(skill -> skill.getStatus() == SkillStatus.ACTIVE)
-                .map(this::toDocument)
-                .flatMap(Optional::stream)
-                .toList();
+        List<SkillSearchDocument> documents = new ArrayList<>();
+        for (Skill skill : skillRepository.findAll()) {
+            Optional<SkillSearchDocument> document = skill.getStatus() == SkillStatus.ACTIVE
+                    ? toDocument(skill)
+                    : Optional.empty();
+            if (document.isPresent()) {
+                documents.add(document.get());
+            } else {
+                searchIndexService.remove(skill.getId());
+            }
+        }
         searchIndexService.batchIndex(documents);
     }
 
@@ -116,18 +123,21 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
             return;
         }
 
-        toDocument(skillOpt.get()).ifPresent(searchIndexService::index);
+        Optional<SkillSearchDocument> document = toDocument(skillOpt.get());
+        if (document.isPresent()) {
+            searchIndexService.index(document.get());
+        } else {
+            searchIndexService.remove(skillId);
+        }
     }
 
-    private SearchIndexPayload buildSearchPayload(Skill skill) {
+    private SearchIndexPayload buildSearchPayload(Skill skill, SkillVersion latestVersion) {
         List<String> searchParts = new ArrayList<>();
         addPart(searchParts, skill.getSlug());
         addPart(searchParts, skill.getSummary());
 
         Set<String> keywords = new TreeSet<>();
-        resolveLatestVersion(skill)
-                .map(this::extractParsedMetadata)
-                .map(metadata -> metadata.get("frontmatter"))
+        Optional.ofNullable(extractParsedMetadata(latestVersion).get("frontmatter"))
                 .map(this::asMap)
                 .ifPresent(frontmatter -> appendFrontmatter(frontmatter, keywords, searchParts));
         appendLabelKeywords(skill.getId(), keywords);
@@ -138,11 +148,13 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
         );
     }
 
-    private Optional<SkillVersion> resolveLatestVersion(Skill skill) {
+    private Optional<SkillVersion> resolvePublishedLatestVersion(Skill skill) {
         if (skill.getLatestVersionId() == null) {
             return Optional.empty();
         }
-        return skillVersionRepository.findById(skill.getLatestVersionId());
+        return skillVersionRepository.findById(skill.getLatestVersionId())
+                .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED)
+                .filter(version -> version.getYankedAt() == null);
     }
 
     private Map<String, Object> extractParsedMetadata(SkillVersion version) {
@@ -269,13 +281,17 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     }
 
     private Optional<SkillSearchDocument> toDocument(Skill skill) {
+        Optional<SkillVersion> latestVersion = resolvePublishedLatestVersion(skill);
+        if (latestVersion.isEmpty()) {
+            return Optional.empty();
+        }
         Optional<Namespace> namespaceOpt = namespaceRepository.findById(skill.getNamespaceId());
         if (namespaceOpt.isEmpty()) {
             return Optional.empty();
         }
 
         Namespace namespace = namespaceOpt.get();
-        SearchIndexPayload payload = buildSearchPayload(skill);
+        SearchIndexPayload payload = buildSearchPayload(skill, latestVersion.get());
 
         return Optional.of(new SkillSearchDocument(
                 skill.getId(),

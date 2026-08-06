@@ -61,6 +61,7 @@ export interface SeedSkillOptions {
   name?: string
   description?: string
   version?: string
+  visibility?: 'PUBLIC' | 'NAMESPACE_ONLY' | 'PRIVATE'
   readmeHeading?: string
   readmeBody?: string
   extraFiles?: Array<{
@@ -575,7 +576,7 @@ export class E2eTestDataBuilder {
             mimeType: 'application/zip',
             buffer: zipBuffer,
           },
-          visibility: 'PUBLIC',
+          visibility: options?.visibility ?? 'PUBLIC',
         },
         headers: await csrfHeaders(this.page),
       }),

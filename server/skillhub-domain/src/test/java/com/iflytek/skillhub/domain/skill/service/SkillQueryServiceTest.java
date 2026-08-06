@@ -203,6 +203,63 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldAllowSuperAdminToReadArchivedNamespaceOnlySkillWithoutMembership() throws Exception {
+        String namespaceSlug = "archived-team";
+        String skillSlug = "namespace-only-skill";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Archived Team", "owner-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.NAMESPACE_ONLY);
+        setId(skill, 1L);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(version, 11L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(version));
+        when(userAccountRepository.findById("owner-1")).thenReturn(Optional.empty());
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(
+                namespaceSlug,
+                skillSlug,
+                "super-1",
+                Map.of(),
+                Set.of("SUPER_ADMIN")
+        );
+
+        assertEquals(skillSlug, result.slug());
+        assertFalse(result.canManageLifecycle());
+    }
+
+    @Test
+    void testGetSkillDetail_ShouldDenySuperAdminArchivedPublicSkillWithoutMembership() throws Exception {
+        String namespaceSlug = "active-team";
+        String skillSlug = "archived-public-skill";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Active Team", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setLatestVersionId(11L);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+
+        assertThrows(DomainForbiddenException.class, () -> service.getSkillDetail(
+                namespaceSlug,
+                skillSlug,
+                "super-1",
+                Map.of(),
+                Set.of("SUPER_ADMIN")
+        ));
+    }
+
+    @Test
     void testListSkillsByNamespace() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";
@@ -559,6 +616,41 @@ class SkillQueryServiceTest {
 
         assertEquals(List.of("1.0.0", "1.2.0", "1.1.0"),
                 result.getContent().stream().map(SkillVersion::getVersion).toList());
+    }
+
+    @Test
+    void testListVersions_ShouldAllowSuperAdminReadWithoutGrantingLifecycleManagement() throws Exception {
+        String namespaceSlug = "archived-team";
+        String skillSlug = "namespace-only-skill";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Archived Team", "owner-1");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, "owner-1", SkillVisibility.NAMESPACE_ONLY);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(10L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", "owner-1");
+        setId(published, 10L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
+                .thenReturn(List.of(published));
+
+        Page<SkillVersion> result = service.listVersions(
+                namespaceSlug,
+                skillSlug,
+                "super-1",
+                Map.of(),
+                PageRequest.of(0, 20),
+                Set.of("SUPER_ADMIN")
+        );
+
+        assertEquals(List.of("1.0.0"),
+                result.getContent().stream().map(SkillVersion::getVersion).toList());
+        verify(skillVersionRepository, never()).findBySkillId(1L);
     }
 
     @Test

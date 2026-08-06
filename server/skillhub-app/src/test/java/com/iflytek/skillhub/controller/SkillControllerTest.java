@@ -20,11 +20,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,7 +59,8 @@ class SkillControllerTest {
                 eq("demo"),
                 eq("1.0.0"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenReturn(new SkillQueryService.SkillVersionDetailDTO(
                         10L,
                         "1.0.0",
@@ -87,7 +90,8 @@ class SkillControllerTest {
                 eq("demo"),
                 eq("1.0.0"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenReturn(new SkillQueryService.SkillVersionDetailDTO(
                         10L,
                         "1.0.0",
@@ -122,7 +126,8 @@ class SkillControllerTest {
                 eq("latest"),
                 eq(null),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenReturn(new SkillQueryService.ResolvedVersionDTO(
                         1L,
                         "team",
@@ -150,7 +155,8 @@ class SkillControllerTest {
                 eq("team"),
                 eq("demo"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenReturn(new SkillQueryService.SkillDetailDTO(
                         1L,
                         "demo",
@@ -198,12 +204,38 @@ class SkillControllerTest {
                 eq("team"),
                 eq("demo"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenThrow(new DomainForbiddenException("error.namespace.archived", "team"));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void getSkillDetailShouldForwardPlatformRoles() throws Exception {
+        Set<String> platformRoles = Set.of("SUPER_ADMIN");
+        when(skillQueryService.getSkillDetail(
+                eq("team"),
+                eq("demo"),
+                eq("super-1"),
+                eq(Map.<Long, NamespaceRole>of()),
+                eq(platformRoles)))
+                .thenThrow(new DomainForbiddenException("test.platformRoles.forwarded"));
+
+        mockMvc.perform(get("/api/web/skills/team/demo")
+                        .requestAttr("userId", "super-1")
+                        .requestAttr("userNsRoles", Map.of())
+                        .requestAttr("platformRoles", platformRoles))
+                .andExpect(status().isForbidden());
+
+        verify(skillQueryService).getSkillDetail(
+                "team",
+                "demo",
+                "super-1",
+                Map.of(),
+                platformRoles);
     }
 
     @Test
@@ -213,7 +245,8 @@ class SkillControllerTest {
                 eq("demo"),
                 eq("latest"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenReturn(List.of(new SkillFile(20L, "README.md", 32L, "text/markdown", "hash", "key")));
 
         mockMvc.perform(get("/api/v1/skills/team/demo/tags/latest/files"))
@@ -232,7 +265,8 @@ class SkillControllerTest {
                 eq("demo"),
                 eq((String) null),
                 eq(Map.<Long, NamespaceRole>of()),
-                any()))
+                any(),
+                anySet()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(version)));
         when(skillQueryService.isDownloadAvailable(version)).thenReturn(false);
 
@@ -249,7 +283,8 @@ class SkillControllerTest {
                 eq("1.0.0"),
                 eq("1.1.0"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenReturn(new SkillQueryService.SkillVersionCompareDTO(
                         "1.0.0",
                         "1.1.0",
@@ -292,7 +327,8 @@ class SkillControllerTest {
                 eq("1.0.0"),
                 eq("1.0.0"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()),
+                anySet()))
                 .thenThrow(new DomainBadRequestException("error.skill.version.compare.same"));
 
         mockMvc.perform(get("/api/v1/skills/team/demo/versions/compare")

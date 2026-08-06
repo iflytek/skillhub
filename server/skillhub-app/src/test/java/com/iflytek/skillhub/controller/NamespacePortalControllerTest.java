@@ -1,7 +1,12 @@
 package com.iflytek.skillhub.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
+import com.iflytek.skillhub.auth.entity.Role;
+import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceGovernanceService;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
@@ -24,19 +29,26 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -52,6 +64,9 @@ class NamespacePortalControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private NamespaceService namespaceService;
@@ -77,6 +92,185 @@ class NamespacePortalControllerTest {
     @MockBean
     private UserAccountRepository userAccountRepository;
 
+    @MockBean
+    private UserRoleBindingRepository userRoleBindingRepository;
+
+    @Test
+    void listNamespaces_superAdminReturnsAllActiveNamespacesWithoutMembership() throws Exception {
+        Namespace teamA = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        Namespace teamB = namespace(2L, "team-b", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+        given(namespaceRepository.findByStatus(eq(NamespaceStatus.ACTIVE), any()))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(
+                        List.of(teamA, teamB),
+                        org.springframework.data.domain.PageRequest.of(0, 20),
+                        2
+                ));
+
+        mockMvc.perform(get("/api/v1/namespaces")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].slug").value("team-a"))
+                .andExpect(jsonPath("$.data.items[1].slug").value("team-b"))
+                .andExpect(jsonPath("$.data.total").value(2));
+    }
+
+    @Test
+    void listMyNamespaces_superAdminKeepsLegacyArrayContract() throws Exception {
+        Namespace active = namespace(1L, "active", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        Namespace archived = namespace(3L, "archived", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+        given(namespaceRepository.findAll(any()))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(
+                        List.of(active, archived),
+                        org.springframework.data.domain.PageRequest.of(0, 2),
+                        2
+                ));
+
+        mockMvc.perform(get("/api/v1/me/namespaces")
+                        .param("page", "0")
+                        .param("size", "2")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].slug").value("active"))
+                .andExpect(jsonPath("$.data[0].currentUserRole").doesNotExist())
+                .andExpect(jsonPath("$.data[1].slug").value("archived"))
+                .andExpect(jsonPath("$.data.items").doesNotExist());
+    }
+
+    @Test
+    void listMyNamespacesPage_superAdminReturnsPagedNamespacesWithoutMembership() throws Exception {
+        Namespace active = namespace(1L, "active", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        Namespace archived = namespace(3L, "archived", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+        given(namespaceRepository.search(eq(null), eq(null), eq(null), eq(null), any()))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(
+                        List.of(active, archived),
+                        org.springframework.data.domain.PageRequest.of(0, 2),
+                        3
+                ));
+
+        mockMvc.perform(get("/api/web/me/namespaces/page")
+                        .param("page", "0")
+                        .param("size", "2")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].slug").value("active"))
+                .andExpect(jsonPath("$.data.items[0].currentUserRole").doesNotExist())
+                .andExpect(jsonPath("$.data.items[1].slug").value("archived"))
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(2));
+    }
+
+    @Test
+    void listMyNamespacesPage_bindsAndAppliesOptionalFilters() throws Exception {
+        Namespace active = namespace(1L, "team-ai", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("owner-1"))
+                .willReturn(List.of(new NamespaceMember(1L, "owner-1", NamespaceRole.OWNER)));
+        given(namespaceRepository.searchByIdIn(
+                eq(List.of(1L)),
+                eq(NamespaceStatus.ACTIVE),
+                eq(NamespaceType.TEAM),
+                eq("team"),
+                eq("team-ai"),
+                any()
+        )).willReturn(new org.springframework.data.domain.PageImpl<>(
+                List.of(active),
+                org.springframework.data.domain.PageRequest.of(0, 20),
+                1
+        ));
+
+        mockMvc.perform(get("/api/v1/me/namespaces/page")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("status", "ACTIVE")
+                        .param("type", "TEAM")
+                        .param("q", "team")
+                        .param("slug", "team-ai")
+                        .param("roles", "OWNER", "ADMIN")
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].slug").value("team-ai"))
+                .andExpect(jsonPath("$.data.items[0].currentUserRole").value("OWNER"))
+                .andExpect(jsonPath("$.data.total").value(1));
+    }
+
+    @Test
+    void listMyNamespacesPage_refreshesGrantedSuperAdminRoleForExistingSession() throws Exception {
+        Namespace active = namespace(1L, "active", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        Namespace archived = namespace(2L, "archived", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
+        PlatformPrincipal stalePrincipal = principal("target-1", Set.of("USER"));
+        MockHttpSession session = sessionWithPrincipal(stalePrincipal);
+
+        given(userRoleBindingRepository.findByUserId("target-1"))
+                .willReturn(List.of(new UserRoleBinding("target-1", role("SUPER_ADMIN"))));
+        given(namespaceMemberRepository.findByUserId("target-1")).willReturn(List.of());
+        given(namespaceRepository.search(eq(null), eq(null), eq(null), eq(null), any()))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(
+                        List.of(active, archived),
+                        org.springframework.data.domain.PageRequest.of(0, 20),
+                        2
+                ));
+
+        mockMvc.perform(get("/api/v1/me/namespaces/page")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .session(session)
+                        .with(auth(stalePrincipal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].slug").value("active"))
+                .andExpect(jsonPath("$.data.items[1].slug").value("archived"))
+                .andExpect(jsonPath("$.data.total").value(2));
+
+        PlatformPrincipal refreshedPrincipal = (PlatformPrincipal) session.getAttribute("platformPrincipal");
+        assertThat(refreshedPrincipal.platformRoles()).containsExactlyInAnyOrder("SUPER_ADMIN");
+        assertThat(sessionAuthorities(session)).containsExactly("ROLE_SUPER_ADMIN");
+    }
+
+    @Test
+    void listMyNamespacesPage_refreshesRevokedSuperAdminRoleForExistingSession() throws Exception {
+        PlatformPrincipal stalePrincipal = principal("target-2", Set.of("SUPER_ADMIN"));
+        MockHttpSession session = sessionWithPrincipal(stalePrincipal);
+
+        given(userRoleBindingRepository.findByUserId("target-2")).willReturn(List.of());
+        given(namespaceMemberRepository.findByUserId("target-2")).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/me/namespaces/page")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .session(session)
+                        .with(auth(stalePrincipal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        verify(namespaceRepository, never()).search(eq(null), eq(null), eq(null), eq(null), any());
+        PlatformPrincipal refreshedPrincipal = (PlatformPrincipal) session.getAttribute("platformPrincipal");
+        assertThat(refreshedPrincipal.platformRoles()).containsExactly("USER");
+        assertThat(sessionAuthorities(session)).containsExactly("ROLE_USER");
+    }
+
+    @Test
+    void openApi_myNamespacesPageExposesFlatPagingParameters() throws Exception {
+        String body = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        JsonNode document = objectMapper.readTree(body);
+
+        assertMyNamespacesPageParameters(document, "/api/v1/me/namespaces/page");
+        assertMyNamespacesPageParameters(document, "/api/web/me/namespaces/page");
+    }
+
     @Test
     void listMyNamespaces_returnsFrozenAndArchivedNamespacesWithCurrentRole() throws Exception {
         Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
@@ -99,6 +293,20 @@ class NamespacePortalControllerTest {
     void getNamespace_requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/namespaces/team-a"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getNamespace_superAdminReadsNamespaceWithoutMembership() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+
+        mockMvc.perform(get("/api/v1/namespaces/team-a")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("team-a"));
     }
 
     @Test
@@ -335,7 +543,21 @@ class NamespacePortalControllerTest {
     }
 
     private RequestPostProcessor auth(String userId, Set<String> platformRoles) {
-        PlatformPrincipal principal = new PlatformPrincipal(
+        PlatformPrincipal principal = principal(userId, platformRoles);
+        return auth(principal);
+    }
+
+    private RequestPostProcessor auth(PlatformPrincipal principal) {
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                authorities(principal.platformRoles())
+        );
+        return authentication(authenticationToken);
+    }
+
+    private PlatformPrincipal principal(String userId, Set<String> platformRoles) {
+        return new PlatformPrincipal(
                 userId,
                 userId,
                 userId + "@example.com",
@@ -343,12 +565,55 @@ class NamespacePortalControllerTest {
                 "session",
                 platformRoles
         );
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                principal,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-        return authentication(authenticationToken);
+    }
+
+    private MockHttpSession sessionWithPrincipal(PlatformPrincipal principal) {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("platformPrincipal", principal);
+        return session;
+    }
+
+    private List<SimpleGrantedAuthority> authorities(Set<String> platformRoles) {
+        Set<String> roles = platformRoles == null || platformRoles.isEmpty() ? Set.of("USER") : platformRoles;
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .toList();
+    }
+
+    private List<String> sessionAuthorities(MockHttpSession session) {
+        SecurityContext context = (SecurityContext) session.getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+        return context.getAuthentication().getAuthorities().stream()
+                .map(Object::toString)
+                .toList();
+    }
+
+    private void assertMyNamespacesPageParameters(JsonNode document, String path) {
+        JsonNode parameters = document.at("/paths/" + escapeJsonPointer(path) + "/get/parameters");
+        assertThat(parameters.isArray()).isTrue();
+        List<String> parameterNames = parameterNames(parameters);
+        assertThat(parameterNames)
+                .contains("page", "size", "sort", "status", "type", "q", "slug", "roles")
+                .doesNotContain("pageable");
+        assertThat(parameter(parameters, "page").path("schema").path("type").asText()).isEqualTo("integer");
+        assertThat(parameter(parameters, "size").path("schema").path("type").asText()).isEqualTo("integer");
+    }
+
+    private List<String> parameterNames(JsonNode parameters) {
+        return java.util.stream.StreamSupport.stream(parameters.spliterator(), false)
+                .map(parameter -> parameter.path("name").asText())
+                .toList();
+    }
+
+    private JsonNode parameter(JsonNode parameters, String name) {
+        return java.util.stream.StreamSupport.stream(parameters.spliterator(), false)
+                .filter(parameter -> name.equals(parameter.path("name").asText()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private String escapeJsonPointer(String path) {
+        return path.replace("~", "~0").replace("/", "~1");
     }
 
     private Namespace namespace(Long id, String slug, NamespaceStatus status, NamespaceType type) {
@@ -367,5 +632,12 @@ class NamespacePortalControllerTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Role role(String code) {
+        Role role = new Role();
+        ReflectionTestUtils.setField(role, "code", code);
+        ReflectionTestUtils.setField(role, "name", code);
+        return role;
     }
 }

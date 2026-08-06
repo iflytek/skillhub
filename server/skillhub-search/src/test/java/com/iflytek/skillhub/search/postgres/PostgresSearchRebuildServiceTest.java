@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.search.SearchIndexService;
 import com.iflytek.skillhub.search.SearchTextTokenizer;
@@ -21,15 +22,143 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PostgresSearchRebuildServiceTest {
+
+    @Test
+    void rebuildAll_shouldRemoveDocumentWhenLatestVersionIsNotPublished() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "private-upload", "owner-1", SkillVisibility.PRIVATE);
+        setField(skill, "id", 42L);
+        skill.setLatestVersionId(99L);
+
+        SkillVersion version = new SkillVersion(42L, "1.0.0", "owner-1");
+        version.setStatus(SkillVersionStatus.UPLOADED);
+
+        when(skillRepository.findAll()).thenReturn(List.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(
+                new Namespace("team-ai", "Team AI", "owner-1")
+        ));
+        when(skillVersionRepository.findById(99L)).thenReturn(Optional.of(version));
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildAll();
+
+        verify(searchIndexService).remove(42L);
+        verify(searchIndexService).batchIndex(List.of());
+        verify(searchIndexService, never()).index(any());
+    }
+
+    @Test
+    void rebuildBySkill_shouldRemoveDocumentWhenLatestVersionIsNotPublished() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "private-upload", "owner-1", SkillVisibility.PRIVATE);
+        setField(skill, "id", 42L);
+        skill.setLatestVersionId(99L);
+
+        SkillVersion version = new SkillVersion(42L, "1.0.0", "owner-1");
+        version.setStatus(SkillVersionStatus.UPLOADED);
+
+        when(skillRepository.findById(42L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(
+                new Namespace("team-ai", "Team AI", "owner-1")
+        ));
+        when(skillVersionRepository.findById(99L)).thenReturn(Optional.of(version));
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildBySkill(42L);
+
+        verify(searchIndexService).remove(42L);
+        verify(searchIndexService, never()).index(any());
+    }
+
+    @Test
+    void rebuildBySkill_shouldRemoveDocumentWhenLatestPublishedVersionIsYanked() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "yanked", "owner-1", SkillVisibility.PUBLIC);
+        setField(skill, "id", 42L);
+        skill.setLatestVersionId(99L);
+
+        SkillVersion version = new SkillVersion(42L, "1.0.0", "owner-1");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setYankedAt(Instant.parse("2026-07-28T00:00:00Z"));
+
+        when(skillRepository.findById(42L)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(
+                new Namespace("team-ai", "Team AI", "owner-1")
+        ));
+        when(skillVersionRepository.findById(99L)).thenReturn(Optional.of(version));
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildBySkill(42L);
+
+        verify(searchIndexService).remove(42L);
+        verify(searchIndexService, never()).index(any());
+    }
+
+    @Test
+    void rebuildBySkill_shouldRemoveDocumentWhenNoPublishedVersionExists() {
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillVersionRepository skillVersionRepository = mock(SkillVersionRepository.class);
+        SearchIndexService searchIndexService = mock(SearchIndexService.class);
+
+        Skill skill = new Skill(7L, "pending-only", "owner-1", SkillVisibility.NAMESPACE_ONLY);
+        setField(skill, "id", 42L);
+        when(skillRepository.findById(42L)).thenReturn(Optional.of(skill));
+
+        PostgresSearchRebuildService service = newService(
+                skillRepository,
+                namespaceRepository,
+                skillVersionRepository,
+                searchIndexService
+        );
+
+        service.rebuildBySkill(42L);
+
+        verify(searchIndexService).remove(42L);
+        verify(searchIndexService, never()).index(any());
+    }
 
     @Test
     void rebuildBySkill_shouldIndexFrontmatterFieldsAndKeywordsWithoutBody() {
@@ -46,6 +175,7 @@ class PostgresSearchRebuildServiceTest {
         Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
 
         SkillVersion version = new SkillVersion(1L, "1.2.0", "owner-1");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
         version.setParsedMetadataJson("""
                 {
                   "name": "Smart Agent",
@@ -116,6 +246,7 @@ class PostgresSearchRebuildServiceTest {
         Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
 
         SkillVersion latestVersion = new SkillVersion(1L, "1.3.0", "owner-1");
+        latestVersion.setStatus(SkillVersionStatus.PUBLISHED);
         latestVersion.setParsedMetadataJson("""
                 {
                   "name": "Smart Agent",
@@ -173,6 +304,7 @@ class PostgresSearchRebuildServiceTest {
         Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
 
         SkillVersion version = new SkillVersion(1L, "1.4.0", "owner-1");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
         version.setParsedMetadataJson("""
                 {
                   "name": "Smart Agent",
@@ -231,6 +363,7 @@ class PostgresSearchRebuildServiceTest {
 
         Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
         SkillVersion version = new SkillVersion(1L, "1.5.0", "owner-1");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
         version.setParsedMetadataJson("""
                 {
                   "name": "Smart Agent",
@@ -283,6 +416,7 @@ class PostgresSearchRebuildServiceTest {
 
         Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
         SkillVersion version = new SkillVersion(1L, "1.6.0", "owner-1");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
         version.setParsedMetadataJson("""
                 {
                   "frontmatter": {

@@ -74,9 +74,9 @@ vi.mock('@/features/auth/use-auth', () => ({
   useAuth: () => ({ hasRole: hasRoleMock, user: userMock }),
 }))
 
-const useMyNamespacesMock = vi.fn()
+const useMyNamespacesPageMock = vi.fn()
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
-  useMyNamespaces: () => useMyNamespacesMock(),
+  useMyNamespacesPage: (...args: unknown[]) => useMyNamespacesPageMock(...args),
 }))
 
 vi.mock('@/shared/components/dashboard-page-header', () => ({
@@ -114,11 +114,11 @@ describe('ReviewsPage', () => {
     paginationProps.length = 0
     hasRoleMock.mockReset()
     useReviewListMock.mockReset()
-    useMyNamespacesMock.mockReset()
+    useMyNamespacesPageMock.mockReset()
     hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN')
     userMock.platformRoles = ['SKILL_ADMIN']
-    useMyNamespacesMock.mockReturnValue({
-      data: [],
+    useMyNamespacesPageMock.mockReturnValue({
+      data: { items: [], total: 0, page: 0, size: 1 },
       isLoading: false,
     })
     useSearchMock.mockReturnValue({})
@@ -193,5 +193,37 @@ describe('ReviewsPage', () => {
 
     expect(useReviewListMock).toHaveBeenCalled()
     expect(useReviewListMock.mock.calls.every((call) => call[5] === false)).toBe(true)
+  })
+
+  it('skips namespace loading for super admins with global review access', () => {
+    hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN' || role === 'USER_ADMIN' || role === 'SUPER_ADMIN')
+    userMock.platformRoles = ['SUPER_ADMIN']
+
+    renderToStaticMarkup(createElement(ReviewsPage))
+
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({
+      page: 0,
+      size: 1,
+      status: 'ACTIVE',
+      type: 'TEAM',
+      roles: ['OWNER', 'ADMIN'],
+    }, false)
+  })
+
+  it('renders a recoverable error when namespace review access cannot be loaded', () => {
+    userMock.platformRoles = ['USER']
+    hasRoleMock.mockReturnValue(false)
+    useMyNamespacesPageMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('network down'),
+      refetch: vi.fn(),
+    })
+
+    const html = renderToStaticMarkup(createElement(ReviewsPage))
+
+    expect(html).toContain('reviews.namespaceLoadError')
+    expect(html).toContain('reviews.retryNamespaceLoad')
+    expect(html).not.toContain('Loading...')
   })
 })

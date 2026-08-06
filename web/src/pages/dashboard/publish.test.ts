@@ -1,9 +1,10 @@
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const useSearchMock = vi.fn()
 const selectRecords: Array<{ value?: string }> = []
+const useMyNamespacesPageMock = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
@@ -25,7 +26,7 @@ vi.mock('@/features/publish/upload-zone', () => ({
 }))
 
 vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
+  Button: ({ children, ...props }: { children: ReactNode }) => createElement('button', props, children),
 }))
 
 vi.mock('@/shared/ui/select', () => ({
@@ -53,7 +54,7 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
-  useMyNamespaces: () => ({ data: [], isLoading: false }),
+  useMyNamespacesPage: (...args: unknown[]) => useMyNamespacesPageMock(...args),
 }))
 
 vi.mock('@/shared/components/dashboard-page-header', () => ({
@@ -75,6 +76,24 @@ import { PublishPage } from './publish'
 describe('PublishPage', () => {
   beforeEach(() => {
     selectRecords.length = 0
+    useMyNamespacesPageMock.mockReset()
+    useMyNamespacesPageMock.mockImplementation((params: { slug?: string }) => ({
+      data: {
+        items: params.slug ? [{
+          id: 1,
+          slug: params.slug,
+          displayName: 'Team AI',
+          status: 'ACTIVE',
+          type: 'TEAM',
+        }] : [],
+        total: params.slug ? 1 : 0,
+        page: 0,
+        size: params.slug ? 1 : 20,
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    }))
     useSearchMock.mockReturnValue({
       namespace: '  team-ai  ',
       visibility: 'private',
@@ -84,8 +103,14 @@ describe('PublishPage', () => {
   it('prefills namespace and visibility from route search params', () => {
     renderToStaticMarkup(createElement(PublishPage))
 
-    expect(selectRecords[0]?.value).toBe('team-ai')
-    expect(selectRecords[1]?.value).toBe('PRIVATE')
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({
+      page: 0,
+      size: 1,
+      status: 'ACTIVE',
+      slug: 'team-ai',
+    }, true)
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({ page: 0, size: 20, status: 'ACTIVE' }, false)
+    expect(selectRecords[0]?.value).toBe('PRIVATE')
   })
 
   it('falls back to public visibility when search params are missing', () => {
@@ -93,8 +118,36 @@ describe('PublishPage', () => {
 
     renderToStaticMarkup(createElement(PublishPage))
 
-    expect(selectRecords[0]?.value).toBe('__select_namespace__')
-    expect(selectRecords[1]?.value).toBe('PUBLIC')
+    expect(useMyNamespacesPageMock).toHaveBeenCalledWith({ page: 0, size: 1, status: 'ACTIVE' }, false)
+    expect(selectRecords[0]?.value).toBe('PUBLIC')
+  })
+
+  it('marks an archived or unavailable prefilled namespace as invalid', () => {
+    useMyNamespacesPageMock.mockReturnValue({
+      data: { items: [], total: 0, page: 0, size: 1 },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+
+    const html = renderToStaticMarkup(createElement(PublishPage))
+
+    expect(html).toContain('publish.namespaceUnavailable')
+  })
+
+  it('distinguishes a namespace validation request failure from an unavailable namespace', () => {
+    useMyNamespacesPageMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('network down'),
+      refetch: vi.fn(),
+    })
+
+    const html = renderToStaticMarkup(createElement(PublishPage))
+
+    expect(html).toContain('publish.namespaceValidationError')
+    expect(html).toContain('publish.retryNamespaceValidation')
+    expect(html).not.toContain('publish.namespaceUnavailable')
   })
 
   it('exports a named component function', () => {
