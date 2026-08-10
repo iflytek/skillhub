@@ -30,6 +30,7 @@ function isAccountDisabledError(error: ApiError): boolean {
   const accountDisabledMessages = [
     i18n.t('apiError.auth.accountDisabled'),
     i18n.getFixedT('en')('apiError.auth.accountDisabled'),
+    i18n.getFixedT('ru')('apiError.auth.accountDisabled'),
     i18n.getFixedT('zh')('apiError.auth.accountDisabled'),
   ]
   const normalizedServerMessage = (error.serverMessage ?? '').toLowerCase()
@@ -43,6 +44,8 @@ function isAccountDisabledError(error: ApiError): boolean {
     || normalizedMessage.includes('disabled')
     || (error.serverMessage ?? '').includes('禁用')
     || error.message.includes('禁用')
+    || (error.serverMessage ?? '').toLowerCase().includes('отключ')
+    || error.message.toLowerCase().includes('отключ')
 }
 
 export function handleApiError(error: unknown): void {
