@@ -33,7 +33,7 @@ class OAuth2AuthorizationRequestResolverTest {
         ClientRegistration feishu = ClientRegistration.withRegistrationId("feishu")
                 .clientId("cli_test123")
                 .clientSecret("secret")
-                .authorizationUri("https://open.feishu.cn/open-apis/authen/v1/authorize")
+                .authorizationUri("https://accounts.feishu.cn/open-apis/authen/v1/authorize")
                 .tokenUri("https://open.feishu.cn/open-apis/authen/v2/oauth/token")
                 .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
                 .userInfoUri("https://open.feishu.cn/open-apis/authen/v1/user_info")
@@ -80,18 +80,18 @@ class OAuth2AuthorizationRequestResolverTest {
     }
 
     @Test
-    void resolve_feishu_usesAppIdInsteadOfClientId() {
+    void resolve_feishu_usesStandardOAuth2Parameters() {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/feishu");
 
         var authorizationRequest = resolver.resolve(request, "feishu");
 
         assertThat(authorizationRequest).isNotNull();
         String uri = authorizationRequest.getAuthorizationRequestUri();
-        assertThat(uri).contains("app_id=cli_test123");
+        assertThat(uri).startsWith("https://accounts.feishu.cn/open-apis/authen/v1/authorize");
+        assertThat(uri).contains("client_id=cli_test123");
         assertThat(uri).contains("response_type=code");
         assertThat(uri).contains("state=");
-        assertThat(uri).doesNotContain("client_id=");
-        assertThat(uri).doesNotContain("scope=");
+        assertThat(uri).doesNotContain("app_id=");
     }
 
     @Test

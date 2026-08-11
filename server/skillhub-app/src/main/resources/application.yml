@@ -87,7 +87,7 @@ spring:
             user-info-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/api/v4/user
             user-name-attribute: username
           feishu:
-            authorization-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/authorize
+            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize
             token-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v2/oauth/token
             user-info-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info
             user-name-attribute: open_id

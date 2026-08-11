@@ -31,7 +31,8 @@ class FeishuClaimsExtractorTest {
         assertThat(claims.provider()).isEqualTo("feishu");
         assertThat(claims.subject()).isEqualTo("ou_123");
         assertThat(claims.email()).isEqualTo("zhangsan@corp.example");
-        assertThat(claims.emailVerified()).isTrue();
+        // Feishu emails are admin-imported; the extractor must not claim verification.
+        assertThat(claims.emailVerified()).isFalse();
         assertThat(claims.providerLogin()).isEqualTo("张三");
     }
 

@@ -33,7 +33,9 @@ public class FeishuClaimsExtractor implements OAuthClaimsExtractor {
         if (email == null) {
             email = (String) attrs.get("email");
         }
-        boolean emailVerified = email != null;
+        // Feishu emails are imported by the organization admin and not verified with the user
+        // in real time, so they carry no verification signal; keep emailVerified false.
+        boolean emailVerified = false;
 
         String username = (String) attrs.get("name");
         if (username == null || username.isBlank()) {

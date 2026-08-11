@@ -287,8 +287,11 @@ Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 
 
 飞书 OAuth 与标准 OAuth2 存在偏差，接入时做了以下定制，可作为后续非标准 Provider 的参考：
 
-1. **授权端点参数**：飞书要求 `app_id` 而非 `client_id`，且不接受 `scope` 参数（权限在开放平台应用内配置）。
-   `SkillHubOAuth2AuthorizationRequestResolver` 对 `feishu` registration 重建授权 URI。
+1. **授权端点**：使用官方当前文档的标准 OAuth2 授权端点
+   `https://accounts.feishu.cn/open-apis/authen/v1/authorize`（`client_id` + 可选 `scope`，
+   权限在开放平台应用内配置），授权请求由 Spring Security 默认 resolver 构建，
+   host 可用 `OAUTH2_FEISHU_AUTHORIZE_URI` 覆盖；token / userinfo 端点仍在 `open.feishu.cn`
+   （`OAUTH2_FEISHU_BASE_URI` 覆盖）。
 2. **userinfo 响应包裹**：响应为 `{code, msg, data}` 结构且错误以 HTTP 200 返回。
    通过 `ProviderOAuth2UserService` 扩展点实现 `FeishuOAuth2UserService`，覆盖默认的 user info 加载并解包 `data`；
    `OAuthLoginFlowService` 按 registrationId 选择 loader，其余 Provider 仍走 `DefaultOAuth2UserService`。
@@ -296,6 +299,8 @@ Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 
 4. **subject 选择**：绑定主体使用 `open_id`（应用内唯一）；`union_id` 保留在 extra 中，
    未来若同一部署接入多个飞书应用可基于它做身份归并。
 5. **准入策略注意**：邮箱域名策略（EMAIL_DOMAIN）模式下，未绑定邮箱的飞书用户会被拒绝。
+6. **email_verified 语义**：飞书 user-info 返回的邮箱由组织管理员导入，无实时验证信号，
+   `FeishuClaimsExtractor` 恒置 `emailVerified=false`；EMAIL_DOMAIN 策略仅匹配邮箱域名，不依赖该标志。
 
 ## 4. 核心接口设计
 
