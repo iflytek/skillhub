@@ -95,6 +95,45 @@ visibility: PUBLIC
 
 技能包可以通过搜索发现，其他人可以通过 CLI 或 Web UI 下载使用。
 
+## 合规声明
+
+技能作者可以在 `SKILL.md` frontmatter 中添加 `x-astron-compliance`，声明该技能版本与某些合规标准、控制项或安全知识库条目的映射关系。
+
+```yaml
+---
+name: incident-response-helper
+description: Helps analysts draft incident response steps.
+x-astron-compliance:
+  - standard: mitre-attack
+    version: "v19.1"
+    controlId: T1059
+    title: Command and Scripting Interpreter
+    evidence:
+      - type: packaged-file
+        path: references/mitre-t1059.md
+      - type: external-url
+        url: https://attack.mitre.org/techniques/T1059/
+---
+```
+
+需要注意：
+
+- 这是“作者声明”，不是 SkillHub 或第三方机构的合规认证。
+- SkillHub 会校验字段结构、重复项、包内证据路径和外部 URL 格式。
+- 发布成功后，声明会被固化为当前版本的 `complianceSnapshot`，并生成稳定摘要 `digest`。
+- 后续版本如果新增、删除或修改合规声明，审核页会展示差异。
+- 搜索 `mitre-attack`、`T1059` 或声明标题时，可以命中对应技能。
+
+字段说明：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `standard` | 是 | 标准或框架标识，例如 `mitre-attack`、`nist-csf`、`soc2` |
+| `version` | 是 | 标准版本 |
+| `controlId` | 是 | 控制项、技术编号或条款 ID |
+| `title` | 否 | 控制项名称，建议填写，便于审核和搜索 |
+| `evidence` | 否 | 证据列表，支持包内文件和外部 URL |
+
 ## API 接口
 
 **发布技能包**：

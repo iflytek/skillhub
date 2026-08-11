@@ -71,6 +71,7 @@ An administrator batch-approves multiple skill packages that meet the standards.
    - Browse the file list
    - View file contents online
    - Download the full package for local testing
+   - Review the compliance snapshot and the diff from the previous published version
 
 ![Flow Diagram](/diagrams/review-flow.png)
 
@@ -79,6 +80,24 @@ An administrator batch-approves multiple skill packages that meet the standards.
    - **Reject**: Provide a rejection reason; the developer can revise and resubmit
 
 5. Add review comments (optional)
+
+**Reviewing Compliance Declarations**:
+
+If the pending version contains `x-astron-compliance`, the review detail page shows the version-level compliance snapshot and a diff summary:
+
+- Added declarations: standards, controls, or evidence newly added by the pending version.
+- Removed declarations: declarations that existed in the previous published version and are no longer present.
+- Modified declarations: standard metadata, control title, or evidence changed.
+- Digest changes: `complianceSnapshot.digest` changed, which means the normalized declaration content changed.
+
+Review guidance:
+
+1. Check whether each declaration matches the actual skill behavior. For example, a security response skill that declares a MITRE ATT&CK technique should provide supporting documentation or packaged evidence.
+2. Expand diff items to inspect evidence paths, external links, and digests instead of relying only on the declaration title.
+3. Treat removals and broad rewrites as higher-priority review items because downstream audit systems may reference those snapshots.
+4. Reject the submission if evidence is missing, paths are inaccessible, or declarations clearly do not match the skill capability.
+
+SkillHub guarantees structural validation, traceable evidence references, and immutable version snapshots. It does not certify that the author's declaration is objectively compliant.
 
 **Withdrawing a Review**:
 
@@ -181,6 +200,7 @@ Content-Type: application/json
 
 - **Review Turnaround**: It is recommended to complete reviews within 24 hours to avoid blocking developers
 - **Review Records**: All review actions are recorded in the audit log
+- **Compliance Audit**: Compliance declarations are recorded as version snapshots. Approval or rejection should consider the diff summary, but Agent execution traces are not recorded by SkillHub
 - **Batch Review**: Administrators can batch-approve multiple skill packages
 - **Review Comments**: When rejecting, it is recommended to provide detailed improvement suggestions
 - **Withdrawal Restrictions**: Only skill packages in the pending review state can be withdrawn

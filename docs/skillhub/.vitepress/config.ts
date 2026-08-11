@@ -44,6 +44,7 @@ export default defineConfig({
               { text: '审核与治理', link: '/guide/review' },
               { text: '安全扫描', link: '/guide/scanner' },
               { text: '用户交互与社交', link: '/guide/social' },
+              { text: 'Runtime 集成契约', link: '/guide/runtime-integration' },
             ],
           },
           {
@@ -90,6 +91,7 @@ export default defineConfig({
               { text: 'Review & Governance', link: '/en/guide/review' },
               { text: 'Security Scanning', link: '/en/guide/scanner' },
               { text: 'Social & Interaction', link: '/en/guide/social' },
+              { text: 'Runtime Integration Contract', link: '/en/guide/runtime-integration' },
             ],
           },
           {

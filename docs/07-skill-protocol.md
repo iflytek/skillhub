@@ -56,6 +56,7 @@ x-astron-compliance:                 # 可选，平台私有合规元数据
   - standard: mitre-attack
     version: "v19.1"
     controlId: T1059
+    title: Command and Scripting Interpreter
     evidence:
       - type: packaged-file
         path: references/standards.md
@@ -63,10 +64,44 @@ x-astron-compliance:                 # 可选，平台私有合规元数据
 ```
 
 > 合规元数据先按 SkillHub/Astron 私有扩展实现，字段名采用 `x-astron-compliance`。
-> 当前第一阶段支持发布校验和版本级 `complianceSnapshot` 固化；这些信息表示“技能作者声明的合规映射”，
-> SkillHub 校验证据引用的格式和可访问性，但不等同于第三方认证或平台背书。详情展示、审核 diff、搜索投影
-> 和 Runtime trace 集成按后续阶段推进。设计边界、分阶段实现和 Runtime 职责划分见
+> 当前支持发布校验、版本级 `complianceSnapshot` 固化、详情展示、审核 diff 和轻量搜索投影。
+> 这些信息表示“技能作者声明的合规映射”，SkillHub 校验证据引用的格式和可追溯性，
+> 但不等同于第三方认证或平台背书。设计边界、分阶段实现和 Runtime 职责划分见
 > [24-compliance-metadata-design.md](24-compliance-metadata-design.md)。
+
+`x-astron-compliance` 的稳定字段如下：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `standard` | 是 | 合规标准、框架或知识库标识，例如 `mitre-attack`、`nist-csf`、`soc2` |
+| `version` | 是 | 标准版本或适用版本，例如 `v19.1`、`2.0` |
+| `controlId` | 是 | 控制项、技术编号或条款 ID，例如 `T1059`、`PR.AA-01` |
+| `title` | 否 | 人类可读的控制项名称 |
+| `evidence` | 否 | 证据列表，指向包内文件或外部 URL |
+
+`evidence` 支持两类：
+
+| `type` | 字段 | 说明 |
+|--------|------|------|
+| `packaged-file` | `path` | 指向技能包内的证据文件。路径必须在包内，不能路径逃逸。 |
+| `external-url` | `url` | 指向外部证据材料。URL 必须使用允许的安全 scheme。 |
+
+发布校验规则：
+
+- 没有 `x-astron-compliance` 的旧技能继续正常发布。
+- `x-astron-compliance` 存在时必须是数组。
+- `standard`、`version`、`controlId` 必填。
+- 同一技能版本内不允许重复 `standard + version + controlId`。
+- `packaged-file.path` 必须存在于上传包内，且不能使用 `../` 等方式逃逸包目录。
+- 合法合规声明会被规范化为版本级 `complianceSnapshot`，并生成稳定 `digest`。
+
+Runtime 集成边界：
+
+- SkillHub 是技能元数据和版本级 `complianceSnapshot` 的权威源。
+- Agent Runtime 是执行 trace 的权威源。
+- Runtime 如需在执行链路中记录合规上下文，应引用 SkillHub 返回的不可变版本 `id`
+  和 `complianceSnapshot.digest`，而不是复制或改写 SkillHub 的声明内容。
+- SkillHub 当前不记录 Agent 执行输入输出、Runtime trace 或实际调用结果。
 
 ## 8.3 技能包目录结构
 
