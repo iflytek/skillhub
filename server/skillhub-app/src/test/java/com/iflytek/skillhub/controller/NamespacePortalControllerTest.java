@@ -96,6 +96,60 @@ class NamespacePortalControllerTest {
     }
 
     @Test
+    void listMyNamespaces_allowsSuperAdminToSeeAllNamespacesWithoutMembership() throws Exception {
+        Namespace teamA = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        Namespace teamB = namespace(2L, "team-b", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
+        given(namespaceRepository.findAll()).willReturn(List.of(teamB, teamA));
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/me/namespaces")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data[0].slug").value("team-a"))
+                .andExpect(jsonPath("$.data[0].currentUserRole").doesNotExist())
+                .andExpect(jsonPath("$.data[1].slug").value("team-b"))
+                .andExpect(jsonPath("$.data[1].status").value("ARCHIVED"));
+    }
+
+    @Test
+    void getNamespace_allowsSuperAdminToReadArchivedNamespaceWithoutMembership() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ARCHIVED, NamespaceType.TEAM);
+        given(namespaceService.getNamespaceBySlug("team-a")).willReturn(namespace);
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/namespaces/team-a")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.slug").value("team-a"))
+                .andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void listNamespaces_allowsSuperAdminToSeeActiveNamespacesWithoutMembership() throws Exception {
+        Namespace teamA = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceRepository.findByStatus(eq(NamespaceStatus.ACTIVE), any()))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(
+                        List.of(teamA),
+                        org.springframework.data.domain.PageRequest.of(0, 20),
+                        1
+                ));
+        given(namespaceMemberRepository.findByUserId("super-1")).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/namespaces")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .with(auth("super-1", Set.of("SUPER_ADMIN")))
+                        .requestAttr("userId", "super-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].slug").value("team-a"));
+    }
+
+    @Test
     void getNamespace_requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/namespaces/team-a"))
                 .andExpect(status().isUnauthorized());
