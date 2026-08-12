@@ -372,6 +372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/namespaces/{slug}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMemberRole_2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/labels/{slug}": {
         parameters: {
             query?: never;
@@ -1598,6 +1614,118 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unfreezeNamespace_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["transferOwnership_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restoreNamespace_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMembers_2"];
+        put?: never;
+        post: operations["addMember_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/members/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["batchAddMembers_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["freezeNamespace_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archiveNamespace_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3092,6 +3220,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listNamespaces_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNamespace_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchMemberCandidates_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -3311,6 +3487,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteSkillById_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeMember_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3957,6 +4149,52 @@ export interface components {
             /** Format: int64 */
             id?: number;
             status?: string;
+        };
+        AdminNamespaceDetailResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
+            status?: string;
+            description?: string;
+            type?: string;
+            avatarUrl?: string;
+            createdBy?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            stats?: components["schemas"]["AdminNamespaceStatsResponse"];
+            permissions?: components["schemas"]["AdminNamespacePermissionsResponse"];
+        };
+        AdminNamespacePermissionsResponse: {
+            /** @enum {string} */
+            currentUserRole?: "OWNER" | "ADMIN" | "MEMBER";
+            platformOverride?: boolean;
+            immutable?: boolean;
+            canManageMembers?: boolean;
+            canGovernNamespace?: boolean;
+            canPublish?: boolean;
+            canTransferOwnership?: boolean;
+            canFreeze?: boolean;
+            canUnfreeze?: boolean;
+            canArchive?: boolean;
+            canRestore?: boolean;
+        };
+        AdminNamespaceStatsResponse: {
+            /** Format: int64 */
+            memberCount?: number;
+            /** Format: int64 */
+            skillCount?: number;
+        };
+        ApiResponseAdminNamespaceDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["AdminNamespaceDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         AdminLabelCreateRequest: {
             slug: string;
@@ -4971,6 +5209,52 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             reviewedAt?: string;
+        };
+        AdminNamespaceListResponse: {
+            items?: components["schemas"]["AdminNamespaceSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            stats?: components["schemas"]["AdminNamespaceListStatsResponse"];
+        };
+        AdminNamespaceListStatsResponse: {
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            active?: number;
+            /** Format: int64 */
+            frozen?: number;
+            /** Format: int64 */
+            archived?: number;
+        };
+        AdminNamespaceSummaryResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
+            status?: string;
+            description?: string;
+            type?: string;
+            avatarUrl?: string;
+            createdBy?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            stats?: components["schemas"]["AdminNamespaceStatsResponse"];
+            permissions?: components["schemas"]["AdminNamespacePermissionsResponse"];
+        };
+        ApiResponseAdminNamespaceListResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["AdminNamespaceListResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         ApiResponsePageResponseAuditLogItemResponse: {
             /** Format: int32 */
@@ -6104,6 +6388,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
+                };
+            };
+        };
+    };
+    updateMemberRole_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
                 };
             };
         };
@@ -8299,6 +8610,205 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseProfileReviewMutationResponse"];
+                };
+            };
+        };
+    };
+    unfreezeNamespace_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminNamespaceDetailResponse"];
+                };
+            };
+        };
+    };
+    transferOwnership_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
+    restoreNamespace_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminNamespaceDetailResponse"];
+                };
+            };
+        };
+    };
+    listMembers_2: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    addMember_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    batchAddMembers_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseBatchMemberResponse"];
+                };
+            };
+        };
+    };
+    freezeNamespace_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminNamespaceDetailResponse"];
+                };
+            };
+        };
+    };
+    archiveNamespace_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminNamespaceDetailResponse"];
                 };
             };
         };
@@ -10642,6 +11152,79 @@ export interface operations {
             };
         };
     };
+    listNamespaces_2: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                status?: string;
+                type?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminNamespaceListResponse"];
+                };
+            };
+        };
+    };
+    getNamespace_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminNamespaceDetailResponse"];
+                };
+            };
+        };
+    };
+    searchMemberCandidates_2: {
+        parameters: {
+            query: {
+                search: string;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNamespaceCandidateUserResponse"];
+                };
+            };
+        };
+    };
     listAuditLogs: {
         parameters: {
             query?: {
@@ -10960,6 +11543,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
+    removeMember_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
                 };
             };
         };

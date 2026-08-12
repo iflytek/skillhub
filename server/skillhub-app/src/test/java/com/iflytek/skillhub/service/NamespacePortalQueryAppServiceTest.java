@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
@@ -125,23 +127,11 @@ class NamespacePortalQueryAppServiceTest {
     }
 
     @Test
-    void listMyNamespaces_superAdminSeesAllNamespacesWithoutSyntheticOwnerActions() {
-        Namespace active = namespace(1L, "active-team");
-        Namespace archived = namespace(2L, "archived-team");
-        archived.setStatus(NamespaceStatus.ARCHIVED);
-        when(namespaceRepository.findAll()).thenReturn(List.of(archived, active));
-        when(namespaceAccessPolicy.isImmutable(active)).thenReturn(false);
-        when(namespaceAccessPolicy.isImmutable(archived)).thenReturn(false);
-
+    void listMyNamespaces_superAdminWithoutMembershipSeesEmptyList() {
         var response = service.listMyNamespaces(Map.of(), Set.of("SUPER_ADMIN"));
 
-        assertThat(response).hasSize(2);
-        assertThat(response.get(0).slug()).isEqualTo("active-team");
-        assertThat(response.get(0).currentUserRole()).isNull();
-        assertThat(response.get(0).canFreeze()).isFalse();
-        assertThat(response.get(0).canArchive()).isFalse();
-        assertThat(response.get(0).canDelete()).isFalse();
-        assertThat(response.get(1).slug()).isEqualTo("archived-team");
+        assertThat(response).isEmpty();
+        verify(namespaceRepository, never()).findAll();
     }
 
     @Test

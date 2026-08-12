@@ -33,6 +33,8 @@ import type {
   OAuthProvider,
   User,
   ManagedNamespace,
+  AdminNamespace,
+  AdminNamespaceList,
   Namespace,
   CreateNamespaceRequest,
   NamespaceMember,
@@ -1143,6 +1145,126 @@ export const profileApi = {
 }
 
 export const adminApi = {
+  async getNamespaces(params: { keyword?: string; status?: string; type?: string; page?: number; size?: number }): Promise<AdminNamespaceList> {
+    const searchParams = new URLSearchParams()
+    if (params.keyword) searchParams.set('keyword', params.keyword)
+    if (params.status) searchParams.set('status', params.status)
+    if (params.type) searchParams.set('type', params.type)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<AdminNamespaceList>(`/api/v1/admin/namespaces?${searchParams.toString()}`)
+  },
+
+  async getNamespace(slug: string): Promise<AdminNamespace> {
+    return fetchJson<AdminNamespace>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}`)
+  },
+
+  async getNamespaceMembers(slug: string, params?: { page?: number; size?: number }): Promise<PagedResponse<NamespaceMember>> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params?.page ?? 0))
+    searchParams.set('size', String(params?.size ?? 20))
+    return fetchJson<PagedResponse<NamespaceMember>>(
+      `/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/members?${searchParams.toString()}`,
+    )
+  },
+
+  async searchNamespaceMemberCandidates(slug: string, search: string, size = 10): Promise<NamespaceCandidateUser[]> {
+    const searchParams = new URLSearchParams({
+      search: search.trim(),
+      size: String(size),
+    })
+    return fetchJson<NamespaceCandidateUser[]>(
+      `/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/member-candidates?${searchParams.toString()}`,
+    )
+  },
+
+  async addNamespaceMember(slug: string, request: { userId: string; role: string }): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/members`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        userId: request.userId.trim(),
+        role: request.role,
+      }),
+    })
+  },
+
+  async batchAddNamespaceMembers(slug: string, members: Array<{ userId: string; role: string }>): Promise<BatchMemberResponse> {
+    return fetchJson<BatchMemberResponse>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/members/batch`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ members }),
+    })
+  },
+
+  async updateNamespaceMemberRole(slug: string, userId: string, role: string): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(
+      `/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}/role`,
+      {
+        method: 'PUT',
+        headers: await ensureCsrfHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ role }),
+      },
+    )
+  },
+
+  async removeNamespaceMember(slug: string, userId: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async transferNamespaceOwnership(slug: string, newOwnerUserId: string): Promise<void> {
+    await fetchJson<void>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/transfer-ownership`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ newOwnerId: newOwnerUserId.trim() }),
+    })
+  },
+
+  async freezeNamespace(slug: string, reason?: string): Promise<AdminNamespace> {
+    return fetchJson<AdminNamespace>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/freeze`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    })
+  },
+
+  async unfreezeNamespace(slug: string): Promise<AdminNamespace> {
+    return fetchJson<AdminNamespace>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/unfreeze`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async archiveNamespace(slug: string, reason?: string): Promise<AdminNamespace> {
+    return fetchJson<AdminNamespace>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/archive`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    })
+  },
+
+  async restoreNamespace(slug: string): Promise<AdminNamespace> {
+    return fetchJson<AdminNamespace>(`/api/v1/admin/namespaces/${normalizeNamespaceSlug(slug)}/restore`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
   async getUsers(params: { search?: string; status?: string; page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
     if (params.search) searchParams.set('search', params.search)

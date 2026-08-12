@@ -72,6 +72,37 @@ public class NamespaceMemberCandidateService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<NamespaceCandidateUserResponse> searchCandidatesForPlatformAdmin(String slug, String search, int size) {
+        Namespace namespace = namespaceService.getNamespaceBySlug(slug);
+        if (namespaceAccessPolicy.isImmutable(namespace)) {
+            throw new DomainBadRequestException("error.namespace.system.immutable", namespace.getSlug());
+        }
+        if (!namespaceAccessPolicy.canManageMembers(namespace)) {
+            throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
+        }
+
+        return findCandidates(namespace, search, size);
+    }
+
+    private List<NamespaceCandidateUserResponse> findCandidates(Namespace namespace, String search, int size) {
+        String keyword = normalizeSearch(search);
+        if (keyword == null) {
+            return List.of();
+        }
+
+        int pageSize = normalizeSize(size);
+        Set<String> existingMemberIds = namespaceMemberRepository.findByNamespaceId(namespace.getId(), PageRequest.of(0, 500))
+                .stream()
+                .map(NamespaceMember::getUserId)
+                .collect(Collectors.toSet());
+
+        return userAccountRepository.search(keyword, UserStatus.ACTIVE, PageRequest.of(0, pageSize)).stream()
+                .filter(user -> !existingMemberIds.contains(user.getId()))
+                .map(NamespaceCandidateUserResponse::from)
+                .toList();
+    }
+
     private String normalizeSearch(String search) {
         if (!StringUtils.hasText(search)) {
             return null;

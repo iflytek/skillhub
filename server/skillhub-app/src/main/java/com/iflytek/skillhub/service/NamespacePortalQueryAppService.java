@@ -93,12 +93,6 @@ public class NamespacePortalQueryAppService {
     public List<MyNamespaceResponse> listMyNamespaces(Map<Long, NamespaceRole> userNamespaceRoles,
                                                       Set<String> platformRoles) {
         Map<Long, NamespaceRole> namespaceRoles = userNamespaceRoles != null ? userNamespaceRoles : Map.of();
-        if (isSuperAdmin(platformRoles)) {
-            return namespaceRepository.findAll().stream()
-                    .sorted(Comparator.comparing(Namespace::getSlug))
-                    .map(namespace -> toMyNamespaceResponse(namespace, namespaceRoles.get(namespace.getId())))
-                    .toList();
-        }
         if (namespaceRoles.isEmpty()) {
             return List.of();
         }

@@ -124,6 +124,46 @@ export interface ManagedNamespace extends Namespace {
   canDelete: boolean
 }
 
+export interface AdminNamespacePermissions {
+  currentUserRole?: NamespaceRole
+  platformOverride: boolean
+  immutable: boolean
+  canManageMembers: boolean
+  canGovernNamespace: boolean
+  canPublish: boolean
+  canTransferOwnership: boolean
+  canFreeze: boolean
+  canUnfreeze: boolean
+  canArchive: boolean
+  canRestore: boolean
+}
+
+export interface AdminNamespaceStats {
+  memberCount: number
+  skillCount: number
+}
+
+export interface AdminNamespace extends Namespace {
+  createdBy?: string
+  stats: AdminNamespaceStats
+  permissions: AdminNamespacePermissions
+}
+
+export interface AdminNamespaceListStats {
+  total: number
+  active: number
+  frozen: number
+  archived: number
+}
+
+export interface AdminNamespaceList {
+  items: AdminNamespace[]
+  total: number
+  page: number
+  size: number
+  stats: AdminNamespaceListStats
+}
+
 export interface NamespaceMember {
   id: number
   userId: string
