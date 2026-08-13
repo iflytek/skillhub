@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.event.UserActivatedEvent;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -44,16 +46,19 @@ public class AdminUserAppService {
     private final UserAccountRepository userAccountRepository;
     private final UserRoleBindingRepository userRoleBindingRepository;
     private final RoleRepository roleRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AdminUserAppService(
             AdminUserSearchRepository adminUserSearchRepository,
             UserAccountRepository userAccountRepository,
             UserRoleBindingRepository userRoleBindingRepository,
-            RoleRepository roleRepository) {
+            RoleRepository roleRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.adminUserSearchRepository = adminUserSearchRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
         this.roleRepository = roleRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -109,8 +114,13 @@ public class AdminUserAppService {
         UserAccount user = loadUser(userId);
         rejectSystemAccountMutation(user);
         UserStatus nextStatus = parseManageableStatus(status);
+        UserStatus previousStatus = user.getStatus();
         user.setStatus(nextStatus);
         userAccountRepository.save(user);
+        if (nextStatus == UserStatus.ACTIVE && previousStatus != UserStatus.ACTIVE) {
+            eventPublisher.publishEvent(
+                    new UserActivatedEvent(user.getId(), user.getDisplayName(), user.getEmail()));
+        }
         return new AdminUserMutationResponse(user.getId(), null, nextStatus.name());
     }
 

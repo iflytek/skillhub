@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.repository.AdminUserSearchRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,11 +36,13 @@ class AdminUserAppServiceTest {
     private final UserRoleBindingRepository userRoleBindingRepository = mock(UserRoleBindingRepository.class);
     private final RoleRepository roleRepository = mock(RoleRepository.class);
     private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final AdminUserAppService service = new AdminUserAppService(
             adminUserSearchRepository,
             userAccountRepository,
             userRoleBindingRepository,
-            roleRepository
+            roleRepository,
+            eventPublisher
     );
 
     @Test

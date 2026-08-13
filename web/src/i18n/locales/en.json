@@ -1339,7 +1339,8 @@
       "notifications": "Notification Settings",
       "accounts": "Account Merge",
       "logout": "Logout",
-      "namespacesAdmin": "Namespace management"
+      "namespacesAdmin": "Namespace management",
+      "platformSettings": "Platform settings"
     }
   },
   "footer": {
@@ -1646,5 +1647,29 @@
     "unfreezeErrorTitle": "Failed to unfreeze namespace",
     "archiveErrorTitle": "Failed to archive namespace",
     "restoreErrorTitle": "Failed to restore namespace"
+  },
+  "adminSettings": {
+    "title": "Platform settings",
+    "subtitle": "Settings that apply to the whole deployment.",
+    "personalNamespaceTitle": "Personal namespace on registration",
+    "personalNamespaceDescription": "Give every newly activated account a namespace of its own. The account is the only member and holds the owner role. Existing accounts are not affected.",
+    "enabledLabel": "Automatic creation",
+    "enabledOn": "Enabled",
+    "enabledOff": "Disabled",
+    "slugTemplateLabel": "Namespace slug template",
+    "displayNameTemplateLabel": "Namespace display name template",
+    "placeholderHint": "Placeholders: {{placeholders}}",
+    "slugPreview": "Example slug: {{slug}}",
+    "slugRulesHint": "Slugs are lowercased, and anything other than a letter or digit becomes a hyphen. A number is appended when the slug is already taken or reserved.",
+    "displayNamePreview": "Example display name: {{displayName}}",
+    "loading": "Loading...",
+    "saveAction": "Save",
+    "saving": "Saving...",
+    "saveSuccessTitle": "Settings saved",
+    "saveSuccessDescription": "Accounts activated from now on use the updated policy.",
+    "saveErrorTitle": "Could not save settings",
+    "validationTitle": "Check the form",
+    "validationTemplateRequired": "Templates cannot be empty.",
+    "fallbackErrorDescription": "Please try again."
   }
 }

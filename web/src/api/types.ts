@@ -585,3 +585,16 @@ export interface NotificationPreferenceItem {
 export interface NotificationUnreadCount {
   count: number
 }
+
+export interface PersonalNamespaceSettings {
+  enabled: boolean
+  slugTemplate: string
+  displayNameTemplate: string
+  supportedPlaceholders: string[]
+}
+
+export interface PersonalNamespaceSettingsInput {
+  enabled: boolean
+  slugTemplate: string
+  displayNameTemplate: string
+}

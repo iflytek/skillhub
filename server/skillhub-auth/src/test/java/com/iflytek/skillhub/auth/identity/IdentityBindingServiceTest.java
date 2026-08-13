@@ -16,6 +16,7 @@ import com.iflytek.skillhub.auth.oauth.AccountPendingException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.event.UserActivatedEvent;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,11 +48,15 @@ class IdentityBindingServiceTest {
     @Mock
     private GlobalNamespaceMembershipService globalNamespaceMembershipService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private IdentityBindingService service;
 
     @BeforeEach
     void setUp() {
-        service = new IdentityBindingService(bindingRepo, userRepo, roleBindingRepo, globalNamespaceMembershipService);
+        service = new IdentityBindingService(bindingRepo, userRepo, roleBindingRepo,
+                globalNamespaceMembershipService, eventPublisher);
     }
 
     @Test
@@ -75,6 +81,44 @@ class IdentityBindingServiceTest {
         verify(bindingRepo).save(any(IdentityBinding.class));
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.oauthProvider()).isEqualTo("github");
+    }
+
+    @Test
+    void bindOrCreate_publishesActivationForActiveNewUsers() {
+        OAuthClaims claims = new OAuthClaims(
+                "github",
+                "gh_1",
+                "alice@example.com",
+                true,
+                "alice",
+                Map.of()
+        );
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        ArgumentCaptor<UserActivatedEvent> eventCaptor = ArgumentCaptor.forClass(UserActivatedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().username()).isEqualTo("alice");
+        assertThat(eventCaptor.getValue().email()).isEqualTo("alice@example.com");
+    }
+
+    @Test
+    void bindOrCreate_doesNotPublishActivationForReturningUsers() {
+        OAuthClaims claims = new OAuthClaims("github", "gh_1", "alice@example.com", true, "alice", Map.of());
+        UserAccount existing = new UserAccount("usr_1", "alice", "alice@example.com", null);
+        existing.setStatus(UserStatus.ACTIVE);
+        when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1"))
+                .thenReturn(Optional.of(new IdentityBinding("usr_1", "github", "gh_1", "alice")));
+        when(userRepo.findById("usr_1")).thenReturn(Optional.of(existing));
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        verify(eventPublisher, never()).publishEvent(any(UserActivatedEvent.class));
     }
 
     @Test

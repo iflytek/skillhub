@@ -1339,7 +1339,8 @@
       "notifications": "通知设置",
       "accounts": "账号合并",
       "logout": "退出登录",
-      "namespacesAdmin": "命名空间管理"
+      "namespacesAdmin": "命名空间管理",
+      "platformSettings": "平台设置"
     }
   },
   "footer": {
@@ -1646,5 +1647,29 @@
     "unfreezeErrorTitle": "解冻命名空间失败",
     "archiveErrorTitle": "归档命名空间失败",
     "restoreErrorTitle": "恢复命名空间失败"
+  },
+  "adminSettings": {
+    "title": "平台设置",
+    "subtitle": "作用于整个部署的全局设置。",
+    "personalNamespaceTitle": "注册时自动创建个人命名空间",
+    "personalNamespaceDescription": "为每个新激活的账号创建一个专属命名空间：该账号是唯一成员，并拥有所有者角色。已有账号不受影响。",
+    "enabledLabel": "自动创建",
+    "enabledOn": "已启用",
+    "enabledOff": "已禁用",
+    "slugTemplateLabel": "命名空间标识模板",
+    "displayNameTemplateLabel": "命名空间显示名模板",
+    "placeholderHint": "可用占位符：{{placeholders}}",
+    "slugPreview": "标识示例：{{slug}}",
+    "slugRulesHint": "标识会转为小写，字母和数字以外的字符会变成连字符；标识已被占用或属于保留字时会自动追加数字后缀。",
+    "displayNamePreview": "显示名示例：{{displayName}}",
+    "loading": "加载中...",
+    "saveAction": "保存",
+    "saving": "保存中...",
+    "saveSuccessTitle": "设置已保存",
+    "saveSuccessDescription": "此后激活的账号将采用新的策略。",
+    "saveErrorTitle": "保存设置失败",
+    "validationTitle": "请检查表单",
+    "validationTemplateRequired": "模板不能为空。",
+    "fallbackErrorDescription": "请稍后重试。"
   }
 }

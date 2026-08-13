@@ -13,6 +13,7 @@ import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.event.UserActivatedEvent;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -51,6 +53,9 @@ class LocalAuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private LocalAuthService service;
 
     @BeforeEach
@@ -62,7 +67,8 @@ class LocalAuthServiceTest {
             globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
             passwordEncoder,
-            CLOCK
+            CLOCK,
+            eventPublisher
         );
     }
 
@@ -84,6 +90,22 @@ class LocalAuthServiceTest {
         assertThat(principal.platformRoles()).containsExactly("USER");
         verify(credentialRepository).save(any(LocalCredential.class));
         verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
+    }
+
+    @Test
+    void register_publishesActivationWithTheNormalizedUsername() {
+        given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(false);
+        given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.empty());
+        given(passwordEncoder.encode("Abcd123!")).willReturn("encoded");
+        given(userAccountRepository.save(any(UserAccount.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(userRoleBindingRepository.findByUserId(any())).willReturn(List.of());
+
+        service.register("Alice", "Abcd123!", "alice@example.com");
+
+        ArgumentCaptor<UserActivatedEvent> eventCaptor = ArgumentCaptor.forClass(UserActivatedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().username()).isEqualTo("alice");
+        assertThat(eventCaptor.getValue().email()).isEqualTo("alice@example.com");
     }
 
     @Test

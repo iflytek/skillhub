@@ -151,6 +151,11 @@ const AdminNamespacesPage = createRoleProtectedRouteComponent(
   'AdminNamespacesPage',
   ['SUPER_ADMIN'],
 )
+const AdminSettingsPage = createRoleProtectedRouteComponent(
+  () => import('@/pages/admin/settings'),
+  'AdminSettingsPage',
+  ['SUPER_ADMIN'],
+)
 
 function DefaultNotFound() {
   return (
@@ -457,6 +462,13 @@ const adminNamespacesRoute = createRoute({
   component: AdminNamespacesPage,
 })
 
+const adminSettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin/settings',
+  beforeLoad: requireAuth,
+  component: AdminSettingsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   landingRoute,
   skillsRoute,
@@ -494,6 +506,7 @@ const routeTree = rootRoute.addChildren([
   adminAuditLogRoute,
   adminLabelsRoute,
   adminNamespacesRoute,
+  adminSettingsRoute,
 ])
 
 export const router = createRouter({

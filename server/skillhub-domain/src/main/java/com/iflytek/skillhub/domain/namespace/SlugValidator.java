@@ -44,12 +44,37 @@ public class SlugValidator {
         if (raw == null) {
             throw new DomainBadRequestException("error.slug.blank");
         }
-        String slug = raw.trim().toLowerCase()
+        String slug = normalize(raw);
+        validate(slug);
+        return slug;
+    }
+
+    /**
+     * Applies the slug character rules without asserting the result is usable.
+     *
+     * <p>Callers that generate candidate slugs — rather than accepting one from a user — need to
+     * inspect and adjust the result (append a suffix, truncate) before validating it.
+     */
+    public static String normalize(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.trim().toLowerCase()
                 .replaceAll("[^\\p{L}\\p{N}\\p{So}]+", "-")
                 .replaceAll("^-+", "")
                 .replaceAll("-+$", "")
                 .replaceAll("-{2,}", "-");
-        validate(slug);
-        return slug;
+    }
+
+    /**
+     * Returns whether {@code slug} would pass {@link #validate(String)}.
+     */
+    public static boolean isValid(String slug) {
+        try {
+            validate(slug);
+            return true;
+        } catch (DomainBadRequestException e) {
+            return false;
+        }
     }
 }

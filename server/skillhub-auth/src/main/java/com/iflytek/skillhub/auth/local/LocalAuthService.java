@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.event.UserActivatedEvent;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
@@ -16,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,7 @@ public class LocalAuthService {
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -51,7 +54,8 @@ public class LocalAuthService {
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
-                            Clock clock) {
+                            Clock clock,
+                            ApplicationEventPublisher eventPublisher) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -59,6 +63,7 @@ public class LocalAuthService {
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -100,6 +105,7 @@ public class LocalAuthService {
             passwordEncoder.encode(password)
         ));
         globalNamespaceMembershipService.ensureMember(user.getId());
+        eventPublisher.publishEvent(new UserActivatedEvent(user.getId(), normalizedUsername, normalizedEmail));
 
         return buildPrincipal(user);
     }

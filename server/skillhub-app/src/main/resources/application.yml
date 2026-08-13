@@ -117,6 +117,15 @@ skillhub:
       code-expiry: ${SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY:PT10M}
       email-from-address: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS:noreply@skillhub.local}
       email-from-name: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME:SkillHub}
+  namespace:
+    # Whether a newly activated account gets a namespace of its own. An administrator can override
+    # this from the admin console, and the stored choice then wins over this file.
+    #
+    # The slug and display-name templates are deliberately not configurable here: they contain
+    # ${...} placeholders, which Spring would try to resolve as property references. Set them in
+    # the admin console instead; their defaults live in PersonalNamespaceProvisioningProperties.
+    personal-provisioning:
+      enabled: ${SKILLHUB_NAMESPACE_PERSONAL_PROVISIONING_ENABLED:false}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:

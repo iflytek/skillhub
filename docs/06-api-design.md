@@ -330,6 +330,15 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 |------|------|------|
 | GET | `/api/v1/admin/audit-logs` | 审计日志查询 |
 
+### 平台设置（需 SUPER_ADMIN）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/settings/personal-namespace` | 读取「新账号自动建命名空间」策略 |
+| PUT | `/api/v1/admin/settings/personal-namespace` | 更新该策略（写审计日志） |
+
+详见 [`2026-08-13-personal-namespace-provisioning.md`](./2026-08-13-personal-namespace-provisioning.md)。
+
 ## 7.7 Namespace 管理 API（需命名空间 OWNER 或 ADMIN）
 
 | 方法 | 路径 | 说明 |

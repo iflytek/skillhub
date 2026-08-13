@@ -372,6 +372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/settings/personal-namespace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPersonalNamespaceSettings"];
+        put: operations["updatePersonalNamespaceSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -3710,6 +3726,26 @@ export interface components {
         AdminUserRoleUpdateRequest: {
             role: string;
         };
+        PersonalNamespaceSettingsUpdateRequest: {
+            enabled: boolean;
+            slugTemplate: string;
+            displayNameTemplate: string;
+        };
+        ApiResponsePersonalNamespaceSettingsResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PersonalNamespaceSettingsResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PersonalNamespaceSettingsResponse: {
+            enabled?: boolean;
+            slugTemplate?: string;
+            displayNameTemplate?: string;
+            supportedPlaceholders?: string[];
+        };
         AdminLabelUpdateRequest: {
             /** @enum {string} */
             type: "RECOMMENDED" | "PRIVILEGED";
@@ -6390,6 +6426,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
+                };
+            };
+        };
+    };
+    getPersonalNamespaceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePersonalNamespaceSettingsResponse"];
+                };
+            };
+        };
+    };
+    updatePersonalNamespaceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalNamespaceSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePersonalNamespaceSettingsResponse"];
                 };
             };
         };

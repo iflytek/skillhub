@@ -6,10 +6,12 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.domain.event.UserActivatedEvent;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
@@ -27,15 +29,18 @@ public class IdentityBindingService {
     private final UserAccountRepository userRepo;
     private final UserRoleBindingRepository roleBindingRepo;
     private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public IdentityBindingService(IdentityBindingRepository bindingRepo,
                                   UserAccountRepository userRepo,
                                   UserRoleBindingRepository roleBindingRepo,
-                                  GlobalNamespaceMembershipService globalNamespaceMembershipService) {
+                                  GlobalNamespaceMembershipService globalNamespaceMembershipService,
+                                  ApplicationEventPublisher eventPublisher) {
         this.bindingRepo = bindingRepo;
         this.userRepo = userRepo;
         this.roleBindingRepo = roleBindingRepo;
         this.globalNamespaceMembershipService = globalNamespaceMembershipService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -65,6 +70,8 @@ public class IdentityBindingService {
             user = userRepo.save(user);
             if (initialStatus == UserStatus.ACTIVE) {
                 globalNamespaceMembershipService.ensureMember(user.getId());
+                eventPublisher.publishEvent(
+                        new UserActivatedEvent(user.getId(), claims.providerLogin(), claims.email()));
             }
 
             binding = new IdentityBinding(user.getId(), claims.provider(), claims.subject(), claims.providerLogin());
