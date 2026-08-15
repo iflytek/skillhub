@@ -9,6 +9,7 @@ import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
+import { UserAvatar } from '@/shared/components/user-avatar'
 
 /** Regex matching allowed display name characters: Chinese, English, digits, spaces, underscore, hyphen. */
 const DISPLAY_NAME_PATTERN = /^[\u4e00-\u9fa5a-zA-Z0-9_ -]+$/
@@ -197,12 +198,13 @@ export function ProfileSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Avatar (read-only) */}
-          {effectiveAvatarUrl ? (
+          {effectiveDisplayName ? (
             <div className="flex items-center gap-4">
-              <img
+              <UserAvatar
                 src={effectiveAvatarUrl}
-                alt={effectiveDisplayName}
+                name={effectiveDisplayName}
                 className="h-16 w-16 rounded-2xl border-2 border-border/60 shadow-card"
+                textClassName="text-xl font-semibold"
               />
             </div>
           ) : null}

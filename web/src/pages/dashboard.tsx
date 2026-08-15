@@ -7,6 +7,7 @@ import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { UserAvatar } from '@/shared/components/user-avatar'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { limitPreviewItems } from './dashboard-preview'
 
@@ -42,11 +43,12 @@ export function DashboardPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-5">
-            {user?.avatarUrl && (
-              <img
+            {user && (
+              <UserAvatar
                 src={user.avatarUrl}
-                alt={user.displayName}
+                name={user.displayName}
                 className="h-20 w-20 rounded-2xl border-2 border-border/60 shadow-card"
+                textClassName="text-2xl font-semibold"
               />
             )}
             <div className="space-y-1.5">
