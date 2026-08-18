@@ -1,5 +1,8 @@
-# ---- Build Stage ----
-FROM eclipse-temurin:21-jdk-alpine AS build
+# syntax=docker/dockerfile:1
+
+# Build the architecture-neutral JAR on the Buildx host. This avoids emulating
+# the complete Maven build when the target image is linux/riscv64.
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
 # Cache dependencies
@@ -19,8 +22,14 @@ COPY . .
 RUN ./mvnw package -DskipTests -B
 
 # ---- Runtime Stage ----
-FROM eclipse-temurin:21-jre-alpine
-RUN addgroup -S app && adduser -S app -G app
+# The Noble variant publishes a linux/riscv64 image; the Alpine JRE currently
+# used by this project is limited to amd64 and arm64.
+FROM eclipse-temurin:21-jre-noble
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends wget && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --system app && \
+    useradd --system --gid app --create-home app
 WORKDIR /app
 
 COPY --from=build /app/skillhub-app/target/*.jar app.jar
