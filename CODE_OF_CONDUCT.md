@@ -29,5 +29,16 @@ project spaces.
 
 ## Reporting
 
-Report conduct issues privately to the maintainers through a private maintainer
-channel. Do not use public issues for personal or sensitive reports.
+Report conduct issues privately to
+[ifly_opensource@iflytek.com](mailto:ifly_opensource@iflytek.com) with the subject
+`SkillHub Code of Conduct report`. Do not use public issues for personal, sensitive,
+or confidential reports.
+
+Reports are handled under the iFLYTEK community
+[incident resolution procedures](https://github.com/iflytek/community/blob/master/code-of-conduct/coc-incident-resolution-procedures.md).
+Information is shared only with people who need it to review the report, protect
+participants, or comply with law. Retaliation for a good-faith report is prohibited.
+
+People materially affected by a conduct decision may request an impartial review
+through the appeal process in the
+[Content Safety Policy](docs/CONTENT_SAFETY.md#appeals).

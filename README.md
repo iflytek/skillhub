@@ -65,6 +65,18 @@ with the Skill's source and the problem it solves, or submit a PR by following t
 - 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
 - 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
 
+## Governance and Safety
+
+- **[Privacy and Data Governance](docs/PRIVACY_AND_DATA_GOVERNANCE.md)** —
+  Data categories, operator responsibilities, retention, portability, and incident
+  handling for public and self-hosted instances
+- **[Content Safety](docs/CONTENT_SAFETY.md)** — Package safety expectations,
+  review and reporting controls, appeals, and child-safety responsibilities
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community standards and the private
+  reporting channel
+- **[Security Policy](https://github.com/iflytek/.github/blob/main/SECURITY.md)** —
+  Private vulnerability reporting and coordinated disclosure
+
 ## Highlights
 
 - **Self-Hosted & Private** — Deploy on your own infrastructure.
