@@ -34,9 +34,15 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/.well-known/**"),
             RouteAuthorizationPolicy.roles(null, "/actuator/prometheus", "SUPER_ADMIN", "AUDITOR"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/skills/*/star"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/v1/skills/*/star"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/v1/skills/*/star"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/skills/*/rating"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/v1/skills/*/rating"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/skills/*/star"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/web/skills/*/star"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/*/star"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/skills/*/rating"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/web/skills/*/rating"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/skills"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/skills/*/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/skills/*/*/versions"),
@@ -89,6 +95,7 @@ public class RouteSecurityPolicyRegistry {
     private static final List<ApiTokenPolicy> API_TOKEN_POLICIES = List.of(
             ApiTokenPolicy.allow(null, "/api/v1/health"),
             ApiTokenPolicy.allow(null, "/api/v1/auth/providers"),
+            ApiTokenPolicy.allow(null, "/api/v1/auth/methods"),
             ApiTokenPolicy.allow(null, "/api/v1/auth/me"),
             ApiTokenPolicy.allow(null, "/api/v1/auth/device/**"),
             ApiTokenPolicy.allow(null, "/api/v1/check"),
@@ -98,12 +105,21 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/skills/**"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/skills"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/skills/**"),
+            ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/labels"),
+            ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/labels"),
+            ApiTokenPolicy.allow(HttpMethod.PUT, "/api/v1/skills/*/star"),
+            ApiTokenPolicy.allow(HttpMethod.DELETE, "/api/v1/skills/*/star"),
+            ApiTokenPolicy.allow(HttpMethod.PUT, "/api/v1/skills/*/rating"),
+            ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/star"),
+            ApiTokenPolicy.allow(HttpMethod.DELETE, "/api/web/skills/*/star"),
+            ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/rating"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/namespaces"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/namespaces/*"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/namespaces"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/namespaces/*"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/resolve/**"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/download"),
+            ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/download/**"),
             ApiTokenPolicy.allow(null, "/.well-known/**"),
             ApiTokenPolicy.allow(null, "/actuator/health"),
             ApiTokenPolicy.allow(null, "/v3/api-docs/**"),
@@ -126,10 +142,44 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.require(HttpMethod.POST, "/api/cli/v1/skills/*/publish/validate", "skill:publish")
     );
 
+    /**
+     * Authorization routes that intentionally have no API-token counterpart, keyed as
+     * {@code "<METHOD|ANY> <pattern>"} to match {@link #routeKey(HttpMethod, String)}.
+     *
+     * <p>These are browser-session surfaces: the interactive login flows, the admin console,
+     * and skill deletion through the web surface, which goes through {@code /api/v1} or
+     * {@code /api/cli/v1} with the {@code skill:delete} scope instead. Bearer tokens are
+     * deliberately rejected on exactly these routes and nowhere else &mdash; anything else the
+     * authorization list opens must also be reachable with a token holding the required scope.</p>
+     */
+    private static final Set<String> SESSION_ONLY_ROUTES = Set.of(
+            "ANY /api/v1/auth/session/bootstrap",
+            "ANY /api/v1/auth/direct/login",
+            "ANY /api/v1/auth/local/**",
+            "ANY /api/v1/admin/**",
+            "DELETE /api/web/skills/id/*",
+            "DELETE /api/web/skills/*/*"
+    );
+
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public List<RouteAuthorizationPolicy> authorizationPolicies() {
         return AUTHORIZATION_POLICIES;
+    }
+
+    /**
+     * Authorization routes that are deliberately unreachable with an API token.
+     */
+    public Set<String> sessionOnlyRoutes() {
+        return SESSION_ONLY_ROUTES;
+    }
+
+    /**
+     * Stable key for a route in the authorization list, used to pair it with
+     * {@link #sessionOnlyRoutes()}.
+     */
+    public static String routeKey(HttpMethod method, String pattern) {
+        return (method == null ? "ANY" : method.name()) + " " + pattern;
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {

@@ -5,10 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.springframework.http.HttpMethod;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class RouteSecurityPolicyRegistryTest {
+
+    private static final Set<String> ALL_SCOPES =
+            Set.of("skill:read", "skill:publish", "skill:delete", "token:manage");
 
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
@@ -129,5 +134,84 @@ class RouteSecurityPolicyRegistryTest {
     void shouldProjectRequestContext_onlyForApiRoutes() {
         assertTrue(registry.shouldProjectRequestContext("/api/web/namespaces/team-a"));
         assertFalse(registry.shouldProjectRequestContext("/assets/index.css"));
+    }
+
+    @Test
+    void authorizeApiToken_allowsPublicLabelCatalogue() {
+        assertTrue(registry.authorizeApiToken("GET", "/api/v1/labels", Set.of()).allowed());
+        assertTrue(registry.authorizeApiToken("GET", "/api/web/labels", Set.of()).allowed());
+    }
+
+    @Test
+    void authorizeApiToken_allowsStarAndRatingWritesWithoutSkillDeleteScope() {
+        assertTrue(registry.authorizeApiToken("PUT", "/api/v1/skills/42/star", Set.of("skill:read")).allowed());
+        assertTrue(registry.authorizeApiToken("DELETE", "/api/v1/skills/42/star", Set.of("skill:read")).allowed());
+        assertTrue(registry.authorizeApiToken("PUT", "/api/v1/skills/42/rating", Set.of("skill:read")).allowed());
+    }
+
+    @Test
+    void authorizationPolicies_declareStarAndRatingWritesBeforeTheSuperAdminDeleteRule() {
+        int unstar = indexOf(HttpMethod.DELETE, "/api/v1/skills/*/star");
+        int hardDelete = indexOf(HttpMethod.DELETE, "/api/v1/skills/*/*");
+
+        assertTrue(unstar >= 0, "un-star must have its own authorization policy");
+        assertTrue(hardDelete >= 0);
+        assertTrue(unstar < hardDelete, "un-star must be matched before the SUPER_ADMIN hard-delete rule");
+    }
+
+    @Test
+    void authorizeApiToken_allowsDownloadsBelowTheDownloadRoot() {
+        assertTrue(registry.authorizeApiToken("GET", "/api/v1/download/global/demo-skill", Set.of()).allowed());
+    }
+
+    @Test
+    void apiTokenPolicies_coverEveryTokenReachableAuthorizationRoute() {
+        List<String> gaps = new ArrayList<>();
+
+        for (RouteSecurityPolicyRegistry.RouteAuthorizationPolicy policy : registry.authorizationPolicies()) {
+            if (policy.accessLevel() == RouteSecurityPolicyRegistry.AccessLevel.ROLE_PROTECTED) {
+                continue;
+            }
+            if (!policy.pattern().startsWith("/api/")) {
+                continue;
+            }
+            String key = RouteSecurityPolicyRegistry.routeKey(policy.method(), policy.pattern());
+            if (registry.sessionOnlyRoutes().contains(key)) {
+                continue;
+            }
+
+            String method = policy.method() == null ? "GET" : policy.method().name();
+            String path = samplePath(policy.pattern());
+            if (!registry.authorizeApiToken(method, path, ALL_SCOPES).allowed()) {
+                gaps.add(key);
+            }
+        }
+
+        assertTrue(gaps.isEmpty(),
+                "Authorization routes with no API-token policy and no session-only declaration: " + gaps);
+    }
+
+    @Test
+    void sessionOnlyRoutes_areRejectedForApiTokens() {
+        for (String route : registry.sessionOnlyRoutes()) {
+            String[] parts = route.split(" ", 2);
+            String method = "ANY".equals(parts[0]) ? "POST" : parts[0];
+            assertFalse(registry.authorizeApiToken(method, samplePath(parts[1]), ALL_SCOPES).allowed(),
+                    "session-only route must stay closed to API tokens: " + route);
+        }
+    }
+
+    private int indexOf(HttpMethod method, String pattern) {
+        List<RouteSecurityPolicyRegistry.RouteAuthorizationPolicy> policies = registry.authorizationPolicies();
+        for (int i = 0; i < policies.size(); i++) {
+            if (policies.get(i).method() == method && pattern.equals(policies.get(i).pattern())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static String samplePath(String pattern) {
+        return pattern.replace("/**", "/sample/leaf").replace("*", "sample");
     }
 }
