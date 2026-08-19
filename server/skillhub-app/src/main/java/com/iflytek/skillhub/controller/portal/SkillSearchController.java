@@ -5,12 +5,16 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import com.iflytek.skillhub.dto.SkillLabelDto;
+import com.iflytek.skillhub.dto.SkillSummaryResponse;
+import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -27,11 +31,14 @@ public class SkillSearchController extends BaseApiController {
     private static final int DEFAULT_SIZE = 20;
 
     private final SkillSearchAppService skillSearchAppService;
+    private final SkillLabelProjectionService skillLabelProjectionService;
 
     public SkillSearchController(SkillSearchAppService skillSearchAppService,
+                                 SkillLabelProjectionService skillLabelProjectionService,
                                  ApiResponseFactory responseFactory) {
         super(responseFactory);
         this.skillSearchAppService = skillSearchAppService;
+        this.skillLabelProjectionService = skillLabelProjectionService;
     }
 
     @GetMapping
@@ -40,6 +47,8 @@ public class SkillSearchController extends BaseApiController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String namespace,
             @RequestParam(name = "label", required = false) java.util.List<String> labels,
+            @Parameter(description = "Include each skill's labels in the response")
+            @RequestParam(name = "includeLabels", defaultValue = "false") boolean includeLabels,
             @Parameter(schema = @Schema(defaultValue = DEFAULT_SORT))
             @RequestParam(required = false) String sort,
             @Parameter(schema = @Schema(type = "integer", defaultValue = "0", minimum = "0"))
@@ -60,7 +69,18 @@ public class SkillSearchController extends BaseApiController {
                 userNsRoles
         );
 
-        return ok("response.success.read", response);
+        return ok("response.success.read", includeLabels ? withLabels(response) : response);
+    }
+
+    private SkillSearchAppService.SearchResponse withLabels(SkillSearchAppService.SearchResponse response) {
+        Map<Long, List<SkillLabelDto>> labelsBySkillId = skillLabelProjectionService.labelsBySkillIds(
+                response.items().stream().map(SkillSummaryResponse::id).toList());
+
+        List<SkillSummaryResponse> items = response.items().stream()
+                .map(item -> item.withLabels(labelsBySkillId.getOrDefault(item.id(), List.of())))
+                .toList();
+
+        return new SkillSearchAppService.SearchResponse(items, response.total(), response.page(), response.size());
     }
 
     private String normalizeSort(String sort) {

@@ -93,9 +93,10 @@ public class ClawHubCompatController {
     public ClawHubSkillListResponse listSkills(@RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "25") int limit,
                                                @RequestParam(required = false) String sort,
+                                               @RequestParam(defaultValue = "false") boolean includeLabels,
                                                @RequestAttribute(value = "userId", required = false) String userId,
                                                @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return clawHubCompatAppService.listSkills(page, limit, sort, userId, userNsRoles);
+        return clawHubCompatAppService.listSkills(page, limit, sort, includeLabels, userId, userNsRoles);
     }
 
     @RateLimit(category = "skills", authenticated = 60, anonymous = 20)
