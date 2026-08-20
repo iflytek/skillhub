@@ -203,6 +203,64 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void getSkillDetailKeepsPublicArchivedSkillDirectlyReadableWithArchivedStatus() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "archived-skill", "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 9L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setLatestVersionId(10L);
+        SkillVersion version = new SkillVersion(9L, "1.0.0", "owner-1");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "archived-skill")).thenReturn(List.of(skill));
+        when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+        when(userAccountRepository.findById("owner-1"))
+                .thenReturn(Optional.of(new UserAccount("owner-1", "Owner", null, null)));
+
+        SkillQueryService.SkillDetailDTO detail =
+                service.getSkillDetail("global", "archived-skill", "viewer", Map.of());
+
+        assertEquals("ARCHIVED", detail.status());
+        assertEquals("archived-skill", detail.slug());
+    }
+
+    @Test
+    void namespaceDiscoveryQueriesOnlyActiveSkillsSoArchivedSkillIsAbsent() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner-1");
+        setId(namespace, 1L);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE)).thenReturn(List.of());
+
+        Page<Skill> result = service.listSkillsByNamespace("global", "viewer", Map.of(), PageRequest.of(0, 20));
+
+        assertTrue(result.isEmpty());
+        verify(skillRepository).findByNamespaceIdAndStatus(1L, SkillStatus.ACTIVE);
+    }
+
+    @Test
+    void versionContentRejectsPublicArchivedSkillForNonManager() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "archived-skill", "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 9L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setLatestVersionId(10L);
+        SkillVersion version = new SkillVersion(9L, "1.0.0", "owner-1");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "archived-skill")).thenReturn(List.of(skill));
+        lenient().when(skillVersionRepository.findBySkillIdAndVersion(9L, "1.0.0"))
+                .thenReturn(Optional.of(version));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.listFiles("global", "archived-skill", "1.0.0", "viewer", Map.of()));
+        verifyNoInteractions(skillFileRepository);
+    }
+
+    @Test
     void testListSkillsByNamespace() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";

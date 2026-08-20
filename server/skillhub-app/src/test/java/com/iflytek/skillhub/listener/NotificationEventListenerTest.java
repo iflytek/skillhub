@@ -4,10 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.event.*;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.social.SkillSubscriptionService;
+import com.iflytek.skillhub.domain.social.SubscriptionRecipientEligibility;
+import com.iflytek.skillhub.domain.social.SubscriptionMetadataAccessPolicy;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.service.NotificationDispatcher;
 import org.junit.jupiter.api.Test;
@@ -31,9 +41,20 @@ class NotificationEventListenerTest {
     @Mock RecipientResolver recipientResolver;
     @Mock NotificationDispatcher dispatcher;
     @Mock ObjectMapper objectMapper;
+    @Mock SkillSubscriptionService skillSubscriptionService;
+    @Mock UserAccountRepository userAccountRepository;
+    @Mock NamespaceMemberRepository namespaceMemberRepository;
 
     @InjectMocks
     NotificationEventListener listener;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUpListener() {
+        listener = new NotificationEventListener(skillRepository, skillVersionRepository, namespaceRepository,
+                recipientResolver, dispatcher, skillSubscriptionService, objectMapper,
+                new SubscriptionRecipientEligibility(userAccountRepository, namespaceMemberRepository,
+                        new SubscriptionMetadataAccessPolicy()));
+    }
 
     private Skill mockSkill(Long id) {
         Skill skill = mock(Skill.class);
@@ -224,5 +245,154 @@ class NotificationEventListenerTest {
 
         verify(dispatcher).dispatch(eq("reporter-1"), eq(NotificationCategory.REPORT),
                 eq("REPORT_RESOLVED"), anyString(), anyString(), eq("SKILL"), eq(1L));
+    }
+
+    @Test
+    void publishSubscriberFanoutExcludesInactiveAccount() {
+        Skill skill = skill(1L, "owner", "owner");
+        skill.setLatestVersionId(10L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("inactive"));
+        UserAccount inactive = new UserAccount("inactive", "Inactive", null, null);
+        inactive.setStatus(UserStatus.DISABLED);
+        when(userAccountRepository.findByIdIn(List.of("inactive"))).thenReturn(List.of(inactive));
+        mockNamespace();
+
+        listener.onSkillPublishedForSubscribers(new SkillPublishedEvent(1L, 10L, "owner"));
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void publishSubscriberFanoutFailsClosedBeforeDispatchWhenAccountBatchFails() {
+        Skill skill = skill(1L, "owner", "owner");
+        skill.setLatestVersionId(10L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("user-1", "user-2"));
+        when(userAccountRepository.findByIdIn(anyList())).thenThrow(new IllegalStateException("account batch unavailable"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                listener.onSkillPublishedForSubscribers(new SkillPublishedEvent(1L, 10L, "owner")))
+                .isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void publishSubscriberFanoutDispatchesOnlyEligibleNonPublisherWithExactPayload() throws Exception {
+        Skill skill = skill(1L, "publisher", "publisher");
+        skill.setLatestVersionId(10L);
+        skill.setVisibility(SkillVisibility.PRIVATE);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L))
+                .thenReturn(List.of("publisher", "admin", "member", "inactive", "missing"));
+        UserAccount publisher = new UserAccount("publisher", "Publisher", null, null);
+        UserAccount admin = new UserAccount("admin", "Admin", null, null);
+        UserAccount member = new UserAccount("member", "Member", null, null);
+        UserAccount inactive = new UserAccount("inactive", "Inactive", null, null);
+        inactive.setStatus(UserStatus.DISABLED);
+        when(userAccountRepository.findByIdIn(anyList())).thenReturn(List.of(publisher, admin, member, inactive));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserIdIn(eq(5L), anyCollection()))
+                .thenReturn(List.of(new NamespaceMember(5L, "admin", NamespaceRole.ADMIN),
+                        new NamespaceMember(5L, "member", NamespaceRole.MEMBER)));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"skillId\":1,\"version\":\"1.0.0\"}");
+
+        listener.onSkillPublishedForSubscribers(new SkillPublishedEvent(1L, 10L, "publisher"));
+
+        verify(dispatcher).dispatch("admin", NotificationCategory.PUBLISH, "SUBSCRIPTION_NEW_VERSION",
+                "Skill updated: Test Skill", "{\"skillId\":1,\"version\":\"1.0.0\"}", "SKILL", 1L);
+        verifyNoMoreInteractions(dispatcher);
+    }
+
+    @Test
+    void yankWithoutFallbackUsesVerifiedPreYankPublicationAndExcludesActor() throws Exception {
+        Skill skill = skill(1L, "owner", "owner");
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("actor", "subscriber"));
+        when(userAccountRepository.findByIdIn(anyList())).thenReturn(List.of(
+                new UserAccount("actor", "Actor", null, null),
+                new UserAccount("subscriber", "Subscriber", null, null)));
+        mockNamespace();
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"skillId\":1,\"versionId\":10}");
+
+        listener.onSkillVersionYankedForSubscribers(new SkillVersionYankedEvent(1L, 10L, "actor", true));
+
+        verify(dispatcher).dispatch("subscriber", NotificationCategory.PUBLISH, "SUBSCRIPTION_VERSION_YANKED",
+                "Skill version yanked: Test Skill", "{\"skillId\":1,\"versionId\":10}", "SKILL", 1L);
+        verifyNoMoreInteractions(dispatcher);
+    }
+
+    @Test
+    void yankDoesNotDispatchWhenEventDoesNotVerifyPublishedPreState() {
+        Skill skill = skill(1L, "owner", "owner");
+        skill.setLatestVersionId(9L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("subscriber"));
+        when(userAccountRepository.findByIdIn(anyList())).thenReturn(List.of(
+                new UserAccount("subscriber", "Subscriber", null, null)));
+        mockNamespace();
+
+        listener.onSkillVersionYankedForSubscribers(new SkillVersionYankedEvent(1L, 10L, "actor", false));
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void publishFanoutFailsClosedBeforeDispatchWhenNamespaceReadFails() {
+        Skill skill = skill(1L, "owner", "owner");
+        skill.setLatestVersionId(10L);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("user-1"));
+        when(namespaceRepository.findById(5L)).thenThrow(new IllegalStateException("namespace unavailable"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                listener.onSkillPublishedForSubscribers(new SkillPublishedEvent(1L, 10L, "owner")))
+                .isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void yankFanoutFailsClosedBeforeDispatchWhenMembershipBatchFails() {
+        Skill skill = skill(1L, "owner", "owner");
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("user-1", "user-2"));
+        when(userAccountRepository.findByIdIn(anyList())).thenReturn(List.of(
+                new UserAccount("user-1", "One", null, null),
+                new UserAccount("user-2", "Two", null, null)));
+        when(namespaceRepository.findById(5L))
+                .thenReturn(Optional.of(new Namespace("demo", "Demo", "owner")));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserIdIn(eq(5L), anyCollection()))
+                .thenThrow(new IllegalStateException("membership unavailable"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                listener.onSkillVersionYankedForSubscribers(new SkillVersionYankedEvent(1L, 10L, "actor", true)))
+                .isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void archivedNamespaceRemovedSubscriberIsRejectedButCurrentMemberReceivesYank() throws Exception {
+        Skill skill = skill(1L, "owner", "owner");
+        skill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED);
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(skillSubscriptionService.findSubscribersBySkillId(1L)).thenReturn(List.of("current", "removed"));
+        when(userAccountRepository.findByIdIn(anyList())).thenReturn(List.of(
+                new UserAccount("current", "Current", null, null),
+                new UserAccount("removed", "Removed", null, null)));
+        Namespace namespace = new Namespace("archived", "Archived", "owner");
+        namespace.setStatus(NamespaceStatus.ARCHIVED);
+        when(namespaceRepository.findById(5L)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserIdIn(eq(5L), anyCollection()))
+                .thenReturn(List.of(new NamespaceMember(5L, "current", NamespaceRole.MEMBER)));
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        listener.onSkillVersionYankedForSubscribers(new SkillVersionYankedEvent(1L, 10L, "actor", true));
+
+        verify(dispatcher).dispatch(eq("current"), eq(NotificationCategory.PUBLISH),
+                eq("SUBSCRIPTION_VERSION_YANKED"), anyString(), eq("{}"), eq("SKILL"), eq(1L));
+        verifyNoMoreInteractions(dispatcher);
     }
 }

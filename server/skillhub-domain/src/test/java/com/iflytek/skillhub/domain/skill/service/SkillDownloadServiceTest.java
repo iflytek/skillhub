@@ -215,6 +215,25 @@ class SkillDownloadServiceTest {
     }
 
     @Test
+    void downloadRejectsPublicArchivedSkillEvenThoughItsMetadataRemainsReadable() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "archived-skill", "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 9L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setLatestVersionId(10L);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "archived-skill")).thenReturn(List.of(skill));
+
+        assertThrows(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class, () ->
+                service.downloadLatest("global", "archived-skill", "viewer", Map.of()));
+
+        verify(skillRepository, never()).incrementDownloadCount(anyLong());
+        verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
+        verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
+    }
+
+    @Test
     void testDownloadLatest_ShouldRejectAnonymousHiddenPrivateAndUnpublishedSkills() throws Exception {
         Namespace namespace = new Namespace("global", "Global", "owner-1");
         setId(namespace, 1L);

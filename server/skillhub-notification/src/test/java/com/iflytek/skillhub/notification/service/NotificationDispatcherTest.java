@@ -11,6 +11,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Map;
+
+import org.mockito.ArgumentCaptor;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -56,6 +61,41 @@ class NotificationDispatcherTest {
         verify(notificationService).create("user-1", NotificationCategory.REVIEW,
                 "review.approved", "Title", "{}", "skill", 1L);
         verify(sseEmitterManager).push(eq("user-1"), any());
+    }
+
+    @Test
+    void dispatch_persistsExactSubscriberNotificationAndPushesSameRecipientVisiblePayload() {
+        Notification notification = new Notification("subscriber-1", NotificationCategory.PUBLISH,
+                "SUBSCRIPTION_NEW_VERSION", "Skill updated: Demo",
+                "{\"skillId\":1,\"versionId\":10}", "SKILL", 1L,
+                Instant.parse("2026-08-19T20:30:00Z"));
+        try {
+            var id = Notification.class.getDeclaredField("id");
+            id.setAccessible(true);
+            id.set(notification, 42L);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+        when(preferenceService.isEnabled("subscriber-1", NotificationCategory.PUBLISH,
+                NotificationChannel.IN_APP)).thenReturn(true);
+        when(notificationService.create(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(notification);
+
+        dispatcher.dispatch("subscriber-1", NotificationCategory.PUBLISH, "SUBSCRIPTION_NEW_VERSION",
+                "Skill updated: Demo", "{\"skillId\":1,\"versionId\":10}", "SKILL", 1L);
+
+        verify(notificationService).create("subscriber-1", NotificationCategory.PUBLISH,
+                "SUBSCRIPTION_NEW_VERSION", "Skill updated: Demo",
+                "{\"skillId\":1,\"versionId\":10}", "SKILL", 1L);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> payload = ArgumentCaptor.forClass(Map.class);
+        verify(sseEmitterManager).push(eq("subscriber-1"), payload.capture());
+        assertThat(payload.getValue()).containsEntry("id", 42L)
+                .containsEntry("category", "PUBLISH")
+                .containsEntry("eventType", "SUBSCRIPTION_NEW_VERSION")
+                .containsEntry("bodyJson", "{\"skillId\":1,\"versionId\":10}")
+                .containsEntry("entityType", "SKILL")
+                .containsEntry("entityId", 1L);
     }
 
     @Test

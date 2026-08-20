@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.review.ReviewTask;
@@ -145,6 +146,9 @@ public class SkillReviewSubmitService {
         skill.setLatestVersionId(versionId);
         skill.setUpdatedBy(actorUserId);
         skillRepository.save(skill);
+
+        eventPublisher.publishEvent(new SkillPublishedEvent(
+                skill.getId(), version.getId(), actorUserId));
     }
 
     private void assertCanManageLifecycle(Skill skill, String actorUserId, Map<Long, NamespaceRole> userNamespaceRoles) {

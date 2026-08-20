@@ -281,7 +281,7 @@ public class SkillGovernanceService {
         });
         auditLogService.record(actorUserId, "YANK_SKILL_VERSION", "SKILL_VERSION", versionId, null, clientIp, userAgent, jsonReason(reason));
         eventPublisher.publishEvent(new com.iflytek.skillhub.domain.event.SkillVersionYankedEvent(
-                version.getSkillId(), versionId, actorUserId));
+                version.getSkillId(), versionId, actorUserId, true));
         return saved;
     }
 

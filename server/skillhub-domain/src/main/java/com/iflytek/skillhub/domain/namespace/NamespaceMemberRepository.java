@@ -15,6 +15,7 @@ public interface NamespaceMemberRepository {
     List<NamespaceMember> findByUserId(String userId);
     Page<NamespaceMember> findByNamespaceId(Long namespaceId, Pageable pageable);
     List<NamespaceMember> findByNamespaceIdAndRoleIn(Long namespaceId, Collection<NamespaceRole> roles);
+    List<NamespaceMember> findByNamespaceIdAndUserIdIn(Long namespaceId, Collection<String> userIds);
     NamespaceMember save(NamespaceMember member);
     void deleteByNamespaceId(Long namespaceId);
     void deleteByNamespaceIdAndUserId(Long namespaceId, String userId);

@@ -8,6 +8,7 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.social.SkillSubscriptionService;
+import com.iflytek.skillhub.domain.social.SubscriptionRecipientEligibility;
 import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.service.NotificationDispatcher;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public class NotificationEventListener {
     private final NotificationDispatcher dispatcher;
     private final SkillSubscriptionService skillSubscriptionService;
     private final ObjectMapper objectMapper;
+    private final SubscriptionRecipientEligibility subscriptionEligibility;
 
     public NotificationEventListener(SkillRepository skillRepository,
                                       SkillVersionRepository skillVersionRepository,
@@ -40,7 +42,8 @@ public class NotificationEventListener {
                                       RecipientResolver recipientResolver,
                                       NotificationDispatcher dispatcher,
                                       SkillSubscriptionService skillSubscriptionService,
-                                      ObjectMapper objectMapper) {
+                                      ObjectMapper objectMapper,
+                                      SubscriptionRecipientEligibility subscriptionEligibility) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.namespaceRepository = namespaceRepository;
@@ -48,6 +51,7 @@ public class NotificationEventListener {
         this.dispatcher = dispatcher;
         this.skillSubscriptionService = skillSubscriptionService;
         this.objectMapper = objectMapper;
+        this.subscriptionEligibility = subscriptionEligibility;
     }
 
     @Async("skillhubEventExecutor")
@@ -74,6 +78,8 @@ public class NotificationEventListener {
             if (subscribers.isEmpty()) {
                 return;
             }
+            var namespace = namespaceRepository.findById(skill.getNamespaceId()).orElse(null);
+            subscribers = subscriptionEligibility.currentRecipients(skill, namespace, subscribers);
             String title = "Skill updated: " + skillDisplayName(skill);
             Map<String, Object> body = bodyWithSkill(skill);
             versionLabel(event.versionId(), body);
@@ -96,6 +102,8 @@ public class NotificationEventListener {
             if (subscribers.isEmpty()) {
                 return;
             }
+            var namespace = namespaceRepository.findById(skill.getNamespaceId()).orElse(null);
+            subscribers = subscriptionEligibility.yankedRecipients(skill, namespace, subscribers, event.wasPublished());
             String title = "Skill version yanked: " + skillDisplayName(skill);
             Map<String, Object> body = bodyWithSkill(skill);
             versionLabel(event.versionId(), body);
