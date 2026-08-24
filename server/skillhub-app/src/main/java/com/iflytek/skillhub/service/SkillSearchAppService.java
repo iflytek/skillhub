@@ -249,6 +249,8 @@ public class SkillSearchAppService {
                 skill.getRatingCount(),
                 namespaceSlug,
                 skill.getUpdatedAt(),
+                skill.getOwnerId(),
+                null,
                 false,
                 toLifecycleVersion(projection.headlineVersion()),
                 toLifecycleVersion(projection.publishedVersion()),

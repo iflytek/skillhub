@@ -5,12 +5,31 @@ import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
-import { Bookmark, ShieldCheck } from 'lucide-react'
+import { Bookmark, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
   skill: SkillSummary
   onClick?: () => void
   highlightStarred?: boolean
+}
+
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffSeconds = Math.floor(diffMs / 1000)
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  const diffHours = Math.floor(diffMinutes / 60)
+  const diffDays = Math.floor(diffHours / 24)
+  const diffMonths = Math.floor(diffDays / 30)
+  const diffYears = Math.floor(diffDays / 365)
+
+  if (diffSeconds < 60) return '刚刚'
+  if (diffMinutes < 60) return `${diffMinutes}分钟前`
+  if (diffHours < 24) return `${diffHours}小时前`
+  if (diffDays < 30) return `${diffDays}天前`
+  if (diffMonths < 12) return `${diffMonths}个月前`
+  return `${diffYears}年前`
 }
 
 /**
@@ -108,6 +127,22 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             </span>
           )}
         </div>
+        {(skill.ownerDisplayName || skill.updatedAt) && (
+          <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-3 text-xs text-muted-foreground">
+            {skill.ownerDisplayName && (
+              <span className="flex items-center gap-1">
+                <User className="w-3 h-3" />
+                {skill.ownerDisplayName}
+              </span>
+            )}
+            {skill.updatedAt && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatRelativeTime(skill.updatedAt)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   )

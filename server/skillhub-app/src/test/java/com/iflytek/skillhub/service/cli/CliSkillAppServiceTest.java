@@ -72,7 +72,7 @@ class CliSkillAppServiceTest {
                 List.of(new SkillSummaryResponse(
                         1L, "pdf-parser", "PDF Parser", "Parse PDFs",
                         "PUBLIC", "ACTIVE", 100L, 5, BigDecimal.valueOf(4.5), 10,
-                        "global", Instant.now(), false,
+                        "global", Instant.now(), null, null, false,
                         new SkillLifecycleVersionResponse(1L, "1.2.0", "PUBLISHED"),
                         new SkillLifecycleVersionResponse(1L, "1.2.0", "PUBLISHED"),
                         null, "PUBLISHED", null
@@ -100,7 +100,7 @@ class CliSkillAppServiceTest {
                         new SkillSummaryResponse(
                                 2L, "ready", "Ready", "Installable",
                                 "PUBLIC", "ACTIVE", 0L, 0, BigDecimal.ZERO, 0,
-                                "global", Instant.now(), false,
+                                "global", Instant.now(), null, null, false,
                                 new SkillLifecycleVersionResponse(2L, "1.0.0", "PUBLISHED"),
                                 new SkillLifecycleVersionResponse(2L, "1.0.0", "PUBLISHED"),
                                 null, "PUBLISHED", null
