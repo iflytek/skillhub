@@ -71,6 +71,7 @@ services:
       SKILLHUB_API_UPSTREAM: http://server:8080
       SKILLHUB_WEB_API_BASE_URL: ""
       SKILLHUB_PUBLIC_BASE_URL: ""
+      SKILLHUB_TRUST_FORWARDED_PROTO: "false"
     depends_on:
       server:
         condition: service_healthy
