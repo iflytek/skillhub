@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/riscv64-images.yml'
+      - '.github/workflows/publish-images.yml'
       - 'server/**'
       - 'web/**'
   workflow_dispatch:

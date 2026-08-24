@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Build the architecture-neutral JAR on the Buildx host. This avoids emulating
 # the complete Maven build when the target image is linux/riscv64.
 FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk-alpine AS build

@@ -236,7 +236,9 @@ frontend schema, and fails if the checked-in SDK is stale.
 Published runtime images are built by GitHub Actions and pushed to GHCR.
 This is the supported path for anyone who wants a ready-to-use local
 environment without building the backend or frontend on their machine.
-Published images target both `linux/amd64` and `linux/arm64`.
+Published server and web images target `linux/amd64`, `linux/arm64`, and
+`linux/riscv64`; the scanner image currently targets `linux/amd64` and
+`linux/arm64`.
 
 **Quick deployment with curl:**
 

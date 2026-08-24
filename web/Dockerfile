@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # The frontend output is static and architecture-neutral. Build it on the
 # Buildx host so linux/riscv64 does not depend on a target-architecture Node.js
 # image; only the multi-architecture Nginx runtime is target-specific.

@@ -136,7 +136,8 @@ skillhub/
 
 - 开发路径：`make dev-all`。前后端在宿主机运行，`docker-compose.yml` 只负责 PostgreSQL、Redis、MinIO。
 - 交付路径：GitHub Actions 构建并发布 `server` / `web` 镜像；用户通过 `compose.release.yml` 在本地一键拉起前后端容器和基础服务。
-- 发布镜像为多架构 manifest，至少覆盖 `linux/amd64` 与 `linux/arm64`。
+- 发布镜像为多架构 manifest：`server` / `web` 覆盖 `linux/amd64`、`linux/arm64` 与
+  `linux/riscv64`；`scanner` 暂保持 `linux/amd64` 与 `linux/arm64`。
 
 单机运行时统一入口：
 - `http://localhost/` → Web 容器（Nginx）
@@ -169,7 +170,8 @@ skillhub/
 - 数据库迁移：Flyway
 - 认证：Spring Security OAuth2 Client（一期 GitHub）
 - 镜像发布：GitHub Actions 推送至 GHCR，默认维护 `edge` 与语义化版本标签
-- 运行时兼容：发布镜像默认输出 `linux/amd64` + `linux/arm64` 多架构 manifest
+- 运行时兼容：`server` / `web` 发布镜像默认输出 `linux/amd64` + `linux/arm64` +
+  `linux/riscv64` 多架构 manifest，`scanner` 暂保持 `linux/amd64` + `linux/arm64`
 
 ## 11. Repository / Query Boundary 约定
 

@@ -10,7 +10,8 @@
 - 单机交付环境：`docker compose --env-file .env.release -f compose.release.yml up -d`
   - 前端和后端都运行在容器内
 - 使用 GitHub Actions 发布到 GHCR 的镜像
-- 默认发布 `linux/amd64` 与 `linux/arm64` 多架构镜像
+- 默认发布多架构镜像：`server` / `web` 覆盖 `linux/amd64`、`linux/arm64` 与
+  `linux/riscv64`，`scanner` 暂保持 `linux/amd64` 与 `linux/arm64`
   - PostgreSQL、Redis 与应用容器一起通过 Compose 启动
 
 不再维护本地构建整套 demo 容器的中间模式，也不再保留 `docker-compose.prod.yml`。
@@ -205,7 +206,8 @@ Sentinel 配置优先于 Cluster 和单机 `host`/`port`。在 Kubernetes 等 Se
    - `ghcr.io/iflytek/skillhub-server`
    - `ghcr.io/iflytek/skillhub-web`
 5. 写入 `edge` / `vX.Y.Z` / `latest` / `sha-*` 标签
-6. 同时发布 `linux/amd64` 与 `linux/arm64` manifest，避免 Apple Silicon / ARM 主机依赖模拟层
+6. 同时发布多架构 manifest：`server` / `web` 覆盖 `linux/amd64`、`linux/arm64` 与
+   `linux/riscv64`，`scanner` 暂保持 `linux/amd64` 与 `linux/arm64`
 
 ## 7 配置管理
 
