@@ -111,7 +111,8 @@ public class SecurityScanService {
     }
 
     public boolean isTaskAlreadyProcessed(String taskId) {
-        return taskId != null && auditRepository.existsByTaskIdAndScannedAtIsNotNull(taskId);
+        return taskId != null && auditRepository != null
+                && auditRepository.existsByTaskIdAndScannedAtIsNotNull(taskId);
     }
 
     @Transactional
