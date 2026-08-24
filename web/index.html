@@ -6,13 +6,14 @@
     <meta name="google" content="notranslate" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://localhost:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss: http://localhost:* https://localhost:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     />
     <title>SkillHub</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- Self-hosted fonts (see /fonts/fonts.css); no external CDN so first paint
+         isn't blocked on fonts.googleapis.com, which is slow/unreachable on some
+         networks (#716). -->
+    <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
   <body>
     <!-- translate=no: Chrome auto-translate mutates #root and races React 19 insertBefore. -->
