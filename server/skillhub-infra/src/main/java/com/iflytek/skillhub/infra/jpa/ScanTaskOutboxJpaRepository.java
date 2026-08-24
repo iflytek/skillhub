@@ -33,7 +33,7 @@ public interface ScanTaskOutboxJpaRepository extends JpaRepository<ScanTaskOutbo
     int deleteSentBefore(@Param("cutoff") Instant cutoff);
 
     @Override
-    void deleteByVersionId(Long versionId);
+    int deleteByVersionId(Long versionId);
 
     List<ScanTaskOutbox> findByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAtAsc(
             ScanTaskOutboxStatus status, Instant now, org.springframework.data.domain.Pageable pageable);
