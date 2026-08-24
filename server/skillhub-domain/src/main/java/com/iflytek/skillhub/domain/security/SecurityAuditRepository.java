@@ -12,6 +12,8 @@ public interface SecurityAuditRepository {
 
     Optional<SecurityAudit> findByScanId(String scanId);
 
+    boolean existsByTaskIdAndScannedAtIsNotNull(String taskId);
+
     boolean existsBySkillVersionId(Long skillVersionId);
 
     /**

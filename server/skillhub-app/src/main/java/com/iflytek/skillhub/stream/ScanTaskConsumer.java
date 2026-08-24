@@ -128,6 +128,10 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
     @Override
     protected void processBusiness(ScanTaskPayload payload) {
+        if (securityScanService.isTaskAlreadyProcessed(payload.taskId())) {
+            log.info("Skipping already processed security scan task: taskId={}, versionId={}", payload.taskId(), payload.versionId());
+            return;
+        }
         String skillPath = resolveWorkingSkillPath(payload);
         SecurityScanRequest request = new SecurityScanRequest(
                 payload.taskId(),

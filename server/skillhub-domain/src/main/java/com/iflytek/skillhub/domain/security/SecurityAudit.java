@@ -26,6 +26,9 @@ public class SecurityAudit {
     @Column(name = "skill_version_id", nullable = false)
     private Long skillVersionId;
 
+    @Column(name = "task_id", length = 100)
+    private String taskId;
+
     @Column(name = "scan_id", length = 100)
     private String scanId;
 
@@ -66,8 +69,13 @@ public class SecurityAudit {
     }
 
     public SecurityAudit(Long skillVersionId, ScannerType scannerType) {
+        this(skillVersionId, scannerType, null);
+    }
+
+    public SecurityAudit(Long skillVersionId, ScannerType scannerType, String taskId) {
         this.skillVersionId = skillVersionId;
         this.scannerType = scannerType;
+        this.taskId = taskId;
         this.verdict = SecurityVerdict.SUSPICIOUS;
         this.isSafe = false;
         this.findingsCount = 0;
@@ -89,6 +97,10 @@ public class SecurityAudit {
 
     public String getScanId() {
         return scanId;
+    }
+
+    public String getTaskId() {
+        return taskId;
     }
 
     public ScannerType getScannerType() {
