@@ -24,11 +24,14 @@ description: Common problem diagnosis and solutions
 
 ### PostgreSQL container fails to start with `operation not permitted` (cannot write `postmaster.pid` / `pg_wal`)
 
-Common in intranet / self-hosted environments using bind mounts. The root cause is a mismatch between the **data volume directory permissions** and the container's `postgres` user (UID 999):
+SkillHub's default Compose / `runtime.sh` deployment uses a Docker named volume (`postgres_data`), so you normally do not need to manage host directory permissions manually. This error is more common after changing PostgreSQL storage to a host bind mount, for example `/data/skillhub/postgres:/var/lib/postgresql/data`.
 
-1. Change the data volume directory owner to the postgres user: `chown -R 999:999 <data-dir>`.
-2. On RHEL/CentOS, check whether SELinux is blocking the container from writing to the host directory.
-3. Prefer the official `runtime.sh` deployment script, which handles the relevant initialization steps and avoids permission gaps from hand-written compose files.
+Recommended checks:
+
+1. Prefer switching back to a Docker named volume, or use the official `runtime.sh` deployment script to avoid permission gaps from hand-written compose files.
+2. If you must use a bind mount, first check the `postgres` UID/GID in the image you run: `docker run --rm postgres:16-alpine id postgres`. Then change the data directory owner to the actual UID/GID, for example `chown -R <uid>:<gid> <data-dir>`. Do not assume every environment is `999:999`.
+3. On RHEL/CentOS, check SELinux. If AppArmor, rootless Docker, NFS/CIFS/NAS, or another restricted filesystem is involved, also verify that PostgreSQL can write, lock files, and change permissions as required.
+4. Avoid putting PostgreSQL `PGDATA` on network filesystems that do not provide full POSIX permission semantics. For production, prefer local disks, Docker named volumes, block storage, or an external PostgreSQL service.
 
 ## Upload Failed
 
