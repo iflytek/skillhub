@@ -27,6 +27,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class CompatSkillLookupService {
 
+    private static final int LEGACY_SLUG_PUBLISHED_SCORE = 1_000;
+    private static final int LEGACY_SLUG_PUBLIC_SCORE = 100;
+    private static final int LEGACY_SLUG_GLOBAL_SCORE = 10;
+
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -60,14 +64,8 @@ public class CompatSkillLookupService {
                 : namespaceRepository.findByIdIn(namespaceIds).stream()
                 .collect(Collectors.toMap(Namespace::getId, Function.identity()));
         Skill skill = skills.stream()
-                .min(Comparator.<Skill>comparingInt(s -> {
-                    Namespace ns = namespacesById.get(s.getNamespaceId());
-                    int score = 0;
-                    if (s.getVisibility() == SkillVisibility.PUBLIC) score += 100;
-                    if (ns != null && ns.getType() == NamespaceType.GLOBAL) score += 50;
-                    if (s.getLatestVersionId() != null) score += 10;
-                    return -score;
-                }).thenComparing(Skill::getId))
+                .min(Comparator.<Skill>comparingInt(s -> -legacySlugCandidateScore(s, namespacesById))
+                        .thenComparing(Skill::getId))
                 .orElse(skills.get(0));
         Namespace namespace = namespacesById.get(skill.getNamespaceId());
         if (namespace == null) {
@@ -113,6 +111,16 @@ public class CompatSkillLookupService {
             return Optional.empty();
         }
         return skillVersionRepository.findById(skill.getLatestVersionId());
+    }
+
+    private static int legacySlugCandidateScore(Skill skill, Map<Long, Namespace> namespacesById) {
+        Namespace namespace = namespacesById.get(skill.getNamespaceId());
+        int score = 0;
+        // Bare-slug CLI resolution should prefer installable candidates before namespace defaults.
+        if (skill.getLatestVersionId() != null) score += LEGACY_SLUG_PUBLISHED_SCORE;
+        if (skill.getVisibility() == SkillVisibility.PUBLIC) score += LEGACY_SLUG_PUBLIC_SCORE;
+        if (namespace != null && namespace.getType() == NamespaceType.GLOBAL) score += LEGACY_SLUG_GLOBAL_SCORE;
+        return score;
     }
 
     private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {

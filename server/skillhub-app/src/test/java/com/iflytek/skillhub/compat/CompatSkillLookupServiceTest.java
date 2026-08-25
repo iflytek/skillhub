@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -15,6 +16,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,40 @@ class CompatSkillLookupServiceTest {
             skillSlugResolutionService,
             visibilityChecker
     );
+
+    @Test
+    void findByLegacySlug_prefersPublicGlobalPublishedCandidate() {
+        Skill privateTeamSkill = skill(11L, 1L, "demo", SkillVisibility.PRIVATE, 110L);
+        Skill publicTeamSkill = skill(12L, 1L, "demo", SkillVisibility.PUBLIC, 120L);
+        Skill publicGlobalSkill = skill(13L, 2L, "demo", SkillVisibility.PUBLIC, 130L);
+        Namespace teamNamespace = namespace(1L, "team-a", NamespaceType.TEAM);
+        Namespace globalNamespace = namespace(2L, "global", NamespaceType.GLOBAL);
+
+        when(skillRepository.findBySlug("demo"))
+                .thenReturn(List.of(privateTeamSkill, publicTeamSkill, publicGlobalSkill));
+        when(namespaceRepository.findByIdIn(List.of(1L, 2L))).thenReturn(List.of(teamNamespace, globalNamespace));
+
+        CompatSkillLookupService.CompatSkillContext result = service.findByLegacySlug("demo");
+
+        assertThat(result.skill().getId()).isEqualTo(13L);
+        assertThat(result.namespace().getSlug()).isEqualTo("global");
+    }
+
+    @Test
+    void findByLegacySlug_prefersPublishedCandidateOverGlobalDraft() {
+        Skill publicGlobalDraft = skill(21L, 2L, "demo", SkillVisibility.PUBLIC, null);
+        Skill publicTeamPublished = skill(22L, 1L, "demo", SkillVisibility.PUBLIC, 220L);
+        Namespace teamNamespace = namespace(1L, "team-a", NamespaceType.TEAM);
+        Namespace globalNamespace = namespace(2L, "global", NamespaceType.GLOBAL);
+
+        when(skillRepository.findBySlug("demo")).thenReturn(List.of(publicGlobalDraft, publicTeamPublished));
+        when(namespaceRepository.findByIdIn(List.of(2L, 1L))).thenReturn(List.of(globalNamespace, teamNamespace));
+
+        CompatSkillLookupService.CompatSkillContext result = service.findByLegacySlug("demo");
+
+        assertThat(result.skill().getId()).isEqualTo(22L);
+        assertThat(result.namespace().getSlug()).isEqualTo("team-a");
+    }
 
     @Test
     void resolveVisible_throwsNotFoundWhenCallerCannotAccessSkill() {
@@ -74,5 +110,19 @@ class CompatSkillLookupServiceTest {
         );
 
         assertThat(result.skill().getId()).isEqualTo(7L);
+    }
+
+    private static Skill skill(Long id, Long namespaceId, String slug, SkillVisibility visibility, Long latestVersionId) {
+        Skill skill = new Skill(namespaceId, slug, "owner-1", visibility);
+        ReflectionTestUtils.setField(skill, "id", id);
+        skill.setLatestVersionId(latestVersionId);
+        return skill;
+    }
+
+    private static Namespace namespace(Long id, String slug, NamespaceType type) {
+        Namespace namespace = new Namespace(slug, slug, "owner-1");
+        ReflectionTestUtils.setField(namespace, "id", id);
+        namespace.setType(type);
+        return namespace;
     }
 }
