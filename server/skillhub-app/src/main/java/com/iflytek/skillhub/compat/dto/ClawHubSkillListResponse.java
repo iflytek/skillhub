@@ -19,7 +19,7 @@ public record ClawHubSkillListResponse(
         LatestVersion latestVersion,
         /**
          * Labels attached to the skill, present only when the caller passes
-         * {@code includeLabels=true}. Omitted otherwise, so the legacy payload is unchanged.
+         * {@code include=labels}. Omitted otherwise, so the legacy payload is unchanged.
          */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         List<SkillLabelDto> labels

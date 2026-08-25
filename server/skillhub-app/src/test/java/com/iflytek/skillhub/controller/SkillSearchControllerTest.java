@@ -170,7 +170,7 @@ class SkillSearchControllerTest {
         when(skillLabelProjectionService.labelsBySkillIds(List.of(7L)))
                 .thenReturn(Map.of(7L, List.of(new SkillLabelDto("automation", "TOPIC", "Automation"))));
 
-        mockMvc.perform(get("/api/web/skills").param("includeLabels", "true"))
+        mockMvc.perform(get("/api/web/skills").param("include", "labels"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].labels[0].slug").value("automation"))
                 .andExpect(jsonPath("$.data.items[0].labels[0].type").value("TOPIC"))
@@ -184,10 +184,17 @@ class SkillSearchControllerTest {
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 20));
         when(skillLabelProjectionService.labelsBySkillIds(List.of(7L))).thenReturn(Map.of());
 
-        mockMvc.perform(get("/api/web/skills").param("includeLabels", "true"))
+        mockMvc.perform(get("/api/web/skills").param("include", "labels"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].labels").isArray())
                 .andExpect(jsonPath("$.data.items[0].labels").isEmpty());
+    }
+
+    @Test
+    void searchShouldRejectUnsupportedIncludeOptions() throws Exception {
+        mockMvc.perform(get("/api/web/skills").param("include", "labels,stats"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
     }
 
     private static SkillSummaryResponse summary(Long id) {

@@ -1,17 +1,17 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.controller.support.IncludeOptions;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
-import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.dto.SkillLabelDto;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
+import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,8 +47,8 @@ public class SkillSearchController extends BaseApiController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String namespace,
             @RequestParam(name = "label", required = false) java.util.List<String> labels,
-            @Parameter(description = "Include each skill's labels in the response")
-            @RequestParam(name = "includeLabels", defaultValue = "false") boolean includeLabels,
+            @Parameter(description = "Optional response expansions. Supported value: labels")
+            @RequestParam(name = "include", required = false) List<String> include,
             @Parameter(schema = @Schema(defaultValue = DEFAULT_SORT))
             @RequestParam(required = false) String sort,
             @Parameter(schema = @Schema(type = "integer", defaultValue = "0", minimum = "0"))
@@ -69,7 +69,7 @@ public class SkillSearchController extends BaseApiController {
                 userNsRoles
         );
 
-        return ok("response.success.read", includeLabels ? withLabels(response) : response);
+        return ok("response.success.read", IncludeOptions.includesLabels(include) ? withLabels(response) : response);
     }
 
     private SkillSearchAppService.SearchResponse withLabels(SkillSearchAppService.SearchResponse response) {
