@@ -3,15 +3,21 @@ package com.iflytek.skillhub.compat;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,10 +46,33 @@ public class CompatSkillLookupService {
     }
 
     public CompatSkillContext findByLegacySlug(String slug) {
-        Skill skill = skillRepository.findBySlug(slug).stream().findFirst()
-                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", slug));
-        Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
-                .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", skill.getNamespaceId()));
+        List<Skill> skills = skillRepository.findBySlug(slug);
+        if (skills.isEmpty()) {
+            throw new DomainNotFoundException("error.skill.notFound", slug);
+        }
+        // Batch-fetch all candidate namespaces in a single query to avoid N+1 lookups.
+        List<Long> namespaceIds = skills.stream()
+                .map(Skill::getNamespaceId)
+                .distinct()
+                .toList();
+        Map<Long, Namespace> namespacesById = namespaceIds.isEmpty()
+                ? Map.of()
+                : namespaceRepository.findByIdIn(namespaceIds).stream()
+                .collect(Collectors.toMap(Namespace::getId, Function.identity()));
+        Skill skill = skills.stream()
+                .min(Comparator.<Skill>comparingInt(s -> {
+                    Namespace ns = namespacesById.get(s.getNamespaceId());
+                    int score = 0;
+                    if (s.getVisibility() == SkillVisibility.PUBLIC) score += 100;
+                    if (ns != null && ns.getType() == NamespaceType.GLOBAL) score += 50;
+                    if (s.getLatestVersionId() != null) score += 10;
+                    return -score;
+                }).thenComparing(Skill::getId))
+                .orElse(skills.get(0));
+        Namespace namespace = namespacesById.get(skill.getNamespaceId());
+        if (namespace == null) {
+            throw new DomainNotFoundException("error.namespace.notFound", skill.getNamespaceId());
+        }
         return new CompatSkillContext(namespace, skill, findLatestVersion(skill));
     }
 
