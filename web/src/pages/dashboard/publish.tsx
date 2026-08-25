@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { UploadZone } from '@/features/publish/upload-zone'
+import { packageFolderAsZip } from '@/features/publish/folder-zip'
 import {
   extractPrecheckWarnings,
   isFrontmatterFailureMessage,
@@ -41,6 +42,7 @@ export function PublishPage() {
   const [visibility, setVisibility] = useState<string>(prefill.visibility)
   const [warningDialogOpen, setWarningDialogOpen] = useState(false)
   const [precheckWarnings, setPrecheckWarnings] = useState<string[]>([])
+  const [isPackaging, setIsPackaging] = useState(false)
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
@@ -64,6 +66,18 @@ export function PublishPage() {
     setSelectedFile(file)
     setPrecheckWarnings([])
     setWarningDialogOpen(false)
+  }
+
+  const handleFolderSelect = async (files: File[]) => {
+    setIsPackaging(true)
+    try {
+      const zip = await packageFolderAsZip(files)
+      handleFileSelect(zip)
+    } catch {
+      toast.error(t('publish.folderPackagingFailed'))
+    } finally {
+      setIsPackaging(false)
+    }
   }
 
   const publishSkill = async (confirmWarnings = false) => {
@@ -201,7 +215,8 @@ export function PublishPage() {
           <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           <UploadZone
             onFileSelect={handleFileSelect}
-            disabled={publishMutation.isPending}
+            onFolderSelect={handleFolderSelect}
+            disabled={publishMutation.isPending || isPackaging}
           />
           {selectedFile && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">

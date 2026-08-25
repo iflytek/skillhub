@@ -1212,7 +1212,8 @@
   "upload": {
     "dropHint": "放开以上传文件...",
     "dragHint": "拖拽 ZIP 文件到此处，或点击选择",
-    "formatHint": "仅支持 .zip 格式"
+    "formatHint": "仅支持 .zip 格式",
+    "folderHint": "或选择文件夹，自动打包上传"
   },
   "layout": {
     "footerDescription": "技能注册中心，为开发者提供高效的技能管理和分发平台。"
@@ -1389,7 +1390,8 @@
     "warningConfirmCancel": "返回修改",
     "frontmatterFailedTitle": "SKILL.md 格式有误",
     "frontmatterFailedDescription": "请检查 SKILL.md 顶部 frontmatter 的 YAML 格式。若字段值中包含冒号，请用引号包裹。",
-    "selectRequired": "请选择命名空间和文件"
+    "selectRequired": "请选择命名空间和文件",
+    "folderPackagingFailed": "无法打包所选文件夹，请确认其中包含文件。"
   },
   "toast": {
     "success": "成功",

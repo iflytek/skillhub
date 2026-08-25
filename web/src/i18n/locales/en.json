@@ -1212,7 +1212,8 @@
   "upload": {
     "dropHint": "Drop to upload...",
     "dragHint": "Drag a ZIP file here, or click to select",
-    "formatHint": "Only .zip format supported"
+    "formatHint": "Only .zip format supported",
+    "folderHint": "Or select a folder to package and upload"
   },
   "layout": {
     "footerDescription": "Skill registry, providing efficient skill management and distribution for developers."
@@ -1389,7 +1390,8 @@
     "warningConfirmCancel": "Go back and fix",
     "frontmatterFailedTitle": "SKILL.md format is invalid",
     "frontmatterFailedDescription": "Please check the YAML frontmatter at the top of SKILL.md. If a field value contains a colon, wrap it in quotes.",
-    "selectRequired": "Please select namespace and file"
+    "selectRequired": "Please select namespace and file",
+    "folderPackagingFailed": "Could not package the selected folder. Make sure it contains files."
   },
   "toast": {
     "success": "Success",
