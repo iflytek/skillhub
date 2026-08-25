@@ -12,7 +12,9 @@ class ScanTaskOutboxTest {
     @Test
     void claimAndMarkSentProducesStableTaskPayload() {
         ScanTask task = new ScanTask("task-1", 7L, "/tmp/7", null, "u1", 123L,
-                Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue()));
+                Map.of(
+                        "scannerType", ScannerType.SKILL_SCANNER.getValue(),
+                        "futureAttribute", "preserved"));
         ScanTaskOutbox outbox = new ScanTaskOutbox(task);
         Instant now = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -21,8 +23,22 @@ class ScanTaskOutboxTest {
         outbox.markSent(now.plusSeconds(1));
 
         assertThat(outbox.getStatus()).isEqualTo(ScanTaskOutboxStatus.SENT);
-        assertThat(outbox.toScanTask().taskId()).isEqualTo("task-1");
-        assertThat(outbox.toScanTask().versionId()).isEqualTo(7L);
+        assertThat(outbox.toScanTask()).isEqualTo(task);
+    }
+
+    @Test
+    void exhaustedPublishAttemptsMoveTaskToFailed() {
+        ScanTaskOutbox outbox = new ScanTaskOutbox(
+                new ScanTask("task-failed", 9L, null, "bundle.zip", null, 1L, Map.of()));
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        outbox.claim(now, Duration.ofMinutes(2));
+
+        outbox.markFailed(now, "permanent failure");
+
+        assertThat(outbox.getStatus()).isEqualTo(ScanTaskOutboxStatus.FAILED);
+        assertThat(outbox.getRetryCount()).isEqualTo(1);
+        assertThat(outbox.getLeaseUntil()).isNull();
+        assertThat(outbox.claim(now.plusSeconds(1), Duration.ofMinutes(2))).isFalse();
     }
 
     @Test

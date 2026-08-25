@@ -207,6 +207,9 @@ public class SecurityScanService {
      */
     @Transactional
     public void softDeleteByVersionId(Long versionId) {
+        if (scanTaskOutboxRepository != null) {
+            scanTaskOutboxRepository.deleteByVersionId(versionId);
+        }
         List<SecurityAudit> audits = auditRepository.findAllActiveBySkillVersionId(versionId);
         if (audits.isEmpty()) {
             log.debug("No active security audits to soft-delete for versionId={}", versionId);

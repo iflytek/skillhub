@@ -20,6 +20,7 @@ import com.iflytek.skillhub.storage.ObjectStorageService;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RLock;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.StreamMessageId;
@@ -35,6 +36,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ScanTaskConsumerLoggingTest {
 
@@ -150,6 +152,15 @@ class ScanTaskConsumerLoggingTest {
         }
     }
 
+    private static RedissonClient redissonClientWithAvailableProcessingLock() {
+        RedissonClient redissonClient = mock(RedissonClient.class);
+        RLock processingLock = mock(RLock.class);
+        when(redissonClient.getLock(org.mockito.ArgumentMatchers.anyString())).thenReturn(processingLock);
+        when(processingLock.tryLock()).thenReturn(true);
+        when(processingLock.isHeldByCurrentThread()).thenReturn(true);
+        return redissonClient;
+    }
+
     private static final class TestableLoggingConsumer extends ScanTaskConsumer {
         private final RStream<String, String> stream = mock(RStream.class);
 
@@ -159,7 +170,7 @@ class ScanTaskConsumerLoggingTest {
                                         ScanTaskProducer scanTaskProducer,
                                         ObjectStorageService objectStorageService) {
             super(
-                    mock(RedissonClient.class),
+                    redissonClientWithAvailableProcessingLock(),
                     "skillhub:scan:requests",
                     "skillhub-scanners",
                     securityScanner,

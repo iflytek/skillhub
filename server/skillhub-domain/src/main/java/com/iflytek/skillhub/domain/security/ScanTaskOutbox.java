@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -31,6 +33,9 @@ public class ScanTaskOutbox {
     private String bundleKey;
     @Column(name = "publisher_id", length = 255)
     private String publisherId;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
+    private Map<String, String> metadata;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private ScanTaskOutboxStatus status;
     @Column(name = "retry_count", nullable = false)
@@ -56,22 +61,25 @@ public class ScanTaskOutbox {
         this.skillPath = task.skillPath();
         this.bundleKey = task.bundleKey();
         this.publisherId = task.publisherId();
+        this.metadata = task.metadata() == null ? Map.of() : Map.copyOf(task.metadata());
         this.status = ScanTaskOutboxStatus.PENDING;
-        this.nextAttemptAt = Instant.now(Clock.systemUTC());
+        Instant taskCreatedAt = Instant.ofEpochMilli(task.createdAtMillis());
+        this.nextAttemptAt = taskCreatedAt;
+        this.createdAt = taskCreatedAt;
+        this.updatedAt = taskCreatedAt;
     }
 
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now(Clock.systemUTC());
-        createdAt = now;
-        updatedAt = now;
+        if (createdAt == null) createdAt = now;
+        if (updatedAt == null) updatedAt = now;
         if (nextAttemptAt == null) nextAttemptAt = now;
     }
 
     public ScanTask toScanTask() {
         return new ScanTask(taskId, versionId, skillPath, bundleKey, publisherId,
-                createdAt == null ? System.currentTimeMillis() : createdAt.toEpochMilli(),
-                Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue()));
+                createdAt.toEpochMilli(), metadata == null ? Map.of() : Map.copyOf(metadata));
     }
 
     public boolean claim(Instant now, Duration lease) {
@@ -90,12 +98,20 @@ public class ScanTaskOutbox {
         updatedAt = now;
     }
 
+    public void markFailed(Instant now, String error) {
+        retryCount++;
+        status = ScanTaskOutboxStatus.FAILED;
+        leaseUntil = null;
+        lastError = truncateError(error);
+        updatedAt = now;
+    }
+
     public void markRetry(Instant now, Duration delay, String error) {
         retryCount++;
         status = ScanTaskOutboxStatus.PENDING;
         nextAttemptAt = now.plus(delay);
         leaseUntil = null;
-        lastError = error == null ? null : error.substring(0, Math.min(error.length(), 2000));
+        lastError = truncateError(error);
         updatedAt = now;
     }
 
@@ -106,5 +122,10 @@ public class ScanTaskOutbox {
     public int getRetryCount() { return retryCount; }
     public Instant getNextAttemptAt() { return nextAttemptAt; }
     public Instant getLeaseUntil() { return leaseUntil; }
+
+    private String truncateError(String error) {
+        return error == null ? null : error.substring(0, Math.min(error.length(), 2000));
+    }
+
     public Instant getCreatedAt() { return createdAt; }
 }

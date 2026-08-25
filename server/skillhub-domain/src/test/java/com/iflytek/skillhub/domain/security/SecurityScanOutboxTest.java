@@ -44,4 +44,16 @@ class SecurityScanOutboxTest {
         assertThat(outbox.getValue().getVersionId()).isEqualTo(42L);
         assertThat(outbox.getValue().getStatus()).isEqualTo(ScanTaskOutboxStatus.PENDING);
     }
+
+    @Test
+    void softDeleteRemovesPendingOutboxEvenWhenNoActiveAuditExists() {
+        given(auditRepository.findAllActiveBySkillVersionId(42L)).willReturn(List.of());
+        SecurityScanService service = new SecurityScanService(auditRepository, versionRepository, producer,
+                new ObjectMapper(), "upload", true, outboxRepository);
+
+        service.softDeleteByVersionId(42L);
+
+        verify(outboxRepository).deleteByVersionId(42L);
+        verify(auditRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
+    }
 }
