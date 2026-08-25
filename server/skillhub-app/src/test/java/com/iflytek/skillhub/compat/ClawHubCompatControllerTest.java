@@ -50,6 +50,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -190,6 +191,8 @@ class ClawHubCompatControllerTest {
     void listSkills_shouldRejectUnsupportedIncludeOptions() throws Exception {
         mockMvc.perform(get("/api/v1/skills").param("include", "labels,stats"))
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(skillSearchAppService);
     }
 
     @Test

@@ -58,6 +58,7 @@ public class SkillSearchController extends BaseApiController {
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
+        boolean includeLabels = IncludeOptions.includesLabels(include);
         SkillSearchAppService.SearchResponse response = skillSearchAppService.search(
                 q,
                 namespace,
@@ -69,7 +70,7 @@ public class SkillSearchController extends BaseApiController {
                 userNsRoles
         );
 
-        return ok("response.success.read", IncludeOptions.includesLabels(include) ? withLabels(response) : response);
+        return ok("response.success.read", includeLabels ? withLabels(response) : response);
     }
 
     private SkillSearchAppService.SearchResponse withLabels(SkillSearchAppService.SearchResponse response) {
