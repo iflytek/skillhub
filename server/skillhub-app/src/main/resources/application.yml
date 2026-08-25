@@ -152,6 +152,26 @@ skillhub:
       candidate-multiplier: 8
       max-candidates: 120
   ratelimit:
+    # Master switch for per-endpoint request rate limiting. Set false (or
+    # SKILLHUB_RATELIMIT_ENABLED=false) to turn quota checks off entirely.
+    enabled: ${SKILLHUB_RATELIMIT_ENABLED:true}
+    # Per-category threshold overrides. Unset categories use the built-in
+    # @RateLimit annotation defaults, so this block is optional and changes
+    # nothing until you set a value. Each override applies to every endpoint
+    # sharing that category. Override via env vars, e.g.:
+    #   SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED=120
+    #   SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_ANONYMOUS=40
+    #   SKILLHUB_RATELIMIT_CATEGORIES_PUBLISH_WINDOW_SECONDS=3600
+    # categories:
+    #   search:
+    #     authenticated: 60
+    #     anonymous: 20
+    #   download:
+    #     authenticated: 120
+    #     anonymous: 30
+    #   publish:
+    #     authenticated: 10
+    #     window-seconds: 60
     download:
       anonymous-cookie-name: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_NAME:skillhub_anon_dl}
       anonymous-cookie-max-age: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_MAX_AGE:P30D}

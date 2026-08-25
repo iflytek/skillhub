@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.ratelimit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.config.RateLimitProperties;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
@@ -28,19 +29,22 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private final ApiResponseFactory apiResponseFactory;
     private final ObjectMapper objectMapper;
     private final SkillHubMetrics metrics;
+    private final RateLimitProperties properties;
 
     public RateLimitInterceptor(RateLimiter rateLimiter,
                                 ClientIpResolver clientIpResolver,
                                 AnonymousDownloadIdentityService anonymousDownloadIdentityService,
                                 ApiResponseFactory apiResponseFactory,
                                 ObjectMapper objectMapper,
-                                SkillHubMetrics metrics) {
+                                SkillHubMetrics metrics,
+                                RateLimitProperties properties) {
         this.rateLimiter = rateLimiter;
         this.clientIpResolver = clientIpResolver;
         this.anonymousDownloadIdentityService = anonymousDownloadIdentityService;
         this.apiResponseFactory = apiResponseFactory;
         this.objectMapper = objectMapper;
         this.metrics = metrics;
+        this.properties = properties;
     }
 
     @Override
@@ -56,23 +60,33 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // Master switch: when disabled, perform no quota checks at all.
+        if (!properties.isEnabled()) {
+            return true;
+        }
+
         // Determine if user is authenticated
         String userId = (String) request.getAttribute("userId");
         boolean isAuthenticated = userId != null;
 
-        // Get limit based on authentication status
-        int limit = isAuthenticated ? rateLimit.authenticated() : rateLimit.anonymous();
-        String resourceSuffix = resolveResourceSuffix(rateLimit.category(), request);
+        // Effective limits: runtime config overrides (per category) fall back to the
+        // annotation defaults, so unconfigured deployments behave exactly as before.
+        String category = rateLimit.category();
+        int windowSeconds = properties.windowSecondsFor(category, rateLimit.windowSeconds());
+        int limit = isAuthenticated
+                ? properties.authenticatedFor(category, rateLimit.authenticated())
+                : properties.anonymousFor(category, rateLimit.anonymous());
+        String resourceSuffix = resolveResourceSuffix(category, request);
 
         boolean allowed = isAuthenticated
                 ? rateLimiter.tryAcquire(
-                        "ratelimit:" + rateLimit.category() + ":user:" + userId + resourceSuffix,
+                        "ratelimit:" + category + ":user:" + userId + resourceSuffix,
                         limit,
-                        rateLimit.windowSeconds())
-                : checkAnonymousLimit(request, response, rateLimit, limit, resourceSuffix);
+                        windowSeconds)
+                : checkAnonymousLimit(request, response, category, limit, windowSeconds, resourceSuffix);
 
         if (!allowed) {
-            metrics.incrementRateLimitExceeded(rateLimit.category());
+            metrics.incrementRateLimitExceeded(category);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             ApiResponse<Void> body = apiResponseFactory.error(429, "error.rateLimit.exceeded");
@@ -85,14 +99,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private boolean checkAnonymousLimit(HttpServletRequest request,
                                         HttpServletResponse response,
-                                        RateLimit rateLimit,
+                                        String category,
                                         int limit,
+                                        int windowSeconds,
                                         String resourceSuffix) {
-        if (!"download".equals(rateLimit.category())) {
+        if (!"download".equals(category)) {
             return rateLimiter.tryAcquire(
-                    "ratelimit:" + rateLimit.category() + ":ip:" + clientIpResolver.resolve(request) + resourceSuffix,
+                    "ratelimit:" + category + ":ip:" + clientIpResolver.resolve(request) + resourceSuffix,
                     limit,
-                    rateLimit.windowSeconds()
+                    windowSeconds
             );
         }
 
@@ -101,7 +116,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         boolean ipAllowed = rateLimiter.tryAcquire(
                 "ratelimit:download:ip:" + identity.ipHash() + resourceSuffix,
                 limit,
-                rateLimit.windowSeconds()
+                windowSeconds
         );
         if (!ipAllowed) {
             return false;
@@ -109,7 +124,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         return rateLimiter.tryAcquire(
                 "ratelimit:download:anon:" + identity.cookieHash() + resourceSuffix,
                 limit,
-                rateLimit.windowSeconds()
+                windowSeconds
         );
     }
 
