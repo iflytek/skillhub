@@ -48,6 +48,11 @@ describe('shared select contract', () => {
     expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-x-hidden')
   })
 
+  it('does not move popper content with static translate utilities', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).not.toContain('translate-y-1')
+    expect(SELECT_CONTENT_CLASS_NAME).not.toContain('translate-x-1')
+  })
+
   it('uses pointer cursors for expanded select interactions', () => {
     expect(SELECT_ITEM_CLASS_NAME).toContain('cursor-pointer')
     expect(SELECT_SCROLL_BUTTON_CLASS_NAME).toContain('cursor-pointer')

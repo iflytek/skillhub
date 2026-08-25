@@ -89,16 +89,15 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
+>(({ className, children, position = 'popper', sideOffset = 4, ...props }, ref) => (
   // No Portal: Content stays in the React tree with its trigger so route/Dialog
   // unmount cannot orphan a body/#skillhub-portals node (removeChild).
   <SelectPrimitive.Content
     ref={ref}
     translate="no"
+    sideOffset={sideOffset}
     className={cn(
       SELECT_CONTENT_CLASS_NAME,
-      position === 'popper'
-        && 'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
       className
     )}
     position={position}
