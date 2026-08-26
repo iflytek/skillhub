@@ -3,6 +3,9 @@ package com.iflytek.skillhub.auth.oauth;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,6 +25,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+@ExtendWith(OutputCaptureExtension.class)
 class OAuth2LoginHandlersTest {
 
     @AfterEach
@@ -172,5 +176,30 @@ class OAuth2LoginHandlersTest {
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/login?returnTo=%2Fsettings%2Faccounts");
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
+    }
+
+    @Test
+    void failureHandler_logsErrorCodeWithoutSensitiveExceptionDetails(CapturedOutput output) throws Exception {
+        OAuthLoginFlowService oauthLoginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2LoginFailureHandler handler = new OAuth2LoginFailureHandler(oauthLoginFlowService);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/login/oauth2/code/dingtalk");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        org.mockito.Mockito.when(oauthLoginFlowService.resolveFailureRedirect(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.isNull()))
+                .thenReturn(null);
+
+        handler.onAuthenticationFailure(
+                request,
+                response,
+                new OAuth2AuthenticationException(new OAuth2Error(
+                        "user_info_request_failed", "sensitive-upstream-response", null))
+        );
+
+        assertThat(output).contains(
+                "OAuth2 login failed: path=/login/oauth2/code/dingtalk, "
+                        + "type=OAuth2AuthenticationException, errorCode=user_info_request_failed");
+        assertThat(output).doesNotContain("sensitive-upstream-response");
     }
 }

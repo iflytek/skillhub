@@ -23,7 +23,10 @@ spec:
               name: http
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: docker
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: spring-profiles-active
 
             # Database
             - name: SPRING_DATASOURCE_URL
@@ -216,6 +219,25 @@ spec:
                   name: skillhub-secret
                   key: oauth2-github-client-secret
                   optional: true
+
+            # DingTalk OAuth2 (optional; requires the dingtalk Spring profile)
+            - name: OAUTH2_DINGTALK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-dingtalk-client-id
+                  optional: true
+            - name: OAUTH2_DINGTALK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-dingtalk-client-secret
+                  optional: true
+            - name: OAUTH2_DINGTALK_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-dingtalk-display-name
 
           volumeMounts:
             - name: skillhub-storage

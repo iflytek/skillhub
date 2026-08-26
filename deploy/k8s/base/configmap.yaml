@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: skillhub-config
 data:
+  # Add dingtalk to enable DingTalk OAuth2, for example: docker,dingtalk
+  spring-profiles-active: docker
+
   # Redis 配置
   # 使用外部 Redis：修改为外部主机地址
   # 使用内置 Redis（overlays/with-infra）：保持 redis
@@ -46,6 +49,9 @@ data:
   # Session 配置
   # HTTP 环境设为 false，HTTPS 环境设为 true
   session-cookie-secure: "false"
+
+  # DingTalk OAuth2 display name (credentials are stored in Secret)
+  oauth2-dingtalk-display-name: 钉钉
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

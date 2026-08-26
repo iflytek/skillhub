@@ -152,6 +152,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.length()").value(1))
             .andExpect(jsonPath("$.data[*].id", hasItems("github")))
+            .andExpect(jsonPath("$.data[?(@.id=='dingtalk')]").isEmpty())
             .andExpect(jsonPath("$.data[*].authorizationUrl", hasItems("/oauth2/authorization/github")))
             .andExpect(jsonPath("$.timestamp").isNotEmpty())
             .andExpect(jsonPath("$.requestId").isNotEmpty());

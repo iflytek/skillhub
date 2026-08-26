@@ -283,6 +283,26 @@ Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 
 2. `CustomOAuth2UserService` 中按 `registrationId` 分支处理用户属性映射
 3. 前端登录页增加对应按钮（通过 `/api/v1/auth/providers` 自动发现）
 
+### 3.7 钉钉 OAuth2 契约
+
+钉钉接入遵循[获取用户个人信息教程](https://developers.dingtalk.com/document/orgapp/tutorial-obtaining-user-personal-information)中的新版 OAuth2 契约：授权地址使用
+`https://login.dingtalk.com/oauth2/auth`，授权 scope 固定为最小可用值
+`openid`，token 与用户信息端点分别使用 `/v1.0/oauth2/userAccessToken` 和
+`/v1.0/contact/users/me`。`corpid` 不能单独作为授权 scope。
+
+钉钉的 `openid` 是 OAuth2 授权参数，不表示其 token 响应是 OIDC。适配器在外发
+授权 URL 中保留 `scope=openid`，但在 Spring Security 内部将该 registration 按
+普通 OAuth2 处理，避免框架转入要求 `id_token` 的 OIDC 分支。其他真正的 OIDC
+registration 仍保留 `openid` 和 nonce。
+
+身份映射遵循以下约束：
+
+- 稳定 subject 按 `unionId -> openId -> userId` 回退
+- identity binding 始终使用 `provider=dingtalk` 与稳定 subject，不依赖邮箱
+- 用户信息端点没有返回真实邮箱时传 `null`，且 `emailVerified=false`
+- 即使端点返回邮箱，也不能视为钉钉已验证邮箱，`emailVerified` 仍为 `false`
+- provider 默认关闭，仅在显式启用 `dingtalk` Spring profile 并配置凭证时注册
+
 ## 4. 核心接口设计
 
 ```java

@@ -49,6 +49,7 @@
 |---------|------|------|
 | `local` | 本地源码开发能力 | 启用 mock 登录、开发种子账号、调试日志 |
 | `docker` | 容器运行时能力 | 启用容器运行时相关能力，不会自动打开首登管理员 |
+| `dingtalk` | 钉钉 OAuth2 登录 | 默认关闭；必须与运行 profile 组合并配置 AppKey/AppSecret |
 
 单机交付环境使用 `SPRING_PROFILES_ACTIVE=docker`，原因如下：
 
@@ -256,7 +257,33 @@ Sentinel 配置优先于 Cluster 和单机 `host`/`port`。在 Kubernetes 等 Se
 - 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
 - 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
 
-## 8 OIDC 登录配置
+## 8 外部身份源配置
+
+### 8.1 钉钉 OAuth2
+
+钉钉 Provider 默认不注册。启用时在 `.env.release` 中设置：
+
+```bash
+SPRING_PROFILES_ACTIVE=docker,dingtalk
+OAUTH2_DINGTALK_CLIENT_ID=your-app-key
+OAUTH2_DINGTALK_CLIENT_SECRET=your-app-secret
+OAUTH2_DINGTALK_DISPLAY_NAME=钉钉
+```
+
+在钉钉开放平台将回调地址配置为
+`{SKILLHUB_PUBLIC_BASE_URL}/login/oauth2/code/dingtalk`，开通读取个人信息所需权限并
+发布应用。授权 scope 固定为官方新版 OAuth2 契约的 `openid`；不要改为单独的
+`corpid`。契约参见[钉钉官方教程](https://developers.dingtalk.com/document/orgapp/tutorial-obtaining-user-personal-information)。
+
+Compose 会将 profile 与三个 `OAUTH2_DINGTALK_*` 变量传给 Server 容器。
+`make validate-release-config` 会拒绝“启用 profile 但缺少凭证”和“配置凭证但未启用
+profile”两类不完整配置。
+
+Kubernetes 部署需要将 ConfigMap 的 `spring-profiles-active` 改为
+`docker,dingtalk`，并在 Secret 中填写 `oauth2-dingtalk-client-id` 与
+`oauth2-dingtalk-client-secret`。Deployment 已将这些配置映射到相同的运行时环境变量。
+
+### 8.2 OIDC 登录
 
 SkillHub 复用 Spring Security OAuth2 Client 的 OIDC 支持。前端不需要单独
 配置回调页；登录页会从 `/api/v1/auth/methods` 读取后端暴露的

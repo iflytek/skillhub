@@ -2,6 +2,9 @@ package com.iflytek.skillhub.auth.config;
 
 import com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService;
 import com.iflytek.skillhub.auth.oauth.CustomOidcUserService;
+import com.iflytek.skillhub.auth.oauth.DingTalkOAuth2Constants;
+import com.iflytek.skillhub.auth.oauth.DingTalkOAuth2UserService;
+import com.iflytek.skillhub.auth.oauth.DingTalkTokenResponseClient;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
 import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
@@ -19,6 +22,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenResponse;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
@@ -57,6 +67,8 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOidcUserService customOidcUserService;
+    private final DingTalkOAuth2UserService dingTalkOAuth2UserService;
+    private final DingTalkTokenResponseClient dingTalkTokenResponseClient;
     private final SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver;
     private final OAuth2LoginSuccessHandler successHandler;
     private final OAuth2LoginFailureHandler failureHandler;
@@ -69,6 +81,8 @@ public class SecurityConfig {
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
                           CustomOidcUserService customOidcUserService,
+                          DingTalkOAuth2UserService dingTalkOAuth2UserService,
+                          DingTalkTokenResponseClient dingTalkTokenResponseClient,
                           SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
                           OAuth2LoginSuccessHandler successHandler,
                           OAuth2LoginFailureHandler failureHandler,
@@ -80,6 +94,8 @@ public class SecurityConfig {
                           RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.customOidcUserService = customOidcUserService;
+        this.dingTalkOAuth2UserService = dingTalkOAuth2UserService;
+        this.dingTalkTokenResponseClient = dingTalkTokenResponseClient;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
@@ -120,8 +136,10 @@ public class SecurityConfig {
             })
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequestResolver))
+                .tokenEndpoint(token -> token.accessTokenResponseClient(
+                    new DelegatingAccessTokenResponseClient(dingTalkTokenResponseClient, new DefaultAuthorizationCodeTokenResponseClient())))
                 .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
+                    .userService(new DelegatingOAuth2UserService(customOAuth2UserService, dingTalkOAuth2UserService))
                     .oidcUserService(customOidcUserService))
                 .successHandler(successHandler)
                 .failureHandler(failureHandler)
@@ -205,5 +223,53 @@ public class SecurityConfig {
             }
         }
         return false;
+    }
+
+    /**
+     * Delegates OAuth2 user info loading to the appropriate service based on
+     * the registrationId. DingTalk uses a custom service due to its non-standard
+     * user info endpoint; all other providers use the standard service.
+     */
+    private static class DelegatingOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+        private final CustomOAuth2UserService defaultService;
+        private final DingTalkOAuth2UserService dingTalkService;
+
+        DelegatingOAuth2UserService(CustomOAuth2UserService defaultService, DingTalkOAuth2UserService dingTalkService) {
+            this.defaultService = defaultService;
+            this.dingTalkService = dingTalkService;
+        }
+
+        @Override
+        public OAuth2User loadUser(OAuth2UserRequest userRequest) {
+            if (DingTalkOAuth2Constants.REGISTRATION_ID.equals(
+                    userRequest.getClientRegistration().getRegistrationId())) {
+                return dingTalkService.loadUser(userRequest);
+            }
+            return defaultService.loadUser(userRequest);
+        }
+    }
+
+    /**
+     * Delegates token exchange to the appropriate client based on the
+     * registrationId. DingTalk requires a JSON body instead of form-urlencoded;
+     * all other providers use the standard client.
+     */
+    private static class DelegatingAccessTokenResponseClient implements OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> {
+        private final DingTalkTokenResponseClient dingTalkClient;
+        private final DefaultAuthorizationCodeTokenResponseClient defaultClient;
+
+        DelegatingAccessTokenResponseClient(DingTalkTokenResponseClient dingTalkClient, DefaultAuthorizationCodeTokenResponseClient defaultClient) {
+            this.dingTalkClient = dingTalkClient;
+            this.defaultClient = defaultClient;
+        }
+
+        @Override
+        public OAuth2AccessTokenResponse getTokenResponse(OAuth2AuthorizationCodeGrantRequest authorizationCodeGrantRequest) {
+            if (DingTalkOAuth2Constants.REGISTRATION_ID.equals(
+                    authorizationCodeGrantRequest.getClientRegistration().getRegistrationId())) {
+                return dingTalkClient.getTokenResponse(authorizationCodeGrantRequest);
+            }
+            return defaultClient.getTokenResponse(authorizationCodeGrantRequest);
+        }
     }
 }

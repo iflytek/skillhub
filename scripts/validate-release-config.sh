@@ -389,6 +389,23 @@ if [ -n "$oauth_secret" ] && [ -z "$oauth_id" ]; then
   error "OAUTH2_GITHUB_CLIENT_ID is required when OAUTH2_GITHUB_CLIENT_SECRET is set"
 fi
 
+dingtalk_profiles=",${SPRING_PROFILES_ACTIVE:-docker},"
+dingtalk_id="${OAUTH2_DINGTALK_CLIENT_ID:-}"
+dingtalk_secret="${OAUTH2_DINGTALK_CLIENT_SECRET:-}"
+case "$dingtalk_profiles" in
+  *,dingtalk,*)
+    require_non_empty OAUTH2_DINGTALK_CLIENT_ID
+    require_non_empty OAUTH2_DINGTALK_CLIENT_SECRET
+    reject_values OAUTH2_DINGTALK_CLIENT_ID "placeholder" "local-placeholder"
+    reject_values OAUTH2_DINGTALK_CLIENT_SECRET "placeholder" "local-placeholder"
+    ;;
+  *)
+    if [ -n "$dingtalk_id" ] || [ -n "$dingtalk_secret" ]; then
+      error "SPRING_PROFILES_ACTIVE must include dingtalk when DingTalk OAuth2 credentials are set"
+    fi
+    ;;
+esac
+
 if [ "$errors" -gt 0 ]; then
   echo "Release config validation failed: $errors error(s), $warnings warning(s)." >&2
   exit 1
