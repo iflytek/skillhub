@@ -144,7 +144,11 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                 log.info("Skipping concurrently processed security scan task: taskId={}, versionId={}",
                         payload.taskId(), payload.versionId());
                 payload.skipCleanup();
-                return;
+                // A normal return is treated as success by AbstractStreamConsumer and ACKs
+                // the Redis entry. Requeue through the common failure path instead, so a
+                // reclaimed duplicate cannot erase the only durable delivery while the active
+                // scanner still owns the task lock.
+                throw new ConcurrentScanInProgressException(payload.taskId());
             }
             if (securityScanService.isTaskAlreadyProcessed(payload.taskId())) {
                 return;
@@ -163,6 +167,12 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                 payload.taskId(), payload.versionId(), skillPath, Map.of());
         SecurityScanResponse response = securityScanner.scan(request);
         securityScanService.processScanResult(payload.versionId(), payload.scannerType(), response);
+    }
+
+    private static final class ConcurrentScanInProgressException extends RuntimeException {
+        private ConcurrentScanInProgressException(String taskId) {
+            super("Security scan is already in progress: taskId=" + taskId);
+        }
     }
 
     @Override

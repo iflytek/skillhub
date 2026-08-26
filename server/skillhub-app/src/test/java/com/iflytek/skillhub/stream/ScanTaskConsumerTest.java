@@ -293,8 +293,9 @@ class ScanTaskConsumerTest {
                 "task-inflight", 42L, tempDir.toString(), null, ScannerType.SKILL_SCANNER);
 
         try {
-            consumer.invokeProcessBusiness(payload);
-            consumer.invokeMarkCompleted(payload);
+            assertThatThrownBy(() -> consumer.invokeProcessBusiness(payload))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Security scan is already in progress: taskId=task-inflight");
 
             assertThat(securityScanner.lastRequest).isNull();
             assertThat(skillFile).exists();
@@ -303,6 +304,33 @@ class ScanTaskConsumerTest {
             Files.deleteIfExists(skillFile);
             Files.deleteIfExists(tempDir);
         }
+    }
+
+    @Test
+    void handleMessage_whenTaskLockIsHeld_republishesInsteadOfDroppingDelivery() {
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
+        RLock processingLock = mock(RLock.class);
+        when(processingLock.tryLock()).thenReturn(false);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(),
+                producer,
+                new InMemoryObjectStorageService(),
+                redissonClient(processingLock)
+        );
+
+        consumer.handleMessage(new StreamMessageId(11, 0), Map.of(
+                "taskId", "task-reclaimed",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(producer.publishedTask.taskId()).isEqualTo("task-reclaimed");
+        assertThat(producer.publishedTask.metadata()).containsEntry("retryCount", "1");
+        verify(consumer.stream).ack("skillhub-scanners", new StreamMessageId(11, 0));
     }
 
     @Test
