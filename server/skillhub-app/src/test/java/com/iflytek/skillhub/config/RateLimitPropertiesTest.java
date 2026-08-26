@@ -2,9 +2,17 @@ package com.iflytek.skillhub.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 
 class RateLimitPropertiesTest {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(TestConfiguration.class);
 
     @Test
     void enabledByDefaultAndNoOverrides() {
@@ -50,5 +58,20 @@ class RateLimitPropertiesTest {
         assertThat(properties.windowSecondsFor("publish", 60)).isEqualTo(3600);
         // A different category is unaffected.
         assertThat(properties.authenticatedFor("download", 120)).isEqualTo(120);
+    }
+
+    @Test
+    void bindsDocumentedCategoryOverrideFromEnvironmentVariable() {
+        // The *-systemEnvironment suffix activates Spring Boot's environment-variable name adaptation.
+        contextRunner.withInitializer(context -> context.getEnvironment().getPropertySources().addFirst(
+                        new SystemEnvironmentPropertySource("test-systemEnvironment", Map.of(
+                                "SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED", "120"))))
+                .run(context -> assertThat(context.getBean(RateLimitProperties.class)
+                        .authenticatedFor("search", 60)).isEqualTo(120));
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(RateLimitProperties.class)
+    static class TestConfiguration {
     }
 }
