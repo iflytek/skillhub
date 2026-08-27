@@ -211,6 +211,36 @@ Sentinel 配置优先于 Cluster 和单机 `host`/`port`。在 Kubernetes 等 Se
 
 ## 7 配置管理
 
+### 7.1 请求限流配置
+
+限流默认开启。未配置分类覆盖时，各接口使用代码中 `@RateLimit` 声明的默认值，现有部署无需调整。
+
+可通过环境变量关闭全部限流，或按分类覆盖额度和时间窗口：
+
+```bash
+SKILLHUB_RATELIMIT_ENABLED=false
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_ANONYMOUS=100
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED=300
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_WINDOW_SECONDS=60
+```
+
+支持的配置字段为 `authenticated`、`anonymous` 和 `window-seconds`。分类名称来自接口的
+`@RateLimit(category = "...")`，例如 `search`、`download`、`publish` 和 `resolve`。只设置其中一个字段时，
+其他字段仍回退到接口默认值。
+
+Docker Compose 用户需要显式传入变量，宿主机环境变量不会自动注入容器：
+
+```yaml
+services:
+  server:
+    environment:
+      SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_ANONYMOUS: "100"
+      SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED: "300"
+      SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_WINDOW_SECONDS: "60"
+```
+
+修改后重启 server 容器生效。超过额度时接口返回 HTTP `429`；该配置只调整阈值，不改变 Redis 限流算法或响应格式。
+
 前端运行时配置通过 `web/runtime-config.js.template` 注入。与认证兼容层相关的新变量如下：
 
 - `SKILLHUB_WEB_AUTH_DIRECT_ENABLED`
