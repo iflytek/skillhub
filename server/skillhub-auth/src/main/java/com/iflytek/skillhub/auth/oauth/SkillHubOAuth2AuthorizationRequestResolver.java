@@ -28,15 +28,26 @@ public class SkillHubOAuth2AuthorizationRequestResolver
 
     @Override
     public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
-        OAuth2AuthorizationRequest authorizationRequest = delegate.resolve(request);
-        oauthLoginFlowService.rememberReturnTo(request);
-        return authorizationRequest;
+        return rememberIfAuthorizationRequest(request, delegate.resolve(request));
     }
 
     @Override
     public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
-        OAuth2AuthorizationRequest authorizationRequest = delegate.resolve(request, clientRegistrationId);
-        oauthLoginFlowService.rememberReturnTo(request);
+        return rememberIfAuthorizationRequest(request, delegate.resolve(request, clientRegistrationId));
+    }
+
+    /**
+     * {@code OAuth2AuthorizationRequestRedirectFilter} calls the resolver on every request in the
+     * chain, not only on authorization requests; the delegate simply answers null for the rest.
+     * Recording the return target on those calls would clear it again on the very next request —
+     * including the provider callback, which carries no {@code returnTo} and is processed by this
+     * filter before authentication succeeds. Only an actual authorization request may touch it.
+     */
+    private OAuth2AuthorizationRequest rememberIfAuthorizationRequest(
+            HttpServletRequest request, OAuth2AuthorizationRequest authorizationRequest) {
+        if (authorizationRequest != null) {
+            oauthLoginFlowService.rememberReturnTo(request);
+        }
         return authorizationRequest;
     }
 }

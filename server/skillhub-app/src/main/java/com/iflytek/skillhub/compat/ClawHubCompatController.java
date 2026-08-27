@@ -10,10 +10,13 @@ import com.iflytek.skillhub.compat.dto.ClawHubSkillResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubStarResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubUnstarResponse;
 import com.iflytek.skillhub.compat.dto.ClawHubWhoamiResponse;
+import com.iflytek.skillhub.controller.support.IncludeOptions;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -93,9 +96,12 @@ public class ClawHubCompatController {
     public ClawHubSkillListResponse listSkills(@RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "25") int limit,
                                                @RequestParam(required = false) String sort,
+                                               @Parameter(description = "Optional response expansions. Supported value: labels")
+                                               @RequestParam(name = "include", required = false) List<String> include,
                                                @RequestAttribute(value = "userId", required = false) String userId,
                                                @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return clawHubCompatAppService.listSkills(page, limit, sort, userId, userNsRoles);
+        return clawHubCompatAppService.listSkills(
+                page, limit, sort, IncludeOptions.includesLabels(include), userId, userNsRoles);
     }
 
     @RateLimit(category = "skills", authenticated = 60, anonymous = 20)

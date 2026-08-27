@@ -12,6 +12,7 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 
 const PAGE_SIZE = 20
 
@@ -27,19 +28,6 @@ function getCategoryKey(cat: Category): string {
     case 'PROMOTION': return 'notification.promotion'
     case 'REPORT': return 'notification.report'
   }
-}
-
-function formatRelativeTime(dateStr: string, lang: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const minutes = Math.floor(diff / 60_000)
-  const hours = Math.floor(diff / 3_600_000)
-  const days = Math.floor(diff / 86_400_000)
-  const isChinese = lang.startsWith('zh')
-  if (minutes < 1) return isChinese ? '刚刚' : 'just now'
-  if (minutes < 60) return isChinese ? `${minutes}分钟` : `${minutes}m`
-  if (hours < 24) return isChinese ? `${hours}小时` : `${hours}h`
-  if (days < 30) return isChinese ? `${days}天` : `${days}d`
-  return new Date(dateStr).toLocaleDateString()
 }
 
 function CategoryBadge({ category }: { category: NotificationItem['category'] }) {

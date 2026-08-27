@@ -15,8 +15,13 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.social.SkillStarService;
+import com.iflytek.skillhub.compat.dto.ClawHubSkillListResponse;
+import com.iflytek.skillhub.dto.SkillLabelDto;
+import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
+import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -31,6 +36,7 @@ class ClawHubCompatAppServiceTest {
     private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final CompatSkillLookupService compatSkillLookupService = mock(CompatSkillLookupService.class);
     private final SkillStarService skillStarService = mock(SkillStarService.class);
+    private final SkillLabelProjectionService skillLabelProjectionService = mock(SkillLabelProjectionService.class);
 
     private final ClawHubCompatAppService service = new ClawHubCompatAppService(
             new CanonicalSlugMapper(),
@@ -42,7 +48,8 @@ class ClawHubCompatAppServiceTest {
             auditLogService,
             compatSkillLookupService,
             skillStarService,
-            new RequestIdAccessor()
+            new RequestIdAccessor(),
+            skillLabelProjectionService
     );
 
     @Test
@@ -119,5 +126,36 @@ class ClawHubCompatAppServiceTest {
         String location = service.downloadLocationByQuery("my-skill", "20260707.025847", null, null);
 
         assertThat(location).isEqualTo("/api/v1/skills/team-a/my-skill/versions/20260707.025847/download");
+    }
+
+    @Test
+    void listSkills_omitsLabelsByDefault() {
+        when(skillSearchAppService.search("", null, "newest", 0, 25, null, Map.of()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 25));
+
+        ClawHubSkillListResponse response = service.listSkills(0, 25, null, null, Map.of());
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).labels()).isNull();
+    }
+
+    @Test
+    void listSkills_returnsLabelsWhenRequested() {
+        when(skillSearchAppService.search("", null, "newest", 0, 25, null, Map.of()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 25));
+        when(skillLabelProjectionService.labelsBySkillIds(List.of(7L)))
+                .thenReturn(Map.of(7L, List.of(new SkillLabelDto("automation", "RECOMMENDED", "Automation"))));
+
+        ClawHubSkillListResponse response = service.listSkills(0, 25, null, true, null, Map.of());
+
+        assertThat(response.items().get(0).labels())
+                .extracting(SkillLabelDto::slug)
+                .containsExactly("automation");
+    }
+
+    private static SkillSummaryResponse summary(Long id) {
+        return new SkillSummaryResponse(
+                id, "demo-skill", "Demo Skill", "A demo", "PUBLIC", "PUBLISHED",
+                0L, 0, null, 0, "global", null, false, null, null, null, null, null);
     }
 }

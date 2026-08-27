@@ -45,7 +45,9 @@ test.describe('Publish Flow UI (Real API)', () => {
       })
       await expect(namespaceTrigger).toContainText(`@${namespace.slug}`)
 
-      await page.locator('input[type="file"]').setInputFiles(packagePath)
+      // The publish form also exposes a second file input for folder selection.
+      // Scope this regression test to the existing ZIP picker.
+      await page.locator('input[type="file"][accept*=".zip"]').setInputFiles(packagePath)
       await expect(page.getByText(path.basename(packagePath))).toBeVisible()
       const confirmButton = page.getByRole('button', { name: 'Confirm Publish' })
       await expect(confirmButton).toBeEnabled()

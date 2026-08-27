@@ -72,7 +72,7 @@ export function SecuritySettingsPage() {
         clearSessionScopedQueries(queryClient)
         queryClient.setQueryData(['auth', 'me'], null)
       }
-      await navigate({ to: '/login', search: { returnTo: '' } })
+      await navigate({ to: '/login' })
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setErrorMessage(t('security.invalidCurrentPassword'))

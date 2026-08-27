@@ -100,7 +100,7 @@ export function ResetPasswordPage() {
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 {t('resetPassword.successMessage')}
               </p>
-              <Link to="/login" search={{ returnTo: '' }} className="block text-center font-medium text-primary hover:underline">
+              <Link to="/login" className="block text-center font-medium text-primary hover:underline">
                 {t('resetPassword.backToLogin')}
               </Link>
             </div>

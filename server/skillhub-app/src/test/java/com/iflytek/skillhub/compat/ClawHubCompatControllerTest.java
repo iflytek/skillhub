@@ -19,7 +19,9 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
+import com.iflytek.skillhub.dto.SkillLabelDto;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
+import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +50,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -71,6 +74,9 @@ class ClawHubCompatControllerTest {
 
     @MockBean
     private SkillSearchAppService skillSearchAppService;
+
+    @MockBean
+    private SkillLabelProjectionService skillLabelProjectionService;
 
     @MockBean
     private SkillQueryService skillQueryService;
@@ -152,6 +158,41 @@ class ClawHubCompatControllerTest {
 
         verify(skillSearchAppService).search("token-search", null, "relevance", 0, 20, "user-7", nsRoles);
         verify(apiTokenService).touchLastUsed(same(token));
+    }
+
+    @Test
+    void listSkills_shouldOmitLabelsByDefault() throws Exception {
+        when(skillSearchAppService.search(eq(""), isNull(), eq("newest"), eq(0), eq(25), isNull(), isNull()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 25));
+
+        mockMvc.perform(get("/api/v1/skills"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].slug").value("demo-skill"))
+                .andExpect(jsonPath("$.items[0].labels").doesNotExist());
+    }
+
+    @Test
+    void listSkills_shouldReturnLabelsWhenIncluded() throws Exception {
+        when(skillSearchAppService.search(eq(""), isNull(), eq("newest"), eq(0), eq(25), isNull(), isNull()))
+                .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 25));
+        when(skillLabelProjectionService.labelsBySkillIds(List.of(7L)))
+                .thenReturn(java.util.Map.of(
+                        7L,
+                        List.of(new SkillLabelDto("automation", "RECOMMENDED", "Automation"))));
+
+        mockMvc.perform(get("/api/v1/skills").param("include", "labels"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].labels[0].slug").value("automation"))
+                .andExpect(jsonPath("$.items[0].labels[0].type").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.items[0].labels[0].displayName").value("Automation"));
+    }
+
+    @Test
+    void listSkills_shouldRejectUnsupportedIncludeOptions() throws Exception {
+        mockMvc.perform(get("/api/v1/skills").param("include", "labels,stats"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(skillSearchAppService);
     }
 
     @Test
@@ -399,6 +440,28 @@ class ClawHubCompatControllerTest {
         version.setStatus(SkillVersionStatus.PENDING_REVIEW);
         ReflectionTestUtils.setField(version, "id", versionId);
         return version;
+    }
+
+    private SkillSummaryResponse summary(Long id) {
+        return new SkillSummaryResponse(
+                id,
+                "demo-skill",
+                "Demo Skill",
+                "A demo",
+                "PUBLIC",
+                "PUBLISHED",
+                0L,
+                0,
+                null,
+                0,
+                "global",
+                null,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null);
     }
 
     private UsernamePasswordAuthenticationToken superAdminAuth() {

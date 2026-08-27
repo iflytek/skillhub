@@ -20,8 +20,10 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.social.SkillStarService;
+import com.iflytek.skillhub.dto.SkillLabelDto;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
+import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import java.io.IOException;
 import java.util.HashMap;
@@ -51,6 +53,7 @@ public class ClawHubCompatAppService {
     private final CompatSkillLookupService compatSkillLookupService;
     private final SkillStarService skillStarService;
     private final RequestIdAccessor requestIdAccessor;
+    private final SkillLabelProjectionService skillLabelProjectionService;
 
     public ClawHubCompatAppService(CanonicalSlugMapper mapper,
                                    SkillSearchAppService skillSearchAppService,
@@ -61,7 +64,8 @@ public class ClawHubCompatAppService {
                                    AuditLogService auditLogService,
                                    CompatSkillLookupService compatSkillLookupService,
                                    SkillStarService skillStarService,
-                                   RequestIdAccessor requestIdAccessor) {
+                                   RequestIdAccessor requestIdAccessor,
+                                   SkillLabelProjectionService skillLabelProjectionService) {
         this.mapper = mapper;
         this.skillSearchAppService = skillSearchAppService;
         this.skillQueryService = skillQueryService;
@@ -72,6 +76,7 @@ public class ClawHubCompatAppService {
         this.compatSkillLookupService = compatSkillLookupService;
         this.skillStarService = skillStarService;
         this.requestIdAccessor = requestIdAccessor;
+        this.skillLabelProjectionService = skillLabelProjectionService;
     }
 
     public ClawHubSearchResponse search(String q,
@@ -195,6 +200,15 @@ public class ClawHubCompatAppService {
                                                String sort,
                                                String userId,
                                                Map<Long, NamespaceRole> userNsRoles) {
+        return listSkills(page, limit, sort, false, userId, userNsRoles);
+    }
+
+    public ClawHubSkillListResponse listSkills(int page,
+                                               int limit,
+                                               String sort,
+                                               boolean includeLabels,
+                                               String userId,
+                                               Map<Long, NamespaceRole> userNsRoles) {
         String sortBy = sort != null ? sort : "newest";
         SkillSearchAppService.SearchResponse response = skillSearchAppService.search(
                 "",
@@ -206,8 +220,15 @@ public class ClawHubCompatAppService {
                 userNsRoles
         );
 
+        Map<Long, List<SkillLabelDto>> labelsBySkillId = includeLabels
+                ? skillLabelProjectionService.labelsBySkillIds(
+                        response.items().stream().map(SkillSummaryResponse::id).toList())
+                : Map.of();
+
         List<ClawHubSkillListResponse.SkillListItem> items = response.items().stream()
-                .map(this::toSkillListItem)
+                .map(item -> toSkillListItem(
+                        item,
+                        includeLabels ? labelsBySkillId.getOrDefault(item.id(), List.of()) : null))
                 .toList();
 
         String nextCursor = null;
@@ -383,7 +404,8 @@ public class ClawHubCompatAppService {
         return new ClawHubResolveResponse(matchVersion, latestVersion);
     }
 
-    private ClawHubSkillListResponse.SkillListItem toSkillListItem(SkillSummaryResponse item) {
+    private ClawHubSkillListResponse.SkillListItem toSkillListItem(SkillSummaryResponse item,
+                                                                   List<SkillLabelDto> labels) {
         long createdAt = 0;
         long updatedAt = item.updatedAt() != null ? item.updatedAt().toEpochMilli() : 0;
 
@@ -413,7 +435,8 @@ public class ClawHubCompatAppService {
                 stats,
                 createdAt,
                 updatedAt,
-                latestVersion
+                latestVersion,
+                labels
         );
     }
 

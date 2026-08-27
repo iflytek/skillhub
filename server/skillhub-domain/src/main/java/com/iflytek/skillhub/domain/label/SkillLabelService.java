@@ -38,6 +38,13 @@ public class SkillLabelService {
         return skillLabelRepository.findBySkillId(skillId);
     }
 
+    public List<SkillLabel> listSkillLabelsBySkillIds(List<Long> skillIds) {
+        if (skillIds == null || skillIds.isEmpty()) {
+            return List.of();
+        }
+        return skillLabelRepository.findBySkillIdIn(skillIds);
+    }
+
     public List<SkillLabel> listByLabelId(Long labelId) {
         return skillLabelRepository.findByLabelId(labelId);
     }

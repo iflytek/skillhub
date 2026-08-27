@@ -20,6 +20,7 @@ import com.iflytek.skillhub.storage.ObjectStorageService;
 import com.iflytek.skillhub.storage.ObjectMetadata;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RLock;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.StreamMessageId;
@@ -38,7 +39,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ScanTaskConsumerTest {
     private static final Path SCAN_TEMP_DIR = Path.of("/tmp/skillhub-scans");
@@ -268,6 +273,88 @@ class ScanTaskConsumerTest {
         assertThat(listScanTempFiles(versionId)).isEmpty();
     }
 
+    @Test
+    void processBusiness_whenTaskIsAlreadyInFlight_skipsScanAndPreservesSharedTempPath() throws Exception {
+        Files.createDirectories(SCAN_TEMP_DIR);
+        Path tempDir = Files.createTempDirectory(SCAN_TEMP_DIR, "scan-task-consumer-inflight");
+        Path skillFile = Files.writeString(tempDir.resolve("SKILL.md"), "# demo");
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        RLock processingLock = mock(RLock.class);
+        when(processingLock.tryLock()).thenReturn(false);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(),
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService(),
+                redissonClient(processingLock)
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-inflight", 42L, tempDir.toString(), null, ScannerType.SKILL_SCANNER);
+
+        try {
+            assertThatThrownBy(() -> consumer.invokeProcessBusiness(payload))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Security scan is already in progress: taskId=task-inflight");
+
+            assertThat(securityScanner.lastRequest).isNull();
+            assertThat(skillFile).exists();
+            verify(processingLock, never()).unlock();
+        } finally {
+            Files.deleteIfExists(skillFile);
+            Files.deleteIfExists(tempDir);
+        }
+    }
+
+    @Test
+    void handleMessage_whenTaskLockIsHeld_republishesInsteadOfDroppingDelivery() {
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
+        RLock processingLock = mock(RLock.class);
+        when(processingLock.tryLock()).thenReturn(false);
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(),
+                producer,
+                new InMemoryObjectStorageService(),
+                redissonClient(processingLock)
+        );
+
+        consumer.handleMessage(new StreamMessageId(11, 0), Map.of(
+                "taskId", "task-reclaimed",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(producer.publishedTask.taskId()).isEqualTo("task-reclaimed");
+        assertThat(producer.publishedTask.metadata()).containsEntry("retryCount", "1");
+        verify(consumer.stream).ack("skillhub-scanners", new StreamMessageId(11, 0));
+    }
+
+    @Test
+    void processBusiness_whenScannerFails_releasesProcessingLock() {
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        securityScanner.failure = new IllegalStateException("scanner unavailable");
+        RLock processingLock = availableProcessingLock();
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                new InMemorySkillVersionRepository(),
+                new InMemoryScanTaskProducer(),
+                new InMemoryObjectStorageService(),
+                redissonClient(processingLock)
+        );
+        ScanTaskConsumer.ScanTaskPayload payload = new ScanTaskConsumer.ScanTaskPayload(
+                "task-failure", 42L, "/tmp/failure", null, ScannerType.SKILL_SCANNER);
+
+        assertThatThrownBy(() -> consumer.invokeProcessBusiness(payload))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("scanner unavailable");
+        verify(processingLock).unlock();
+    }
+
     private void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -299,7 +386,28 @@ class ScanTaskConsumerTest {
                                          ScanTaskProducer scanTaskProducer,
                                          ObjectStorageService objectStorageService) {
             super(
-                    mock(RedissonClient.class),
+                    redissonClient(availableProcessingLock()),
+                    "skillhub:scan:requests",
+                    "skillhub-scanners",
+                    securityScanner,
+                    securityScanService,
+                    skillVersionRepository,
+                    scanTaskProducer,
+                    objectStorageService,
+                    new MessageObservationSupport(ObservationRegistry.NOOP, new RequestIdAccessor())
+            );
+            this.stream = mock(RStream.class);
+        }
+
+        @SuppressWarnings("unchecked")
+        private TestableScanTaskConsumer(SecurityScanner securityScanner,
+                                         SecurityScanService securityScanService,
+                                         SkillVersionRepository skillVersionRepository,
+                                         ScanTaskProducer scanTaskProducer,
+                                         ObjectStorageService objectStorageService,
+                                         RedissonClient redissonClient) {
+            super(
+                    redissonClient,
                     "skillhub:scan:requests",
                     "skillhub-scanners",
                     securityScanner,
@@ -332,6 +440,19 @@ class ScanTaskConsumerTest {
         private void invokeRetryMessage(ScanTaskPayload payload, int retryCount) {
             retryMessage(payload, retryCount);
         }
+    }
+
+    private static RLock availableProcessingLock() {
+        RLock processingLock = mock(RLock.class);
+        when(processingLock.tryLock()).thenReturn(true);
+        when(processingLock.isHeldByCurrentThread()).thenReturn(true);
+        return processingLock;
+    }
+
+    private static RedissonClient redissonClient(RLock processingLock) {
+        RedissonClient redissonClient = mock(RedissonClient.class);
+        when(redissonClient.getLock(org.mockito.ArgumentMatchers.anyString())).thenReturn(processingLock);
+        return redissonClient;
     }
 
     private static final class StubSecurityScanner implements SecurityScanner {

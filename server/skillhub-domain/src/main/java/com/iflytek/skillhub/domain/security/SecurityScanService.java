@@ -9,6 +9,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,23 +33,36 @@ public class SecurityScanService {
 
     private final SecurityAuditRepository auditRepository;
     private final SkillVersionRepository skillVersionRepository;
+    private final ScanTaskOutboxRepository scanTaskOutboxRepository;
     private final ScanTaskProducer scanTaskProducer;
     private final ObjectMapper objectMapper;
     private final String scanMode;
     private final boolean enabled;
 
+    @Autowired
     public SecurityScanService(SecurityAuditRepository auditRepository,
                                SkillVersionRepository skillVersionRepository,
                                ScanTaskProducer scanTaskProducer,
                                ObjectMapper objectMapper,
                                @Value("${skillhub.security.scanner.mode:local}") String scanMode,
-                               @Value("${skillhub.security.scanner.enabled:false}") boolean enabled) {
+                               @Value("${skillhub.security.scanner.enabled:false}") boolean enabled,
+                               ScanTaskOutboxRepository scanTaskOutboxRepository) {
         this.auditRepository = auditRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.scanTaskProducer = scanTaskProducer;
         this.objectMapper = objectMapper;
         this.scanMode = scanMode;
         this.enabled = enabled;
+        this.scanTaskOutboxRepository = scanTaskOutboxRepository;
+    }
+
+    public SecurityScanService(SecurityAuditRepository auditRepository,
+                               SkillVersionRepository skillVersionRepository,
+                               ScanTaskProducer scanTaskProducer,
+                               ObjectMapper objectMapper,
+                               String scanMode,
+                               boolean enabled) {
+        this(auditRepository, skillVersionRepository, scanTaskProducer, objectMapper, scanMode, enabled, null);
     }
 
     public boolean isEnabled() {
@@ -74,7 +88,6 @@ public class SecurityScanService {
             packagePath = saveTempDirectory(versionId, entries).toString();
         }
         // Always create a new audit record — supports multiple rounds per version
-        auditRepository.save(new SecurityAudit(versionId, ScannerType.SKILL_SCANNER));
         final ScanTask scanTask = new ScanTask(
                 UUID.randomUUID().toString(),
                 versionId,
@@ -84,14 +97,22 @@ public class SecurityScanService {
                 System.currentTimeMillis(),
                 Map.of("scannerType", ScannerType.SKILL_SCANNER.getValue())
         );
-        // The stream consumer must not observe this task before skill_version /
-        // security_audit rows are committed and visible.
-        TransactionCommitCallbacks.afterCommitOrNow(() -> scanTaskProducer.publishScanTask(scanTask));
+        auditRepository.save(new SecurityAudit(versionId, ScannerType.SKILL_SCANNER, scanTask.taskId()));
+        if (scanTaskOutboxRepository != null) {
+            scanTaskOutboxRepository.save(new ScanTaskOutbox(scanTask));
+        } else {
+            TransactionCommitCallbacks.afterCommitOrNow(() -> scanTaskProducer.publishScanTask(scanTask));
+        }
         // Only transition to SCANNING if the version is not already published (auto-publish flow)
         if (version.getStatus() != SkillVersionStatus.PUBLISHED) {
             version.setStatus(SkillVersionStatus.SCANNING);
             skillVersionRepository.save(version);
         }
+    }
+
+    public boolean isTaskAlreadyProcessed(String taskId) {
+        return taskId != null && auditRepository != null
+                && auditRepository.existsByTaskIdAndScannedAtIsNotNull(taskId);
     }
 
     @Transactional
@@ -186,6 +207,9 @@ public class SecurityScanService {
      */
     @Transactional
     public void softDeleteByVersionId(Long versionId) {
+        if (scanTaskOutboxRepository != null) {
+            scanTaskOutboxRepository.deleteByVersionId(versionId);
+        }
         List<SecurityAudit> audits = auditRepository.findAllActiveBySkillVersionId(versionId);
         if (audits.isEmpty()) {
             log.debug("No active security audits to soft-delete for versionId={}", versionId);
@@ -203,5 +227,8 @@ public class SecurityScanService {
     @Transactional
     public void hardDeleteByVersionId(Long versionId) {
         auditRepository.deleteBySkillVersionId(versionId);
+        if (scanTaskOutboxRepository != null) {
+            scanTaskOutboxRepository.deleteByVersionId(versionId);
+        }
     }
 }

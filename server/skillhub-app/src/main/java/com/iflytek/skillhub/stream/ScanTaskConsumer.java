@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.observability.MessageObservationSupport;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.ScanTaskPayload> {
     private static final Path SCAN_TEMP_DIR = Paths.get("/tmp/skillhub-scans").toAbsolutePath().normalize();
 
+    private final RedissonClient redissonClient;
     private final SecurityScanner securityScanner;
     private final SecurityScanService securityScanService;
     private final SkillVersionRepository skillVersionRepository;
@@ -42,6 +44,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                             ObjectStorageService objectStorageService,
                             MessageObservationSupport messageObservationSupport) {
         super(redissonClient, streamKey, groupName, messageObservationSupport);
+        this.redissonClient = redissonClient;
         this.securityScanner = securityScanner;
         this.securityScanService = securityScanService;
         this.skillVersionRepository = skillVersionRepository;
@@ -72,6 +75,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                 reclaimInterval,
                 messageObservationSupport
         );
+        this.redissonClient = redissonClient;
         this.securityScanner = securityScanner;
         this.securityScanService = securityScanService;
         this.skillVersionRepository = skillVersionRepository;
@@ -128,15 +132,47 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
 
     @Override
     protected void processBusiness(ScanTaskPayload payload) {
+        if (securityScanService.isTaskAlreadyProcessed(payload.taskId())) {
+            log.info("Skipping already processed security scan task: taskId={}, versionId={}", payload.taskId(), payload.versionId());
+            return;
+        }
+        RLock processingLock = redissonClient.getLock("skillhub:scan:processing:" + payload.taskId());
+        boolean acquired = false;
+        try {
+            acquired = processingLock.tryLock();
+            if (!acquired) {
+                log.info("Skipping concurrently processed security scan task: taskId={}, versionId={}",
+                        payload.taskId(), payload.versionId());
+                payload.skipCleanup();
+                // A normal return is treated as success by AbstractStreamConsumer and ACKs
+                // the Redis entry. Requeue through the common failure path instead, so a
+                // reclaimed duplicate cannot erase the only durable delivery while the active
+                // scanner still owns the task lock.
+                throw new ConcurrentScanInProgressException(payload.taskId());
+            }
+            if (securityScanService.isTaskAlreadyProcessed(payload.taskId())) {
+                return;
+            }
+            executeScan(payload);
+        } finally {
+            if (acquired && processingLock.isHeldByCurrentThread()) {
+                processingLock.unlock();
+            }
+        }
+    }
+
+    private void executeScan(ScanTaskPayload payload) {
         String skillPath = resolveWorkingSkillPath(payload);
         SecurityScanRequest request = new SecurityScanRequest(
-                payload.taskId(),
-                payload.versionId(),
-                skillPath,
-                Map.of()
-        );
+                payload.taskId(), payload.versionId(), skillPath, Map.of());
         SecurityScanResponse response = securityScanner.scan(request);
         securityScanService.processScanResult(payload.versionId(), payload.scannerType(), response);
+    }
+
+    private static final class ConcurrentScanInProgressException extends RuntimeException {
+        private ConcurrentScanInProgressException(String taskId) {
+            super("Security scan is already in progress: taskId=" + taskId);
+        }
     }
 
     @Override
@@ -259,6 +295,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         private final ScannerType scannerType;
         private final int retryCount;
         private String workingSkillPath;
+        private boolean cleanupEnabled = true;
 
         protected ScanTaskPayload(String taskId, Long versionId, String skillPath, String bundleKey, ScannerType scannerType) {
             this(taskId, versionId, skillPath, bundleKey, scannerType, 0);
@@ -307,7 +344,14 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         }
 
         protected String cleanupPath() {
+            if (!cleanupEnabled) {
+                return null;
+            }
             return workingSkillPath != null ? workingSkillPath : skillPath;
+        }
+
+        protected void skipCleanup() {
+            cleanupEnabled = false;
         }
 
         protected String workingSkillPath() {

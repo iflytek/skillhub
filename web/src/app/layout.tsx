@@ -123,7 +123,6 @@ export function Layout() {
           ) : (
             <Link
               to="/login"
-              search={{ returnTo: '' }}
               className="hover:opacity-80 transition-opacity"
             >
               {t('nav.login')}
