@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.auth.local;
 
+import com.iflytek.skillhub.auth.config.LdapProperties;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
+import com.iflytek.skillhub.auth.ldap.LdapAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
@@ -16,9 +18,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -27,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class LocalAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(LocalAuthService.class);
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,64}$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -44,6 +53,15 @@ public class LocalAuthService {
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+    private final LdapProperties ldapProperties;
+    private final ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
+    /**
+     * Transaction boundary for the local-credential login path. The {@code login} method itself
+     * is intentionally NOT transactional: the LDAP fallback performs directory network calls
+     * (up to connect+read timeout) and must not hold a database connection/transaction open
+     * while blocked on the directory. Only the local credential database work is wrapped.
+     */
+    private final TransactionTemplate transactionTemplate;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -51,7 +69,10 @@ public class LocalAuthService {
                             GlobalNamespaceMembershipService globalNamespaceMembershipService,
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
-                            Clock clock) {
+                            Clock clock,
+                            LdapProperties ldapProperties,
+                            ObjectProvider<LdapAuthService> ldapAuthServiceProvider,
+                            PlatformTransactionManager transactionManager) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -59,6 +80,9 @@ public class LocalAuthService {
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.ldapProperties = ldapProperties;
+        this.ldapAuthServiceProvider = ldapAuthServiceProvider;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -107,33 +131,72 @@ public class LocalAuthService {
     /**
      * Authenticates a local account and returns the principal snapshot used to
      * establish a web session.
+     * If the user is not found locally, falls back to LDAP authentication if enabled.
      */
-    @Transactional
     public PlatformPrincipal login(String username, String password) {
         String normalizedUsername = normalizeUsername(username);
-        LocalCredential credential = credentialRepository.findByUsernameIgnoreCase(normalizedUsername)
-            .orElse(null);
+        LocalCredential credential = transactionTemplate.execute(status ->
+            credentialRepository.findByUsernameIgnoreCase(normalizedUsername).orElse(null));
 
         if (credential == null) {
+            // Blur timing to prevent username enumeration
             passwordEncoder.matches(password == null ? "" : password, DUMMY_PASSWORD_HASH);
+            
+            // Fallback to LDAP authentication if enabled
+            if (ldapProperties.isEnabled()) {
+                LdapAuthService ldapAuthService = ldapAuthServiceProvider.getIfAvailable();
+                if (ldapAuthService == null) {
+                    log.warn("LDAP is enabled but LdapAuthService bean is unavailable; rejecting login for username: {}", username);
+                    throw invalidCredentials();
+                }
+                log.debug("Local user not found, attempting LDAP authentication for username: {}", username);
+                log.debug("LDAP enabled: {}, host: {}, base: {}",
+                    ldapProperties.isEnabled(),
+                    LdapAuthService.safeLogHost(ldapProperties.getUrl()),
+                    ldapProperties.getBase());
+                try {
+                    PlatformPrincipal ldapPrincipal = ldapAuthService.login(username, password);
+                    log.debug("LDAP authentication successful for username: {}", username);
+                    return ldapPrincipal;
+                } catch (AuthFlowException e) {
+                    log.warn("LDAP authentication failed for username: {}, error: {}", username, e.getMessage());
+                    // Propagate account-state, availability, and email-conflict errors instead of
+                    // masking them as invalid credentials, so the frontend can show the right message.
+                    // A 409 emailConflict is only reached after a successful LDAP bind, so the
+                    // credentials are valid; masking it as 401 would mislead the user into thinking
+                    // their password is wrong. Only genuine credential failures (userNotFound /
+                    // invalidCredentials) fall back to the generic response to avoid enumeration.
+                    HttpStatus status = e.getStatus();
+                    if (status == HttpStatus.FORBIDDEN || status == HttpStatus.SERVICE_UNAVAILABLE
+                        || status == HttpStatus.CONFLICT) {
+                        throw e;
+                    }
+                    throw invalidCredentials();
+                }
+            } else {
+                log.debug("LDAP authentication is disabled, rejecting login for username: {}", username);
+            }
+            
             throw invalidCredentials();
         }
 
-        UserAccount user = userAccountRepository.findById(credential.getUserId())
-            .orElseThrow(() -> new IllegalStateException("User not found for local credential"));
+        return transactionTemplate.execute(status -> {
+            UserAccount user = userAccountRepository.findById(credential.getUserId())
+                .orElseThrow(() -> new IllegalStateException("User not found for local credential"));
 
-        ensureUserCanLogin(user);
-        ensureNotLocked(credential);
+            ensureUserCanLogin(user);
+            ensureNotLocked(credential);
 
-        if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
-            handleFailedLogin(credential);
-            throw invalidCredentials();
-        }
+            if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
+                handleFailedLogin(credential);
+                throw invalidCredentials();
+            }
 
-        credential.setFailedAttempts(0);
-        credential.setLockedUntil(null);
-        credentialRepository.save(credential);
-        return buildPrincipal(user);
+            credential.setFailedAttempts(0);
+            credential.setLockedUntil(null);
+            credentialRepository.save(credential);
+            return buildPrincipal(user);
+        });
     }
 
     /**

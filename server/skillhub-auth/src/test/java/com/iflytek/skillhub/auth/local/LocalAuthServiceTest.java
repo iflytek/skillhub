@@ -9,9 +9,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.iflytek.skillhub.auth.config.LdapProperties;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.entity.Role;
 import com.iflytek.skillhub.auth.entity.UserRoleBinding;
+import com.iflytek.skillhub.auth.ldap.LdapAuthService;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -22,6 +25,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,10 +55,25 @@ class LocalAuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private LdapProperties ldapProperties;
+
+    @Mock
+    private LdapAuthService ldapAuthService;
+
+    @Mock
+    private org.springframework.beans.factory.ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
+
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     private LocalAuthService service;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(ldapAuthServiceProvider.getIfAvailable()).thenReturn(ldapAuthService);
+        org.mockito.Mockito.lenient().when(transactionManager.getTransaction(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(org.mockito.Mockito.mock(org.springframework.transaction.TransactionStatus.class));
         service = new LocalAuthService(
             credentialRepository,
             userAccountRepository,
@@ -62,7 +81,10 @@ class LocalAuthServiceTest {
             globalNamespaceMembershipService,
             new PasswordPolicyValidator(),
             passwordEncoder,
-            CLOCK
+            CLOCK,
+            ldapProperties,
+            ldapAuthServiceProvider,
+            transactionManager
         );
     }
 
@@ -161,6 +183,7 @@ class LocalAuthServiceTest {
     @Test
     void login_withUnknownUsername_stillPerformsDummyPasswordCheck() {
         given(credentialRepository.findByUsernameIgnoreCase("ghost")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(false);
         given(passwordEncoder.matches(eq("bad"), eq("$2a$12$8Q/2o2A0V.b18G2DutV4c.s5zZxH6MECM7tP8mYv6b6Q6x6o9v3vu")))
             .willReturn(false);
 
@@ -260,5 +283,117 @@ class LocalAuthServiceTest {
         assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "   "))
             .isInstanceOf(AuthFlowException.class)
             .hasMessageContaining("validation.auth.local.email.notBlank");
+    }
+
+    @Test
+    void login_withUnknownUsername_fallsBackToLdap_whenEnabled() {
+        // Given
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        UserAccount ldapUser = new UserAccount("usr_ldap", "ldapuser", "ldapuser@example.com", null);
+        ldapUser.setStatus(UserStatus.ACTIVE);
+        PlatformPrincipal ldapPrincipal = new PlatformPrincipal(
+            "usr_ldap",
+            "ldapuser",
+            "ldapuser@example.com",
+            null,
+            "ldap",
+            Set.of("USER")
+        );
+
+        given(ldapAuthService.login("ldapuser", "LdapPassword123!")).willReturn(ldapPrincipal);
+
+        // When
+        var principal = service.login("ldapuser", "LdapPassword123!");
+
+        // Then
+        assertThat(principal.userId()).isEqualTo("usr_ldap");
+        assertThat(principal.displayName()).isEqualTo("ldapuser");
+        assertThat(principal.email()).isEqualTo("ldapuser@example.com");
+        verify(ldapAuthService).login("ldapuser", "LdapPassword123!");
+    }
+
+    @Test
+    void login_withUnknownUsername_fails_whenLdapAuthenticationFails() {
+        // Given
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "WrongPassword"))
+            .willThrow(new AuthFlowException(HttpStatus.UNAUTHORIZED, "LDAP authentication failed"));
+
+        // When & Then
+        assertThatThrownBy(() -> service.login("ldapuser", "WrongPassword"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(ldapAuthService).login("ldapuser", "WrongPassword");
+    }
+
+    @Test
+    void login_withUnknownUsername_propagatesServiceUnavailable_whenLdapDirectoryDown() {
+        // Given — LDAP directory unavailable should surface as 503, not be masked as 401
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "password"))
+            .willThrow(new AuthFlowException(HttpStatus.SERVICE_UNAVAILABLE, "error.auth.ldap.directoryUnavailable"));
+
+        // When & Then — 503 must propagate so the frontend can show "try again later"
+        assertThatThrownBy(() -> service.login("ldapuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void login_withUnknownUsername_propagatesForbidden_whenLdapAccountDisabled() {
+        // Given — a disabled LDAP account (403) should propagate, not be masked as 401
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "password"))
+            .willThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.ldap.disabled"));
+
+        // When & Then — 403 must propagate so the frontend can show "account disabled"
+        assertThatThrownBy(() -> service.login("ldapuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void login_withUnknownUsername_propagatesEmailConflict_whenEmailCollidesWithExistingAccount() {
+        // Given — an email-conflict (409) is only raised after a successful LDAP bind, so the
+        // credentials are valid; it must propagate so the frontend can guide the user to an
+        // explicit account-link flow rather than reporting a misleading "wrong password".
+        given(credentialRepository.findByUsernameIgnoreCase("ldapuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(true);
+
+        given(ldapAuthService.login("ldapuser", "password"))
+            .willThrow(new AuthFlowException(HttpStatus.CONFLICT, "error.auth.ldap.emailConflict"));
+
+        // When & Then — 409 is propagated, not masked as 401
+        assertThatThrownBy(() -> service.login("ldapuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void login_withUnknownUsername_fails_whenLdapDisabled() {
+        // Given
+        given(credentialRepository.findByUsernameIgnoreCase("localuser")).willReturn(Optional.empty());
+        given(ldapProperties.isEnabled()).willReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> service.login("localuser", "password"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(ldapAuthService, never()).login(any(), any());
     }
 }

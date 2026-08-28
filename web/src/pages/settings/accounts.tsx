@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConfirmAccountMerge, useInitiateAccountMerge, useVerifyAccountMerge } from '@/features/auth/use-account-merge'
+import { useLdapBind } from '@/features/auth/use-ldap-bind'
 import { truncateErrorMessage } from '@/shared/lib/error-display'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -13,6 +14,9 @@ import { Input } from '@/shared/ui/input'
  */
 export function AccountSettingsPage() {
   const { t } = useTranslation()
+  const [ldapUsername, setLdapUsername] = useState('')
+  const [ldapPassword, setLdapPassword] = useState('')
+  const [ldapStatusMessage, setLdapStatusMessage] = useState('')
   const [secondaryIdentifier, setSecondaryIdentifier] = useState('')
   const [mergeRequestId, setMergeRequestId] = useState('')
   const [verificationToken, setVerificationToken] = useState('')
@@ -21,6 +25,25 @@ export function AccountSettingsPage() {
   const initiateMutation = useInitiateAccountMerge()
   const verifyMutation = useVerifyAccountMerge()
   const confirmMutation = useConfirmAccountMerge()
+  const ldapBindMutation = useLdapBind()
+
+  /**
+   * Binds the LDAP identity proven by the given directory credentials to the current account.
+   */
+  async function handleLdapBind(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLdapStatusMessage('')
+    try {
+      await ldapBindMutation.mutateAsync({ username: ldapUsername, password: ldapPassword })
+      setLdapUsername('')
+      setLdapPassword('')
+      setLdapStatusMessage(t('accounts.ldapBindSuccess'))
+    } catch (error) {
+      setLdapStatusMessage(
+        truncateErrorMessage(error instanceof Error ? error.message : t('accounts.ldapBindError')) ?? t('accounts.ldapBindError'),
+      )
+    }
+  }
 
   /**
    * Starts the merge flow and surfaces the request id plus verification token
@@ -77,6 +100,40 @@ export function AccountSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <Card className="glass-strong">
+        <CardHeader>
+          <CardTitle>{t('accounts.ldapBindTitle')}</CardTitle>
+          <CardDescription>{t('accounts.ldapBindDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleLdapBind}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="ldap-username">{t('accounts.ldapUsername')}</label>
+              <Input
+                id="ldap-username"
+                autoComplete="username"
+                value={ldapUsername}
+                onChange={(event) => setLdapUsername(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="ldap-password">{t('accounts.ldapPassword')}</label>
+              <Input
+                id="ldap-password"
+                type="password"
+                autoComplete="current-password"
+                value={ldapPassword}
+                onChange={(event) => setLdapPassword(event.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={ldapBindMutation.isPending}>
+              {ldapBindMutation.isPending ? t('accounts.ldapBinding') : t('accounts.ldapBind')}
+            </Button>
+          </form>
+          {ldapStatusMessage ? <p className="mt-4 text-sm text-muted-foreground">{ldapStatusMessage}</p> : null}
+        </CardContent>
+      </Card>
+
       <Card className="glass-strong">
         <CardHeader>
           <CardTitle>{t('accounts.initiateTitle')}</CardTitle>

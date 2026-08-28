@@ -117,6 +117,29 @@ skillhub:
       code-expiry: ${SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY:PT10M}
       email-from-address: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS:noreply@skillhub.local}
       email-from-name: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME:SkillHub}
+  ldap:
+    # LDAP authentication configuration
+    # Set enabled to true and configure url/base/username/password to enable LDAP authentication
+    enabled: ${SKILLHUB_LDAP_ENABLED:false}
+    url: ${SKILLHUB_LDAP_URL:}
+    base: ${SKILLHUB_LDAP_BASE:}
+    username: ${SKILLHUB_LDAP_USERNAME:}
+    password: ${SKILLHUB_LDAP_PASSWORD:}
+    user-search-attribute: ${SKILLHUB_LDAP_USER_SEARCH_ATTRIBUTE:uid}
+    user-search-base: ${SKILLHUB_LDAP_USER_SEARCH_BASE:}
+    # Stable directory identifier used as the LDAP identity subject (entryUUID for OpenLDAP, objectGUID for AD)
+    subject-attribute: ${SKILLHUB_LDAP_SUBJECT_ATTRIBUTE:entryUUID}
+    display-name-attribute: ${SKILLHUB_LDAP_DISPLAY_NAME_ATTRIBUTE:displayName}
+    display-name-fallback-attribute: ${SKILLHUB_LDAP_DISPLAY_NAME_FALLBACK_ATTRIBUTE:cn}
+    email-attribute: ${SKILLHUB_LDAP_EMAIL_ATTRIBUTE:mail}
+    connect-timeout-millis: ${SKILLHUB_LDAP_CONNECT_TIMEOUT_MILLIS:5000}
+    read-timeout-millis: ${SKILLHUB_LDAP_READ_TIMEOUT_MILLIS:10000}
+    # Custom trust store for LDAPS certificate validation (internal/self-signed CAs).
+    # Installed at application startup by merging into the JVM-wide trust store (defaults are
+    # preserved). Leave empty to use the JVM default trust store.
+    tls-trust-store: ${SKILLHUB_LDAP_TLS_TRUST_STORE:}
+    tls-trust-store-password: ${SKILLHUB_LDAP_TLS_TRUST_STORE_PASSWORD:}
+    tls-trust-store-type: ${SKILLHUB_LDAP_TLS_TRUST_STORE_TYPE:JKS}
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
@@ -250,6 +273,8 @@ management:
   health:
     mail:
       enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
+    ldap:
+      enabled: false
   endpoints:
     web:
       exposure:

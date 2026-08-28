@@ -81,6 +81,11 @@ export interface MergeInitiateRequest {
   secondaryIdentifier: string
 }
 
+export interface LdapBindRequest {
+  username: string
+  password: string
+}
+
 export interface MergeInitiateResponse {
   mergeRequestId: number
   secondaryUserId: string
