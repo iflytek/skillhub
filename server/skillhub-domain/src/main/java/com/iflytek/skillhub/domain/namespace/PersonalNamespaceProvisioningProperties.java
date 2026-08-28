@@ -24,9 +24,9 @@ public class PersonalNamespaceProvisioningProperties {
      * Spring property references. Operators change the templates in the admin console, so these
      * defaults only apply until someone does.
      */
-    private String slugTemplate = "${username}";
+    private String slugTemplate = "personal-${random}";
 
-    private String displayNameTemplate = "${username}";
+    private String displayNameTemplate = "${username}-个人空间";
 
     public boolean isEnabled() {
         return enabled;

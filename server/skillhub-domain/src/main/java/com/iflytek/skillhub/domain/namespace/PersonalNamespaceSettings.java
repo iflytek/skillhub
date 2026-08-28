@@ -20,4 +20,5 @@ public record PersonalNamespaceSettings(
     public static final String PLACEHOLDER_USERNAME = "username";
     public static final String PLACEHOLDER_EMAIL_PREFIX = "email_prefix";
     public static final String PLACEHOLDER_USER_ID = "user_id";
+    public static final String PLACEHOLDER_RANDOM = "random";
 }

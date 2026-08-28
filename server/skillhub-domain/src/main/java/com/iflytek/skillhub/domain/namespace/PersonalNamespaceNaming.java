@@ -3,6 +3,7 @@ package com.iflytek.skillhub.domain.namespace;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.UUID;
 
 /**
  * Renders the operator-configured name templates for a personal namespace.
@@ -37,7 +38,8 @@ final class PersonalNamespaceNaming {
         Map<String, String> values = Map.of(
                 PersonalNamespaceSettings.PLACEHOLDER_USERNAME, username(owner),
                 PersonalNamespaceSettings.PLACEHOLDER_EMAIL_PREFIX, emailPrefix(owner),
-                PersonalNamespaceSettings.PLACEHOLDER_USER_ID, blankToEmpty(owner.userId()));
+                PersonalNamespaceSettings.PLACEHOLDER_USER_ID, blankToEmpty(owner.userId()),
+                PersonalNamespaceSettings.PLACEHOLDER_RANDOM, randomSuffix());
 
         Matcher matcher = PLACEHOLDER.matcher(template);
         StringBuilder rendered = new StringBuilder();
@@ -100,5 +102,9 @@ final class PersonalNamespaceNaming {
 
     private static String blankToEmpty(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String randomSuffix() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8).toLowerCase();
     }
 }
