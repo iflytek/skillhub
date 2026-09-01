@@ -337,5 +337,7 @@ function compareVersions(
 ): 'same' | 'remote-newer' | 'remote-older' | 'unknown' {
   if (installedVersion === remoteVersion) return 'same'
   if (!validSemver(installedVersion) || !validSemver(remoteVersion)) return 'unknown'
-  return compareSemver(remoteVersion, installedVersion) > 0 ? 'remote-newer' : 'remote-older'
+  const order = compareSemver(remoteVersion, installedVersion)
+  if (order === 0) return 'same'
+  return order > 0 ? 'remote-newer' : 'remote-older'
 }

@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
@@ -208,6 +208,7 @@ describe('installSkill', () => {
 
   test('force rejects metadata explicitly owned by another installer', async () => {
     globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
@@ -222,11 +223,13 @@ describe('installSkill', () => {
       namespace: 'global',
       slug: 'demo',
       targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
-      force: true
+      force: true,
+      home
     })).rejects.toThrow('cannot verify SkillHub ownership')
   })
 
   test('revalidates ownership after download before replacing the target', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
@@ -269,10 +272,109 @@ describe('installSkill', () => {
       namespace: 'global',
       slug: 'demo',
       targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
-      force: true
+      force: true,
+      home
     })).rejects.toThrow('source conflict')
 
     expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Replaced during download')
+    const metadata = JSON.parse(await readFile(join(skillDir, '.skillhub', 'metadata.json'), 'utf-8'))
+    expect(metadata.registry).toBe('http://other-registry.test')
+    expect((await readdir(rootDir)).some(name => name.includes('skillhub-backup'))).toBe(false)
+    expect(await exists(join(rootDir, '.demo.skillhub-install.lock'))).toBe(false)
+  })
+
+  test('rolls back every target when a later target changes source before commit', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const parent = await mkdtemp(join(tmpdir(), 'skillhub-install-targets-'))
+    const firstRoot = join(parent, 'a')
+    const secondRoot = join(parent, 'b')
+    const firstSkillDir = join(firstRoot, 'demo')
+    const secondSkillDir = join(secondRoot, 'demo')
+    for (const skillDir of [firstSkillDir, secondSkillDir]) {
+      await mkdir(skillDir, { recursive: true })
+      await writeFile(join(skillDir, 'SKILL.md'), `# Old ${skillDir === firstSkillDir ? 'A' : 'B'}`)
+      await writeManagedMetadata(skillDir)
+    }
+    await mkdir(join(home, '.skillhub'), { recursive: true })
+    await writeFile(join(home, '.skillhub', 'inventory.json'), JSON.stringify({
+      items: [{
+        registry: 'http://registry.test',
+        namespace: 'global',
+        slug: 'demo',
+        version: '0.1.0',
+        targets: [
+          { agent: 'codex', rootDir: firstRoot, installDir: firstSkillDir, installedAt: '2026-09-01T00:00:00Z' },
+          { agent: 'claude-code', rootDir: secondRoot, installDir: secondSkillDir, installedAt: '2026-09-01T00:00:00Z' }
+        ]
+      }]
+    }))
+    const archive = zipSync({ 'SKILL.md': new TextEncoder().encode('# New') })
+    globalThis.fetch = (async (input: URL | RequestInfo) => {
+      const path = new URL(String(input)).pathname
+      if (path.endsWith('/resolve')) {
+        return Response.json({ code: 0, data: {
+          namespace: 'global', slug: 'demo', version: '1.0.0', versionId: 1,
+          fingerprint: 'fp', downloadUrl: '/download'
+        } })
+      }
+      if (path.endsWith('/download')) {
+        await writeManagedMetadata(secondSkillDir, {
+          registry: 'http://other-registry.test', namespace: 'global', slug: 'demo'
+        })
+        return new Response(
+          archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength) as ArrayBuffer,
+          { status: 200 }
+        )
+      }
+      return Response.json({ code: 404 }, { status: 404 })
+    }) as typeof fetch
+
+    await expect(installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [
+        { agent: 'codex', rootDir: firstRoot, scope: 'project', source: 'explicit' },
+        { agent: 'claude-code', rootDir: secondRoot, scope: 'project', source: 'explicit' }
+      ],
+      force: true,
+      home
+    })).rejects.toThrow('source conflict')
+
+    expect(await readFile(join(firstSkillDir, 'SKILL.md'), 'utf-8')).toBe('# Old A')
+    expect(await readFile(join(secondSkillDir, 'SKILL.md'), 'utf-8')).toBe('# Old B')
+    const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '0.1.0' })
+    expect(inventory.items[0].targets).toHaveLength(2)
+    for (const rootDir of [firstRoot, secondRoot]) {
+      const entries = await readdir(rootDir)
+      expect(entries.some(name => name.includes('skillhub-backup'))).toBe(false)
+      expect(entries.some(name => name.includes('skillhub-install.lock'))).toBe(false)
+    }
+  })
+
+  test('rejects an active target lock and recovers a dead-process lock', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const lockPath = join(rootDir, '.demo.skillhub-install.lock')
+    await writeFile(lockPath, JSON.stringify({ pid: process.pid }))
+
+    await expect(installSkill({
+      registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: false, home
+    })).rejects.toThrow('install target is busy')
+    expect(await exists(join(rootDir, 'demo'))).toBe(false)
+
+    await writeFile(lockPath, JSON.stringify({ pid: 999999 }))
+    await installSkill({
+      registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: false, home
+    })
+    expect(await readFile(join(rootDir, 'demo', 'SKILL.md'), 'utf-8')).toBe('# New')
+    expect(await exists(lockPath)).toBe(false)
   })
 
   test('force keeps old installation and inventory when replacement extraction fails', async () => {

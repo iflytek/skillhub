@@ -44,7 +44,7 @@ describe('upgrade command', () => {
     skill.zipBytes = makeSkillZip('# v2')
 
     const checked = await runCli([
-      'upgrade', '@global/skillhub-registry', '--registry', registry.url, '--check', '--json'
+      'upgrade', '@global/skillhub-registry', '--registry', registry.url, '--dir', rootDir, '--check', '--json'
     ], { HOME: env.home, USERPROFILE: env.home })
     expect(checked.exitCode).toBe(0)
     expect(JSON.parse(checked.stdout).items[0]).toMatchObject({
@@ -69,6 +69,9 @@ describe('upgrade command', () => {
       'utf-8'
     ))
     expect(metadata).toMatchObject({ schemaVersion: 1, version: '1.1.0', versionId: 2, fingerprint: 'fp-v2' })
+    expect(Object.keys(metadata.files)).toContain('SKILL.md')
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'fp-v2' })
   })
 
   test('local changes block by default and --force replaces only the same source', async () => {
@@ -95,7 +98,7 @@ describe('upgrade command', () => {
     skill.zipBytes = makeSkillZip('# v2')
 
     const blocked = await runCli([
-      'upgrade', '@team/code-review', '--registry', registry.url, '--check', '--json'
+      'upgrade', '@team/code-review', '--registry', registry.url, '--agent', 'custom', '--check', '--json'
     ], { HOME: env.home, USERPROFILE: env.home })
     expect(blocked.exitCode).toBe(6)
     expect(JSON.parse(blocked.stdout).items[0]).toMatchObject({ action: 'blocked' })
@@ -175,6 +178,13 @@ describe('upgrade command', () => {
     })
     expect(selected.exitCode).toBe(0)
     expect(selected.stdout).toContain('@team-a/demo')
+
+    const noNamespaceMatch = await runCli(['upgrade', 'demo', '--namespace', 'missing', '--check'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+    expect(noNamespaceMatch.exitCode).toBe(5)
+    expect(noNamespaceMatch.stderr).toContain('not installed')
   })
 
   test('one resolved archive is reused for every managed target', async () => {
@@ -214,6 +224,13 @@ describe('upgrade command', () => {
     expect(registry.received.downloads).toBe(2)
     expect(await readFile(join(env.home, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
     expect(await readFile(join(env.home, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'fp-v2' })
+    expect(inventory.items[0].targets).toHaveLength(2)
+
+    const listed = await runCli(['list', '--json'], { HOME: env.home, USERPROFILE: env.home })
+    expect(listed.exitCode).toBe(0)
+    expect(JSON.parse(listed.stdout).items[0]).toMatchObject({ version: '1.1.0' })
   })
 
   test('never downgrades when the registry latest version moves backwards', async () => {
@@ -313,6 +330,9 @@ describe('upgrade command', () => {
     ], { HOME: env.home, USERPROFILE: env.home })
     expect(migrated.exitCode).toBe(0)
     expect(await readFile(join(rootDir, 'legacy', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    const migratedMetadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
+    expect(migratedMetadata.schemaVersion).toBe(1)
+    expect(Object.keys(migratedMetadata.files)).toContain('SKILL.md')
   })
 
   test('never installs a missing skill and never offers an implicit upgrade-all', async () => {
@@ -333,5 +353,54 @@ describe('upgrade command', () => {
     ], { HOME: env.home, USERPROFILE: env.home })
     expect(tooMany.exitCode).toBe(5)
     expect(tooMany.stderr).toContain('at most 50')
+  })
+
+  test('accepts exactly fifty explicitly installed coordinates', async () => {
+    const env = await createTempHome()
+    const skills = Array.from({ length: 50 }, (_, index) => ({
+      namespace: 'global',
+      slug: `skill-${index}`,
+      version: '1.0.0',
+      fingerprint: `fp-${index}`,
+      zipBytes: makeSkillZip(`# skill ${index}`)
+    }))
+    const registry = await startFakeRegistry({ skills })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    const items = []
+    for (const skill of skills) {
+      const skillDir = join(rootDir, skill.slug)
+      await mkdir(join(skillDir, '.skillhub'), { recursive: true })
+      await writeFile(join(skillDir, 'SKILL.md'), `# ${skill.slug}`)
+      await writeFile(join(skillDir, '.skillhub', 'metadata.json'), JSON.stringify({
+        registry: registry.url,
+        namespace: skill.namespace,
+        slug: skill.slug,
+        version: skill.version,
+        fingerprint: skill.fingerprint,
+        source: 'skillhub'
+      }))
+      items.push({
+        registry: registry.url,
+        namespace: skill.namespace,
+        slug: skill.slug,
+        version: skill.version,
+        fingerprint: skill.fingerprint,
+        targets: [{
+          agent: 'custom', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z'
+        }]
+      })
+    }
+    await mkdir(join(env.home, '.skillhub'), { recursive: true })
+    await writeFile(join(env.home, '.skillhub', 'inventory.json'), JSON.stringify({ items }))
+
+    const result = await runCli([
+      'upgrade', ...skills.map(skill => `@global/${skill.slug}`),
+      '--registry', registry.url, '--force', '--check', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout).summary).toMatchObject({ unchanged: 50, blocked: 0 })
+    expect(registry.received.downloads).toBe(0)
   })
 })

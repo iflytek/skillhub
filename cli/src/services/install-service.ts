@@ -29,6 +29,15 @@ export interface InstallOptions {
   resolved?: ResolveResponse | undefined
 }
 
+interface StagedInstall {
+  target: AgentCandidate
+  skillDir: string
+  tempDir: string
+  installedAt: string
+  backupDir: string | null
+  movedIntoPlace: boolean
+}
+
 async function preflightInstallTargets(
   targets: AgentCandidate[],
   identity: InstalledSkillIdentity,
@@ -79,97 +88,130 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
   const response = await client.download(options.namespace, options.slug, resolved.version)
   const buffer = await readBoundedResponseBody(response)
 
-  const installed: Array<{ agent: string; dir: string }> = []
-  for (const { target, skillDir } of preparedTargets) {
-    await mkdir(target.rootDir, { recursive: true })
-    const tempDir = await mkdtemp(join(target.rootDir, `.${options.slug}.install-`))
-    let movedIntoPlace = false
-
-    try {
-      await extractZip(buffer, tempDir)
-
-      const installedAt = new Date().toISOString()
-      const snapshot = await snapshotSkillDirectory(tempDir)
-      const metaDir = join(tempDir, '.skillhub')
-      await mkdir(metaDir, { recursive: true })
-      await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
-        schemaVersion: 1,
-        registry: options.registry,
-        namespace: options.namespace,
-        slug: options.slug,
-        version: resolved.version,
-        versionId: resolved.versionId,
-        fingerprint: resolved.fingerprint,
-        files: snapshot.files,
-        source: 'skillhub',
-        agent: target.agent,
-        installedAt
-      }, null, 2))
-
-      if (await pathExists(skillDir) && !options.force) {
-        throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
-          path: skillDir,
-          next: 'pass --force to overwrite'
-        })
-      }
-
-      const backupDir = `${skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
-      let backupCreated = false
-      const releaseInstallLock = await acquireInstallTargetLock(target.rootDir, options.slug)
+  const staged: StagedInstall[] = []
+  try {
+    for (const { target, skillDir } of preparedTargets) {
+      await mkdir(target.rootDir, { recursive: true })
+      const tempDir = await mkdtemp(join(target.rootDir, `.${options.slug}.install-`))
       try {
-        if (await pathExists(skillDir)) {
-          if (!options.force) {
-            throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
-              path: skillDir,
-              next: 'pass --force to overwrite'
-            })
-          }
-          await rename(skillDir, backupDir)
-          backupCreated = true
-          await assertReplaceableInstallation(
-            backupDir,
-            skillDir,
-            { registry: options.registry, namespace: options.namespace, slug: options.slug },
-            await store.read()
-          )
-        }
-        await rename(tempDir, skillDir)
-        movedIntoPlace = true
+        await extractZip(buffer, tempDir)
 
-        await store.replaceTargetAtInstallDir(options.registry, options.namespace, options.slug, resolved.version, {
+        const installedAt = new Date().toISOString()
+        const snapshot = await snapshotSkillDirectory(tempDir)
+        const metaDir = join(tempDir, '.skillhub')
+        await mkdir(metaDir, { recursive: true })
+        await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
+          schemaVersion: 1,
+          registry: options.registry,
+          namespace: options.namespace,
+          slug: options.slug,
+          version: resolved.version,
+          versionId: resolved.versionId,
+          fingerprint: resolved.fingerprint,
+          files: snapshot.files,
+          source: 'skillhub',
           agent: target.agent,
-          rootDir: target.rootDir,
-          installDir: skillDir,
           installedAt
-        }, resolved.fingerprint)
-
-        if (backupCreated) await rm(backupDir, { recursive: true, force: true }).catch(() => {})
+        }, null, 2))
+        staged.push({ target, skillDir, tempDir, installedAt, backupDir: null, movedIntoPlace: false })
       } catch (error) {
-        if (movedIntoPlace) {
-          await rm(skillDir, { recursive: true, force: true }).catch(() => {})
-          movedIntoPlace = false
-        }
-        if (backupCreated) await rename(backupDir, skillDir).catch(() => {})
-        if (!options.force && await pathExists(skillDir)) {
-          throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
-            path: skillDir,
-            next: 'pass --force to overwrite'
-          })
-        }
-        throw error
-      } finally {
-        await releaseInstallLock()
-      }
-    } finally {
-      if (!movedIntoPlace) {
         await rm(tempDir, { recursive: true, force: true }).catch(() => {})
+        throw error
       }
     }
 
-    installed.push({ agent: target.agent, dir: skillDir })
-  }
+    const releases: Array<() => Promise<void>> = []
+    try {
+      for (const item of [...staged].sort((left, right) => left.skillDir.localeCompare(right.skillDir))) {
+        releases.push(await acquireInstallTargetLock(item.target.rootDir, options.slug))
+      }
 
-  return { installed }
+      const lockedInventory = await store.read()
+      assertNoPartialVersionChange(lockedInventory, staged, {
+        registry: options.registry,
+        namespace: options.namespace,
+        slug: options.slug
+      }, resolved)
+
+      for (const item of staged) {
+        if (await pathExists(item.skillDir)) {
+          if (!options.force) {
+            throw new CliError(`skill already installed at ${item.skillDir}`, EXIT.filesystem, {
+              path: item.skillDir,
+              next: 'pass --force to overwrite'
+            })
+          }
+          item.backupDir = `${item.skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
+          await rename(item.skillDir, item.backupDir)
+          await assertReplaceableInstallation(item.backupDir, item.skillDir, {
+            registry: options.registry,
+            namespace: options.namespace,
+            slug: options.slug
+          }, lockedInventory)
+        }
+        await rename(item.tempDir, item.skillDir)
+        item.movedIntoPlace = true
+      }
+
+      await store.replaceTargetsAtInstallDirs(
+        options.registry,
+        options.namespace,
+        options.slug,
+        resolved.version,
+        staged.map(item => ({
+          agent: item.target.agent,
+          rootDir: item.target.rootDir,
+          installDir: item.skillDir,
+          installedAt: item.installedAt
+        })),
+        resolved.fingerprint
+      )
+
+      for (const item of staged) {
+        if (item.backupDir) await rm(item.backupDir, { recursive: true, force: true }).catch(() => {})
+      }
+    } catch (error) {
+      for (const item of [...staged].reverse()) {
+        if (item.movedIntoPlace) {
+          await rm(item.skillDir, { recursive: true, force: true }).catch(() => {})
+          item.movedIntoPlace = false
+        }
+        if (item.backupDir) await rename(item.backupDir, item.skillDir).catch(() => {})
+      }
+      throw error
+    } finally {
+      for (const release of releases.reverse()) await release()
+    }
+
+    return {
+      installed: staged.map(item => ({ agent: item.target.agent, dir: item.skillDir }))
+    }
+  } finally {
+    for (const item of staged) {
+      if (!item.movedIntoPlace) await rm(item.tempDir, { recursive: true, force: true }).catch(() => {})
+    }
+  }
+}
+
+function assertNoPartialVersionChange(
+  inventory: Inventory,
+  staged: StagedInstall[],
+  identity: InstalledSkillIdentity,
+  resolved: ResolveResponse
+): void {
+  const item = inventory.items.find(candidate => sameInstalledSkillSource(candidate, identity))
+  if (!item) return
+
+  const selectedInstallDirs = new Set(staged.map(candidate => candidate.skillDir))
+  const retainedTargets = item.targets.filter(target => !selectedInstallDirs.has(target.installDir))
+  if (retainedTargets.length === 0) return
+  if (item.version === resolved.version && item.fingerprint === resolved.fingerprint) return
+
+  throw new CliError('partial-target install would create inconsistent versions', EXIT.validation, {
+    coordinate: `@${identity.namespace}/${identity.slug}`,
+    retainedTargets: retainedTargets.map(target => ({ agent: target.agent, dir: target.installDir })),
+    next: 'select all installed targets for the upgrade'
+  })
 }
 
 async function assertReplaceableInstallation(
@@ -209,8 +251,14 @@ async function acquireInstallTargetLock(rootDir: string, slug: string): Promise<
 
   const createLock = async () => {
     const handle = await open(lockPath, 'wx')
-    await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }))
-    return handle
+    try {
+      await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }))
+      return handle
+    } catch (error) {
+      await handle.close().catch(() => {})
+      await rm(lockPath, { force: true }).catch(() => {})
+      throw error
+    }
   }
 
   let handle: Awaited<ReturnType<typeof open>>

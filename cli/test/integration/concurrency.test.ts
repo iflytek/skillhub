@@ -28,17 +28,7 @@ function makeSkillZip(): Uint8Array {
 }
 
 describe('cross-process concurrency on inventory.json', () => {
-  // KNOWN BUG (documented here, not yet fixed):
-  //   inventory-store.upsertTarget() reads inventory, modifies in memory,
-  //   then writeAtomic() acquires the lock only over the write half. Two
-  //   concurrent installs each read the (empty) inventory, each adds their
-  //   own item, and the second writer overwrites the first — a classic
-  //   lost-update.
-  //
-  //   When the fix lands (lock spans read+write, or upsertTarget acquires
-  //   the lock first and re-reads), tighten the inventory assertion to
-  //   `expect(slugs).toEqual(['first', 'second'])`.
-  test('two parallel installs of distinct slugs: filesystem is correct, inventory has at least one (lost-update bug pinned)', async () => {
+  test('two parallel installs of distinct slugs preserve both inventory items', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({
       token: 'sk_ok',
@@ -66,9 +56,6 @@ describe('cross-process concurrency on inventory.json', () => {
       )
     ])
 
-    // Both subprocess installs report success — neither errored at the
-    // protocol level even though the inventory bookkeeping race ate one of
-    // their inventory writes.
     expect(r1.exitCode).toBe(0)
     expect(r2.exitCode).toBe(0)
 
@@ -80,12 +67,7 @@ describe('cross-process concurrency on inventory.json', () => {
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')
     ) as { items: Array<{ slug: string }> }
     const slugs = inv.items.map(i => i.slug).sort()
-    // Today: at least one slug always lands; under the lost-update race
-    // both may NOT be there. When the lock widens to cover read+write,
-    // upgrade this to `toEqual(['first', 'second'])`.
-    expect(slugs.length).toBeGreaterThanOrEqual(1)
-    const lastSlug = slugs[slugs.length - 1]!
-    expect(['first', 'second']).toContain(lastSlug)
+    expect(slugs).toEqual(['first', 'second'])
   })
 
   test('two parallel installs of the same slug to the same dir: exactly one wins, one conflicts', async () => {
@@ -111,15 +93,8 @@ describe('cross-process concurrency on inventory.json', () => {
       )
     ])
 
-    // Two valid outcomes: (a) both succeed because the loser's existence
-    // check ran BEFORE the winner extracted, OR (b) one succeeds and the
-    // other reports already-installed (EXIT.filesystem).
-    // Either way, inventory must end up coherent (single item, single
-    // target — no duplicates).
     const codes = [r1.exitCode, r2.exitCode].sort((a, b) => a - b)
-    expect(codes[0]).toBe(0) // at least one succeeded
-    const otherCode = codes[1]!
-    expect([0, 4]).toContain(otherCode) // other either succeeded or got conflict
+    expect(codes).toEqual([0, 4])
 
     const inv = JSON.parse(
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')

@@ -34,6 +34,23 @@ describe('help command', () => {
     expect(result.stdout).toContain('skillhub search')
   })
 
+  test('distinguishes skill upgrade from CLI self-update and namespace sync', async () => {
+    const upgrade = await runCli(['help', 'upgrade'])
+    expect(upgrade.exitCode).toBe(0)
+    expect(upgrade.stdout).toContain('Upgrade explicitly selected installed skills')
+    expect(upgrade.stdout).toContain('skillhub upgrade <coordinate...>')
+    expect(upgrade.stdout).toContain('--check')
+    expect(upgrade.stdout).toContain('--force')
+
+    const update = await runCli(['help', 'update'])
+    expect(update.exitCode).toBe(0)
+    expect(update.stdout).toContain('Check or update CLI itself')
+
+    const sync = await runCli(['help', 'sync'])
+    expect(sync.exitCode).toBe(0)
+    expect(sync.stdout).toContain('namespace workspaces')
+  })
+
   // P1: bare `skillhub help` (no topic) prints the directory of all commands
   test('bare help lists all commands in human format', async () => {
     const result = await runCli(['help'])
