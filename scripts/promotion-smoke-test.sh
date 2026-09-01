@@ -8,7 +8,7 @@ FAIL=0
 USER_COOKIE="$(mktemp)"
 ADMIN_COOKIE="$(mktemp)"
 WORK_DIR="$(mktemp -d)"
-SLUG="psmoke$(date +%s)"
+SLUG="psmoke$(date +%s)${RANDOM}"
 
 cleanup() {
   rm -f "$USER_COOKIE" "$ADMIN_COOKIE"
@@ -94,16 +94,17 @@ GLOBAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" 
 assert_code "Global namespace detail is available" "$GLOBAL_RESPONSE" "0"
 GLOBAL_NAMESPACE_ID="$(json_field "$GLOBAL_RESPONSE" "data.id")"
 
-CREATE_NAMESPACE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
-  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
+CREATE_NAMESPACE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" \
   -H "Content-Type: application/json" \
   -X POST "$BASE_URL/api/web/namespaces" \
   -d "{\"slug\":\"$SLUG\",\"displayName\":\"Promotion Smoke $SLUG\",\"description\":\"promotion smoke test\"}")"
-assert_code "Admin can create promotion smoke namespace" "$CREATE_NAMESPACE_RESPONSE" "0"
+assert_code "Regular user can create promotion smoke namespace" "$CREATE_NAMESPACE_RESPONSE" "0"
+NAMESPACE_ID="$(json_field "$CREATE_NAMESPACE_RESPONSE" "data.id")"
 
-cat > "$WORK_DIR/SKILL.md" <<'EOF'
+cat > "$WORK_DIR/SKILL.md" <<EOF
 ---
-name: Promotion Smoke Skill
+name: Promotion Smoke $SLUG
 description: Promotion smoke test
 version: 1.0.0
 ---
@@ -119,19 +120,46 @@ with zipfile.ZipFile(work_dir / "skill.zip", "w", zipfile.ZIP_DEFLATED) as archi
     archive.write(work_dir / "SKILL.md", "SKILL.md")
 PY
 
-PUBLISH_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
-  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
+PUBLISH_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" \
   -F "file=@$WORK_DIR/skill.zip;type=application/zip" \
   -F "visibility=PUBLIC" \
   "$BASE_URL/api/web/skills/$SLUG/publish")"
-assert_code "Admin can publish a team skill" "$PUBLISH_RESPONSE" "0"
+assert_code "Regular user can publish a team skill for review" "$PUBLISH_RESPONSE" "0"
 SKILL_ID="$(json_field "$PUBLISH_RESPONSE" "data.skillId")"
 SKILL_SLUG="$(json_field "$PUBLISH_RESPONSE" "data.slug")"
+
+PENDING_REVIEWS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  "$BASE_URL/api/web/reviews?status=PENDING&namespaceId=$NAMESPACE_ID")"
+assert_code "Admin can list pending skill reviews" "$PENDING_REVIEWS_RESPONSE" "0"
+REVIEW_ID="$(JSON_INPUT="$PENDING_REVIEWS_RESPONSE" python3 - "$SKILL_SLUG" <<'PY'
+import json
+import os
+import sys
+
+skill_slug = sys.argv[1]
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+match = next((item for item in items if item["skillSlug"] == skill_slug), None)
+print(match["id"] if match else "")
+PY
+)"
+if [[ -z "$REVIEW_ID" ]]; then
+  fail "Pending skill reviews should contain the published team skill"
+  exit 1
+fi
+pass "Pending skill reviews contain the published team skill"
+
+APPROVE_REVIEW_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
+  -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/reviews/$REVIEW_ID/approve" \
+  -d '{"comment":"approved by promotion smoke"}')"
+assert_code "Admin can approve the regular user's team skill" "$APPROVE_REVIEW_RESPONSE" "0"
 
 SKILL_DETAIL_RESPONSE=""
 PROMOTION_READY=false
 for _ in $(seq 1 60); do
-  SKILL_DETAIL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  SKILL_DETAIL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
     "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG")"
   if JSON_INPUT="$SKILL_DETAIL_RESPONSE" python3 - <<'PY'
 import json
@@ -148,7 +176,7 @@ PY
   fi
   sleep 1
 done
-assert_code "Admin can load team skill detail" "$SKILL_DETAIL_RESPONSE" "0"
+assert_code "Regular user can load team skill detail" "$SKILL_DETAIL_RESPONSE" "0"
 if [[ "$PROMOTION_READY" != "true" ]]; then
   fail "Published team skill did not become promotable within 60 seconds"
   exit 1
@@ -161,9 +189,9 @@ else
   fail "Approved team skill should expose canSubmitPromotion=true"
 fi
 
-MY_SKILLS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+MY_SKILLS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
   "$BASE_URL/api/web/me/skills")"
-assert_code "Admin can list my skills with promotion metadata" "$MY_SKILLS_RESPONSE" "0"
+assert_code "Regular user can list my skills with promotion metadata" "$MY_SKILLS_RESPONSE" "0"
 if JSON_INPUT="$MY_SKILLS_RESPONSE" python3 - "$SKILL_ID" <<'PY'
 import json
 import os
@@ -181,12 +209,12 @@ else
   fail "My skills response should expose headlineVersion and canSubmitPromotion"
 fi
 
-SUBMIT_PROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
-  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
+SUBMIT_PROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" \
   -H "Content-Type: application/json" \
   -X POST "$BASE_URL/api/web/promotions" \
   -d "{\"sourceSkillId\":$SKILL_ID,\"sourceVersionId\":$VERSION_ID,\"targetNamespaceId\":$GLOBAL_NAMESPACE_ID}")"
-assert_code "Admin can submit promotion to global namespace" "$SUBMIT_PROMOTION_RESPONSE" "0"
+assert_code "Regular user can submit promotion to global namespace" "$SUBMIT_PROMOTION_RESPONSE" "0"
 
 PENDING_PROMOTIONS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
   "$BASE_URL/api/web/promotions?status=PENDING")"
@@ -213,9 +241,14 @@ import sys
 
 skill_id = int(sys.argv[1])
 items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
-print(next(item["id"] for item in items if item["sourceSkillId"] == skill_id))
+match = next((item for item in items if item["sourceSkillId"] == skill_id), None)
+print(match["id"] if match else "")
 PY
 )"
+if [[ -z "$PROMOTION_ID" ]]; then
+  fail "Pending promotions should contain the submitted team skill"
+  exit 1
+fi
 
 UNAUTHORIZED_APPROVAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
   -H "X-XSRF-TOKEN: $USER_CSRF" \
@@ -267,7 +300,15 @@ else
   fail "Promoted global version download should return HTTP 200 (got $GLOBAL_DOWNLOAD_STATUS)"
 fi
 
-if unzip -p "$GLOBAL_BUNDLE" SKILL.md | grep -q '^Body$'; then
+if python3 - "$GLOBAL_BUNDLE" <<'PY'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    content = archive.read("SKILL.md").decode("utf-8")
+raise SystemExit(0 if "Body" in content.splitlines() else 1)
+PY
+then
   pass "Promoted global bundle contains the source SKILL.md"
 else
   fail "Promoted global bundle should contain the source SKILL.md"
