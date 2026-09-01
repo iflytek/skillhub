@@ -41,7 +41,29 @@ class JpaSkillReviewQueryRepositoryTest {
             assertThat(review.reviewText()).isEqualTo("excellent");
             assertThat(review.authoredByViewer()).isTrue();
             assertThat(review.status()).isEqualTo("VISIBLE");
+            assertThat(review.userId()).isNull();
+            assertThat(review.moderationReason()).isNull();
         });
         verify(userAccountRepository).findByIdIn(List.of("author-1"));
+    }
+
+    @Test
+    void administratorListingIncludesModerationDetails() {
+        SkillRating rating = new SkillRating(10L, "author-1", (short) 2);
+        rating.updateReview((short) 2, "off topic");
+        rating.hideReview("admin", "Policy violation");
+        PageRequest page = PageRequest.of(0, 20);
+        when(ratingRepository.findReviewsBySkillId(10L, page))
+                .thenReturn(new PageImpl<>(List.of(rating), page, 1));
+        when(userAccountRepository.findByIdIn(List.of("author-1"))).thenReturn(List.of());
+
+        var result = new JpaSkillReviewQueryRepository(ratingRepository, userAccountRepository)
+                .list(10L, "admin", true, page);
+
+        assertThat(result.getContent()).singleElement().satisfies(review -> {
+            assertThat(review.userId()).isEqualTo("author-1");
+            assertThat(review.moderationReason()).isEqualTo("Policy violation");
+            assertThat(review.status()).isEqualTo("HIDDEN");
+        });
     }
 }

@@ -64,7 +64,7 @@ View skill packages with the most stars and highest ratings to discover best pra
 
 1. Select "Write a review" on a published skill's detail page
 2. Choose 1-5 stars and enter up to 2,000 characters
-3. You can edit or clear the text; clearing it keeps the star rating
+3. You can edit or clear the text; clearing it keeps the star rating and remains available if the skill is later unpublished
 4. A review hidden by an administrator stays hidden after author edits and becomes public only after an administrator restores it
 
 **Viewing Notifications**:

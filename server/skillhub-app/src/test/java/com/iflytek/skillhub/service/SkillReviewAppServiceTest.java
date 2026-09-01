@@ -109,6 +109,20 @@ class SkillReviewAppServiceTest {
     }
 
     @Test
+    void authorCanClearReviewAfterSkillStopsBeingInteractable() {
+        SkillRating review = new SkillRating(10L, "author", (short) 4);
+        review.updateReview((short) 4, "Remove me");
+        review.clearReview();
+        when(ratingService.clearReview(10L, "author")).thenReturn(review);
+
+        service.clear(10L, "author", Map.of(), Set.of());
+
+        verify(ratingService).clearReview(10L, "author");
+        verify(skillRepository, never()).findById(any());
+        verify(skillVersionRepository, never()).findById(any());
+    }
+
+    @Test
     void hideWritesModerationAuditInSameWorkflow() {
         SkillRating review = new SkillRating(10L, "author", (short) 4);
         review.updateReview((short) 4, "helpful review");

@@ -11,7 +11,7 @@ export interface SkillReview extends Omit<GeneratedSkillReview,
   'id' | 'userId' | 'displayName' | 'avatarUrl' | 'score' | 'reviewText' | 'status' |
   'authoredByViewer' | 'moderationReason' | 'createdAt' | 'updatedAt'> {
   id: number
-  userId: string
+  userId?: string | null
   displayName: string
   avatarUrl?: string | null
   score: number

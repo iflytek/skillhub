@@ -96,7 +96,6 @@ public class SkillReviewAppService {
                                        String userId,
                                        Map<Long, NamespaceRole> namespaceRoles,
                                        Set<String> platformRoles) {
-        requireInteractableSkill(skillId, userId, namespaceRoles, platformRoles);
         return toMine(ratingService.clearReview(skillId, userId));
     }
 

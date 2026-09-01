@@ -30,10 +30,15 @@ function ReviewStars({ value, onChange, disabled = false }: {
   disabled?: boolean
 }) {
   const { t } = useTranslation()
+  const ratingName = useId()
 
   if (!onChange) {
     return (
-      <div className="flex items-center gap-1" aria-label={t('skillReviews.ratingDisplay', { score: value })}>
+      <div
+        className="flex items-center gap-1"
+        role="img"
+        aria-label={t('skillReviews.ratingDisplay', { score: value })}
+      >
         {[1, 2, 3, 4, 5].map((score) => (
           <Star
             key={score}
@@ -51,21 +56,28 @@ function ReviewStars({ value, onChange, disabled = false }: {
   return (
     <div className="flex items-center gap-1" role="radiogroup" aria-label={t('skillReviews.scoreLabel')}>
       {[1, 2, 3, 4, 5].map((score) => (
-        <button
-          key={score}
-          type="button"
-          className="rounded p-0.5 transition-transform hover:scale-110"
-          role="radio"
-          aria-checked={score === value}
-          onClick={() => onChange(score)}
-          disabled={disabled}
-          aria-label={t('skillReviews.ratingOption', { score })}
-        >
-          <Star className={cn(
-            'h-4 w-4',
-            score <= value ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/40',
-          )} />
-        </button>
+        <span key={score}>
+          <input
+            id={`${ratingName}-${score}`}
+            className="peer sr-only"
+            type="radio"
+            name={ratingName}
+            value={score}
+            checked={score === value}
+            onChange={() => onChange(score)}
+            disabled={disabled}
+            aria-label={t('skillReviews.ratingOption', { score })}
+          />
+          <label
+            htmlFor={`${ratingName}-${score}`}
+            className="block cursor-pointer rounded p-0.5 transition-transform hover:scale-110 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
+          >
+            <Star aria-hidden="true" className={cn(
+              'h-4 w-4',
+              score <= value ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/40',
+            )} />
+          </label>
+        </span>
       ))}
     </div>
   )

@@ -16,6 +16,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.SkillReviewMeResponse;
+import com.iflytek.skillhub.dto.SkillReviewResponse;
 import com.iflytek.skillhub.service.SkillReviewAppService;
 import java.util.List;
 import java.util.Set;
@@ -48,6 +49,21 @@ class SkillReviewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void publicReviewListOmitsInternalUserAndModerationFields() throws Exception {
+        SkillReviewResponse review = new SkillReviewResponse(
+                8L, null, "Alice", null, (short) 5, "Useful", "VISIBLE", false,
+                null, null, null);
+        when(reviewAppService.list(eq(10L), eq(null), any(), eq(Set.of()), eq(0), eq(20)))
+                .thenReturn(new PageResponse<>(List.of(review), 1, 0, 20));
+
+        mockMvc.perform(get("/api/v1/skills/10/reviews"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].displayName").value("Alice"))
+                .andExpect(jsonPath("$.data.items[0].userId").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].moderationReason").doesNotExist());
     }
 
     @Test
