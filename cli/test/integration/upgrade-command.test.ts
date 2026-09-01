@@ -169,8 +169,9 @@ describe('upgrade command', () => {
     })
     await writeFile(join(rootDir, 'late-edit', 'SKILL.md'), '# edited after planning')
 
-    await expect(executeSkillUpgradePlan(plan, { home: env.home, tokenForRegistry }))
-      .rejects.toThrow('local changes detected after upgrade planning')
+    const result = await executeSkillUpgradePlan(plan, { home: env.home, tokenForRegistry })
+    expect(result.items[0]).toMatchObject({ action: 'failed' })
+    expect(result.items[0]?.reason).toContain('local changes detected after upgrade planning')
     expect(await readFile(join(rootDir, 'late-edit', 'SKILL.md'), 'utf-8'))
       .toBe('# edited after planning')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
@@ -211,8 +212,9 @@ describe('upgrade command', () => {
     const skillDir = join(rootDir, 'removed-late')
     await rm(skillDir, { recursive: true })
 
-    await expect(executeSkillUpgradePlan(plan, { home: env.home, tokenForRegistry }))
-      .rejects.toThrow('installed target disappeared before upgrade commit')
+    const result = await executeSkillUpgradePlan(plan, { home: env.home, tokenForRegistry })
+    expect(result.items[0]).toMatchObject({ action: 'failed' })
+    expect(result.items[0]?.reason).toContain('installed target disappeared before upgrade commit')
     expect(await exists(skillDir)).toBe(false)
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
     expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
