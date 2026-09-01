@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'bun:test'
 import { removeLocalSkill } from '../../../src/services/remove-service'
-import { acquireSkillTargetLock } from '../../../src/services/skill-target-lock'
+import { acquireSkillTargetLock, skillTargetLockPath } from '../../../src/services/skill-target-lock'
 import { InventoryStore } from '../../../src/stores/inventory-store'
 
 async function exists(path: string): Promise<boolean> {
@@ -123,7 +123,31 @@ describe('removeLocalSkill', () => {
     expect(removed.removed).toHaveLength(1)
     expect(await exists(skillDir)).toBe(false)
     expect((await store.read()).items).toEqual([])
-    expect(await exists(join(rootDir, '.demo.skillhub-install.lock'))).toBe(false)
+    expect(await exists(await skillTargetLockPath(rootDir, 'demo'))).toBe(false)
+  })
+
+  test('removes a stale inventory target when the recorded root directory is missing', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-remove-stale-home-'))
+    const parent = await mkdtemp(join(tmpdir(), 'skillhub-remove-stale-parent-'))
+    const rootDir = join(parent, 'missing-root')
+    const skillDir = join(rootDir, 'demo')
+    const store = new InventoryStore(home)
+    await store.write({
+      items: [{
+        registry: 'https://skill.xfyun.cn',
+        namespace: 'global',
+        slug: 'demo',
+        version: '1.0.0',
+        targets: [{ agent: 'codex', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z' }]
+      }]
+    })
+
+    const result = await removeLocalSkill({ registry: 'https://skill.xfyun.cn', slug: 'demo', home })
+
+    expect(result.removed).toEqual([{ namespace: 'global', agent: 'codex', dir: skillDir, existed: false }])
+    expect(await exists(rootDir)).toBe(false)
+    expect((await store.read()).items).toEqual([])
+    expect(await exists(await skillTargetLockPath(rootDir, 'demo'))).toBe(false)
   })
 
   test('throws on path traversal in installDir', async () => {

@@ -37,23 +37,25 @@ describe('version upgrade flow', () => {
   // -------------------------------------------------------------------------
   // VU1 — full upgrade lifecycle:
   //   1. Registry serves pdf-parser@1.0.0 → install → metadata=v1, content=v1
-  //   2. Stop registry, start a new one serving pdf-parser@2.0.0
-  //   3. Install --force using the new registry URL
+  //   2. The same registry serves pdf-parser@2.0.0
+  //   3. Install --force from the same source identity
   //   4. metadata.json, inventory.json AND on-disk SKILL.md all reflect v2
   // -------------------------------------------------------------------------
   test('VU1 install v1 then upgrade to v2 with --force replaces metadata, inventory, and content', async () => {
     const env = await createTempHome()
 
     // --- Stage 1: install v1 ----------------------------------------------
+    const skill = {
+      namespace: 'global',
+      slug: 'pdf-parser',
+      version: '1.0.0',
+      versionId: 1,
+      zipBytes: makeSkillZipWithBody('# pdf-parser v1\n\nVersion one body.')
+    }
     registry = await startFakeRegistry({
       token: 'sk_ok',
       user: { handle: 'u1', displayName: 'User One' },
-      skills: [{
-        namespace: 'global',
-        slug: 'pdf-parser',
-        version: '1.0.0',
-        zipBytes: makeSkillZipWithBody('# pdf-parser v1\n\nVersion one body.')
-      }]
+      skills: [skill]
     })
     await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
 
@@ -77,22 +79,10 @@ describe('version upgrade flow', () => {
       expect(body).toContain('Version one body.')
     }
 
-    // --- Stage 2: swap registry to v2 -------------------------------------
-    registry.stop()
-    registry = await startFakeRegistry({
-      token: 'sk_ok',
-      user: { handle: 'u1', displayName: 'User One' },
-      skills: [{
-        namespace: 'global',
-        slug: 'pdf-parser',
-        version: '2.0.0',
-        zipBytes: makeSkillZipWithBody('# pdf-parser v2\n\nVersion two body.')
-      }]
-    })
-
-    // Re-login against the new registry (URL changed, so credentials are
-    // keyed differently).
-    await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+    // --- Stage 2: publish v2 from the same source --------------------------
+    skill.version = '2.0.0'
+    skill.versionId = 2
+    skill.zipBytes = makeSkillZipWithBody('# pdf-parser v2\n\nVersion two body.')
 
     const r2 = await runCli(
       ['install', 'pdf-parser', '--dir', installDir, '--registry', registry.url, '--token', 'sk_ok', '--force'],

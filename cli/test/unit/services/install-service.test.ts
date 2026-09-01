@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { zipSync } from 'fflate'
 import { installSkill } from '../../../src/services/install-service'
+import { skillTargetLockPath } from '../../../src/services/skill-target-lock'
 
 const originalFetch = globalThis.fetch
 
@@ -327,7 +328,7 @@ describe('installSkill', () => {
     const metadata = JSON.parse(await readFile(join(skillDir, '.skillhub', 'metadata.json'), 'utf-8'))
     expect(metadata.registry).toBe('http://other-registry.test')
     expect((await readdir(rootDir)).some(name => name.includes('skillhub-backup'))).toBe(false)
-    expect(await exists(join(rootDir, '.demo.skillhub-install.lock'))).toBe(false)
+    expect(await exists(await skillTargetLockPath(rootDir, 'demo'))).toBe(false)
     expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
   })
 
@@ -397,7 +398,7 @@ describe('installSkill', () => {
     for (const rootDir of [firstRoot, secondRoot]) {
       const entries = await readdir(rootDir)
       expect(entries.some(name => name.includes('skillhub-backup'))).toBe(false)
-      expect(entries.some(name => name.includes('skillhub-install.lock'))).toBe(false)
+      expect(await exists(await skillTargetLockPath(rootDir, 'demo'))).toBe(false)
     }
   })
 
@@ -405,7 +406,7 @@ describe('installSkill', () => {
     globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
     const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
-    const lockPath = join(rootDir, '.demo.skillhub-install.lock')
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
     await writeFile(lockPath, JSON.stringify({ pid: process.pid }))
 
     await expect(installSkill({
