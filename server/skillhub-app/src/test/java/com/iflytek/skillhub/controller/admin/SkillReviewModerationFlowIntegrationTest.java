@@ -15,11 +15,13 @@ import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.RbacService;
 import com.iflytek.skillhub.domain.audit.AuditLog;
+import com.iflytek.skillhub.domain.audit.AuditLogRepository;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.social.SkillRating;
+import com.iflytek.skillhub.domain.social.SkillRatingRepository;
 import com.iflytek.skillhub.domain.social.SkillReviewStatus;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.infra.jpa.AuditLogJpaRepository;
@@ -57,9 +59,11 @@ class SkillReviewModerationFlowIntegrationTest {
     @Autowired private UserAccountJpaRepository userAccountRepository;
     @Autowired private NamespaceJpaRepository namespaceRepository;
     @Autowired private SkillJpaRepository skillRepository;
-    @Autowired private JpaSkillRatingRepository ratingRepository;
+    @Autowired private SkillRatingRepository ratingRepository;
+    @Autowired private JpaSkillRatingRepository ratingJpaRepository;
 
-    @SpyBean private AuditLogJpaRepository auditLogRepository;
+    @Autowired private AuditLogRepository auditLogRepository;
+    @SpyBean private AuditLogJpaRepository auditLogJpaRepository;
     @MockBean private DeviceAuthService deviceAuthService;
     @MockBean private RbacService rbacService;
     @MockBean private GovernanceNotificationService governanceNotificationService;
@@ -92,7 +96,7 @@ class SkillReviewModerationFlowIntegrationTest {
         assertThat(saved.getReviewStatus()).isEqualTo(SkillReviewStatus.VISIBLE);
         assertThat(saved.getModeratedBy()).isEqualTo(ADMIN_ID);
 
-        List<String> actions = auditLogRepository.findAll().stream()
+        List<String> actions = auditLogJpaRepository.findAll().stream()
                 .filter(log -> ADMIN_ID.equals(log.getActorUserId()))
                 .filter(log -> review.getId().equals(log.getTargetId()))
                 .filter(log -> "SKILL_REVIEW".equals(log.getTargetType()))
@@ -134,7 +138,7 @@ class SkillReviewModerationFlowIntegrationTest {
 
         SkillRating review = new SkillRating(skill.getId(), AUTHOR_ID, (short) 4);
         review.updateReview((short) 4, "Useful review");
-        return ratingRepository.saveAndFlush(review);
+        return ratingJpaRepository.saveAndFlush(review);
     }
 
     private void saveUserIfAbsent(String userId, String displayName, String email) {
