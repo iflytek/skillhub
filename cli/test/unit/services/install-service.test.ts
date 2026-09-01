@@ -172,6 +172,7 @@ describe('installSkill', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Manual')
     await writeManagedMetadata(skillDir)
     const inventoryPath = join(home, '.skillhub', 'inventory.json')
     await mkdir(join(home, '.skillhub'), { recursive: true })
@@ -217,6 +218,7 @@ describe('installSkill', () => {
     const metadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
     metadata.source = 'manual'
     await writeFile(metadataPath, JSON.stringify(metadata))
+    const metadataBefore = await readFile(metadataPath, 'utf-8')
 
     await expect(installSkill({
       registry: 'http://registry.test',
@@ -226,6 +228,12 @@ describe('installSkill', () => {
       force: true,
       home
     })).rejects.toThrow('cannot verify SkillHub ownership')
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Manual')
+    expect(await readFile(metadataPath, 'utf-8')).toBe(metadataBefore)
+    expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
+    const entries = await readdir(rootDir)
+    expect(entries.some(name => name.includes('skillhub-backup'))).toBe(false)
+    expect(entries.some(name => name.includes('skillhub-install.lock'))).toBe(false)
   })
 
   test('force rejects a directory without installation metadata', async () => {
