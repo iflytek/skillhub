@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
@@ -120,6 +121,23 @@ class SkillReviewAppServiceTest {
         assertThatThrownBy(() -> service.upsert(
                 10L, "owner", (short) 5, "not published", Map.of(), Set.of()))
                 .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class)
+                .hasMessage("error.skillReview.notInteractable");
+
+        verify(ratingService, never()).upsertReview(any(), any(), any(Short.class), any());
+    }
+
+    @Test
+    void archivedSkillReviewMutationIsRejectedServerSide() {
+        Skill skill = publishedSkill(SkillVisibility.PUBLIC);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        SkillVersion published = new SkillVersion(10L, "1.0.0", "owner");
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+        when(skillRepository.findById(10L)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findById(100L)).thenReturn(Optional.of(published));
+
+        assertThatThrownBy(() -> service.upsert(
+                10L, "owner", (short) 5, "archived", Map.of(), Set.of()))
+                .isInstanceOf(DomainBadRequestException.class)
                 .hasMessage("error.skillReview.notInteractable");
 
         verify(ratingService, never()).upsertReview(any(), any(), any(Short.class), any());
