@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
@@ -407,7 +407,7 @@ describe('installSkill', () => {
     const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const lockPath = await skillTargetLockPath(rootDir, 'demo')
-    await writeFile(lockPath, JSON.stringify({ pid: process.pid }))
+    await mkdir(lockPath)
 
     await expect(installSkill({
       registry: 'http://registry.test', namespace: 'global', slug: 'demo',
@@ -416,7 +416,10 @@ describe('installSkill', () => {
     })).rejects.toThrow('install target is busy')
     expect(await exists(join(rootDir, 'demo'))).toBe(false)
 
-    await writeFile(lockPath, JSON.stringify({ pid: 999999 }))
+    await rm(lockPath, { recursive: true })
+    await mkdir(lockPath)
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(lockPath, staleTime, staleTime)
     await installSkill({
       registry: 'http://registry.test', namespace: 'global', slug: 'demo',
       targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
