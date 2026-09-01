@@ -4,7 +4,17 @@ All notable CLI behavior changes are documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Add `skillhub upgrade <coordinate...>` for bounded, explicit upgrades of already-installed Skills,
+  including side-effect-free `--check`, structured `--json`, local-change protection, and target
+  filters.
+
 ### Fixed
+
+- Prevent `--force` from overwriting an unmanaged or different-source Skill at the same target path.
+  Source ownership is the full `registry + namespace + slug` identity.
+- Exclude installer-owned `.skillhub/` state when publishing a local Skill directory.
 
 - Resolve `namespace/slug`, `@namespace/slug`, and `namespace--slug`
   coordinates against their declared namespace instead of silently falling

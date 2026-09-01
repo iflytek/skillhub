@@ -11,6 +11,7 @@ import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
 import { syncDiffCommand, syncPullCommand, syncPushCommand, syncStatusCommand, type SyncCommonOptions, type SyncPullOptions, type SyncPushOptions } from './commands/sync'
 import { updateCommand } from './commands/update'
+import { upgradeCommand, type UpgradeCommandOptions } from './commands/upgrade'
 import { versionCommand } from './commands/version'
 import { whoamiCommand } from './commands/whoami'
 import { EXIT } from './shared/constants'
@@ -245,6 +246,23 @@ cli
   .option('--json', 'Output JSON')
   .action((slug: string, options: InstallCommandOptions & { agent?: string | string[] }) => {
     return runCommand(() => installCommand(slug, { ...options, agent: toArray(options.agent) }), Boolean(options.json))
+  })
+
+cli
+  .command('upgrade [...coordinates]', 'Upgrade explicitly selected installed skills')
+  .option('--namespace <slug>', 'Filter a bare slug by namespace')
+  .option('--agent <profile>', 'Filter installed targets by Agent (repeatable)')
+  .option('--dir <path>', 'Filter installed targets by directory')
+  .option('--registry <url>', 'Filter by installation source registry')
+  .option('--token <token>', 'API token override')
+  .option('--check', 'Show the exact plan without writing')
+  .option('--force', 'Replace local changes from the same source')
+  .option('--json', 'Output JSON')
+  .action((coordinates: string[], options: UpgradeCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(
+      () => upgradeCommand(coordinates, { ...options, agent: toArray(options.agent) }),
+      Boolean(options.json)
+    )
   })
 
 cli

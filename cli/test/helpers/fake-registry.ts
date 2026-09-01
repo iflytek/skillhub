@@ -1,3 +1,5 @@
+import { unzipSync } from 'fflate'
+
 type FakeHandler = (req: Request) => Response | Promise<Response>
 
 export function createFakeRegistry(handlers: Record<string, FakeHandler>) {
@@ -103,6 +105,7 @@ export interface CapturedPublish {
   /** Visibility string from the multipart form field. */
   visibility: string
   rejectExistingVersion: boolean
+  archiveEntries: string[]
 }
 
 export interface CapturedValidate {
@@ -203,7 +206,8 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     delete: CapturedDelete | null
     validate: CapturedValidate | null
     review: CapturedReview | null
-  } = { publish: null, resolve: null, delete: null, validate: null, review: null }
+    downloads: number
+  } = { publish: null, resolve: null, delete: null, validate: null, review: null, downloads: 0 }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
   // TCP-level failure. Start a connection-dropping server and return its URL
@@ -345,6 +349,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
         }
+        state.downloads += 1
         const bytes = skill.zipBytes ?? MINIMAL_ZIP
         return new Response(bytes as BodyInit, {
           status: 200,
@@ -364,6 +369,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
         }
+        state.downloads += 1
         const bytes = skill.zipBytes ?? MINIMAL_ZIP
         return new Response(bytes as BodyInit, {
           status: 200,
@@ -415,6 +421,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
+
           state.validate = {
             namespace,
             fileName,
@@ -442,7 +449,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         const namespace = publishMatch[1]!
 
         // Parse multipart form data asynchronously — return a Promise<Response>.
-        return req.formData().then(form => {
+        return req.formData().then(async form => {
           const fileField = form.get('file')
           const visibility = (form.get('visibility') as string | null) ?? 'PUBLIC'
 
@@ -451,13 +458,17 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
+          const archiveEntries = fileField instanceof File
+            ? Object.keys(unzipSync(new Uint8Array(await fileField.arrayBuffer()))).sort()
+            : []
 
           // Record for test assertions.
           state.publish = {
             namespace,
             fileName,
             visibility,
-            rejectExistingVersion: form.get('rejectExistingVersion') === 'true'
+            rejectExistingVersion: form.get('rejectExistingVersion') === 'true',
+            archiveEntries
           }
 
           return Response.json({

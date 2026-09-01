@@ -51,6 +51,22 @@ function installFetchWithDownloadResponse(downloadResponse: Response): typeof fe
   return fakeFetch as unknown as typeof fetch
 }
 
+async function writeManagedMetadata(
+  skillDir: string,
+  identity: { registry: string; namespace: string; slug: string } = {
+    registry: 'http://registry.test',
+    namespace: 'global',
+    slug: 'demo'
+  }
+): Promise<void> {
+  await mkdir(join(skillDir, '.skillhub'), { recursive: true })
+  await writeFile(join(skillDir, '.skillhub', 'metadata.json'), JSON.stringify({
+    ...identity,
+    version: '0.1.0',
+    source: 'skillhub'
+  }))
+}
+
 describe('installSkill', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch
@@ -135,6 +151,7 @@ describe('installSkill', () => {
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
     await writeFile(join(skillDir, 'stale.txt'), 'old')
+    await writeManagedMetadata(skillDir)
 
     await installSkill({
       registry: 'http://registry.test',
@@ -149,12 +166,13 @@ describe('installSkill', () => {
     expect(await exists(join(skillDir, 'stale.txt'))).toBe(false)
   })
 
-  test('force removes stale inventory records that point at the replaced install directory', async () => {
+  test('force rejects a different namespace at the same install directory', async () => {
     globalThis.fetch = installFetch({ 'SKILL.md': '# Team Demo' })
     const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
+    await writeManagedMetadata(skillDir)
     const inventoryPath = join(home, '.skillhub', 'inventory.json')
     await mkdir(join(home, '.skillhub'), { recursive: true })
     await writeFile(inventoryPath, JSON.stringify({
@@ -172,18 +190,18 @@ describe('installSkill', () => {
       }]
     }))
 
-    await installSkill({
+    await expect(installSkill({
       registry: 'http://registry.test',
       namespace: 'team',
       slug: 'demo',
       targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
       force: true,
       home
-    })
+    })).rejects.toThrow('source conflict')
 
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
     expect(inventory.items).toHaveLength(1)
-    expect(inventory.items[0]).toMatchObject({ namespace: 'team', slug: 'demo' })
+    expect(inventory.items[0]).toMatchObject({ namespace: 'global', slug: 'demo' })
     expect(inventory.items[0].targets).toHaveLength(1)
     expect(inventory.items[0].targets[0].installDir).toBe(skillDir)
   })
@@ -195,6 +213,7 @@ describe('installSkill', () => {
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
     await writeFile(join(skillDir, 'SKILL.md'), '# Old')
+    await writeManagedMetadata(skillDir)
     const inventoryPath = join(home, '.skillhub', 'inventory.json')
     await mkdir(join(home, '.skillhub'), { recursive: true })
     await writeFile(inventoryPath, JSON.stringify({
@@ -234,6 +253,7 @@ describe('installSkill', () => {
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
     await writeFile(join(skillDir, 'SKILL.md'), '# Old')
+    await writeManagedMetadata(skillDir)
     const invalidHome = join(rootDir, 'home-is-a-file')
     await writeFile(invalidHome, 'not a directory')
 

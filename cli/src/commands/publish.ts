@@ -49,7 +49,9 @@ export async function publishCommand(path: string, options: PublishCommandOption
       throw new CliError(`file must be a zip archive: ${path}`, EXIT.filesystem, { path })
     }
   } else if (pathStat.isDirectory()) {
-    archiveBlob = await createZip(path)
+    archiveBlob = await createZip(path, {
+      exclude: relativePath => relativePath === '.skillhub' || relativePath.startsWith('.skillhub/')
+    })
     archiveName = `${basename(path)}.zip`
   } else {
     throw new CliError(`path must be a file or directory: ${path}`, EXIT.filesystem, { path })

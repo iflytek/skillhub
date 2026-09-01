@@ -1,0 +1,287 @@
+import { relative, resolve } from 'node:path'
+import { pathExists } from '../platform/paths'
+import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client'
+import { InventoryStore, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
+import { CliError } from '../shared/errors'
+import { EXIT } from '../shared/constants'
+import { hasExplicitNamespace, parseSkillName, resolveSkillName } from '../shared/skill-name-parser'
+import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
+import { installSkill } from './install-service'
+import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installed-skill-metadata'
+
+const MAX_UPGRADE_SELECTION = 50
+
+export interface UpgradeSelectionOptions {
+  coordinates: string[]
+  namespace?: string
+  registry?: string
+  agents?: string[]
+  dir?: string
+  force: boolean
+  home?: string
+  tokenForRegistry: (registry: string) => Promise<string | undefined>
+}
+
+export type UpgradePlanAction = 'upgrade' | 'unchanged' | 'blocked'
+
+export interface UpgradePlanItem {
+  coordinate: string
+  registry: string
+  currentVersion: string
+  remoteVersion?: string
+  action: UpgradePlanAction
+  reason?: string
+  changedFiles: string[]
+  targets: Array<{ agent: string; dir: string }>
+  resolved?: ResolveResponse
+  inventoryItem: InventoryItem
+  selectedTargets: InventoryTarget[]
+}
+
+export interface UpgradePlan {
+  items: UpgradePlanItem[]
+  blocked: number
+  upgrades: number
+  unchanged: number
+}
+
+export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promise<UpgradePlan> {
+  if (options.coordinates.length === 0) {
+    throw new CliError('provide at least one installed skill coordinate', EXIT.usage)
+  }
+  if (options.coordinates.length > MAX_UPGRADE_SELECTION) {
+    throw new CliError(`upgrade accepts at most ${MAX_UPGRADE_SELECTION} coordinates`, EXIT.usage)
+  }
+
+  const store = new InventoryStore(options.home)
+  const inventory = await store.read()
+  const selected = selectInventoryItems(inventory.items, options)
+  const items: UpgradePlanItem[] = []
+
+  for (const selection of selected) {
+    const coordinate = `@${selection.item.namespace}/${selection.item.slug}`
+    const base = {
+      coordinate,
+      registry: selection.item.registry,
+      currentVersion: selection.item.version,
+      changedFiles: [] as string[],
+      targets: selection.targets.map(target => ({ agent: target.agent, dir: target.installDir })),
+      inventoryItem: selection.item,
+      selectedTargets: selection.targets
+    }
+
+    let resolved: ResolveResponse
+    try {
+      const token = await options.tokenForRegistry(selection.item.registry)
+      resolved = await new SkillHubClient(selection.item.registry, token)
+        .resolve(selection.item.namespace, selection.item.slug)
+    } catch (error) {
+      items.push({
+        ...base,
+        action: 'blocked',
+        reason: error instanceof Error ? error.message : 'remote version unavailable'
+      })
+      continue
+    }
+
+    if (resolved.namespace !== selection.item.namespace || resolved.slug !== selection.item.slug) {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'registry resolved a different skill identity'
+      })
+      continue
+    }
+
+    const inspection = await inspectTargets(selection.item, selection.targets)
+    const hardConflict = inspection.hardConflicts[0]
+    if (hardConflict) {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: hardConflict,
+        changedFiles: inspection.changedFiles,
+        resolved
+      })
+      continue
+    }
+    if (inspection.changedFiles.length > 0 && !options.force) {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'local changes detected; pass --force to replace same-source files',
+        changedFiles: inspection.changedFiles,
+        resolved
+      })
+      continue
+    }
+    if (inspection.baselineMissing && !options.force) {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'installed metadata has no file baseline; pass --force to migrate this same-source installation',
+        resolved
+      })
+      continue
+    }
+
+    const unchanged = selection.item.version === resolved.version &&
+      selection.item.fingerprint === resolved.fingerprint &&
+      inspection.metadataCurrent
+    items.push({
+      ...base,
+      remoteVersion: resolved.version,
+      action: unchanged ? 'unchanged' : 'upgrade',
+      changedFiles: inspection.changedFiles,
+      resolved
+    })
+  }
+
+  return {
+    items,
+    blocked: items.filter(item => item.action === 'blocked').length,
+    upgrades: items.filter(item => item.action === 'upgrade').length,
+    unchanged: items.filter(item => item.action === 'unchanged').length
+  }
+}
+
+export async function executeSkillUpgradePlan(
+  plan: UpgradePlan,
+  options: Pick<UpgradeSelectionOptions, 'force' | 'home' | 'tokenForRegistry'>
+): Promise<void> {
+  if (plan.blocked > 0) {
+    throw new CliError('upgrade plan contains blocked skills', EXIT.validation)
+  }
+
+  for (const item of plan.items) {
+    if (item.action !== 'upgrade' || !item.resolved) continue
+    const token = await options.tokenForRegistry(item.registry)
+    await installSkill({
+      registry: item.registry,
+      token,
+      namespace: item.inventoryItem.namespace,
+      slug: item.inventoryItem.slug,
+      resolved: item.resolved,
+      targets: item.selectedTargets.map(target => ({
+        agent: target.agent,
+        rootDir: target.rootDir,
+        scope: 'project',
+        source: 'explicit'
+      })),
+      force: true,
+      home: options.home
+    })
+  }
+}
+
+function selectInventoryItems(
+  items: InventoryItem[],
+  options: Pick<UpgradeSelectionOptions, 'coordinates' | 'namespace' | 'registry' | 'agents' | 'dir'>
+): Array<{ item: InventoryItem; targets: InventoryTarget[] }> {
+  const selected = new Map<string, { item: InventoryItem; targets: InventoryTarget[] }>()
+
+  for (const coordinate of options.coordinates) {
+    const explicitNamespace = hasExplicitNamespace(coordinate)
+    const parsed = explicitNamespace
+      ? resolveSkillName(coordinate, options.namespace)
+      : parseSkillName(coordinate)
+    const namespace = explicitNamespace ? parsed.namespace : options.namespace
+
+    const matches = items.flatMap(item => {
+      if (item.slug !== parsed.slug) return []
+      if (namespace && item.namespace !== namespace) return []
+      if (options.registry && normalizeRegistry(item.registry) !== normalizeRegistry(options.registry)) return []
+      const targets = item.targets.filter(target => matchesTargetFilters(target, options.agents, options.dir))
+      return targets.length > 0 ? [{ item, targets }] : []
+    })
+
+    if (matches.length === 0) {
+      throw new CliError(`skill "${coordinate}" is not installed`, EXIT.usage, {
+        next: `use skillhub install ${coordinate}`
+      })
+    }
+    if (matches.length > 1) {
+      throw new CliError(`installed skill "${coordinate}" is ambiguous`, EXIT.usage, {
+        matches: matches.map(match => `${match.item.registry} @${match.item.namespace}/${match.item.slug}`),
+        next: 'use a full coordinate and --registry to select one installation source'
+      })
+    }
+
+    const match = matches[0]!
+    const key = `${normalizeRegistry(match.item.registry)}\u0000${match.item.namespace}\u0000${match.item.slug}`
+    selected.set(key, match)
+  }
+
+  if (selected.size > MAX_UPGRADE_SELECTION) {
+    throw new CliError(`upgrade resolves to at most ${MAX_UPGRADE_SELECTION} skills`, EXIT.usage)
+  }
+  return [...selected.values()]
+}
+
+async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
+  hardConflicts: string[]
+  changedFiles: string[]
+  baselineMissing: boolean
+  metadataCurrent: boolean
+}> {
+  const hardConflicts: string[] = []
+  const changedFiles = new Set<string>()
+  let baselineMissing = false
+  let metadataCurrent = true
+
+  for (const target of targets) {
+    if (!(await pathExists(target.installDir))) {
+      hardConflicts.push(`installed target is missing: ${target.installDir}`)
+      continue
+    }
+    const result = await readInstalledSkillMetadata(target.installDir)
+    if (result.status !== 'valid') {
+      hardConflicts.push(`metadata-invalid at ${target.installDir}: ${result.status === 'missing' ? 'missing' : result.reason}`)
+      continue
+    }
+    if (!sameInstalledSkillSource(result.metadata, item)) {
+      hardConflicts.push(`source-conflict at ${target.installDir}`)
+      continue
+    }
+    if (!result.metadata.files) {
+      baselineMissing = true
+    } else {
+      const snapshot = await snapshotSkillDirectory(target.installDir)
+      for (const path of diffSkillFiles(result.metadata.files, snapshot.files)) {
+        changedFiles.add(`${target.installDir}:${path}`)
+      }
+    }
+    if (result.metadata.version !== item.version || result.metadata.fingerprint !== item.fingerprint) {
+      metadataCurrent = false
+    }
+  }
+
+  return {
+    hardConflicts,
+    changedFiles: [...changedFiles].sort(),
+    baselineMissing,
+    metadataCurrent
+  }
+}
+
+function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
+  if (agents?.length && !agents.includes(target.agent)) return false
+  if (!dir) return true
+  const filterPath = resolve(dir)
+  const installPath = resolve(target.installDir)
+  const rootPath = resolve(target.rootDir)
+  return isSameOrWithin(filterPath, installPath) || isSameOrWithin(filterPath, rootPath)
+}
+
+function isSameOrWithin(parent: string, candidate: string): boolean {
+  const rel = relative(parent, candidate)
+  return rel === '' || (!rel.startsWith('..') && !rel.startsWith('/') && !rel.startsWith('\\'))
+}
+
+function normalizeRegistry(registry: string): string {
+  return registry.replace(/\/+$/, '')
+}

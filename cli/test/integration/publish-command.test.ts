@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
@@ -115,6 +115,25 @@ describe('publish command — P0', () => {
     expect(registry.received.publish!.namespace).toBe('global')
     expect(registry.received.publish!.fileName).toMatch(/\.zip$/)
     expect(registry.received.publish!.visibility).toBe('PUBLIC')
+  })
+
+  test('directory publish excludes local SkillHub installation metadata', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_ok' })
+    await login(env, registry.url)
+
+    const dir = await makeTempDir(['SKILL.md', '# Demo'])
+    await mkdir(join(dir, '.skillhub'), { recursive: true })
+    await writeFile(join(dir, '.skillhub', 'metadata.json'), '{"registry":"private"}')
+
+    const result = await runCli(['publish', dir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(registry.received.publish!.archiveEntries).toContain('SKILL.md')
+    expect(registry.received.publish!.archiveEntries.some(path => path.startsWith('.skillhub'))).toBe(false)
   })
 
   test('zip file happy path: exit 0, fileName matches passed file', async () => {

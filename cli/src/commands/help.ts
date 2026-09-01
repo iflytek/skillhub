@@ -43,6 +43,15 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  upgrade: {
+    summary: 'Upgrade explicitly selected installed skills',
+    usage: 'skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]',
+    examples: [
+      'skillhub upgrade @global/skillhub-registry',
+      'skillhub upgrade @team/code-review @team/java-guide --check --json',
+      'skillhub upgrade code-review --namespace team --agent codex'
+    ]
+  },
   sync: {
     summary: 'Synchronize and maintain namespace workspaces',
     usage: 'skillhub sync <pull|status|diff|push> [options]',

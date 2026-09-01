@@ -171,7 +171,7 @@ skillhub install pdf-parser --agent codex --agent claude-code
 # Install to custom directory
 skillhub install pdf-parser --dir ~/.claude/skills
 
-# Force overwrite existing installation
+# Reinstall a SkillHub-managed installation from the same source
 skillhub install pdf-parser --force
 ```
 
@@ -228,16 +228,43 @@ For a custom path or an unsupported Agent directory, use `--dir` to specify the 
 
 ```json
 {
+  "schemaVersion": 1,
   "registry": "https://skill.xfyun.cn",
   "namespace": "global",
   "slug": "pdf-parser",
   "version": "1.0.0",
+  "versionId": 123,
   "fingerprint": "sha256:...",
+  "files": { "SKILL.md": "sha256..." },
   "source": "skillhub",
   "agent": "codex",
   "installedAt": "2026-04-28T06:00:00.000Z"
 }
 ```
+
+The CLI creates `.skillhub/metadata.json` after extracting a downloaded package. It is not part of
+the published ZIP and is excluded when a managed directory is published again.
+
+## ⬆️ Upgrade Installed Skills
+
+`upgrade` only operates on explicitly selected, SkillHub-managed local installations. It never
+installs a missing Skill and has no implicit upgrade-all mode.
+
+```bash
+# Preview without changing files
+skillhub upgrade @global/skillhub-registry --check
+
+# Upgrade one or a bounded list of installed Skills
+skillhub upgrade @global/skillhub-registry
+skillhub upgrade @team/code-review @team/java-guide
+
+# Machine-readable plan
+skillhub upgrade @team/code-review --check --json
+```
+
+The source identity is `registry + namespace + slug`. `--force` may replace local changes only when
+that full identity matches the installation metadata; it never overwrites an unmanaged directory or
+a Skill installed from another source.
 
 ## 🔄 Namespace Workspaces
 
@@ -402,6 +429,7 @@ Update mechanism:
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
+| `skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]` | Upgrade explicitly selected installed skills |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |
@@ -447,12 +475,15 @@ skillhub search test --registry https://skillhub.example.com
 
 ```bash
 # Use --force to overwrite
-skillhub install pdf-parser --force
+skillhub install pdf-parser --force # same SkillHub source only
 
 # Or remove first then install
 skillhub remove pdf-parser
 skillhub install pdf-parser
 ```
+
+`--force` does not bypass source ownership. Move or explicitly remove an unmanaged or different-source
+directory before installing another Skill with the same visible slug.
 
 ### Corrupted Inventory
 
