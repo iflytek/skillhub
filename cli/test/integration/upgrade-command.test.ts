@@ -291,7 +291,10 @@ describe('upgrade command', () => {
     expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'fp-v2' })
     expect(inventory.items[0].targets).toHaveLength(2)
 
-    const listed = await runCli(['list', '--json'], { HOME: env.home, USERPROFILE: env.home })
+    const listed = await runCli(['list', '--json', '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
     expect(listed.exitCode).toBe(0)
     expect(JSON.parse(listed.stdout).items[0]).toMatchObject({ version: '1.1.0' })
   })
