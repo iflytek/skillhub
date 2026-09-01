@@ -231,7 +231,8 @@ export async function executeSkillUpgradePlan(
       force: true,
       home: options.home,
       expectedTargetFiles: item.expectedTargetFiles,
-      allowTargetDrift: item.allowTargetDrift
+      allowTargetDrift: item.allowTargetDrift,
+      requireExistingTargets: true
     })
   }
 }

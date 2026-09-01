@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { strToU8, zipSync } from 'fflate'
@@ -16,6 +16,15 @@ afterEach(() => {
 
 function makeSkillZip(content: string): Uint8Array {
   return zipSync({ 'SKILL.md': strToU8(content) })
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path)
+    return true
+  } catch {
+    return false
+  }
 }
 
 describe('upgrade command', () => {
@@ -162,6 +171,47 @@ describe('upgrade command', () => {
       .rejects.toThrow('local changes detected after upgrade planning')
     expect(await readFile(join(rootDir, 'late-edit', 'SKILL.md'), 'utf-8'))
       .toBe('# edited after planning')
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
+  })
+
+  test('a target removed after planning is not recreated by upgrade', async () => {
+    const env = await createTempHome()
+    const skill = {
+      namespace: 'global',
+      slug: 'removed-late',
+      version: '1.0.0',
+      versionId: 1,
+      fingerprint: 'fp-v1',
+      zipBytes: makeSkillZip('# v1')
+    }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/removed-late', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    }, { cwd: env.cwd })
+
+    skill.version = '1.1.0'
+    skill.versionId = 2
+    skill.fingerprint = 'fp-v2'
+    skill.zipBytes = makeSkillZip('# v2')
+    const tokenForRegistry = async () => undefined
+    const plan = await planSkillUpgrades({
+      coordinates: ['@global/removed-late'],
+      registry: registry.url,
+      force: false,
+      home: env.home,
+      tokenForRegistry
+    })
+    const skillDir = join(rootDir, 'removed-late')
+    await rm(skillDir, { recursive: true })
+
+    await expect(executeSkillUpgradePlan(plan, { home: env.home, tokenForRegistry }))
+      .rejects.toThrow('installed target disappeared before upgrade commit')
+    expect(await exists(skillDir)).toBe(false)
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
     expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
   })

@@ -29,6 +29,7 @@ export interface InstallOptions {
   resolved?: ResolveResponse | undefined
   expectedTargetFiles?: Record<string, Record<string, string>> | undefined
   allowTargetDrift?: boolean | undefined
+  requireExistingTargets?: boolean | undefined
 }
 
 interface StagedInstall {
@@ -137,15 +138,23 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
       }, resolved)
 
       for (const item of staged) {
-        if (await pathExists(item.skillDir)) {
+        const targetExists = await pathExists(item.skillDir)
+        if (!targetExists && options.requireExistingTargets) {
+          throw new CliError(`installed target disappeared before upgrade commit: ${item.skillDir}`, EXIT.validation, {
+            path: item.skillDir,
+            next: 'reinstall the Skill explicitly before upgrading it'
+          })
+        }
+        if (targetExists) {
           if (!options.force) {
             throw new CliError(`skill already installed at ${item.skillDir}`, EXIT.filesystem, {
               path: item.skillDir,
               next: 'pass --force to overwrite'
             })
           }
-          item.backupDir = `${item.skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
-          await rename(item.skillDir, item.backupDir)
+          const backupDir = `${item.skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
+          await rename(item.skillDir, backupDir)
+          item.backupDir = backupDir
           await assertReplaceableInstallation(item.backupDir, item.skillDir, {
             registry: options.registry,
             namespace: options.namespace,
