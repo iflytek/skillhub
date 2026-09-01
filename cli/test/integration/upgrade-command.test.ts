@@ -43,6 +43,10 @@ describe('upgrade command', () => {
     skill.fingerprint = 'fp-v2'
     skill.zipBytes = makeSkillZip('# v2')
 
+    const inventoryPath = join(env.home, '.skillhub', 'inventory.json')
+    const metadataPath = join(rootDir, 'skillhub-registry', '.skillhub', 'metadata.json')
+    const inventoryBeforeCheck = await readFile(inventoryPath, 'utf-8')
+    const metadataBeforeCheck = await readFile(metadataPath, 'utf-8')
     const checked = await runCli([
       'upgrade', '@global/skillhub-registry', '--registry', registry.url, '--dir', rootDir, '--check', '--json'
     ], { HOME: env.home, USERPROFILE: env.home })
@@ -55,6 +59,17 @@ describe('upgrade command', () => {
     })
     expect(await readFile(join(rootDir, 'skillhub-registry', 'SKILL.md'), 'utf-8')).toBe('# v1')
     expect(registry.received.downloads).toBe(1)
+    expect(await readFile(inventoryPath, 'utf-8')).toBe(inventoryBeforeCheck)
+    expect(await readFile(metadataPath, 'utf-8')).toBe(metadataBeforeCheck)
+
+    const checkedAgain = await runCli([
+      'upgrade', '@global/skillhub-registry', '--registry', registry.url, '--dir', rootDir, '--check', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(checkedAgain.exitCode).toBe(0)
+    expect(checkedAgain.stdout).toBe(checked.stdout)
+    expect(await readFile(inventoryPath, 'utf-8')).toBe(inventoryBeforeCheck)
+    expect(await readFile(metadataPath, 'utf-8')).toBe(metadataBeforeCheck)
+    expect(registry.received.downloads).toBe(1)
 
     const upgraded = await runCli([
       'upgrade', '@global/skillhub-registry', '--registry', registry.url, '--json'
@@ -64,13 +79,10 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'skillhub-registry', 'SKILL.md'), 'utf-8')).toBe('# v2')
     expect(registry.received.downloads).toBe(2)
 
-    const metadata = JSON.parse(await readFile(
-      join(rootDir, 'skillhub-registry', '.skillhub', 'metadata.json'),
-      'utf-8'
-    ))
+    const metadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
     expect(metadata).toMatchObject({ schemaVersion: 1, version: '1.1.0', versionId: 2, fingerprint: 'fp-v2' })
     expect(Object.keys(metadata.files)).toContain('SKILL.md')
-    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
     expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'fp-v2' })
   })
 
@@ -179,6 +191,14 @@ describe('upgrade command', () => {
     expect(selected.exitCode).toBe(0)
     expect(selected.stdout).toContain('@team-a/demo')
 
+    const fullCoordinate = await runCli(['upgrade', '@team-a/demo', '--check'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+    expect(fullCoordinate.exitCode).toBe(0)
+    expect(fullCoordinate.stdout).toContain('@team-a/demo')
+    expect(fullCoordinate.stdout).not.toContain('@team-b/demo')
+
     const noNamespaceMatch = await runCli(['upgrade', 'demo', '--namespace', 'missing', '--check'], {
       HOME: env.home,
       USERPROFILE: env.home
@@ -244,6 +264,7 @@ describe('upgrade command', () => {
       'install', '@global/shared', '--agent', 'codex', '--agent', 'claude-code', '--registry', registry.url
     ], { HOME: env.home, USERPROFILE: env.home }, { cwd: env.cwd })
     expect(installed.exitCode).toBe(0)
+    expect(registry.received.resolves).toBe(1)
     expect(registry.received.downloads).toBe(1)
 
     skill.version = '1.1.0'
@@ -262,6 +283,7 @@ describe('upgrade command', () => {
       USERPROFILE: env.home
     }, { cwd: env.cwd })
     expect(upgraded.exitCode).toBe(0)
+    expect(registry.received.resolves).toBe(2)
     expect(registry.received.downloads).toBe(2)
     expect(await readFile(join(env.home, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
     expect(await readFile(join(env.home, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')

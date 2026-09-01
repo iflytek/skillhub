@@ -206,8 +206,9 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     delete: CapturedDelete | null
     validate: CapturedValidate | null
     review: CapturedReview | null
+    resolves: number
     downloads: number
-  } = { publish: null, resolve: null, delete: null, validate: null, review: null, downloads: 0 }
+  } = { publish: null, resolve: null, delete: null, validate: null, review: null, resolves: 0, downloads: 0 }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
   // TCP-level failure. Start a connection-dropping server and return its URL
@@ -312,6 +313,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
       // Resolve: GET /api/cli/v1/skills/:namespace/:slug/resolve
       const resolveMatch = path.match(/^\/api\/cli\/v1\/skills\/([^/]+)\/([^/]+)\/resolve$/)
       if (resolveMatch && req.method === 'GET') {
+        state.resolves++
         if (options.failures?.resolve) return failureResponse(options.failures.resolve)
         const namespace = resolveMatch[1]!
         const slug = resolveMatch[2]!

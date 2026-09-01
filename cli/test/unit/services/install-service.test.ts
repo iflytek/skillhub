@@ -228,6 +228,43 @@ describe('installSkill', () => {
     })).rejects.toThrow('cannot verify SkillHub ownership')
   })
 
+  test('force rejects a directory without installation metadata', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'local.txt'), 'keep')
+
+    await expect(installSkill({
+      registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: true, home
+    })).rejects.toThrow('cannot verify SkillHub ownership')
+    expect(await readFile(join(skillDir, 'local.txt'), 'utf-8')).toBe('keep')
+    expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
+  })
+
+  test('force rejects a different slug in installation metadata', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Other')
+    await writeManagedMetadata(skillDir, {
+      registry: 'http://registry.test', namespace: 'global', slug: 'other'
+    })
+
+    await expect(installSkill({
+      registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: true, home
+    })).rejects.toThrow('source conflict')
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Other')
+    expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
+  })
+
   test('revalidates ownership after download before replacing the target', async () => {
     const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
@@ -281,6 +318,7 @@ describe('installSkill', () => {
     expect(metadata.registry).toBe('http://other-registry.test')
     expect((await readdir(rootDir)).some(name => name.includes('skillhub-backup'))).toBe(false)
     expect(await exists(join(rootDir, '.demo.skillhub-install.lock'))).toBe(false)
+    expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
   })
 
   test('rolls back every target when a later target changes source before commit', async () => {
