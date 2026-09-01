@@ -113,14 +113,12 @@ describe('cross-process concurrency on inventory.json', () => {
     })
     await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
 
-    // Plant a stale lock file: PID 1 (init, never the same as our test
-    // child, and won't match the spawned subprocess's PID), with a very
-    // old timestamp so the store treats it as stale.
+    // Plant a stale lock file owned by a PID that does not exist.
     const skillhubDir = join(env.home, '.skillhub')
     await mkdir(skillhubDir, { recursive: true })
     const lockPath = join(skillhubDir, 'inventory.json.lock')
     const ancientTimestamp = Date.now() - 600_000 // 10 minutes ago — past the 30s stale threshold
-    await writeFile(lockPath, JSON.stringify({ pid: 1, timestamp: ancientTimestamp }))
+    await writeFile(lockPath, JSON.stringify({ pid: 999999, timestamp: ancientTimestamp }))
 
     const installDir = join(env.cwd, 'stale')
     await mkdir(installDir, { recursive: true })
