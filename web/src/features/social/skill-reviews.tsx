@@ -225,7 +225,8 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
   const [page, setPage] = useState(0)
   const [editing, setEditing] = useState(false)
   const reviews = useSkillReviews(skillId, page)
-  const mine = useMySkillReview(skillId, isAuthenticated && canInteract)
+  const mine = useMySkillReview(skillId, isAuthenticated)
+  const clearMine = useClearSkillReview(skillId)
   const canModerate = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const totalPages = reviews.data ? Math.ceil(reviews.data.total / reviews.data.size) : 0
 
@@ -240,6 +241,16 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
       return
     }
     setEditing(true)
+  }
+
+  const deleteUnavailableReview = () => {
+    clearMine.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(t('skillReviews.deleted'))
+        setPage(0)
+      },
+      onError: (error) => toast.error(t('skillReviews.deleteFailed'), error.message),
+    })
   }
 
   return (
@@ -257,6 +268,10 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
         {canInteract && !editing ? (
           <Button variant="outline" onClick={startEditing}>
             {mine.data?.reviewed ? t('skillReviews.edit') : t('skillReviews.write')}
+          </Button>
+        ) : !canInteract && isAuthenticated && mine.data?.reviewed ? (
+          <Button variant="outline" onClick={deleteUnavailableReview} disabled={clearMine.isPending}>
+            {t('skillReviews.delete')}
           </Button>
         ) : null}
       </div>

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   saveMutate: vi.fn(),
   clearMutate: vi.fn(),
   moderateMutate: vi.fn(),
+  mineEnabled: [] as boolean[],
 }))
 
 vi.mock('react-i18next', async () => {
@@ -62,8 +63,9 @@ vi.mock('./use-skill-reviews', () => ({
     mocks.requestedPages.push(page)
     return { data: mocks.pages.get(page), isLoading: false, isError: false }
   },
-  useMySkillReview: () => ({
-    data: {
+  useMySkillReview: (_skillId: number, enabled: boolean) => {
+    mocks.mineEnabled.push(enabled)
+    return { data: {
       rated: true,
       score: 4,
       reviewed: true,
@@ -71,8 +73,8 @@ vi.mock('./use-skill-reviews', () => ({
       reviewText: 'Useful review',
       status: 'VISIBLE',
       updatedAt: '2026-09-01T00:00:00Z',
-    },
-  }),
+    } }
+  },
   useUpsertSkillReview: () => ({ mutate: mocks.saveMutate, isPending: false }),
   useClearSkillReview: () => ({ mutate: mocks.clearMutate, isPending: false }),
   useModerateSkillReview: () => ({ mutate: mocks.moderateMutate, isPending: false }),
@@ -85,6 +87,7 @@ describe('skill reviews', () => {
     mocks.pages.clear()
     mocks.pages.set(0, { items: [], total: 0, page: 0, size: 20 })
     mocks.requestedPages.length = 0
+    mocks.mineEnabled.length = 0
   })
 
   afterEach(() => {
@@ -140,5 +143,14 @@ describe('skill reviews', () => {
       expect(locale.skillReviews.hide).toBeTruthy()
       expect(locale.skillReviews.restore).toBeTruthy()
     }
+  })
+
+  it('lets an authenticated author clear existing text when the skill is not interactable', () => {
+    render(<SkillReviews skillId={10} canInteract={false} onRequireLogin={vi.fn()} />)
+
+    expect(mocks.mineEnabled).toContain(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete review' }))
+    expect(mocks.clearMutate).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Edit my review' })).toBeNull()
   })
 })

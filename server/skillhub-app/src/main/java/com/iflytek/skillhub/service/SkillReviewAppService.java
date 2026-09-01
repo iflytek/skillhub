@@ -76,7 +76,6 @@ public class SkillReviewAppService {
                                          String userId,
                                          Map<Long, NamespaceRole> namespaceRoles,
                                          Set<String> platformRoles) {
-        requireVisibleSkill(skillId, userId, namespaceRoles, platformRoles);
         return ratingService.getUserFeedback(skillId, userId)
                 .map(this::toMine)
                 .orElseGet(SkillReviewMeResponse::empty);

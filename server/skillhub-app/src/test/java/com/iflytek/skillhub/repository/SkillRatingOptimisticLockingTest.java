@@ -42,6 +42,7 @@ class SkillRatingOptimisticLockingTest {
             rollbackIfActive(staleManager);
             firstManager.close();
             staleManager.close();
+            deleteRating(ratingId);
         }
     }
 
@@ -63,6 +64,21 @@ class SkillRatingOptimisticLockingTest {
     private void rollbackIfActive(EntityManager entityManager) {
         if (entityManager.getTransaction().isActive()) {
             entityManager.getTransaction().rollback();
+        }
+    }
+
+    private void deleteRating(Long ratingId) {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        try {
+            entityManager.getTransaction().begin();
+            SkillRating rating = entityManager.find(SkillRating.class, ratingId);
+            if (rating != null) {
+                entityManager.remove(rating);
+            }
+            entityManager.getTransaction().commit();
+        } finally {
+            rollbackIfActive(entityManager);
+            entityManager.close();
         }
     }
 

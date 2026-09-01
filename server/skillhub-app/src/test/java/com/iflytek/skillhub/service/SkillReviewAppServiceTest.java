@@ -123,6 +123,18 @@ class SkillReviewAppServiceTest {
     }
 
     @Test
+    void authorCanReadOwnReviewAfterSkillStopsBeingVisible() {
+        SkillRating review = new SkillRating(10L, "author", (short) 4);
+        review.updateReview((short) 4, "My review");
+        when(ratingService.getUserFeedback(10L, "author")).thenReturn(Optional.of(review));
+
+        service.getMine(10L, "author", Map.of(), Set.of());
+
+        verify(ratingService).getUserFeedback(10L, "author");
+        verify(skillRepository, never()).findById(any());
+    }
+
+    @Test
     void hideWritesModerationAuditInSameWorkflow() {
         SkillRating review = new SkillRating(10L, "author", (short) 4);
         review.updateReview((short) 4, "helpful review");
