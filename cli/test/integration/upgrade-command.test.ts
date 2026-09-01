@@ -530,6 +530,46 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'first', 'SKILL.md'), 'utf-8')).toBe('# first v1')
   })
 
+  test('a runtime batch failure reports committed, failed, and unattempted skills', async () => {
+    const env = await createTempHome()
+    const first = { namespace: 'global', slug: 'first', version: '1.0.0', fingerprint: 'first-v1', zipBytes: makeSkillZip('# first v1') }
+    const second = { namespace: 'global', slug: 'second', version: '1.0.0', fingerprint: 'second-v1', zipBytes: makeSkillZip('# second v1') }
+    const third = { namespace: 'global', slug: 'third', version: '1.0.0', fingerprint: 'third-v1', zipBytes: makeSkillZip('# third v1') }
+    const registry = await startFakeRegistry({ skills: [first, second, third] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    for (const slug of ['first', 'second', 'third']) {
+      await runCli(['install', `@global/${slug}`, '--dir', rootDir, '--registry', registry.url], {
+        HOME: env.home,
+        USERPROFILE: env.home
+      })
+    }
+
+    first.version = '1.1.0'
+    first.fingerprint = 'first-v2'
+    first.zipBytes = makeSkillZip('# first v2')
+    second.version = '1.1.0'
+    second.fingerprint = 'second-v2'
+    second.zipBytes = strToU8('not a zip archive')
+    third.version = '1.1.0'
+    third.fingerprint = 'third-v2'
+    third.zipBytes = makeSkillZip('# third v2')
+
+    const result = await runCli([
+      'upgrade', '@global/first', '@global/second', '@global/third',
+      '--registry', registry.url, '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(result.exitCode).toBe(1)
+    const output = JSON.parse(result.stdout)
+    expect(output.summary).toEqual({ upgraded: 1, unchanged: 0, failed: 1, notAttempted: 1 })
+    expect(output.items.map((item: { action: string }) => item.action))
+      .toEqual(['upgraded', 'failed', 'not-attempted'])
+    expect(await readFile(join(rootDir, 'first', 'SKILL.md'), 'utf-8')).toBe('# first v2')
+    expect(await readFile(join(rootDir, 'second', 'SKILL.md'), 'utf-8')).toBe('# second v1')
+    expect(await readFile(join(rootDir, 'third', 'SKILL.md'), 'utf-8')).toBe('# third v1')
+  })
+
   test('legacy metadata without a file baseline requires explicit force migration', async () => {
     const env = await createTempHome()
     const skill = { namespace: 'global', slug: 'legacy', version: '1.0.0', fingerprint: 'v1', zipBytes: makeSkillZip('# v1') }

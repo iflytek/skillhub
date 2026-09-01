@@ -2,7 +2,12 @@ import { CredentialsStore } from '../stores/credentials-store'
 import { resolveToken } from '../services/registry-service'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
-import { executeSkillUpgradePlan, planSkillUpgrades, type UpgradePlan } from '../services/upgrade-service'
+import {
+  executeSkillUpgradePlan,
+  planSkillUpgrades,
+  type UpgradeExecutionResult,
+  type UpgradePlan
+} from '../services/upgrade-service'
 
 export interface UpgradeCommandOptions {
   namespace?: string | undefined
@@ -44,8 +49,15 @@ export async function upgradeCommand(coordinates: string[], options: UpgradeComm
   }
   if (options.check) return renderUpgradePlan(plan, { check: true, executed: false }, Boolean(options.json))
 
-  await executeSkillUpgradePlan(plan, { tokenForRegistry })
-  return renderUpgradePlan(plan, { check: false, executed: true }, Boolean(options.json))
+  const result = await executeSkillUpgradePlan(plan, { tokenForRegistry })
+  const output = renderUpgradeResult(plan, result, Boolean(options.json))
+  if (result.failed > 0) {
+    process.stdout.write(`${output}\n`)
+    throw new CliError('one or more skills failed to upgrade', EXIT.generic, {
+      failed: result.items.filter(item => item.action === 'failed')
+    })
+  }
+  return output
 }
 
 function renderUpgradePlan(
@@ -79,6 +91,43 @@ function renderUpgradePlan(
       const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}` : ''
       const reason = item.reason ? ` (${item.reason})` : ''
       return `${action.padEnd(10)} ${item.coordinate}${versions}${reason}`
+    })
+  ].join('\n')
+}
+
+function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean): string {
+  const executionByCoordinate = new Map(result.items.map(item => [item.coordinate, item]))
+  const items = plan.items.map(item => ({
+    coordinate: item.coordinate,
+    registry: item.registry,
+    currentVersion: item.currentVersion,
+    remoteVersion: item.remoteVersion,
+    action: executionByCoordinate.get(item.coordinate)?.action ?? item.action,
+    reason: executionByCoordinate.get(item.coordinate)?.reason ?? item.reason,
+    changedFiles: item.changedFiles,
+    targets: item.targets
+  }))
+
+  if (json) {
+    return JSON.stringify({
+      ok: result.failed === 0,
+      check: false,
+      summary: {
+        upgraded: result.upgraded,
+        unchanged: result.unchanged,
+        failed: result.failed,
+        notAttempted: result.notAttempted
+      },
+      items
+    })
+  }
+
+  return [
+    `Upgrade result: ${result.upgraded} upgraded, ${result.unchanged} unchanged, ${result.failed} failed, ${result.notAttempted} not attempted`,
+    ...items.map(item => {
+      const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}` : ''
+      const reason = item.reason ? ` (${item.reason})` : ''
+      return `${item.action.padEnd(13)} ${item.coordinate}${versions}${reason}`
     })
   ].join('\n')
 }

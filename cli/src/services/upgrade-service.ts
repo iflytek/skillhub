@@ -48,6 +48,20 @@ export interface UpgradePlan {
   unchanged: number
 }
 
+export type UpgradeExecutionAction = 'upgraded' | 'unchanged' | 'failed' | 'not-attempted'
+
+export interface UpgradeExecutionResult {
+  items: Array<{
+    coordinate: string
+    action: UpgradeExecutionAction
+    reason?: string
+  }>
+  upgraded: number
+  unchanged: number
+  failed: number
+  notAttempted: number
+}
+
 export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promise<UpgradePlan> {
   if (options.coordinates.length === 0) {
     throw new CliError('provide at least one installed skill coordinate', EXIT.usage)
@@ -208,32 +222,61 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
 export async function executeSkillUpgradePlan(
   plan: UpgradePlan,
   options: Pick<UpgradeSelectionOptions, 'home' | 'tokenForRegistry'>
-): Promise<void> {
+): Promise<UpgradeExecutionResult> {
   if (plan.blocked > 0) {
     throw new CliError('upgrade plan contains blocked skills', EXIT.validation)
   }
 
+  const items: UpgradeExecutionResult['items'] = []
+  let stopped = false
   for (const item of plan.items) {
+    if (item.action === 'unchanged') {
+      items.push({ coordinate: item.coordinate, action: 'unchanged' })
+      continue
+    }
     if (item.action !== 'upgrade' || !item.resolved) continue
-    const token = await options.tokenForRegistry(item.registry)
-    await installSkill({
-      registry: item.registry,
-      token,
-      namespace: item.inventoryItem.namespace,
-      slug: item.inventoryItem.slug,
-      resolved: item.resolved,
-      targets: item.selectedTargets.map(target => ({
-        agent: target.agent,
-        rootDir: target.rootDir,
-        scope: 'project',
-        source: 'explicit'
-      })),
-      force: true,
-      home: options.home,
-      expectedTargetFiles: item.expectedTargetFiles,
-      allowTargetDrift: item.allowTargetDrift,
-      requireExistingTargets: true
-    })
+    if (stopped) {
+      items.push({ coordinate: item.coordinate, action: 'not-attempted' })
+      continue
+    }
+
+    try {
+      const token = await options.tokenForRegistry(item.registry)
+      await installSkill({
+        registry: item.registry,
+        token,
+        namespace: item.inventoryItem.namespace,
+        slug: item.inventoryItem.slug,
+        resolved: item.resolved,
+        targets: item.selectedTargets.map(target => ({
+          agent: target.agent,
+          rootDir: target.rootDir,
+          scope: 'project',
+          source: 'explicit'
+        })),
+        force: true,
+        home: options.home,
+        expectedTargetFiles: item.expectedTargetFiles,
+        allowTargetDrift: item.allowTargetDrift,
+        requireExistingTargets: true
+      })
+      items.push({ coordinate: item.coordinate, action: 'upgraded' })
+    } catch (error) {
+      items.push({
+        coordinate: item.coordinate,
+        action: 'failed',
+        reason: error instanceof Error ? error.message : 'unexpected upgrade failure'
+      })
+      stopped = true
+    }
+  }
+
+  return {
+    items,
+    upgraded: items.filter(item => item.action === 'upgraded').length,
+    unchanged: items.filter(item => item.action === 'unchanged').length,
+    failed: items.filter(item => item.action === 'failed').length,
+    notAttempted: items.filter(item => item.action === 'not-attempted').length
   }
 }
 
