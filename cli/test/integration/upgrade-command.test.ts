@@ -187,6 +187,47 @@ describe('upgrade command', () => {
     expect(noNamespaceMatch.stderr).toContain('not installed')
   })
 
+  test('target filters select deterministically and missing matches never install', async () => {
+    const env = await createTempHome()
+    const skill = { namespace: 'global', slug: 'filtered', version: '1.0.0', fingerprint: 'fp', zipBytes: makeSkillZip('# v1') }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/filtered', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    for (const args of [
+      ['--dir', rootDir],
+      ['--agent', 'custom'],
+      ['--namespace', 'global'],
+      ['--registry', registry.url]
+    ]) {
+      const result = await runCli(['upgrade', 'filtered', ...args, '--force', '--check'], {
+        HOME: env.home,
+        USERPROFILE: env.home
+      })
+      expect(result.exitCode).toBe(0)
+    }
+
+    for (const args of [
+      ['--dir', join(env.cwd, 'missing')],
+      ['--agent', 'codex'],
+      ['--namespace', 'missing'],
+      ['--registry', 'http://unmatched.invalid']
+    ]) {
+      const result = await runCli(['upgrade', 'filtered', ...args, '--check'], {
+        HOME: env.home,
+        USERPROFILE: env.home
+      })
+      expect(result.exitCode).toBe(5)
+      expect(result.stderr).toContain('not installed')
+    }
+    expect(registry.received.downloads).toBe(1)
+  })
+
   test('one resolved archive is reused for every managed target', async () => {
     const env = await createTempHome()
     const skill = {
@@ -263,6 +304,39 @@ describe('upgrade command', () => {
     expect(result.exitCode).toBe(6)
     expect(JSON.parse(result.stdout).items[0].reason).toContain('older')
     expect(await readFile(join(rootDir, 'stable', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    expect(registry.received.downloads).toBe(1)
+  })
+
+  test('keeps local files when resolve is unavailable or same-version content drifts', async () => {
+    const env = await createTempHome()
+    const failures: { resolve?: 'server_error' } = {}
+    const skill = { namespace: 'global', slug: 'resilient', version: '1.0.0', fingerprint: 'fp-v1', zipBytes: makeSkillZip('# v1') }
+    const registry = await startFakeRegistry({ skills: [skill], failures })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/resilient', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    failures.resolve = 'server_error'
+    const unavailable = await runCli([
+      'upgrade', '@global/resilient', '--registry', registry.url, '--force', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(unavailable.exitCode).toBe(6)
+    expect(JSON.parse(unavailable.stdout).items[0].action).toBe('blocked')
+    expect(await readFile(join(rootDir, 'resilient', 'SKILL.md'), 'utf-8')).toBe('# v1')
+
+    delete failures.resolve
+    skill.fingerprint = 'fp-drift'
+    skill.zipBytes = makeSkillZip('# changed without version bump')
+    const drifted = await runCli([
+      'upgrade', '@global/resilient', '--registry', registry.url, '--force', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(drifted.exitCode).toBe(6)
+    expect(JSON.parse(drifted.stdout).items[0].reason).toContain('without a newer version')
+    expect(await readFile(join(rootDir, 'resilient', 'SKILL.md'), 'utf-8')).toBe('# v1')
     expect(registry.received.downloads).toBe(1)
   })
 
