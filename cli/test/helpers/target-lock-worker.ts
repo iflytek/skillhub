@@ -9,10 +9,11 @@ try {
   const release = await acquireSkillTargetLock(rootDir, slug)
   await writeFile(acquiredPath, 'acquired')
   process.stdout.write('acquired\n')
-  while (true) {
+  let releaseRequested = false
+  while (!releaseRequested) {
     try {
       await access(releasePath)
-      break
+      releaseRequested = true
     } catch {
       await new Promise(resolve => setTimeout(resolve, 10))
     }
