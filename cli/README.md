@@ -266,6 +266,10 @@ The source identity is `registry + namespace + slug`. `--force` may replace loca
 that full identity matches the installation metadata; it never overwrites an unmanaged directory or
 a Skill installed from another source.
 
+All targets in one inventory entry are upgraded together. A filter that selects only part of that
+entry is rejected because the current inventory format stores one shared version for all targets.
+The command also keeps the local files when the registry resolves to an older version.
+
 ## 🔄 Namespace Workspaces
 
 Use namespace synchronization when an Agent workspace should maintain all installable skills from one team space.

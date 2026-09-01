@@ -261,7 +261,6 @@ describe('publish command — P1', () => {
 // P1 — content shape: directory layout and edge files
 // ---------------------------------------------------------------------------
 
-import { mkdir } from 'node:fs/promises'
 import { unzipSync, strFromU8 } from 'fflate'
 
 describe('publish command — content shape', () => {

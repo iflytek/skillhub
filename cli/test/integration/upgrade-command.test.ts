@@ -198,14 +198,121 @@ describe('upgrade command', () => {
     skill.version = '1.1.0'
     skill.fingerprint = 'fp-v2'
     skill.zipBytes = makeSkillZip('# v2')
+
+    const partial = await runCli([
+      'upgrade', '@global/shared', '--registry', registry.url, '--agent', 'codex', '--check', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home }, { cwd: env.cwd })
+    expect(partial.exitCode).toBe(6)
+    expect(JSON.parse(partial.stdout).items[0].reason).toContain('partial-target')
+    expect(registry.received.downloads).toBe(1)
+
     const upgraded = await runCli(['upgrade', '@global/shared', '--registry', registry.url], {
       HOME: env.home,
       USERPROFILE: env.home
     }, { cwd: env.cwd })
     expect(upgraded.exitCode).toBe(0)
     expect(registry.received.downloads).toBe(2)
-    expect(await readFile(join(env.cwd, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
-    expect(await readFile(join(env.cwd, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    expect(await readFile(join(env.home, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    expect(await readFile(join(env.home, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
+  })
+
+  test('never downgrades when the registry latest version moves backwards', async () => {
+    const env = await createTempHome()
+    const skill = {
+      namespace: 'global',
+      slug: 'stable',
+      version: '2.0.0',
+      versionId: 2,
+      fingerprint: 'fp-v2',
+      zipBytes: makeSkillZip('# v2')
+    }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/stable', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    skill.version = '1.0.0'
+    skill.versionId = 1
+    skill.fingerprint = 'fp-v1'
+    skill.zipBytes = makeSkillZip('# v1')
+
+    const result = await runCli([
+      'upgrade', '@global/stable', '--registry', registry.url, '--force', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(result.exitCode).toBe(6)
+    expect(JSON.parse(result.stdout).items[0].reason).toContain('older')
+    expect(await readFile(join(rootDir, 'stable', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    expect(registry.received.downloads).toBe(1)
+  })
+
+  test('a blocked batch reports a plan and does not claim successful writes', async () => {
+    const env = await createTempHome()
+    const first = { namespace: 'global', slug: 'first', version: '1.0.0', fingerprint: 'first-v1', zipBytes: makeSkillZip('# first v1') }
+    const second = { namespace: 'global', slug: 'second', version: '1.0.0', fingerprint: 'second-v1', zipBytes: makeSkillZip('# second v1') }
+    const registry = await startFakeRegistry({ skills: [first, second] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    for (const slug of ['first', 'second']) {
+      await runCli(['install', `@global/${slug}`, '--dir', rootDir, '--registry', registry.url], {
+        HOME: env.home,
+        USERPROFILE: env.home
+      })
+    }
+
+    first.version = '1.1.0'
+    first.fingerprint = 'first-v2'
+    first.zipBytes = makeSkillZip('# first v2')
+    second.version = '1.1.0'
+    second.fingerprint = 'second-v2'
+    second.zipBytes = makeSkillZip('# second v2')
+    await writeFile(join(rootDir, 'second', 'SKILL.md'), '# local change')
+
+    const result = await runCli([
+      'upgrade', '@global/first', '@global/second', '--registry', registry.url, '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(result.exitCode).toBe(6)
+    const output = JSON.parse(result.stdout)
+    expect(output.items.find((item: { coordinate: string }) => item.coordinate.endsWith('/first')).action).toBe('upgrade')
+    expect(output.items.find((item: { coordinate: string }) => item.coordinate.endsWith('/second')).action).toBe('blocked')
+    expect(await readFile(join(rootDir, 'first', 'SKILL.md'), 'utf-8')).toBe('# first v1')
+  })
+
+  test('legacy metadata without a file baseline requires explicit force migration', async () => {
+    const env = await createTempHome()
+    const skill = { namespace: 'global', slug: 'legacy', version: '1.0.0', fingerprint: 'v1', zipBytes: makeSkillZip('# v1') }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/legacy', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+    const metadataPath = join(rootDir, 'legacy', '.skillhub', 'metadata.json')
+    const metadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
+    delete metadata.files
+    delete metadata.schemaVersion
+    await writeFile(metadataPath, JSON.stringify(metadata))
+    skill.version = '1.1.0'
+    skill.fingerprint = 'v2'
+    skill.zipBytes = makeSkillZip('# v2')
+
+    const blocked = await runCli([
+      'upgrade', '@global/legacy', '--registry', registry.url, '--check', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(blocked.exitCode).toBe(6)
+    expect(JSON.parse(blocked.stdout).items[0].reason).toContain('no file baseline')
+
+    const migrated = await runCli([
+      'upgrade', '@global/legacy', '--registry', registry.url, '--force', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(migrated.exitCode).toBe(0)
+    expect(await readFile(join(rootDir, 'legacy', 'SKILL.md'), 'utf-8')).toBe('# v2')
   })
 
   test('never installs a missing skill and never offers an implicit upgrade-all', async () => {
@@ -220,5 +327,11 @@ describe('upgrade command', () => {
     const empty = await runCli(['upgrade'], { HOME: env.home, USERPROFILE: env.home })
     expect(empty.exitCode).toBe(5)
     expect(empty.stderr).toContain('at least one')
+
+    const tooMany = await runCli([
+      'upgrade', ...Array.from({ length: 51 }, (_, index) => `@global/skill-${index}`)
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(tooMany.exitCode).toBe(5)
+    expect(tooMany.stderr).toContain('at most 50')
   })
 })

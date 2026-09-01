@@ -206,6 +206,75 @@ describe('installSkill', () => {
     expect(inventory.items[0].targets[0].installDir).toBe(skillDir)
   })
 
+  test('force rejects metadata explicitly owned by another installer', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeManagedMetadata(skillDir)
+    const metadataPath = join(skillDir, '.skillhub', 'metadata.json')
+    const metadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
+    metadata.source = 'manual'
+    await writeFile(metadataPath, JSON.stringify(metadata))
+
+    await expect(installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: true
+    })).rejects.toThrow('cannot verify SkillHub ownership')
+  })
+
+  test('revalidates ownership after download before replacing the target', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Old')
+    await writeManagedMetadata(skillDir)
+    const archive = zipSync({ 'SKILL.md': new TextEncoder().encode('# New') })
+
+    globalThis.fetch = (async (input: URL | RequestInfo) => {
+      const path = new URL(String(input)).pathname
+      if (path.endsWith('/resolve')) {
+        return Response.json({
+          code: 0,
+          data: {
+            namespace: 'global',
+            slug: 'demo',
+            version: '1.0.0',
+            versionId: 1,
+            fingerprint: 'fp',
+            downloadUrl: '/download'
+          }
+        })
+      }
+      if (path.endsWith('/download')) {
+        await writeManagedMetadata(skillDir, {
+          registry: 'http://other-registry.test',
+          namespace: 'global',
+          slug: 'demo'
+        })
+        await writeFile(join(skillDir, 'SKILL.md'), '# Replaced during download')
+        return new Response(
+          archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength) as ArrayBuffer,
+          { status: 200 }
+        )
+      }
+      return Response.json({ code: 404 }, { status: 404 })
+    }) as typeof fetch
+
+    await expect(installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: true
+    })).rejects.toThrow('source conflict')
+
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Replaced during download')
+  })
+
   test('force keeps old installation and inventory when replacement extraction fails', async () => {
     globalThis.fetch = installFetchWithDownloadResponse(new Response(new TextEncoder().encode('not a zip'), { status: 200 }))
     const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))

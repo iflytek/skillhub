@@ -248,6 +248,10 @@ skillhub upgrade @team/code-review --check --json
 `--force`; it only replaces a managed installation whose full `registry + namespace + slug` source
 matches.
 
+All targets in one inventory entry are upgraded together. A filter that selects only part of that
+entry is rejected because the current inventory format stores one shared version for all targets.
+The command also keeps the local files when the registry resolves to an older version.
+
 ## Local Management
 
 ### List Installed Skills

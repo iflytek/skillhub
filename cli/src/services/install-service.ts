@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, open, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { SkillHubClient } from '../clients/skillhub-client'
 import { InventoryStore } from '../stores/inventory-store'
@@ -58,30 +58,7 @@ async function preflightInstallTargets(
       })
     }
     if (exists) {
-      const metadataResult = await readInstalledSkillMetadata(skillDir)
-      const inventoryOwners = inventory.items.filter(item =>
-        item.targets.some(existing => existing.installDir === skillDir))
-
-      if (metadataResult.status !== 'valid') {
-        throw new CliError(`cannot verify SkillHub ownership of ${skillDir}`, EXIT.filesystem, {
-          path: skillDir,
-          reason: metadataResult.status === 'missing' ? 'installation metadata is missing' : metadataResult.reason,
-          next: 'move or remove the existing directory before installing'
-        })
-      }
-      if (!sameInstalledSkillSource(metadataResult.metadata, identity) ||
-          inventoryOwners.some(owner => !sameInstalledSkillSource(owner, identity))) {
-        throw new CliError(`source conflict at ${skillDir}`, EXIT.filesystem, {
-          path: skillDir,
-          expected: identity,
-          actual: {
-            registry: metadataResult.metadata.registry,
-            namespace: metadataResult.metadata.namespace,
-            slug: metadataResult.metadata.slug
-          },
-          next: 'choose another target directory or remove the conflicting skill explicitly'
-        })
-      }
+      await assertReplaceableInstallation(skillDir, skillDir, identity, inventory)
     }
     preparedTargets.push({ target, skillDir })
   }
@@ -138,10 +115,23 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
 
       const backupDir = `${skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
       let backupCreated = false
+      const releaseInstallLock = await acquireInstallTargetLock(target.rootDir, options.slug)
       try {
         if (await pathExists(skillDir)) {
+          if (!options.force) {
+            throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
+              path: skillDir,
+              next: 'pass --force to overwrite'
+            })
+          }
           await rename(skillDir, backupDir)
           backupCreated = true
+          await assertReplaceableInstallation(
+            backupDir,
+            skillDir,
+            { registry: options.registry, namespace: options.namespace, slug: options.slug },
+            await store.read()
+          )
         }
         await rename(tempDir, skillDir)
         movedIntoPlace = true
@@ -167,6 +157,8 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
           })
         }
         throw error
+      } finally {
+        await releaseInstallLock()
       }
     } finally {
       if (!movedIntoPlace) {
@@ -178,4 +170,78 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
   }
 
   return { installed }
+}
+
+async function assertReplaceableInstallation(
+  metadataDir: string,
+  inventoryInstallDir: string,
+  identity: InstalledSkillIdentity,
+  inventory: Inventory
+): Promise<void> {
+  const metadataResult = await readInstalledSkillMetadata(metadataDir)
+  if (metadataResult.status !== 'valid') {
+    throw new CliError(`cannot verify SkillHub ownership of ${inventoryInstallDir}`, EXIT.filesystem, {
+      path: inventoryInstallDir,
+      reason: metadataResult.status === 'missing' ? 'installation metadata is missing' : metadataResult.reason,
+      next: 'move or remove the existing directory before installing'
+    })
+  }
+
+  const inventoryOwners = inventory.items.filter(item =>
+    item.targets.some(existing => existing.installDir === inventoryInstallDir))
+  if (!sameInstalledSkillSource(metadataResult.metadata, identity) ||
+      inventoryOwners.some(owner => !sameInstalledSkillSource(owner, identity))) {
+    throw new CliError(`source conflict at ${inventoryInstallDir}`, EXIT.filesystem, {
+      path: inventoryInstallDir,
+      expected: identity,
+      actual: {
+        registry: metadataResult.metadata.registry,
+        namespace: metadataResult.metadata.namespace,
+        slug: metadataResult.metadata.slug
+      },
+      next: 'choose another target directory or remove the conflicting skill explicitly'
+    })
+  }
+}
+
+async function acquireInstallTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
+  const lockPath = join(rootDir, `.${slug}.skillhub-install.lock`)
+
+  const createLock = async () => {
+    const handle = await open(lockPath, 'wx')
+    await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }))
+    return handle
+  }
+
+  let handle: Awaited<ReturnType<typeof open>>
+  try {
+    handle = await createLock()
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error
+
+    let ownerIsRunning = true
+    try {
+      const lock = JSON.parse(await readFile(lockPath, 'utf-8')) as { pid?: unknown }
+      if (typeof lock.pid !== 'number') throw new Error('invalid install lock')
+      process.kill(lock.pid, 0)
+    } catch (lockError) {
+      if (lockError instanceof Error && 'code' in lockError && lockError.code === 'ESRCH') {
+        ownerIsRunning = false
+      }
+    }
+
+    if (ownerIsRunning) {
+      throw new CliError(`install target is busy: ${join(rootDir, slug)}`, EXIT.filesystem, {
+        path: join(rootDir, slug),
+        next: 'wait for the other SkillHub CLI process to finish and retry'
+      })
+    }
+    await rm(lockPath, { force: true })
+    handle = await createLock()
+  }
+
+  return async () => {
+    await handle.close().catch(() => {})
+    await rm(lockPath, { force: true }).catch(() => {})
+  }
 }

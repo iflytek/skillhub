@@ -1,4 +1,5 @@
 import { relative, resolve } from 'node:path'
+import { compare as compareSemver, valid as validSemver } from 'semver'
 import { pathExists } from '../platform/paths'
 import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client'
 import { InventoryStore, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
@@ -13,10 +14,10 @@ const MAX_UPGRADE_SELECTION = 50
 
 export interface UpgradeSelectionOptions {
   coordinates: string[]
-  namespace?: string
-  registry?: string
-  agents?: string[]
-  dir?: string
+  namespace?: string | undefined
+  registry?: string | undefined
+  agents?: string[] | undefined
+  dir?: string | undefined
   force: boolean
   home?: string
   tokenForRegistry: (registry: string) => Promise<string | undefined>
@@ -68,6 +69,15 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       targets: selection.targets.map(target => ({ agent: target.agent, dir: target.installDir })),
       inventoryItem: selection.item,
       selectedTargets: selection.targets
+    }
+
+    if (selection.targets.length !== selection.item.targets.length) {
+      items.push({
+        ...base,
+        action: 'blocked',
+        reason: 'partial-target upgrades are not supported because one inventory item has one shared version'
+      })
+      continue
     }
 
     let resolved: ResolveResponse
@@ -129,9 +139,44 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const unchanged = selection.item.version === resolved.version &&
+    const versionOrder = compareVersions(selection.item.version, resolved.version)
+    if (versionOrder === 'remote-older') {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'remote version is older than the installed version; local files were kept',
+        changedFiles: inspection.changedFiles,
+        resolved
+      })
+      continue
+    }
+    if (versionOrder === 'unknown') {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'cannot determine version order; use explicit install after verifying the release',
+        changedFiles: inspection.changedFiles,
+        resolved
+      })
+      continue
+    }
+
+    const unchanged = versionOrder === 'same' &&
       selection.item.fingerprint === resolved.fingerprint &&
       inspection.metadataCurrent
+    if (versionOrder === 'same' && !unchanged) {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'remote content changed without a newer version; use explicit install after verifying the release',
+        changedFiles: inspection.changedFiles,
+        resolved
+      })
+      continue
+    }
     items.push({
       ...base,
       remoteVersion: resolved.version,
@@ -151,7 +196,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
 
 export async function executeSkillUpgradePlan(
   plan: UpgradePlan,
-  options: Pick<UpgradeSelectionOptions, 'force' | 'home' | 'tokenForRegistry'>
+  options: Pick<UpgradeSelectionOptions, 'home' | 'tokenForRegistry'>
 ): Promise<void> {
   if (plan.blocked > 0) {
     throw new CliError('upgrade plan contains blocked skills', EXIT.validation)
@@ -284,4 +329,13 @@ function isSameOrWithin(parent: string, candidate: string): boolean {
 
 function normalizeRegistry(registry: string): string {
   return registry.replace(/\/+$/, '')
+}
+
+function compareVersions(
+  installedVersion: string,
+  remoteVersion: string
+): 'same' | 'remote-newer' | 'remote-older' | 'unknown' {
+  if (installedVersion === remoteVersion) return 'same'
+  if (!validSemver(installedVersion) || !validSemver(remoteVersion)) return 'unknown'
+  return compareSemver(remoteVersion, installedVersion) > 0 ? 'remote-newer' : 'remote-older'
 }

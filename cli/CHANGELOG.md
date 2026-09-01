@@ -14,6 +14,8 @@ All notable CLI behavior changes are documented in this file.
 
 - Prevent `--force` from overwriting an unmanaged or different-source Skill at the same target path.
   Source ownership is the full `registry + namespace + slug` identity.
+- Reject registry downgrades and partial-target updates that the shared inventory version cannot
+  represent safely.
 - Exclude installer-owned `.skillhub/` state when publishing a local Skill directory.
 
 - Resolve `namespace/slug`, `@namespace/slug`, and `namespace--slug`

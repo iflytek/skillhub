@@ -37,6 +37,19 @@ export async function readInstalledSkillMetadata(skillDir: string): Promise<Inst
         return { status: 'invalid', reason: `metadata field "${field}" must be a non-empty string` }
       }
     }
+    if (value.source !== undefined && value.source !== 'skillhub') {
+      return { status: 'invalid', reason: 'metadata field "source" must be "skillhub"' }
+    }
+    if (value.schemaVersion !== undefined && value.schemaVersion !== 1) {
+      return { status: 'invalid', reason: 'metadata schema version is not supported' }
+    }
+    if (value.versionId !== undefined &&
+        (!Number.isInteger(value.versionId) || (value.versionId as number) <= 0)) {
+      return { status: 'invalid', reason: 'metadata field "versionId" must be a positive integer' }
+    }
+    if (value.fingerprint !== undefined && typeof value.fingerprint !== 'string') {
+      return { status: 'invalid', reason: 'metadata field "fingerprint" must be a string' }
+    }
     if (value.files !== undefined && !isStringRecord(value.files)) {
       return { status: 'invalid', reason: 'metadata field "files" must map paths to hashes' }
     }
