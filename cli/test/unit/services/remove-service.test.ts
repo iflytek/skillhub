@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'bun:test'
@@ -124,6 +124,40 @@ describe('removeLocalSkill', () => {
     expect(await exists(skillDir)).toBe(false)
     expect((await store.read()).items).toEqual([])
     expect(await exists(await skillTargetLockPath(rootDir, 'demo'))).toBe(false)
+  })
+
+  test('legacy symlink roots use the same lifecycle lock as their real target', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-remove-alias-home-'))
+    const parent = await mkdtemp(join(tmpdir(), 'skillhub-remove-alias-parent-'))
+    const realRoot = join(parent, 'real-root')
+    const aliasRoot = join(parent, 'legacy-alias')
+    const realSkillDir = join(realRoot, 'demo')
+    const aliasSkillDir = join(aliasRoot, 'demo')
+    await mkdir(realSkillDir, { recursive: true })
+    await symlink(realRoot, aliasRoot, 'dir')
+
+    const store = new InventoryStore(home)
+    await store.write({
+      items: [{
+        registry: 'https://skill.xfyun.cn',
+        namespace: 'global',
+        slug: 'demo',
+        version: '1.0.0',
+        targets: [{ agent: 'codex', rootDir: aliasRoot, installDir: aliasSkillDir, installedAt: '2026-09-01T00:00:00Z' }]
+      }]
+    })
+
+    expect(await skillTargetLockPath(aliasRoot, 'demo'))
+      .toBe(await skillTargetLockPath(realRoot, 'demo'))
+    const release = await acquireSkillTargetLock(realRoot, 'demo')
+    try {
+      await expect(removeLocalSkill({ registry: 'https://skill.xfyun.cn', slug: 'demo', home }))
+        .rejects.toThrow('install target is busy')
+      expect(await exists(realSkillDir)).toBe(true)
+      expect((await store.read()).items[0]?.targets).toHaveLength(1)
+    } finally {
+      await release()
+    }
   })
 
   test('removes a stale inventory target when the recorded root directory is missing', async () => {

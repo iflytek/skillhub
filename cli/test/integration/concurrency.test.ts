@@ -9,7 +9,7 @@
  * The unit test in test/unit/stores/inventory-store.test.ts pins the
  * single-process lock recovery; here we cover the cross-process case.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { zipSync, strToU8 } from 'fflate'
@@ -28,7 +28,7 @@ function makeSkillZip(): Uint8Array {
 }
 
 describe('cross-process concurrency on inventory.json', () => {
-  test('two parallel installs of distinct slugs preserve both inventory items', async () => {
+  test('two parallel installs recover the same stale lock and preserve both inventory items', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({
       token: 'sk_ok',
@@ -39,6 +39,11 @@ describe('cross-process concurrency on inventory.json', () => {
       ]
     })
     await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+
+    const staleLockPath = join(env.home, '.skillhub', 'inventory.json.lock')
+    await mkdir(staleLockPath)
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(staleLockPath, staleTime, staleTime)
 
     const dirA = join(env.cwd, 'A')
     const dirB = join(env.cwd, 'B')
@@ -113,12 +118,13 @@ describe('cross-process concurrency on inventory.json', () => {
     })
     await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
 
-    // Plant a stale lock file owned by a PID that does not exist.
+    // Plant a stale proper-lockfile directory.
     const skillhubDir = join(env.home, '.skillhub')
     await mkdir(skillhubDir, { recursive: true })
     const lockPath = join(skillhubDir, 'inventory.json.lock')
-    const ancientTimestamp = Date.now() - 600_000 // 10 minutes ago — past the 30s stale threshold
-    await writeFile(lockPath, JSON.stringify({ pid: 999999, timestamp: ancientTimestamp }))
+    await mkdir(lockPath)
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(lockPath, staleTime, staleTime)
 
     const installDir = join(env.cwd, 'stale')
     await mkdir(installDir, { recursive: true })

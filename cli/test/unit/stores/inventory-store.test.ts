@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, utimes } from 'node:fs/promises'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -37,19 +37,16 @@ describe('InventoryStore', () => {
     expect(inventory.items).toHaveLength(5)
   })
 
-  test('recovers from stale lock file', async () => {
+  test('recovers from a stale lock directory', async () => {
     const home = await makeTempHome()
     const store = new InventoryStore(home)
 
-    // Ensure the directory for the lock file exists
+    // proper-lockfile uses atomic mkdir and an mtime lease.
     await mkdir(dirname(store.path), { recursive: true })
-
-    // Write a stale lock: dead PID + old timestamp
     const lockPath = `${store.path}.lock`
-    await writeFile(
-      lockPath,
-      JSON.stringify({ pid: 999999, timestamp: Date.now() - 60000 }),
-    )
+    await mkdir(lockPath)
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(lockPath, staleTime, staleTime)
 
     // upsertTarget should recover from the stale lock and succeed
     await store.upsertTarget(

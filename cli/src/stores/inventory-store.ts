@@ -1,5 +1,6 @@
-import { open, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { lock } from 'proper-lockfile'
 import { joinPath, userStateDir, ensureDir, pathExists } from '../platform/paths'
 
 export interface InventoryTarget {
@@ -48,34 +49,26 @@ export class InventoryStore {
 
   async writeAtomic(inventory: Inventory): Promise<void> {
     await ensureDir(dirname(this.path))
-    const lockPath = `${this.path}.lock`
-    let lockHandle: Awaited<ReturnType<typeof open>> | null = null
+    let release: (() => Promise<void>) | null = null
     try {
-      lockHandle = await this.acquireLock(lockPath)
+      release = await this.acquireLock()
       await this.writeUnderLock(inventory)
     } finally {
-      if (lockHandle) {
-        await lockHandle.close().catch(() => {})
-        await rm(lockPath, { force: true }).catch(() => {})
-      }
+      if (release) await release().catch(() => {})
     }
   }
 
   private async mutateAtomic<T>(mutate: (inventory: Inventory) => T): Promise<T> {
     await ensureDir(dirname(this.path))
-    const lockPath = `${this.path}.lock`
-    let lockHandle: Awaited<ReturnType<typeof open>> | null = null
+    let release: (() => Promise<void>) | null = null
     try {
-      lockHandle = await this.acquireLock(lockPath)
+      release = await this.acquireLock()
       const inventory = await this.read()
       const result = mutate(inventory)
       await this.writeUnderLock(inventory)
       return result
     } finally {
-      if (lockHandle) {
-        await lockHandle.close().catch(() => {})
-        await rm(lockPath, { force: true }).catch(() => {})
-      }
+      if (release) await release().catch(() => {})
     }
   }
 
@@ -92,50 +85,20 @@ export class InventoryStore {
     }
   }
 
-  private async acquireLock(lockPath: string, maxRetries = 10, retryDelayMs = 100): Promise<Awaited<ReturnType<typeof open>>> {
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        // Try to create lock file with PID and timestamp
-        const lockHandle = await open(lockPath, 'wx')
-        const lockData = JSON.stringify({ pid: process.pid, timestamp: Date.now() })
-        await writeFile(lockPath, lockData)
-        return lockHandle
-      } catch (err) {
-        if (err instanceof Error && 'code' in err && err.code !== 'EEXIST') throw err
-
-        // Lock exists, check if it's stale (older than 30 seconds)
-        // 30s threshold chosen to balance between:
-        // - Allowing slow operations to complete (e.g., large inventory writes)
-        // - Recovering quickly from crashed processes
-        try {
-          const lockContent = await readFile(lockPath, 'utf-8')
-          const lockData = JSON.parse(lockContent) as { pid: number; timestamp: number }
-          const ageMs = Date.now() - lockData.timestamp
-
-          if (ageMs > 30000) {
-            // Stale lock detected - verify the process is actually dead
-            try {
-              // process.kill(pid, 0) throws if process doesn't exist
-              process.kill(lockData.pid, 0)
-              // Process still alive, wait and retry
-            } catch {
-              // Process is dead, safe to remove stale lock
-              await rm(lockPath, { force: true }).catch(() => {})
-              continue
-            }
-          }
-        } catch {
-          // Lock file disappeared or corrupted, retry
-          continue
-        }
-
-        // Lock is held by another active process, wait and retry with exponential backoff
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs * Math.pow(2, attempt)))
-        }
+  private acquireLock(): Promise<() => Promise<void>> {
+    return lock(this.path, {
+      lockfilePath: `${this.path}.lock`,
+      realpath: false,
+      stale: 30_000,
+      update: 10_000,
+      retries: {
+        retries: 10,
+        factor: 2,
+        minTimeout: 100,
+        maxTimeout: 1_000,
+        randomize: true
       }
-    }
-    throw new Error(`Failed to acquire lock after ${maxRetries} attempts`)
+    })
   }
 
   async upsertTarget(

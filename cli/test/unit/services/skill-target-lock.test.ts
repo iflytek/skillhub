@@ -1,6 +1,6 @@
-import { access, mkdir, mkdtemp, utimes, writeFile } from 'node:fs/promises'
+import { access, lstat, mkdir, mkdtemp, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'bun:test'
 import { skillTargetLockPath } from '../../../src/services/skill-target-lock'
@@ -69,5 +69,8 @@ describe('skill target lifecycle lock', () => {
     expect(results.map(result => result.exitCode).sort()).toEqual([0, 4])
     expect(results.filter(result => result.stdout === 'acquired')).toHaveLength(1)
     expect(await exists(lockPath)).toBe(false)
+    if (process.platform !== 'win32') {
+      expect((await lstat(dirname(lockPath))).mode & 0o077).toBe(0)
+    }
   })
 })
