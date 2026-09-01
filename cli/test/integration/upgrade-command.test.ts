@@ -568,6 +568,11 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'first', 'SKILL.md'), 'utf-8')).toBe('# first v2')
     expect(await readFile(join(rootDir, 'second', 'SKILL.md'), 'utf-8')).toBe('# second v1')
     expect(await readFile(join(rootDir, 'third', 'SKILL.md'), 'utf-8')).toBe('# third v1')
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items.find((item: { slug: string }) => item.slug === 'first').version).toBe('1.1.0')
+    expect(inventory.items.find((item: { slug: string }) => item.slug === 'second').version).toBe('1.0.0')
+    expect(inventory.items.find((item: { slug: string }) => item.slug === 'third').version).toBe('1.0.0')
+    expect(registry.received.downloads).toBe(5)
   })
 
   test('legacy metadata without a file baseline requires explicit force migration', async () => {

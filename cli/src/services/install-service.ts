@@ -31,6 +31,13 @@ export interface InstallOptions {
   expectedTargetFiles?: Record<string, Record<string, string>> | undefined
   allowTargetDrift?: boolean | undefined
   requireExistingTargets?: boolean | undefined
+  /** Internal test seam for lock lifecycle failures; production uses acquireSkillTargetLock. */
+  acquireTargetLock?: typeof acquireSkillTargetLock
+}
+
+export interface InstallResult {
+  installed: Array<{ agent: string; dir: string }>
+  warnings?: string[]
 }
 
 interface StagedInstall {
@@ -80,7 +87,7 @@ async function preflightInstallTargets(
   return preparedTargets
 }
 
-export async function installSkill(options: InstallOptions): Promise<{ installed: Array<{ agent: string; dir: string }> }> {
+export async function installSkill(options: InstallOptions): Promise<InstallResult> {
   const store = new InventoryStore(options.home)
   const inventory = await store.read()
   const preparedTargets = await preflightInstallTargets(options.targets, {
@@ -126,9 +133,11 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
     }
 
     const releases: Array<() => Promise<void>> = []
+    const warnings: string[] = []
+    const acquireTargetLock = options.acquireTargetLock ?? acquireSkillTargetLock
     try {
       for (const item of [...staged].sort((left, right) => left.skillDir.localeCompare(right.skillDir))) {
-        releases.push(await acquireSkillTargetLock(item.target.rootDir, options.slug))
+        releases.push(await acquireTargetLock(item.target.rootDir, options.slug))
       }
 
       const lockedInventory = await store.read()
@@ -245,11 +254,18 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
       }
       throw error
     } finally {
-      for (const release of releases.reverse()) await release()
+      for (const release of releases.reverse()) {
+        try {
+          await release()
+        } catch (error) {
+          warnings.push(`target lock cleanup failed: ${describeError(error)}`)
+        }
+      }
     }
 
     return {
-      installed: staged.map(item => ({ agent: item.target.agent, dir: item.skillDir }))
+      installed: staged.map(item => ({ agent: item.target.agent, dir: item.skillDir })),
+      warnings
     }
   } finally {
     for (const item of staged) {

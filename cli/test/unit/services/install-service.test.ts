@@ -167,6 +167,28 @@ describe('installSkill', () => {
     expect(await exists(join(skillDir, 'stale.txt'))).toBe(false)
   })
 
+  test('reports lock cleanup failure as a warning after committing the installation', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Committed' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+
+    const result = await installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: false,
+      home,
+      acquireTargetLock: async () => async () => { throw new Error('simulated release failure') }
+    })
+
+    expect(result.warnings).toEqual(['target lock cleanup failed: simulated release failure'])
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Committed')
+    const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp' })
+  })
+
   test('force rejects a different namespace at the same install directory', async () => {
     globalThis.fetch = installFetch({ 'SKILL.md': '# Team Demo' })
     const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))

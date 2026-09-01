@@ -269,6 +269,8 @@ a Skill installed from another source.
 All targets in one inventory entry are upgraded together. A filter that selects only part of that
 entry is rejected because the current inventory format stores one shared version for all targets.
 The command also keeps the local files when the registry resolves to an older version.
+If a multi-Skill run fails after an earlier upgrade commits, execution stops and reports each item
+as `upgraded`, `failed`, or `not-attempted`; a committed upgrade is never rolled back implicitly.
 New installations store absolute target paths. An older inventory entry with relative target paths
 must be reinstalled before upgrade because its original working directory cannot be recovered safely.
 

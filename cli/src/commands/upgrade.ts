@@ -53,7 +53,8 @@ export async function upgradeCommand(coordinates: string[], options: UpgradeComm
   const output = renderUpgradeResult(plan, result, Boolean(options.json))
   if (result.failed > 0) {
     process.stdout.write(`${output}\n`)
-    throw new CliError('one or more skills failed to upgrade', EXIT.generic, {
+    const firstFailure = result.items.find(item => item.action === 'failed')
+    throw new CliError('one or more skills failed to upgrade', firstFailure?.exitCode ?? EXIT.generic, {
       failed: result.items.filter(item => item.action === 'failed')
     })
   }
@@ -104,6 +105,7 @@ function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, 
     remoteVersion: item.remoteVersion,
     action: executionByCoordinate.get(item.coordinate)?.action ?? item.action,
     reason: executionByCoordinate.get(item.coordinate)?.reason ?? item.reason,
+    warnings: executionByCoordinate.get(item.coordinate)?.warnings,
     changedFiles: item.changedFiles,
     targets: item.targets
   }))
@@ -127,7 +129,8 @@ function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, 
     ...items.map(item => {
       const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}` : ''
       const reason = item.reason ? ` (${item.reason})` : ''
-      return `${item.action.padEnd(13)} ${item.coordinate}${versions}${reason}`
+      const warnings = item.warnings?.length ? ` [warning: ${item.warnings.join('; ')}]` : ''
+      return `${item.action.padEnd(13)} ${item.coordinate}${versions}${reason}${warnings}`
     })
   ].join('\n')
 }

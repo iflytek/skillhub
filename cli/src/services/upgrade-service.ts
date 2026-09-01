@@ -55,6 +55,8 @@ export interface UpgradeExecutionResult {
     coordinate: string
     action: UpgradeExecutionAction
     reason?: string
+    warnings?: string[]
+    exitCode?: number
   }>
   upgraded: number
   unchanged: number
@@ -242,7 +244,7 @@ export async function executeSkillUpgradePlan(
 
     try {
       const token = await options.tokenForRegistry(item.registry)
-      await installSkill({
+      const installed = await installSkill({
         registry: item.registry,
         token,
         namespace: item.inventoryItem.namespace,
@@ -260,12 +262,17 @@ export async function executeSkillUpgradePlan(
         allowTargetDrift: item.allowTargetDrift,
         requireExistingTargets: true
       })
-      items.push({ coordinate: item.coordinate, action: 'upgraded' })
+      items.push({
+        coordinate: item.coordinate,
+        action: 'upgraded',
+        ...(installed.warnings?.length ? { warnings: installed.warnings } : {})
+      })
     } catch (error) {
       items.push({
         coordinate: item.coordinate,
         action: 'failed',
-        reason: error instanceof Error ? error.message : 'unexpected upgrade failure'
+        reason: error instanceof Error ? error.message : 'unexpected upgrade failure',
+        ...(error instanceof CliError ? { exitCode: error.exitCode } : {})
       })
       stopped = true
     }
