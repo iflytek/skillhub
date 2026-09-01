@@ -30,7 +30,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.StaticMessageSource;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -154,19 +153,15 @@ class GlobalExceptionHandlerTest {
         attachAppender();
         prepareClientErrorRequest("PUT", "/api/v1/skills/10/reviews/me");
 
-        for (RuntimeException exception : List.of(
-                new ObjectOptimisticLockingFailureException(SkillRating.class, 7L),
-                new DataIntegrityViolationException("duplicate key value violates constraint user-secret"))) {
-            ResponseEntity<ApiResponse<Void>> response = handler.handlePersistenceConflict(exception, request);
+        ResponseEntity<ApiResponse<Void>> response = handler.handlePersistenceConflict(
+                new ObjectOptimisticLockingFailureException(SkillRating.class, 7L), request);
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-            assertThat(response.getBody()).isNotNull();
-            assertThat(response.getBody().code()).isEqualTo(409);
-            assertThat(response.getBody().msg()).isEqualTo("Refresh and try again");
-        }
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo(409);
+        assertThat(response.getBody().msg()).isEqualTo("Refresh and try again");
         assertThat(loggedMessages()).allSatisfy(message -> assertThat(message)
-                .doesNotContain("user-secret")
-                .doesNotContain("duplicate key"));
+                .doesNotContain("user-secret"));
     }
 
     @Test

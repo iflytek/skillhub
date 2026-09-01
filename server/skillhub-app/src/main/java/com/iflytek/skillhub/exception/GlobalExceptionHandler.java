@@ -13,7 +13,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -70,10 +69,7 @@ public class GlobalExceptionHandler {
         return renderLocalizedError(ex, HttpStatus.valueOf(ex.statusCode()), request);
     }
 
-    @ExceptionHandler({
-            ObjectOptimisticLockingFailureException.class,
-            DataIntegrityViolationException.class
-    })
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handlePersistenceConflict(
             RuntimeException ex,
             HttpServletRequest request) {

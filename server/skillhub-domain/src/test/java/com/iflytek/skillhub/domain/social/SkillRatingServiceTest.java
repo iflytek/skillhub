@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.social;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -116,6 +118,21 @@ class SkillRatingServiceTest {
                 .isInstanceOf(DomainBadRequestException.class);
         assertThatThrownBy(() -> service.upsertReview(1L, "user-1", (short) 4, "x".repeat(2001)))
                 .isInstanceOf(DomainBadRequestException.class);
+    }
+
+    @Test
+    void upsertReview_mapsConcurrentFirstInsertToConflict() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1")).thenReturn(Optional.empty());
+        when(ratingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new DataIntegrityViolationException("duplicate rating"))
+                .when(ratingRepository).flush();
+
+        assertThatThrownBy(() -> service.upsertReview(1L, "user-1", (short) 4, "Useful"))
+                .isInstanceOf(DomainConflictException.class)
+                .hasMessage("error.request.conflict");
+
+        verify(eventPublisher, never()).publishEvent(any(SkillRatedEvent.class));
     }
 
     @Test

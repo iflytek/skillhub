@@ -1,10 +1,12 @@
 package com.iflytek.skillhub.domain.social;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.social.event.SkillRatedEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,8 +52,13 @@ public class SkillRatingService {
         SkillRating rating = ratingRepository.findBySkillIdAndUserId(skillId, userId)
                 .orElseGet(() -> new SkillRating(skillId, userId, score));
         rating.updateReview(score, reviewText);
-        SkillRating saved = ratingRepository.save(rating);
-        ratingRepository.flush();
+        SkillRating saved;
+        try {
+            saved = ratingRepository.save(rating);
+            ratingRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new DomainConflictException("error.request.conflict");
+        }
         eventPublisher.publishEvent(new SkillRatedEvent(skillId, userId, score));
         return saved;
     }
