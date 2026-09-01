@@ -135,7 +135,7 @@ async function resolveSyncContext(options: SyncCommonOptions): Promise<{
   return { client: new SkillHubClient(registry, token), registry, token, namespace, rootDir }
 }
 
-function renderPullResult(result: PullResult, json: boolean, check: boolean): string {
+export function renderPullResult(result: PullResult, json: boolean, check: boolean): string {
   if (json) {
     return JSON.stringify({ ok: result.failures.length === 0, check, ...result })
   }

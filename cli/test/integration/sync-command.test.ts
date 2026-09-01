@@ -8,6 +8,7 @@ import { runCli } from '../helpers/run-cli'
 import { createTempHome } from '../helpers/temp-env'
 import { SkillHubClient } from '../../src/clients/skillhub-client'
 import { pullNamespace } from '../../src/services/sync-service'
+import { renderPullResult } from '../../src/commands/sync'
 
 function makeSkill(body: string): { zipBytes: Uint8Array; fingerprint: string } {
   const content = strToU8(body)
@@ -47,6 +48,8 @@ describe('sync command', () => {
         slug: 'demo',
         message: 'target lock cleanup failed: simulated release failure'
       }])
+      expect(JSON.parse(renderPullResult(result, true, false)).warnings).toEqual(result.warnings)
+      expect(renderPullResult(result, false, false)).toContain('warning    demo: target lock cleanup failed')
     } finally {
       registry.stop()
     }

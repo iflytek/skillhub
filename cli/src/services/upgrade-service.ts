@@ -64,6 +64,10 @@ export interface UpgradeExecutionResult {
   notAttempted: number
 }
 
+type UpgradeExecutionOptions = Pick<UpgradeSelectionOptions, 'home' | 'tokenForRegistry'> & {
+  installSkillFn?: typeof installSkill
+}
+
 export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promise<UpgradePlan> {
   if (options.coordinates.length === 0) {
     throw new CliError('provide at least one installed skill coordinate', EXIT.usage)
@@ -223,7 +227,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
 
 export async function executeSkillUpgradePlan(
   plan: UpgradePlan,
-  options: Pick<UpgradeSelectionOptions, 'home' | 'tokenForRegistry'>
+  options: UpgradeExecutionOptions
 ): Promise<UpgradeExecutionResult> {
   if (plan.blocked > 0) {
     throw new CliError('upgrade plan contains blocked skills', EXIT.validation)
@@ -244,7 +248,7 @@ export async function executeSkillUpgradePlan(
 
     try {
       const token = await options.tokenForRegistry(item.registry)
-      const installed = await installSkill({
+      const installed = await (options.installSkillFn ?? installSkill)({
         registry: item.registry,
         token,
         namespace: item.inventoryItem.namespace,

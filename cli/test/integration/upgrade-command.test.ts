@@ -6,6 +6,8 @@ import { createTempHome } from '../helpers/temp-env'
 import { startFakeRegistry } from '../helpers/fake-registry'
 import { runCli } from '../helpers/run-cli'
 import { executeSkillUpgradePlan, planSkillUpgrades } from '../../src/services/upgrade-service'
+import { installSkill } from '../../src/services/install-service'
+import { renderUpgradeResult } from '../../src/commands/upgrade'
 
 let registries: Array<Awaited<ReturnType<typeof startFakeRegistry>>> = []
 
@@ -573,6 +575,49 @@ describe('upgrade command', () => {
     expect(inventory.items.find((item: { slug: string }) => item.slug === 'second').version).toBe('1.0.0')
     expect(inventory.items.find((item: { slug: string }) => item.slug === 'third').version).toBe('1.0.0')
     expect(registry.received.downloads).toBe(5)
+  })
+
+  test('a committed upgrade keeps success and renders a post-commit warning', async () => {
+    const env = await createTempHome()
+    const skill = { namespace: 'global', slug: 'warned', version: '1.0.0', fingerprint: 'v1', zipBytes: makeSkillZip('# v1') }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/warned', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+    skill.version = '1.1.0'
+    skill.fingerprint = 'v2'
+    skill.zipBytes = makeSkillZip('# v2')
+    const tokenForRegistry = async () => undefined
+    const plan = await planSkillUpgrades({
+      coordinates: ['@global/warned'],
+      registry: registry.url,
+      force: false,
+      home: env.home,
+      tokenForRegistry
+    })
+
+    const result = await executeSkillUpgradePlan(plan, {
+      home: env.home,
+      tokenForRegistry,
+      installSkillFn: options => installSkill({
+        ...options,
+        acquireTargetLock: async () => async () => { throw new Error('simulated release failure') }
+      })
+    })
+
+    expect(result).toMatchObject({ upgraded: 1, failed: 0 })
+    expect(result.items[0]).toMatchObject({ action: 'upgraded' })
+    expect(result.items[0]?.warnings).toEqual(['target lock cleanup failed: simulated release failure'])
+    expect(JSON.parse(renderUpgradeResult(plan, result, true)).items[0].warnings).toHaveLength(1)
+    expect(renderUpgradeResult(plan, result, false)).toContain('upgraded')
+    expect(renderUpgradeResult(plan, result, false)).toContain('[warning: target lock cleanup failed')
+    expect(await readFile(join(rootDir, 'warned', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'v2' })
   })
 
   test('legacy metadata without a file baseline requires explicit force migration', async () => {

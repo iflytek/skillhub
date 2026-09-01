@@ -96,7 +96,7 @@ function renderUpgradePlan(
   ].join('\n')
 }
 
-function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean): string {
+export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean): string {
   const executionByCoordinate = new Map(result.items.map(item => [item.coordinate, item]))
   const items = plan.items.map(item => ({
     coordinate: item.coordinate,
