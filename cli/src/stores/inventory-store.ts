@@ -180,10 +180,14 @@ export class InventoryStore {
     slug: string,
     version: string,
     targets: InventoryTarget[],
-    fingerprint?: string
+    fingerprint?: string,
+    replacedInstallDirs: string[] = []
   ): Promise<void> {
     await this.mutateAtomic(inventory => {
-      const installDirs = new Set(targets.map(target => target.installDir))
+      const installDirs = new Set([
+        ...targets.map(target => target.installDir),
+        ...replacedInstallDirs
+      ])
       const existingItem = inventory.items.find(candidate =>
         candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
       const retainedTargets = existingItem?.targets.filter(target => !installDirs.has(target.installDir)) ?? []

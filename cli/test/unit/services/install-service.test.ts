@@ -4,6 +4,8 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { zipSync } from 'fflate'
 import { installSkill } from '../../../src/services/install-service'
+import { planSkillUpgrades } from '../../../src/services/upgrade-service'
+import { removeLocalSkill } from '../../../src/services/remove-service'
 import { skillTargetLockPath } from '../../../src/services/skill-target-lock'
 
 const originalFetch = globalThis.fetch
@@ -143,6 +145,70 @@ describe('installSkill', () => {
       await rm(home, { recursive: true, force: true })
       await rm(targetParent, { recursive: true, force: true })
     }
+  })
+
+  test('migrates a canonical inventory target to its selected path alias without duplication', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Reinstalled' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const parent = await mkdtemp(join(tmpdir(), 'skillhub-install-alias-'))
+    const realRoot = join(parent, 'real')
+    const aliasRoot = join(parent, 'alias')
+    const realSkillDir = join(realRoot, 'demo')
+    const aliasSkillDir = join(aliasRoot, 'demo')
+    await mkdir(realSkillDir, { recursive: true })
+    await writeFile(join(realSkillDir, 'SKILL.md'), '# Old')
+    await writeManagedMetadata(realSkillDir)
+    await symlink(realRoot, aliasRoot, process.platform === 'win32' ? 'junction' : 'dir')
+
+    const inventoryPath = join(home, '.skillhub', 'inventory.json')
+    await mkdir(join(home, '.skillhub'), { recursive: true })
+    await writeFile(inventoryPath, JSON.stringify({
+      items: [{
+        registry: 'http://registry.test',
+        namespace: 'global',
+        slug: 'demo',
+        version: '0.1.0',
+        targets: [{
+          agent: 'codex',
+          rootDir: realRoot,
+          installDir: realSkillDir,
+          installedAt: '2026-09-01T00:00:00Z'
+        }]
+      }]
+    }))
+
+    await installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [{ agent: 'codex', rootDir: aliasRoot, scope: 'project', source: 'explicit' }],
+      force: true,
+      home
+    })
+
+    const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
+    expect(inventory.items).toHaveLength(1)
+    expect(inventory.items[0].targets).toEqual([
+      expect.objectContaining({ rootDir: aliasRoot, installDir: aliasSkillDir })
+    ])
+
+    const plan = await planSkillUpgrades({
+      coordinates: ['@global/demo'],
+      registry: 'http://registry.test',
+      force: false,
+      home,
+      tokenForRegistry: async () => undefined
+    })
+    expect(plan).toMatchObject({ blocked: 0, unchanged: 1 })
+
+    await removeLocalSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      home
+    })
+    expect(await exists(realSkillDir)).toBe(false)
+    expect((JSON.parse(await readFile(inventoryPath, 'utf-8'))).items).toEqual([])
   })
 
   test('force replaces the old skill directory instead of overlaying files', async () => {

@@ -371,9 +371,9 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
       baselineMissing = true
     } else {
       const snapshot = await snapshotSkillDirectory(installDir)
-      currentFiles[installDir] = snapshot.files
+      currentFiles[target.installDir] = snapshot.files
       for (const path of diffSkillFiles(result.metadata.files, snapshot.files)) {
-        changedFiles.add(`${installDir}:${path}`)
+        changedFiles.add(`${target.installDir}:${path}`)
       }
     }
     if (result.metadata.version !== item.version || result.metadata.fingerprint !== item.fingerprint) {

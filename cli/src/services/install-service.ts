@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { SkillHubClient } from '../clients/skillhub-client'
 import { InventoryStore, InventoryVersionConflictError } from '../stores/inventory-store'
 import { CliError } from '../shared/errors'
@@ -43,6 +43,7 @@ export interface InstallResult {
 interface StagedInstall {
   target: AgentCandidate
   skillDir: string
+  canonicalSkillDir: string
   tempDir: string
   installedAt: string
   backupDir: string | null
@@ -54,9 +55,9 @@ async function preflightInstallTargets(
   identity: InstalledSkillIdentity,
   force: boolean,
   inventory: Inventory
-): Promise<Array<{ target: AgentCandidate; skillDir: string }>> {
+): Promise<Array<{ target: AgentCandidate; skillDir: string; canonicalSkillDir: string }>> {
   const seenSkillDirs = new Set<string>()
-  const preparedTargets: Array<{ target: AgentCandidate; skillDir: string }> = []
+  const preparedTargets: Array<{ target: AgentCandidate; skillDir: string; canonicalSkillDir: string }> = []
 
   for (const target of targets) {
     const rootDir = resolve(target.rootDir)
@@ -82,9 +83,9 @@ async function preflightInstallTargets(
       })
     }
     if (exists) {
-      await assertReplaceableInstallation(skillDir, skillDir, identity, inventory)
+      await assertReplaceableInstallation(skillDir, skillDir, canonicalSkillDir, identity, inventory)
     }
-    preparedTargets.push({ target: resolvedTarget, skillDir })
+    preparedTargets.push({ target: resolvedTarget, skillDir, canonicalSkillDir })
   }
 
   return preparedTargets
@@ -105,7 +106,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
 
   const staged: StagedInstall[] = []
   try {
-    for (const { target, skillDir } of preparedTargets) {
+    for (const { target, skillDir, canonicalSkillDir } of preparedTargets) {
       await mkdir(target.rootDir, { recursive: true })
       const tempDir = await mkdtemp(join(target.rootDir, `.${options.slug}.install-`))
       try {
@@ -128,7 +129,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           agent: target.agent,
           installedAt
         }, null, 2))
-        staged.push({ target, skillDir, tempDir, installedAt, backupDir: null, movedIntoPlace: false })
+        staged.push({ target, skillDir, canonicalSkillDir, tempDir, installedAt, backupDir: null, movedIntoPlace: false })
       } catch (error) {
         await rm(tempDir, { recursive: true, force: true }).catch(() => {})
         throw error
@@ -144,7 +145,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
       }
 
       const lockedInventory = await store.read()
-      assertNoPartialVersionChange(lockedInventory, staged, {
+      await assertNoPartialVersionChange(lockedInventory, staged, {
         registry: options.registry,
         namespace: options.namespace,
         slug: options.slug
@@ -168,7 +169,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           const backupDir = `${item.skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
           await rename(item.skillDir, backupDir)
           item.backupDir = backupDir
-          await assertReplaceableInstallation(item.backupDir, item.skillDir, {
+          await assertReplaceableInstallation(item.backupDir, item.skillDir, item.canonicalSkillDir, {
             registry: options.registry,
             namespace: options.namespace,
             slug: options.slug
@@ -191,6 +192,10 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
       }
 
       try {
+        const replacedInstallDirs = await findEquivalentInventoryInstallDirs(
+          lockedInventory,
+          new Set(staged.map(item => item.canonicalSkillDir))
+        )
         await store.replaceTargetsAtInstallDirs(
           options.registry,
           options.namespace,
@@ -202,7 +207,8 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
             installDir: item.skillDir,
             installedAt: item.installedAt
           })),
-          resolved.fingerprint
+          resolved.fingerprint,
+          replacedInstallDirs
         )
       } catch (error) {
         if (error instanceof InventoryVersionConflictError) {
@@ -281,17 +287,20 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function assertNoPartialVersionChange(
+async function assertNoPartialVersionChange(
   inventory: Inventory,
   staged: StagedInstall[],
   identity: InstalledSkillIdentity,
   resolved: ResolveResponse
-): void {
+): Promise<void> {
   const item = inventory.items.find(candidate => sameInstalledSkillSource(candidate, identity))
   if (!item) return
 
-  const selectedInstallDirs = new Set(staged.map(candidate => candidate.skillDir))
-  const retainedTargets = item.targets.filter(target => !selectedInstallDirs.has(target.installDir))
+  const selectedInstallDirs = new Set(staged.map(candidate => candidate.canonicalSkillDir))
+  const retainedTargets: typeof item.targets = []
+  for (const target of item.targets) {
+    if (!selectedInstallDirs.has(await canonicalInventoryInstallDir(target))) retainedTargets.push(target)
+  }
   if (retainedTargets.length === 0) return
   if (item.version === resolved.version && item.fingerprint === resolved.fingerprint) return
 
@@ -305,6 +314,7 @@ function assertNoPartialVersionChange(
 async function assertReplaceableInstallation(
   metadataDir: string,
   inventoryInstallDir: string,
+  canonicalInstallDir: string,
   identity: InstalledSkillIdentity,
   inventory: Inventory
 ): Promise<void> {
@@ -317,8 +327,15 @@ async function assertReplaceableInstallation(
     })
   }
 
-  const inventoryOwners = inventory.items.filter(item =>
-    item.targets.some(existing => existing.installDir === inventoryInstallDir))
+  const inventoryOwners: Inventory['items'] = []
+  for (const item of inventory.items) {
+    for (const target of item.targets) {
+      if (await canonicalInventoryInstallDir(target) === canonicalInstallDir) {
+        inventoryOwners.push(item)
+        break
+      }
+    }
+  }
   if (!sameInstalledSkillSource(metadataResult.metadata, identity) ||
       inventoryOwners.some(owner => !sameInstalledSkillSource(owner, identity))) {
     throw new CliError(`source conflict at ${inventoryInstallDir}`, EXIT.filesystem, {
@@ -332,4 +349,25 @@ async function assertReplaceableInstallation(
       next: 'choose another target directory or remove the conflicting skill explicitly'
     })
   }
+}
+
+async function findEquivalentInventoryInstallDirs(
+  inventory: Inventory,
+  canonicalInstallDirs: Set<string>
+): Promise<string[]> {
+  const matches: string[] = []
+  for (const item of inventory.items) {
+    for (const target of item.targets) {
+      if (canonicalInstallDirs.has(await canonicalInventoryInstallDir(target))) {
+        matches.push(target.installDir)
+      }
+    }
+  }
+  return matches
+}
+
+async function canonicalInventoryInstallDir(target: { rootDir: string; installDir: string }): Promise<string> {
+  const resolvedRoot = resolve(target.rootDir)
+  const canonicalRoot = await canonicalizeExistingPath(resolvedRoot)
+  return resolve(canonicalRoot, relative(resolvedRoot, resolve(target.installDir)))
 }
