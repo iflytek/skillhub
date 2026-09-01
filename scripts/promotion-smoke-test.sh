@@ -94,13 +94,20 @@ GLOBAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" 
 assert_code "Global namespace detail is available" "$GLOBAL_RESPONSE" "0"
 GLOBAL_NAMESPACE_ID="$(json_field "$GLOBAL_RESPONSE" "data.id")"
 
-CREATE_NAMESPACE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
-  -H "X-XSRF-TOKEN: $USER_CSRF" \
+CREATE_NAMESPACE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
   -H "Content-Type: application/json" \
   -X POST "$BASE_URL/api/web/namespaces" \
   -d "{\"slug\":\"$SLUG\",\"displayName\":\"Promotion Smoke $SLUG\",\"description\":\"promotion smoke test\"}")"
-assert_code "Regular user can create promotion smoke namespace" "$CREATE_NAMESPACE_RESPONSE" "0"
+assert_code "Admin can create promotion smoke namespace" "$CREATE_NAMESPACE_RESPONSE" "0"
 NAMESPACE_ID="$(json_field "$CREATE_NAMESPACE_RESPONSE" "data.id")"
+
+ADD_MEMBER_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
+  -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/namespaces/$SLUG/members" \
+  -d '{"userId":"local-user","role":"MEMBER"}')"
+assert_code "Admin can add the regular user as a namespace member" "$ADD_MEMBER_RESPONSE" "0"
 
 cat > "$WORK_DIR/SKILL.md" <<EOF
 ---
@@ -128,6 +135,32 @@ PUBLISH_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -
 assert_code "Regular user can publish a team skill for review" "$PUBLISH_RESPONSE" "0"
 SKILL_ID="$(json_field "$PUBLISH_RESPONSE" "data.skillId")"
 SKILL_SLUG="$(json_field "$PUBLISH_RESPONSE" "data.slug")"
+
+REVIEW_READY=false
+SKILL_DETAIL_RESPONSE=""
+for _ in $(seq 1 60); do
+  SKILL_DETAIL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+    "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG")"
+  if JSON_INPUT="$SKILL_DETAIL_RESPONSE" python3 - <<'PY'
+import json
+import os
+
+data = json.loads(os.environ["JSON_INPUT"]).get("data") or {}
+versions = [data.get("ownerPreviewVersion") or {}, data.get("headlineVersion") or {}]
+raise SystemExit(0 if any(version.get("status") == "PENDING_REVIEW" for version in versions) else 1)
+PY
+  then
+    REVIEW_READY=true
+    break
+  fi
+  sleep 1
+done
+assert_code "Regular user can load the submitted team skill" "$SKILL_DETAIL_RESPONSE" "0"
+if [[ "$REVIEW_READY" != "true" ]]; then
+  fail "Published team skill did not finish scanning within 60 seconds"
+  exit 1
+fi
+pass "Published team skill is ready for review"
 
 PENDING_REVIEWS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
   "$BASE_URL/api/web/reviews?status=PENDING&namespaceId=$NAMESPACE_ID")"
