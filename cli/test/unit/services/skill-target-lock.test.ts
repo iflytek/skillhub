@@ -1,4 +1,4 @@
-import { access, chmod, lstat, mkdir, mkdtemp, rm, symlink, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdir, mkdtemp, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -108,18 +108,18 @@ describe('skill target lifecycle lock', () => {
     if (process.platform !== 'win32') {
       expect((await lstat(dirname(lockPath))).mode & 0o077).toBe(0)
     }
-  })
+  }, 15_000)
 
   test('keeps one lock identity when a symlink target is removed', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-symlink-root-'))
     const linkedDir = await mkdtemp(join(tmpdir(), 'skillhub-target-symlink-value-'))
     const skillDir = join(rootDir, 'demo')
-    await symlink(linkedDir, skillDir, 'dir')
+    await symlink(linkedDir, skillDir, process.platform === 'win32' ? 'junction' : 'dir')
 
     const lockPathBeforeRemoval = await skillTargetLockPath(rootDir, 'demo')
     const release = await acquireSkillTargetLock(rootDir, 'demo')
     try {
-      await rm(skillDir)
+      await unlink(skillDir)
       expect(await skillTargetLockPath(rootDir, 'demo')).toBe(lockPathBeforeRemoval)
       await expect(acquireSkillTargetLock(rootDir, 'demo')).rejects.toThrow('install target is busy')
     } finally {

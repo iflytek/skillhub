@@ -59,7 +59,8 @@ async function preflightInstallTargets(
   const preparedTargets: Array<{ target: AgentCandidate; skillDir: string }> = []
 
   for (const target of targets) {
-    const canonicalRootDir = await canonicalizeExistingPath(resolve(target.rootDir))
+    const rootDir = resolve(target.rootDir)
+    const canonicalRootDir = await canonicalizeExistingPath(rootDir)
     const canonicalSkillDir = join(canonicalRootDir, identity.slug)
     if (seenSkillDirs.has(canonicalSkillDir)) {
       throw new CliError(`multiple install targets resolve to ${canonicalSkillDir}`, EXIT.usage, {
@@ -69,8 +70,10 @@ async function preflightInstallTargets(
     }
     seenSkillDirs.add(canonicalSkillDir)
 
-    const canonicalTarget = { ...target, rootDir: canonicalRootDir }
-    const skillDir = canonicalSkillDir
+    // Use the canonical path only as an internal identity. Persist the resolved
+    // user path so macOS aliases and Windows short names remain stable in CLI output.
+    const resolvedTarget = { ...target, rootDir }
+    const skillDir = join(rootDir, identity.slug)
     const exists = await pathExists(skillDir)
     if (exists && !force) {
       throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
@@ -81,7 +84,7 @@ async function preflightInstallTargets(
     if (exists) {
       await assertReplaceableInstallation(skillDir, skillDir, identity, inventory)
     }
-    preparedTargets.push({ target: canonicalTarget, skillDir })
+    preparedTargets.push({ target: resolvedTarget, skillDir })
   }
 
   return preparedTargets
