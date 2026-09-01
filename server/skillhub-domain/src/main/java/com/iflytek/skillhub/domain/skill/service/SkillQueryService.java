@@ -242,7 +242,8 @@ public class SkillQueryService {
                 skill.getUpdatedAt(),
                 canManageRestrictedSkill(skill, currentUserId, userNsRoles),
                 canSubmitPromotion(namespace, skill, publishedVersion, currentUserId, userNsRoles),
-                headlineVersion == null || "PUBLISHED".equals(headlineVersion.status()),
+                skill.getStatus() == SkillStatus.ACTIVE
+                        && (headlineVersion == null || "PUBLISHED".equals(headlineVersion.status())),
                 currentUserId == null || !Objects.equals(skill.getOwnerId(), currentUserId),
                 headlineVersion,
                 publishedVersion,
