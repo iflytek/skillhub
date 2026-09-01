@@ -36,6 +36,7 @@ export interface PullResult {
   entries: SyncStatusEntry[]
   actions: Array<{ slug: string; action: 'installed' | 'updated' | 'pruned' }>
   failures: Array<{ slug: string; message: string }>
+  warnings: Array<{ slug: string; message: string }>
 }
 
 export interface PushResultItem {
@@ -133,6 +134,7 @@ export async function pullNamespace(options: {
   check: boolean
   prune: boolean
   force: boolean
+  installSkillFn?: typeof installSkill
 }): Promise<PullResult> {
   const inspected = await inspectNamespaceWorkspace(options)
   const result: PullResult = {
@@ -140,7 +142,8 @@ export async function pullNamespace(options: {
     rootDir: options.rootDir,
     entries: inspected.entries,
     actions: [],
-    failures: []
+    failures: [],
+    warnings: []
   }
   if (options.check) return result
 
@@ -154,7 +157,7 @@ export async function pullNamespace(options: {
     const remote = remoteBySlug.get(entry.slug)
     if (!remote) continue
     try {
-      await installSkill({
+      const installed = await (options.installSkillFn ?? installSkill)({
         registry: options.registry,
         token: options.token,
         namespace: options.namespace,
@@ -172,6 +175,7 @@ export async function pullNamespace(options: {
         force: entry.status !== 'not-installed' || options.force
       })
       result.actions.push({ slug: entry.slug, action: entry.status === 'not-installed' ? 'installed' : 'updated' })
+      result.warnings.push(...(installed.warnings ?? []).map(message => ({ slug: entry.slug, message })))
     } catch (error) {
       result.failures.push({ slug: entry.slug, message: error instanceof Error ? error.message : 'install failed' })
     }

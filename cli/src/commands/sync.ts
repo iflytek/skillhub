@@ -145,6 +145,7 @@ function renderPullResult(result: PullResult, json: boolean, check: boolean): st
     ...result.entries
       .filter(entry => !result.actions.some(action => action.slug === entry.slug))
       .map(entry => `${entry.status.padEnd(16)} ${entry.slug}`),
+    ...result.warnings.map(item => `warning    ${item.slug}: ${item.message}`),
     ...result.failures.map(item => `failed     ${item.slug}: ${item.message}`)
   ]
   return lines.join('\n')

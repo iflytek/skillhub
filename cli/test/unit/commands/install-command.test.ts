@@ -146,6 +146,25 @@ describe('installCommand dependency injection', () => {
     }] as AgentCandidate[]
   }
 
+  test('renders post-commit warnings in human and JSON output', async () => {
+    const deps: InstallCommandDeps = {
+      isTTY: () => false,
+      resolveInstallTargets: fakeResolveInstallTargets(),
+      installSkill: async () => ({
+        installed: [{ agent: 'codex', dir: '/home/u/.codex/skills/foo' }],
+        warnings: ['target lock cleanup failed: simulated release failure']
+      })
+    }
+
+    const human = await installCommand('@global/foo', { registry: 'http://localhost' }, deps)
+    expect(human).toContain('Warning: target lock cleanup failed')
+    const json = JSON.parse(await installCommand('@global/foo', {
+      registry: 'http://localhost',
+      json: true
+    }, deps))
+    expect(json.warnings).toEqual(['target lock cleanup failed: simulated release failure'])
+  })
+
   test('passes a namespaced coordinate to installSkill', async () => {
     let received: Parameters<NonNullable<InstallCommandDeps['installSkill']>>[0] | undefined
     const deps: InstallCommandDeps = {

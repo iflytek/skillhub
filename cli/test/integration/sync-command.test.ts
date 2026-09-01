@@ -6,6 +6,8 @@ import { describe, expect, test } from 'bun:test'
 import { startFakeRegistry, type FakeSkill } from '../helpers/fake-registry'
 import { runCli } from '../helpers/run-cli'
 import { createTempHome } from '../helpers/temp-env'
+import { SkillHubClient } from '../../src/clients/skillhub-client'
+import { pullNamespace } from '../../src/services/sync-service'
 
 function makeSkill(body: string): { zipBytes: Uint8Array; fingerprint: string } {
   const content = strToU8(body)
@@ -15,6 +17,41 @@ function makeSkill(body: string): { zipBytes: Uint8Array; fingerprint: string } 
 }
 
 describe('sync command', () => {
+  test('pull propagates committed install warnings', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'team-skills')
+    const fixture = makeSkill('---\nname: demo\ndescription: Demo\nversion: 1.0.0\n---\n')
+    const registry = await startFakeRegistry({
+      token: 'token',
+      skills: [{ namespace: 'team-a', slug: 'demo', ...fixture }]
+    })
+
+    try {
+      const result = await pullNamespace({
+        client: new SkillHubClient(registry.url, 'token'),
+        registry: registry.url,
+        token: 'token',
+        namespace: 'team-a',
+        rootDir: skillsDir,
+        check: false,
+        prune: false,
+        force: false,
+        installSkillFn: async () => ({
+          installed: [{ agent: 'workspace', dir: join(skillsDir, 'demo') }],
+          warnings: ['target lock cleanup failed: simulated release failure']
+        })
+      })
+
+      expect(result.actions).toEqual([{ slug: 'demo', action: 'installed' }])
+      expect(result.warnings).toEqual([{
+        slug: 'demo',
+        message: 'target lock cleanup failed: simulated release failure'
+      }])
+    } finally {
+      registry.stop()
+    }
+  })
+
   test('pull installs a namespace incrementally and writes workspace metadata', async () => {
     const env = await createTempHome()
     const skillsDir = join(env.cwd, 'team-skills')
