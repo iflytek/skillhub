@@ -172,7 +172,7 @@ describe('installSkill', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
-    await writeFile(join(skillDir, 'SKILL.md'), '# Manual')
+    await writeFile(join(skillDir, 'SKILL.md'), '# Global Demo')
     await writeManagedMetadata(skillDir)
     const inventoryPath = join(home, '.skillhub', 'inventory.json')
     await mkdir(join(home, '.skillhub'), { recursive: true })
@@ -205,6 +205,7 @@ describe('installSkill', () => {
     expect(inventory.items[0]).toMatchObject({ namespace: 'global', slug: 'demo' })
     expect(inventory.items[0].targets).toHaveLength(1)
     expect(inventory.items[0].targets[0].installDir).toBe(skillDir)
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Global Demo')
   })
 
   test('force rejects metadata explicitly owned by another installer', async () => {
@@ -213,6 +214,7 @@ describe('installSkill', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
     const skillDir = join(rootDir, 'demo')
     await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Manual')
     await writeManagedMetadata(skillDir)
     const metadataPath = join(skillDir, '.skillhub', 'metadata.json')
     const metadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
