@@ -69,13 +69,17 @@ describe('skill target lifecycle lock', () => {
     const bunPath = (await Bun.which('bun')) ?? process.execPath
     const acquiredPath = join(rootDir, 'acquired')
     const releasePath = join(rootDir, 'release')
+    const startPath = join(rootDir, 'start')
+    const readyPaths = [join(rootDir, 'ready-0'), join(rootDir, 'ready-1')]
 
-    const processes = [0, 1].map(() => Bun.spawn({
-      cmd: [bunPath, worker, rootDir, 'demo', acquiredPath, releasePath],
+    const processes = readyPaths.map(readyPath => Bun.spawn({
+      cmd: [bunPath, worker, rootDir, 'demo', readyPath, startPath, acquiredPath, releasePath],
       stdout: 'pipe',
       stderr: 'pipe'
     }))
     try {
+      await Promise.all(readyPaths.map(waitForFile))
+      await writeFile(startPath, 'start')
       await waitForFile(acquiredPath)
       const loserExitCode = await Promise.race([
         ...processes.map(process => process.exited),
