@@ -123,6 +123,7 @@ describe('removeLocalSkill', () => {
     expect(removed.removed).toHaveLength(1)
     expect(await exists(skillDir)).toBe(false)
     expect((await store.read()).items).toEqual([])
+    expect(await exists(join(rootDir, '.demo.skillhub-install.lock'))).toBe(false)
   })
 
   test('throws on path traversal in installDir', async () => {
