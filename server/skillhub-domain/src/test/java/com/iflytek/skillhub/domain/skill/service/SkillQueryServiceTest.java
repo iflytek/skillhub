@@ -1242,6 +1242,28 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldKeepInteractionForActiveSkillWithoutHeadlineVersion() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String ownerId = "owner-1";
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(
+                namespaceSlug, skillSlug, ownerId, Map.of());
+
+        assertNull(result.headlineVersion());
+        assertTrue(result.canInteract());
+    }
+
+    @Test
     void testGetSkillDetail_ShouldIncludeRejectedOwnerPreviewComment() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";

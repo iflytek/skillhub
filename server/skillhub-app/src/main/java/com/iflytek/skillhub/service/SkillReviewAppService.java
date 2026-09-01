@@ -8,6 +8,7 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
@@ -142,7 +143,7 @@ public class SkillReviewAppService {
                 && skillVersionRepository.findById(skill.getLatestVersionId())
                 .map(version -> version.getStatus() == SkillVersionStatus.PUBLISHED)
                 .orElse(false);
-        if (!published) {
+        if (skill.getStatus() != SkillStatus.ACTIVE || !published) {
             throw new DomainBadRequestException("error.skillReview.notInteractable");
         }
         return skill;
