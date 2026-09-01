@@ -1213,6 +1213,35 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void testGetSkillDetail_ShouldDisableInteractionForArchivedSkill() throws Exception {
+        String namespaceSlug = "test-ns";
+        String skillSlug = "test-skill";
+        String ownerId = "owner-1";
+        Map<Long, NamespaceRole> userNsRoles = Map.of();
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", ownerId);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, skillSlug, ownerId, SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ARCHIVED);
+        skill.setLatestVersionId(11L);
+
+        SkillVersion published = new SkillVersion(1L, "1.0.0", ownerId);
+        setId(published, 11L);
+        published.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
+        when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
+
+        SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, ownerId, userNsRoles);
+
+        assertNotNull(result.headlineVersion());
+        assertEquals("PUBLISHED", result.headlineVersion().status());
+        assertFalse(result.canInteract());
+    }
+
+    @Test
     void testGetSkillDetail_ShouldIncludeRejectedOwnerPreviewComment() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";
