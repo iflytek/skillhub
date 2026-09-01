@@ -129,7 +129,7 @@ describe('skill reviews', () => {
     mocks.pages.set(1, { items: [], total: 20, page: 1, size: 20 })
     view.rerender(<SkillReviews skillId={10} canInteract onRequireLogin={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
-    expect(mocks.requestedPages.at(-1)).toBe(0)
+    expect(mocks.requestedPages[mocks.requestedPages.length - 1]).toBe(0)
   })
 
   it('keeps review interaction copy in every supported locale', () => {

@@ -54,7 +54,7 @@ function ReviewStars({ value, onChange, disabled = false }: {
         <button
           key={score}
           type="button"
-          className={cn('rounded p-0.5', onChange && 'hover:scale-110 transition-transform')}
+          className="rounded p-0.5 transition-transform hover:scale-110"
           role="radio"
           aria-checked={score === value}
           onClick={() => onChange(score)}
