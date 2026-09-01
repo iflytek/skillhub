@@ -147,8 +147,8 @@ describe('removeLocalSkill', () => {
       }]
     })
 
-    expect(await skillTargetLockPath(aliasRoot, 'demo'))
-      .toBe(await skillTargetLockPath(realRoot, 'demo'))
+    const lockPath = await skillTargetLockPath(realRoot, 'demo')
+    expect(await skillTargetLockPath(aliasRoot, 'demo')).toBe(lockPath)
     const release = await acquireSkillTargetLock(realRoot, 'demo')
     try {
       await expect(removeLocalSkill({ registry: 'https://skill.xfyun.cn', slug: 'demo', home }))
@@ -158,6 +158,7 @@ describe('removeLocalSkill', () => {
     } finally {
       await release()
     }
+    expect(await exists(lockPath)).toBe(false)
   })
 
   test('removes a stale inventory target when the recorded root directory is missing', async () => {

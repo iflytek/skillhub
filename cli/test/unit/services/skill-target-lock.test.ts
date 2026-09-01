@@ -1,9 +1,13 @@
-import { access, lstat, mkdir, mkdtemp, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdir, mkdtemp, symlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'bun:test'
-import { skillTargetLockPath } from '../../../src/services/skill-target-lock'
+import {
+  assertPrivateLockDir,
+  ensurePrivateLockDir,
+  skillTargetLockPath
+} from '../../../src/services/skill-target-lock'
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -23,6 +27,37 @@ async function waitForFile(path: string): Promise<void> {
 }
 
 describe('skill target lifecycle lock', () => {
+  test('creates or repairs a private lock root and rejects unsafe roots', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'skillhub-lock-root-'))
+    const privateRoot = join(parent, 'private')
+    await ensurePrivateLockDir(privateRoot)
+    if (process.platform !== 'win32') {
+      expect((await lstat(privateRoot)).mode & 0o077).toBe(0)
+      await chmod(privateRoot, 0o755)
+      await ensurePrivateLockDir(privateRoot)
+      expect((await lstat(privateRoot)).mode & 0o077).toBe(0)
+    }
+
+    const fileRoot = join(parent, 'file')
+    await writeFile(fileRoot, 'keep')
+    await expect(ensurePrivateLockDir(fileRoot)).rejects.toThrow('unsafe SkillHub CLI lock directory')
+    expect(await Bun.file(fileRoot).text()).toBe('keep')
+
+    const symlinkTarget = join(parent, 'symlink-target')
+    const symlinkRoot = join(parent, 'symlink')
+    await mkdir(symlinkTarget)
+    await symlink(symlinkTarget, symlinkRoot, 'dir')
+    await expect(ensurePrivateLockDir(symlinkRoot)).rejects.toThrow('unsafe SkillHub CLI lock directory')
+    expect((await lstat(symlinkRoot)).isSymbolicLink()).toBe(true)
+
+    expect(() => assertPrivateLockDir('/foreign', {
+      isDirectory: () => true,
+      isSymbolicLink: () => false,
+      uid: 2000,
+      mode: 0o40700
+    }, 1000)).toThrow('owned by another user')
+  })
+
   test('simultaneous stale recovery admits exactly one owner across processes', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-lock-root-'))
     const lockPath = await skillTargetLockPath(rootDir, 'demo')

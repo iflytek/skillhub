@@ -36,7 +36,27 @@ export async function skillTargetLockPath(rootDir: string, slug: string): Promis
   return join(lockDir, `${digest}.lock`)
 }
 
-async function ensurePrivateLockDir(lockDir: string): Promise<void> {
+interface LockDirectoryDetails {
+  isDirectory(): boolean
+  isSymbolicLink(): boolean
+  uid: number
+  mode: number
+}
+
+export function assertPrivateLockDir(
+  lockDir: string,
+  details: LockDirectoryDetails,
+  currentUid: number | null
+): void {
+  if (!details.isDirectory() || details.isSymbolicLink()) {
+    throw new Error(`unsafe SkillHub CLI lock directory: ${lockDir}`)
+  }
+  if (currentUid !== null && details.uid !== currentUid) {
+    throw new Error(`SkillHub CLI lock directory is owned by another user: ${lockDir}`)
+  }
+}
+
+export async function ensurePrivateLockDir(lockDir: string): Promise<void> {
   try {
     await mkdir(lockDir, { mode: 0o700 })
   } catch (error) {
@@ -44,12 +64,8 @@ async function ensurePrivateLockDir(lockDir: string): Promise<void> {
   }
 
   const details = await lstat(lockDir)
-  if (!details.isDirectory() || details.isSymbolicLink()) {
-    throw new Error(`unsafe SkillHub CLI lock directory: ${lockDir}`)
-  }
-  if (typeof process.getuid === 'function' && details.uid !== process.getuid()) {
-    throw new Error(`SkillHub CLI lock directory is owned by another user: ${lockDir}`)
-  }
+  const currentUid = typeof process.getuid === 'function' ? process.getuid() : null
+  assertPrivateLockDir(lockDir, details, currentUid)
   if (process.platform !== 'win32' && (details.mode & 0o077) !== 0) {
     await chmod(lockDir, 0o700)
   }

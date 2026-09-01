@@ -9,7 +9,7 @@
  * The unit test in test/unit/stores/inventory-store.test.ts pins the
  * single-process lock recovery; here we cover the cross-process case.
  */
-import { mkdir, readFile, utimes } from 'node:fs/promises'
+import { access, mkdir, readFile, readdir, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { zipSync, strToU8 } from 'fflate'
@@ -73,6 +73,9 @@ describe('cross-process concurrency on inventory.json', () => {
     ) as { items: Array<{ slug: string }> }
     const slugs = inv.items.map(i => i.slug).sort()
     expect(slugs).toEqual(['first', 'second'])
+    await expect(access(staleLockPath)).rejects.toThrow()
+    expect((await readdir(join(env.home, '.skillhub')))
+      .filter(name => name.startsWith('inventory.json.') && name.endsWith('.tmp'))).toEqual([])
   })
 
   test('two parallel installs of the same slug to the same dir: exactly one wins, one conflicts', async () => {
