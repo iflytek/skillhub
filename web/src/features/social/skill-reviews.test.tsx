@@ -102,8 +102,8 @@ describe('skill reviews', () => {
 
     const rating = screen.getByRole('radiogroup', { name: 'Your score' })
     expect(rating).toBeTruthy()
-    expect(screen.getByRole('radio', { name: 'Rate 4 out of 5 stars' }).getAttribute('aria-checked'))
-      .toBe('true')
+    expect(screen.getByRole('radio', { name: 'Rate 4 out of 5 stars' }))
+      .toHaveProperty('checked', true)
     expect(screen.getByRole('textbox', { name: 'Review text' })).toHaveProperty('value', 'Useful review')
   })
 
