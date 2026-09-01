@@ -290,6 +290,25 @@ UNAUTHORIZED_APPROVAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$
   -d '{"comment":"unauthorized"}')"
 assert_code "Regular user cannot approve a promotion" "$UNAUTHORIZED_APPROVAL_RESPONSE" "403"
 
+PROMOTION_AFTER_DENIAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  "$BASE_URL/api/web/promotions?status=PENDING")"
+assert_code "Admin can reload pending promotions after denied approval" "$PROMOTION_AFTER_DENIAL_RESPONSE" "0"
+if JSON_INPUT="$PROMOTION_AFTER_DENIAL_RESPONSE" python3 - "$PROMOTION_ID" <<'PY'
+import json
+import os
+import sys
+
+promotion_id = int(sys.argv[1])
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+match = next((item for item in items if item["id"] == promotion_id), None)
+raise SystemExit(0 if match and match["status"] == "PENDING" and match.get("targetSkillId") is None else 1)
+PY
+then
+  pass "Denied approval keeps the promotion pending without a target"
+else
+  fail "Denied approval should keep the promotion pending without a target"
+fi
+
 APPROVE_PROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
   -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
   -H "Content-Type: application/json" \
