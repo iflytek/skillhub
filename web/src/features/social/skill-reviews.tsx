@@ -186,8 +186,8 @@ function ReviewRow({ skillId, review, canModerate }: {
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-foreground">{review.displayName}</span>
+            <div className="min-w-0 max-w-full flex flex-wrap items-center gap-2">
+              <span className="min-w-0 max-w-full break-words font-medium text-foreground [overflow-wrap:anywhere]">{review.displayName}</span>
               <ReviewStars value={review.score} />
               {hidden ? (
                 <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
@@ -199,7 +199,7 @@ function ReviewRow({ skillId, review, canModerate }: {
               {formatLocalDateTime(review.updatedAt, i18n.language)}
             </span>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/90">{review.reviewText}</p>
+          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground/90 [overflow-wrap:anywhere]">{review.reviewText}</p>
           {hidden && review.moderationReason ? (
             <p className="mt-2 text-xs text-muted-foreground">
               {t('skillReviews.moderationReason', { reason: review.moderationReason })}

@@ -348,6 +348,20 @@ describe('SkillDetailPage', () => {
     expect(html).not.toContain('skillDetail.deleteSkill')
   })
 
+  it('wraps a long skill name instead of widening the mobile page', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ displayName: 'review-runtime-1788284593-353294' }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('text-balance break-words text-4xl')
+    expect(html).toContain('[overflow-wrap:anywhere]')
+  })
+
   it('shows the label management panel for a user who can manage the skill lifecycle', () => {
     useSkillDetailMock.mockReturnValue({
       data: createSkill({

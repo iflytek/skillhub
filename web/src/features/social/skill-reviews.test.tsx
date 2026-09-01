@@ -135,6 +135,31 @@ describe('skill reviews', () => {
     expect(mocks.requestedPages[mocks.requestedPages.length - 1]).toBe(0)
   })
 
+  it('wraps long reviewer names and review text', () => {
+    const reviewer = 'review_author_1788284593_353294'
+    const reviewText = 'x'.repeat(200)
+    mocks.pages.set(0, {
+      items: [{
+        id: 8,
+        displayName: reviewer,
+        score: 5,
+        reviewText,
+        status: 'VISIBLE',
+        authoredByViewer: false,
+        createdAt: '2026-09-01T00:00:00Z',
+        updatedAt: '2026-09-01T00:00:00Z',
+      }],
+      total: 1,
+      page: 0,
+      size: 20,
+    })
+
+    render(<SkillReviews skillId={10} canInteract onRequireLogin={vi.fn()} />)
+
+    expect(screen.getByText(reviewer).className).toContain('[overflow-wrap:anywhere]')
+    expect(screen.getByText(reviewText).className).toContain('[overflow-wrap:anywhere]')
+  })
+
   it('keeps review interaction copy in every supported locale', () => {
     for (const locale of [en, zh, ru]) {
       expect(locale.skillReviews.ratingDisplay).toBeTruthy()
