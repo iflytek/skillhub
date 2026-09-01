@@ -188,6 +188,73 @@ else
   fail "Pending promotions list should include submitted team skill"
 fi
 
+PROMOTION_ID="$(JSON_INPUT="$PENDING_PROMOTIONS_RESPONSE" python3 - "$SKILL_ID" <<'PY'
+import json
+import os
+import sys
+
+skill_id = int(sys.argv[1])
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+print(next(item["id"] for item in items if item["sourceSkillId"] == skill_id))
+PY
+)"
+
+UNAUTHORIZED_APPROVAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" \
+  -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotions/$PROMOTION_ID/approve" \
+  -d '{"comment":"unauthorized"}')"
+assert_code "Regular user cannot approve a promotion" "$UNAUTHORIZED_APPROVAL_RESPONSE" "403"
+
+APPROVE_PROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
+  -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotions/$PROMOTION_ID/approve" \
+  -d '{"comment":"approved by promotion smoke"}')"
+assert_code "Admin can approve promotion to global namespace" "$APPROVE_PROMOTION_RESPONSE" "0"
+TARGET_SKILL_ID="$(json_field "$APPROVE_PROMOTION_RESPONSE" "data.targetSkillId")"
+if [[ -n "$TARGET_SKILL_ID" && "$TARGET_SKILL_ID" != "None" && "$TARGET_SKILL_ID" != "null" ]]; then
+  pass "Approved promotion exposes target skill id"
+else
+  fail "Approved promotion should expose target skill id"
+fi
+
+GLOBAL_VERSIONS_RESPONSE="$(curl -sS \
+  "$BASE_URL/api/web/skills/global/$SKILL_SLUG/versions")"
+assert_code "Promoted global skill versions are visible" "$GLOBAL_VERSIONS_RESPONSE" "0"
+if JSON_INPUT="$GLOBAL_VERSIONS_RESPONSE" python3 - <<'PY'
+import json
+import os
+
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+raise SystemExit(0 if any(
+    item["version"] == "1.0.0"
+    and item["status"] == "PUBLISHED"
+    and item["downloadAvailable"]
+    for item in items
+) else 1)
+PY
+then
+  pass "Promoted global version is published and downloadable"
+else
+  fail "Promoted global version should be PUBLISHED with downloadAvailable=true"
+fi
+
+GLOBAL_BUNDLE="$WORK_DIR/global-skill.zip"
+GLOBAL_DOWNLOAD_STATUS="$(curl -sS -L -o "$GLOBAL_BUNDLE" -w '%{http_code}' \
+  "$BASE_URL/api/web/skills/global/$SKILL_SLUG/versions/1.0.0/download")"
+if [[ "$GLOBAL_DOWNLOAD_STATUS" == "200" ]]; then
+  pass "Promoted global version download returns HTTP 200"
+else
+  fail "Promoted global version download should return HTTP 200 (got $GLOBAL_DOWNLOAD_STATUS)"
+fi
+
+if unzip -p "$GLOBAL_BUNDLE" SKILL.md | grep -q '^Body$'; then
+  pass "Promoted global bundle contains the source SKILL.md"
+else
+  fail "Promoted global bundle should contain the source SKILL.md"
+fi
+
 echo
 echo "Results: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -ne 0 ]]; then
