@@ -1,13 +1,22 @@
+import { access, writeFile } from 'node:fs/promises'
 import { acquireSkillTargetLock } from '../../src/services/skill-target-lock'
 import { CliError } from '../../src/shared/errors'
 
-const [rootDir, slug, holdMilliseconds] = process.argv.slice(2)
-if (!rootDir || !slug || !holdMilliseconds) process.exit(5)
+const [rootDir, slug, acquiredPath, releasePath] = process.argv.slice(2)
+if (!rootDir || !slug || !acquiredPath || !releasePath) process.exit(5)
 
 try {
   const release = await acquireSkillTargetLock(rootDir, slug)
+  await writeFile(acquiredPath, 'acquired')
   process.stdout.write('acquired\n')
-  await new Promise(resolve => setTimeout(resolve, Number(holdMilliseconds)))
+  while (true) {
+    try {
+      await access(releasePath)
+      break
+    } catch {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+  }
   await release()
   process.exit(0)
 } catch (error) {
