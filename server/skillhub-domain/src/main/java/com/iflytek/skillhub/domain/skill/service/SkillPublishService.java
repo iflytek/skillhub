@@ -51,6 +51,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -234,6 +235,11 @@ public class SkillPublishService {
         if (resolvedSlug != null && errors.isEmpty()) {
             List<Skill> existingSkills = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), resolvedSlug);
             boolean overwriteAllowed = namespace.isAllowMemberOverwrite() && member.isPresent();
+            // Mirror the publish target selection: first non-archived other-owner skill with a
+            // PUBLISHED version becomes the overwrite target, so version-exists and archived
+            // checks below apply to the record the publish would actually land on.
+            Skill overwriteTarget = null;
+            boolean onlyArchivedTarget = false;
             for (Skill existing : existingSkills) {
                 if (existing.getOwnerId().equals(publisherId)) {
                     if (existing.getStatus() == SkillStatus.ARCHIVED) {
@@ -249,10 +255,25 @@ public class SkillPublishService {
                     boolean hasPublished = !skillVersionRepository
                             .findBySkillIdAndStatus(existing.getId(), SkillVersionStatus.PUBLISHED)
                             .isEmpty();
-                    if (hasPublished && !overwriteAllowed) {
-                        errors.add("Name conflict: slug \"" + resolvedSlug + "\" is already published by another user");
-                        break;
+                    if (hasPublished) {
+                        if (!overwriteAllowed) {
+                            errors.add("Name conflict: slug \"" + resolvedSlug + "\" is already published by another user");
+                            break;
+                        }
+                        if (existing.getStatus() == SkillStatus.ARCHIVED) {
+                            onlyArchivedTarget = true;
+                        } else if (overwriteTarget == null) {
+                            overwriteTarget = existing;
+                        }
                     }
+                }
+            }
+            if (overwriteTarget == null && onlyArchivedTarget) {
+                errors.add("Cannot publish to archived skill: " + resolvedSlug);
+            } else if (overwriteTarget != null && resolvedVersion != null) {
+                var targetVersion = skillVersionRepository.findBySkillIdAndVersion(overwriteTarget.getId(), resolvedVersion);
+                if (targetVersion.isPresent() && targetVersion.get().getStatus() == SkillVersionStatus.PUBLISHED) {
+                    errors.add("Version already published: " + resolvedVersion);
                 }
             }
         }
@@ -407,8 +428,11 @@ public class SkillPublishService {
         // When the namespace opts into allowMemberOverwrite and the publisher is a member, the
         // published skill owned by another user becomes the publish target instead: the new
         // version attaches to it so the (namespace, slug) coordinate keeps its identity and
-        // original owner (SkillVersion.createdBy still records the actual publisher).
+        // original owner (SkillVersion.createdBy still records the actual publisher). Archived
+        // records are never selected as target; when only an archived record carries the
+        // coordinate the publish is rejected below.
         Skill overwriteTarget = null;
+        boolean onlyArchivedTarget = false;
         for (Skill existing : existingSkills) {
             if (!existing.getOwnerId().equals(publisherId)) {
                 boolean hasPublished = !skillVersionRepository
@@ -423,17 +447,26 @@ public class SkillPublishService {
                             throw new DomainBadRequestException("error.skill.publish.nameConflict", skillSlug);
                         }
                     }
-                    if (overwriteTarget == null) {
+                    if (existing.getStatus() == SkillStatus.ARCHIVED) {
+                        onlyArchivedTarget = true;
+                    } else if (overwriteTarget == null) {
                         overwriteTarget = existing;
                     }
                 }
             }
         }
+        if (overwriteTarget == null && onlyArchivedTarget) {
+            throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
+        }
 
         // Find or create skill for current user
         Skill skill;
+        SkillVisibility effectiveVisibility = visibility;
         if (overwriteTarget != null) {
             skill = overwriteTarget;
+            // Overwriting updates someone else's coordinate: the requested visibility must not
+            // change the target skill's reach, so the target's current visibility wins.
+            effectiveVisibility = skill.getVisibility();
         } else {
             skill = skillRepository.findByNamespaceIdAndSlugAndOwnerId(namespace.getId(), skillSlug, publisherId)
                     .orElseGet(() -> {
@@ -481,12 +514,12 @@ public class SkillPublishService {
 
         // 8. Create SkillVersion
         SkillVersion version = new SkillVersion(skill.getId(), metadata.version(), publisherId);
-        version.setRequestedVisibility(visibility);
+        version.setRequestedVisibility(effectiveVisibility);
         boolean autoPublish = forceAutoPublish || isSuperAdmin;
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
             version.setPublishedAt(currentTime());
-        } else if (visibility == SkillVisibility.PRIVATE) {
+        } else if (effectiveVisibility == SkillVisibility.PRIVATE) {
             // PRIVATE skill goes to UPLOADED status, no review task created
             version.setStatus(SkillVersionStatus.UPLOADED);
             version.setPublishedAt(currentTime());
@@ -577,7 +610,7 @@ public class SkillPublishService {
         skillVersionRepository.save(version);
 
         // Create review task for PUBLIC/NAMESPACE_ONLY (not PRIVATE)
-        if (!autoPublish && visibility != SkillVisibility.PRIVATE) {
+        if (!autoPublish && effectiveVisibility != SkillVisibility.PRIVATE) {
             ReviewTask reviewTask = new ReviewTask(
                     version.getId(), skill.getId(), namespace.getId(), version.getVersion(), publisherId);
             ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
@@ -598,10 +631,10 @@ public class SkillPublishService {
         // 12. Update skill metadata and move the published pointer for auto-publish flows
         skill.setDisplayName(metadata.name());
         skill.setSummary(metadata.description());
-        if (autoPublish || visibility == SkillVisibility.PRIVATE) {
+        if (autoPublish || effectiveVisibility == SkillVisibility.PRIVATE) {
             // Update latestVersionId for autoPublish or PRIVATE skill (UPLOADED status)
             skill.setLatestVersionId(version.getId());
-            skill.setVisibility(visibility);
+            skill.setVisibility(effectiveVisibility);
         }
         skill.setUpdatedBy(publisherId);
         skillRepository.save(skill);
@@ -713,7 +746,7 @@ public class SkillPublishService {
      * member. With the setting off (the default) the owner-isolation behavior is unchanged for
      * everyone, including OWNER/ADMIN and SUPER_ADMIN.
      */
-    private boolean canOverwriteOtherOwners(Namespace namespace, java.util.Optional<NamespaceMember> membership) {
+    private boolean canOverwriteOtherOwners(Namespace namespace, Optional<NamespaceMember> membership) {
         return namespace.isAllowMemberOverwrite() && membership.isPresent();
     }
 

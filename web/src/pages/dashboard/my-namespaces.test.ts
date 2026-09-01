@@ -95,6 +95,7 @@ function buildNamespace(overrides: Partial<ManagedNamespace> = {}): ManagedNames
     description: 'namespace',
     type: 'TEAM',
     status: 'ACTIVE',
+    allowMemberOverwrite: false,
     createdAt: '2026-05-07T00:00:00Z',
     immutable: false,
     canFreeze: false,
