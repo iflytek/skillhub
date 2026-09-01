@@ -1302,6 +1302,8 @@
   "skillReviews": {
     "title": "User reviews",
     "count": "{{count}} reviews",
+    "count_one": "{{count}} review",
+    "count_other": "{{count}} reviews",
     "write": "Write a review",
     "edit": "Edit my review",
     "scoreLabel": "Your score",

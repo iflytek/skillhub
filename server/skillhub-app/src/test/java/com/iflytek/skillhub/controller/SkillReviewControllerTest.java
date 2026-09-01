@@ -93,6 +93,19 @@ class SkillReviewControllerTest {
     }
 
     @Test
+    void reviewScoreIsRequiredByTheApiContract() throws Exception {
+        var principal = principal("user-42", Set.of());
+
+        mockMvc.perform(put("/api/v1/skills/10/reviews/me")
+                        .with(authentication(authToken(principal, "ROLE_USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reviewText\":\"Useful\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
     void skillAdminCanHideReview() throws Exception {
         var principal = principal("admin", Set.of("SKILL_ADMIN"));
 

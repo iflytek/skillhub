@@ -1302,6 +1302,7 @@
   "skillReviews": {
     "title": "用户评价",
     "count": "共 {{count}} 条评价",
+    "count_other": "共 {{count}} 条评价",
     "write": "写评价",
     "edit": "编辑我的评价",
     "scoreLabel": "你的评分",

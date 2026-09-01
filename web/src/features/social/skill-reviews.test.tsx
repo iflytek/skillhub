@@ -143,6 +143,11 @@ describe('skill reviews', () => {
       expect(locale.skillReviews.hide).toBeTruthy()
       expect(locale.skillReviews.restore).toBeTruthy()
     }
+    expect(en.skillReviews.count_one).toBe('{{count}} review')
+    expect(en.skillReviews.count_other).toBe('{{count}} reviews')
+    expect(ru.skillReviews.count_one).toBeTruthy()
+    expect(ru.skillReviews.count_few).toBeTruthy()
+    expect(ru.skillReviews.count_many).toBeTruthy()
   })
 
   it('lets an authenticated author clear existing text when the skill is not interactable', () => {

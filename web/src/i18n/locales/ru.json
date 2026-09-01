@@ -1514,6 +1514,10 @@
   "skillReviews": {
     "title": "Отзывы пользователей",
     "count": "Отзывов: {{count}}",
+    "count_one": "{{count}} отзыв",
+    "count_few": "{{count}} отзыва",
+    "count_many": "{{count}} отзывов",
+    "count_other": "{{count}} отзыва",
     "write": "Написать отзыв",
     "edit": "Изменить мой отзыв",
     "scoreLabel": "Ваша оценка",

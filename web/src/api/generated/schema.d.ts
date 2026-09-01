@@ -3747,7 +3747,7 @@ export interface components {
         };
         SkillReviewRequest: {
             /** Format: int32 */
-            score?: number;
+            score: number;
             reviewText: string;
         };
         ApiResponseSkillReviewMeResponse: {
