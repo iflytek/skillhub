@@ -77,6 +77,11 @@ class SkillReviewModerationFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("HIDDEN"));
 
+        SkillRating hidden = ratingRepository.findById(review.getId()).orElseThrow();
+        assertThat(hidden.getReviewStatus()).isEqualTo(SkillReviewStatus.HIDDEN);
+        assertThat(hidden.getModeratedBy()).isEqualTo(ADMIN_ID);
+        assertThat(hidden.getModerationReason()).isEqualTo("off topic");
+
         mockMvc.perform(post("/api/v1/admin/skill-reviews/" + review.getId() + "/restore")
                         .with(authentication(adminAuth()))
                         .with(csrf()))
@@ -89,6 +94,8 @@ class SkillReviewModerationFlowIntegrationTest {
 
         List<String> actions = auditLogRepository.findAll().stream()
                 .filter(log -> ADMIN_ID.equals(log.getActorUserId()))
+                .filter(log -> review.getId().equals(log.getTargetId()))
+                .filter(log -> "SKILL_REVIEW".equals(log.getTargetType()))
                 .map(AuditLog::getAction)
                 .toList();
         assertThat(actions).contains("SKILL_REVIEW_HIDE", "SKILL_REVIEW_RESTORE");

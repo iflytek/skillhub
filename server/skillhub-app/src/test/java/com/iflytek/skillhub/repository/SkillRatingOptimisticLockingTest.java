@@ -8,6 +8,7 @@ import com.iflytek.skillhub.domain.social.SkillReviewStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.OptimisticLockException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -78,7 +79,7 @@ class SkillRatingOptimisticLockingTest {
                 secondManager.persist(duplicate);
                 secondManager.flush();
                 secondManager.getTransaction().commit();
-            }).isInstanceOf(RuntimeException.class);
+            }).satisfies(error -> assertThat(hasCause(error, ConstraintViolationException.class)).isTrue());
 
             EntityManager verifier = entityManagerFactory.createEntityManager();
             try {
