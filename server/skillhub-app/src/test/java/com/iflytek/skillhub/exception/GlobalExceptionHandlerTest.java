@@ -14,6 +14,7 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.security.SensitiveLogSanitizer;
+import com.iflytek.skillhub.domain.social.SkillRating;
 import com.iflytek.skillhub.storage.StorageAccessException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
@@ -29,11 +30,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.StaticMessageSource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -72,6 +75,8 @@ class GlobalExceptionHandlerTest {
         messageSource.addMessage("error.unsupportedMediaType", java.util.Locale.getDefault(), "Unsupported media type");
         messageSource.addMessage("error.notAcceptable", java.util.Locale.getDefault(),
                 "Requested response media type is not acceptable");
+        messageSource.addMessage("error.request.conflict", java.util.Locale.getDefault(),
+                "Refresh and try again");
         requestIdAccessor = new RequestIdAccessor();
         ApiResponseFactory responseFactory = new ApiResponseFactory(
                 messageSource,
@@ -142,6 +147,26 @@ class GlobalExceptionHandlerTest {
                 .contains("authentication=authenticated")
                 .doesNotContain(STABLE_USER_ID)
                 .doesNotContain("userId="));
+    }
+
+    @Test
+    void persistenceConflictsReturn409WithoutLeakingDatabaseDetails() {
+        attachAppender();
+        prepareClientErrorRequest("PUT", "/api/v1/skills/10/reviews/me");
+
+        for (RuntimeException exception : List.of(
+                new ObjectOptimisticLockingFailureException(SkillRating.class, 7L),
+                new DataIntegrityViolationException("duplicate key value violates constraint user-secret"))) {
+            ResponseEntity<ApiResponse<Void>> response = handler.handlePersistenceConflict(exception, request);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().code()).isEqualTo(409);
+            assertThat(response.getBody().msg()).isEqualTo("Refresh and try again");
+        }
+        assertThat(loggedMessages()).allSatisfy(message -> assertThat(message)
+                .doesNotContain("user-secret")
+                .doesNotContain("duplicate key"));
     }
 
     @Test

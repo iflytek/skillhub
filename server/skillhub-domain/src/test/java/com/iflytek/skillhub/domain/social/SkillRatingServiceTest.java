@@ -134,6 +134,26 @@ class SkillRatingServiceTest {
     }
 
     @Test
+    void clearAndResubmitReview_preservesHiddenModerationState() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        SkillRating existing = new SkillRating(1L, "user-1", (short) 4);
+        existing.updateReview((short) 4, "Hidden review");
+        existing.hideReview("moderator-1", "Policy violation");
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1"))
+                .thenReturn(Optional.of(existing));
+        when(ratingRepository.save(existing)).thenReturn(existing);
+
+        service.clearReview(1L, "user-1");
+        SkillRating resubmitted = service.upsertReview(1L, "user-1", (short) 5, "Rewritten review");
+
+        assertThat(resubmitted.getReviewStatus()).isEqualTo(SkillReviewStatus.HIDDEN);
+        assertThat(resubmitted.getModeratedBy()).isEqualTo("moderator-1");
+        assertThat(resubmitted.getModerationReason()).isEqualTo("Policy violation");
+        assertThat(resubmitted.getReviewText()).isEqualTo("Rewritten review");
+        verify(ratingRepository, times(2)).flush();
+    }
+
+    @Test
     void moderator_can_hide_and_restore_review() {
         SkillRating existing = new SkillRating(1L, "user-1", (short) 4);
         existing.updateReview((short) 4, "Useful skill");

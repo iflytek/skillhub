@@ -39,20 +39,28 @@ public class JpaSkillReviewQueryRepository implements SkillReviewQueryRepository
                 .toList();
         Map<String, UserAccount> authors = userAccountRepository.findByIdIn(authorIds).stream()
                 .collect(Collectors.toMap(UserAccount::getId, Function.identity()));
-        return reviews.map(review -> toResponse(review, authors.get(review.getUserId()), viewerId));
+        return reviews.map(review -> toResponse(
+                review,
+                authors.get(review.getUserId()),
+                viewerId,
+                includeHidden
+        ));
     }
 
-    private SkillReviewResponse toResponse(SkillRating review, UserAccount author, String viewerId) {
+    private SkillReviewResponse toResponse(SkillRating review,
+                                           UserAccount author,
+                                           String viewerId,
+                                           boolean includeModerationDetails) {
         return new SkillReviewResponse(
                 review.getId(),
-                review.getUserId(),
+                includeModerationDetails ? review.getUserId() : null,
                 author != null ? author.getDisplayName() : review.getUserId(),
                 author != null ? author.getAvatarUrl() : null,
                 review.getScore(),
                 review.getReviewText(),
                 review.getReviewStatus().name(),
                 review.getUserId().equals(viewerId),
-                review.getModerationReason(),
+                includeModerationDetails ? review.getModerationReason() : null,
                 review.getCreatedAt(),
                 review.getUpdatedAt()
         );

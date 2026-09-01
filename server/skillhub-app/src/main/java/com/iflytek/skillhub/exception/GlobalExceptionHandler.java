@@ -13,10 +13,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.FieldError;
@@ -66,6 +68,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LocalizedDomainException.class)
     public ResponseEntity<ApiResponse<Void>> handleLocalizedDomainException(LocalizedDomainException ex, HttpServletRequest request) {
         return renderLocalizedError(ex, HttpStatus.valueOf(ex.statusCode()), request);
+    }
+
+    @ExceptionHandler({
+            ObjectOptimisticLockingFailureException.class,
+            DataIntegrityViolationException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handlePersistenceConflict(
+            RuntimeException ex,
+            HttpServletRequest request) {
+        logHandledException(HttpStatus.CONFLICT, "error.request.conflict", request);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                apiResponseFactory.error(409, "error.request.conflict"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

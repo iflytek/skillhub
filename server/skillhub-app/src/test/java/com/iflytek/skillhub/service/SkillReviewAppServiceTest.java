@@ -11,6 +11,9 @@ import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.social.SkillRating;
@@ -32,6 +35,7 @@ import org.springframework.data.domain.Pageable;
 class SkillReviewAppServiceTest {
 
     @Mock private SkillRepository skillRepository;
+    @Mock private SkillVersionRepository skillVersionRepository;
     @Mock private SkillRatingService ratingService;
     @Mock private SkillReviewQueryRepository queryRepository;
     @Mock private AuditLogService auditLogService;
@@ -43,6 +47,7 @@ class SkillReviewAppServiceTest {
     void setUp() {
         service = new SkillReviewAppService(
                 skillRepository,
+                skillVersionRepository,
                 new VisibilityChecker(),
                 ratingService,
                 queryRepository,
@@ -83,6 +88,22 @@ class SkillReviewAppServiceTest {
         assertThatThrownBy(() -> service.upsert(
                 10L, "other-user", (short) 5, "great", Map.of(), Set.of()))
                 .isInstanceOf(DomainForbiddenException.class);
+
+        verify(ratingService, never()).upsertReview(any(), any(), any(Short.class), any());
+    }
+
+    @Test
+    void unpublishedSkillReviewMutationIsRejectedServerSide() {
+        Skill skill = publishedSkill(SkillVisibility.PUBLIC);
+        SkillVersion pending = new SkillVersion(10L, "1.0.0", "owner");
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        when(skillRepository.findById(10L)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findById(100L)).thenReturn(Optional.of(pending));
+
+        assertThatThrownBy(() -> service.upsert(
+                10L, "owner", (short) 5, "not published", Map.of(), Set.of()))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class)
+                .hasMessage("error.skillReview.notInteractable");
 
         verify(ratingService, never()).upsertReview(any(), any(), any(Short.class), any());
     }

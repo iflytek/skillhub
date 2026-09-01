@@ -4,6 +4,7 @@ ALTER TABLE skill_rating
     ADD COLUMN moderated_by VARCHAR(128) REFERENCES user_account(id),
     ADD COLUMN moderated_at TIMESTAMPTZ,
     ADD COLUMN moderation_reason VARCHAR(500),
+    ADD COLUMN lock_version BIGINT NOT NULL DEFAULT 0,
     ADD CONSTRAINT chk_skill_rating_review_status
         CHECK (review_status IN ('VISIBLE', 'HIDDEN'));
 

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
  */
 public interface SkillRatingRepository {
     SkillRating save(SkillRating rating);
+    void flush();
     Optional<SkillRating> findById(Long id);
     Optional<SkillRating> findBySkillIdAndUserId(Long skillId, String userId);
     Page<SkillRating> findVisibleReviewsBySkillId(Long skillId, Pageable pageable);

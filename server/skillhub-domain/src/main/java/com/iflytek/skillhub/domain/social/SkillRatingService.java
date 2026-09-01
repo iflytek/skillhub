@@ -51,6 +51,7 @@ public class SkillRatingService {
                 .orElseGet(() -> new SkillRating(skillId, userId, score));
         rating.updateReview(score, reviewText);
         SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
         eventPublisher.publishEvent(new SkillRatedEvent(skillId, userId, score));
         return saved;
     }
@@ -62,21 +63,27 @@ public class SkillRatingService {
                 .filter(SkillRating::hasReview)
                 .orElseThrow(() -> new DomainNotFoundException("error.skillReview.notFound"));
         rating.clearReview();
-        return ratingRepository.save(rating);
+        SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
+        return saved;
     }
 
     @Transactional
     public SkillRating hideReview(Long reviewId, String moderatorId, String reason) {
         SkillRating rating = findReview(reviewId);
         rating.hideReview(moderatorId, reason);
-        return ratingRepository.save(rating);
+        SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
+        return saved;
     }
 
     @Transactional
     public SkillRating restoreReview(Long reviewId, String moderatorId) {
         SkillRating rating = findReview(reviewId);
         rating.restoreReview(moderatorId);
-        return ratingRepository.save(rating);
+        SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
+        return saved;
     }
 
     public Optional<Short> getUserRating(Long skillId, String userId) {

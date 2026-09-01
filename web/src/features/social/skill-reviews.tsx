@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, MessageSquare, ShieldAlert, Star } from 'lucide-react'
 import { useAuth } from '@/features/auth/use-auth'
@@ -29,16 +29,37 @@ function ReviewStars({ value, onChange, disabled = false }: {
   onChange?: (value: number) => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation()
+
+  if (!onChange) {
+    return (
+      <div className="flex items-center gap-1" aria-label={t('skillReviews.ratingDisplay', { score: value })}>
+        {[1, 2, 3, 4, 5].map((score) => (
+          <Star
+            key={score}
+            aria-hidden="true"
+            className={cn(
+              'h-4 w-4',
+              score <= value ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/40',
+            )}
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="flex items-center gap-1" aria-label={`${value}/5`}>
+    <div className="flex items-center gap-1" role="radiogroup" aria-label={t('skillReviews.scoreLabel')}>
       {[1, 2, 3, 4, 5].map((score) => (
         <button
           key={score}
           type="button"
           className={cn('rounded p-0.5', onChange && 'hover:scale-110 transition-transform')}
-          onClick={() => onChange?.(score)}
-          disabled={disabled || !onChange}
-          aria-label={`${score}`}
+          role="radio"
+          aria-checked={score === value}
+          onClick={() => onChange(score)}
+          disabled={disabled}
+          aria-label={t('skillReviews.ratingOption', { score })}
         >
           <Star className={cn(
             'h-4 w-4',
@@ -56,6 +77,7 @@ function ReviewEditor({ skillId, review, onDone }: {
   onDone: () => void
 }) {
   const { t } = useTranslation()
+  const reviewTextId = useId()
   const [score, setScore] = useState(review?.rated ? review.score : 5)
   const [reviewText, setReviewText] = useState(review?.reviewText ?? '')
   const save = useUpsertSkillReview(skillId)
@@ -93,7 +115,9 @@ function ReviewEditor({ skillId, review, onDone }: {
         <span className="text-sm font-medium">{t('skillReviews.scoreLabel')}</span>
         <ReviewStars value={score} onChange={setScore} disabled={pending} />
       </div>
+      <label htmlFor={reviewTextId} className="sr-only">{t('skillReviews.reviewTextLabel')}</label>
       <Textarea
+        id={reviewTextId}
         value={reviewText}
         onChange={(event) => setReviewText(event.target.value)}
         maxLength={2000}
@@ -193,6 +217,11 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
   const canModerate = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const totalPages = reviews.data ? Math.ceil(reviews.data.total / reviews.data.size) : 0
 
+  const finishEditing = () => {
+    setEditing(false)
+    setPage(0)
+  }
+
   const startEditing = () => {
     if (!isAuthenticated) {
       onRequireLogin()
@@ -232,7 +261,7 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
           key={`${mine.data?.reviewId ?? 'new'}-${mine.data?.updatedAt ?? ''}`}
           skillId={skillId}
           review={mine.data}
-          onDone={() => setEditing(false)}
+          onDone={finishEditing}
         />
       ) : null}
 
@@ -257,12 +286,12 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
         </div>
       )}
 
-      {totalPages > 1 ? (
+      {page > 0 || totalPages > 1 ? (
         <div className="flex items-center justify-end gap-2 border-t border-border/50 pt-4">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>
             {t('skillReviews.previous')}
           </Button>
-          <span className="text-xs text-muted-foreground">{page + 1}/{totalPages}</span>
+          <span className="text-xs text-muted-foreground">{page + 1}/{Math.max(totalPages, 1)}</span>
           <Button variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)}>
             {t('skillReviews.next')}
           </Button>

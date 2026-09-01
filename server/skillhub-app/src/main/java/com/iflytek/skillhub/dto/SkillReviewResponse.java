@@ -1,7 +1,9 @@
 package com.iflytek.skillhub.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record SkillReviewResponse(
         Long id,
         String userId,

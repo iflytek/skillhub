@@ -14,6 +14,10 @@ public class SkillRating {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(name = "lock_version", nullable = false)
+    private Long lockVersion;
+
     @Column(name = "skill_id", nullable = false)
     private Long skillId;
 
@@ -69,10 +73,6 @@ public class SkillRating {
 
     public void clearReview() {
         this.reviewText = null;
-        this.reviewStatus = SkillReviewStatus.VISIBLE;
-        this.moderatedBy = null;
-        this.moderatedAt = null;
-        this.moderationReason = null;
         this.updatedAt = Instant.now(Clock.systemUTC());
     }
 
@@ -143,6 +143,7 @@ public class SkillRating {
 
     // getters
     public Long getId() { return id; }
+    public Long getLockVersion() { return lockVersion; }
     public Long getSkillId() { return skillId; }
     public String getUserId() { return userId; }
     public Short getScore() { return score; }

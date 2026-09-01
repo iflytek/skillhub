@@ -235,11 +235,13 @@
 | moderated_by | varchar(128) | 最近一次管理操作人，nullable |
 | moderated_at | datetime | 最近一次管理时间，nullable |
 | moderation_reason | varchar(500) | 隐藏原因，nullable |
+| lock_version | bigint | 乐观锁版本；并发编辑或治理冲突返回 409 |
 | created_at | datetime | |
 | updated_at | datetime | |
 
 唯一约束：`(skill_id, user_id)`，每人每技能一条，可修改。删除文字评价只清空
-`review_text`，保留评分；管理员隐藏评价时也保留评分，避免治理动作改变聚合分数。
+`review_text`，保留评分和既有治理状态；管理员隐藏评价时也保留评分，避免作者通过
+清空后重新提交绕过治理，或治理动作改变聚合分数。
 
 ### user_account
 

@@ -8,6 +8,8 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.social.SkillRating;
 import com.iflytek.skillhub.domain.social.SkillRatingService;
@@ -28,6 +30,7 @@ public class SkillReviewAppService {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final SkillRepository skillRepository;
+    private final SkillVersionRepository skillVersionRepository;
     private final VisibilityChecker visibilityChecker;
     private final SkillRatingService ratingService;
     private final SkillReviewQueryRepository queryRepository;
@@ -35,12 +38,14 @@ public class SkillReviewAppService {
     private final RequestIdAccessor requestIdAccessor;
 
     public SkillReviewAppService(SkillRepository skillRepository,
+                                 SkillVersionRepository skillVersionRepository,
                                  VisibilityChecker visibilityChecker,
                                  SkillRatingService ratingService,
                                  SkillReviewQueryRepository queryRepository,
                                  AuditLogService auditLogService,
                                  RequestIdAccessor requestIdAccessor) {
         this.skillRepository = skillRepository;
+        this.skillVersionRepository = skillVersionRepository;
         this.visibilityChecker = visibilityChecker;
         this.ratingService = ratingService;
         this.queryRepository = queryRepository;
@@ -83,7 +88,7 @@ public class SkillReviewAppService {
                                         String reviewText,
                                         Map<Long, NamespaceRole> namespaceRoles,
                                         Set<String> platformRoles) {
-        requireVisibleSkill(skillId, userId, namespaceRoles, platformRoles);
+        requireInteractableSkill(skillId, userId, namespaceRoles, platformRoles);
         return toMine(ratingService.upsertReview(skillId, userId, score, reviewText));
     }
 
@@ -91,7 +96,7 @@ public class SkillReviewAppService {
                                        String userId,
                                        Map<Long, NamespaceRole> namespaceRoles,
                                        Set<String> platformRoles) {
-        requireVisibleSkill(skillId, userId, namespaceRoles, platformRoles);
+        requireInteractableSkill(skillId, userId, namespaceRoles, platformRoles);
         return toMine(ratingService.clearReview(skillId, userId));
     }
 
@@ -126,6 +131,21 @@ public class SkillReviewAppService {
                 namespaceRoles != null ? namespaceRoles : Map.of(),
                 platformRoles != null ? platformRoles : Set.of())) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
+        return skill;
+    }
+
+    private Skill requireInteractableSkill(Long skillId,
+                                           String userId,
+                                           Map<Long, NamespaceRole> namespaceRoles,
+                                           Set<String> platformRoles) {
+        Skill skill = requireVisibleSkill(skillId, userId, namespaceRoles, platformRoles);
+        boolean published = skill.getLatestVersionId() != null
+                && skillVersionRepository.findById(skill.getLatestVersionId())
+                .map(version -> version.getStatus() == SkillVersionStatus.PUBLISHED)
+                .orElse(false);
+        if (!published) {
+            throw new DomainBadRequestException("error.skillReview.notInteractable");
         }
         return skill;
     }
