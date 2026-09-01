@@ -39,13 +39,27 @@ describe('skill target lifecycle lock', () => {
       stdout: 'pipe',
       stderr: 'pipe'
     }))
-    await waitForFile(acquiredPath)
-    const loserExitCode = await Promise.race([
-      ...processes.map(process => process.exited),
-      Bun.sleep(5_000).then(() => { throw new Error('timed out waiting for the lock loser') })
-    ])
-    expect(loserExitCode).toBe(4)
-    await writeFile(releasePath, 'release')
+    try {
+      await waitForFile(acquiredPath)
+      const loserExitCode = await Promise.race([
+        ...processes.map(process => process.exited),
+        Bun.sleep(5_000).then(() => { throw new Error('timed out waiting for the lock loser') })
+      ])
+      expect(loserExitCode).toBe(4)
+    } finally {
+      try {
+        await writeFile(releasePath, 'release')
+      } finally {
+        const exited = await Promise.race([
+          Promise.all(processes.map(process => process.exited)).then(() => true),
+          Bun.sleep(5_000).then(() => false)
+        ])
+        if (!exited) {
+          for (const process of processes) process.kill()
+          await Promise.all(processes.map(process => process.exited))
+        }
+      }
+    }
     const results = await Promise.all(processes.map(async process => ({
       exitCode: await process.exited,
       stdout: (await new Response(process.stdout).text()).trim(),
