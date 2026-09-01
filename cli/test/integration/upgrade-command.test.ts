@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { strToU8, zipSync } from 'fflate'
@@ -242,6 +242,10 @@ describe('upgrade command', () => {
     expect(isAbsolute(inventory.items[0].targets[0].rootDir)).toBe(true)
     expect(inventory.items[0].targets[0].installDir)
       .toBe(join(inventory.items[0].targets[0].rootDir, 'portable'))
+    expect(await realpath(inventory.items[0].targets[0].rootDir))
+      .toBe(await realpath(join(env.cwd, 'skills')))
+    expect(await realpath(inventory.items[0].targets[0].installDir))
+      .toBe(await realpath(join(env.cwd, 'skills', 'portable')))
 
     inventory.items[0].targets[0].rootDir = 'skills'
     inventory.items[0].targets[0].installDir = join('skills', 'portable')
