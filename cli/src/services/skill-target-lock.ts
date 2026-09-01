@@ -28,7 +28,7 @@ export async function acquireSkillTargetLock(rootDir: string, slug: string): Pro
 
 export async function skillTargetLockPath(rootDir: string, slug: string): Promise<string> {
   const canonicalRoot = await canonicalizeExistingPath(resolve(rootDir))
-  const target = await canonicalizeExistingPath(resolve(canonicalRoot, slug))
+  const target = resolve(canonicalRoot, slug)
   const digest = createHash('sha256').update(target).digest('hex')
   const uid = typeof process.getuid === 'function' ? process.getuid() : 'user'
   const lockDir = join(tmpdir(), `skillhub-cli-target-locks-${uid}`)
