@@ -148,6 +148,7 @@ describe('skill reviews', () => {
     expect(ru.skillReviews.count_one).toBeTruthy()
     expect(ru.skillReviews.count_few).toBeTruthy()
     expect(ru.skillReviews.count_many).toBeTruthy()
+    expect(ru.skillReviews.count_other).toBeTruthy()
   })
 
   it('lets an authenticated author clear existing text when the skill is not interactable', () => {

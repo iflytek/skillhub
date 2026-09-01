@@ -42,7 +42,10 @@ describe('russian locale', () => {
       for (const part of parts) {
         cursor = (cursor as Record<string, unknown>)[part]
       }
-      const englishReference = enMap[key] ?? enMap[key.replace(pluralSuffix, '_other')] ?? ''
+      const englishReference = enMap[key] ?? enMap[key.replace(pluralSuffix, '_other')]
+      if (englishReference === undefined) {
+        throw new Error(`missing English reference for ${key}`)
+      }
       if (placeholders(String(cursor)).join() !== placeholders(englishReference).join()) {
         mismatches.push(key)
       }
