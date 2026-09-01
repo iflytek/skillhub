@@ -212,13 +212,14 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
           }
         }
         if (item.backupDir) {
+          const backupDir = item.backupDir
           try {
-            await rename(item.backupDir, item.skillDir)
+            await rename(backupDir, item.skillDir)
             item.backupDir = null
           } catch (rollbackError) {
             rollbackFailures.push({
               operation: 'restore backup',
-              path: item.backupDir,
+              path: backupDir,
               error: describeError(rollbackError)
             })
           }
