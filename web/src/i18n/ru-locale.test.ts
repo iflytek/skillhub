@@ -15,9 +15,15 @@ function placeholders(text: string): string[] {
   return [...text.matchAll(/\{\{[^}]+\}\}/g)].map((match) => match[0]).sort()
 }
 
+const pluralSuffix = /_(zero|one|two|few|many|other)$/
+
+function normalizedLeafKeys(value: unknown): string[] {
+  return [...new Set(leafKeys(value).map((key) => key.replace(pluralSuffix, '_plural')))]
+}
+
 describe('russian locale', () => {
   it('mirrors the english key tree', () => {
-    expect(leafKeys(ru).sort()).toEqual(leafKeys(en).sort())
+    expect(normalizedLeafKeys(ru).sort()).toEqual(normalizedLeafKeys(en).sort())
   })
 
   it('preserves interpolation placeholders', () => {
@@ -36,7 +42,11 @@ describe('russian locale', () => {
       for (const part of parts) {
         cursor = (cursor as Record<string, unknown>)[part]
       }
-      if (placeholders(String(cursor)).join() !== placeholders(enMap[key] ?? '').join()) {
+      const englishReference = enMap[key] ?? enMap[key.replace(pluralSuffix, '_other')]
+      if (englishReference === undefined) {
+        throw new Error(`missing English reference for ${key}`)
+      }
+      if (placeholders(String(cursor)).join() !== placeholders(englishReference).join()) {
         mismatches.push(key)
       }
     }

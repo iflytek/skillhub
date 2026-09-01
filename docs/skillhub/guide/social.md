@@ -60,6 +60,13 @@ SkillHub 提供了丰富的社交功能，让团队成员可以互动、分享�
 3. 评分会立即生效，影响技能包的平均评分
 4. 可以随时修改评分
 
+**撰写评价**：
+
+1. 在已发布技能的详情页点击「写评价」
+2. 选择 1-5 星并填写最多 2000 字的评价
+3. 可以修改或清空评价；清空评价不会删除星级评分，即使技能之后取消发布也仍可清空自己的文字
+4. 被管理员隐藏的评价在重新编辑后仍保持隐藏，只有技能管理员或超级管理员可以恢复公开
+
 **查看通知**：
 
 1. 点击顶部导航栏的通知图标
@@ -125,6 +132,24 @@ GET /api/v1/me/stars?page=0&size=20
 GET /api/v1/skills/{skillId}/rating
 ```
 
+**评价接口**：
+
+```bash
+# 公开评价列表
+GET /api/v1/skills/{skillId}/reviews?page=0&size=20
+
+# 查看、创建或修改自己的评价
+GET /api/v1/skills/{skillId}/reviews/me
+PUT /api/v1/skills/{skillId}/reviews/me
+
+# 清空评价文字并保留星级评分
+DELETE /api/v1/skills/{skillId}/reviews/me
+
+# 技能管理员或超级管理员隐藏、恢复评价
+POST /api/v1/admin/skill-reviews/{reviewId}/hide
+POST /api/v1/admin/skill-reviews/{reviewId}/restore
+```
+
 **响应示例**：
 ```json
 {
@@ -136,6 +161,8 @@ GET /api/v1/skills/{skillId}/rating
 ## 注意事项
 
 > **评分规则**：每个用户对每个技能包只能评分一次，可以修改评分但不能删除。
+
+> **评价规则**：只有已发布技能可以评价；公开列表只显示可见评价。并发修改发生冲突时，刷新详情后重试。
 
 - **星标数量**：技能包的星标数会显示在搜索结果和详情页
 - **平均评分**：技能包的平均评分会影响搜索排序

@@ -1,10 +1,12 @@
 package com.iflytek.skillhub.domain.social;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.social.event.SkillRatedEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,10 +46,74 @@ public class SkillRatingService {
         eventPublisher.publishEvent(new SkillRatedEvent(skillId, userId, score));
     }
 
+    @Transactional
+    public SkillRating upsertReview(Long skillId, String userId, short score, String reviewText) {
+        ensureSkillExists(skillId);
+        SkillRating rating = ratingRepository.findBySkillIdAndUserId(skillId, userId)
+                .orElseGet(() -> new SkillRating(skillId, userId, score));
+        rating.updateReview(score, reviewText);
+        SkillRating saved;
+        try {
+            saved = ratingRepository.save(rating);
+            ratingRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new DomainConflictException("error.request.conflict");
+        }
+        eventPublisher.publishEvent(new SkillRatedEvent(skillId, userId, score));
+        return saved;
+    }
+
+    @Transactional
+    public SkillRating clearReview(Long skillId, String userId) {
+        ensureSkillExists(skillId);
+        SkillRating rating = ratingRepository.findBySkillIdAndUserId(skillId, userId)
+                .filter(SkillRating::hasReview)
+                .orElseThrow(() -> new DomainNotFoundException("error.skillReview.notFound"));
+        rating.clearReview();
+        SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
+        return saved;
+    }
+
+    @Transactional
+    public SkillRating hideReview(Long reviewId, String moderatorId, String reason) {
+        SkillRating rating = findReview(reviewId);
+        rating.hideReview(moderatorId, reason);
+        SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
+        return saved;
+    }
+
+    @Transactional
+    public SkillRating restoreReview(Long reviewId, String moderatorId) {
+        SkillRating rating = findReview(reviewId);
+        rating.restoreReview(moderatorId);
+        SkillRating saved = ratingRepository.save(rating);
+        ratingRepository.flush();
+        return saved;
+    }
+
     public Optional<Short> getUserRating(Long skillId, String userId) {
         ensureSkillExists(skillId);
         return ratingRepository.findBySkillIdAndUserId(skillId, userId)
             .map(SkillRating::getScore);
+    }
+
+    public Optional<SkillRating> getUserReview(Long skillId, String userId) {
+        ensureSkillExists(skillId);
+        return ratingRepository.findBySkillIdAndUserId(skillId, userId)
+                .filter(SkillRating::hasReview);
+    }
+
+    public Optional<SkillRating> getUserFeedback(Long skillId, String userId) {
+        ensureSkillExists(skillId);
+        return ratingRepository.findBySkillIdAndUserId(skillId, userId);
+    }
+
+    private SkillRating findReview(Long reviewId) {
+        return ratingRepository.findById(reviewId)
+                .filter(SkillRating::hasReview)
+                .orElseThrow(() -> new DomainNotFoundException("error.skillReview.notFound"));
     }
 
     private void ensureSkillExists(Long skillId) {

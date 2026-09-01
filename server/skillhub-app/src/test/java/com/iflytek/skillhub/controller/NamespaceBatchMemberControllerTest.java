@@ -16,11 +16,13 @@ import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.service.NamespaceMemberCandidateService;
+import com.iflytek.skillhub.service.NamespacePortalCommandAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -35,6 +37,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,6 +70,9 @@ class NamespaceBatchMemberControllerTest {
 
     @MockBean
     private NamespaceMemberCandidateService namespaceMemberCandidateService;
+
+    @SpyBean
+    private NamespacePortalCommandAppService namespacePortalCommandAppService;
 
     @MockBean
     private DeviceAuthService deviceAuthService;
@@ -187,9 +194,7 @@ class NamespaceBatchMemberControllerTest {
 
     @Test
     void batchAddMembers_emptyArray_returnsError() throws Exception {
-        // @NotEmpty on BatchMemberRequest.members triggers validation error
-        // Spring Boot 3.2+ raises HandlerMethodValidationException (500) rather than
-        // MethodArgumentNotValidException (400) for record-based @RequestBody validation
+        // @NotEmpty on BatchMemberRequest.members is enforced before the controller runs.
         mockMvc.perform(post("/api/v1/namespaces/team-a/members/batch")
                         .with(csrf())
                         .with(auth("owner-1"))
@@ -198,7 +203,10 @@ class NamespaceBatchMemberControllerTest {
                         .content("""
                                 {"members":[]}
                                 """))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+
+        verify(namespacePortalCommandAppService, never()).batchAddMembers(any(), any(), any());
     }
 
     @Test

@@ -252,6 +252,10 @@ Web 端与 CLI 保持同一发布语义，只是在交互上可提供更明确�
 → 异步重算 skill.rating_avg 和 rating_count（SELECT AVG + Redis 分布式锁防重复重算）
 ```
 
+文字评价复用同一条 `skill_rating` 记录：用户提交 `score + review_text` 时同步更新评分并触发
+`SkillRatedEvent`；删除评价只清空文字，保留星级评分。公开列表仅返回 `VISIBLE` 评价；
+`SKILL_ADMIN` / `SUPER_ADMIN` 可隐藏或恢复评价，管理动作写入审计日志且不改变评分聚合。
+
 ## 7 异步事件汇总
 
 | 事件 | 触发时机 | 消费方 |

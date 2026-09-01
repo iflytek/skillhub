@@ -60,6 +60,13 @@ View skill packages with the most stars and highest ratings to discover best pra
 3. The rating takes effect immediately and impacts the skill package's average rating
 4. You can update your rating at any time
 
+**Writing a Review**:
+
+1. Select "Write a review" on a published skill's detail page
+2. Choose 1-5 stars and enter up to 2,000 characters
+3. You can edit or clear the text; clearing it keeps the star rating and remains available if the skill is later unpublished
+4. A review hidden by an administrator stays hidden after author edits and becomes public only after an administrator restores it
+
 **Viewing Notifications**:
 
 1. Click the notification icon in the top navigation bar
@@ -125,6 +132,24 @@ GET /api/v1/me/stars?page=0&size=20
 GET /api/v1/skills/{skillId}/rating
 ```
 
+**Review APIs**:
+
+```bash
+# Public review list
+GET /api/v1/skills/{skillId}/reviews?page=0&size=20
+
+# Read, create, or update the current user's review
+GET /api/v1/skills/{skillId}/reviews/me
+PUT /api/v1/skills/{skillId}/reviews/me
+
+# Clear review text while retaining the star rating
+DELETE /api/v1/skills/{skillId}/reviews/me
+
+# SKILL_ADMIN or SUPER_ADMIN moderation
+POST /api/v1/admin/skill-reviews/{reviewId}/hide
+POST /api/v1/admin/skill-reviews/{reviewId}/restore
+```
+
 **Response Example**:
 ```json
 {
@@ -136,6 +161,8 @@ GET /api/v1/skills/{skillId}/rating
 ## Notes
 
 > **Rating Rules**: Each user can rate each skill package only once. Ratings can be updated but not deleted.
+
+> **Review Rules**: Only published skills can be reviewed, and the public list contains visible reviews only. Refresh and retry after a concurrent-update conflict.
 
 - **Star Count**: A skill package's star count is displayed in search results and on the detail page
 - **Average Rating**: A skill package's average rating affects search ranking
