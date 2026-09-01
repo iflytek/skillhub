@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'bun:test'
 import { removeLocalSkill } from '../../../src/services/remove-service'
+import { acquireSkillTargetLock } from '../../../src/services/skill-target-lock'
 import { InventoryStore } from '../../../src/stores/inventory-store'
 
 async function exists(path: string): Promise<boolean> {
@@ -90,6 +91,38 @@ describe('removeLocalSkill', () => {
     expect(await exists(globalDir)).toBe(true)
     expect(await exists(teamDir)).toBe(false)
     expect((await store.read()).items.map(item => item.namespace)).toEqual(['global'])
+  })
+
+  test('does not remove a target while install or upgrade holds its lifecycle lock', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-remove-lock-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-remove-lock-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    const store = new InventoryStore(home)
+    await store.write({
+      items: [{
+        registry: 'https://skill.xfyun.cn',
+        namespace: 'global',
+        slug: 'demo',
+        version: '1.0.0',
+        targets: [{ agent: 'codex', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z' }]
+      }]
+    })
+
+    const release = await acquireSkillTargetLock(rootDir, 'demo')
+    try {
+      await expect(removeLocalSkill({ registry: 'https://skill.xfyun.cn', slug: 'demo', home }))
+        .rejects.toThrow('install target is busy')
+      expect(await exists(skillDir)).toBe(true)
+      expect((await store.read()).items[0]?.targets).toHaveLength(1)
+    } finally {
+      await release()
+    }
+
+    const removed = await removeLocalSkill({ registry: 'https://skill.xfyun.cn', slug: 'demo', home })
+    expect(removed.removed).toHaveLength(1)
+    expect(await exists(skillDir)).toBe(false)
+    expect((await store.read()).items).toEqual([])
   })
 
   test('throws on path traversal in installDir', async () => {

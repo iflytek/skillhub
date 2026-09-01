@@ -3,6 +3,7 @@ import { relative, isAbsolute } from 'node:path'
 import { InventoryStore } from '../stores/inventory-store'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import { acquireSkillTargetLock } from './skill-target-lock'
 
 /**
  * Validate that child path is strictly under parent directory.
@@ -52,8 +53,9 @@ export async function removeLocalSkill(options: RemoveLocalOptions): Promise<Rem
   }
 
   const removed: RemoveResult['removed'] = []
+  const releases: Array<() => Promise<void>> = []
 
-  for (const { item, target } of targetsToRemove) {
+  for (const { target } of targetsToRemove) {
     // Validate installDir is strictly under the recorded rootDir
     if (!target.rootDir || !isPathUnder(target.installDir, target.rootDir)) {
       throw new CliError(`unsafe remove path: ${target.installDir} is not under ${target.rootDir ?? 'unknown root'}`, EXIT.filesystem, {
@@ -61,20 +63,31 @@ export async function removeLocalSkill(options: RemoveLocalOptions): Promise<Rem
         next: 'verify inventory integrity with `skillhub doctor`'
       })
     }
+  }
 
-    let existed = true
-    try {
-      await stat(target.installDir)
-    } catch {
-      existed = false
+  try {
+    for (const { target } of [...targetsToRemove]
+      .sort((left, right) => left.target.installDir.localeCompare(right.target.installDir))) {
+      releases.push(await acquireSkillTargetLock(target.rootDir, options.slug))
     }
 
-    if (existed) {
-      await rm(target.installDir, { recursive: true })
-    }
+    for (const { item, target } of targetsToRemove) {
+      let existed = true
+      try {
+        await stat(target.installDir)
+      } catch {
+        existed = false
+      }
 
-    await store.removeTarget(options.registry, item.namespace, options.slug, target.installDir)
-    removed.push({ namespace: item.namespace, agent: target.agent, dir: target.installDir, existed })
+      if (existed) {
+        await rm(target.installDir, { recursive: true })
+      }
+
+      await store.removeTarget(options.registry, item.namespace, options.slug, target.installDir)
+      removed.push({ namespace: item.namespace, agent: target.agent, dir: target.installDir, existed })
+    }
+  } finally {
+    for (const release of releases.reverse()) await release()
   }
 
   return { removed }
