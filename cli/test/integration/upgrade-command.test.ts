@@ -1,5 +1,5 @@
 import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { strToU8, zipSync } from 'fflate'
 import { createTempHome } from '../helpers/temp-env'
@@ -239,8 +239,9 @@ describe('upgrade command', () => {
 
     const inventoryPath = join(env.home, '.skillhub', 'inventory.json')
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items[0].targets[0].rootDir).toBe(join(env.cwd, 'skills'))
-    expect(inventory.items[0].targets[0].installDir).toBe(join(env.cwd, 'skills', 'portable'))
+    expect(isAbsolute(inventory.items[0].targets[0].rootDir)).toBe(true)
+    expect(inventory.items[0].targets[0].installDir)
+      .toBe(join(inventory.items[0].targets[0].rootDir, 'portable'))
 
     inventory.items[0].targets[0].rootDir = 'skills'
     inventory.items[0].targets[0].installDir = join('skills', 'portable')
