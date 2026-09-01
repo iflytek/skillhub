@@ -1236,6 +1236,8 @@
     "displayNameLabel": "显示名称",
     "displayNameRequired": "显示名称不能为空",
     "descriptionLabel": "描述",
+    "allowMemberOverwriteLabel": "允许成员覆盖发布",
+    "allowMemberOverwriteHint": "开启后，空间内任意成员可向其他成员已发布的同名 skill 发布新版本（版本挂在原发布者名下）。默认关闭：已发布的 slug 归首次发布者所有。",
     "saveAction": "保存",
     "saving": "保存中...",
     "saveSuccess": "命名空间已更新",

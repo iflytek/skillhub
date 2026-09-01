@@ -763,13 +763,16 @@ export const namespaceApi = {
     })
   },
 
-  async update(slug: string, request: { displayName?: string; description?: string }): Promise<Namespace> {
-    const body: Record<string, string> = {}
+  async update(slug: string, request: { displayName?: string; description?: string; allowMemberOverwrite?: boolean }): Promise<Namespace> {
+    const body: Record<string, string | boolean> = {}
     if (request.displayName !== undefined) {
       body.displayName = request.displayName.trim()
     }
     if (request.description !== undefined) {
       body.description = request.description === '' ? '' : request.description.trim()
+    }
+    if (request.allowMemberOverwrite !== undefined) {
+      body.allowMemberOverwrite = request.allowMemberOverwrite
     }
     return fetchJson<Namespace>(`/api/v1/namespaces/${normalizeNamespaceSlug(slug)}`, {
       method: 'PUT',

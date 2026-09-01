@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.event.ReviewSubmittedEvent;
 import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -174,11 +175,9 @@ public class SkillPublishService {
 
         // 2. Check membership
         boolean isSuperAdmin = platformRoles.contains("SUPER_ADMIN");
-        if (!isSuperAdmin) {
-            var member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId);
-            if (member.isEmpty()) {
-                errors.add("Publisher is not a member of namespace: " + namespaceSlug);
-            }
+        var member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId);
+        if (!isSuperAdmin && member.isEmpty()) {
+            errors.add("Publisher is not a member of namespace: " + namespaceSlug);
         }
         if (requiresSecurityScanner(visibility) && !securityScanService.isEnabled()) {
             errors.add("error.security.scanner.required");
@@ -234,6 +233,7 @@ public class SkillPublishService {
         // 6. Slug conflict, archived skill, and version-exists checks
         if (resolvedSlug != null && errors.isEmpty()) {
             List<Skill> existingSkills = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), resolvedSlug);
+            boolean overwriteAllowed = namespace.isAllowMemberOverwrite() && member.isPresent();
             for (Skill existing : existingSkills) {
                 if (existing.getOwnerId().equals(publisherId)) {
                     if (existing.getStatus() == SkillStatus.ARCHIVED) {
@@ -249,7 +249,7 @@ public class SkillPublishService {
                     boolean hasPublished = !skillVersionRepository
                             .findBySkillIdAndStatus(existing.getId(), SkillVersionStatus.PUBLISHED)
                             .isEmpty();
-                    if (hasPublished) {
+                    if (hasPublished && !overwriteAllowed) {
                         errors.add("Name conflict: slug \"" + resolvedSlug + "\" is already published by another user");
                         break;
                     }
@@ -349,10 +349,12 @@ public class SkillPublishService {
 
         boolean isSuperAdmin = platformRoles.contains("SUPER_ADMIN");
 
-        // 2. Check publisher is member unless SUPER_ADMIN short-circuits permission checks
-        if (!isSuperAdmin && !bypassMembershipCheck) {
-            namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
-                    .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug));
+        // 2. Check publisher is member unless SUPER_ADMIN short-circuits permission checks.
+        // Membership is still resolved for super admin / bypass callers: it gates the
+        // allowMemberOverwrite relaxation below (see canOverwriteOtherOwners).
+        var membership = namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId);
+        if (!isSuperAdmin && !bypassMembershipCheck && membership.isEmpty()) {
+            throw new DomainBadRequestException("error.skill.publish.publisher.notMember", namespaceSlug);
         }
 
         // 3. Validate package
@@ -401,41 +403,56 @@ public class SkillPublishService {
         List<Skill> existingSkills = skillRepository.findByNamespaceIdAndSlug(namespace.getId(), skillSlug);
 
         // Check if any other owner's skill has published versions
-        // Only PUBLISHED status blocks same-name publishing (UPLOADED/PENDING_REVIEW allowed)
+        // Only PUBLISHED status blocks same-name publishing (UPLOADED/PENDING_REVIEW allowed).
+        // When the namespace opts into allowMemberOverwrite and the publisher is a member, the
+        // published skill owned by another user becomes the publish target instead: the new
+        // version attaches to it so the (namespace, slug) coordinate keeps its identity and
+        // original owner (SkillVersion.createdBy still records the actual publisher).
+        Skill overwriteTarget = null;
         for (Skill existing : existingSkills) {
             if (!existing.getOwnerId().equals(publisherId)) {
                 boolean hasPublished = !skillVersionRepository
                         .findBySkillIdAndStatus(existing.getId(), SkillVersionStatus.PUBLISHED)
                         .isEmpty();
                 if (hasPublished) {
-                    // Distinguish between PRIVATE and PUBLIC/NAMESPACE_ONLY conflicts
-                    if (existing.getVisibility() == SkillVisibility.PRIVATE) {
-                        throw new DomainBadRequestException("error.skill.publish.nameConflict.private", skillSlug);
-                    } else {
-                        throw new DomainBadRequestException("error.skill.publish.nameConflict", skillSlug);
+                    if (!canOverwriteOtherOwners(namespace, membership)) {
+                        // Distinguish between PRIVATE and PUBLIC/NAMESPACE_ONLY conflicts
+                        if (existing.getVisibility() == SkillVisibility.PRIVATE) {
+                            throw new DomainBadRequestException("error.skill.publish.nameConflict.private", skillSlug);
+                        } else {
+                            throw new DomainBadRequestException("error.skill.publish.nameConflict", skillSlug);
+                        }
+                    }
+                    if (overwriteTarget == null) {
+                        overwriteTarget = existing;
                     }
                 }
             }
         }
 
         // Find or create skill for current user
-        Skill skill = skillRepository.findByNamespaceIdAndSlugAndOwnerId(namespace.getId(), skillSlug, publisherId)
-                .orElseGet(() -> {
-                    Skill newSkill = new Skill(namespace.getId(), skillSlug, publisherId, visibility);
-                    newSkill.setCreatedBy(publisherId);
-                    try {
-                        Skill savedSkill = skillRepository.save(newSkill);
-                        // save() may defer the unique-constraint check until transaction commit.
-                        // Flush here so this boundary can translate the coordinate race.
-                        skillRepository.flush();
-                        return savedSkill;
-                    } catch (DataIntegrityViolationException ex) {
-                        // A concurrent publish for the same (namespace, slug, owner) coordinate inserted
-                        // the skill first and won the unique-constraint race. Surface a deterministic
-                        // business conflict instead of leaking the violation as an HTTP 500.
-                        throw new DomainBadRequestException("error.skill.publish.concurrentConflict", skillSlug);
-                    }
-                });
+        Skill skill;
+        if (overwriteTarget != null) {
+            skill = overwriteTarget;
+        } else {
+            skill = skillRepository.findByNamespaceIdAndSlugAndOwnerId(namespace.getId(), skillSlug, publisherId)
+                    .orElseGet(() -> {
+                        Skill newSkill = new Skill(namespace.getId(), skillSlug, publisherId, visibility);
+                        newSkill.setCreatedBy(publisherId);
+                        try {
+                            Skill savedSkill = skillRepository.save(newSkill);
+                            // save() may defer the unique-constraint check until transaction commit.
+                            // Flush here so this boundary can translate the coordinate race.
+                            skillRepository.flush();
+                            return savedSkill;
+                        } catch (DataIntegrityViolationException ex) {
+                            // A concurrent publish for the same (namespace, slug, owner) coordinate inserted
+                            // the skill first and won the unique-constraint race. Surface a deterministic
+                            // business conflict instead of leaking the violation as an HTTP 500.
+                            throw new DomainBadRequestException("error.skill.publish.concurrentConflict", skillSlug);
+                        }
+                    });
+        }
 
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
@@ -688,6 +705,16 @@ public class SkillPublishService {
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.namespace.archived", namespace.getSlug());
         }
+    }
+
+    /**
+     * Overwriting another owner's published (namespace, slug) coordinate is allowed only when
+     * the namespace opts in via allowMemberOverwrite and the publisher actually is a namespace
+     * member. With the setting off (the default) the owner-isolation behavior is unchanged for
+     * everyone, including OWNER/ADMIN and SUPER_ADMIN.
+     */
+    private boolean canOverwriteOtherOwners(Namespace namespace, java.util.Optional<NamespaceMember> membership) {
+        return namespace.isAllowMemberOverwrite() && membership.isPresent();
     }
 
     private void assertCanManageLifecycle(Skill skill,

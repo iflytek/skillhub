@@ -3754,6 +3754,7 @@ export interface components {
             slug: string;
             displayName: string;
             description?: string;
+            allowMemberOverwrite?: boolean;
         };
         ApiResponseNamespaceResponse: {
             /** Format: int32 */
@@ -3775,6 +3776,7 @@ export interface components {
             /** @enum {string} */
             type?: "GLOBAL" | "TEAM";
             avatarUrl?: string;
+            allowMemberOverwrite?: boolean;
             createdBy?: string;
             /** Format: date-time */
             createdAt?: string;

@@ -193,8 +193,8 @@ export function useUpdateNamespace() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ slug, displayName, description }: { slug: string; displayName?: string; description?: string }) =>
-      namespaceApi.update(slug, { displayName, description }),
+    mutationFn: ({ slug, displayName, description, allowMemberOverwrite }: { slug: string; displayName?: string; description?: string; allowMemberOverwrite?: boolean }) =>
+      namespaceApi.update(slug, { displayName, description, allowMemberOverwrite }),
     onSuccess: (namespace) => {
       queryClient.invalidateQueries({ queryKey: ['namespaces', namespace.slug] })
       queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })

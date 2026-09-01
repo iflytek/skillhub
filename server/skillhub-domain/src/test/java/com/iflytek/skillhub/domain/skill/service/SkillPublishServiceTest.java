@@ -1396,6 +1396,171 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void testPublishFromEntries_ShouldOverwriteOtherOwnersPublishedSkillWhenNamespaceAllows() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-200";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        namespace.setAllowMemberOverwrite(true);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        // Existing skill owned by another user with a published version
+        Skill existingSkill = new Skill(1L, "test-skill", "user-100", SkillVisibility.PUBLIC);
+        setId(existingSkill, 1L);
+        SkillVersion publishedVersion = new SkillVersion(1L, "0.1.0", "user-100");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(existingSkill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(publishedVersion));
+        when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("1.0.0"))).thenReturn(Optional.empty());
+
+        List<SkillVersion> savedVersions = new java.util.ArrayList<>();
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion saved = invocation.getArgument(0);
+            if (saved.getId() == null) setId(saved, 10L);
+            savedVersions.add(saved);
+            return saved;
+        });
+        List<Skill> savedSkills = new java.util.ArrayList<>();
+        when(skillRepository.save(any(Skill.class))).thenAnswer(invocation -> {
+            savedSkills.add(invocation.getArgument(0));
+            return invocation.getArgument(0);
+        });
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug, entries, publisherId, SkillVisibility.PUBLIC, Set.of()
+        );
+
+        // Overwrite lands on the original owner's skill record: ownership preserved,
+        // actual publisher recorded on the version.
+        assertNotNull(result);
+        assertEquals("test-skill", result.slug());
+        assertEquals(1, savedVersions.size());
+        assertEquals(1L, savedVersions.get(0).getSkillId());
+        assertEquals(publisherId, savedVersions.get(0).getCreatedBy());
+        assertEquals(1, savedSkills.size());
+        assertEquals("user-100", savedSkills.get(0).getOwnerId());
+        assertEquals(publisherId, savedSkills.get(0).getUpdatedBy());
+    }
+
+    @Test
+    void testPublishFromEntries_ShouldOverwritePrivateSkillWhenNamespaceAllows() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-200";
+        String skillMdContent = "---\nname: test-skill\ndescription: Test\nversion: 1.0.0\n---\nBody";
+
+        PackageEntry skillMd = new PackageEntry("SKILL.md", skillMdContent.getBytes(), skillMdContent.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(skillMd);
+
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        namespace.setAllowMemberOverwrite(true);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        Skill existingSkill = new Skill(1L, "test-skill", "user-100", SkillVisibility.PRIVATE);
+        setId(existingSkill, 1L);
+        SkillVersion publishedVersion = new SkillVersion(1L, "0.1.0", "user-100");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(skillMdContent)).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(existingSkill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(publishedVersion));
+        when(skillVersionRepository.findBySkillIdAndVersion(any(), eq("1.0.0"))).thenReturn(Optional.empty());
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion saved = invocation.getArgument(0);
+            if (saved.getId() == null) setId(saved, 10L);
+            return saved;
+        });
+        when(skillRepository.save(any(Skill.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                namespaceSlug, entries, publisherId, SkillVisibility.PRIVATE, Set.of()
+        );
+
+        assertNotNull(result);
+        assertEquals("test-skill", result.slug());
+    }
+
+    @Test
+    void testValidateOnly_ShouldNotReportConflictWhenNamespaceAllows() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-200";
+        List<PackageEntry> entries = skillEntries("test-skill", "1.0.0");
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        namespace.setAllowMemberOverwrite(true);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        Skill existingSkill = new Skill(1L, "test-skill", "user-100", SkillVisibility.PRIVATE);
+        setId(existingSkill, 1L);
+        SkillVersion publishedVersion = new SkillVersion(1L, "0.1.0", "user-100");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(anyString())).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(existingSkill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(publishedVersion));
+
+        SkillPublishService.DryRunResult result = service.validateOnly(
+                namespaceSlug, entries, publisherId, SkillVisibility.PRIVATE, Set.of()
+        );
+
+        assertTrue(result.valid());
+        assertTrue(result.errors().isEmpty());
+    }
+
+    @Test
+    void testValidateOnly_ShouldReportConflictWhenNamespaceDisallows() throws Exception {
+        String namespaceSlug = "test-ns";
+        String publisherId = "user-200";
+        List<PackageEntry> entries = skillEntries("test-skill", "1.0.0");
+        Namespace namespace = new Namespace(namespaceSlug, "Test NS", "user-1");
+        setId(namespace, 1L);
+        NamespaceMember member = mock(NamespaceMember.class);
+        SkillMetadata metadata = new SkillMetadata("test-skill", "Test", "1.0.0", "Body", Map.of());
+
+        Skill existingSkill = new Skill(1L, "test-skill", "user-100", SkillVisibility.PUBLIC);
+        setId(existingSkill, 1L);
+        SkillVersion publishedVersion = new SkillVersion(1L, "0.1.0", "user-100");
+        publishedVersion.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(any(), eq(publisherId))).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(anyString())).thenReturn(metadata);
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(any(), eq("test-skill"))).thenReturn(List.of(existingSkill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(publishedVersion));
+
+        SkillPublishService.DryRunResult result = service.validateOnly(
+                namespaceSlug, entries, publisherId, SkillVisibility.PRIVATE, Set.of()
+        );
+
+        assertFalse(result.valid());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("Name conflict")));
+    }
+
+    @Test
     void testPublishFromEntries_ShouldAutoWithdrawPendingVersions() throws Exception {
         String namespaceSlug = "test-ns";
         String publisherId = "user-100";
