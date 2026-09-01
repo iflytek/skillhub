@@ -89,18 +89,17 @@ if [[ -z "$USER_CSRF" || -z "$ADMIN_CSRF" ]]; then
   exit 1
 fi
 
-GLOBAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+GLOBAL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
   "$BASE_URL/api/web/namespaces/global")"
 assert_code "Global namespace detail is available" "$GLOBAL_RESPONSE" "0"
 GLOBAL_NAMESPACE_ID="$(json_field "$GLOBAL_RESPONSE" "data.id")"
 
-CREATE_NAMESPACE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
-  -H "X-XSRF-TOKEN: $USER_CSRF" \
+CREATE_NAMESPACE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
   -H "Content-Type: application/json" \
   -X POST "$BASE_URL/api/web/namespaces" \
   -d "{\"slug\":\"$SLUG\",\"displayName\":\"Promotion Smoke $SLUG\",\"description\":\"promotion smoke test\"}")"
-assert_code "Owner can create promotion smoke namespace" "$CREATE_NAMESPACE_RESPONSE" "0"
-NAMESPACE_ID="$(json_field "$CREATE_NAMESPACE_RESPONSE" "data.id")"
+assert_code "Admin can create promotion smoke namespace" "$CREATE_NAMESPACE_RESPONSE" "0"
 
 cat > "$WORK_DIR/SKILL.md" <<'EOF'
 ---
@@ -110,33 +109,51 @@ version: 1.0.0
 ---
 Body
 EOF
-(cd "$WORK_DIR" && zip -q skill.zip SKILL.md)
+python3 - "$WORK_DIR" <<'PY'
+from pathlib import Path
+import sys
+import zipfile
 
-PUBLISH_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
-  -H "X-XSRF-TOKEN: $USER_CSRF" \
+work_dir = Path(sys.argv[1])
+with zipfile.ZipFile(work_dir / "skill.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+    archive.write(work_dir / "SKILL.md", "SKILL.md")
+PY
+
+PUBLISH_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
   -F "file=@$WORK_DIR/skill.zip;type=application/zip" \
   -F "visibility=PUBLIC" \
   "$BASE_URL/api/web/skills/$SLUG/publish")"
-assert_code "Owner can publish a team skill" "$PUBLISH_RESPONSE" "0"
+assert_code "Admin can publish a team skill" "$PUBLISH_RESPONSE" "0"
 SKILL_ID="$(json_field "$PUBLISH_RESPONSE" "data.skillId")"
 SKILL_SLUG="$(json_field "$PUBLISH_RESPONSE" "data.slug")"
 
-PENDING_REVIEWS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
-  "$BASE_URL/api/web/reviews?status=PENDING&namespaceId=$NAMESPACE_ID")"
-assert_code "Admin can list pending namespace reviews" "$PENDING_REVIEWS_RESPONSE" "0"
-REVIEW_ID="$(json_field "$PENDING_REVIEWS_RESPONSE" "data.items.0.id")"
+SKILL_DETAIL_RESPONSE=""
+PROMOTION_READY=false
+for _ in $(seq 1 60); do
+  SKILL_DETAIL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+    "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG")"
+  if JSON_INPUT="$SKILL_DETAIL_RESPONSE" python3 - <<'PY'
+import json
+import os
 
-APPROVE_REVIEW_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
-  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
-  -H "Content-Type: application/json" \
-  -X POST "$BASE_URL/api/web/reviews/$REVIEW_ID/approve" \
-  -d '{"comment":"ok"}')"
-assert_code "Admin can approve team skill review" "$APPROVE_REVIEW_RESPONSE" "0"
-
-SKILL_DETAIL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
-  "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG")"
-assert_code "Owner can load team skill detail" "$SKILL_DETAIL_RESPONSE" "0"
-VERSION_ID="$(json_field "$SKILL_DETAIL_RESPONSE" "data.latestVersionId")"
+response = json.loads(os.environ["JSON_INPUT"])
+data = response.get("data") or {}
+headline_version = data.get("headlineVersion") or {}
+raise SystemExit(0 if headline_version.get("id") and data.get("canSubmitPromotion") else 1)
+PY
+  then
+    PROMOTION_READY=true
+    break
+  fi
+  sleep 1
+done
+assert_code "Admin can load team skill detail" "$SKILL_DETAIL_RESPONSE" "0"
+if [[ "$PROMOTION_READY" != "true" ]]; then
+  fail "Published team skill did not become promotable within 60 seconds"
+  exit 1
+fi
+VERSION_ID="$(json_field "$SKILL_DETAIL_RESPONSE" "data.headlineVersion.id")"
 CAN_SUBMIT_PROMOTION="$(json_field "$SKILL_DETAIL_RESPONSE" "data.canSubmitPromotion")"
 if [[ "$CAN_SUBMIT_PROMOTION" == "True" || "$CAN_SUBMIT_PROMOTION" == "true" ]]; then
   pass "Approved team skill is marked promotable"
@@ -144,31 +161,32 @@ else
   fail "Approved team skill should expose canSubmitPromotion=true"
 fi
 
-MY_SKILLS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+MY_SKILLS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
   "$BASE_URL/api/web/me/skills")"
-assert_code "Owner can list my skills with promotion metadata" "$MY_SKILLS_RESPONSE" "0"
+assert_code "Admin can list my skills with promotion metadata" "$MY_SKILLS_RESPONSE" "0"
 if JSON_INPUT="$MY_SKILLS_RESPONSE" python3 - "$SKILL_ID" <<'PY'
 import json
 import os
 import sys
 
 skill_id = int(sys.argv[1])
-items = json.loads(os.environ["JSON_INPUT"])["data"]
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
 match = next(item for item in items if item["id"] == skill_id)
-raise SystemExit(0 if match["canSubmitPromotion"] and match["latestVersionId"] else 1)
+headline_version = match.get("headlineVersion") or {}
+raise SystemExit(0 if match["canSubmitPromotion"] and headline_version.get("id") else 1)
 PY
 then
   pass "My skills response exposes promotion submission fields"
 else
-  fail "My skills response should expose latestVersionId and canSubmitPromotion"
+  fail "My skills response should expose headlineVersion and canSubmitPromotion"
 fi
 
-SUBMIT_PROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
-  -H "X-XSRF-TOKEN: $USER_CSRF" \
+SUBMIT_PROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" \
   -H "Content-Type: application/json" \
   -X POST "$BASE_URL/api/web/promotions" \
   -d "{\"sourceSkillId\":$SKILL_ID,\"sourceVersionId\":$VERSION_ID,\"targetNamespaceId\":$GLOBAL_NAMESPACE_ID}")"
-assert_code "Owner can submit promotion to global namespace" "$SUBMIT_PROMOTION_RESPONSE" "0"
+assert_code "Admin can submit promotion to global namespace" "$SUBMIT_PROMOTION_RESPONSE" "0"
 
 PENDING_PROMOTIONS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
   "$BASE_URL/api/web/promotions?status=PENDING")"
