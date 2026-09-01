@@ -12,6 +12,7 @@ public interface SkillRatingRepository {
     Optional<SkillRating> findById(Long id);
     Optional<SkillRating> findBySkillIdAndUserId(Long skillId, String userId);
     Page<SkillRating> findVisibleReviewsBySkillId(Long skillId, Pageable pageable);
+    Page<SkillRating> findReviewsBySkillId(Long skillId, Pageable pageable);
     double averageScoreBySkillId(Long skillId);
     int countBySkillId(Long skillId);
     void deleteBySkillId(Long skillId);

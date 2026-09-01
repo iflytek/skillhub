@@ -91,6 +91,11 @@ public class SkillRatingService {
                 .filter(SkillRating::hasReview);
     }
 
+    public Optional<SkillRating> getUserFeedback(Long skillId, String userId) {
+        ensureSkillExists(skillId);
+        return ratingRepository.findBySkillIdAndUserId(skillId, userId);
+    }
+
     private SkillRating findReview(Long reviewId) {
         return ratingRepository.findById(reviewId)
                 .filter(SkillRating::hasReview)

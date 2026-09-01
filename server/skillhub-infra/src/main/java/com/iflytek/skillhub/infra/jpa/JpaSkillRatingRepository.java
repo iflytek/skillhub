@@ -26,6 +26,15 @@ public interface JpaSkillRatingRepository extends JpaRepository<SkillRating, Lon
             """)
     Page<SkillRating> findVisibleReviewsBySkillId(Long skillId, Pageable pageable);
 
+    @Query("""
+            SELECT r FROM SkillRating r
+            WHERE r.skillId = :skillId
+              AND r.reviewText IS NOT NULL
+              AND TRIM(r.reviewText) <> ''
+            ORDER BY r.updatedAt DESC, r.id DESC
+            """)
+    Page<SkillRating> findReviewsBySkillId(Long skillId, Pageable pageable);
+
     @Query("SELECT COALESCE(AVG(r.score), 0) FROM SkillRating r WHERE r.skillId = :skillId")
     double averageScoreBySkillId(Long skillId);
 
