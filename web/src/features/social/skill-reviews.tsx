@@ -136,9 +136,9 @@ function ReviewEditor({ skillId, review, onDone }: {
         placeholder={t('skillReviews.placeholder')}
         disabled={pending}
       />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-xs text-muted-foreground">{reviewText.length}/2000</span>
-        <div className="flex gap-2">
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
           {review?.reviewed ? (
             <Button variant="ghost" size="sm" onClick={handleDelete} disabled={pending}>
               {t('skillReviews.delete')}
