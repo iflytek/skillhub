@@ -251,6 +251,8 @@ matches.
 All targets in one inventory entry are upgraded together. A filter that selects only part of that
 entry is rejected because the current inventory format stores one shared version for all targets.
 The command also keeps the local files when the registry resolves to an older version.
+New installations store absolute target paths. Reinstall an older entry that still contains relative
+target paths before upgrading it; the CLI cannot safely infer the original working directory.
 
 ## Local Management
 

@@ -22,6 +22,13 @@ export interface Inventory {
   items: InventoryItem[]
 }
 
+export class InventoryVersionConflictError extends Error {
+  constructor(readonly retainedTargets: InventoryTarget[]) {
+    super('partial-target install would create inconsistent versions')
+    this.name = 'InventoryVersionConflictError'
+  }
+}
+
 export class InventoryStore {
   readonly path: string
 
@@ -214,6 +221,14 @@ export class InventoryStore {
   ): Promise<void> {
     await this.mutateAtomic(inventory => {
       const installDirs = new Set(targets.map(target => target.installDir))
+      const existingItem = inventory.items.find(candidate =>
+        candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
+      const retainedTargets = existingItem?.targets.filter(target => !installDirs.has(target.installDir)) ?? []
+      if (existingItem && retainedTargets.length > 0 &&
+          (existingItem.version !== version || existingItem.fingerprint !== fingerprint)) {
+        throw new InventoryVersionConflictError(retainedTargets)
+      }
+
       for (const item of inventory.items) {
         item.targets = item.targets.filter(existing => !installDirs.has(existing.installDir))
       }

@@ -1,6 +1,6 @@
-import { relative, resolve } from 'node:path'
+import { isAbsolute, relative, resolve } from 'node:path'
 import { compare as compareSemver, valid as validSemver } from 'semver'
-import { pathExists } from '../platform/paths'
+import { canonicalizeExistingPath, pathExists } from '../platform/paths'
 import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client'
 import { InventoryStore, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
 import { CliError } from '../shared/errors'
@@ -37,6 +37,8 @@ export interface UpgradePlanItem {
   resolved?: ResolveResponse
   inventoryItem: InventoryItem
   selectedTargets: InventoryTarget[]
+  expectedTargetFiles: Record<string, Record<string, string>>
+  allowTargetDrift: boolean
 }
 
 export interface UpgradePlan {
@@ -68,7 +70,9 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       changedFiles: [] as string[],
       targets: selection.targets.map(target => ({ agent: target.agent, dir: target.installDir })),
       inventoryItem: selection.item,
-      selectedTargets: selection.targets
+      selectedTargets: selection.targets,
+      expectedTargetFiles: {} as Record<string, Record<string, string>>,
+      allowTargetDrift: options.force
     }
 
     if (selection.targets.length !== selection.item.targets.length) {
@@ -113,6 +117,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
         action: 'blocked',
         reason: hardConflict,
         changedFiles: inspection.changedFiles,
+        expectedTargetFiles: inspection.currentFiles,
         resolved
       })
       continue
@@ -124,6 +129,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
         action: 'blocked',
         reason: 'local changes detected; pass --force to replace same-source files',
         changedFiles: inspection.changedFiles,
+        expectedTargetFiles: inspection.currentFiles,
         resolved
       })
       continue
@@ -134,6 +140,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
         remoteVersion: resolved.version,
         action: 'blocked',
         reason: 'installed metadata has no file baseline; pass --force to migrate this same-source installation',
+        expectedTargetFiles: inspection.currentFiles,
         resolved
       })
       continue
@@ -147,6 +154,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
         action: 'blocked',
         reason: 'remote version is older than the installed version; local files were kept',
         changedFiles: inspection.changedFiles,
+        expectedTargetFiles: inspection.currentFiles,
         resolved
       })
       continue
@@ -158,6 +166,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
         action: 'blocked',
         reason: 'cannot determine version order; use explicit install after verifying the release',
         changedFiles: inspection.changedFiles,
+        expectedTargetFiles: inspection.currentFiles,
         resolved
       })
       continue
@@ -173,6 +182,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
         action: 'blocked',
         reason: 'remote content changed without a newer version; use explicit install after verifying the release',
         changedFiles: inspection.changedFiles,
+        expectedTargetFiles: inspection.currentFiles,
         resolved
       })
       continue
@@ -182,6 +192,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       remoteVersion: resolved.version,
       action: unchanged ? 'unchanged' : 'upgrade',
       changedFiles: inspection.changedFiles,
+      expectedTargetFiles: inspection.currentFiles,
       resolved
     })
   }
@@ -218,7 +229,9 @@ export async function executeSkillUpgradePlan(
         source: 'explicit'
       })),
       force: true,
-      home: options.home
+      home: options.home,
+      expectedTargetFiles: item.expectedTargetFiles,
+      allowTargetDrift: item.allowTargetDrift
     })
   }
 }
@@ -272,18 +285,25 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
   changedFiles: string[]
   baselineMissing: boolean
   metadataCurrent: boolean
+  currentFiles: Record<string, Record<string, string>>
 }> {
   const hardConflicts: string[] = []
   const changedFiles = new Set<string>()
   let baselineMissing = false
   let metadataCurrent = true
+  const currentFiles: Record<string, Record<string, string>> = {}
 
   for (const target of targets) {
-    if (!(await pathExists(target.installDir))) {
+    if (!isAbsolute(target.rootDir) || !isAbsolute(target.installDir)) {
+      hardConflicts.push(`legacy relative target path is unsafe to upgrade: ${target.installDir}`)
+      continue
+    }
+    const installDir = await canonicalizeExistingPath(target.installDir)
+    if (!(await pathExists(installDir))) {
       hardConflicts.push(`installed target is missing: ${target.installDir}`)
       continue
     }
-    const result = await readInstalledSkillMetadata(target.installDir)
+    const result = await readInstalledSkillMetadata(installDir)
     if (result.status !== 'valid') {
       hardConflicts.push(`metadata-invalid at ${target.installDir}: ${result.status === 'missing' ? 'missing' : result.reason}`)
       continue
@@ -295,9 +315,10 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
     if (!result.metadata.files) {
       baselineMissing = true
     } else {
-      const snapshot = await snapshotSkillDirectory(target.installDir)
+      const snapshot = await snapshotSkillDirectory(installDir)
+      currentFiles[installDir] = snapshot.files
       for (const path of diffSkillFiles(result.metadata.files, snapshot.files)) {
-        changedFiles.add(`${target.installDir}:${path}`)
+        changedFiles.add(`${installDir}:${path}`)
       }
     }
     if (result.metadata.version !== item.version || result.metadata.fingerprint !== item.fingerprint) {
@@ -309,7 +330,8 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
     hardConflicts,
     changedFiles: [...changedFiles].sort(),
     baselineMissing,
-    metadataCurrent
+    metadataCurrent,
+    currentFiles
   }
 }
 

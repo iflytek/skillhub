@@ -98,4 +98,33 @@ describe('InventoryStore', () => {
     const inventory = await store.read()
     expect(inventory.items).toHaveLength(1)
   })
+
+  test('rejects a version change while an unselected target is retained', async () => {
+    const home = await makeTempHome()
+    const store = new InventoryStore(home)
+    const retained = makeTarget('shared-a')
+    await store.upsertTarget(
+      'https://skill.xfyun.cn',
+      'global',
+      'shared',
+      '1.0.0',
+      retained,
+      'fp-v1',
+    )
+
+    const replacement = makeTarget('shared-b')
+    await expect(store.replaceTargetsAtInstallDirs(
+      'https://skill.xfyun.cn',
+      'global',
+      'shared',
+      '1.1.0',
+      [replacement],
+      'fp-v2',
+    )).rejects.toThrow('partial-target install would create inconsistent versions')
+
+    const inventory = await store.read()
+    expect(inventory.items).toHaveLength(1)
+    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
+    expect(inventory.items[0]?.targets).toEqual([retained])
+  })
 })

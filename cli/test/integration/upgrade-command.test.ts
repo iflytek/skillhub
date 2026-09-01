@@ -5,6 +5,7 @@ import { strToU8, zipSync } from 'fflate'
 import { createTempHome } from '../helpers/temp-env'
 import { startFakeRegistry } from '../helpers/fake-registry'
 import { runCli } from '../helpers/run-cli'
+import { executeSkillUpgradePlan, planSkillUpgrades } from '../../src/services/upgrade-service'
 
 let registries: Array<Awaited<ReturnType<typeof startFakeRegistry>>> = []
 
@@ -122,6 +123,87 @@ describe('upgrade command', () => {
     ], { HOME: env.home, USERPROFILE: env.home })
     expect(forced.exitCode).toBe(0)
     expect(await readFile(join(rootDir, 'code-review', 'SKILL.md'), 'utf-8')).toBe('# v2')
+  })
+
+  test('a local edit made after planning is rechecked before replacement', async () => {
+    const env = await createTempHome()
+    const skill = {
+      namespace: 'global',
+      slug: 'late-edit',
+      version: '1.0.0',
+      versionId: 1,
+      fingerprint: 'fp-v1',
+      zipBytes: makeSkillZip('# v1')
+    }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const rootDir = join(env.cwd, 'skills')
+    await mkdir(rootDir, { recursive: true })
+    await runCli(['install', '@global/late-edit', '--dir', rootDir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    }, { cwd: env.cwd })
+
+    skill.version = '1.1.0'
+    skill.versionId = 2
+    skill.fingerprint = 'fp-v2'
+    skill.zipBytes = makeSkillZip('# v2')
+    const tokenForRegistry = async () => undefined
+    const plan = await planSkillUpgrades({
+      coordinates: ['@global/late-edit'],
+      registry: registry.url,
+      force: false,
+      home: env.home,
+      tokenForRegistry
+    })
+    await writeFile(join(rootDir, 'late-edit', 'SKILL.md'), '# edited after planning')
+
+    await expect(executeSkillUpgradePlan(plan, { home: env.home, tokenForRegistry }))
+      .rejects.toThrow('local changes detected after upgrade planning')
+    expect(await readFile(join(rootDir, 'late-edit', 'SKILL.md'), 'utf-8'))
+      .toBe('# edited after planning')
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
+  })
+
+  test('new installs persist absolute targets and legacy relative targets are blocked safely', async () => {
+    const env = await createTempHome()
+    const skill = {
+      namespace: 'global',
+      slug: 'portable',
+      version: '1.0.0',
+      versionId: 1,
+      fingerprint: 'fp-v1',
+      zipBytes: makeSkillZip('# v1')
+    }
+    const registry = await startFakeRegistry({ skills: [skill] })
+    registries.push(registry)
+    const installed = await runCli([
+      'install', '@global/portable', '--dir', 'skills', '--registry', registry.url
+    ], { HOME: env.home, USERPROFILE: env.home }, { cwd: env.cwd })
+    expect(installed.exitCode).toBe(0)
+
+    const inventoryPath = join(env.home, '.skillhub', 'inventory.json')
+    const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
+    expect(inventory.items[0].targets[0].rootDir).toBe(join(env.cwd, 'skills'))
+    expect(inventory.items[0].targets[0].installDir).toBe(join(env.cwd, 'skills', 'portable'))
+
+    inventory.items[0].targets[0].rootDir = 'skills'
+    inventory.items[0].targets[0].installDir = join('skills', 'portable')
+    await writeFile(inventoryPath, JSON.stringify(inventory))
+    skill.version = '1.1.0'
+    skill.versionId = 2
+    skill.fingerprint = 'fp-v2'
+    skill.zipBytes = makeSkillZip('# v2')
+
+    const otherCwd = join(env.cwd, 'other')
+    await mkdir(otherCwd, { recursive: true })
+    const result = await runCli([
+      'upgrade', '@global/portable', '--registry', registry.url, '--check', '--json'
+    ], { HOME: env.home, USERPROFILE: env.home }, { cwd: otherCwd })
+    expect(result.exitCode).toBe(6)
+    expect(JSON.parse(result.stdout).items[0].reason).toContain('legacy relative target path')
+    expect(await readFile(join(env.cwd, 'skills', 'portable', 'SKILL.md'), 'utf-8')).toBe('# v1')
   })
 
   test('source conflict is a hard block even with --force', async () => {
