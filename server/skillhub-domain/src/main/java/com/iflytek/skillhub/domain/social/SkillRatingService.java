@@ -44,10 +44,57 @@ public class SkillRatingService {
         eventPublisher.publishEvent(new SkillRatedEvent(skillId, userId, score));
     }
 
+    @Transactional
+    public SkillRating upsertReview(Long skillId, String userId, short score, String reviewText) {
+        ensureSkillExists(skillId);
+        SkillRating rating = ratingRepository.findBySkillIdAndUserId(skillId, userId)
+                .orElseGet(() -> new SkillRating(skillId, userId, score));
+        rating.updateReview(score, reviewText);
+        SkillRating saved = ratingRepository.save(rating);
+        eventPublisher.publishEvent(new SkillRatedEvent(skillId, userId, score));
+        return saved;
+    }
+
+    @Transactional
+    public SkillRating clearReview(Long skillId, String userId) {
+        ensureSkillExists(skillId);
+        SkillRating rating = ratingRepository.findBySkillIdAndUserId(skillId, userId)
+                .filter(SkillRating::hasReview)
+                .orElseThrow(() -> new DomainNotFoundException("error.skillReview.notFound"));
+        rating.clearReview();
+        return ratingRepository.save(rating);
+    }
+
+    @Transactional
+    public SkillRating hideReview(Long reviewId, String moderatorId, String reason) {
+        SkillRating rating = findReview(reviewId);
+        rating.hideReview(moderatorId, reason);
+        return ratingRepository.save(rating);
+    }
+
+    @Transactional
+    public SkillRating restoreReview(Long reviewId, String moderatorId) {
+        SkillRating rating = findReview(reviewId);
+        rating.restoreReview(moderatorId);
+        return ratingRepository.save(rating);
+    }
+
     public Optional<Short> getUserRating(Long skillId, String userId) {
         ensureSkillExists(skillId);
         return ratingRepository.findBySkillIdAndUserId(skillId, userId)
             .map(SkillRating::getScore);
+    }
+
+    public Optional<SkillRating> getUserReview(Long skillId, String userId) {
+        ensureSkillExists(skillId);
+        return ratingRepository.findBySkillIdAndUserId(skillId, userId)
+                .filter(SkillRating::hasReview);
+    }
+
+    private SkillRating findReview(Long reviewId) {
+        return ratingRepository.findById(reviewId)
+                .filter(SkillRating::hasReview)
+                .orElseThrow(() -> new DomainNotFoundException("error.skillReview.notFound"));
     }
 
     private void ensureSkillExists(Long skillId) {

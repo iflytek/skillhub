@@ -77,4 +77,87 @@ class SkillRatingServiceTest {
         assertThatThrownBy(() -> service.getUserRating(99L, "10"))
                 .isInstanceOf(DomainNotFoundException.class);
     }
+
+    @Test
+    void upsertReview_creates_review_and_rating() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1")).thenReturn(Optional.empty());
+        when(ratingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SkillRating review = service.upsertReview(1L, "user-1", (short) 5, "  Useful skill.  ");
+
+        assertThat(review.getScore()).isEqualTo((short) 5);
+        assertThat(review.getReviewText()).isEqualTo("Useful skill.");
+        assertThat(review.getReviewStatus()).isEqualTo(SkillReviewStatus.VISIBLE);
+        verify(eventPublisher).publishEvent(any(SkillRatedEvent.class));
+    }
+
+    @Test
+    void upsertReview_preserves_hidden_status_when_author_edits() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        SkillRating existing = new SkillRating(1L, "user-1", (short) 2);
+        existing.updateReview((short) 2, "Original review");
+        existing.hideReview("moderator-1", "Policy violation");
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1")).thenReturn(Optional.of(existing));
+        when(ratingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SkillRating review = service.upsertReview(1L, "user-1", (short) 4, "Edited review");
+
+        assertThat(review.getReviewStatus()).isEqualTo(SkillReviewStatus.HIDDEN);
+        assertThat(review.getReviewText()).isEqualTo("Edited review");
+    }
+
+    @Test
+    void upsertReview_rejects_blank_or_too_long_text() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.upsertReview(1L, "user-1", (short) 4, "  "))
+                .isInstanceOf(DomainBadRequestException.class);
+        assertThatThrownBy(() -> service.upsertReview(1L, "user-1", (short) 4, "x".repeat(2001)))
+                .isInstanceOf(DomainBadRequestException.class);
+    }
+
+    @Test
+    void clearReview_keeps_rating_row_and_score() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        SkillRating existing = new SkillRating(1L, "user-1", (short) 4);
+        existing.updateReview((short) 4, "Useful skill");
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1")).thenReturn(Optional.of(existing));
+        when(ratingRepository.save(existing)).thenReturn(existing);
+
+        SkillRating result = service.clearReview(1L, "user-1");
+
+        assertThat(result.hasReview()).isFalse();
+        assertThat(result.getScore()).isEqualTo((short) 4);
+        assertThat(result.getReviewStatus()).isEqualTo(SkillReviewStatus.VISIBLE);
+    }
+
+    @Test
+    void moderator_can_hide_and_restore_review() {
+        SkillRating existing = new SkillRating(1L, "user-1", (short) 4);
+        existing.updateReview((short) 4, "Useful skill");
+        when(ratingRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(ratingRepository.save(existing)).thenReturn(existing);
+
+        SkillRating hidden = service.hideReview(7L, "moderator-1", "Off topic");
+        assertThat(hidden.getReviewStatus()).isEqualTo(SkillReviewStatus.HIDDEN);
+        assertThat(hidden.getModeratedBy()).isEqualTo("moderator-1");
+        assertThat(hidden.getModerationReason()).isEqualTo("Off topic");
+
+        SkillRating restored = service.restoreReview(7L, "moderator-2");
+        assertThat(restored.getReviewStatus()).isEqualTo(SkillReviewStatus.VISIBLE);
+        assertThat(restored.getModeratedBy()).isEqualTo("moderator-2");
+        assertThat(restored.getModerationReason()).isNull();
+    }
+
+    @Test
+    void clearReview_throws_when_user_has_only_rating() {
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
+        when(ratingRepository.findBySkillIdAndUserId(1L, "user-1"))
+                .thenReturn(Optional.of(new SkillRating(1L, "user-1", (short) 4)));
+
+        assertThatThrownBy(() -> service.clearReview(1L, "user-1"))
+                .isInstanceOf(DomainNotFoundException.class);
+    }
 }
