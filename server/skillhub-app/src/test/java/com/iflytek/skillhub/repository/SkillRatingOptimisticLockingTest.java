@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.iflytek.skillhub.domain.social.SkillRating;
+import com.iflytek.skillhub.domain.social.SkillReviewStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.OptimisticLockException;
@@ -31,18 +32,66 @@ class SkillRatingOptimisticLockingTest {
             SkillRating first = firstManager.find(SkillRating.class, ratingId);
             SkillRating stale = staleManager.find(SkillRating.class, ratingId);
 
-            first.updateReview((short) 5, "First update");
+            first.hideReview("moderator", "Policy violation");
             firstManager.getTransaction().commit();
 
             stale.updateReview((short) 2, "Stale update");
             assertThatThrownBy(staleManager.getTransaction()::commit)
                     .satisfies(error -> assertThat(hasCause(error, OptimisticLockException.class)).isTrue());
+
+            EntityManager verifier = entityManagerFactory.createEntityManager();
+            try {
+                SkillRating saved = verifier.find(SkillRating.class, ratingId);
+                assertThat(saved.getReviewStatus()).isEqualTo(SkillReviewStatus.HIDDEN);
+                assertThat(saved.getModerationReason()).isEqualTo("Policy violation");
+            } finally {
+                verifier.close();
+            }
         } finally {
             rollbackIfActive(firstManager);
             rollbackIfActive(staleManager);
             firstManager.close();
             staleManager.close();
             deleteRating(ratingId);
+        }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void duplicateFirstInsertIsRejectedByTheDatabaseUniqueConstraint() {
+        EntityManager firstManager = entityManagerFactory.createEntityManager();
+        EntityManager secondManager = entityManagerFactory.createEntityManager();
+        try {
+            firstManager.getTransaction().begin();
+            secondManager.getTransaction().begin();
+            assertThat(countRatings(firstManager, 20L, "duplicate-author")).isZero();
+            assertThat(countRatings(secondManager, 20L, "duplicate-author")).isZero();
+
+            SkillRating first = new SkillRating(20L, "duplicate-author", (short) 4);
+            first.updateReview((short) 4, "First insert");
+            firstManager.persist(first);
+            firstManager.getTransaction().commit();
+
+            SkillRating duplicate = new SkillRating(20L, "duplicate-author", (short) 5);
+            duplicate.updateReview((short) 5, "Duplicate insert");
+            assertThatThrownBy(() -> {
+                secondManager.persist(duplicate);
+                secondManager.flush();
+                secondManager.getTransaction().commit();
+            }).isInstanceOf(RuntimeException.class);
+
+            EntityManager verifier = entityManagerFactory.createEntityManager();
+            try {
+                assertThat(countRatings(verifier, 20L, "duplicate-author")).isEqualTo(1L);
+            } finally {
+                verifier.close();
+            }
+        } finally {
+            rollbackIfActive(firstManager);
+            rollbackIfActive(secondManager);
+            firstManager.close();
+            secondManager.close();
+            deleteRatings(20L, "duplicate-author");
         }
     }
 
@@ -75,6 +124,34 @@ class SkillRatingOptimisticLockingTest {
             if (rating != null) {
                 entityManager.remove(rating);
             }
+            entityManager.getTransaction().commit();
+        } finally {
+            rollbackIfActive(entityManager);
+            entityManager.close();
+        }
+    }
+
+    private long countRatings(EntityManager entityManager, Long skillId, String userId) {
+        return entityManager.createQuery("""
+                        SELECT COUNT(r) FROM SkillRating r
+                        WHERE r.skillId = :skillId AND r.userId = :userId
+                        """, Long.class)
+                .setParameter("skillId", skillId)
+                .setParameter("userId", userId)
+                .getSingleResult();
+    }
+
+    private void deleteRatings(Long skillId, String userId) {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        try {
+            entityManager.getTransaction().begin();
+            entityManager.createQuery("""
+                            DELETE FROM SkillRating r
+                            WHERE r.skillId = :skillId AND r.userId = :userId
+                            """)
+                    .setParameter("skillId", skillId)
+                    .setParameter("userId", userId)
+                    .executeUpdate();
             entityManager.getTransaction().commit();
         } finally {
             rollbackIfActive(entityManager);

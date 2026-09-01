@@ -2,12 +2,14 @@ package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -78,6 +80,21 @@ class SkillReviewAppServiceTest {
         service.list(10L, "admin", Map.of(), Set.of("SKILL_ADMIN"), 0, 20);
 
         verify(queryRepository).list(eq(10L), eq("admin"), eq(true), any(Pageable.class));
+    }
+
+    @Test
+    void reviewPaginationRejectsNegativePageAndSizesOutsideOneToOneHundred() {
+        Skill skill = publishedSkill(SkillVisibility.PUBLIC);
+        when(skillRepository.findById(10L)).thenReturn(Optional.of(skill));
+
+        assertThatThrownBy(() -> service.list(10L, null, Map.of(), Set.of(), -1, 20))
+                .isInstanceOf(DomainBadRequestException.class);
+        assertThatThrownBy(() -> service.list(10L, null, Map.of(), Set.of(), 0, 0))
+                .isInstanceOf(DomainBadRequestException.class);
+        assertThatThrownBy(() -> service.list(10L, null, Map.of(), Set.of(), 0, 101))
+                .isInstanceOf(DomainBadRequestException.class);
+
+        verify(queryRepository, never()).list(any(), any(), anyBoolean(), any(Pageable.class));
     }
 
     @Test

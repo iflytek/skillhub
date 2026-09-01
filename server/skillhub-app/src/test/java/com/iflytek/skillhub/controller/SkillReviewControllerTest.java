@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -74,6 +75,21 @@ class SkillReviewControllerTest {
     }
 
     @Test
+    void anonymousUserCannotUpsertOrClearReview() throws Exception {
+        mockMvc.perform(put("/api/v1/skills/10/reviews/me")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"score\":4,\"reviewText\":\"Useful\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
+
+        mockMvc.perform(delete("/api/v1/skills/10/reviews/me")
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
     void authenticatedUserCanUpsertReview() throws Exception {
         var principal = principal("user-42", Set.of());
         when(reviewAppService.upsert(eq(10L), eq("user-42"), eq((short) 4), eq("Useful"), any(), eq(Set.of())))
@@ -106,6 +122,19 @@ class SkillReviewControllerTest {
     }
 
     @Test
+    void reviewTextIsRequiredByTheApiContract() throws Exception {
+        var principal = principal("user-42", Set.of());
+
+        mockMvc.perform(put("/api/v1/skills/10/reviews/me")
+                        .with(authentication(authToken(principal, "ROLE_USER")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"score\":4}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
     void skillAdminCanHideReview() throws Exception {
         var principal = principal("admin", Set.of("SKILL_ADMIN"));
 
@@ -130,6 +159,19 @@ class SkillReviewControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void moderationReasonRejectsMoreThanFiveHundredCharacters() throws Exception {
+        var principal = principal("admin", Set.of("SKILL_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/admin/skill-reviews/8/hide")
+                        .with(authentication(authToken(principal, "ROLE_SKILL_ADMIN")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"" + "x".repeat(501) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
     }
 
     private PlatformPrincipal principal(String userId, Set<String> roles) {

@@ -189,6 +189,25 @@ class SkillRatingServiceTest {
     }
 
     @Test
+    void moderationReason_acceptsFiveHundredCharactersAndRejectsFiveHundredOne() {
+        SkillRating valid = new SkillRating(1L, "user-1", (short) 4);
+        valid.updateReview((short) 4, "Useful skill");
+        SkillRating invalid = new SkillRating(1L, "user-2", (short) 4);
+        invalid.updateReview((short) 4, "Another useful skill");
+        when(ratingRepository.findById(7L)).thenReturn(Optional.of(valid));
+        when(ratingRepository.findById(8L)).thenReturn(Optional.of(invalid));
+        when(ratingRepository.save(valid)).thenReturn(valid);
+
+        SkillRating hidden = service.hideReview(7L, "moderator", "x".repeat(500));
+        assertThat(hidden.getModerationReason()).hasSize(500);
+
+        assertThatThrownBy(() -> service.hideReview(8L, "moderator", "x".repeat(501)))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.skillReview.reason.tooLong");
+        verify(ratingRepository, never()).save(invalid);
+    }
+
+    @Test
     void clearReview_throws_when_user_has_only_rating() {
         when(skillRepository.findById(1L)).thenReturn(Optional.of(skill()));
         when(ratingRepository.findBySkillIdAndUserId(1L, "user-1"))
