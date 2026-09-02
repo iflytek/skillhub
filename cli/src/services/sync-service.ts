@@ -7,8 +7,9 @@ import { InventoryStore } from '../stores/inventory-store'
 import { SyncWorkspaceStore, type NamespaceSyncState } from '../stores/sync-workspace-store'
 import { createZip, isZipFile } from '../platform/archive'
 import { pathExists } from '../platform/paths'
+import { compareSkillVersions } from './skill-version-order'
 
-export type SyncStatus = 'up-to-date' | 'update-available' | 'local-changed' | 'orphaned' | 'not-installed'
+export type SyncStatus = 'up-to-date' | 'update-available' | 'local-changed' | 'blocked' | 'orphaned' | 'not-installed'
 
 export interface SkillSyncMetadata {
   registry: string
@@ -96,10 +97,35 @@ export async function inspectNamespaceWorkspace(options: {
       })
       continue
     }
-    if (metadata.fingerprint !== remote.fingerprint) {
+    const versionOrder = compareSkillVersions(metadata.version, remote.version)
+    if (versionOrder === 'remote-newer') {
       entries.push({
         ...baseEntry(remote, 'update-available'),
         localVersion: metadata.version
+      })
+      continue
+    }
+    if (versionOrder === 'remote-older') {
+      entries.push({
+        ...baseEntry(remote, 'blocked'),
+        localVersion: metadata.version,
+        reason: 'remote version is older than the installed version; local files were kept'
+      })
+      continue
+    }
+    if (versionOrder === 'unknown') {
+      entries.push({
+        ...baseEntry(remote, 'blocked'),
+        localVersion: metadata.version,
+        reason: 'cannot determine version order; use explicit install after verifying the release'
+      })
+      continue
+    }
+    if (versionOrder === 'same' && metadata.fingerprint !== remote.fingerprint) {
+      entries.push({
+        ...baseEntry(remote, 'blocked'),
+        localVersion: metadata.version,
+        reason: 'remote content changed without a newer version; use explicit install after verifying the release'
       })
       continue
     }
@@ -150,6 +176,10 @@ export async function pullNamespace(options: {
   const remoteBySlug = new Map(inspected.remoteItems.map(item => [item.slug, item]))
   for (const entry of inspected.entries) {
     if (entry.status === 'up-to-date' || entry.status === 'orphaned') continue
+    if (entry.status === 'blocked') {
+      result.failures.push({ slug: entry.slug, message: entry.reason ?? 'automatic sync is blocked' })
+      continue
+    }
     if (entry.status === 'local-changed' && !options.force) {
       result.failures.push({ slug: entry.slug, message: entry.reason ?? 'local changes detected; pass --force to overwrite' })
       continue

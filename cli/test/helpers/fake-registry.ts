@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { unzipSync } from 'fflate'
 
 type FakeHandler = (req: Request) => Response | Promise<Response>
@@ -70,10 +71,23 @@ export interface FakeSkill {
   version?: string
   /** Numeric version id returned in resolve. Defaults to 1. */
   versionId?: number
-  /** SHA-256 fingerprint string. Defaults to 'deadbeef'. */
+  /** SHA-256 fingerprint string. Defaults to the fingerprint of zipBytes. */
   fingerprint?: string
   /** Raw bytes served as the ZIP body. Defaults to a minimal valid ZIP. */
   zipBytes?: Uint8Array
+}
+
+function resolveSkillFingerprint(skill: FakeSkill): string {
+  if (skill.fingerprint) return skill.fingerprint
+  const entries = unzipSync(skill.zipBytes ?? MINIMAL_ZIP)
+  const aggregate = createHash('sha256')
+  for (const path of Object.keys(entries)
+    .filter(path => !path.endsWith('/') && path !== '.skillhub' && !path.startsWith('.skillhub/'))
+    .sort((left, right) => left.localeCompare(right))) {
+    const fileHash = createHash('sha256').update(entries[path]!).digest('hex')
+    aggregate.update(`${path}:${fileHash}\n`, 'utf8')
+  }
+  return `sha256:${aggregate.digest('hex')}`
 }
 
 // Minimal valid ZIP: local file header + end-of-central-directory record with
@@ -296,7 +310,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
               slug: skill.slug,
               version: skill.version ?? '1.0.0',
               versionId: skill.versionId ?? index + 1,
-              fingerprint: skill.fingerprint ?? 'deadbeef',
+              fingerprint: resolveSkillFingerprint(skill),
               updatedAt: '2026-08-18T00:00:00Z',
               visibility: 'NAMESPACE_ONLY',
               downloadUrl: buildDownloadUrl(baseUrl, namespace, skill.slug, skill.version ?? '1.0.0')
@@ -335,7 +349,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
             slug,
             version,
             versionId: skill.versionId ?? 1,
-            fingerprint: skill.fingerprint ?? 'deadbeef',
+            fingerprint: resolveSkillFingerprint(skill),
             downloadUrl: buildDownloadUrl(baseUrl, namespace, slug, version)
           }
         })

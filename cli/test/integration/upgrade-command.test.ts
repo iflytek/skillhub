@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { access, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
@@ -16,8 +17,17 @@ afterEach(() => {
   registries = []
 })
 
+function makeSkill(content: string): { fingerprint: string; zipBytes: Uint8Array } {
+  const bytes = strToU8(content)
+  const fileHash = createHash('sha256').update(bytes).digest('hex')
+  return {
+    fingerprint: `sha256:${createHash('sha256').update(`SKILL.md:${fileHash}\n`).digest('hex')}`,
+    zipBytes: zipSync({ 'SKILL.md': bytes })
+  }
+}
+
 function makeSkillZip(content: string): Uint8Array {
-  return zipSync({ 'SKILL.md': strToU8(content) })
+  return makeSkill(content).zipBytes
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -37,8 +47,7 @@ describe('upgrade command', () => {
       slug: 'skillhub-registry',
       version: '1.0.0',
       versionId: 1,
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -52,8 +61,7 @@ describe('upgrade command', () => {
 
     skill.version = '1.1.0'
     skill.versionId = 2
-    skill.fingerprint = 'fp-v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
 
     const inventoryPath = join(env.home, '.skillhub', 'inventory.json')
     const metadataPath = join(rootDir, 'skillhub-registry', '.skillhub', 'metadata.json')
@@ -92,10 +100,15 @@ describe('upgrade command', () => {
     expect(registry.received.downloads).toBe(2)
 
     const metadata = JSON.parse(await readFile(metadataPath, 'utf-8'))
-    expect(metadata).toMatchObject({ schemaVersion: 1, version: '1.1.0', versionId: 2, fingerprint: 'fp-v2' })
+    expect(metadata).toMatchObject({
+      schemaVersion: 1,
+      version: '1.1.0',
+      versionId: 2,
+      fingerprint: makeSkill('# v2').fingerprint
+    })
     expect(Object.keys(metadata.files)).toContain('SKILL.md')
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'fp-v2' })
+    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
   })
 
   test('local changes block by default and --force replaces only the same source', async () => {
@@ -104,8 +117,7 @@ describe('upgrade command', () => {
       namespace: 'team',
       slug: 'code-review',
       version: '1.0.0',
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -118,8 +130,7 @@ describe('upgrade command', () => {
 
     await writeFile(join(rootDir, 'code-review', 'SKILL.md'), '# locally edited')
     skill.version = '1.1.0'
-    skill.fingerprint = 'fp-v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
 
     const blocked = await runCli([
       'upgrade', '@team/code-review', '--registry', registry.url, '--agent', 'custom', '--check', '--json'
@@ -143,8 +154,7 @@ describe('upgrade command', () => {
       slug: 'late-edit',
       version: '1.0.0',
       versionId: 1,
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -157,8 +167,7 @@ describe('upgrade command', () => {
 
     skill.version = '1.1.0'
     skill.versionId = 2
-    skill.fingerprint = 'fp-v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
     const tokenForRegistry = async () => undefined
     const plan = await planSkillUpgrades({
       coordinates: ['@global/late-edit'],
@@ -175,7 +184,7 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'late-edit', 'SKILL.md'), 'utf-8'))
       .toBe('# edited after planning')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
+    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: makeSkill('# v1').fingerprint })
   })
 
   test('a target removed after planning is not recreated by upgrade', async () => {
@@ -185,8 +194,7 @@ describe('upgrade command', () => {
       slug: 'removed-late',
       version: '1.0.0',
       versionId: 1,
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -199,8 +207,7 @@ describe('upgrade command', () => {
 
     skill.version = '1.1.0'
     skill.versionId = 2
-    skill.fingerprint = 'fp-v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
     const tokenForRegistry = async () => undefined
     const plan = await planSkillUpgrades({
       coordinates: ['@global/removed-late'],
@@ -217,7 +224,7 @@ describe('upgrade command', () => {
     expect(result.items[0]?.reason).toContain('installed target disappeared before upgrade commit')
     expect(await exists(skillDir)).toBe(false)
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
+    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: makeSkill('# v1').fingerprint })
   })
 
   test('new installs persist absolute targets and legacy relative targets are blocked safely', async () => {
@@ -227,8 +234,7 @@ describe('upgrade command', () => {
       slug: 'portable',
       version: '1.0.0',
       versionId: 1,
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -252,8 +258,7 @@ describe('upgrade command', () => {
     await writeFile(inventoryPath, JSON.stringify(inventory))
     skill.version = '1.1.0'
     skill.versionId = 2
-    skill.fingerprint = 'fp-v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
 
     const otherCwd = join(env.cwd, 'other')
     await mkdir(otherCwd, { recursive: true })
@@ -271,8 +276,7 @@ describe('upgrade command', () => {
       namespace: 'global',
       slug: 'demo',
       version: '1.0.0',
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -288,7 +292,7 @@ describe('upgrade command', () => {
     metadata.namespace = 'another-team'
     await writeFile(metadataPath, JSON.stringify(metadata))
     skill.version = '2.0.0'
-    skill.fingerprint = 'fp-v2'
+    skill.fingerprint = makeSkill('# v2').fingerprint
 
     const result = await runCli([
       'upgrade', '@global/demo', '--registry', registry.url, '--force', '--json'
@@ -300,8 +304,8 @@ describe('upgrade command', () => {
 
   test('a bare slug must identify exactly one installed source', async () => {
     const env = await createTempHome()
-    const skillA = { namespace: 'team-a', slug: 'demo', version: '1.0.0', fingerprint: 'a', zipBytes: makeSkillZip('# A') }
-    const skillB = { namespace: 'team-b', slug: 'demo', version: '1.0.0', fingerprint: 'b', zipBytes: makeSkillZip('# B') }
+    const skillA = { namespace: 'team-a', slug: 'demo', version: '1.0.0', ...makeSkill('# A') }
+    const skillB = { namespace: 'team-b', slug: 'demo', version: '1.0.0', ...makeSkill('# B') }
     const registryA = await startFakeRegistry({ skills: [skillA] })
     const registryB = await startFakeRegistry({ skills: [skillB] })
     registries.push(registryA, registryB)
@@ -350,7 +354,7 @@ describe('upgrade command', () => {
 
   test('target filters select deterministically and missing matches never install', async () => {
     const env = await createTempHome()
-    const skill = { namespace: 'global', slug: 'filtered', version: '1.0.0', fingerprint: 'fp', zipBytes: makeSkillZip('# v1') }
+    const skill = { namespace: 'global', slug: 'filtered', version: '1.0.0', ...makeSkill('# v1') }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
     const rootDir = join(env.cwd, 'skills')
@@ -395,8 +399,7 @@ describe('upgrade command', () => {
       namespace: 'global',
       slug: 'shared',
       version: '1.0.0',
-      fingerprint: 'fp-v1',
-      zipBytes: makeSkillZip('# v1')
+      ...makeSkill('# v1')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -409,8 +412,7 @@ describe('upgrade command', () => {
     expect(registry.received.downloads).toBe(1)
 
     skill.version = '1.1.0'
-    skill.fingerprint = 'fp-v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
 
     const partial = await runCli([
       'upgrade', '@global/shared', '--registry', registry.url, '--agent', 'codex', '--check', '--json'
@@ -429,7 +431,7 @@ describe('upgrade command', () => {
     expect(await readFile(join(env.home, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
     expect(await readFile(join(env.home, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'fp-v2' })
+    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
     expect(inventory.items[0].targets).toHaveLength(2)
 
     const listed = await runCli(['list', '--json', '--registry', registry.url], {
@@ -447,8 +449,7 @@ describe('upgrade command', () => {
       slug: 'stable',
       version: '2.0.0',
       versionId: 2,
-      fingerprint: 'fp-v2',
-      zipBytes: makeSkillZip('# v2')
+      ...makeSkill('# v2')
     }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
@@ -461,8 +462,7 @@ describe('upgrade command', () => {
 
     skill.version = '1.0.0'
     skill.versionId = 1
-    skill.fingerprint = 'fp-v1'
-    skill.zipBytes = makeSkillZip('# v1')
+    Object.assign(skill, makeSkill('# v1'))
 
     const result = await runCli([
       'upgrade', '@global/stable', '--registry', registry.url, '--force', '--json'
@@ -476,7 +476,7 @@ describe('upgrade command', () => {
   test('keeps local files when resolve is unavailable or same-version content drifts', async () => {
     const env = await createTempHome()
     const failures: { resolve?: 'server_error' } = {}
-    const skill = { namespace: 'global', slug: 'resilient', version: '1.0.0', fingerprint: 'fp-v1', zipBytes: makeSkillZip('# v1') }
+    const skill = { namespace: 'global', slug: 'resilient', version: '1.0.0', ...makeSkill('# v1') }
     const registry = await startFakeRegistry({ skills: [skill], failures })
     registries.push(registry)
     const rootDir = join(env.cwd, 'skills')
@@ -495,8 +495,7 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'resilient', 'SKILL.md'), 'utf-8')).toBe('# v1')
 
     delete failures.resolve
-    skill.fingerprint = 'fp-drift'
-    skill.zipBytes = makeSkillZip('# changed without version bump')
+    Object.assign(skill, makeSkill('# changed without version bump'))
     const drifted = await runCli([
       'upgrade', '@global/resilient', '--registry', registry.url, '--force', '--json'
     ], { HOME: env.home, USERPROFILE: env.home })
@@ -508,8 +507,8 @@ describe('upgrade command', () => {
 
   test('a blocked batch reports a plan and does not claim successful writes', async () => {
     const env = await createTempHome()
-    const first = { namespace: 'global', slug: 'first', version: '1.0.0', fingerprint: 'first-v1', zipBytes: makeSkillZip('# first v1') }
-    const second = { namespace: 'global', slug: 'second', version: '1.0.0', fingerprint: 'second-v1', zipBytes: makeSkillZip('# second v1') }
+    const first = { namespace: 'global', slug: 'first', version: '1.0.0', ...makeSkill('# first v1') }
+    const second = { namespace: 'global', slug: 'second', version: '1.0.0', ...makeSkill('# second v1') }
     const registry = await startFakeRegistry({ skills: [first, second] })
     registries.push(registry)
     const rootDir = join(env.cwd, 'skills')
@@ -522,11 +521,9 @@ describe('upgrade command', () => {
     }
 
     first.version = '1.1.0'
-    first.fingerprint = 'first-v2'
-    first.zipBytes = makeSkillZip('# first v2')
+    Object.assign(first, makeSkill('# first v2'))
     second.version = '1.1.0'
-    second.fingerprint = 'second-v2'
-    second.zipBytes = makeSkillZip('# second v2')
+    Object.assign(second, makeSkill('# second v2'))
     await writeFile(join(rootDir, 'second', 'SKILL.md'), '# local change')
 
     const result = await runCli([
@@ -541,9 +538,9 @@ describe('upgrade command', () => {
 
   test('a runtime batch failure reports committed, failed, and unattempted skills', async () => {
     const env = await createTempHome()
-    const first = { namespace: 'global', slug: 'first', version: '1.0.0', fingerprint: 'first-v1', zipBytes: makeSkillZip('# first v1') }
-    const second = { namespace: 'global', slug: 'second', version: '1.0.0', fingerprint: 'second-v1', zipBytes: makeSkillZip('# second v1') }
-    const third = { namespace: 'global', slug: 'third', version: '1.0.0', fingerprint: 'third-v1', zipBytes: makeSkillZip('# third v1') }
+    const first = { namespace: 'global', slug: 'first', version: '1.0.0', ...makeSkill('# first v1') }
+    const second = { namespace: 'global', slug: 'second', version: '1.0.0', ...makeSkill('# second v1') }
+    const third = { namespace: 'global', slug: 'third', version: '1.0.0', ...makeSkill('# third v1') }
     const registry = await startFakeRegistry({ skills: [first, second, third] })
     registries.push(registry)
     const rootDir = join(env.cwd, 'skills')
@@ -556,14 +553,12 @@ describe('upgrade command', () => {
     }
 
     first.version = '1.1.0'
-    first.fingerprint = 'first-v2'
-    first.zipBytes = makeSkillZip('# first v2')
+    Object.assign(first, makeSkill('# first v2'))
     second.version = '1.1.0'
-    second.fingerprint = 'second-v2'
+    second.fingerprint = makeSkill('# second v2').fingerprint
     second.zipBytes = strToU8('not a zip archive')
     third.version = '1.1.0'
-    third.fingerprint = 'third-v2'
-    third.zipBytes = makeSkillZip('# third v2')
+    Object.assign(third, makeSkill('# third v2'))
 
     const result = await runCli([
       'upgrade', '@global/first', '@global/second', '@global/third',
@@ -586,7 +581,7 @@ describe('upgrade command', () => {
 
   test('a committed upgrade keeps success and renders a post-commit warning', async () => {
     const env = await createTempHome()
-    const skill = { namespace: 'global', slug: 'warned', version: '1.0.0', fingerprint: 'v1', zipBytes: makeSkillZip('# v1') }
+    const skill = { namespace: 'global', slug: 'warned', version: '1.0.0', ...makeSkill('# v1') }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
     const rootDir = join(env.cwd, 'skills')
@@ -596,8 +591,7 @@ describe('upgrade command', () => {
       USERPROFILE: env.home
     })
     skill.version = '1.1.0'
-    skill.fingerprint = 'v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
     const tokenForRegistry = async () => undefined
     const plan = await planSkillUpgrades({
       coordinates: ['@global/warned'],
@@ -624,12 +618,12 @@ describe('upgrade command', () => {
     expect(renderUpgradeResult(plan, result, false)).toContain('[warning: target lock cleanup failed')
     expect(await readFile(join(rootDir, 'warned', 'SKILL.md'), 'utf-8')).toBe('# v2')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: 'v2' })
+    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
   })
 
   test('legacy metadata without a file baseline requires explicit force migration', async () => {
     const env = await createTempHome()
-    const skill = { namespace: 'global', slug: 'legacy', version: '1.0.0', fingerprint: 'v1', zipBytes: makeSkillZip('# v1') }
+    const skill = { namespace: 'global', slug: 'legacy', version: '1.0.0', ...makeSkill('# v1') }
     const registry = await startFakeRegistry({ skills: [skill] })
     registries.push(registry)
     const rootDir = join(env.cwd, 'skills')
@@ -644,8 +638,7 @@ describe('upgrade command', () => {
     delete metadata.schemaVersion
     await writeFile(metadataPath, JSON.stringify(metadata))
     skill.version = '1.1.0'
-    skill.fingerprint = 'v2'
-    skill.zipBytes = makeSkillZip('# v2')
+    Object.assign(skill, makeSkill('# v2'))
 
     const blocked = await runCli([
       'upgrade', '@global/legacy', '--registry', registry.url, '--check', '--json'
