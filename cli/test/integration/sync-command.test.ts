@@ -197,7 +197,7 @@ describe('sync command', () => {
         'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
         '--registry', registry.url, '--token', 'token', '--json'
       ], { HOME: env.home }, { cwd: env.cwd })
-      expect(pulled.exitCode).toBe(1)
+      expect(pulled.exitCode).toBe(6)
       expect(await readFile(join(skillsDir, 'demo', 'SKILL.md'), 'utf8')).toBe('# original\n')
     } finally {
       registry.stop()
@@ -229,7 +229,7 @@ describe('sync command', () => {
         'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
         '--registry', registry.url, '--token', 'token', '--json'
       ], { HOME: env.home }, { cwd: env.cwd })
-      expect(pulled.exitCode).toBe(1)
+      expect(pulled.exitCode).toBe(6)
       expect(JSON.parse(pulled.stdout).entries[0]).toMatchObject({
         status: 'blocked',
         localVersion: '2.0.0',
@@ -267,7 +267,7 @@ describe('sync command', () => {
         'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
         '--registry', registry.url, '--token', 'token', '--json'
       ], { HOME: env.home }, { cwd: env.cwd })
-      expect(pulled.exitCode).toBe(1)
+      expect(pulled.exitCode).toBe(6)
       expect(JSON.parse(pulled.stdout).entries[0]).toMatchObject({
         status: 'blocked',
         localVersion: 'release-a',
@@ -276,6 +276,70 @@ describe('sync command', () => {
       })
     } finally {
       registry.stop()
+    }
+  })
+
+  test('hard remote guards cannot be bypassed by local changes and force', async () => {
+    const original = makeSkill('# original\n')
+    const variants = [
+      {
+        name: 'downgrade',
+        initialVersion: '2.0.0',
+        remoteVersion: '1.0.0',
+        remote: original,
+        reason: 'remote version is older than the installed version; local files were kept'
+      },
+      {
+        name: 'same-version drift',
+        initialVersion: '1.0.0',
+        remoteVersion: '1.0.0',
+        remote: makeSkill('# changed without a version bump\n'),
+        reason: 'remote content changed without a newer version; use explicit install after verifying the release'
+      },
+      {
+        name: 'unknown version order',
+        initialVersion: 'release-a',
+        remoteVersion: 'release-b',
+        remote: original,
+        reason: 'cannot determine version order; use explicit install after verifying the release'
+      }
+    ]
+
+    for (const variant of variants) {
+      const env = await createTempHome()
+      const skillsDir = join(env.cwd, 'team-skills')
+      const skill: FakeSkill = {
+        namespace: 'team-a',
+        slug: 'demo',
+        version: variant.initialVersion,
+        versionId: 1,
+        ...original
+      }
+      const registry = await startFakeRegistry({ token: 'token', skills: [skill] })
+      try {
+        await runCli([
+          'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir,
+          '--registry', registry.url, '--token', 'token'
+        ], { HOME: env.home }, { cwd: env.cwd })
+        await writeFile(join(skillsDir, 'demo', 'SKILL.md'), `# local edit before ${variant.name}\n`)
+        skill.version = variant.remoteVersion
+        skill.versionId = 2
+        skill.fingerprint = variant.remote.fingerprint
+        skill.zipBytes = variant.remote.zipBytes
+
+        const pulled = await runCli([
+          'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
+          '--registry', registry.url, '--token', 'token', '--json'
+        ], { HOME: env.home }, { cwd: env.cwd })
+        const output = JSON.parse(pulled.stdout)
+        expect(pulled.exitCode, variant.name).toBe(6)
+        expect(output.entries[0], variant.name).toMatchObject({ status: 'blocked', reason: variant.reason })
+        expect(output.actions, variant.name).toEqual([])
+        expect(await readFile(join(skillsDir, 'demo', 'SKILL.md'), 'utf8'))
+          .toBe(`# local edit before ${variant.name}\n`)
+      } finally {
+        registry.stop()
+      }
     }
   })
 

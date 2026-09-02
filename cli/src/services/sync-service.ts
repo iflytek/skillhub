@@ -89,22 +89,7 @@ export async function inspectNamespaceWorkspace(options: {
     }
 
     const snapshot = await snapshotSkillDirectory(skillDir)
-    if (snapshot.fingerprint !== metadata.fingerprint) {
-      entries.push({
-        ...baseEntry(remote, 'local-changed'),
-        localVersion: metadata.version,
-        changedFiles: diffSkillFiles(metadata.files, snapshot.files)
-      })
-      continue
-    }
     const versionOrder = compareSkillVersions(metadata.version, remote.version)
-    if (versionOrder === 'remote-newer') {
-      entries.push({
-        ...baseEntry(remote, 'update-available'),
-        localVersion: metadata.version
-      })
-      continue
-    }
     if (versionOrder === 'remote-older') {
       entries.push({
         ...baseEntry(remote, 'blocked'),
@@ -126,6 +111,21 @@ export async function inspectNamespaceWorkspace(options: {
         ...baseEntry(remote, 'blocked'),
         localVersion: metadata.version,
         reason: 'remote content changed without a newer version; use explicit install after verifying the release'
+      })
+      continue
+    }
+    if (snapshot.fingerprint !== metadata.fingerprint) {
+      entries.push({
+        ...baseEntry(remote, 'local-changed'),
+        localVersion: metadata.version,
+        changedFiles: diffSkillFiles(metadata.files, snapshot.files)
+      })
+      continue
+    }
+    if (versionOrder === 'remote-newer') {
+      entries.push({
+        ...baseEntry(remote, 'update-available'),
+        localVersion: metadata.version
       })
       continue
     }
