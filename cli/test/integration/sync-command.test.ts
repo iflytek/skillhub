@@ -127,6 +127,230 @@ describe('sync command', () => {
     }
   })
 
+  test('reports a newer remote version as update-available even when content is unchanged', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'team-skills')
+    const fixture = makeSkill('---\nname: demo\ndescription: Demo\nversion: 1.0.0\n---\n')
+    const skill: FakeSkill = {
+      namespace: 'team-a',
+      slug: 'demo',
+      version: '1.0.0',
+      versionId: 1,
+      ...fixture
+    }
+    const registry = await startFakeRegistry({ token: 'token', skills: [skill] })
+
+    try {
+      await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      skill.version = '1.1.0'
+      skill.versionId = 2
+
+      const status = await runCli([
+        'sync', 'status', '--namespace', 'team-a', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(JSON.parse(status.stdout).items[0]).toMatchObject({
+        status: 'update-available',
+        localVersion: '1.0.0',
+        remoteVersion: '1.1.0'
+      })
+    } finally {
+      registry.stop()
+    }
+  })
+
+  test('blocks same-version remote content drift even with force', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'team-skills')
+    const original = makeSkill('# original\n')
+    const changed = makeSkill('# changed without a version bump\n')
+    const skill: FakeSkill = {
+      namespace: 'team-a',
+      slug: 'demo',
+      version: '1.0.0',
+      versionId: 1,
+      ...original
+    }
+    const registry = await startFakeRegistry({ token: 'token', skills: [skill] })
+
+    try {
+      await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      skill.fingerprint = changed.fingerprint
+      skill.zipBytes = changed.zipBytes
+
+      const status = await runCli([
+        'sync', 'status', '--namespace', 'team-a', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(JSON.parse(status.stdout).items[0]).toMatchObject({
+        status: 'blocked',
+        reason: 'remote content changed without a newer version; use explicit install after verifying the release'
+      })
+
+      const checked = await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--check',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(checked.exitCode).toBe(6)
+      expect(JSON.parse(checked.stdout)).toMatchObject({ ok: false, check: true })
+
+      const pulled = await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(pulled.exitCode).toBe(6)
+      expect(await readFile(join(skillsDir, 'demo', 'SKILL.md'), 'utf8')).toBe('# original\n')
+    } finally {
+      registry.stop()
+    }
+  })
+
+  test('blocks automatic downgrade even when remote content is unchanged', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'team-skills')
+    const fixture = makeSkill('# stable content\n')
+    const skill: FakeSkill = {
+      namespace: 'team-a',
+      slug: 'demo',
+      version: '2.0.0',
+      versionId: 2,
+      ...fixture
+    }
+    const registry = await startFakeRegistry({ token: 'token', skills: [skill] })
+
+    try {
+      await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      skill.version = '1.0.0'
+      skill.versionId = 1
+
+      const pulled = await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(pulled.exitCode).toBe(6)
+      expect(JSON.parse(pulled.stdout).entries[0]).toMatchObject({
+        status: 'blocked',
+        localVersion: '2.0.0',
+        remoteVersion: '1.0.0',
+        reason: 'remote version is older than the installed version; local files were kept'
+      })
+      expect(await readFile(join(skillsDir, 'demo', 'SKILL.md'), 'utf8')).toBe('# stable content\n')
+    } finally {
+      registry.stop()
+    }
+  })
+
+  test('blocks sync when local and remote versions cannot be ordered', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'team-skills')
+    const fixture = makeSkill('# stable content\n')
+    const skill: FakeSkill = {
+      namespace: 'team-a',
+      slug: 'demo',
+      version: 'release-a',
+      versionId: 1,
+      ...fixture
+    }
+    const registry = await startFakeRegistry({ token: 'token', skills: [skill] })
+
+    try {
+      await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      skill.version = 'release-b'
+      skill.versionId = 2
+
+      const pulled = await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(pulled.exitCode).toBe(6)
+      expect(JSON.parse(pulled.stdout).entries[0]).toMatchObject({
+        status: 'blocked',
+        localVersion: 'release-a',
+        remoteVersion: 'release-b',
+        reason: 'cannot determine version order; use explicit install after verifying the release'
+      })
+    } finally {
+      registry.stop()
+    }
+  })
+
+  test('hard remote guards cannot be bypassed by local changes and force', async () => {
+    const original = makeSkill('# original\n')
+    const variants = [
+      {
+        name: 'downgrade',
+        initialVersion: '2.0.0',
+        remoteVersion: '1.0.0',
+        remote: original,
+        reason: 'remote version is older than the installed version; local files were kept'
+      },
+      {
+        name: 'same-version drift',
+        initialVersion: '1.0.0',
+        remoteVersion: '1.0.0',
+        remote: makeSkill('# changed without a version bump\n'),
+        reason: 'remote content changed without a newer version; use explicit install after verifying the release'
+      },
+      {
+        name: 'unknown version order',
+        initialVersion: 'release-a',
+        remoteVersion: 'release-b',
+        remote: original,
+        reason: 'cannot determine version order; use explicit install after verifying the release'
+      }
+    ]
+
+    for (const variant of variants) {
+      const env = await createTempHome()
+      const skillsDir = join(env.cwd, 'team-skills')
+      const skill: FakeSkill = {
+        namespace: 'team-a',
+        slug: 'demo',
+        version: variant.initialVersion,
+        versionId: 1,
+        ...original
+      }
+      const registry = await startFakeRegistry({ token: 'token', skills: [skill] })
+      try {
+        await runCli([
+          'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir,
+          '--registry', registry.url, '--token', 'token'
+        ], { HOME: env.home }, { cwd: env.cwd })
+        await writeFile(join(skillsDir, 'demo', 'SKILL.md'), `# local edit before ${variant.name}\n`)
+        skill.version = variant.remoteVersion
+        skill.versionId = 2
+        skill.fingerprint = variant.remote.fingerprint
+        skill.zipBytes = variant.remote.zipBytes
+
+        const pulled = await runCli([
+          'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
+          '--registry', registry.url, '--token', 'token', '--json'
+        ], { HOME: env.home }, { cwd: env.cwd })
+        const output = JSON.parse(pulled.stdout)
+        expect(pulled.exitCode, variant.name).toBe(6)
+        expect(output.entries[0], variant.name).toMatchObject({ status: 'blocked', reason: variant.reason })
+        expect(output.entries[0].changedFiles, variant.name).toEqual(['SKILL.md'])
+        expect(output.actions, variant.name).toEqual([])
+        expect(await readFile(join(skillsDir, 'demo', 'SKILL.md'), 'utf8'))
+          .toBe(`# local edit before ${variant.name}\n`)
+      } finally {
+        registry.stop()
+      }
+    }
+  })
+
   test('prune removes only unchanged managed orphan skills', async () => {
     const env = await createTempHome()
     const skillsDir = join(env.cwd, 'team-skills')

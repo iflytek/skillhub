@@ -1,5 +1,4 @@
 import { isAbsolute, relative, resolve } from 'node:path'
-import { compare as compareSemver, valid as validSemver } from 'semver'
 import { canonicalizeExistingPath, pathExists } from '../platform/paths'
 import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client'
 import { InventoryStore, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
@@ -9,6 +8,7 @@ import { hasExplicitNamespace, parseSkillName, resolveSkillName } from '../share
 import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
 import { installSkill } from './install-service'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installed-skill-metadata'
+import { compareSkillVersions } from './skill-version-order'
 
 const MAX_UPGRADE_SELECTION = 50
 
@@ -166,7 +166,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const versionOrder = compareVersions(selection.item.version, resolved.version)
+    const versionOrder = compareSkillVersions(selection.item.version, resolved.version)
     if (versionOrder === 'remote-older') {
       items.push({
         ...base,
@@ -406,15 +406,4 @@ function isSameOrWithin(parent: string, candidate: string): boolean {
 
 function normalizeRegistry(registry: string): string {
   return registry.replace(/\/+$/, '')
-}
-
-function compareVersions(
-  installedVersion: string,
-  remoteVersion: string
-): 'same' | 'remote-newer' | 'remote-older' | 'unknown' {
-  if (installedVersion === remoteVersion) return 'same'
-  if (!validSemver(installedVersion) || !validSemver(remoteVersion)) return 'unknown'
-  const order = compareSemver(remoteVersion, installedVersion)
-  if (order === 0) return 'same'
-  return order > 0 ? 'remote-newer' : 'remote-older'
 }

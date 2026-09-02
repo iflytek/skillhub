@@ -47,10 +47,15 @@ export async function syncPullCommand(options: SyncPullOptions): Promise<string>
   const output = renderPullResult(result, Boolean(options.json), Boolean(options.check))
   if (result.failures.length > 0) {
     process.stdout.write(`${output}\n`)
-    throw new CliError('namespace sync completed with failures', EXIT.generic, {
-      namespace: context.namespace,
-      failures: result.failures
-    })
+    const blocked = result.entries.filter(entry => entry.status === 'blocked')
+    throw new CliError(
+      blocked.length > 0 ? 'namespace sync blocked by remote version safety checks' : 'namespace sync completed with failures',
+      blocked.length > 0 ? EXIT.validation : EXIT.generic,
+      {
+        namespace: context.namespace,
+        failures: result.failures
+      }
+    )
   }
   return output
 }

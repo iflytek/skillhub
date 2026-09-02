@@ -42,7 +42,6 @@ describe('install command — P0', () => {
           slug: 'pdf-parser',
           version: '1.0.0',
           versionId: 1,
-          fingerprint: 'abc123',
           zipBytes: makeSkillZip()
         }
       ]

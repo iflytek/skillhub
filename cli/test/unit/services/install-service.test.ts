@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,6 +8,7 @@ import { installSkill } from '../../../src/services/install-service'
 import { planSkillUpgrades } from '../../../src/services/upgrade-service'
 import { removeLocalSkill } from '../../../src/services/remove-service'
 import { skillTargetLockPath } from '../../../src/services/skill-target-lock'
+import { EXIT } from '../../../src/shared/constants'
 
 const originalFetch = globalThis.fetch
 
@@ -19,7 +21,16 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-function installFetch(zipEntries: Record<string, string>): typeof fetch {
+function skillFingerprint(zipEntries: Record<string, string>): string {
+  const aggregate = createHash('sha256')
+  for (const [name, content] of Object.entries(zipEntries).sort(([left], [right]) => left.localeCompare(right))) {
+    const fileHash = createHash('sha256').update(content).digest('hex')
+    aggregate.update(`${name}:${fileHash}\n`, 'utf8')
+  }
+  return `sha256:${aggregate.digest('hex')}`
+}
+
+function installFetch(zipEntries: Record<string, string>, fingerprint = skillFingerprint(zipEntries)): typeof fetch {
   const archive = zipSync(Object.fromEntries(
     Object.entries(zipEntries).map(([name, content]) => [name, new TextEncoder().encode(content)])
   ))
@@ -27,10 +38,10 @@ function installFetch(zipEntries: Record<string, string>): typeof fetch {
   return installFetchWithDownloadResponse(new Response(
     archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength) as ArrayBuffer,
     { status: 200 }
-  ))
+  ), fingerprint)
 }
 
-function installFetchWithDownloadResponse(downloadResponse: Response): typeof fetch {
+function installFetchWithDownloadResponse(downloadResponse: Response, fingerprint = 'fp'): typeof fetch {
   const fakeFetch = async (input: URL | RequestInfo) => {
     const path = new URL(String(input)).pathname
     if (path.endsWith('/resolve')) {
@@ -41,7 +52,7 @@ function installFetchWithDownloadResponse(downloadResponse: Response): typeof fe
           slug: 'demo',
           version: '1.0.0',
           versionId: 1,
-          fingerprint: 'fp',
+          fingerprint,
           downloadUrl: '/download'
         }
       })
@@ -114,6 +125,49 @@ describe('installSkill', () => {
 
     expect(await exists(firstSkillDir)).toBe(false)
     expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
+  })
+
+  test('rejects a downloaded fingerprint mismatch before replacing files or inventory', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Unexpected' }, 'sha256:unexpected')
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    const inventoryPath = join(home, '.skillhub', 'inventory.json')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Existing')
+    await writeManagedMetadata(skillDir)
+    await mkdir(join(home, '.skillhub'), { recursive: true })
+    const inventoryBefore = JSON.stringify({
+      items: [{
+        registry: 'http://registry.test',
+        namespace: 'global',
+        slug: 'demo',
+        version: '0.1.0',
+        targets: [{
+          agent: 'codex',
+          rootDir,
+          installDir: skillDir,
+          installedAt: '2026-09-01T00:00:00Z'
+        }]
+      }]
+    })
+    await writeFile(inventoryPath, inventoryBefore)
+
+    await expect(installSkill({
+      registry: 'http://registry.test',
+      namespace: 'global',
+      slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
+      force: true,
+      home
+    })).rejects.toMatchObject({
+      exitCode: EXIT.validation,
+      message: 'downloaded skill fingerprint does not match the resolved release'
+    })
+
+    expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Existing')
+    expect(await readFile(inventoryPath, 'utf-8')).toBe(inventoryBefore)
+    expect((await readdir(rootDir)).some(name => name.includes('.install-'))).toBe(false)
   })
 
   test('rejects canonical target aliases before writing any installation', async () => {
@@ -252,7 +306,10 @@ describe('installSkill', () => {
     expect(result.warnings).toEqual(['target lock cleanup failed: simulated release failure'])
     expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Committed')
     const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp' })
+    expect(inventory.items[0]).toMatchObject({
+      version: '1.0.0',
+      fingerprint: skillFingerprint({ 'SKILL.md': '# Committed' })
+    })
   })
 
   test('force rejects a different namespace at the same install directory', async () => {
@@ -383,7 +440,7 @@ describe('installSkill', () => {
             slug: 'demo',
             version: '1.0.0',
             versionId: 1,
-            fingerprint: 'fp',
+            fingerprint: skillFingerprint({ 'SKILL.md': '# New' }),
             downloadUrl: '/download'
           }
         })
@@ -451,7 +508,7 @@ describe('installSkill', () => {
       if (path.endsWith('/resolve')) {
         return Response.json({ code: 0, data: {
           namespace: 'global', slug: 'demo', version: '1.0.0', versionId: 1,
-          fingerprint: 'fp', downloadUrl: '/download'
+          fingerprint: skillFingerprint({ 'SKILL.md': '# New' }), downloadUrl: '/download'
         } })
       }
       if (path.endsWith('/download')) {

@@ -302,6 +302,12 @@ skillhub sync push --all --namespace team-a --submit-review
 
 The default workspace is `<cwd>/.agents/skills`. Pull never overwrites local changes unless `--force` is supplied. Remote removals are reported as `orphaned` and are retained unless `--prune` is supplied. Both destructive cases still require explicit flags.
 
+Sync compares both the published version and package fingerprint. An exact match is `up-to-date`,
+while a newer version is `update-available` even when its content is unchanged. An older remote
+version, an unorderable version pair, or changed remote content without a version bump is `blocked`.
+`--force` cannot bypass these release-safety checks; verify the release and use an explicit
+`skillhub install` when replacement is intentional.
+
 Workspace push is non-overwriting: an existing namespace/slug/version is reported as a conflict, including versions that are still uploaded or pending review. Other skills in the same `--all` run continue processing.
 
 Namespace sync writes `.skillhub/namespace-sync.json` in the workspace and per-skill `.skillhub/metadata.json` files. These files contain the registry coordinate, published version, aggregate fingerprint, and file hashes used by `status` and `diff`.
