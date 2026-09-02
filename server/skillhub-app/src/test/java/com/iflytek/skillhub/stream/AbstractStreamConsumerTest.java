@@ -47,6 +47,36 @@ class AbstractStreamConsumerTest {
     }
 
     @Test
+    void handleMessage_doesNotDeleteWhenAcknowledgementReturnsZero() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        StreamMessageId messageId = new StreamMessageId(10, 0);
+        when(stream.ack("scan-group", messageId)).thenReturn(0L);
+        TestConsumer consumer = new TestConsumer(stream);
+
+        consumer.handleMessage(messageId, Map.of("payload", "ok"));
+
+        verify(stream).ack("scan-group", messageId);
+        verify(stream, never()).remove(messageId);
+    }
+
+    @Test
+    void handleMessage_doesNotDeleteWhenAcknowledgementFails() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        StreamMessageId messageId = new StreamMessageId(11, 0);
+        when(stream.ack("scan-group", messageId))
+                .thenThrow(new RedisSystemException("redis unavailable", new IllegalStateException("offline")));
+        TestConsumer consumer = new TestConsumer(stream);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> consumer.handleMessage(messageId, Map.of("payload", "ok")))
+                .isInstanceOf(RedisSystemException.class);
+
+        verify(stream, never()).remove(messageId);
+    }
+
+    @Test
     void handleMessage_acknowledgesAfterRetryableFailure() {
         @SuppressWarnings("unchecked")
         RStream<String, String> stream = mock(RStream.class);
