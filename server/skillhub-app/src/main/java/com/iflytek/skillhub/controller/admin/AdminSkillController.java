@@ -2,11 +2,17 @@ package com.iflytek.skillhub.controller.admin;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.AdminSkillMutationResponse;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,11 +31,53 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminSkillController extends BaseApiController {
 
     private final SkillGovernanceService skillGovernanceService;
+    private final NamespaceRepository namespaceRepository;
+    private final SkillSlugResolutionService skillSlugResolutionService;
 
     public AdminSkillController(ApiResponseFactory responseFactory,
-                                SkillGovernanceService skillGovernanceService) {
+                                SkillGovernanceService skillGovernanceService,
+                                NamespaceRepository namespaceRepository,
+                                SkillSlugResolutionService skillSlugResolutionService) {
         super(responseFactory);
         this.skillGovernanceService = skillGovernanceService;
+        this.namespaceRepository = namespaceRepository;
+        this.skillSlugResolutionService = skillSlugResolutionService;
+    }
+
+    @PostMapping("/{namespace}/{slug}/archive")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ApiResponse<SkillLifecycleMutationResponse> archiveSkill(@PathVariable String namespace,
+                                                                     @PathVariable String slug,
+                                                                     @RequestBody(required = false) AdminSkillActionRequest request,
+                                                                     @AuthenticationPrincipal PlatformPrincipal principal,
+                                                                     HttpServletRequest httpRequest) {
+        Skill skill = findSkill(namespace, slug);
+        Skill archived = skillGovernanceService.archiveSkillAsAdmin(
+            skill.getId(),
+            principal.userId(),
+            httpRequest.getRemoteAddr(),
+            httpRequest.getHeader("User-Agent"),
+            request != null ? request.reason() : null
+        );
+        return ok("response.success.updated", new SkillLifecycleMutationResponse(
+            archived.getId(), null, "ARCHIVE", archived.getStatus().name()));
+    }
+
+    @PostMapping("/{namespace}/{slug}/unarchive")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ApiResponse<SkillLifecycleMutationResponse> unarchiveSkill(@PathVariable String namespace,
+                                                                       @PathVariable String slug,
+                                                                       @AuthenticationPrincipal PlatformPrincipal principal,
+                                                                       HttpServletRequest httpRequest) {
+        Skill skill = findSkill(namespace, slug);
+        Skill restored = skillGovernanceService.unarchiveSkillAsAdmin(
+            skill.getId(),
+            principal.userId(),
+            httpRequest.getRemoteAddr(),
+            httpRequest.getHeader("User-Agent")
+        );
+        return ok("response.success.updated", new SkillLifecycleMutationResponse(
+            restored.getId(), null, "UNARCHIVE", restored.getStatus().name()));
     }
 
     @PostMapping("/{skillId}/hide")
@@ -76,5 +124,13 @@ public class AdminSkillController extends BaseApiController {
             request != null ? request.reason() : null
         );
         return ok("response.success.updated", new AdminSkillMutationResponse(version.getSkillId(), versionId, "YANK", version.getStatus().name()));
+    }
+
+    private Skill findSkill(String namespaceSlug, String skillSlug) {
+        String cleanNamespace = namespaceSlug.startsWith("@") ? namespaceSlug.substring(1) : namespaceSlug;
+        Namespace namespace = namespaceRepository.findBySlug(cleanNamespace)
+            .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", cleanNamespace));
+        return skillSlugResolutionService.resolve(
+            namespace.getId(), skillSlug, null, SkillSlugResolutionService.Preference.PUBLISHED);
     }
 }

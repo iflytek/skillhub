@@ -9,12 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -27,6 +30,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,10 +44,81 @@ class AdminSkillControllerTest {
     private SkillGovernanceService skillGovernanceService;
 
     @MockBean
+    private NamespaceRepository namespaceRepository;
+
+    @MockBean
+    private SkillSlugResolutionService skillSlugResolutionService;
+
+    @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
     private DeviceAuthService deviceAuthService;
+
+    @Test
+    void archiveSkill_returnsUpdatedResponse() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        ReflectionTestUtils.setField(namespace, "id", 1L);
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        ReflectionTestUtils.setField(skill, "id", 10L);
+        skill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ARCHIVED);
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(
+                1L, "demo", null, SkillSlugResolutionService.Preference.PUBLISHED))
+            .willReturn(skill);
+        given(skillGovernanceService.archiveSkillAsAdmin(
+                org.mockito.ArgumentMatchers.eq(10L),
+                org.mockito.ArgumentMatchers.eq("admin"),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq("policy")))
+            .willReturn(skill);
+
+        PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("SUPER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/admin/skills/global/demo/archive")
+                .with(authentication(auth))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"policy\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.skillId").value(10))
+            .andExpect(jsonPath("$.data.action").value("ARCHIVE"))
+            .andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void unarchiveSkill_returnsUpdatedResponse() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        ReflectionTestUtils.setField(namespace, "id", 1L);
+        Skill skill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        ReflectionTestUtils.setField(skill, "id", 10L);
+        skill.setStatus(com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE);
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(
+                1L, "demo", null, SkillSlugResolutionService.Preference.PUBLISHED))
+            .willReturn(skill);
+        given(skillGovernanceService.unarchiveSkillAsAdmin(
+                org.mockito.ArgumentMatchers.eq(10L),
+                org.mockito.ArgumentMatchers.eq("admin"),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+            .willReturn(skill);
+
+        PlatformPrincipal principal = new PlatformPrincipal("admin", "admin", "a@example.com", "", "github", Set.of("SUPER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+
+        mockMvc.perform(post("/api/v1/admin/skills/global/demo/unarchive")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.data.skillId").value(10))
+            .andExpect(jsonPath("$.data.action").value("UNARCHIVE"))
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
 
     @Test
     void hideSkill_returnsUpdatedResponse() throws Exception {

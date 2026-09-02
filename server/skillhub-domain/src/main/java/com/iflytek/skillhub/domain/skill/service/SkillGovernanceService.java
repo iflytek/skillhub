@@ -157,6 +157,23 @@ public class SkillGovernanceService {
     }
 
     @Transactional
+    public Skill unarchiveSkillAsAdmin(Long skillId,
+                                       String actorUserId,
+                                       String clientIp,
+                                       String userAgent) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
+
+        SkillStatus previousStatus = skill.getStatus();
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setUpdatedBy(actorUserId);
+        Skill saved = skillRepository.save(skill);
+        auditLogService.record(actorUserId, "UNARCHIVE_SKILL", "SKILL", skillId, null, clientIp, userAgent, null);
+        eventPublisher.publishEvent(new SkillStatusChangedEvent(skillId, previousStatus, SkillStatus.ACTIVE));
+        return saved;
+    }
+
+    @Transactional
     public void deleteVersion(Skill skill,
                               SkillVersion version,
                               String actorUserId,
