@@ -8,12 +8,20 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-class _FakeApp:
-    def middleware(self, _kind):
-        return lambda function: function
+class _FakeRouter:
+    def __init__(self):
+        self.handlers = []
 
     def add_event_handler(self, _event, _handler):
-        pass
+        self.handlers.append((_event, _handler))
+
+
+class _FakeApp:
+    def __init__(self):
+        self.router = _FakeRouter()
+
+    def middleware(self, _kind):
+        return lambda function: function
 
 
 class _FakeResponse:
@@ -111,6 +119,12 @@ class SkillHubScannerAppTest(unittest.IsolatedAsyncioTestCase):
 
             self.assertFalse(stale.exists())
             self.assertTrue(unrelated.exists())
+
+    async def test_startup_cleanup_is_registered_on_the_upstream_router(self):
+        self.assertEqual(
+            [("startup", self.module._cleanup_stale_scan_directories)],
+            self.module.app.router.handlers,
+        )
 
 
 if __name__ == "__main__":

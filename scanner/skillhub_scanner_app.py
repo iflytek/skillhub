@@ -54,7 +54,7 @@ async def _await_scan_until(scan_task: asyncio.Task, deadline: float, request_pa
         _restart_after_hard_timeout(request_path)
 
 
-app.add_event_handler("startup", _cleanup_stale_scan_directories)
+app.router.add_event_handler("startup", _cleanup_stale_scan_directories)
 
 
 @app.middleware("http")
