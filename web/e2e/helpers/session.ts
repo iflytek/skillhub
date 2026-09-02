@@ -111,9 +111,17 @@ async function cacheAccountSession(page: Page, username: string) {
   })
 }
 
-async function restoreCachedSession(page: Page, worker: number): Promise<SessionSnapshot | null> {
+async function restoreCachedSession(
+  page: Page,
+  worker: number,
+  allowMockSession = true,
+): Promise<SessionSnapshot | null> {
   const snapshot = cachedSessionByWorker.get(worker)
   if (!snapshot) {
+    return null
+  }
+
+  if (!allowMockSession && snapshot.username === 'local-user') {
     return null
   }
 
@@ -170,20 +178,22 @@ async function tryBootstrapMockSession(page: Page, worker: number): Promise<{ us
 
 async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: RegisterSessionOptions) {
   const worker = testInfo?.parallelIndex ?? 0
-  const cached = cachedUserByWorker.get(worker)
+  const allowMockSession = options?.allowMockSession !== false
+  const cachedUsername = cachedUserByWorker.get(worker)
+  const cached = !allowMockSession && cachedUsername === 'local-user' ? undefined : cachedUsername
   const username = usernameForWorker(testInfo)
   const request = page.context().request
 
   await primeAuthProviders(page)
 
   // Avoid hammering auth endpoints on every test run for the same worker.
-  const restored = await restoreCachedSession(page, worker)
+  const restored = await restoreCachedSession(page, worker, allowMockSession)
   if (restored) {
     cachedUserByWorker.set(worker, restored.username)
     return { username: restored.username, password }
   }
 
-  if (options?.allowMockSession !== false) {
+  if (allowMockSession) {
     const mockSession = await tryBootstrapMockSession(page, worker)
     if (mockSession) {
       return mockSession

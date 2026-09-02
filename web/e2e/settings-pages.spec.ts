@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
-import { createFreshSession } from './helpers/session'
+import { registerSession } from './helpers/session'
 
 test.describe('Settings Pages (Real API)', () => {
   test.use({ baseURL: 'http://127.0.0.1:3000' })
 
   test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
-    await createFreshSession(page, testInfo)
+    await registerSession(page, testInfo, { allowMockSession: false })
   })
 
   test('opens profile settings page', async ({ page }) => {
