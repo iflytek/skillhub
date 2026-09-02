@@ -128,21 +128,24 @@ curl -H "X-Mock-User-Id: local-admin" http://localhost:8080/api/v1/auth/me
 
 ## 安装 CLI 工具
 
-SkillHub 兼容 OpenClaw CLI，可以使用 `npx clawhub` 命令管理技能包：
+推荐使用第一方 SkillHub CLI 管理技能包：
 
 ```bash
-# 配置 SkillHub 注册中心地址
-export CLAWHUB_REGISTRY=http://localhost:8080
+# 安装并配置 SkillHub 注册中心地址
+npm install -g @astron-team/skillhub
+export SKILLHUB_REGISTRY=http://localhost:8080
 
 # 搜索技能包
-npx clawhub search email
+skillhub search email
 
 # 安装技能包
-npx clawhub install my-skill
+skillhub install my-skill
 
 # 发布技能包
-npx clawhub publish ./my-skill
+skillhub publish ./my-skill --namespace my-team
 ```
+
+已有 ClawHub 工作流仍可通过兼容层进行搜索和安装；新流程及发布操作优先使用 SkillHub CLI。
 
 ## 发布第一个技能包
 
@@ -164,13 +167,10 @@ my-skill/
 
 ```bash
 # 配置注册中心
-export CLAWHUB_REGISTRY=http://localhost:8080
-
-# 发布到默认命名空间
-npx clawhub publish ./my-skill
+export SKILLHUB_REGISTRY=http://localhost:8080
 
 # 发布到指定命名空间
-npx clawhub publish ./my-skill --namespace my-team
+skillhub publish ./my-skill --namespace my-team
 ```
 
 3. **等待安全扫描**
@@ -201,13 +201,13 @@ npx clawhub publish ./my-skill --namespace my-team
 
 ```bash
 # 搜索技能包
-npx clawhub search pdf
+skillhub search pdf
 
 # 安装技能包
-npx clawhub install pdf-parser
+skillhub install pdf-parser
 
 # 安装指定命名空间的技能包
-npx clawhub install my-team--pdf-parser
+skillhub install pdf-parser --namespace my-team
 ```
 
 ### 使用 Web UI

@@ -128,21 +128,24 @@ In the browser, you can add the `X-Mock-User-Id` header via a browser extension 
 
 ## Install the CLI Tool
 
-SkillHub is compatible with the OpenClaw CLI. You can use the `npx clawhub` command to manage skill packages:
+Use the first-party SkillHub CLI for skill package management:
 
 ```bash
-# Configure the SkillHub registry URL
-export CLAWHUB_REGISTRY=http://localhost:8080
+# Install the CLI and configure the SkillHub registry URL
+npm install -g @astron-team/skillhub
+export SKILLHUB_REGISTRY=http://localhost:8080
 
 # Search for skill packages
-npx clawhub search email
+skillhub search email
 
 # Install a skill package
-npx clawhub install my-skill
+skillhub install my-skill
 
 # Publish a skill package
-npx clawhub publish ./my-skill
+skillhub publish ./my-skill --namespace my-team
 ```
+
+Existing ClawHub workflows can still use the compatibility layer for search and install. Prefer the SkillHub CLI for new workflows and publishing.
 
 ## Publish Your First Skill Package
 
@@ -164,13 +167,10 @@ my-skill/
 
 ```bash
 # Configure the registry
-export CLAWHUB_REGISTRY=http://localhost:8080
-
-# Publish to the default namespace
-npx clawhub publish ./my-skill
+export SKILLHUB_REGISTRY=http://localhost:8080
 
 # Publish to a specific namespace
-npx clawhub publish ./my-skill --namespace my-team
+skillhub publish ./my-skill --namespace my-team
 ```
 
 3. **Wait for security scanning**
@@ -201,13 +201,13 @@ Administrators will receive a notification and the skill package will be officia
 
 ```bash
 # Search for skill packages
-npx clawhub search pdf
+skillhub search pdf
 
 # Install a skill package
-npx clawhub install pdf-parser
+skillhub install pdf-parser
 
 # Install a skill package from a specific namespace
-npx clawhub install my-team--pdf-parser
+skillhub install pdf-parser --namespace my-team
 ```
 
 ### Using the Web UI
