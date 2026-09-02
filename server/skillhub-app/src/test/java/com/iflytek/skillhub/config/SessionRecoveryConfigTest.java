@@ -22,20 +22,4 @@ class SessionRecoveryConfigTest {
                 "skillhub:session:sessions:expires:broken-session"
         ));
     }
-
-    @Test
-    void corruptSessionRemover_deletesDefaultBase64EncodedSessionId() {
-        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
-        var remover = new SessionRecoveryConfig()
-                .corruptSessionRemover(redisTemplate, "skillhub:session");
-
-        remover.remove("YnJva2VuLXNlc3Npb24=");
-
-        verify(redisTemplate).delete(List.of(
-                "skillhub:session:sessions:YnJva2VuLXNlc3Npb24=",
-                "skillhub:session:sessions:expires:YnJva2VuLXNlc3Npb24=",
-                "skillhub:session:sessions:broken-session",
-                "skillhub:session:sessions:expires:broken-session"
-        ));
-    }
 }

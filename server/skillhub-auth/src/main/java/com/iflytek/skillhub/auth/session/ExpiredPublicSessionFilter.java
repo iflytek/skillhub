@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +53,10 @@ public final class ExpiredPublicSessionFilter extends OncePerRequestFilter {
                 return;
             }
         } catch (SerializationException error) {
-            String corruptSessionId = sessionIdFromCookie(request);
+            // Spring Session resolves and caches the server-side session id before loading the
+            // Redis record. Re-read that cached id so custom cookie serializers and jvmRoute
+            // settings remain Spring Session's responsibility.
+            String corruptSessionId = request.getRequestedSessionId();
             if (corruptSessionId == null) {
                 throw error;
             }
@@ -67,20 +69,6 @@ public final class ExpiredPublicSessionFilter extends OncePerRequestFilter {
             return;
         }
         filterChain.doFilter(request, response);
-    }
-
-    private String sessionIdFromCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return null;
-        }
-        return Arrays.stream(cookies)
-                .filter(cookie -> sessionCookieNames.contains(cookie.getName()))
-                .map(Cookie::getValue)
-                .filter(Objects::nonNull)
-                .filter(value -> !value.isBlank())
-                .findFirst()
-                .orElse(null);
     }
 
     private void expireSessionCookies(HttpServletRequest request, HttpServletResponse response) {

@@ -43,11 +43,12 @@ skillhub:
       scan-path: /scan-upload
       mode: local
       connect-timeout-ms: 5000
-      read-timeout-ms: 300000
+      read-timeout-ms: 900000
       retry-max-attempts: 3
     stream:
       key: skillhub:scan:requests
       group: skillhub-scanners
+      reclaim-min-idle: PT16M
 ```
 
 Important environment variables:
@@ -55,16 +56,23 @@ Important environment variables:
 - `SKILLHUB_SECURITY_SCANNER_ENABLED`
 - `SKILLHUB_SECURITY_SCANNER_URL`
 - `SKILLHUB_SECURITY_SCANNER_MODE`
+- `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT`
 - `SKILLHUB_SCAN_STREAM_KEY`
 - `SKILLHUB_SCAN_STREAM_GROUP`
+- `SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE`
 
 Scanner-side optional environment variables:
 
 - `SKILL_SCANNER_LLM_API_KEY`
 - `SKILL_SCANNER_LLM_BASE_URL`
 - `SKILL_SCANNER_LLM_MODEL`
+- `SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS` (default `1`)
+- `SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS` (default `930`)
 
 If the LLM variables are absent, the scanner should still run with non-LLM analyzers.
+The default timeout ordering is server read timeout (900 seconds), scanner hard timeout
+(930 seconds), then pending-message reclaim (960 seconds). A hard timeout exits the scanner process
+with status `124`; Compose or Kubernetes restarts it and the Redis pending task is retried.
 
 ## Kubernetes Notes
 

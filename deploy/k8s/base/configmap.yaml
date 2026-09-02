@@ -38,6 +38,7 @@ data:
   skill-scanner-read-timeout: "900000"
   skill-scan-reclaim-min-idle: PT16M
   skill-scanner-max-concurrent-scans: "1"
+  skill-scanner-hard-timeout-seconds: "930"
 
   # Bootstrap 管理员配置（非敏感）
   bootstrap-admin-enabled: "true"

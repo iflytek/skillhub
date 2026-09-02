@@ -45,6 +45,11 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: skill-scanner-max-concurrent-scans
+            - name: SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-hard-timeout-seconds
           readinessProbe:
             httpGet:
               path: /health

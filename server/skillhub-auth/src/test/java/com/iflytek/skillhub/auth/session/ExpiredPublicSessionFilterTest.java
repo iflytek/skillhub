@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import jakarta.servlet.FilterChain;
@@ -15,6 +17,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -84,10 +87,14 @@ class ExpiredPublicSessionFilterTest {
         delegate.setMethod("GET");
         delegate.setRequestURI("/api/v1/auth/methods");
         delegate.setCookies(new Cookie("SESSION", "corrupt-session"));
+        AtomicInteger calls = new AtomicInteger();
         HttpServletRequest request = new HttpServletRequestWrapper(delegate) {
             @Override
             public String getRequestedSessionId() {
-                throw new SerializationException("incompatible session data");
+                if (calls.getAndIncrement() == 0) {
+                    throw new SerializationException("incompatible session data");
+                }
+                return "resolved-session-id";
             }
         };
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -95,10 +102,38 @@ class ExpiredPublicSessionFilterTest {
 
         filter.doFilter(request, response, chain);
 
-        verify(corruptSessionRemover).remove("corrupt-session");
+        verify(corruptSessionRemover).remove("resolved-session-id");
         assertNull(capturedRequest(chain).getRequestedSessionId());
         assertNotNull(response.getCookie("SESSION"));
         assertEquals(0, response.getCookie("SESSION").getMaxAge());
+    }
+
+    @Test
+    void unreadableSession_shouldNotHideRedisDeleteFailure() {
+        MockHttpServletRequest delegate = new MockHttpServletRequest();
+        delegate.setMethod("GET");
+        delegate.setRequestURI("/api/v1/auth/methods");
+        delegate.setCookies(new Cookie("SESSION", "encoded-cookie"));
+        AtomicInteger calls = new AtomicInteger();
+        HttpServletRequest request = new HttpServletRequestWrapper(delegate) {
+            @Override
+            public String getRequestedSessionId() {
+                if (calls.getAndIncrement() == 0) {
+                    throw new SerializationException("incompatible session data");
+                }
+                return "resolved-session-id";
+            }
+        };
+        RuntimeException redisFailure = new RuntimeException("redis unavailable");
+        org.mockito.Mockito.doThrow(redisFailure)
+                .when(corruptSessionRemover).remove("resolved-session-id");
+        FilterChain chain = mock(FilterChain.class);
+
+        RuntimeException actual = assertThrows(RuntimeException.class,
+                () -> filter.doFilter(request, new MockHttpServletResponse(), chain));
+
+        assertSame(redisFailure, actual);
+        verifyNoInteractions(chain);
     }
 
     private static MockHttpServletRequest expiredSessionRequest(String method, String path) {
