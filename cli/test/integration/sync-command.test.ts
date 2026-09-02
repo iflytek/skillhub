@@ -193,6 +193,13 @@ describe('sync command', () => {
         reason: 'remote content changed without a newer version; use explicit install after verifying the release'
       })
 
+      const checked = await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--check',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(checked.exitCode).toBe(6)
+      expect(JSON.parse(checked.stdout)).toMatchObject({ ok: false, check: true })
+
       const pulled = await runCli([
         'sync', 'pull', '--namespace', 'team-a', '--dir', skillsDir, '--force',
         '--registry', registry.url, '--token', 'token', '--json'
@@ -334,6 +341,7 @@ describe('sync command', () => {
         const output = JSON.parse(pulled.stdout)
         expect(pulled.exitCode, variant.name).toBe(6)
         expect(output.entries[0], variant.name).toMatchObject({ status: 'blocked', reason: variant.reason })
+        expect(output.entries[0].changedFiles, variant.name).toEqual(['SKILL.md'])
         expect(output.actions, variant.name).toEqual([])
         expect(await readFile(join(skillsDir, 'demo', 'SKILL.md'), 'utf8'))
           .toBe(`# local edit before ${variant.name}\n`)

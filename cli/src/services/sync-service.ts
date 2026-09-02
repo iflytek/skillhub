@@ -89,11 +89,15 @@ export async function inspectNamespaceWorkspace(options: {
     }
 
     const snapshot = await snapshotSkillDirectory(skillDir)
+    const changedFiles = snapshot.fingerprint === metadata.fingerprint
+      ? []
+      : diffSkillFiles(metadata.files, snapshot.files)
     const versionOrder = compareSkillVersions(metadata.version, remote.version)
     if (versionOrder === 'remote-older') {
       entries.push({
         ...baseEntry(remote, 'blocked'),
         localVersion: metadata.version,
+        changedFiles,
         reason: 'remote version is older than the installed version; local files were kept'
       })
       continue
@@ -102,6 +106,7 @@ export async function inspectNamespaceWorkspace(options: {
       entries.push({
         ...baseEntry(remote, 'blocked'),
         localVersion: metadata.version,
+        changedFiles,
         reason: 'cannot determine version order; use explicit install after verifying the release'
       })
       continue
@@ -110,6 +115,7 @@ export async function inspectNamespaceWorkspace(options: {
       entries.push({
         ...baseEntry(remote, 'blocked'),
         localVersion: metadata.version,
+        changedFiles,
         reason: 'remote content changed without a newer version; use explicit install after verifying the release'
       })
       continue
@@ -118,7 +124,7 @@ export async function inspectNamespaceWorkspace(options: {
       entries.push({
         ...baseEntry(remote, 'local-changed'),
         localVersion: metadata.version,
-        changedFiles: diffSkillFiles(metadata.files, snapshot.files)
+        changedFiles
       })
       continue
     }
@@ -168,7 +174,9 @@ export async function pullNamespace(options: {
     rootDir: options.rootDir,
     entries: inspected.entries,
     actions: [],
-    failures: [],
+    failures: inspected.entries
+      .filter(entry => entry.status === 'blocked')
+      .map(entry => ({ slug: entry.slug, message: entry.reason ?? 'automatic sync is blocked' })),
     warnings: []
   }
   if (options.check) return result
@@ -176,10 +184,7 @@ export async function pullNamespace(options: {
   const remoteBySlug = new Map(inspected.remoteItems.map(item => [item.slug, item]))
   for (const entry of inspected.entries) {
     if (entry.status === 'up-to-date' || entry.status === 'orphaned') continue
-    if (entry.status === 'blocked') {
-      result.failures.push({ slug: entry.slug, message: entry.reason ?? 'automatic sync is blocked' })
-      continue
-    }
+    if (entry.status === 'blocked') continue
     if (entry.status === 'local-changed' && !options.force) {
       result.failures.push({ slug: entry.slug, message: entry.reason ?? 'local changes detected; pass --force to overwrite' })
       continue
