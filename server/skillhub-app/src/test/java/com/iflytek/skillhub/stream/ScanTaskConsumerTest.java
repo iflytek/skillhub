@@ -18,6 +18,8 @@ import com.iflytek.skillhub.observability.MessageObservationSupport;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import com.iflytek.skillhub.storage.ObjectMetadata;
+import com.iflytek.skillhub.infra.http.HttpClientException;
+import com.iflytek.skillhub.infra.scanner.SecurityScanException;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RLock;
@@ -307,7 +309,7 @@ class ScanTaskConsumerTest {
     }
 
     @Test
-    void handleMessage_whenTaskLockIsHeld_republishesInsteadOfDroppingDelivery() {
+    void handleMessage_whenTaskLockIsHeld_keepsOriginalDeliveryPending() {
         StubSecurityScanner securityScanner = new StubSecurityScanner();
         InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
         RLock processingLock = mock(RLock.class);
@@ -328,9 +330,44 @@ class ScanTaskConsumerTest {
                 "scannerType", ScannerType.SKILL_SCANNER.getValue()
         ));
 
-        assertThat(producer.publishedTask.taskId()).isEqualTo("task-reclaimed");
-        assertThat(producer.publishedTask.metadata()).containsEntry("retryCount", "1");
-        verify(consumer.stream).ack("skillhub-scanners", new StreamMessageId(11, 0));
+        assertThat(producer.publishedTask).isNull();
+        verify(consumer.stream, never()).ack("skillhub-scanners", new StreamMessageId(11, 0));
+    }
+
+    @Test
+    void handleMessage_whenScannerIsUnavailable_keepsVersionScanningAndDeliveryPending() {
+        StubSecurityScanner securityScanner = new StubSecurityScanner();
+        securityScanner.failure = new SecurityScanException(
+                "scanner timed out", new HttpClientException("request timed out", new java.util.concurrent.TimeoutException()));
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        try {
+            setField(version, "id", 42L);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+        version.setStatus(SkillVersionStatus.SCANNING);
+        InMemorySkillVersionRepository repository = new InMemorySkillVersionRepository(version);
+        InMemoryScanTaskProducer producer = new InMemoryScanTaskProducer();
+        TestableScanTaskConsumer consumer = new TestableScanTaskConsumer(
+                securityScanner,
+                new StubSecurityScanService(),
+                repository,
+                producer,
+                new InMemoryObjectStorageService()
+        );
+
+        StreamMessageId messageId = new StreamMessageId(12, 0);
+        consumer.handleMessage(messageId, Map.of(
+                "taskId", "task-timeout",
+                "versionId", "42",
+                "skillPath", "/tmp/skillhub-scans/42",
+                "scannerType", ScannerType.SKILL_SCANNER.getValue()
+        ));
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
+        assertThat(repository.savedVersion).isNull();
+        assertThat(producer.publishedTask).isNull();
+        verify(consumer.stream, never()).ack("skillhub-scanners", messageId);
     }
 
     @Test

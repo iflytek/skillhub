@@ -40,7 +40,7 @@ public class SkillScannerAdapter implements SecurityScanner {
             return mapToResponse(apiResponse);
         } catch (HttpClientException e) {
             log.error("Security scan failed for versionId={}: {}", request.skillVersionId(), e.getMessage());
-            throw new SecurityScanException("Security scan failed", e);
+            throw new SecurityScanException("Security scan request failed: " + e.getMessage(), e);
         }
     }
 

@@ -28,8 +28,8 @@ public abstract class AbstractStreamConsumer<T> {
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     private static final String FIELD_RETRY_COUNT = "retryCount";
-    private static final int MAX_RETRY_COUNT = 3;
-    private static final int READ_BATCH_SIZE = 10;
+    private static final int DEFAULT_MAX_RETRY_COUNT = 3;
+    private static final int DEFAULT_READ_BATCH_SIZE = 10;
     private static final Duration POLL_TIMEOUT = Duration.ofSeconds(2);
 
     private final RedissonClient redissonClient;
@@ -170,7 +170,7 @@ public abstract class AbstractStreamConsumer<T> {
                 groupName,
                 consumerName,
                 StreamReadGroupArgs.neverDelivered()
-                        .count(READ_BATCH_SIZE)
+                        .count(readBatchSize())
                         .timeout(POLL_TIMEOUT)
         );
         processMessages(messages);
@@ -237,13 +237,17 @@ public abstract class AbstractStreamConsumer<T> {
             acknowledge(messageId);
         } catch (Exception e) {
             messageObservationSupport.recordCurrentError(e);
-            handleFailure(payload, retryCount, e);
-            acknowledge(messageId);
+            if (shouldDeferFailure(payload, e)) {
+                markDeferred(payload, e);
+            } else {
+                handleFailure(payload, retryCount, e);
+                acknowledge(messageId);
+            }
         }
     }
 
     private void handleFailure(T payload, int retryCount, Exception e) {
-        if (retryCount < MAX_RETRY_COUNT) {
+        if (retryCount < maxRetryCount()) {
             // Retry publication remains inside the current consumer scope, so the new producer
             // span and message carrier continue the original trace.
             retryMessage(payload, retryCount + 1);
@@ -274,7 +278,28 @@ public abstract class AbstractStreamConsumer<T> {
     }
 
     protected void acknowledge(StreamMessageId messageId) {
-        stream().ack(groupName, messageId);
+        if (stream().ack(groupName, messageId) > 0) {
+            // This stream has one consumer group. Removing acknowledged entries prevents
+            // completed scan tasks from growing the Redis stream without bound.
+            stream().remove(messageId);
+        }
+    }
+
+    protected int readBatchSize() {
+        return DEFAULT_READ_BATCH_SIZE;
+    }
+
+    protected int maxRetryCount() {
+        return DEFAULT_MAX_RETRY_COUNT;
+    }
+
+    protected boolean shouldDeferFailure(T payload, Exception error) {
+        return false;
+    }
+
+    protected void markDeferred(T payload, Exception error) {
+        log.warn("Deferring {} task without acknowledging its stream entry: {}",
+                taskDisplayName(), payloadIdentifier(payload), error);
     }
 
     protected final RStream<String, String> stream() {

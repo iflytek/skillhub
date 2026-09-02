@@ -27,6 +27,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 class AbstractStreamConsumerTest {
@@ -35,12 +36,14 @@ class AbstractStreamConsumerTest {
     void handleMessage_acknowledgesAfterSuccessfulProcessing() {
         @SuppressWarnings("unchecked")
         RStream<String, String> stream = mock(RStream.class);
-        TestConsumer consumer = new TestConsumer(stream);
         StreamMessageId messageId = new StreamMessageId(1, 0);
+        when(stream.ack("scan-group", messageId)).thenReturn(1L);
+        TestConsumer consumer = new TestConsumer(stream);
 
         consumer.handleMessage(messageId, Map.of("payload", "ok"));
 
         verify(stream).ack("scan-group", messageId);
+        verify(stream).remove(messageId);
     }
 
     @Test
@@ -55,6 +58,22 @@ class AbstractStreamConsumerTest {
 
         verify(stream).ack("scan-group", messageId);
         verify(stream, times(1)).ack("scan-group", messageId);
+    }
+
+    @Test
+    void handleMessage_deferredFailureRemainsPending() {
+        @SuppressWarnings("unchecked")
+        RStream<String, String> stream = mock(RStream.class);
+        TestConsumer consumer = new TestConsumer(stream);
+        consumer.fail = true;
+        consumer.defer = true;
+        StreamMessageId messageId = new StreamMessageId(20, 0);
+
+        consumer.handleMessage(messageId, Map.of("payload", "busy"));
+
+        verify(stream, never()).ack("scan-group", messageId);
+        verify(stream, never()).remove(messageId);
+        assertThat(consumer.deferred).isTrue();
     }
 
     @Test
@@ -140,6 +159,8 @@ class AbstractStreamConsumerTest {
         private final RStream<String, String> stream;
         private final RequestIdAccessor requestIdAccessor;
         private boolean fail;
+        private boolean defer;
+        private boolean deferred;
         private String processedRequestId;
 
         private TestConsumer(RStream<String, String> stream) {
@@ -208,6 +229,16 @@ class AbstractStreamConsumerTest {
 
         @Override
         protected void retryMessage(String payload, int retryCount) {
+        }
+
+        @Override
+        protected boolean shouldDeferFailure(String payload, Exception error) {
+            return defer;
+        }
+
+        @Override
+        protected void markDeferred(String payload, Exception error) {
+            deferred = true;
         }
     }
 

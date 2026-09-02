@@ -96,7 +96,8 @@ class SkillScannerAdapterTest {
 
         assertThatThrownBy(() -> adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of())))
                 .isInstanceOf(SecurityScanException.class)
-                .hasMessage("Security scan failed");
+                .hasMessage("Security scan request failed: HTTP 502: bad gateway")
+                .satisfies(error -> assertThat(((SecurityScanException) error).isScannerUnavailable()).isTrue());
     }
 
     private static final class StubSkillScannerService extends SkillScannerService {

@@ -35,6 +35,9 @@ data:
   skill-scanner-enabled: "true"
   skill-scanner-url: http://skillhub-scanner:8000
   skill-scanner-mode: upload
+  skill-scanner-read-timeout: "900000"
+  skill-scan-reclaim-min-idle: PT16M
+  skill-scanner-max-concurrent-scans: "1"
 
   # Bootstrap 管理员配置（非敏感）
   bootstrap-admin-enabled: "true"

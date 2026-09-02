@@ -21,6 +21,11 @@ skillhub:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:true}
       base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}
       mode: ${SKILLHUB_SECURITY_SCANNER_MODE:local}
+      read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:900000}
+
+    stream:
+      # Keep this greater than scanner.read-timeout-ms.
+      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT16M}
 
       # 分析器配置
       analyzers:
@@ -109,6 +114,14 @@ mode: upload
 # Kubernetes 环境（独立 Pod）
 mode: upload
 ```
+
+#### 扫描超时与并发
+
+- `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT`：服务端等待单次扫描的毫秒数，默认 15 分钟。
+- `SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE`：未确认任务允许被恢复的等待时间，应大于扫描超时，默认 16 分钟。
+- `SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS`：Scanner 容器内的最大并发扫描数，默认 `1`；超出的请求返回 HTTP 503，由待处理消息稍后重试。
+
+Scanner 超时或暂时不可用时，版本不会进入 `SCAN_FAILED`。任务保留为待处理，版本保持 `SCANNING`，待 Scanner 恢复后自动继续。由技能包本身触发的扫描错误仍采用有限次数重试，最终可以进入 `SCAN_FAILED`。
 
 ---
 

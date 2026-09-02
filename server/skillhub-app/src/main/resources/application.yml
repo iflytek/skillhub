@@ -209,7 +209,9 @@ skillhub:
       scan-path: /scan-upload
       mode: ${SKILLHUB_SECURITY_SCANNER_MODE:local}
       connect-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT:5000}
-      read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:300000}
+      # Keep this above the longest expected scan. Availability failures remain pending
+      # and are reclaimed later instead of moving the skill to SCAN_FAILED.
+      read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:900000}
       retry-max-attempts: ${SKILLHUB_SECURITY_SCANNER_RETRY_MAX:3}
       analyzers:
         behavioral: ${SKILLHUB_SCANNER_USE_BEHAVIORAL:true}
@@ -229,7 +231,8 @@ skillhub:
       key: ${SKILLHUB_SCAN_STREAM_KEY:skillhub:scan:requests}
       group: ${SKILLHUB_SCAN_STREAM_GROUP:skillhub-scanners}
       reclaim-enabled: ${SKILLHUB_SCAN_STREAM_RECLAIM_ENABLED:true}
-      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT2M}
+      # Must exceed scanner read-timeout so an active task is not reclaimed prematurely.
+      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT16M}
       reclaim-batch-size: ${SKILLHUB_SCAN_STREAM_RECLAIM_BATCH_SIZE:20}
       reclaim-interval: ${SKILLHUB_SCAN_STREAM_RECLAIM_INTERVAL:PT30S}
   bootstrap:

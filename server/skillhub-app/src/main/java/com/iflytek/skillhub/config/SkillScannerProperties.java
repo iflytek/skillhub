@@ -12,7 +12,7 @@ public class SkillScannerProperties {
     private String healthPath = "/health";
     private String scanPath = "/scan-upload";
     private int connectTimeoutMs = 5000;
-    private int readTimeoutMs = 300000;
+    private int readTimeoutMs = 900000;
     private int retryMaxAttempts = 3;
     private String mode = "local";
     private Analyzers analyzers = new Analyzers();

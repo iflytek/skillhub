@@ -40,6 +40,11 @@ spec:
                   name: skillhub-secret
                   key: skill-scanner-llm-model
                   optional: true
+            - name: SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-max-concurrent-scans
           readinessProbe:
             httpGet:
               path: /health

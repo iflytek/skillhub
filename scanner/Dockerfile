@@ -5,6 +5,7 @@ ARG SKILL_SCANNER_VERSION=1.0.2
 WORKDIR /app
 
 COPY backports/apply_1_0_2_llm_base_url_backport.py /tmp/apply_1_0_2_llm_base_url_backport.py
+COPY skillhub_scanner_app.py /app/skillhub_scanner_app.py
 
 RUN pip install --no-cache-dir \
         "cisco-ai-skill-scanner==${SKILL_SCANNER_VERSION}" \
@@ -23,4 +24,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s \
   CMD wget -qO- http://127.0.0.1:8000/health || exit 1
 
-CMD ["skill-scanner-api", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "skillhub_scanner_app:app", "--host", "0.0.0.0", "--port", "8000"]

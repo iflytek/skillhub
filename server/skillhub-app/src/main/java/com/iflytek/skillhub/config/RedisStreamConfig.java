@@ -28,7 +28,7 @@ public class RedisStreamConfig {
     @Value("${skillhub.security.stream.reclaim-enabled:true}")
     private boolean reclaimEnabled;
 
-    @Value("${skillhub.security.stream.reclaim-min-idle:PT2M}")
+    @Value("${skillhub.security.stream.reclaim-min-idle:PT16M}")
     private Duration reclaimMinIdle;
 
     @Value("${skillhub.security.stream.reclaim-batch-size:20}")
@@ -36,6 +36,9 @@ public class RedisStreamConfig {
 
     @Value("${skillhub.security.stream.reclaim-interval:PT30S}")
     private Duration reclaimInterval;
+
+    @Value("${skillhub.security.scanner.retry-max-attempts:3}")
+    private int maxRetryAttempts;
 
     @Bean
     public RedissonScanTaskProducer redisScanTaskProducer(
@@ -66,6 +69,7 @@ public class RedisStreamConfig {
                 reclaimMinIdle,
                 reclaimBatchSize,
                 reclaimInterval,
+                maxRetryAttempts,
                 messageObservationSupport
         );
     }

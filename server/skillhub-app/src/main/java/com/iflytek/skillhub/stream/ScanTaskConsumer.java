@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.observability.MessageObservationSupport;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import com.iflytek.skillhub.infra.scanner.SecurityScanException;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
@@ -33,6 +34,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
     private final SkillVersionRepository skillVersionRepository;
     private final ScanTaskProducer scanTaskProducer;
     private final ObjectStorageService objectStorageService;
+    private final int maxRetryAttempts;
 
     public ScanTaskConsumer(RedissonClient redissonClient,
                             String streamKey,
@@ -50,6 +52,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         this.skillVersionRepository = skillVersionRepository;
         this.scanTaskProducer = scanTaskProducer;
         this.objectStorageService = objectStorageService;
+        this.maxRetryAttempts = 3;
     }
 
     public ScanTaskConsumer(RedissonClient redissonClient,
@@ -64,6 +67,7 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
                             Duration reclaimMinIdle,
                             int reclaimBatchSize,
                             Duration reclaimInterval,
+                            int maxRetryAttempts,
                             MessageObservationSupport messageObservationSupport) {
         super(
                 redissonClient,
@@ -81,6 +85,30 @@ public class ScanTaskConsumer extends AbstractStreamConsumer<ScanTaskConsumer.Sc
         this.skillVersionRepository = skillVersionRepository;
         this.scanTaskProducer = scanTaskProducer;
         this.objectStorageService = objectStorageService;
+        this.maxRetryAttempts = maxRetryAttempts;
+    }
+
+    @Override
+    protected int readBatchSize() {
+        return 1;
+    }
+
+    @Override
+    protected int maxRetryCount() {
+        return maxRetryAttempts;
+    }
+
+    @Override
+    protected boolean shouldDeferFailure(ScanTaskPayload payload, Exception error) {
+        return error instanceof ConcurrentScanInProgressException
+                || (error instanceof SecurityScanException scanError && scanError.isScannerUnavailable());
+    }
+
+    @Override
+    protected void markDeferred(ScanTaskPayload payload, Exception error) {
+        cleanupRetryTempPath(payload);
+        log.warn("Scanner unavailable; keeping task pending for later recovery: taskId={}, versionId={}, reason={}",
+                payload.taskId(), payload.versionId(), error.getMessage());
     }
 
     @Override

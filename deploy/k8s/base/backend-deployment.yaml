@@ -160,6 +160,16 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: skill-scanner-mode
+            - name: SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-read-timeout
+            - name: SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scan-reclaim-min-idle
 
             # Session
             - name: SESSION_COOKIE_SECURE
