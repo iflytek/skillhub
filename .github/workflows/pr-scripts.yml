@@ -7,6 +7,9 @@ on:
       - '.env.release.example'
       - '.env.release.draft'
       - 'compose.release.yml'
+      - 'docker-compose.yml'
+      - 'deploy/runtime-mirror-images.txt'
+      - 'charts/skillhub/tests/install-upgrade-smoke.sh'
       - 'server/Dockerfile'
       - 'Makefile'
       - 'web/Dockerfile'
@@ -46,3 +49,4 @@ jobs:
       - run: bash scripts/tests/dev-web-host-test.sh
       - run: bash scripts/tests/server-image-compat-test.sh
       - run: bash scripts/tests/workflow-security-test.sh
+      - run: bash scripts/tests/runtime-image-pins-test.sh
