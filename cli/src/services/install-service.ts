@@ -114,6 +114,14 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
 
         const installedAt = new Date().toISOString()
         const snapshot = await snapshotSkillDirectory(tempDir)
+        if (snapshot.fingerprint !== resolved.fingerprint) {
+          throw new CliError('downloaded skill fingerprint does not match the resolved release', EXIT.validation, {
+            coordinate: `@${options.namespace}/${options.slug}`,
+            expectedFingerprint: resolved.fingerprint,
+            actualFingerprint: snapshot.fingerprint,
+            next: 'retry the install after the registry release has been verified'
+          })
+        }
         const metaDir = join(tempDir, '.skillhub')
         await mkdir(metaDir, { recursive: true })
         await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
