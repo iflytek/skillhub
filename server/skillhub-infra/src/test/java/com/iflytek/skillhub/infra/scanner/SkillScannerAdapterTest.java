@@ -90,14 +90,27 @@ class SkillScannerAdapterTest {
     @Test
     void scan_wrapsHttpClientFailureAsSecurityScanException() {
         StubSkillScannerService skillScannerService = new StubSkillScannerService();
-        skillScannerService.directoryException = new HttpClientException(502, "bad gateway");
+        skillScannerService.directoryException = new HttpClientException(500, "internal error");
         ScanOptions options = ScanOptions.disabled();
         SkillScannerAdapter adapter = new SkillScannerAdapter(skillScannerService, "local", options);
 
         assertThatThrownBy(() -> adapter.scan(new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of())))
                 .isInstanceOf(SecurityScanException.class)
-                .hasMessage("Security scan request failed: HTTP 502: bad gateway")
+                .hasMessage("Security scan request failed: HTTP 500: internal error")
                 .satisfies(error -> assertThat(((SecurityScanException) error).isScannerUnavailable()).isTrue());
+    }
+
+    @Test
+    void scan_treatsInvalidPackageResponseAsPermanentFailure() {
+        StubSkillScannerService skillScannerService = new StubSkillScannerService();
+        skillScannerService.directoryException = new HttpClientException(422, "invalid package");
+        SkillScannerAdapter adapter = new SkillScannerAdapter(
+                skillScannerService, "local", ScanOptions.disabled());
+
+        assertThatThrownBy(() -> adapter.scan(
+                new SecurityScanRequest("task-1", 42L, "/tmp/skill", Map.of())))
+                .isInstanceOf(SecurityScanException.class)
+                .satisfies(error -> assertThat(((SecurityScanException) error).isScannerUnavailable()).isFalse());
     }
 
     private static final class StubSkillScannerService extends SkillScannerService {

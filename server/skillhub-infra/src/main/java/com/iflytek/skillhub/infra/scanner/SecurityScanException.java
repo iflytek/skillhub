@@ -18,6 +18,6 @@ public class SecurityScanException extends RuntimeException {
             return false;
         }
         int status = error.getStatusCode();
-        return status == 0 || status == 429 || status == 502 || status == 503 || status == 504;
+        return status == 0 || status == 429 || status >= 500;
     }
 }
