@@ -9,7 +9,12 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -17,12 +22,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public final class ExpiredPublicSessionFilter extends OncePerRequestFilter {
 
-    private static final Set<String> SESSION_COOKIES = Set.of("SESSION", "JSESSIONID");
+    private static final Logger log = LoggerFactory.getLogger(ExpiredPublicSessionFilter.class);
 
     private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
+    private final CorruptSessionRemover corruptSessionRemover;
+    private final Set<String> sessionCookieNames;
 
-    public ExpiredPublicSessionFilter(RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
+    public ExpiredPublicSessionFilter(RouteSecurityPolicyRegistry routeSecurityPolicyRegistry,
+                                      CorruptSessionRemover corruptSessionRemover,
+                                      String sessionCookieName) {
         this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
+        this.corruptSessionRemover = corruptSessionRemover;
+        Set<String> cookieNames = new HashSet<>();
+        cookieNames.add(sessionCookieName);
+        cookieNames.add("JSESSIONID");
+        this.sessionCookieNames = Set.copyOf(cookieNames);
     }
 
     @Override
@@ -33,17 +47,66 @@ public final class ExpiredPublicSessionFilter extends OncePerRequestFilter {
         String requestPath = RouteSecurityPolicyRegistry.requestPath(request);
         boolean publicRoute = routeSecurityPolicyRegistry.accessLevel(request.getMethod(), requestPath)
                 == RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL;
-        if (publicRoute && request.getRequestedSessionId() != null && !request.isRequestedSessionIdValid()) {
-            filterChain.doFilter(new SessionlessRequest(request), response);
+        try {
+            String requestedSessionId = request.getRequestedSessionId();
+            if (publicRoute && requestedSessionId != null && !request.isRequestedSessionIdValid()) {
+                filterChain.doFilter(new SessionlessRequest(request, sessionCookieNames), response);
+                return;
+            }
+        } catch (SerializationException error) {
+            String corruptSessionId = sessionIdFromCookie(request);
+            if (corruptSessionId == null) {
+                throw error;
+            }
+            // Delete only the unreadable record. Redis connectivity failures from deleteById
+            // intentionally propagate instead of disguising a storage outage as logout.
+            corruptSessionRemover.remove(corruptSessionId);
+            expireSessionCookies(request, response);
+            log.warn("Removed an unreadable HTTP session; the client must authenticate again");
+            filterChain.doFilter(new SessionlessRequest(request, sessionCookieNames), response);
             return;
         }
         filterChain.doFilter(request, response);
     }
 
+    private String sessionIdFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        return Arrays.stream(cookies)
+                .filter(cookie -> sessionCookieNames.contains(cookie.getName()))
+                .map(Cookie::getValue)
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void expireSessionCookies(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return;
+        }
+        Arrays.stream(cookies)
+                .filter(cookie -> sessionCookieNames.contains(cookie.getName()))
+                .forEach(cookie -> {
+                    Cookie expired = new Cookie(cookie.getName(), "");
+                    expired.setHttpOnly(true);
+                    expired.setSecure(request.isSecure());
+                    expired.setPath(request.getContextPath().isBlank() ? "/" : request.getContextPath());
+                    expired.setMaxAge(0);
+                    response.addCookie(expired);
+                });
+    }
+
     private static final class SessionlessRequest extends HttpServletRequestWrapper {
 
-        private SessionlessRequest(HttpServletRequest request) {
+        private final Set<String> sessionCookieNames;
+
+        private SessionlessRequest(HttpServletRequest request, Set<String> sessionCookieNames) {
             super(request);
+            this.sessionCookieNames = sessionCookieNames;
         }
 
         @Override
@@ -68,7 +131,7 @@ public final class ExpiredPublicSessionFilter extends OncePerRequestFilter {
                 return null;
             }
             Cookie[] retained = Arrays.stream(cookies)
-                    .filter(cookie -> !SESSION_COOKIES.contains(cookie.getName()))
+                    .filter(cookie -> !sessionCookieNames.contains(cookie.getName()))
                     .toArray(Cookie[]::new);
             return retained.length == 0 ? null : retained;
         }

@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.session;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
@@ -13,15 +14,18 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.data.redis.serializer.SerializationException;
 
 class ExpiredPublicSessionFilterTest {
 
-    private final ExpiredPublicSessionFilter filter =
-            new ExpiredPublicSessionFilter(new RouteSecurityPolicyRegistry());
+    private final CorruptSessionRemover corruptSessionRemover = mock(CorruptSessionRemover.class);
+    private final ExpiredPublicSessionFilter filter = new ExpiredPublicSessionFilter(
+            new RouteSecurityPolicyRegistry(), corruptSessionRemover, "SESSION");
 
     @Test
     void expiredSessionOnPublicRoute_shouldBeHiddenFromDownstreamSecurityFilters() throws Exception {
@@ -72,6 +76,29 @@ class ExpiredPublicSessionFilterTest {
         filter.doFilter(request, new MockHttpServletResponse(), chain);
 
         assertNull(capturedRequest(chain).getRequestedSessionId());
+    }
+
+    @Test
+    void unreadableSession_shouldBeDeletedAndTreatedAsLoggedOut() throws Exception {
+        MockHttpServletRequest delegate = new MockHttpServletRequest();
+        delegate.setMethod("GET");
+        delegate.setRequestURI("/api/v1/auth/methods");
+        delegate.setCookies(new Cookie("SESSION", "corrupt-session"));
+        HttpServletRequest request = new HttpServletRequestWrapper(delegate) {
+            @Override
+            public String getRequestedSessionId() {
+                throw new SerializationException("incompatible session data");
+            }
+        };
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(corruptSessionRemover).remove("corrupt-session");
+        assertNull(capturedRequest(chain).getRequestedSessionId());
+        assertNotNull(response.getCookie("SESSION"));
+        assertEquals(0, response.getCookie("SESSION").getMaxAge());
     }
 
     private static MockHttpServletRequest expiredSessionRequest(String method, String path) {
