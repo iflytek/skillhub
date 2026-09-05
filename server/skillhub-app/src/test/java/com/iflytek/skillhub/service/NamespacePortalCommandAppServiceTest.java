@@ -49,7 +49,7 @@ class NamespacePortalCommandAppServiceTest {
 
     @Test
     void createNamespace_requiresPlatformAdminRole() {
-        NamespaceRequest request = new NamespaceRequest("team-alpha", "Team Alpha", null);
+        NamespaceRequest request = new NamespaceRequest("team-alpha", "Team Alpha", null, null);
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-1", "user-1", "user-1@example.com", "", "github", Set.of("USER")
         );

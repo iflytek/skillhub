@@ -176,7 +176,7 @@ class NamespacePortalControllerTest {
         updated.setType(NamespaceType.TEAM);
         updated.setDescription("Updated description");
         given(namespaceService.getNamespaceBySlug("team-a")).willReturn(existing);
-        given(namespaceService.updateNamespace(1L, "Team A+", "Updated description", null, "owner-1"))
+        given(namespaceService.updateNamespace(1L, "Team A+", "Updated description", null, null, "owner-1"))
                 .willReturn(updated);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/namespaces/team-a")
