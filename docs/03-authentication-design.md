@@ -280,9 +280,28 @@ spring:
 ```
 
 Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 只需：
-1. `application.yml` 添加 registration 配置
-2. `CustomOAuth2UserService` 中按 `registrationId` 分支处理用户属性映射
-3. 前端登录页增加对应按钮（通过 `/api/v1/auth/providers` 自动发现）
+1. `application.yml` 添加 registration 配置（client-id 默认 `placeholder` 时登录页自动隐藏该入口）
+2. 新增一个 `OAuthClaimsExtractor` 实现（`@Component`，按 `registrationId` 自动注册），完成用户属性到标准 claims 的映射
+3. 前端无需改动：登录按钮通过 `/api/v1/auth/methods` 自动发现，图标约定 `web/public/{provider}-logo.svg`
+
+### 非标准 Provider 接入样板：飞书（Feishu）
+
+飞书 OAuth 与标准 OAuth2 存在偏差，接入时做了以下定制，可作为后续非标准 Provider 的参考：
+
+1. **授权端点**：使用官方当前文档的标准 OAuth2 授权端点
+   `https://accounts.feishu.cn/open-apis/authen/v1/authorize`（`client_id` + 可选 `scope`，
+   权限在开放平台应用内配置），授权请求由 Spring Security 默认 resolver 构建，
+   host 可用 `OAUTH2_FEISHU_AUTHORIZE_URI` 覆盖；token / userinfo 端点仍在 `open.feishu.cn`
+   （`OAUTH2_FEISHU_BASE_URI` 覆盖）。
+2. **userinfo 响应包裹**：响应为 `{code, msg, data}` 结构且错误以 HTTP 200 返回。
+   通过 `ProviderOAuth2UserService` 扩展点实现 `FeishuOAuth2UserService`，覆盖默认的 user info 加载并解包 `data`；
+   `OAuthLoginFlowService` 按 registrationId 选择 loader，其余 Provider 仍走 `DefaultOAuth2UserService`。
+3. **token 端点认证**：使用 `client_secret_post`（表单传 client_id/client_secret）。
+4. **subject 选择**：绑定主体使用 `open_id`（应用内唯一）；`union_id` 保留在 extra 中，
+   未来若同一部署接入多个飞书应用可基于它做身份归并。
+5. **准入策略注意**：邮箱域名策略（EMAIL_DOMAIN）模式下，未绑定邮箱的飞书用户会被拒绝。
+6. **email_verified 语义**：飞书 user-info 返回的邮箱由组织管理员导入，无实时验证信号，
+   `FeishuClaimsExtractor` 恒置 `emailVerified=false`；EMAIL_DOMAIN 策略仅匹配邮箱域名，不依赖该标志。
 
 ## 4. 核心接口设计
 

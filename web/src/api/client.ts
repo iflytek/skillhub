@@ -70,6 +70,7 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  registrationEnabled?: string
 }
 
 declare global {
@@ -181,6 +182,14 @@ export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfi
     provider: provider || undefined,
     auto: parseBooleanFlag(config.authSessionBootstrapAuto),
   }
+}
+
+export function isLocalRegistrationEnabled(): boolean {
+  const value = getRuntimeConfig().registrationEnabled
+  if (value === undefined || value.trim() === '') {
+    return true
+  }
+  return parseBooleanFlag(value)
 }
 
 type ApiEnvelope<T> = {
