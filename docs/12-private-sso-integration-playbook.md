@@ -1,5 +1,10 @@
 # 私有 SSO 接入兼容层实施手册
 
+> 状态说明：本文是现有私有 SSO 兼容入口的历史实施手册。新接入应先遵循
+> [统一身份联邦设计](./21-unified-identity-federation-design.md)，由 Provider 返回协议
+> 验证结果，再由统一核心归一化为 `IdentityAssertion`；不得直接构造
+> `PlatformPrincipal`。本文中相反的代码示例只用于理解当前兼容实现。
+
 ## 1. 文档目的
 
 本文档面向两类读者：
@@ -11,10 +16,10 @@
 
 相关文档：
 
-- [03-authentication-design.md](/Users/xudongsun/github/skillhub/docs/03-authentication-design.md)
-- [06-api-design.md](/Users/xudongsun/github/skillhub/docs/06-api-design.md)
-- [08-frontend-architecture.md](/Users/xudongsun/github/skillhub/docs/08-frontend-architecture.md)
-- [11-auth-extensibility-and-private-sso.md](/Users/xudongsun/github/skillhub/docs/11-auth-extensibility-and-private-sso.md)
+- [03-authentication-design.md](./03-authentication-design.md)
+- [06-api-design.md](./06-api-design.md)
+- [08-frontend-architecture.md](./08-frontend-architecture.md)
+- [11-auth-extensibility-and-private-sso.md](./11-auth-extensibility-and-private-sso.md)
 
 ## 2. 当前上下文与已确认约束
 
@@ -54,9 +59,9 @@
 
 关键代码位置：
 
-- [DirectAuthProvider.java](/Users/xudongsun/github/skillhub/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/direct/DirectAuthProvider.java)
-- [PassiveSessionAuthenticator.java](/Users/xudongsun/github/skillhub/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/bootstrap/PassiveSessionAuthenticator.java)
-- [PlatformSessionService.java](/Users/xudongsun/github/skillhub/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/session/PlatformSessionService.java)
+- [DirectAuthProvider.java](../server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/direct/DirectAuthProvider.java)
+- [PassiveSessionAuthenticator.java](../server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/bootstrap/PassiveSessionAuthenticator.java)
+- [PlatformSessionService.java](../server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/session/PlatformSessionService.java)
 
 ### 3.2 后端公共协议
 
@@ -415,7 +420,7 @@ skillhub:
 
 如果后续由 AI 继续在私有仓库上完成接入，建议严格遵守以下执行规则：
 
-- 先读 [11-auth-extensibility-and-private-sso.md](/Users/xudongsun/github/skillhub/docs/11-auth-extensibility-and-private-sso.md) 和本文档
+- 先读 [11-auth-extensibility-and-private-sso.md](./11-auth-extensibility-and-private-sso.md) 和本文档
 - 不要重构现有公共认证主链路，除非发现明确 bug
 - 私有 SSO 的具体实现优先写成 provider、authenticator、client、identity service
 - 不要复制 `PlatformSessionService` 逻辑
