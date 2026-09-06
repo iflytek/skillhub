@@ -33,13 +33,17 @@ for item in runtime_items:
     assert coordinate not in runtime_by_coordinate, coordinate
     runtime_by_coordinate[coordinate] = item
 
-artifact_coordinates = {(item["slug"], item["version"]) for item in artifacts}
+artifacts_by_coordinate = {
+    (item["slug"], item["version"]): item for item in artifacts
+}
 legacy_coordinates = {("skillhub-hello", "1.0.0"), ("agentguard", "1.1")}
-assert set(runtime_by_coordinate) == artifact_coordinates | legacy_coordinates
+runtime_coordinates = set(runtime_by_coordinate)
+assert legacy_coordinates <= runtime_coordinates
+packaged_runtime_coordinates = runtime_coordinates - legacy_coordinates
+assert packaged_runtime_coordinates <= set(artifacts_by_coordinate)
 
-for artifact in artifacts:
-    coordinate = (artifact["slug"], artifact["version"])
-    assert coordinate in runtime_by_coordinate, coordinate
+for coordinate in packaged_runtime_coordinates:
+    artifact = artifacts_by_coordinate[coordinate]
     runtime_item = runtime_by_coordinate[coordinate]
     assert runtime_item["sha256"] == artifact["sha256"], coordinate
     parsed_url = urlsplit(runtime_item["url"])

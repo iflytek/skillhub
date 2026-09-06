@@ -112,6 +112,16 @@
       }
     },
     {
+      "slug": "sandbase",
+      "version": "0.1.17",
+      "license": "Apache-2.0",
+      "upstream": {
+        "repository": "https://github.com/sandbaseai/cli",
+        "commit": "99a2f8102ce67f82080f67862d8ea81b87b37203",
+        "path": "skills/sandbase"
+      }
+    },
+    {
       "slug": "storytelling-advisor",
       "version": "1.0.0",
       "license": "MIT",
