@@ -4,7 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.iflytek.skillhub.auth.connection.core.AdapterKey;
+import com.iflytek.skillhub.auth.connection.core.AdapterCapability;
+import com.iflytek.skillhub.auth.connection.core.AdapterContractVersion;
+import com.iflytek.skillhub.auth.connection.core.AdapterDescriptor;
 import com.iflytek.skillhub.auth.connection.core.ConnectionHandle;
+import com.iflytek.skillhub.auth.connection.core.ConnectionKind;
 import com.iflytek.skillhub.auth.connection.core.ConnectionUnavailableException;
 import com.iflytek.skillhub.auth.connection.core.EnterpriseConnectionRegistry;
 import com.iflytek.skillhub.auth.connection.core.InteractionModel;
@@ -89,7 +93,7 @@ class RedirectAuthenticationAdapterContractTest {
                 );
         assertThat(RedirectAuthenticationAdapter.class.getDeclaredMethods())
                 .extracting(Method::getName)
-                .containsExactlyInAnyOrder("adapterKey", "configType", "start", "complete");
+                .containsExactlyInAnyOrder("descriptor", "configType", "start", "complete");
     }
 
     @Test
@@ -118,8 +122,15 @@ class RedirectAuthenticationAdapterContractTest {
     private static final class TestRedirectAdapter implements RedirectAuthenticationAdapter<TestRuntimeConfig> {
 
         @Override
-        public AdapterKey adapterKey() {
-            return new AdapterKey("test-redirect");
+        public AdapterDescriptor descriptor() {
+            return new AdapterDescriptor(
+                    new AdapterKey("test-redirect"),
+                    new AdapterContractVersion(1, 0),
+                    ConnectionKind.LOGIN,
+                    1,
+                    Optional.of(InteractionModel.REDIRECT),
+                    Set.of(AdapterCapability.IDENTITY_ASSERTION)
+            );
         }
 
         @Override

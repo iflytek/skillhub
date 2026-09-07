@@ -1,13 +1,13 @@
 package com.iflytek.skillhub.auth.federation.core;
 
-import com.iflytek.skillhub.auth.connection.core.AdapterKey;
+import com.iflytek.skillhub.auth.connection.core.AdapterDescriptor;
 import com.iflytek.skillhub.auth.connection.core.LoginConnectionRuntimeConfig;
 import com.iflytek.skillhub.auth.connection.core.LoginConnectionRuntimeSnapshot;
 
 /** Two-phase contract for redirect-based authentication adapters. */
 public interface RedirectAuthenticationAdapter<C extends LoginConnectionRuntimeConfig> {
 
-    AdapterKey adapterKey();
+    AdapterDescriptor descriptor();
 
     Class<C> configType();
 
