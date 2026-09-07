@@ -8,6 +8,9 @@ public interface LoginConnectionRepository {
 
     Optional<LoginConnection> findByOrganizationIdAndId(String organizationId, String id);
 
+    /** Serializes high-risk control-plane mutations such as Secret rotation. */
+    Optional<LoginConnection> lockByOrganizationIdAndId(String organizationId, String id);
+
     /** Dedicated data-plane lookup; the random handle reveals no tenant management identifier. */
     Optional<LoginConnection> findByPublicHandle(ConnectionHandle handle);
 

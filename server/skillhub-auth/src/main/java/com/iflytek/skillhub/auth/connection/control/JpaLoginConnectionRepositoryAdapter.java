@@ -26,6 +26,15 @@ public class JpaLoginConnectionRepositoryAdapter implements LoginConnectionRepos
     }
 
     @Override
+    @Transactional
+    public Optional<LoginConnection> lockByOrganizationIdAndId(String organizationId, String id) {
+        return delegate.lockByOrganizationIdAndId(
+                requireText(organizationId, "organizationId"),
+                requireText(id, "id")
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<LoginConnection> findByPublicHandle(ConnectionHandle handle) {
         return delegate.findByPublicHandle(Objects.requireNonNull(handle, "handle").value());

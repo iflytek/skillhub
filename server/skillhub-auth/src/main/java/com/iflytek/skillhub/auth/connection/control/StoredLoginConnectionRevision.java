@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.auth.connection.control;
 
 import com.iflytek.skillhub.auth.connection.core.ConnectionUnavailableException;
+import com.iflytek.skillhub.auth.connection.secret.SecretPurpose;
+import com.iflytek.skillhub.auth.connection.secret.SecretReference;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -84,7 +86,7 @@ public class StoredLoginConnectionRevision {
         this.configSchemaVersion = configSchemaVersion;
         this.capabilities = requireJsonShape(capabilities, '[', ']', "capabilities");
         this.typedConfig = requireJsonShape(typedConfig, '{', '}', "typedConfig");
-        if (secretBindingVersion != null && secretBindingVersion < 0) {
+        if (secretBindingVersion != null && secretBindingVersion < 1) {
             throw invalid("secretBindingVersion");
         }
         this.secretBindingVersion = secretBindingVersion;
@@ -132,8 +134,20 @@ public class StoredLoginConnectionRevision {
                 configSchemaVersion,
                 capabilities,
                 typedConfig,
-                Optional.ofNullable(secretBindingVersion)
+                secretReference(connection)
         );
+    }
+
+    private Optional<SecretReference> secretReference(LoginConnection connection) {
+        if (secretBindingVersion == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new SecretReference(
+                connection.getOrganizationId().orElse(SecretReference.PLATFORM_SCOPE_KEY),
+                connectionId,
+                SecretPurpose.LOGIN_CLIENT_SECRET,
+                secretBindingVersion
+        ));
     }
 
     private static String requireContractVersion(String value) {

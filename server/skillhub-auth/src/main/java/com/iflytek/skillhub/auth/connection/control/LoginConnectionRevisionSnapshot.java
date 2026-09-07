@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.connection.control;
 
 import com.iflytek.skillhub.auth.connection.core.AdapterKey;
 import com.iflytek.skillhub.auth.connection.core.ConnectionHandle;
+import com.iflytek.skillhub.auth.connection.secret.SecretReference;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,7 +18,7 @@ public record LoginConnectionRevisionSnapshot(
         int configSchemaVersion,
         String capabilitiesJson,
         String typedConfigJson,
-        Optional<Long> secretBindingVersion
+        Optional<SecretReference> secretReference
 ) {
 
     public LoginConnectionRevisionSnapshot {
@@ -36,7 +37,15 @@ public record LoginConnectionRevisionSnapshot(
         }
         capabilitiesJson = requireText(capabilitiesJson, "capabilitiesJson");
         typedConfigJson = requireText(typedConfigJson, "typedConfigJson");
-        secretBindingVersion = Objects.requireNonNull(secretBindingVersion, "secretBindingVersion");
+        secretReference = Objects.requireNonNull(secretReference, "secretReference");
+        if (secretReference.isPresent()) {
+            SecretReference reference = secretReference.get();
+            String expectedScope = organizationId.orElse(SecretReference.PLATFORM_SCOPE_KEY);
+            if (!expectedScope.equals(reference.scopeKey())
+                    || !connectionId.equals(reference.connectionId())) {
+                throw new IllegalArgumentException("Secret reference scope is invalid");
+            }
+        }
     }
 
     private static String requireText(String value, String field) {
@@ -59,7 +68,7 @@ public record LoginConnectionRevisionSnapshot(
                 + ", adapterKey=" + adapterKey.value()
                 + ", adapterContractVersion=" + adapterContractVersion
                 + ", configSchemaVersion=" + configSchemaVersion
-                + ", capabilitiesJson=<redacted>, typedConfigJson=<redacted>, secretBindingVersion="
-                + (secretBindingVersion.isPresent() ? "present" : "none") + "]";
+                + ", capabilitiesJson=<redacted>, typedConfigJson=<redacted>, secretReference="
+                + (secretReference.isPresent() ? "present" : "none") + "]";
     }
 }
