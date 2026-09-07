@@ -6,6 +6,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditAction;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditEvent;
 import com.iflytek.skillhub.domain.organization.Organization;
 import com.iflytek.skillhub.domain.organization.OrganizationMembership;
 import com.iflytek.skillhub.domain.organization.OrganizationMembershipRepository;
@@ -19,6 +22,7 @@ import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.dto.OrganizationCreateRequest;
 import com.iflytek.skillhub.dto.OrganizationResponse;
+import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.EnterpriseIdentityQueryRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -51,6 +55,12 @@ class PlatformOrganizationAdminAppServiceTest {
     @Mock
     private EnterpriseIdentityQueryRepository queryRepository;
 
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private RequestIdAccessor requestIdAccessor;
+
     private PlatformOrganizationAdminAppService service;
 
     @BeforeEach
@@ -61,12 +71,15 @@ class PlatformOrganizationAdminAppServiceTest {
                 roleBindingRepository,
                 userAccountRepository,
                 queryRepository,
+                auditLogService,
+                requestIdAccessor,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
 
     @Test
     void createBootstrapsExplicitOwnerWithoutMakingActorAMember() {
+        given(requestIdAccessor.current()).willReturn("request-1");
         UserAccount owner = new UserAccount(
                 "owner-1",
                 "Owner One",
@@ -91,8 +104,11 @@ class PlatformOrganizationAdminAppServiceTest {
                 ArgumentCaptor.forClass(OrganizationMembership.class);
         ArgumentCaptor<OrganizationRoleBinding> bindingCaptor =
                 ArgumentCaptor.forClass(OrganizationRoleBinding.class);
+        ArgumentCaptor<OrganizationAuditEvent> auditCaptor =
+                ArgumentCaptor.forClass(OrganizationAuditEvent.class);
         verify(membershipRepository).save(membershipCaptor.capture());
         verify(roleBindingRepository).save(bindingCaptor.capture());
+        verify(auditLogService).record(auditCaptor.capture());
 
         assertThat(response.slug()).isEqualTo("acme");
         assertThat(response.authorityVersion()).isEqualTo(1);
@@ -102,6 +118,10 @@ class PlatformOrganizationAdminAppServiceTest {
         assertThat(bindingCaptor.getValue().getRole()).isEqualTo(OrganizationRole.ORG_OWNER);
         assertThat(bindingCaptor.getValue().getCreatedBy()).isEqualTo("platform-admin");
         assertThat(membershipCaptor.getValue().getUserId()).isNotEqualTo("platform-admin");
+        assertThat(auditCaptor.getValue().organizationId()).isEqualTo(response.id());
+        assertThat(auditCaptor.getValue().action())
+                .isEqualTo(OrganizationAuditAction.ORGANIZATION_CREATED);
+        assertThat(auditCaptor.getValue().requestId()).isEqualTo("request-1");
     }
 
     @Test

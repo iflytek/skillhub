@@ -1,6 +1,11 @@
 package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.auth.federation.adapter.RemoteIdentityIoExecutor;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditAction;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditDetail;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditEvent;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditTargetType;
 import com.iflytek.skillhub.domain.organization.Organization;
 import com.iflytek.skillhub.domain.organization.OrganizationAdministrativeAction;
 import com.iflytek.skillhub.domain.organization.OrganizationAuthorizationService;
@@ -26,6 +31,7 @@ import com.iflytek.skillhub.dto.OrganizationResponse;
 import com.iflytek.skillhub.dto.OrganizationRoleBindingCreateRequest;
 import com.iflytek.skillhub.dto.OrganizationRoleBindingResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.EnterpriseIdentityQueryRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -54,6 +60,8 @@ public class OrganizationAdminAppService {
     private final OrganizationMembershipService membershipService;
     private final OrganizationRoleBindingService roleBindingService;
     private final EnterpriseIdentityQueryRepository queryRepository;
+    private final AuditLogService auditLogService;
+    private final RequestIdAccessor requestIdAccessor;
     private final Clock clock;
 
     public OrganizationAdminAppService(
@@ -66,6 +74,8 @@ public class OrganizationAdminAppService {
             OrganizationMembershipService membershipService,
             OrganizationRoleBindingService roleBindingService,
             EnterpriseIdentityQueryRepository queryRepository,
+            AuditLogService auditLogService,
+            RequestIdAccessor requestIdAccessor,
             Clock clock
     ) {
         this.organizationRepository = organizationRepository;
@@ -77,6 +87,8 @@ public class OrganizationAdminAppService {
         this.membershipService = membershipService;
         this.roleBindingService = roleBindingService;
         this.queryRepository = queryRepository;
+        this.auditLogService = auditLogService;
+        this.requestIdAccessor = requestIdAccessor;
         this.clock = clock;
     }
 
@@ -139,6 +151,7 @@ public class OrganizationAdminAppService {
         ).map(OrganizationDomainResponse::from));
     }
 
+    @Transactional
     public OrganizationDomainChallengeResponse issueDomainChallenge(
             String organizationId,
             OrganizationDomainCreateRequest request,
@@ -151,6 +164,14 @@ public class OrganizationAdminAppService {
                 actorUserId,
                 clock.instant()
         );
+        recordAudit(
+                organizationId,
+                actorUserId,
+                OrganizationAuditAction.DOMAIN_CHALLENGE_ISSUED,
+                OrganizationAuditTargetType.DOMAIN,
+                challenge.domainId(),
+                OrganizationAuditDetail.transition(null, "PENDING")
+        );
         return new OrganizationDomainChallengeResponse(
                 challenge.domainId(),
                 challenge.domain(),
@@ -161,6 +182,7 @@ public class OrganizationAdminAppService {
     }
 
     /** Performs remote DNS I/O before calling the transactional domain mutation. */
+    @Transactional
     public OrganizationDomainResponse verifyDomain(
             String organizationId,
             String domainId,
@@ -173,6 +195,7 @@ public class OrganizationAdminAppService {
         ).orElseThrow(() -> new DomainNotFoundException(
                 "error.organization.domain.not-found"
         ));
+        String previousStatus = claim.getStatus().name();
         List<String> candidates = remoteIdentityIo.execute(() ->
                 proofResolver.resolveTxt(dnsRecordName(claim.getDomain())))
                 .stream()
@@ -180,26 +203,48 @@ public class OrganizationAdminAppService {
                 .map(value -> value.substring(DNS_VALUE_PREFIX.length()))
                 .filter(value -> !value.isBlank())
                 .toList();
-        return OrganizationDomainResponse.from(domainService.verifyAny(
+        OrganizationDomain verified = domainService.verifyAny(
                 organizationId,
                 domainId,
                 candidates,
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordAudit(
+                organizationId,
+                actorUserId,
+                OrganizationAuditAction.DOMAIN_VERIFIED,
+                OrganizationAuditTargetType.DOMAIN,
+                verified.getId(),
+                OrganizationAuditDetail.transition(
+                        previousStatus,
+                        verified.getStatus().name()
+                )
+        );
+        return OrganizationDomainResponse.from(verified);
     }
 
+    @Transactional
     public OrganizationDomainResponse disableDomain(
             String organizationId,
             String domainId,
             String actorUserId
     ) {
-        return OrganizationDomainResponse.from(domainService.disable(
+        OrganizationDomain disabled = domainService.disable(
                 organizationId,
                 domainId,
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordAudit(
+                organizationId,
+                actorUserId,
+                OrganizationAuditAction.DOMAIN_DISABLED,
+                OrganizationAuditTargetType.DOMAIN,
+                disabled.getId(),
+                OrganizationAuditDetail.transition(null, disabled.getStatus().name())
+        );
+        return OrganizationDomainResponse.from(disabled);
     }
 
     @Transactional(readOnly = true)
@@ -216,56 +261,88 @@ public class OrganizationAdminAppService {
         ).map(OrganizationMemberResponse::from));
     }
 
+    @Transactional
     public OrganizationMemberResponse addMember(
             String organizationId,
             OrganizationMemberCreateRequest request,
             String actorUserId
     ) {
-        return OrganizationMemberResponse.from(membershipService.addManualMember(
+        OrganizationMembership membership = membershipService.addManualMember(
                 organizationId,
                 request.userId(),
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordMembershipAudit(
+                OrganizationAuditAction.MEMBER_ADDED,
+                organizationId,
+                actorUserId,
+                membership
+        );
+        return OrganizationMemberResponse.from(membership);
     }
 
+    @Transactional
     public OrganizationMemberResponse suspendMember(
             String organizationId,
             String membershipId,
             String actorUserId
     ) {
-        return OrganizationMemberResponse.from(membershipService.suspend(
+        OrganizationMembership membership = membershipService.suspend(
                 organizationId,
                 membershipId,
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordMembershipAudit(
+                OrganizationAuditAction.MEMBER_SUSPENDED,
+                organizationId,
+                actorUserId,
+                membership
+        );
+        return OrganizationMemberResponse.from(membership);
     }
 
+    @Transactional
     public OrganizationMemberResponse reactivateMember(
             String organizationId,
             String membershipId,
             String actorUserId
     ) {
-        return OrganizationMemberResponse.from(membershipService.reactivate(
+        OrganizationMembership membership = membershipService.reactivate(
                 organizationId,
                 membershipId,
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordMembershipAudit(
+                OrganizationAuditAction.MEMBER_REACTIVATED,
+                organizationId,
+                actorUserId,
+                membership
+        );
+        return OrganizationMemberResponse.from(membership);
     }
 
+    @Transactional
     public OrganizationMemberResponse deprovisionMember(
             String organizationId,
             String membershipId,
             String actorUserId
     ) {
-        return OrganizationMemberResponse.from(membershipService.deprovision(
+        OrganizationMembership membership = membershipService.deprovision(
                 organizationId,
                 membershipId,
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordMembershipAudit(
+                OrganizationAuditAction.MEMBER_DEPROVISIONED,
+                organizationId,
+                actorUserId,
+                membership
+        );
+        return OrganizationMemberResponse.from(membership);
     }
 
     @Transactional(readOnly = true)
@@ -286,6 +363,7 @@ public class OrganizationAdminAppService {
         ).map(OrganizationRoleBindingResponse::from));
     }
 
+    @Transactional
     public OrganizationRoleBindingResponse grantRole(
             String organizationId,
             OrganizationRoleBindingCreateRequest request,
@@ -298,20 +376,34 @@ public class OrganizationAdminAppService {
                 actorUserId,
                 clock.instant()
         );
+        recordRoleAudit(
+                OrganizationAuditAction.ROLE_GRANTED,
+                organizationId,
+                actorUserId,
+                binding
+        );
         return OrganizationRoleBindingResponse.from(binding);
     }
 
+    @Transactional
     public OrganizationRoleBindingResponse revokeRole(
             String organizationId,
             String bindingId,
             String actorUserId
     ) {
-        return OrganizationRoleBindingResponse.from(roleBindingService.revoke(
+        OrganizationRoleBinding binding = roleBindingService.revoke(
                 organizationId,
                 bindingId,
                 actorUserId,
                 clock.instant()
-        ));
+        );
+        recordRoleAudit(
+                OrganizationAuditAction.ROLE_REVOKED,
+                organizationId,
+                actorUserId,
+                binding
+        );
+        return OrganizationRoleBindingResponse.from(binding);
     }
 
     private OrganizationResponse transition(
@@ -325,6 +417,7 @@ public class OrganizationAdminAppService {
                 OrganizationAdministrativeAction.MANAGE_ORGANIZATION_LIFECYCLE
         );
         Organization organization = requireOrganization(organizationId);
+        String previousStatus = organization.getStatus().name();
         Instant now = clock.instant();
         switch (transition) {
             case SUSPEND -> organization.suspend(now);
@@ -332,6 +425,17 @@ public class OrganizationAdminAppService {
             case DECOMMISSION -> organization.decommission(now);
         }
         organizationRepository.save(organization);
+        recordAudit(
+                organizationId,
+                actorUserId,
+                transition.auditAction,
+                OrganizationAuditTargetType.ORGANIZATION,
+                organization.getId(),
+                OrganizationAuditDetail.transition(
+                        previousStatus,
+                        organization.getStatus().name()
+                )
+        );
         Set<OrganizationRole> roles = queryRepository.findActiveRoles(
                 List.of(organizationId),
                 actorUserId
@@ -360,9 +464,74 @@ public class OrganizationAdminAppService {
         return DNS_RECORD_PREFIX + domain;
     }
 
+    private void recordMembershipAudit(
+            OrganizationAuditAction action,
+            String organizationId,
+            String actorUserId,
+            OrganizationMembership membership
+    ) {
+        recordAudit(
+                organizationId,
+                actorUserId,
+                action,
+                OrganizationAuditTargetType.MEMBERSHIP,
+                membership.getId(),
+                OrganizationAuditDetail.member(
+                        membership.getStatus().name(),
+                        membership.getSourceType().name(),
+                        membership.getUserId()
+                )
+        );
+    }
+
+    private void recordRoleAudit(
+            OrganizationAuditAction action,
+            String organizationId,
+            String actorUserId,
+            OrganizationRoleBinding binding
+    ) {
+        recordAudit(
+                organizationId,
+                actorUserId,
+                action,
+                OrganizationAuditTargetType.ROLE_BINDING,
+                binding.getId(),
+                OrganizationAuditDetail.role(
+                        binding.getStatus().name(),
+                        binding.getRole().name(),
+                        binding.getUserId()
+                )
+        );
+    }
+
+    private void recordAudit(
+            String organizationId,
+            String actorUserId,
+            OrganizationAuditAction action,
+            OrganizationAuditTargetType targetType,
+            String targetReference,
+            OrganizationAuditDetail detail
+    ) {
+        auditLogService.record(OrganizationAuditEvent.success(
+                actorUserId,
+                organizationId,
+                action,
+                targetType,
+                targetReference,
+                requestIdAccessor.current(),
+                detail
+        ));
+    }
+
     private enum OrganizationTransition {
-        SUSPEND,
-        REACTIVATE,
-        DECOMMISSION
+        SUSPEND(OrganizationAuditAction.ORGANIZATION_SUSPENDED),
+        REACTIVATE(OrganizationAuditAction.ORGANIZATION_REACTIVATED),
+        DECOMMISSION(OrganizationAuditAction.ORGANIZATION_DECOMMISSIONED);
+
+        private final OrganizationAuditAction auditAction;
+
+        OrganizationTransition(OrganizationAuditAction auditAction) {
+            this.auditAction = auditAction;
+        }
     }
 }

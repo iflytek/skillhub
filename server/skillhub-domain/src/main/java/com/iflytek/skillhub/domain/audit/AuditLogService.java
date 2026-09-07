@@ -42,4 +42,22 @@ public class AuditLogService {
             createdAt
         ));
     }
+
+    @Transactional
+    public AuditLog record(OrganizationAuditEvent event) {
+        return auditLogRepository.save(new AuditLog(
+                event.actorUserId(),
+                event.action().name(),
+                event.targetType().storageValue(),
+                null,
+                event.organizationId(),
+                event.targetReference(),
+                event.result().name(),
+                event.requestId(),
+                null,
+                null,
+                event.detail().toJson(),
+                Instant.now(clock)
+        ));
+    }
 }

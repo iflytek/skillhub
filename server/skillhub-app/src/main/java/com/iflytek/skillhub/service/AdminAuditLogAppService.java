@@ -89,6 +89,7 @@ public class AdminAuditLogAppService {
                        al.detail_json,
                        al.target_type,
                        al.target_id,
+                       al.target_ref,
                        al.request_id,
                        al.client_ip,
                        al.created_at
@@ -107,11 +108,11 @@ public class AdminAuditLogAppService {
                         renderDetails(
                                 rs.getString("detail_json"),
                                 rs.getString("target_type"),
-                                rs.getObject("target_id")),
+                                resolvedTargetReference(rs)),
                         rs.getString("client_ip"),
                         rs.getString("request_id"),
                         rs.getString("target_type"),
-                        toResourceId(rs.getObject("target_id")),
+                        resolvedTargetReference(rs),
                         readInstant(rs, "created_at"))
         );
 
@@ -149,7 +150,7 @@ public class AdminAuditLogAppService {
             parameters.addValue("resourceType", resourceType.trim());
         }
         if (StringUtils.hasText(resourceId)) {
-            clause.append(" AND CAST(al.target_id AS TEXT) = :resourceId");
+            clause.append(" AND COALESCE(al.target_ref, CAST(al.target_id AS TEXT)) = :resourceId");
             parameters.addValue("resourceId", resourceId.trim());
         }
         if (startTime != null) {
@@ -169,14 +170,14 @@ public class AdminAuditLogAppService {
         return OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
     }
 
-    private String renderDetails(String detailJson, String targetType, Object targetId) {
+    private String renderDetails(String detailJson, String targetType, String targetReference) {
         if (StringUtils.hasText(detailJson)) {
             return detailJson;
         }
-        if (!StringUtils.hasText(targetType) && targetId == null) {
+        if (!StringUtils.hasText(targetType) && targetReference == null) {
             return null;
         }
-        return targetType + ":" + targetId;
+        return targetType + ":" + targetReference;
     }
 
     // Read via getObject(OffsetDateTime.class) to bypass JVM-TZ interpretation
@@ -186,7 +187,12 @@ public class AdminAuditLogAppService {
         return odt == null ? null : odt.toInstant();
     }
 
-    private String toResourceId(Object targetId) {
+    private static String resolvedTargetReference(ResultSet rs) throws SQLException {
+        String targetReference = rs.getString("target_ref");
+        if (StringUtils.hasText(targetReference)) {
+            return targetReference;
+        }
+        Object targetId = rs.getObject("target_id");
         return targetId == null ? null : String.valueOf(targetId);
     }
 }

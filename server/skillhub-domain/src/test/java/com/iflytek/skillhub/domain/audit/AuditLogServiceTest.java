@@ -49,4 +49,31 @@ class AuditLogServiceTest {
         assertThat(result.getAction()).isEqualTo("SKILL_PUBLISH");
         assertThat(result.getTargetId()).isEqualTo(7L);
     }
+
+    @Test
+    void recordOrganization_preservesTenantTargetResultAndRequestCorrelation() {
+        when(auditLogRepository.save(any(AuditLog.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        OrganizationAuditEvent event = OrganizationAuditEvent.success(
+                "user-1",
+                "organization-1",
+                OrganizationAuditAction.MEMBER_SUSPENDED,
+                OrganizationAuditTargetType.MEMBERSHIP,
+                "membership-1",
+                "req-organization-1",
+                OrganizationAuditDetail.transition("ACTIVE", "SUSPENDED")
+        );
+
+        AuditLog result = auditLogService.record(event);
+
+        assertThat(result.getActorUserId()).isEqualTo("user-1");
+        assertThat(result.getOrganizationId()).isEqualTo("organization-1");
+        assertThat(result.getAction()).isEqualTo("MEMBER_SUSPENDED");
+        assertThat(result.getTargetType()).isEqualTo("ORGANIZATION_MEMBERSHIP");
+        assertThat(result.getTargetReference()).isEqualTo("membership-1");
+        assertThat(result.getResult()).isEqualTo("SUCCESS");
+        assertThat(result.getRequestId()).isEqualTo("req-organization-1");
+        assertThat(result.getDetailJson())
+                .isEqualTo("{\"stateFrom\":\"ACTIVE\",\"stateTo\":\"SUSPENDED\"}");
+    }
 }

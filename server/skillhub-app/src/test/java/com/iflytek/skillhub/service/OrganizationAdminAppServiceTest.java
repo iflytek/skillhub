@@ -4,9 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.iflytek.skillhub.auth.federation.adapter.RemoteIdentityIoExecutor;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditAction;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditEvent;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditResult;
+import com.iflytek.skillhub.domain.organization.MembershipSourceType;
 import com.iflytek.skillhub.domain.organization.Organization;
 import com.iflytek.skillhub.domain.organization.OrganizationAdministrativeAction;
 import com.iflytek.skillhub.domain.organization.OrganizationAuthorizationService;
@@ -17,12 +23,16 @@ import com.iflytek.skillhub.domain.organization.OrganizationDomainRepository;
 import com.iflytek.skillhub.domain.organization.OrganizationDomainService;
 import com.iflytek.skillhub.domain.organization.OrganizationDomainVerificationMethod;
 import com.iflytek.skillhub.domain.organization.OrganizationMembershipService;
+import com.iflytek.skillhub.domain.organization.OrganizationMembership;
 import com.iflytek.skillhub.domain.organization.OrganizationRepository;
 import com.iflytek.skillhub.domain.organization.OrganizationRole;
+import com.iflytek.skillhub.domain.organization.OrganizationRoleBinding;
 import com.iflytek.skillhub.domain.organization.OrganizationRoleBindingService;
 import com.iflytek.skillhub.dto.OrganizationDomainChallengeResponse;
 import com.iflytek.skillhub.dto.OrganizationDomainCreateRequest;
 import com.iflytek.skillhub.dto.OrganizationResponse;
+import com.iflytek.skillhub.dto.OrganizationRoleBindingCreateRequest;
+import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.EnterpriseIdentityQueryRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -35,6 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -72,6 +83,12 @@ class OrganizationAdminAppServiceTest {
     @Mock
     private EnterpriseIdentityQueryRepository queryRepository;
 
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private RequestIdAccessor requestIdAccessor;
+
     private OrganizationAdminAppService service;
 
     @BeforeEach
@@ -86,6 +103,8 @@ class OrganizationAdminAppServiceTest {
                 membershipService,
                 roleBindingService,
                 queryRepository,
+                auditLogService,
+                requestIdAccessor,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
@@ -113,6 +132,7 @@ class OrganizationAdminAppServiceTest {
 
     @Test
     void challengeReturnsTheExactDnsRecordWithoutPersistingPresentationSyntax() {
+        given(requestIdAccessor.current()).willReturn("request-1");
         given(domainService.issueChallenge(
                 ORGANIZATION_ID,
                 "Example.COM",
@@ -136,10 +156,20 @@ class OrganizationAdminAppServiceTest {
         assertThat(result.recordValue())
                 .isEqualTo("skillhub-verification=one-time-token");
         assertThat(result.toString()).doesNotContain("one-time-token");
+
+        ArgumentCaptor<OrganizationAuditEvent> eventCaptor =
+                ArgumentCaptor.forClass(OrganizationAuditEvent.class);
+        verify(auditLogService).record(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().action())
+                .isEqualTo(OrganizationAuditAction.DOMAIN_CHALLENGE_ISSUED);
+        assertThat(eventCaptor.getValue().requestId()).isEqualTo("request-1");
+        assertThat(eventCaptor.getValue().detail().toJson())
+                .doesNotContain("one-time-token", "skillhub-verification");
     }
 
     @Test
     void verifyReadsDnsBeforeEnteringTheTransactionalDomainMutation() {
+        given(requestIdAccessor.current()).willReturn("request-1");
         OrganizationDomain claim = OrganizationDomain.claim(
                 ORGANIZATION_ID,
                 "example.com",
@@ -164,7 +194,10 @@ class OrganizationAdminAppServiceTest {
                 List.of("current-token"),
                 ACTOR_ID,
                 NOW
-        )).willReturn(claim);
+        )).willAnswer(invocation -> {
+            claim.verify(NOW);
+            return claim;
+        });
 
         service.verifyDomain(ORGANIZATION_ID, claim.getId(), ACTOR_ID);
 
@@ -188,6 +221,84 @@ class OrganizationAdminAppServiceTest {
                 ACTOR_ID,
                 NOW
         );
+
+        ArgumentCaptor<OrganizationAuditEvent> eventCaptor =
+                ArgumentCaptor.forClass(OrganizationAuditEvent.class);
+        verify(auditLogService).record(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().action())
+                .isEqualTo(OrganizationAuditAction.DOMAIN_VERIFIED);
+        assertThat(eventCaptor.getValue().detail().toJson())
+                .contains("PENDING", "VERIFIED")
+                .doesNotContain("current-token", "digest-not-exposed-to-the-app-layer");
+    }
+
+    @Test
+    void organizationMembershipAndRoleMutationsEmitTenantCorrelatedResults() {
+        given(requestIdAccessor.current()).willReturn("request-1");
+        Organization organization = organization();
+        given(organizationRepository.findById(ORGANIZATION_ID))
+                .willReturn(Optional.of(organization));
+
+        OrganizationMembership membership = OrganizationMembership.provisioned(
+                ORGANIZATION_ID,
+                MembershipSourceType.MANUAL,
+                "member-1",
+                "Member One",
+                "member-1@example.test",
+                NOW.minusSeconds(120)
+        );
+        membership.activate("member-1", NOW.minusSeconds(60));
+        membership.suspend(NOW);
+        given(membershipService.suspend(
+                ORGANIZATION_ID,
+                membership.getId(),
+                ACTOR_ID,
+                NOW
+        )).willReturn(membership);
+
+        OrganizationRoleBinding binding = OrganizationRoleBinding.grant(
+                ORGANIZATION_ID,
+                "member-1",
+                OrganizationRole.IDENTITY_ADMIN,
+                ACTOR_ID,
+                NOW
+        );
+        given(roleBindingService.grant(
+                ORGANIZATION_ID,
+                "member-1",
+                OrganizationRole.IDENTITY_ADMIN,
+                ACTOR_ID,
+                NOW
+        )).willReturn(binding);
+
+        service.suspend(ORGANIZATION_ID, ACTOR_ID);
+        service.suspendMember(ORGANIZATION_ID, membership.getId(), ACTOR_ID);
+        service.grantRole(
+                ORGANIZATION_ID,
+                new OrganizationRoleBindingCreateRequest(
+                        "member-1",
+                        OrganizationRole.IDENTITY_ADMIN
+                ),
+                ACTOR_ID
+        );
+
+        ArgumentCaptor<OrganizationAuditEvent> eventCaptor =
+                ArgumentCaptor.forClass(OrganizationAuditEvent.class);
+        verify(auditLogService, times(3)).record(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues())
+                .extracting(OrganizationAuditEvent::action)
+                .containsExactly(
+                        OrganizationAuditAction.ORGANIZATION_SUSPENDED,
+                        OrganizationAuditAction.MEMBER_SUSPENDED,
+                        OrganizationAuditAction.ROLE_GRANTED
+                );
+        assertThat(eventCaptor.getAllValues())
+                .allSatisfy(event -> {
+                    assertThat(event.actorUserId()).isEqualTo(ACTOR_ID);
+                    assertThat(event.organizationId()).isEqualTo(ORGANIZATION_ID);
+                    assertThat(event.result()).isEqualTo(OrganizationAuditResult.SUCCESS);
+                    assertThat(event.requestId()).isEqualTo("request-1");
+                });
     }
 
     private Organization organization() {

@@ -1,5 +1,10 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditAction;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditDetail;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditEvent;
+import com.iflytek.skillhub.domain.audit.OrganizationAuditTargetType;
 import com.iflytek.skillhub.domain.organization.MembershipSourceType;
 import com.iflytek.skillhub.domain.organization.Organization;
 import com.iflytek.skillhub.domain.organization.OrganizationMembership;
@@ -15,6 +20,7 @@ import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.OrganizationCreateRequest;
 import com.iflytek.skillhub.dto.OrganizationResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.EnterpriseIdentityQueryRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -35,6 +41,8 @@ public class PlatformOrganizationAdminAppService {
     private final OrganizationRoleBindingRepository roleBindingRepository;
     private final UserAccountRepository userAccountRepository;
     private final EnterpriseIdentityQueryRepository queryRepository;
+    private final AuditLogService auditLogService;
+    private final RequestIdAccessor requestIdAccessor;
     private final Clock clock;
 
     public PlatformOrganizationAdminAppService(
@@ -43,6 +51,8 @@ public class PlatformOrganizationAdminAppService {
             OrganizationRoleBindingRepository roleBindingRepository,
             UserAccountRepository userAccountRepository,
             EnterpriseIdentityQueryRepository queryRepository,
+            AuditLogService auditLogService,
+            RequestIdAccessor requestIdAccessor,
             Clock clock
     ) {
         this.organizationRepository = organizationRepository;
@@ -50,6 +60,8 @@ public class PlatformOrganizationAdminAppService {
         this.roleBindingRepository = roleBindingRepository;
         this.userAccountRepository = userAccountRepository;
         this.queryRepository = queryRepository;
+        this.auditLogService = auditLogService;
+        this.requestIdAccessor = requestIdAccessor;
         this.clock = clock;
     }
 
@@ -92,6 +104,15 @@ public class PlatformOrganizationAdminAppService {
         roleBindingRepository.save(ownerBinding);
         organization.recordRoleBindingChange(now);
         organizationRepository.save(organization);
+        auditLogService.record(OrganizationAuditEvent.success(
+                actorUserId,
+                organization.getId(),
+                OrganizationAuditAction.ORGANIZATION_CREATED,
+                OrganizationAuditTargetType.ORGANIZATION,
+                organization.getId(),
+                requestIdAccessor.current(),
+                OrganizationAuditDetail.transition(null, organization.getStatus().name())
+        ));
         return OrganizationResponse.from(organization, List.of());
     }
 
