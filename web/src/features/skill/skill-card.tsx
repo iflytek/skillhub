@@ -77,7 +77,10 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
         </div>
 
         {skill.summary && (
-          <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
+          <p
+            className="skill-card-summary mb-3 text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
+            title={skill.summary}
+          >
             {skill.summary}
           </p>
         )}

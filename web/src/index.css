@@ -567,6 +567,16 @@
   color: hsl(var(--text-placeholder));
 }
 
+/* 技能卡片描述固定为三行，避免长文案拉高网格；完整内容通过 title 提供。 */
+.skill-card-summary {
+  display: -webkit-box;
+  min-height: 3.75rem;
+  max-height: 3.75rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 /* ═══════════════════════════════════════════
    样式细节增强（不改颜色，只改交互/布局/字体）
    ═══════════════════════════════════════════ */
