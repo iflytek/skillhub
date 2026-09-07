@@ -181,7 +181,7 @@ export function ProfileSettingsPage() {
       <Card className="glass-strong">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>{t('profile.title')}</CardTitle>
+            <CardTitle>{t('profile.detailsTitle')}</CardTitle>
             <CardDescription>{t('profile.subtitle')}</CardDescription>
           </div>
           {!isEditing ? (

@@ -92,7 +92,7 @@ export function SecuritySettingsPage() {
       <DashboardPageHeader title={t('security.title')} subtitle={t('security.subtitle')} />
       <Card className="glass-strong">
         <CardHeader>
-          <CardTitle>{t('security.title')}</CardTitle>
+          <CardTitle>{t('security.passwordTitle')}</CardTitle>
           <CardDescription>{t('security.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>

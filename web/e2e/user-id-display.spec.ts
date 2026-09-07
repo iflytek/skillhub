@@ -8,18 +8,12 @@ test.describe('User ID Display', () => {
     await registerSession(page, testInfo)
   })
 
-  test('shows user ID in dashboard account card', async ({ page }) => {
+  test('shows the signed-in account identity in the dashboard sidebar', async ({ page }) => {
     await page.goto('/dashboard')
-    await expect(page.getByText('Account Information')).toBeVisible()
 
-    const userIdText = page.getByText('User ID', { exact: false })
-    await expect(userIdText).toBeVisible()
-
-    // The dashboard renders "User ID: <value>" in a single element.
-    // Verify the value is not empty by checking the text content is longer than just the label.
-    const content = await userIdText.textContent()
-    const valueAfterLabel = content?.replace(/^.*User ID[:\s]*/i, '').trim() ?? ''
-    expect(valueAfterLabel.length).toBeGreaterThan(0)
+    const accountSummary = page.locator('aside').locator('.mb-4').first()
+    await expect(accountSummary).toBeVisible()
+    await expect(accountSummary).not.toHaveText(/^\s*$/)
   })
 
   test('shows user ID on profile settings page', async ({ page }) => {

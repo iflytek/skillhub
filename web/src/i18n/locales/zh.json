@@ -336,7 +336,7 @@
     "viewSubscriptions": "查看我的订阅",
     "mySkillsTitle": "我的技能",
     "openMySkills": "查看我的技能",
-    "mySkillsPreviewDescription": "展示最近的 5 个技能，可进入详情或前往\u201C我的技能\u201D查看全部。",
+    "mySkillsPreviewDescription": "展示最近的 5 个技能，可进入详情或前往“我的技能”查看全部。",
     "mySkillsPreviewEmpty": "你还没有发布任何技能",
     "credentials": "访问凭证",
     "openTokens": "查看 API Tokens",
@@ -820,7 +820,8 @@
     "partiallyAppliedTitle": "部分已生效",
     "partiallyAppliedDescription": "部分修改已立即生效，其余修改正在等待管理员审核。",
     "noChanges": "没有需要保存的修改。",
-    "userId": "用户 ID"
+    "userId": "用户 ID",
+    "detailsTitle": "个人资料"
   },
   "security": {
     "title": "安全设置",
@@ -837,7 +838,8 @@
     "unavailableTitle": "此账号暂不可修改密码。",
     "unavailableDescription": "此账号通过外部身份提供方登录，或尚未配置本地密码凭据。",
     "submitting": "提交中...",
-    "submit": "更新密码"
+    "submit": "更新密码",
+    "passwordTitle": "密码"
   },
   "accounts": {
     "initiateTitle": "发起账号合并",
@@ -1701,7 +1703,8 @@
       "promotion": "提升通知",
       "promotionDesc": "提升申请提交、通过或拒绝时通知",
       "report": "举报通知",
-      "reportDesc": "举报提交或处理完成时通知"
+      "reportDesc": "举报提交或处理完成时通知",
+      "channelsTitle": "通知类型"
     }
   },
   "adminNamespaces": {

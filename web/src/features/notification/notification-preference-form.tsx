@@ -50,7 +50,7 @@ export function NotificationPreferenceForm() {
   return (
     <Card className="glass-strong">
       <CardHeader>
-        <CardTitle>{t('notification.preferences.title')}</CardTitle>
+        <CardTitle>{t('notification.preferences.channelsTitle')}</CardTitle>
         <CardDescription>{t('notification.preferences.description')}</CardDescription>
       </CardHeader>
       <CardContent>

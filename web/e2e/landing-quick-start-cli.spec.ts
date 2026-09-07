@@ -1,80 +1,69 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 
-test.describe('Landing Quick Start CLI Tab (Real API)', () => {
+test.describe('Landing access methods (Real API)', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
   })
 
-  test('renders three peer tabs and exposes the CLI install command', async ({ page }) => {
+  test('renders three access methods and exposes current CLI commands', async ({ page }) => {
     await page.goto('/')
 
-    const agentTab = page.getByRole('button', { name: 'I am Agent', exact: true })
-    const humanTab = page.getByRole('button', { name: 'I am Human', exact: true })
-    const cliTab = page.getByRole('button', { name: 'CLI', exact: true })
+    const agentMode = page.getByRole('button', { name: /Agent 自动接入/ })
+    const cliMode = page.getByRole('button', { name: /CLI 命令行/ })
+    const webMode = page.getByRole('button', { name: /Web 界面/ })
 
-    await expect(agentTab).toBeVisible()
-    await expect(humanTab).toBeVisible()
-    await expect(cliTab).toBeVisible()
+    await expect(agentMode).toBeVisible()
+    await expect(cliMode).toBeVisible()
+    await expect(webMode).toBeVisible()
+    await expect(agentMode).toHaveAttribute('aria-pressed', 'true')
 
-    await expect(agentTab).toHaveAttribute('aria-pressed', 'true')
+    await cliMode.click()
+    await expect(cliMode).toHaveAttribute('aria-pressed', 'true')
+    await expect(agentMode).toHaveAttribute('aria-pressed', 'false')
+    await expect(webMode).toHaveAttribute('aria-pressed', 'false')
 
-    await cliTab.click()
-    await expect(cliTab).toHaveAttribute('aria-pressed', 'true')
-    await expect(agentTab).toHaveAttribute('aria-pressed', 'false')
-    await expect(humanTab).toHaveAttribute('aria-pressed', 'false')
-
-    await expect(
-      page.getByText('Install the SkillHub CLI locally to run skillhub install for skills.'),
-    ).toBeVisible()
-    await expect(page.getByText('npm i -g @astron-team/skillhub', { exact: true })).toBeVisible()
+    await expect(page.getByText('npx -y @astron-team/skillhub@0.1.11 --version', { exact: true })).toBeVisible()
+    await expect(page.getByText(/npx -y @astron-team\/skillhub@0\.1\.11 search weather/)).toBeVisible()
+    await expect(page.getByText(/npx -y @astron-team\/skillhub@0\.1\.11 install @global\/weather/)).toBeVisible()
+    await expect(page.getByRole('link', { name: 'CLI 文档' })).toHaveAttribute(
+      'href',
+      'https://github.com/iflytek/skillhub/tree/main/cli',
+    )
   })
 
-  test('agent and human tabs expose the current SkillHub guidance', async ({ page }) => {
+  test('agent views expose Registry configuration and implicit discovery', async ({ page }) => {
     await page.goto('/')
 
-    const agentTab = page.getByRole('button', { name: 'I am Agent', exact: true })
-    const humanTab = page.getByRole('button', { name: 'I am Human', exact: true })
+    const registryTab = page.getByRole('tab', { name: 'Registry 配置' })
+    const discoveryTab = page.getByRole('tab', { name: '隐式发现' })
 
-    await expect(
-      page.getByText(
-        'Connect SkillHub using http://127.0.0.1:3000/install/skillhub.md',
-        { exact: true },
-      ),
-    ).toBeVisible()
+    await expect(registryTab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByText(/registry\/skill\.md/).first()).toBeVisible()
+
+    await discoveryTab.click()
+    await expect(discoveryTab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByText('检索 SkillHub Registry')).toBeVisible()
+    await expect(page.getByText('匹配 @global/weather · v1.3.0')).toBeVisible()
+
     const guideResponse = await page.request.get('/install/skillhub.md')
     expect(guideResponse.status()).toBe(200)
     const guide = await guideResponse.text()
     expect(guide).toContain('http://127.0.0.1:3000')
     expect(guideResponse.headers()['cache-control']).toContain('no-cache')
+
     const legacyGuideResponse = await page.request.get('/registry/skill.md')
     expect(legacyGuideResponse.status()).toBe(200)
     expect(await legacyGuideResponse.text()).toBe(guide)
+
     const hostileHostResponse = await page.request.get('/install/skillhub.md', {
       headers: { Host: 'attacker.example' },
     })
     expect(hostileHostResponse.status()).toBe(403)
+
     const extensionHostResponse = await page.request.get('/install/skillhub.md', {
       headers: { Host: 'chrome-extension:evil;echo_injected' },
     })
     expect(extensionHostResponse.status()).toBe(400)
-
-    await humanTab.click()
-    await expect(humanTab).toHaveAttribute('aria-pressed', 'true')
-    await expect(
-      page.getByText(
-        'npx @astron-team/skillhub@latest search <keyword> --registry http://127.0.0.1:3000',
-        { exact: true },
-      ),
-    ).toBeVisible()
-
-    await agentTab.click()
-    await expect(agentTab).toHaveAttribute('aria-pressed', 'true')
-    await expect(
-      page.getByText(
-        'Connect SkillHub using http://127.0.0.1:3000/install/skillhub.md',
-        { exact: true },
-      ),
-    ).toBeVisible()
   })
 })
