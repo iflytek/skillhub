@@ -323,7 +323,8 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "View your account, skills, and access credentials in one place",
+    "subtitle": "Manage your skills, account, and preferences",
+    "overview": "Overview",
     "backToDashboard": "Back to Dashboard",
     "userInfo": "Account Information",
     "userInfoDesc": "Basic account details and platform roles",
@@ -347,6 +348,37 @@
     "previewMore": "...",
     "previewMoreLabel": "View All",
     "userId": "User ID"
+  },
+  "sidebar": {
+    "account": "Account",
+    "profile": "Profile",
+    "security": "Security",
+    "notifications": "Notifications",
+    "skillsAndData": "Skills & Data",
+    "mySkills": "My Skills",
+    "publish": "Publish",
+    "namespaces": "Namespaces",
+    "stars": "My Stars",
+    "subscriptions": "Subscriptions",
+    "tokens": "API Tokens",
+    "reviewProgress": "Review Progress",
+    "admin": "Admin",
+    "governance": "Governance",
+    "reports": "Reports"
+  },
+  "overview": {
+    "mySkills": "My Skills",
+    "mySkillsDesc": "View and manage all your published skills",
+    "publish": "Publish",
+    "publishDesc": "Upload and publish a new skill",
+    "tokens": "API Tokens",
+    "tokensDesc": "Manage your API access tokens",
+    "stars": "My Stars",
+    "starsDesc": "View your starred and rated skills",
+    "profile": "Profile",
+    "profileDesc": "Edit your display name and personal info",
+    "security": "Security",
+    "securityDesc": "Change password and account security options"
   },
   "mySkills": {
     "title": "My Skills",
@@ -1417,13 +1449,19 @@
     }
   },
   "footer": {
+    "product": "Product",
+    "marketplace": "Skill marketplace",
+    "publish": "Publish skill",
+    "developers": "Developers",
+    "project": "Project",
+    "codeOfConduct": "Code of conduct",
     "resources": "Resources",
     "docs": "Documentation",
     "api": "API",
     "community": "Community",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "copyright": "© 2026 SkillHub. All rights reserved."
+    "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "publish": {
     "title": "Publish Skill",

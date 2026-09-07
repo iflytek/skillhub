@@ -199,6 +199,7 @@ function ProgressItem({
             <Link
               to="/space/$namespace/$slug"
               params={{ namespace: item.namespace, slug: item.skillSlug }}
+              search={{ returnTo: '/dashboard/review-progress' }}
               className="truncate font-semibold text-foreground underline-offset-4 hover:underline"
             >
               @{item.namespace}/{item.skillSlug}

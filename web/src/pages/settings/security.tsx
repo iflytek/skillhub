@@ -10,6 +10,7 @@ import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 interface PasswordChangeCapabilityUser {
   canChangePassword?: boolean
@@ -87,7 +88,8 @@ export function SecuritySettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="space-y-8 animate-fade-up">
+      <DashboardPageHeader title={t('security.title')} subtitle={t('security.subtitle')} />
       <Card className="glass-strong">
         <CardHeader>
           <CardTitle>{t('security.title')}</CardTitle>

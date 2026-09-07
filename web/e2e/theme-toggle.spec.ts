@@ -25,17 +25,24 @@ test.describe('Light and dark theme', () => {
         }),
       })
     })
-    await page.route('**/api/web/me/namespaces', async (route) => {
+    await page.route('**/api/web/me/namespaces/page?*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           code: 0,
           msg: 'success',
-          data: [],
+          data: { items: [], total: 0, page: 0, size: 10 },
           timestamp: '2026-09-01T00:00:00Z',
           requestId: 'theme-namespace-fixture',
         }),
+      })
+    })
+    await page.route('**/api/web/me/namespaces', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 0, msg: 'success', data: [], timestamp: '2026-09-01T00:00:00Z', requestId: 'theme-namespace-legacy-fixture' }),
       })
     })
     await page.route('**/api/web/notifications/unread-count', async (route) => {

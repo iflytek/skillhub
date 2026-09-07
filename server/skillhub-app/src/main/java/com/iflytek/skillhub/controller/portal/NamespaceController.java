@@ -76,6 +76,15 @@ public class NamespaceController extends BaseApiController {
                 namespacePortalQueryAppService.listMyNamespaces(userNsRoles, platformRoles(principal)));
     }
 
+    @GetMapping("/me/namespaces/page")
+    public ApiResponse<PageResponse<MyNamespaceResponse>> listMyNamespacesPage(
+            Pageable pageable,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @AuthenticationPrincipal PlatformPrincipal principal) {
+        return ok("response.success.read",
+                namespacePortalQueryAppService.listMyNamespacesPage(pageable, userNsRoles, platformRoles(principal)));
+    }
+
     @GetMapping("/namespaces/{slug}")
     public ApiResponse<NamespaceResponse> getNamespace(@PathVariable String slug,
                                                        @RequestAttribute("userId") String userId,

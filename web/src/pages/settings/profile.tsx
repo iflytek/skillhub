@@ -9,6 +9,7 @@ import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
 /** Regex matching allowed display name characters: Chinese, English, digits, spaces, underscore, hyphen. */
 const DISPLAY_NAME_PATTERN = /^[\u4e00-\u9fa5a-zA-Z0-9_ -]+$/
@@ -175,7 +176,8 @@ export function ProfileSettingsPage() {
   })
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="space-y-8 animate-fade-up">
+      <DashboardPageHeader title={t('profile.title')} subtitle={t('profile.subtitle')} />
       <Card className="glass-strong">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -184,7 +186,7 @@ export function ProfileSettingsPage() {
           </div>
           {!isEditing ? (
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/reset-password' })}>
+              <Button type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/settings/security' })}>
                 {t('profile.resetPassword')}
               </Button>
               {hasEditableFields ? (

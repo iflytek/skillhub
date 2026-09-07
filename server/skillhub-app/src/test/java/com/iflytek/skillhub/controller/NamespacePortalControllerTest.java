@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -93,6 +94,26 @@ class NamespacePortalControllerTest {
                 .andExpect(jsonPath("$.data[0].status").value("ARCHIVED"))
                 .andExpect(jsonPath("$.data[0].currentUserRole").value("OWNER"))
                 .andExpect(jsonPath("$.data[0].canDelete").value(false));
+    }
+
+    @Test
+    void listMyNamespacesPage_limitsResultsAndReturnsTotal() throws Exception {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        given(namespaceRepository.findByIdIn(eq(List.of(1L)), any(org.springframework.data.domain.Pageable.class)))
+                .willReturn(new org.springframework.data.domain.PageImpl<>(List.of(namespace), PageRequest.of(0, 10), 1));
+        given(namespaceMemberRepository.findByUserId("owner-1"))
+                .willReturn(List.of(new NamespaceMember(1L, "owner-1", NamespaceRole.OWNER)));
+
+        mockMvc.perform(get("/api/v1/me/namespaces/page")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .with(auth("owner-1"))
+                        .requestAttr("userId", "owner-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].slug").value("team-a"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.size").value(10));
     }
 
     @Test

@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Pagination } from '@/shared/components/pagination'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -26,9 +27,15 @@ export function ReportsPage() {
     disposition?: ReportDisposition
     skillLabel: string
   } | null>(null)
-  const { data: pendingReports, isLoading: isPendingLoading } = useSkillReports('PENDING')
-  const { data: resolvedReports, isLoading: isResolvedLoading } = useSkillReports('RESOLVED')
-  const { data: dismissedReports, isLoading: isDismissedLoading } = useSkillReports('DISMISSED')
+  const [pages, setPages] = useState<Record<'PENDING' | 'RESOLVED' | 'DISMISSED', number>>({
+    PENDING: 0,
+    RESOLVED: 0,
+    DISMISSED: 0,
+  })
+  const pageSize = 10
+  const { data: pendingReports, isLoading: isPendingLoading } = useSkillReports('PENDING', pages.PENDING, pageSize)
+  const { data: resolvedReports, isLoading: isResolvedLoading } = useSkillReports('RESOLVED', pages.RESOLVED, pageSize)
+  const { data: dismissedReports, isLoading: isDismissedLoading } = useSkillReports('DISMISSED', pages.DISMISSED, pageSize)
   const resolveMutation = useResolveSkillReport()
   const dismissMutation = useDismissSkillReport()
 
@@ -77,13 +84,13 @@ export function ReportsPage() {
       )
     }
 
-    if (!reports || reports.length === 0) {
+    if (!reports || reports.items.length === 0) {
       return <Card className="p-12 text-center text-muted-foreground">{t('reports.empty')}</Card>
     }
 
     return (
       <div className="space-y-4">
-        {reports.map((report) => {
+        {reports.items.map((report) => {
           const skillLabel = report.skillDisplayName || report.skillSlug || `#${report.skillId}`
           return (
             <Card key={report.id} className="p-5 space-y-4">
@@ -149,6 +156,13 @@ export function ReportsPage() {
             </Card>
           )
         })}
+        {reports.total > reports.size ? (
+          <Pagination
+            page={pages[status]}
+            totalPages={Math.max(Math.ceil(reports.total / reports.size), 1)}
+            onPageChange={(nextPage) => setPages((current) => ({ ...current, [status]: nextPage }))}
+          />
+        ) : null}
       </div>
     )
   }

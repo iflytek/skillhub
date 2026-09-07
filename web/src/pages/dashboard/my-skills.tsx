@@ -285,11 +285,6 @@ export function MySkillsPage() {
       <DashboardPageHeader
         title={t('mySkills.title')}
         subtitle={t('mySkills.subtitle')}
-        actions={(
-          <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
-          {t('mySkills.publishNew')}
-          </Button>
-        )}
       />
 
       <div className="flex flex-col gap-3">
@@ -506,11 +501,7 @@ export function MySkillsPage() {
               <Button size="lg" variant="outline" onClick={handleClearSearch}>
                 {t('mySkills.clearSearch')}
               </Button>
-            ) : (
-              <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
-                {t('mySkills.publishSkill')}
-              </Button>
-            )
+            ) : undefined
           }
         />
       )}

@@ -171,7 +171,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
                             {version.status}
                           </span>
                           {isActiveReviewVersion(version, detail) ? (
-                            <span className="inline-flex items-center rounded-full bg-brand-gradient px-2.5 py-0.5 text-xs font-medium text-white">
+                            <span className="inline-flex items-center rounded-full bg-[#202020] px-2.5 py-0.5 text-xs font-medium text-white">
                               {t('review.activeReviewVersion')}
                             </span>
                           ) : null}
