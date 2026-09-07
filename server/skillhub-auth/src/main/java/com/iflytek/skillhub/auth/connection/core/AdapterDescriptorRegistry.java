@@ -39,7 +39,7 @@ public final class AdapterDescriptorRegistry {
 
         Map<RegistrationKey, AdapterDescriptor> validated = new LinkedHashMap<>();
         for (AdapterDescriptor descriptor : ordered) {
-            validate(descriptor);
+            validateDescriptor(descriptor);
             RegistrationKey key = RegistrationKey.from(descriptor);
             if (validated.putIfAbsent(key, descriptor) != null) {
                 throw failure(
@@ -71,7 +71,8 @@ public final class AdapterDescriptorRegistry {
         return descriptors;
     }
 
-    private static void validate(AdapterDescriptor descriptor) {
+    public static void validateDescriptor(AdapterDescriptor descriptor) {
+        Objects.requireNonNull(descriptor, "descriptor");
         if (!SUPPORTED_CONTRACT_MAJORS.contains(descriptor.contractVersion().major())) {
             throw failure(
                     AdapterRegistryFailureReason.UNSUPPORTED_CONTRACT_VERSION,

@@ -9,10 +9,7 @@ public record LoginConnectionRuntimeSnapshot<C extends LoginConnectionRuntimeCon
         String connectionId,
         ConnectionHandle handle,
         long revision,
-        AdapterKey adapterKey,
-        int adapterContractVersion,
-        int configSchemaVersion,
-        InteractionModel interactionModel,
+        AdapterDescriptor descriptor,
         C config
 ) {
 
@@ -23,15 +20,27 @@ public record LoginConnectionRuntimeSnapshot<C extends LoginConnectionRuntimeCon
         if (revision < 1) {
             throw new IllegalArgumentException("connection revision must be positive");
         }
-        Objects.requireNonNull(adapterKey, "adapter key must not be null");
-        if (adapterContractVersion < 1) {
-            throw new IllegalArgumentException("adapter contract version must be positive");
+        Objects.requireNonNull(descriptor, "adapter descriptor must not be null");
+        if (descriptor.connectionKind() != ConnectionKind.LOGIN) {
+            throw new IllegalArgumentException("login runtime snapshot requires a login adapter descriptor");
         }
-        if (configSchemaVersion < 1) {
-            throw new IllegalArgumentException("config schema version must be positive");
-        }
-        Objects.requireNonNull(interactionModel, "interaction model must not be null");
         Objects.requireNonNull(config, "runtime config must not be null");
+    }
+
+    public AdapterKey adapterKey() {
+        return descriptor.adapterKey();
+    }
+
+    public AdapterContractVersion adapterContractVersion() {
+        return descriptor.contractVersion();
+    }
+
+    public int configSchemaVersion() {
+        return descriptor.configSchemaVersion();
+    }
+
+    public InteractionModel interactionModel() {
+        return descriptor.interactionModel().orElseThrow();
     }
 
     private static Optional<String> normalizeOptionalText(Optional<String> value, String field) {

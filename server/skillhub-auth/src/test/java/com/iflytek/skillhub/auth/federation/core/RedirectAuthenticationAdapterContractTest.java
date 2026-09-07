@@ -34,10 +34,14 @@ class RedirectAuthenticationAdapterContractTest {
                 "connection_1",
                 handle,
                 3L,
-                new AdapterKey("test-redirect"),
-                1,
-                1,
-                InteractionModel.REDIRECT,
+                new AdapterDescriptor(
+                        new AdapterKey("test-redirect"),
+                        new AdapterContractVersion(1, 0),
+                        ConnectionKind.LOGIN,
+                        1,
+                        Optional.of(InteractionModel.REDIRECT),
+                        Set.of(AdapterCapability.IDENTITY_ASSERTION)
+                ),
                 new TestRuntimeConfig("https://identity.example.com")
         );
         EnterpriseConnectionRegistry registry = requested -> {
