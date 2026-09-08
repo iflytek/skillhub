@@ -132,7 +132,7 @@ class BasicPrePublishValidatorTest {
                 "scripts/config.py",
                 """
                 client_secret = "abcdefghijklmnop"  // hardcoded
-                refresh_token=zyxwvutsrqponmlk # hardcoded
+                refresh_token=zyxwvuts-12345678 # hardcoded
                 """.getBytes(StandardCharsets.UTF_8),
                 96,
                 "text/x-python"
