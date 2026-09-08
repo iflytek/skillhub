@@ -42,4 +42,23 @@ describe('ConfigStore', () => {
     expect(config.registry).toBe('https://new.com')
     expect(config.defaultAgent).toBe('codex')
   })
+
+  test('setRegistry() preserves third-party and unknown fields', async () => {
+    const home = await makeTempHome()
+    const store = new ConfigStore(home)
+    await store.write({
+      self_update_url: 'https://skillhub.example.com/version.json',
+      auto_self_upgrade: false,
+      futureField: { enabled: true }
+    })
+
+    await store.setRegistry('https://registry.example.com')
+
+    expect(await store.read()).toEqual({
+      self_update_url: 'https://skillhub.example.com/version.json',
+      auto_self_upgrade: false,
+      futureField: { enabled: true },
+      registry: 'https://registry.example.com'
+    })
+  })
 })

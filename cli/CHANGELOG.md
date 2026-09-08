@@ -14,6 +14,9 @@ All notable CLI behavior changes are documented in this file.
 
 ### Fixed
 
+- Preserve unknown fields in shared `~/.skillhub/config.json` and `credentials.json` files, and
+  treat a compatible credentials document without first-party `tokens` as logged out instead of
+  failing. Login and logout now modify only the first-party registry state.
 - Return structured JSON from `help --json` and topic help, report unknown help topics as usage
   errors, and support `--version` / `-v` alongside the existing `version` command.
 - Report successful publish and sync push requests as submissions, preserving the registry's raw

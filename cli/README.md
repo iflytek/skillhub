@@ -86,6 +86,10 @@ skillhub login --token sk_xxx --registry https://skillhub.example.com
 
 `login` validates the token, stores it in `~/.skillhub/credentials.json`, and writes the registry to `~/.skillhub/config.json`.
 
+Both files are updated non-destructively: SkillHub CLI changes only its own `tokens` and `registry`
+fields and preserves unknown fields written by other compatible tools. This allows tools that share
+the `~/.skillhub` directory to keep independently named state in the same JSON documents.
+
 ### Check Current Identity
 
 ```bash

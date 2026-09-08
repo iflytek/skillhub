@@ -461,6 +461,9 @@ skillhub login --token <token> [--registry <url>] [--json]
 
 保存 token 和 registry 配置。
 
+CLI 以非破坏方式更新 `~/.skillhub/credentials.json` 和 `~/.skillhub/config.json`：只修改
+自己使用的 `tokens` 和 `registry` 字段，保留其他兼容工具写入的未知字段。
+
 ### logout
 
 ```bash

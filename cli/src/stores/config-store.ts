@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { joinPath, userStateDir, ensureDir, pathExists } from '../platform/paths'
 
-export interface CliConfig {
+export interface CliConfig extends Record<string, unknown> {
   registry?: string
   defaultAgent?: string
   lastUpdateCheckAt?: string

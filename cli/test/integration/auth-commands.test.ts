@@ -30,6 +30,42 @@ describe('auth commands', () => {
     expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json()).toMatchObject({ tokens: { [registry.url]: 'sk_ok' } })
   })
 
+  test('login and logout preserve compatible third-party state', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_ok', user: { handle: 'u1', displayName: 'User One' } })
+    const thirdPartyUser = { token: 'third-party-token', host: 'https://api.skillhub.cn' }
+    await Bun.write(`${env.home}/.skillhub/config.json`, JSON.stringify({
+      self_update_url: 'https://skillhub.example.com/version.json',
+      auto_self_upgrade: false
+    }))
+    await Bun.write(`${env.home}/.skillhub/credentials.json`, JSON.stringify({ user: thirdPartyUser }))
+
+    const login = await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+    expect(login.exitCode).toBe(0)
+    expect(await Bun.file(`${env.home}/.skillhub/config.json`).json()).toEqual({
+      self_update_url: 'https://skillhub.example.com/version.json',
+      auto_self_upgrade: false,
+      registry: registry.url
+    })
+    expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json()).toEqual({
+      user: thirdPartyUser,
+      tokens: { [registry.url]: 'sk_ok' }
+    })
+
+    const logout = await runCli(['logout', '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+    expect(logout.exitCode).toBe(0)
+    expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json()).toEqual({
+      user: thirdPartyUser,
+      tokens: {}
+    })
+  })
+
   test('login fails with invalid token', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({ token: 'sk_ok' })
