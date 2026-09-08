@@ -88,7 +88,7 @@ class FeishuOAuth2UserServiceTest {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
-                .authorizationUri("https://open.feishu.cn/open-apis/authen/v1/authorize")
+                .authorizationUri("https://accounts.feishu.cn/open-apis/authen/v1/authorize")
                 .tokenUri("https://open.feishu.cn/open-apis/authen/v2/oauth/token")
                 .userInfoUri("https://open.feishu.cn/open-apis/authen/v1/user_info")
                 .userNameAttributeName("open_id")
