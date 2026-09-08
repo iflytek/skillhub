@@ -20,6 +20,20 @@ description: 常见问题解答
 
 使用 PostgreSQL 标准备份工具（pg_dump）。
 
+### 国内 / 内网环境部署时镜像拉取失败，或自己拼 compose 启动数据库报错？
+
+优先使用官方的 `runtime.sh` 一键脚本，而不是手写 compose：
+
+```bash
+# 默认从 ghcr.io 拉取镜像
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
+
+# 国内网络拉不到 ghcr.io 时，加 --aliyun 走阿里云镜像源
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
+```
+
+脚本会自动准备 PostgreSQL、Redis、对象存储等依赖并按正确顺序启动，能避免手写 compose 时常见的数据库初始化 / 依赖顺序报错。完全离线的环境可先用 `scripts/mirror-runtime-images.sh` 把镜像同步到内网 registry，再用 `--mirror-registry <地址>` 指向它。
+
 ## 使用相关
 
 ### 如何重置管理员密码？
