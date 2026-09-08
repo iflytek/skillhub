@@ -46,6 +46,27 @@ public record OrganizationAuditEvent(
         );
     }
 
+    public static OrganizationAuditEvent failed(
+            String actorUserId,
+            String organizationId,
+            OrganizationAuditAction action,
+            OrganizationAuditTargetType targetType,
+            String targetReference,
+            String requestId,
+            OrganizationAuditDetail detail
+    ) {
+        return new OrganizationAuditEvent(
+                actorUserId,
+                organizationId,
+                action,
+                targetType,
+                targetReference,
+                OrganizationAuditResult.FAILED,
+                requestId,
+                detail
+        );
+    }
+
     @Override
     public String toString() {
         return "OrganizationAuditEvent[actorUserId=%s, organizationId=%s, action=%s, "

@@ -49,6 +49,14 @@ public class OrganizationAuthorizationPolicy {
                             )
                     ),
                     Map.entry(
+                            OrganizationAdministrativeAction.VIEW_LOGIN_CONNECTIONS,
+                            Set.of(
+                                    OrganizationRole.ORG_OWNER,
+                                    OrganizationRole.IDENTITY_ADMIN,
+                                    OrganizationRole.ORG_AUDITOR
+                            )
+                    ),
+                    Map.entry(
                             OrganizationAdministrativeAction.MANAGE_ORGANIZATION_LIFECYCLE,
                             Set.of(OrganizationRole.ORG_OWNER)
                     ),

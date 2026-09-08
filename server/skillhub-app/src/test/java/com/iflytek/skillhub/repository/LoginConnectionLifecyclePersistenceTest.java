@@ -12,6 +12,7 @@ import com.iflytek.skillhub.auth.connection.control.LoginConnectionRevisionRepos
 import com.iflytek.skillhub.auth.connection.control.LoginConnectionStatus;
 import com.iflytek.skillhub.auth.connection.control.PersistentEnterpriseConnectionRegistry;
 import com.iflytek.skillhub.auth.connection.control.StoredLoginConnectionRevision;
+import com.iflytek.skillhub.auth.connection.control.LoginConnectionTestFailureReason;
 import com.iflytek.skillhub.auth.connection.core.AdapterCapability;
 import com.iflytek.skillhub.auth.connection.core.AdapterContractVersion;
 import com.iflytek.skillhub.auth.connection.core.AdapterDescriptor;
@@ -91,6 +92,9 @@ class LoginConnectionLifecyclePersistenceTest {
 
     @Autowired
     private LoginConnectionLifecycleService lifecycleService;
+
+    @Autowired
+    private IdentityOperationRepository identityOperationRepository;
 
     @Autowired
     private EntityManager entityManager;

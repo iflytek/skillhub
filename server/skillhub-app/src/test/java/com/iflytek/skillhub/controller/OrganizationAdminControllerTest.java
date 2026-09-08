@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,12 +18,18 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.organization.OrganizationRole;
 import com.iflytek.skillhub.domain.organization.OrganizationStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.dto.LoginConnectionHealthResponse;
+import com.iflytek.skillhub.dto.LoginConnectionResponse;
+import com.iflytek.skillhub.dto.LoginConnectionRevisionResponse;
+import com.iflytek.skillhub.dto.LoginConnectionSecretSummaryResponse;
 import com.iflytek.skillhub.dto.OrganizationDomainChallengeResponse;
 import com.iflytek.skillhub.dto.OrganizationResponse;
+import com.iflytek.skillhub.service.EnterpriseConnectionAppService;
 import com.iflytek.skillhub.service.OrganizationAdminAppService;
 import com.iflytek.skillhub.service.PlatformOrganizationAdminAppService;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +56,9 @@ class OrganizationAdminControllerTest {
 
     @MockBean
     private OrganizationAdminAppService organizationAppService;
+
+    @MockBean
+    private EnterpriseConnectionAppService enterpriseConnectionAppService;
 
     @MockBean
     private NamespaceMemberRepository namespaceMemberRepository;
@@ -159,6 +169,88 @@ class OrganizationAdminControllerTest {
                         .value("_skillhub-verification.example.com"))
                 .andExpect(jsonPath("$.data.recordValue")
                         .value("skillhub-verification=one-time-token"));
+    }
+
+    @Test
+    void loginConnectionCreationNeverEchoesTheSubmittedSecret() throws Exception {
+        given(enterpriseConnectionAppService.create(
+                eq("organization-a"),
+                any(),
+                eq("identity-admin")
+        )).willReturn(new LoginConnectionResponse(
+                "connection-1",
+                "login-safe-handle",
+                "Corporate SSO",
+                "oidc",
+                "DRAFT",
+                null,
+                null,
+                new LoginConnectionRevisionResponse(
+                        "revision-1",
+                        1,
+                        "1.0",
+                        1,
+                        Map.of(
+                                "issuer", "https://id.example.com",
+                                "clientId", "skillhub",
+                                "scopes", List.of("openid")
+                        ),
+                        false,
+                        false,
+                        NOW
+                ),
+                new LoginConnectionSecretSummaryResponse(true, NOW, null),
+                new LoginConnectionHealthResponse("UNTESTED", null, null),
+                NOW,
+                NOW
+        ));
+
+        String body = mockMvc.perform(post(
+                        "/api/v1/organizations/organization-a/login-connections"
+                )
+                        .with(authentication(authToken("identity-admin")))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "displayName": "Corporate SSO",
+                                  "adapterKey": "oidc",
+                                  "configuration": {
+                                    "issuer": "https://id.example.com",
+                                    "clientId": "skillhub",
+                                    "scopes": ["openid"]
+                                  },
+                                  "clientSecret": "never-echo-this-secret",
+                                  "verifiedEmailCorrelationEnabled": false,
+                                  "jitProvisioningEnabled": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.secret.configured").value(true))
+                .andExpect(jsonPath("$.data.latestRevision.configuration.clientId")
+                        .value("skillhub"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(body)
+                .doesNotContain("never-echo-this-secret")
+                .doesNotContain("clientSecret");
+    }
+
+    @Test
+    void activationRequiresExplicitConfirmationBeforeCallingTheService() throws Exception {
+        mockMvc.perform(post(
+                        "/api/v1/organizations/organization-a/login-connections/connection-1"
+                                + "/revisions/revision-1/activate"
+                )
+                        .with(authentication(authToken("identity-admin")))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"confirmed\":false}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(enterpriseConnectionAppService);
     }
 
     private OrganizationResponse organizationResponse(List<OrganizationRole> roles) {
