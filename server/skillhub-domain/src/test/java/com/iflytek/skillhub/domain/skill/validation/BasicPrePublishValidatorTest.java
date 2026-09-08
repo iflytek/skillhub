@@ -98,4 +98,80 @@ class BasicPrePublishValidatorTest {
 
         assertTrue(result.passed());
     }
+
+    @Test
+    void shouldAllowRuntimeExpressionsAssignedToSensitiveVariables() {
+        PackageEntry script = new PackageEntry(
+                "scripts/oauth.py",
+                """
+                refresh_token = token_response.get("refresh_token")
+                client_secret = client_secret
+                self._client_secret = client_secret
+                access_token = ensure_valid_access_token(config)
+                headers = build_headers(access_token=access_token)
+                token = response.data["token"]
+                """.getBytes(StandardCharsets.UTF_8),
+                256,
+                "text/x-python"
+        );
+
+        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
+                List.of(script),
+                new SkillMetadata("Safe Skill", "desc", "1.0.0", "body", Map.of()),
+                "user-1",
+                1L
+        ));
+
+        assertTrue(result.passed());
+        assertTrue(result.warnings().isEmpty());
+    }
+
+    @Test
+    void shouldWarnOnQuotedAndBareCredentialLiterals() {
+        PackageEntry script = new PackageEntry(
+                "scripts/config.py",
+                """
+                client_secret = "abcdefghijklmnop"  // hardcoded
+                refresh_token=zyxwvutsrqponmlk # hardcoded
+                """.getBytes(StandardCharsets.UTF_8),
+                96,
+                "text/x-python"
+        );
+
+        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
+                List.of(script),
+                new SkillMetadata("Unsafe Skill", "desc", "1.0.0", "body", Map.of()),
+                "user-1",
+                1L
+        ));
+
+        assertTrue(result.passed());
+        assertTrue(result.warnings().stream().anyMatch(warning ->
+                warning.contains("scripts/config.py line 1")));
+        assertTrue(result.warnings().stream().anyMatch(warning ->
+                warning.contains("scripts/config.py line 2")));
+    }
+
+    @Test
+    void shouldStillWarnOnProviderSpecificTokensInsideExpressions() {
+        PackageEntry script = new PackageEntry(
+                "scripts/client.py",
+                """
+                headers = build_headers("ghp_abcdefghijklmnopqrstuvwxyz1234")
+                """.getBytes(StandardCharsets.UTF_8),
+                68,
+                "text/x-python"
+        );
+
+        ValidationResult result = validator.validate(new PrePublishValidator.SkillPackageContext(
+                List.of(script),
+                new SkillMetadata("Unsafe Skill", "desc", "1.0.0", "body", Map.of()),
+                "user-1",
+                1L
+        ));
+
+        assertTrue(result.passed());
+        assertFalse(result.warnings().isEmpty());
+        assertTrue(result.warnings().getFirst().contains("GitHub token"));
+    }
 }
