@@ -667,6 +667,42 @@ describe('install command — server errors', () => {
 // ---------------------------------------------------------------------------
 
 describe('install command — multi-agent & auto-detect', () => {
+  test('--agent astron-studio installs into the fixed user-level .acode skills directory', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u', displayName: 'U' },
+      skills: [{ namespace: 'global', slug: 'pdf-parser', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+    await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+
+    const result = await runCli(
+      [
+        'install', 'pdf-parser',
+        '--agent', 'astron-studio',
+        '--registry', registry.url,
+        '--token', 'sk_ok',
+        '--json'
+      ],
+      { HOME: env.home, USERPROFILE: env.home }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
+    expect(parsed.installed).toEqual([{
+      agent: 'astron-studio',
+      dir: join(env.home, '.acode', 'skills', 'pdf-parser')
+    }])
+    expect(await Bun.file(join(
+      env.home,
+      '.acode',
+      'skills',
+      'pdf-parser',
+      '.skillhub',
+      'metadata.json'
+    )).exists()).toBe(true)
+  })
+
   test('multi --agent installs the same skill into every specified user-level dir', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({

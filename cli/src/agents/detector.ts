@@ -1,4 +1,5 @@
 import type { AgentProfile } from './types'
+import { astronStudioProfile } from './profiles/astron-studio'
 import { claudeCodeProfile } from './profiles/claude-code'
 import { codexProfile } from './profiles/codex'
 import { cursorProfile } from './profiles/cursor'
@@ -15,14 +16,14 @@ import { opencodeProfile } from './profiles/opencode'
 import { kiloProfile } from './profiles/kilo'
 
 export {
-  claudeCodeProfile, codexProfile, cursorProfile, githubCopilotProfile,
+  astronStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, githubCopilotProfile,
   geminiCliProfile, openhandsProfile, windsurfProfile, openclawProfile,
   kiroCliProfile, rooProfile, traeProfile, traeCnProfile,
   opencodeProfile, kiloProfile
 }
 
 export const allProfiles: AgentProfile[] = [
-  claudeCodeProfile, codexProfile, cursorProfile, githubCopilotProfile,
+  astronStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, githubCopilotProfile,
   geminiCliProfile, openhandsProfile, windsurfProfile, openclawProfile,
   kiroCliProfile, rooProfile, traeProfile, traeCnProfile,
   opencodeProfile, kiloProfile

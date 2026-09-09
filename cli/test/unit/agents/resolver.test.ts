@@ -128,6 +128,17 @@ describe('resolveInstallTargets', () => {
     expect(targets).toEqual([{ agent: 'codex', rootDir: '/repo/.codex/skills', scope: 'project', source: 'explicit' }])
   })
 
+  test('rejects project scope for the user-only AstronStudio profile', async () => {
+    await expect(resolveInstallTargets({
+      cwd: '/repo',
+      home: '/home/u',
+      agents: ['astron-studio'],
+      scope: 'project',
+      json: false,
+      interactive: false
+    })).rejects.toThrow('agent astron-studio does not support project scope')
+  })
+
   test('scope=user + agent codex returns user root with user scope', async () => {
     const targets = await resolveInstallTargets({
       cwd: '/repo',
