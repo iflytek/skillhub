@@ -1,4 +1,4 @@
-import { access, chmod, lstat, mkdir, mkdtemp, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdir, mkdtemp, readdir, rm, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -81,8 +81,6 @@ describe('skill target lifecycle lock', () => {
     const staleTime = new Date(Date.now() - 60_000)
     await utimes(lockPath, staleTime, staleTime)
     const acquisitionGatePath = `${lockPath}.acquire`
-    await writeFile(acquisitionGatePath, 'abandoned-owner')
-    await utimes(acquisitionGatePath, staleTime, staleTime)
     const worker = fileURLToPath(new URL('../../helpers/target-lock-worker.ts', import.meta.url))
     const bunPath = (await Bun.which('bun')) ?? process.execPath
     const acquiredPath = join(rootDir, 'acquired')
@@ -128,13 +126,45 @@ describe('skill target lifecycle lock', () => {
       expect(loser.stderr).toContain('install target is busy')
     }
     expect(await exists(lockPath)).toBe(false)
-    expect(await exists(acquisitionGatePath)).toBe(false)
+    expect(await readdir(acquisitionGatePath)).toEqual([])
     const releaseAfterContention = await acquireSkillTargetLock(rootDir, 'demo')
     await releaseAfterContention()
     if (process.platform !== 'win32') {
       expect((await lstat(dirname(lockPath))).mode & 0o077).toBe(0)
     }
   }, 15_000)
+
+  test('does not recover a live acquisition contender solely because its file is old', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-live-gate-'))
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await mkdir(acquisitionGatePath)
+    const liveContenderPath = join(acquisitionGatePath, `${process.pid}-suspended.choosing`)
+    await writeFile(liveContenderPath, '')
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(liveContenderPath, staleTime, staleTime)
+
+    await expect(acquireSkillTargetLock(rootDir, 'demo')).rejects.toThrow('install target is busy')
+    expect(await exists(liveContenderPath)).toBe(true)
+    await rm(acquisitionGatePath, { recursive: true })
+  })
+
+  test('recovers acquisition contenders whose owner process exited', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-dead-gate-'))
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await mkdir(acquisitionGatePath)
+    const bunPath = (await Bun.which('bun')) ?? process.execPath
+    const exitedOwner = Bun.spawn({ cmd: [bunPath, '-e', ''], stdout: 'ignore', stderr: 'ignore' })
+    const deadPid = exitedOwner.pid
+    expect(await exitedOwner.exited).toBe(0)
+    await writeFile(join(acquisitionGatePath, `${deadPid}-abandoned.choosing`), '')
+    await writeFile(join(acquisitionGatePath, `${deadPid}-abandoned.ticket`), '1')
+
+    const release = await acquireSkillTargetLock(rootDir, 'demo')
+    await release()
+    expect(await readdir(acquisitionGatePath)).toEqual([])
+  })
 
   test('keeps one lock identity when a symlink target is removed', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-symlink-root-'))
