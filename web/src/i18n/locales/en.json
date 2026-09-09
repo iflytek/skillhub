@@ -820,8 +820,7 @@
     "partiallyAppliedTitle": "Partially Applied",
     "partiallyAppliedDescription": "Some changes were applied immediately. Others are pending admin review.",
     "noChanges": "No changes to save.",
-    "userId": "User ID",
-    "detailsTitle": "Profile Details"
+    "userId": "User ID"
   },
   "security": {
     "title": "Security Settings",
@@ -838,8 +837,7 @@
     "unavailableTitle": "Password changes are unavailable for this account.",
     "unavailableDescription": "This account signs in through an external identity provider or has no local password credential.",
     "submitting": "Submitting...",
-    "submit": "Update Password",
-    "passwordTitle": "Password"
+    "submit": "Update Password"
   },
   "accounts": {
     "initiateTitle": "Initiate Account Merge",
@@ -1704,8 +1702,7 @@
       "promotion": "Promotion Notifications",
       "promotionDesc": "Notify on promotion request, approval, or rejection",
       "report": "Report Notifications",
-      "reportDesc": "Notify on report submission or resolution",
-      "channelsTitle": "Notification Channels"
+      "reportDesc": "Notify on report submission or resolution"
     }
   },
   "adminNamespaces": {
