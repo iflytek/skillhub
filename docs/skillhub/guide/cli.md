@@ -151,7 +151,7 @@ skillhub install pdf-parser --version 1.2.0
 skillhub install pdf-parser --agent codex
 
 # 安装到 AStudio 的固定用户级目录
-skillhub install pdf-parser --agent AStudio
+skillhub install pdf-parser --agent astudio
 
 # 安装到多个 Agent
 skillhub install pdf-parser --agent codex --agent claude-code
@@ -185,7 +185,7 @@ CLI 按以下逻辑确定安装位置：
 
 | Agent | 项目级路径 | 用户级路径 |
 |-------|-----------|-----------|
-| `AStudio` | 不支持 | `~/.acode/skills/` |
+| `astudio`（AStudio） | 不支持 | `~/.acode/skills/` |
 | `claude-code` | `<project>/.claude/skills/` | `~/.claude/skills/` |
 | `codex` | `<project>/.codex/skills/` | `~/.codex/skills/` |
 | `cursor` | `<project>/.cursor/skills/` | `~/.cursor/skills/` |

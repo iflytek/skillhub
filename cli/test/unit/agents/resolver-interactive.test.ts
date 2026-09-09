@@ -73,7 +73,7 @@ describe('resolveInstallTargets interactive prompt', () => {
         interactive: true
       })
 
-      expect(renderedChoices.some(choice => choice.value.agent === 'AStudio')).toBe(false)
+      expect(renderedChoices.some(choice => choice.value.agent === 'astudio')).toBe(false)
       expect(targets).toEqual([{
         agent: 'generic',
         rootDir: `${home}/.agents/skills`,

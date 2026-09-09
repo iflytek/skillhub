@@ -155,7 +155,7 @@ skillhub install pdf-parser --version 1.2.0
 skillhub install pdf-parser --agent codex
 
 # Install to AStudio's fixed user-level directory
-skillhub install pdf-parser --agent AStudio
+skillhub install pdf-parser --agent astudio
 
 # Install to multiple Agents
 skillhub install pdf-parser --agent codex --agent claude-code
@@ -189,7 +189,7 @@ Most Agents have both project-level and user-level skills directories. Use `--sc
 
 | Agent | Project-level Path | User-level Path |
 |-------|-------------------|-----------------|
-| `AStudio` | Not supported | `~/.acode/skills/` |
+| `astudio` (AStudio) | Not supported | `~/.acode/skills/` |
 | `claude-code` | `<project>/.claude/skills/` | `~/.claude/skills/` |
 | `codex` | `<project>/.codex/skills/` | `~/.codex/skills/` |
 | `cursor` | `<project>/.cursor/skills/` | `~/.cursor/skills/` |

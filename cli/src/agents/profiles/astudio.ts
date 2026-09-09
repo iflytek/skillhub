@@ -6,7 +6,7 @@ function userSkillsRoot(home: string): string {
 }
 
 export const aStudioProfile: AgentProfile = {
-  id: 'AStudio',
+  id: 'astudio',
   displayName: 'AStudio',
   projectRoots: () => [],
   userRoots: home => [userSkillsRoot(home)],

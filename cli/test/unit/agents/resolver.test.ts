@@ -132,11 +132,11 @@ describe('resolveInstallTargets', () => {
     await expect(resolveInstallTargets({
       cwd: '/repo',
       home: '/home/u',
-      agents: ['AStudio'],
+      agents: ['astudio'],
       scope: 'project',
       json: false,
       interactive: false
-    })).rejects.toThrow('agent AStudio does not support project scope')
+    })).rejects.toThrow('agent astudio does not support project scope')
   })
 
   test('scope=user + agent codex returns user root with user scope', async () => {

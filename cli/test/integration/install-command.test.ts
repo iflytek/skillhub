@@ -667,7 +667,7 @@ describe('install command — server errors', () => {
 // ---------------------------------------------------------------------------
 
 describe('install command — multi-agent & auto-detect', () => {
-  test('--agent AStudio installs into the fixed user-level .acode skills directory', async () => {
+  test('--agent astudio installs and persists the stable lowercase agent id', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({
       token: 'sk_ok',
@@ -679,7 +679,7 @@ describe('install command — multi-agent & auto-detect', () => {
     const result = await runCli(
       [
         'install', 'pdf-parser',
-        '--agent', 'AStudio',
+        '--agent', 'astudio',
         '--registry', registry.url,
         '--token', 'sk_ok',
         '--json'
@@ -690,17 +690,24 @@ describe('install command — multi-agent & auto-detect', () => {
     expect(result.exitCode).toBe(0)
     const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
     expect(parsed.installed).toEqual([{
-      agent: 'AStudio',
+      agent: 'astudio',
       dir: join(env.home, '.acode', 'skills', 'pdf-parser')
     }])
-    expect(await Bun.file(join(
+    const metadataPath = join(
       env.home,
       '.acode',
       'skills',
       'pdf-parser',
       '.skillhub',
       'metadata.json'
-    )).exists()).toBe(true)
+    )
+    expect(await Bun.file(metadataPath).exists()).toBe(true)
+    expect(JSON.parse(await readFile(metadataPath, 'utf-8')).agent).toBe('astudio')
+
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')) as {
+      items: Array<{ targets: Array<{ agent: string }> }>
+    }
+    expect(inventory.items[0]?.targets[0]?.agent).toBe('astudio')
   })
 
   test('multi --agent installs the same skill into every specified user-level dir', async () => {

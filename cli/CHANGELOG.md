@@ -6,7 +6,7 @@ All notable CLI behavior changes are documented in this file.
 
 ### Added
 
-- Add the user-level `AStudio` agent profile, with automatic detection of
+- Add the user-level `astudio` agent profile, displayed as AStudio, with automatic detection of
   `~/.acode/skills` on Linux, macOS, and Windows.
 - Add repeatable `sync pull --skill <slug>` selection for non-interactive and JSON workflows, with
   interactive multi-select in a TTY.
