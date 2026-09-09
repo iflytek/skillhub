@@ -527,6 +527,22 @@ npx @astron-team/skillhub@latest publish ./skills/<category>/<skill-name>
 **In short: use collections like `anthropics/skills` for content, and SkillHub to
 distribute it across your organization under governance.**
 
+### Optional external skill: cue-omni-reader (not hosted in SkillHub)
+
+You can also install individual Agent Skills directly from their upstream open
+collections, bypassing any registry. For example, [`cue-omni-reader`](https://github.com/sensedeal/cue-skills/tree/main/cue-omni-reader)
+(MIT) is an instruction-only skill that drives the official Cue Omni Reader MCP
+to parse an HTTP(S) URL or an authorized local document, audio, or video source
+into Markdown:
+
+```sh
+npx skills add sensedeal/cue-skills --skill cue-omni-reader
+```
+
+This is a **direct upstream install** — it does not mean the skill is published,
+hosted, or cataloged in any SkillHub registry, and it ships no SkillHub registry
+or server integration code.
+
 ## Usage with Agent Platforms
 
 SkillHub works as a skill registry backend for several agent platforms. Point any of the clients below at your SkillHub instance to publish, discover, and install skills.
