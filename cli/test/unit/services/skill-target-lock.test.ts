@@ -122,6 +122,8 @@ describe('skill target lifecycle lock', () => {
     expect(results.map(result => result.exitCode).sort()).toEqual([0, ...Array(workerCount - 1).fill(4)])
     expect(results.filter(result => result.stdout === 'acquired')).toHaveLength(1)
     expect(await exists(lockPath)).toBe(false)
+    const releaseAfterContention = await acquireSkillTargetLock(rootDir, 'demo')
+    await releaseAfterContention()
     if (process.platform !== 'win32') {
       expect((await lstat(dirname(lockPath))).mode & 0o077).toBe(0)
     }

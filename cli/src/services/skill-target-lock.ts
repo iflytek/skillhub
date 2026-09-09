@@ -7,23 +7,67 @@ import { canonicalizeExistingPath } from '../platform/paths'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 
+const NO_AUTOMATIC_STALE_RECOVERY_MS = Number.MAX_SAFE_INTEGER
+
 /** Serializes every local lifecycle mutation for one Skill target directory. */
 export async function acquireSkillTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
   const lockPath = await skillTargetLockPath(rootDir, slug)
+  // proper-lockfile's stale deletion is not serialized. Gate only the acquisition attempt so two
+  // recoverers cannot remove and replace the same target lock concurrently.
+  const acquisitionGatePath = `${lockPath}.acquire`
+  let releaseAcquisitionGate: () => Promise<void>
   try {
-    return await lock(lockPath, {
-      lockfilePath: lockPath,
-      realpath: false,
-      stale: 10_000,
-      update: 3_000,
-      retries: 0
-    })
+    releaseAcquisitionGate = await acquireLockWithoutStaleRecovery(acquisitionGatePath)
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ELOCKED') {
-      throw targetBusyError(rootDir, slug)
-    }
+    if (hasErrorCode(error, 'ELOCKED')) throw targetBusyError(rootDir, slug)
     throw error
   }
+
+  let releaseTarget: () => Promise<void>
+  try {
+    releaseTarget = await acquireTargetLock(lockPath)
+  } catch (operationError) {
+    try {
+      await releaseAcquisitionGate()
+    } catch (cleanupError) {
+      throw new AggregateError([operationError, cleanupError], 'target lock acquisition and gate cleanup both failed')
+    }
+    if (hasErrorCode(operationError, 'ELOCKED')) throw targetBusyError(rootDir, slug)
+    throw operationError
+  }
+
+  try {
+    await releaseAcquisitionGate()
+  } catch (error) {
+    await releaseTarget().catch(() => {})
+    throw error
+  }
+
+  return releaseTarget
+}
+
+function acquireTargetLock(lockPath: string): Promise<() => Promise<void>> {
+  return lock(lockPath, {
+    lockfilePath: lockPath,
+    realpath: false,
+    stale: 10_000,
+    update: 3_000,
+    retries: 0
+  })
+}
+
+function acquireLockWithoutStaleRecovery(lockPath: string): Promise<() => Promise<void>> {
+  return lock(lockPath, {
+    lockfilePath: lockPath,
+    realpath: false,
+    stale: NO_AUTOMATIC_STALE_RECOVERY_MS,
+    update: 3_000,
+    retries: 0
+  })
+}
+
+function hasErrorCode(error: unknown, code: string): boolean {
+  return error instanceof Error && 'code' in error && error.code === code
 }
 
 export async function skillTargetLockPath(rootDir: string, slug: string): Promise<string> {
