@@ -27,7 +27,13 @@ cmp \
 test -f "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md"
 grep -F 'npm install --global @astron-team/skillhub' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
-grep -F 'version: 2.0.0' \
+grep -F 'version: 2.0.1' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'separately confirms removal of that exact identified launcher' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'Never unlink an executable directly' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'do not run the global installation yet' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
 grep -F 'installed but not yet loaded' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null

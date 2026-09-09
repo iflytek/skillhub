@@ -80,9 +80,9 @@
     },
     {
       "slug": "skillhub-cli",
-      "version": "2.0.0",
-      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-09/675e2a82-2361-4b2b-bf61-fab81be6db3f/1788943688653/bb3df7fbea91d40c562cc8e303b2c680b27651a853b4b60f49febefd66d0bfa9.zip",
-      "sha256": "bb3df7fbea91d40c562cc8e303b2c680b27651a853b4b60f49febefd66d0bfa9"
+      "version": "2.0.1",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-09/18a90feb-8e6d-4a6b-9dad-6e157dd7bca0/1788949434853/b1f598fd5ef3ddb71681149c894cabfe156f33d66901b00bd05e0dae06a6ab33.zip",
+      "sha256": "b1f598fd5ef3ddb71681149c894cabfe156f33d66901b00bd05e0dae06a6ab33"
     },
     {
       "slug": "storytelling-advisor",

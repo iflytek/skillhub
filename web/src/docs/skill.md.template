@@ -1,7 +1,7 @@
 ---
 name: skillhub-cli
 description: Connect an Agent to a SkillHub registry and use the official SkillHub CLI to search, install, list, or explicitly upgrade SkillHub skills. Use when a user asks to connect SkillHub, install a SkillHub skill, or manage skills previously installed from SkillHub.
-version: 2.0.0
+version: 2.0.1
 license: Apache-2.0
 ---
 
@@ -30,16 +30,18 @@ First check whether the command on `PATH` is the expected CLI:
 skillhub version
 ```
 
-Use it only when the output is `SkillHub CLI <version>`. A different result may be an unrelated command with the same name.
+Use it only when the output is `SkillHub CLI <version>`. If the command is missing, install the latest first-party CLI globally so future manual `skillhub` commands use this implementation:
 
-When connecting this registry, install the latest first-party CLI globally so future manual `skillhub` commands use this implementation:
-
-```console
+```bash
 npm install --global @astron-team/skillhub
 skillhub version
 ```
 
-If `skillhub version` still resolves to a known third-party launcher after installation, locate the exact command selected by the shell, remove that conflicting launcher only when it is owned by the current user, refresh command lookup, and run the global installation again. Do not retain or create an alias for the replaced command. Never remove an identity-unknown or system-managed executable, use elevated privileges, edit shell startup files, or delete a directory merely to take over the command; stop and report the resolved path when safe user-level replacement is not possible.
+If `skillhub version` returns anything else, do not run the global installation yet because its package-manager shim could overwrite the existing launcher. Inspect the existing command without changing anything: resolve the exact command selected by the shell, follow symlinks to the final target, and identify its owner and installing package manager or package. Report those facts to the user. Do not infer identity from the command name or output alone.
+
+Only after the user separately confirms removal of that exact identified launcher may you use its package manager's supported uninstall command, refresh command lookup, and install the first-party CLI. Never unlink an executable directly, remove an identity-unknown or system-managed command, use elevated privileges, edit shell startup files, or delete a directory merely to take over the command. If the owner or package source cannot be proven, stop and give the user the resolved path and read-only findings.
+
+When the existing command already reports `SkillHub CLI <version>`, connecting authorizes updating that verified first-party installation to the latest release with the same global npm command. Verify `skillhub version` afterward.
 
 Replacing the executable must not replace the other tool's data. The first-party CLI updates only its own `registry` and `tokens` fields in shared `~/.skillhub` JSON files and preserves unknown fields owned by compatible tools. Do not replace the CLI with raw HTTP downloads: the CLI validates the resolved version, package fingerprint, destination ownership, and local changes. Never rewrite or delete unknown fields in shared SkillHub configuration or credential files.
 
@@ -59,7 +61,7 @@ Repository documentation may describe unreleased behavior. If neither live help 
 - **Discover a Skill:** search this registry first. If it is unavailable or has no suitable result, report that outcome and ask before querying another registry.
 - **Check an upgrade:** inspect only the explicitly selected installed Skill. Never upgrade every installation implicitly.
 
-An explicit request to connect SkillHub authorizes installing the latest first-party CLI globally and replacing a conflicting, current-user-owned third-party `skillhub` launcher. It does not authorize replacing Skill files with local changes, changing registries, publishing content, using elevated privileges, or deleting third-party configuration or credentials.
+An explicit request to connect SkillHub authorizes installing the latest first-party CLI globally. It does not authorize removing another `skillhub` launcher, replacing Skill files with local changes, changing registries, publishing content, using elevated privileges, or deleting third-party configuration or credentials. Launcher removal requires the separate, exact confirmation described above.
 
 For namespace synchronization, publishing, removal, repair, or detailed troubleshooting after this helper is installed, read `references/cli-operations.md`. Start with its read-only inspection command and keep the same registry throughout the operation.
 

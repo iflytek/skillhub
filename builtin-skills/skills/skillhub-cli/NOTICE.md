@@ -8,7 +8,7 @@
 
 ## SkillHub modifications
 
-SkillHub adaptation version: `2.0.0`.
+SkillHub adaptation version: `2.0.1`.
 
 - Created a dedicated first-party CLI Skill instead of changing the existing ClawHub-oriented `skillhub-registry` Skill.
 - Separated anonymous bootstrap guidance from the persistent Agent installation while keeping one instruction body.
@@ -17,3 +17,4 @@ SkillHub adaptation version: `2.0.0`.
 - Added POSIX and PowerShell 7 credential-entry guidance without placing tokens in command history.
 - Preserved exact registry, coordinate, version, Agent target, authentication, and integrity boundaries.
 - Removed automatic public-registry fallback for exact installs and private discovery queries.
+- Required read-only launcher provenance checks and exact user confirmation before package-manager removal.

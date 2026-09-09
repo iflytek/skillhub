@@ -38,14 +38,16 @@ describe('landing quick start locales', () => {
 
   it('keeps the native CLI guide bound to the selected registry', () => {
     expect(skillGuideTemplate).toContain('name: skillhub-cli')
-    expect(skillGuideTemplate).toContain('version: 2.0.0')
+    expect(skillGuideTemplate).toContain('version: 2.0.1')
     expect(skillGuideTemplate).toContain('npm install --global @astron-team/skillhub')
     expect(skillGuideTemplate).not.toContain('@astron-team/skillhub@0.1.12')
     expect(skillGuideTemplate).toContain('the `registry` field in `~/.skillhub/config.json`')
     expect(skillGuideTemplate).toContain('`https://skill.xfyun.cn`')
     expect(skillGuideTemplate).not.toContain('${SKILLHUB_PUBLIC_BASE_URL}')
-    expect(skillGuideTemplate).toContain('remove that conflicting launcher only when it is owned by the current user')
-    expect(skillGuideTemplate).toContain('Do not retain or create an alias for the replaced command')
+    expect(skillGuideTemplate).toContain('separately confirms removal of that exact identified launcher')
+    expect(skillGuideTemplate).toContain('Never unlink an executable directly')
+    expect(skillGuideTemplate).toContain('do not run the global installation yet')
+    expect(skillGuideTemplate).toContain('does not authorize removing another `skillhub` launcher')
     expect(skillGuideTemplate).toContain('Treat `<registry>` below as a value to replace')
     expect(skillGuideTemplate).toContain([
       'skillhub install @global/skillhub-cli \\',

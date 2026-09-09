@@ -124,13 +124,22 @@ if [ "$cache_control" != 'no-cache' ]; then
   exit 1
 fi
 
-# An explicit URL is authoritative and must not interpolate a hostile request Host.
-explicit_hostile=$(curl -fsS -H 'Host: evil.example;echo_injected' "$base/skillhub/registry/skill.md")
-printf '%s' "$explicit_hostile" | grep -F '4. `https://skill.xfyun.cn`.' >/dev/null
-if printf '%s' "$explicit_hostile" | grep -F 'echo_injected' >/dev/null; then
-  echo 'explicit Agent guide must not interpolate the request Host' >&2
+# The guide URL is the sole source of registry identity. Reject malformed Host
+# values even when SKILLHUB_PUBLIC_BASE_URL configures the surrounding UI.
+explicit_hostile_status=$(curl -sS -o "$tmp/explicit-hostile-response" -w '%{http_code}' \
+  -H 'Host: evil.example;echo_injected' "$base/skillhub/registry/skill.md")
+if [ "$explicit_hostile_status" != 400 ]; then
+  echo "Agent guide must reject a hostile Host, got: $explicit_hostile_status" >&2
   exit 1
 fi
+
+for template_path in /registry/skill.md.template /skillhub/registry/skill.md.template; do
+  template_status=$(curl -sS -o /dev/null -w '%{http_code}' "$base$template_path")
+  if [ "$template_status" != 404 ]; then
+    echo "Agent guide template must not be public at $template_path, got: $template_status" >&2
+    exit 1
+  fi
+done
 
 docker rm -f "$name" >/dev/null 2>&1 || true
 
