@@ -23,9 +23,9 @@ test.describe('Landing access methods (Real API)', () => {
     await expect(agentMode).toHaveAttribute('aria-pressed', 'false')
     await expect(webMode).toHaveAttribute('aria-pressed', 'false')
 
-    await expect(page.getByText('npx -y @astron-team/skillhub@0.1.11 --version', { exact: true })).toBeVisible()
-    await expect(page.getByText(/npx -y @astron-team\/skillhub@0\.1\.11 search weather/)).toBeVisible()
-    await expect(page.getByText(/npx -y @astron-team\/skillhub@0\.1\.11 install @global\/weather/)).toBeVisible()
+    await expect(page.getByText('npx -y @astron-team/skillhub@0.1.12 --version', { exact: true })).toBeVisible()
+    await expect(page.getByText(/npx -y @astron-team\/skillhub@0\.1\.12 search weather/)).toBeVisible()
+    await expect(page.getByText(/npx -y @astron-team\/skillhub@0\.1\.12 install @global\/weather/)).toBeVisible()
     await expect(page.getByRole('link', { name: 'CLI docs' })).toHaveAttribute(
       'href',
       'https://github.com/iflytek/skillhub/tree/main/cli',

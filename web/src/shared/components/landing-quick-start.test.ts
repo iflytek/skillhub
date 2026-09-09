@@ -64,11 +64,11 @@ describe('landing-quick-start module exports', () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenNthCalledWith(
         1,
-        'npx -y @astron-team/skillhub@0.1.11 search weather --registry https://registry.internal.example/skills --limit 5',
+        'npx -y @astron-team/skillhub@0.1.12 search weather --registry https://registry.internal.example/skills --limit 5',
       )
       expect(writeText).toHaveBeenNthCalledWith(
         2,
-        'npx -y @astron-team/skillhub@0.1.11 install @global/weather --dir ./skills --registry https://registry.internal.example/skills',
+        'npx -y @astron-team/skillhub@0.1.12 install @global/weather --dir ./skills --registry https://registry.internal.example/skills',
       )
     })
   })
