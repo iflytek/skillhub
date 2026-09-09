@@ -16,7 +16,7 @@ describe('agent profiles', () => {
 
   test('profileMap contains all profiles', () => {
     expect(profileMap.size).toBe(15)
-    expect(profileMap.has('astron-studio')).toBe(true)
+    expect(profileMap.has('AStudio')).toBe(true)
     expect(profileMap.has('claude-code')).toBe(true)
     expect(profileMap.has('codex')).toBe(true)
     expect(profileMap.has('cursor')).toBe(true)
@@ -40,19 +40,19 @@ describe('agent profiles', () => {
     expect(profile.projectRoots('/repo')).toEqual(['/repo/.cursor/skills'])
   })
 
-  test('AstronStudio exposes only its fixed user-level directory on Linux, macOS, and Windows', () => {
-    const profile = profileMap.get('astron-studio')!
+  test('AStudio exposes only its fixed user-level directory on Linux, macOS, and Windows', () => {
+    const profile = profileMap.get('AStudio')!
 
-    expect(profile.displayName).toBe('AstronStudio')
+    expect(profile.displayName).toBe('AStudio')
     expect(profile.projectRoots('/repo')).toEqual([])
     expect(profile.userRoots('/home/alice')).toEqual(['/home/alice/.acode/skills'])
     expect(profile.userRoots('/Users/alice')).toEqual(['/Users/alice/.acode/skills'])
     expect(profile.userRoots('C:\\Users\\alice')).toEqual(['C:/Users/alice/.acode/skills'])
   })
 
-  test('AstronStudio is detected only when the user .acode skills directory exists', async () => {
-    const home = await mkdtemp(join(tmpdir(), 'skillhub-astron-studio-home-'))
-    const profile = profileMap.get('astron-studio')!
+  test('AStudio is detected only when the user .acode skills directory exists', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-astudio-home-'))
+    const profile = profileMap.get('AStudio')!
     const nativeRootDir = join(home, '.acode', 'skills')
     const profileRootDir = nativeRootDir.replace(/\\/g, '/')
 
@@ -67,7 +67,7 @@ describe('agent profiles', () => {
       await mkdir(nativeRootDir, { recursive: true })
 
       expect(await profile.detectInstalled('/repo', home)).toEqual([{
-        agent: 'astron-studio',
+        agent: 'AStudio',
         rootDir: profileRootDir,
         scope: 'user',
         source: 'detected'

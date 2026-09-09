@@ -35,8 +35,8 @@ afterEach(() => {
 const { resolveInstallTargets } = await import('../../../src/agents/resolver')
 
 describe('resolveInstallTargets interactive prompt', () => {
-  test('renders AstronStudio by display name when its directory was detected', async () => {
-    const home = await mkdtemp(join(tmpdir(), 'skillhub-astron-studio-resolver-'))
+  test('renders AStudio by display name when its directory was detected', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-astudio-resolver-'))
     const nativeRootDir = join(home, '.acode', 'skills')
     const profileRootDir = nativeRootDir.replace(/\\/g, '/')
 
@@ -51,14 +51,14 @@ describe('resolveInstallTargets interactive prompt', () => {
         interactive: true
       })
 
-      expect(renderedChoices[0]?.title).toBe(`AstronStudio (${profileRootDir})`)
+      expect(renderedChoices[0]?.title).toBe(`AStudio (${profileRootDir})`)
     } finally {
       await rm(home, { recursive: true, force: true })
     }
   })
 
-  test('does not render AstronStudio when .acode skills is a regular file', async () => {
-    const home = await mkdtemp(join(tmpdir(), 'skillhub-astron-studio-file-'))
+  test('does not render AStudio when .acode skills is a regular file', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-astudio-file-'))
     const rootDir = join(home, '.acode', 'skills')
 
     try {
@@ -73,7 +73,7 @@ describe('resolveInstallTargets interactive prompt', () => {
         interactive: true
       })
 
-      expect(renderedChoices.some(choice => choice.value.agent === 'astron-studio')).toBe(false)
+      expect(renderedChoices.some(choice => choice.value.agent === 'AStudio')).toBe(false)
       expect(targets).toEqual([{
         agent: 'generic',
         rootDir: `${home}/.agents/skills`,

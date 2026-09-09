@@ -154,8 +154,8 @@ skillhub install pdf-parser --version 1.2.0
 # Install to specific Agent
 skillhub install pdf-parser --agent codex
 
-# Install to AstronStudio's fixed user-level directory
-skillhub install pdf-parser --agent astron-studio
+# Install to AStudio's fixed user-level directory
+skillhub install pdf-parser --agent AStudio
 
 # Install to multiple Agents
 skillhub install pdf-parser --agent codex --agent claude-code
@@ -185,11 +185,11 @@ The CLI determines the installation location using the following logic:
 
 ### Install Paths
 
-Most Agents have both project-level and user-level skills directories. Use `--scope user|project` to control which one is used. AstronStudio uses its fixed user-level directory only.
+Most Agents have both project-level and user-level skills directories. Use `--scope user|project` to control which one is used. AStudio uses its fixed user-level directory only.
 
 | Agent | Project-level Path | User-level Path |
 |-------|-------------------|-----------------|
-| `astron-studio` | Not supported | `~/.acode/skills/` |
+| `AStudio` | Not supported | `~/.acode/skills/` |
 | `claude-code` | `<project>/.claude/skills/` | `~/.claude/skills/` |
 | `codex` | `<project>/.codex/skills/` | `~/.codex/skills/` |
 | `cursor` | `<project>/.cursor/skills/` | `~/.cursor/skills/` |
@@ -206,7 +206,7 @@ Most Agents have both project-level and user-level skills directories. Use `--sc
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
-For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. AstronStudio appears in that selector when `~/.acode/skills/` exists. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
+For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. AStudio appears in that selector when `~/.acode/skills/` exists. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
 
 ### File Structure After Installation
 

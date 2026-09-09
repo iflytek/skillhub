@@ -5,9 +5,9 @@ function userSkillsRoot(home: string): string {
   return home.replace(/\\/g, '/').replace(/\/+$/, '') + '/.acode/skills'
 }
 
-export const astronStudioProfile: AgentProfile = {
-  id: 'astron-studio',
-  displayName: 'AstronStudio',
+export const aStudioProfile: AgentProfile = {
+  id: 'AStudio',
+  displayName: 'AStudio',
   projectRoots: () => [],
   userRoots: home => [userSkillsRoot(home)],
   async detectInstalled(_cwd, home) {
