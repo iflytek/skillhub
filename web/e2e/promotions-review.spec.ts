@@ -74,14 +74,14 @@ test.describe('Promotion review dashboard', () => {
         }),
       })
     })
-    await page.route('**/api/web/me/namespaces/page?*', async (route) => {
+    await page.route('**/api/web/me/namespaces', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           code: 0,
           msg: 'success',
-          data: { items: [], total: 0, page: 0, size: 10 },
+          data: [],
           timestamp: new Date().toISOString(),
           requestId: 'e2e-namespaces',
         }),

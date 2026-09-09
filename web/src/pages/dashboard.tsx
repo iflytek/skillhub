@@ -99,9 +99,6 @@ export function DashboardPage() {
 
   return (
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
-      {/* Page header — empty height placeholder for consistent spacing */}
-      <div className="pt-6 pb-1" />
-
       {/* Two-column layout */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left sidebar */}
