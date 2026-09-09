@@ -49,7 +49,7 @@ test.describe('Landing access methods (Real API)', () => {
     const guideResponse = await page.request.get('/install/skillhub.md')
     expect(guideResponse.status()).toBe(200)
     const guide = await guideResponse.text()
-    expect(guide).toContain('http://127.0.0.1:3000')
+    expect(guide).toContain(new URL(page.url()).origin)
     expect(guideResponse.headers()['cache-control']).toContain('no-cache')
     const legacyGuideResponse = await page.request.get('/registry/skill.md')
     expect(legacyGuideResponse.status()).toBe(200)
