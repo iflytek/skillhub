@@ -412,6 +412,20 @@ npx @astron-team/skillhub@latest publish ./skills/<分类>/<技能名>
 
 **一句话总结：用 `anthropics/skills` 这类集合提供内容，用 SkillHub 在组织内进行受治理的分发。**
 
+### 可选的外部 skill：cue-omni-reader（非 SkillHub 托管）
+
+你也可以不经过任何注册中心，直接从上游开源集合安装单个 Agent Skill。例如
+[`cue-omni-reader`](https://github.com/sensedeal/cue-skills/tree/main/cue-omni-reader)
+（MIT）是一层纯指令的 skill，驱动官方 Cue Omni Reader MCP，把 HTTP(S) 网页与
+**已授权的本地文档、音频、视频**解析为 Markdown：
+
+```sh
+npx skills add sensedeal/cue-skills --skill cue-omni-reader
+```
+
+这是**直接从上游安装**——不代表该 skill 已收录、发布或托管在任何 SkillHub
+注册中心，也不携带任何 SkillHub 注册中心或服务端集成代码。
+
 ## 与智能体平台集成
 
 SkillHub 设计为与各种智能体平台和框架无缝集成。
