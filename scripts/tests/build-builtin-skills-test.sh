@@ -27,13 +27,13 @@ cmp \
 test -f "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md"
 grep -F 'npm install --global @astron-team/skillhub' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
-grep -F 'version: 2.0.1' \
+grep -F 'version: 2.0.2' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
 grep -F 'separately confirms removal of that exact identified launcher' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
 grep -F 'Never unlink an executable directly' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
-grep -F 'do not run the global installation yet' \
+grep -F 'do not run the global installation or update yet' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
 grep -F 'installed but not yet loaded' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
@@ -55,16 +55,20 @@ from pathlib import Path
 guide = Path(sys.argv[1]).read_text(encoding="utf-8")
 missing = guide.index("If the command is missing")
 install = guide.index("npm install --global @astron-team/skillhub", missing)
-foreign = guide.index("If `skillhub version` returns anything else")
+existing = guide.index("If the command exists")
+verified = guide.index("Treat an existing command as first-party only")
+foreign = guide.index("If package metadata proves another owner or package")
 confirm = guide.index("Only after the user separately confirms removal", foreign)
-verified = guide.index("When the existing command already reports `SkillHub CLI <version>`")
 
-assert missing < install < foreign < confirm < verified
-inspection = guide[foreign:confirm]
+assert missing < install < existing < verified < foreign < confirm
+inspection = guide[existing:verified]
 for required in ("exact command selected by the shell", "follow symlinks", "owner", "package manager or package"):
     assert required in inspection, required
-for forbidden in ("npm install --global", "uninstall", "unlink"):
+for forbidden in ("npm install --global", "supported uninstall command", "unlink an executable"):
     assert forbidden not in inspection, forbidden
+assert "resolved package metadata proves" in guide[verified:foreign]
+assert "installing package is `@astron-team/skillhub`" in guide[verified:foreign]
+assert "even when it prints `SkillHub CLI <version>`" in guide[foreign:confirm]
 
 authorization = guide[guide.index("An explicit request to connect SkillHub authorizes"):]
 assert "does not authorize removing another `skillhub` launcher" in authorization

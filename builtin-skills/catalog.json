@@ -113,7 +113,7 @@
     },
     {
       "slug": "skillhub-cli",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "license": "Apache-2.0",
       "upstream": {
         "repository": "https://github.com/iflytek/skillhub",

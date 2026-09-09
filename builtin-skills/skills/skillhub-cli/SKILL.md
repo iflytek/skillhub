@@ -1,7 +1,7 @@
 ---
 name: skillhub-cli
 description: Connect an Agent to a SkillHub registry and use the official SkillHub CLI to search, install, list, or explicitly upgrade SkillHub skills. Use when a user asks to connect SkillHub, install a SkillHub skill, or manage skills previously installed from SkillHub.
-version: 2.0.1
+version: 2.0.2
 license: Apache-2.0
 ---
 
@@ -24,24 +24,20 @@ Keep the exact registry selected by the user for the current request. Do not cha
 
 ## Use The First-Party CLI
 
-First check whether the command on `PATH` is the expected CLI:
-
-```bash
-skillhub version
-```
-
-Use it only when the output is `SkillHub CLI <version>`. If the command is missing, install the latest first-party CLI globally so future manual `skillhub` commands use this implementation:
+First determine whether `skillhub` exists on `PATH`. On POSIX shells use `command -v skillhub`; in PowerShell use `(Get-Command skillhub -ErrorAction SilentlyContinue).Source`. If the command is missing, install the latest first-party CLI globally so future manual `skillhub` commands use this implementation:
 
 ```bash
 npm install --global @astron-team/skillhub
 skillhub version
 ```
 
-If `skillhub version` returns anything else, do not run the global installation yet because its package-manager shim could overwrite the existing launcher. Inspect the existing command without changing anything: resolve the exact command selected by the shell, follow symlinks to the final target, and identify its owner and installing package manager or package. Report those facts to the user. Do not infer identity from the command name or output alone.
+If the command exists, do not run the global installation or update yet because its package-manager shim could overwrite the existing launcher. Inspect the existing command without changing anything: resolve the exact command selected by the shell, follow symlinks to the final target, and identify its owner and installing package manager or package. Run `skillhub version` as an additional compatibility check, not as proof of ownership. Do not infer identity from the command name or output alone.
+
+Treat an existing command as first-party only when its resolved package metadata proves that its installing package is `@astron-team/skillhub` and its output matches `SkillHub CLI <version>`. Then connecting authorizes updating it to the latest release with the same global npm command. Verify both the package source and `skillhub version` again afterward.
+
+If package metadata proves another owner or package, or the version output is unexpected, treat it as non-first-party even when it prints `SkillHub CLI <version>`. Report the resolved path, final target, owner, package source, and version output to the user.
 
 Only after the user separately confirms removal of that exact identified launcher may you use its package manager's supported uninstall command, refresh command lookup, and install the first-party CLI. Never unlink an executable directly, remove an identity-unknown or system-managed command, use elevated privileges, edit shell startup files, or delete a directory merely to take over the command. If the owner or package source cannot be proven, stop and give the user the resolved path and read-only findings.
-
-When the existing command already reports `SkillHub CLI <version>`, connecting authorizes updating that verified first-party installation to the latest release with the same global npm command. Verify `skillhub version` afterward.
 
 Replacing the executable must not replace the other tool's data. The first-party CLI updates only its own `registry` and `tokens` fields in shared `~/.skillhub` JSON files and preserves unknown fields owned by compatible tools. Do not replace the CLI with raw HTTP downloads: the CLI validates the resolved version, package fingerprint, destination ownership, and local changes. Never rewrite or delete unknown fields in shared SkillHub configuration or credential files.
 

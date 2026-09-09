@@ -38,7 +38,7 @@ describe('landing quick start locales', () => {
 
   it('keeps the native CLI guide bound to the selected registry', () => {
     expect(skillGuideTemplate).toContain('name: skillhub-cli')
-    expect(skillGuideTemplate).toContain('version: 2.0.1')
+    expect(skillGuideTemplate).toContain('version: 2.0.2')
     expect(skillGuideTemplate).toContain('npm install --global @astron-team/skillhub')
     expect(skillGuideTemplate).not.toContain('@astron-team/skillhub@0.1.12')
     expect(skillGuideTemplate).toContain('the `registry` field in `~/.skillhub/config.json`')

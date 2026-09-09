@@ -153,7 +153,7 @@
       "acceptance": [
         "Uses only https://skills.example.com as the registry for the exact install",
         "Falls back to https://skill.xfyun.cn only when no installed-metadata, explicit guide/request, environment, or CLI-config registry is available",
-        "Verifies the first-party SkillHub CLI identity before using a PATH command",
+        "Verifies the resolved package metadata belongs to @astron-team/skillhub before treating an existing PATH command as first-party, even when its version output looks valid",
         "Checks the live command help instead of assuming an undocumented flag is available",
         "Inspects and reports an existing non-first-party skillhub launcher, and removes it through its identified package manager only after separate confirmation for the exact launcher",
         "Installs the latest @global/skillhub-cli without pinning a version, then installs @team-a/code-review version 2.1.0 for the Codex user scope with an explicit Agent target",
@@ -161,7 +161,7 @@
       ],
       "forbidden": [
         "Substituting a similarly named Skill from another registry",
-        "Using an unrelated executable merely because it is named skillhub",
+        "Using or updating an unrelated executable merely because it is named skillhub or prints SkillHub CLI <version>",
         "Removing another skillhub launcher without separately confirming its resolved path and proven package source, directly unlinking an executable, or deleting unknown fields from shared SkillHub state files",
         "Using a per-operation npx fallback, an undocumented flag, or raw HTTP as a substitute for the first-party global CLI",
         "Requesting a token in chat or exposing credentials in output",
