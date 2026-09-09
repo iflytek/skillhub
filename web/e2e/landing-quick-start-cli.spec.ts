@@ -49,7 +49,8 @@ test.describe('Landing access methods (Real API)', () => {
     const guideResponse = await page.request.get('/registry/skill.md')
     expect(guideResponse.status()).toBe(200)
     const guide = await guideResponse.text()
-    expect(guide).toContain(new URL(page.url()).origin)
+    expect(guide).toContain('name: skillhub-cli')
+    expect(guide).toContain('removing the trailing `/registry/skill.md`')
     expect(guideResponse.headers()['cache-control']).toContain('no-cache')
     const hostileHostResponse = await page.request.get('/registry/skill.md', {
       headers: { Host: 'attacker.example' },
