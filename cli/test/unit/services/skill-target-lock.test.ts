@@ -179,6 +179,9 @@ describe('skill target lifecycle lock', () => {
   test('recovers acquisition contenders whose owner process exited', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-dead-gate-'))
     const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    await mkdir(lockPath)
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(lockPath, staleTime, staleTime)
     const acquisitionGatePath = `${lockPath}.acquire`
     await mkdir(acquisitionGatePath)
     const bunPath = (await Bun.which('bun')) ?? process.execPath
