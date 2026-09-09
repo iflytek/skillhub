@@ -139,13 +139,26 @@ describe('skill target lifecycle lock', () => {
     const lockPath = await skillTargetLockPath(rootDir, 'demo')
     const acquisitionGatePath = `${lockPath}.acquire`
     await mkdir(acquisitionGatePath)
-    const liveContenderPath = join(acquisitionGatePath, `${process.pid}-suspended.choosing`)
+    const liveContenderPath = join(acquisitionGatePath, `choosing.${process.pid}-suspended`)
     await writeFile(liveContenderPath, '')
     const staleTime = new Date(Date.now() - 60_000)
     await utimes(liveContenderPath, staleTime, staleTime)
 
     await expect(acquireSkillTargetLock(rootDir, 'demo')).rejects.toThrow('install target is busy')
     expect(await exists(liveContenderPath)).toBe(true)
+    await rm(acquisitionGatePath, { recursive: true })
+  })
+
+  test('does not pass a live acquisition ticket', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-live-ticket-'))
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await mkdir(acquisitionGatePath)
+    const liveTicketPath = join(acquisitionGatePath, `ticket.1.${process.pid}-suspended`)
+    await writeFile(liveTicketPath, '')
+
+    await expect(acquireSkillTargetLock(rootDir, 'demo')).rejects.toThrow('install target is busy')
+    expect(await exists(liveTicketPath)).toBe(true)
     await rm(acquisitionGatePath, { recursive: true })
   })
 
@@ -158,8 +171,8 @@ describe('skill target lifecycle lock', () => {
     const exitedOwner = Bun.spawn({ cmd: [bunPath, '-e', ''], stdout: 'ignore', stderr: 'ignore' })
     const deadPid = exitedOwner.pid
     expect(await exitedOwner.exited).toBe(0)
-    await writeFile(join(acquisitionGatePath, `${deadPid}-abandoned.choosing`), '')
-    await writeFile(join(acquisitionGatePath, `${deadPid}-abandoned.ticket`), '1')
+    await writeFile(join(acquisitionGatePath, `choosing.${deadPid}-abandoned`), '')
+    await writeFile(join(acquisitionGatePath, `ticket.1.${deadPid}-abandoned`), '')
 
     const release = await acquireSkillTargetLock(rootDir, 'demo')
     await release()
