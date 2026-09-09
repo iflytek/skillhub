@@ -45,7 +45,7 @@ vi.mock('@/shared/components/confirm-dialog', () => ({
 vi.mock('@/features/report/use-skill-reports', () => ({
   useDismissSkillReport: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useResolveSkillReport: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSkillReports: () => ({ data: [], isLoading: false }),
+  useSkillReports: () => ({ data: { items: [], total: 0, page: 0, size: 10 }, isLoading: false }),
 }))
 
 vi.mock('@/features/report/report-text', () => ({

@@ -76,8 +76,8 @@ describe('user-menu module exports', () => {
   })
 })
 
-describe('UserMenu security settings visibility', () => {
-  it('keeps author review progress separate from reviewer management', () => {
+describe('UserMenu navigation', () => {
+  it('keeps dashboard-only personal links out of the compact avatar menu', () => {
     const html = renderToStaticMarkup(
       <UserMenu
         user={{
@@ -87,36 +87,37 @@ describe('UserMenu security settings visibility', () => {
       />,
     )
 
-    expect(html).toContain('user.menu.reviewProgress')
-    expect(html).not.toContain('user.menu.reviews')
+    expect(html).toContain('user.menu.dashboard')
+    expect(html).not.toContain('user.menu.reviewProgress')
+    expect(html).not.toContain('user.menu.security')
   })
 
-  it('shows security settings when password changes are allowed, independent of OAuth provider', () => {
+  it('keeps administrator links available to administrators', () => {
     const html = renderToStaticMarkup(
       <UserMenu
         user={{
-          displayName: 'OAuth Linked User',
-          oauthProvider: 'github',
-          platformRoles: ['USER'],
-          canChangePassword: true,
+          displayName: 'Administrator',
+          platformRoles: ['SUPER_ADMIN'],
         }}
       />,
     )
 
-    expect(html).toContain('user.menu.security')
+    expect(html).toContain('user.menu.users')
+    expect(html).toContain('user.menu.labels')
+    expect(html).toContain('user.menu.namespacesAdmin')
+    expect(html).toContain('user.menu.auditLog')
   })
 
-  it('hides security settings when password changes are not allowed, even for a local-looking account', () => {
+  it('always keeps logout available', () => {
     const html = renderToStaticMarkup(
       <UserMenu
         user={{
           displayName: 'Local User',
           platformRoles: ['USER'],
-          canChangePassword: false,
         }}
       />,
     )
 
-    expect(html).not.toContain('user.menu.security')
+    expect(html).toContain('user.menu.logout')
   })
 })

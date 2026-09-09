@@ -6,7 +6,7 @@ describe('getAppHeaderClassName', () => {
     const className = getAppHeaderClassName(false)
 
     expect(className).not.toContain(APP_HEADER_ELEVATED_CLASS_NAME)
-    expect(className).toContain('bg-background/90')
+    expect(className).toContain('bg-background/70')
     expect(className).not.toContain('bg-white')
   })
 

@@ -2964,6 +2964,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/namespaces/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyNamespacesPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/namespaces/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyNamespacesPage_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/namespaces": {
         parameters: {
             query?: never;
@@ -5093,11 +5125,11 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
-        ApiResponseListMyNamespaceResponse: {
+        ApiResponsePageResponseMyNamespaceResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["MyNamespaceResponse"][];
+            data?: components["schemas"]["PageResponseMyNamespaceResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
@@ -5126,6 +5158,24 @@ export interface components {
             canArchive?: boolean;
             canRestore?: boolean;
             canDelete?: boolean;
+        };
+        PageResponseMyNamespaceResponse: {
+            items?: components["schemas"]["MyNamespaceResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponseListMyNamespaceResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["MyNamespaceResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         ApiResponseGovernanceSummaryResponse: {
             /** Format: int32 */
@@ -11236,6 +11286,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
+                };
+            };
+        };
+    };
+    listMyNamespacesPage: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseMyNamespaceResponse"];
+                };
+            };
+        };
+    };
+    listMyNamespacesPage_1: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseMyNamespaceResponse"];
                 };
             };
         };

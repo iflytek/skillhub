@@ -62,16 +62,11 @@ describe('DashboardPage', () => {
     expect(typeof DashboardPage).toBe('function')
   })
 
-  it('renders the dashboard title and user info section', () => {
+  it('renders the dashboard sidebar and overview cards', () => {
     const html = renderToStaticMarkup(<DashboardPage />)
 
-    expect(html).toContain('dashboard.title')
-    expect(html).toContain('dashboard.userInfo')
-  })
-
-  it('shows the my-skills preview section', () => {
-    const html = renderToStaticMarkup(<DashboardPage />)
-
-    expect(html).toContain('mySkills.title')
+    expect(html).toContain('sidebar.skillsAndData')
+    expect(html).toContain('overview.mySkills')
+    expect(html).not.toContain('overview.publish')
   })
 })

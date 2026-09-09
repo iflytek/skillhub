@@ -8,6 +8,25 @@ async function getMyNamespaces(): Promise<ManagedNamespace[]> {
   return namespaceApi.listMine()
 }
 
+async function getMyNamespacesPage(params: { page?: number; size?: number } = {}): Promise<PagedResponse<ManagedNamespace>> {
+  try {
+    return await namespaceApi.listMinePage(params)
+  } catch {
+    // Local development may still be backed by an older server image without the paginated endpoint.
+    // Fall back to the legacy list endpoint and slice client-side so the page remains usable.
+    const namespaces = await namespaceApi.listMine()
+    const page = params.page ?? 0
+    const size = params.size ?? 10
+    const start = page * size
+    return {
+      items: namespaces.slice(start, start + size),
+      total: namespaces.length,
+      page,
+      size,
+    }
+  }
+}
+
 async function createNamespace(request: CreateNamespaceRequest): Promise<Namespace> {
   return namespaceApi.create(request)
 }
@@ -55,6 +74,14 @@ export function useMyNamespaces() {
   return useQuery({
     queryKey: ['namespaces', 'my'],
     queryFn: getMyNamespaces,
+  })
+}
+
+export function useMyNamespacesPage(params: { page?: number; size?: number } = {}) {
+  return useQuery({
+    queryKey: ['namespaces', 'my', 'page', params],
+    queryFn: () => getMyNamespacesPage(params),
+    placeholderData: (previousData) => previousData,
   })
 }
 

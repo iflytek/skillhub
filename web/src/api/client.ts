@@ -660,6 +660,13 @@ export const namespaceApi = {
     return fetchJson<ManagedNamespace[]>(`${WEB_API_PREFIX}/me/namespaces`)
   },
 
+  async listMinePage(params?: { page?: number; size?: number }): Promise<PagedResponse<ManagedNamespace>> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params?.page ?? 0))
+    searchParams.set('size', String(params?.size ?? 10))
+    return fetchJson<PagedResponse<ManagedNamespace>>(`${WEB_API_PREFIX}/me/namespaces/page?${searchParams.toString()}`)
+  },
+
   async getDetail(slug: string): Promise<Namespace> {
     return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}`)
   },

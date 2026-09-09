@@ -1,181 +1,208 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import type { SkillSummary } from '@/api/types'
-import { useMySkills } from '@/shared/hooks/use-user-queries'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
-import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
-import { TokenList } from '@/features/token/token-list'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
-import { limitPreviewItems } from './dashboard-preview'
-
-const DASHBOARD_PREVIEW_LIMIT = 5
+import {
+  Star, Heart, Package, Key, Shield, Flag, Globe,
+  UserCog, Lock, Bell, Clock, ChevronRight,
+} from 'lucide-react'
 
 /**
- * Default dashboard landing page for authenticated users.
+ * Sidebar navigation groups for the Dashboard.
  *
- * It surfaces account context, quick links, and a lightweight preview of the user's latest skills
- * and tokens before they move into more specialized dashboard sub-pages.
+ * Groups are rendered with a label divider; items within each group share visual spacing.
+ * Admin-only items are filtered based on the user's platform roles.
+ */
+
+interface SidebarItem {
+  key: string
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  to: string
+  admin?: boolean
+  badge?: string
+}
+
+interface SidebarGroup {
+  label?: string
+  items: SidebarItem[]
+}
+
+export const SIDEBAR_GROUPS: SidebarGroup[] = [
+  {
+    label: 'sidebar.account',
+    items: [
+      { key: 'profile', icon: UserCog, label: 'sidebar.profile', to: '/settings/profile' },
+      { key: 'security', icon: Lock, label: 'sidebar.security', to: '/settings/security' },
+      { key: 'notifications', icon: Bell, label: 'sidebar.notifications', to: '/settings/notifications' },
+    ],
+  },
+  {
+    label: 'sidebar.skillsAndData',
+    items: [
+      { key: 'skills', icon: Package, label: 'sidebar.mySkills', to: '/dashboard/skills' },
+      { key: 'namespaces', icon: Globe, label: 'sidebar.namespaces', to: '/dashboard/namespaces' },
+      { key: 'stars', icon: Star, label: 'sidebar.stars', to: '/dashboard/stars' },
+      { key: 'subscriptions', icon: Heart, label: 'sidebar.subscriptions', to: '/dashboard/subscriptions' },
+      { key: 'tokens', icon: Key, label: 'sidebar.tokens', to: '/dashboard/tokens' },
+      { key: 'reviewProgress', icon: Clock, label: 'sidebar.reviewProgress', to: '/dashboard/review-progress' },
+    ],
+  },
+  {
+    label: 'sidebar.admin',
+    items: [
+      { key: 'governance', icon: Shield, label: 'sidebar.governance', to: '/dashboard/governance', admin: true },
+      { key: 'reports', icon: Flag, label: 'sidebar.reports', to: '/dashboard/reports', admin: true },
+    ],
+  },
+]
+
+// Flatten for backward compatibility with layout.tsx
+const SIDEBAR_NAV_ITEMS = SIDEBAR_GROUPS.flatMap((g) => g.items)
+
+export const SIDEBAR_NAV = SIDEBAR_NAV_ITEMS.map(({ key, icon, label, to, admin }) => ({
+  key,
+  icon,
+  label,
+  to,
+  admin,
+  exact: false,
+}))
+
+/**
+ * Overview cards for the Dashboard home.
+ * Shown as a grid of quick-access cards linking to main sections.
+ */
+const OVERVIEW_CARDS = [
+  { key: 'skills', icon: Package, label: 'overview.mySkills', to: '/dashboard/skills', desc: 'overview.mySkillsDesc' },
+  { key: 'tokens', icon: Key, label: 'overview.tokens', to: '/dashboard/tokens', desc: 'overview.tokensDesc' },
+  { key: 'stars', icon: Star, label: 'overview.stars', to: '/dashboard/stars', desc: 'overview.starsDesc' },
+  { key: 'profile', icon: UserCog, label: 'overview.profile', to: '/settings/profile', desc: 'overview.profileDesc' },
+  { key: 'security', icon: Lock, label: 'overview.security', to: '/settings/security', desc: 'overview.securityDesc' },
+] as const
+
+/**
+ * Dashboard home page with sidebar + overview cards.
  */
 export function DashboardPage() {
-  const skillPreviewPageSize = DASHBOARD_PREVIEW_LIMIT
   const { t } = useTranslation()
   const { user } = useAuth()
   const governanceVisible = canViewGovernanceCenter(user?.platformRoles)
-  const { data: skillPage, isLoading: isLoadingSkills } = useMySkills({ page: 0, size: skillPreviewPageSize })
-  const skillPreview = limitPreviewItems<SkillSummary>(skillPage?.items ?? [], DASHBOARD_PREVIEW_LIMIT)
+
+  const filteredGroups = SIDEBAR_GROUPS
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.admin || governanceVisible),
+    }))
+    .filter((group) => group.items.length > 0)
 
   return (
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
-      <div>
-        <h1 className="text-4xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>{t('dashboard.title')}</h1>
-        <p className="mt-2 text-lg" style={{ color: 'hsl(var(--text-secondary))' }}>
-          {t('dashboard.subtitle')}
-        </p>
-      </div>
+      {/* Two-column layout */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left sidebar */}
+        <DashboardSidebar groups={filteredGroups} user={user} t={t} pathname="/dashboard" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('dashboard.userInfo')}</CardTitle>
-          <CardDescription>{t('dashboard.userInfoDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-5">
-            {user?.avatarUrl && (
-              <img
-                src={user.avatarUrl}
-                alt={user.displayName}
-                className="h-20 w-20 rounded-2xl border-2 border-border/60 shadow-card"
-              />
-            )}
-            <div className="space-y-1.5">
-              <div className="text-xl font-semibold font-heading">{user?.displayName}</div>
-              <div className="text-sm text-muted-foreground">{user?.email}</div>
-              <div className="text-sm text-muted-foreground">{t('dashboard.userId')}: {user?.userId}</div>
-              <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                {t('dashboard.loginVia', { provider: user?.oauthProvider })}
-              </div>
-            </div>
-          </div>
-          {user?.platformRoles && user.platformRoles.length > 0 && (
-            <div className="space-y-3">
-              <div className="text-sm font-medium font-heading">{t('dashboard.platformRoles')}</div>
-              <div className="flex flex-wrap gap-2">
-                {user.platformRoles.map((role: string) => (
-                  <span
-                    key={role}
-                    className="role-pill"
-                  >
-                    {role}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className={`grid grid-cols-1 gap-4 ${governanceVisible ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
-        <Card className="p-5">
-          <div className="text-sm text-muted-foreground">{t('dashboard.starsAndRatings')}</div>
-          <Link to="/dashboard/stars" className="mt-2 inline-block font-semibold text-primary hover:underline">
-            {t('dashboard.viewStars')}
-          </Link>
-        </Card>
-        <Card className="p-5">
-          <div className="text-sm text-muted-foreground">{t('dashboard.subscriptions')}</div>
-          <Link to="/dashboard/subscriptions" className="mt-2 inline-block font-semibold text-primary hover:underline">
-            {t('dashboard.viewSubscriptions')}
-          </Link>
-        </Card>
-        <Card className="p-5">
-          <div className="text-sm text-muted-foreground">{t('dashboard.mySkillsTitle')}</div>
-          <Link to="/dashboard/skills" className="mt-2 inline-block font-semibold text-primary hover:underline">
-            {t('dashboard.openMySkills')}
-          </Link>
-        </Card>
-        <Card className="p-5">
-          <div className="text-sm text-muted-foreground">{t('dashboard.credentials')}</div>
-          <Link to="/dashboard/tokens" className="mt-2 inline-block font-semibold text-primary hover:underline">
-            {t('dashboard.openTokens')}
-          </Link>
-        </Card>
-        {governanceVisible ? (
-          <Card className="p-5">
-            <div className="text-sm text-muted-foreground">{t('dashboard.governanceTitle')}</div>
-            <Link to="/dashboard/governance" className="mt-2 inline-block font-semibold text-primary hover:underline">
-              {t('dashboard.viewGovernance')}
-            </Link>
-          </Card>
-        ) : null}
-        {governanceVisible ? (
-          <Card className="p-5">
-            <div className="text-sm text-muted-foreground">{t('dashboard.reportsTitle')}</div>
-            <Link to="/dashboard/reports" className="mt-2 inline-block font-semibold text-primary hover:underline">
-              {t('dashboard.viewReports')}
-            </Link>
-          </Card>
-        ) : null}
-      </div>
-
-      <div className="space-y-8">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">{t('mySkills.title')}</h2>
-            <Link to="/dashboard/skills" className="text-sm font-semibold text-primary hover:underline">
-              {t('dashboard.openMySkills')}
-            </Link>
-          </div>
-          <p className="text-sm text-muted-foreground">{t('dashboard.mySkillsPreviewDescription')}</p>
-          <Card>
-            <CardContent className="p-4">
-              {isLoadingSkills ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {Array.from({ length: DASHBOARD_PREVIEW_LIMIT + 1 }).map((_, index) => (
-                    <div key={index} className="h-20 animate-shimmer rounded-lg" />
-                  ))}
-                </div>
-              ) : skillPreview.items.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {skillPreview.items.map((skill) => (
-                      <Link
-                        key={skill.id}
-                        to="/space/$namespace/$slug"
-                        params={{ namespace: skill.namespace, slug: skill.slug }}
-                        className="rounded-lg border border-border/60 px-3 py-3 transition-colors hover:bg-accent/40"
-                      >
-                        <div className="truncate text-sm font-medium">{skill.displayName}</div>
-                        <div className="mt-1 truncate text-xs text-muted-foreground">@{skill.namespace}</div>
-                        {getHeadlineVersion(skill) ? (
-                          <div className="mt-2 inline-flex rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                            v{getHeadlineVersion(skill)?.version}
-                          </div>
-                        ) : null}
-                      </Link>
-                    ))}
-                    <Link
-                      to="/dashboard/skills"
-                      className="flex min-h-20 flex-col items-center justify-center rounded-lg border border-dashed border-border/70 px-3 py-3 text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
-                    >
-                      <span className="text-lg font-semibold leading-none">{t('dashboard.previewMore')}</span>
-                      <span className="mt-2 text-xs font-medium">{t('dashboard.previewMoreLabel')}</span>
-                    </Link>
+        {/* Right content - overview cards */}
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {OVERVIEW_CARDS.map((card) => {
+              const Icon = card.icon
+              return (
+                <Link
+                  key={card.key}
+                  to={card.to}
+                  className="group flex items-start gap-4 rounded-xl border border-border/60 p-5 transition-all duration-150 hover:bg-accent hover:border-border hover:shadow-sm"
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-secondary">
+                    <Icon className="w-5 h-5" style={{ color: 'hsl(var(--foreground))' }} />
                   </div>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">{t('dashboard.mySkillsPreviewEmpty')}</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4">
-          <TokenList />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                        {t(card.label)}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0" style={{ color: 'hsl(var(--muted-foreground))' }} />
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
+                      {t(card.desc)}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+/** Reusable sidebar for dashboard and its sub-pages. */
+export function DashboardSidebar({
+  groups,
+  user,
+  t,
+  pathname,
+}: {
+  groups: SidebarGroup[]
+  user: ReturnType<typeof useAuth>['user']
+  t: ReturnType<typeof useTranslation>['t']
+  pathname: string
+}) {
+  return (
+    <aside className="w-full lg:w-56 flex-shrink-0">
+      <div className="lg:sticky lg:top-[68px]">
+      {/* User summary */}
+      <div className="flex items-center gap-3 px-3 py-2 mb-4">
+        {user?.avatarUrl ? (
+          <img src={user.avatarUrl} alt={user.displayName} className="h-8 w-8 rounded-full border border-border/60" />
+        ) : (
+          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+            {user?.displayName?.charAt(0) ?? '?'}
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="text-sm font-semibold truncate" style={{ color: 'hsl(var(--foreground))' }}>
+            {user?.displayName}
+          </div>
+          <div className="text-xs truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            {user?.email}
+          </div>
+        </div>
+      </div>
+
+      {/* Nav groups */}
+      {groups.map((group) => (
+        <div key={group.label ?? 'top'} className="mb-4">
+          {group.label && (
+            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              {t(group.label)}
+            </div>
+          )}
+          <nav className="space-y-0.5">
+            {group.items.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.to || pathname.startsWith(item.to)
+              return (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                    isActive ? 'bg-accent' : 'hover:bg-accent'
+                  }`}
+                  style={{ color: isActive ? 'hsl(var(--foreground))' : 'hsl(var(--text-secondary))' }}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{t(item.label)}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+      ))}
+      </div>
+    </aside>
   )
 }

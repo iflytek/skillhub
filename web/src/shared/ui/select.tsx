@@ -1,18 +1,19 @@
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { getPortalContainer } from '@/shared/lib/portal-container'
 import { cn } from '@/shared/lib/utils'
 
 export const SELECT_TRIGGER_CLASS_NAME = cn(
-  'flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-border/60 bg-secondary/50 px-4 py-2 text-sm text-foreground',
-  'ring-offset-background transition-all duration-200',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/50',
+  'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border/60 bg-background/40 px-3 py-1.5 text-sm text-foreground',
+  'ring-offset-background transition-[border-color,box-shadow,background-color] duration-150 ease-out',
+  'hover:border-border focus-visible:outline-none focus-visible:border-ring focus-visible:bg-card focus-visible:ring-4 focus-visible:ring-ring/15',
   'disabled:cursor-not-allowed disabled:opacity-50',
   'data-[placeholder]:text-muted-foreground [&>span]:line-clamp-1'
 )
 
 export const SELECT_CONTENT_CLASS_NAME = cn(
-  'z-50 max-h-[var(--radix-select-content-available-height)] overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
+  'z-50 max-h-[var(--radix-select-content-available-height)] w-fit min-w-48 max-w-[18rem] overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
   // In-tree (no Portal): avoids React 19 removeChild races on route unmount.
   // No exit animations: delayed unmount still races commits when Content was portaled.
   'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
@@ -89,33 +90,43 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', sideOffset = 4, ...props }, ref) => (
-  // No Portal: Content stays in the React tree with its trigger so route/Dialog
-  // unmount cannot orphan a body/#skillhub-portals node (removeChild).
-  <SelectPrimitive.Content
-    ref={ref}
-    translate="no"
-    sideOffset={sideOffset}
-    className={cn(
-      SELECT_CONTENT_CLASS_NAME,
-      className
-    )}
-    position={position}
-    {...props}
-  >
-    <SelectScrollUpButton />
-    <SelectPrimitive.Viewport
+>(({ className, children, position = 'popper', sideOffset = 4, ...props }, ref) => {
+  const portalContainer = getPortalContainer()
+  const content = (
+    <SelectPrimitive.Content
+      ref={ref}
+      translate="no"
+      sideOffset={sideOffset}
       className={cn(
-        'p-1',
-        position === 'popper'
-          && 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]'
+        SELECT_CONTENT_CLASS_NAME,
+        className
       )}
+      position={position}
+      {...props}
     >
-      {children}
-    </SelectPrimitive.Viewport>
-    <SelectScrollDownButton />
-  </SelectPrimitive.Content>
-))
+      <SelectScrollUpButton />
+      <SelectPrimitive.Viewport
+        className={cn(
+          'p-1',
+          position === 'popper'
+            && 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]'
+        )}
+      >
+        {children}
+      </SelectPrimitive.Viewport>
+      <SelectScrollDownButton />
+    </SelectPrimitive.Content>
+  )
+
+  // Portal to the shared container when available (e.g. inside a Dialog) so
+  // the dropdown is not clipped by overflow:hidden / overflow-y-auto ancestors.
+  // In-tree still works fine for non-modal contexts.
+  if (portalContainer) {
+    return React.createElement(SelectPrimitive.Portal, { container: portalContainer }, content)
+  }
+
+  return content
+})
 
 SelectContent.displayName = SelectPrimitive.Content.displayName
 

@@ -5,13 +5,11 @@ import type { ReportDisposition } from '@/api/types'
 /**
  * Loads reported skills for the requested moderation status.
  */
-export function useSkillReports(status: string) {
+export function useSkillReports(status: string, page = 0, size = 10) {
   return useQuery({
-    queryKey: ['skill-reports', status],
-    queryFn: async () => {
-      const page = await reportApi.listSkillReports({ status })
-      return page.items
-    },
+    queryKey: ['skill-reports', status, page, size],
+    queryFn: () => reportApi.listSkillReports({ status, page, size }),
+    placeholderData: (previousData) => previousData,
   })
 }
 
