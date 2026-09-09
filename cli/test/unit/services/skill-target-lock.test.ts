@@ -193,6 +193,7 @@ describe('skill target lifecycle lock', () => {
 
     const release = await acquireSkillTargetLock(rootDir, 'demo')
     await release()
+    expect(await exists(lockPath)).toBe(false)
     expect(await readdir(acquisitionGatePath)).toEqual([])
   })
 
