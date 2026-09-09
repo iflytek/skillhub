@@ -164,6 +164,13 @@ describe('SearchPage', () => {
     expect(html).toContain('flex flex-wrap items-center gap-2')
   })
 
+  it('wraps sort controls within narrow viewports', () => {
+    const html = renderToStaticMarkup(<SearchPage />)
+
+    expect(html).toContain('flex min-w-0 flex-wrap items-center gap-3')
+    expect(html).toContain('flex max-w-full flex-wrap gap-2')
+  })
+
   it('toggles the selected label off and resets paging', () => {
     renderToStaticMarkup(<SearchPage />)
 

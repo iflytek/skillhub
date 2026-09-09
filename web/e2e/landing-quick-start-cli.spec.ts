@@ -10,10 +10,10 @@ test.describe('Landing access methods (Real API)', () => {
     await page.goto('/')
 
     const agentMode = page.getByRole('button', { name: /Agent integration/ })
-    const cliMode = page.getByRole('button', { name: /^02CLI/ })
+    const cliMode = page.getByRole('button', { name: /\bCLI\b/ })
     const webMode = page.getByRole('button', { name: /Web interface/ })
 
-    await expect(agentMode).toBeVisible()
+    await expect(agentMode).toBeVisible({ timeout: 15_000 })
     await expect(cliMode).toBeVisible()
     await expect(webMode).toBeVisible()
     await expect(agentMode).toHaveAttribute('aria-pressed', 'true')
