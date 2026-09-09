@@ -72,13 +72,12 @@ async function acquireAcquisitionGate(gatePath: string): Promise<() => Promise<v
 
   await writeFile(choosingPath, '', { flag: 'wx', mode: 0o600 })
   try {
-    const tickets = await readLiveTickets(gatePath)
+    const { tickets } = await readGateState(gatePath, contenderId)
     ticket = Math.max(0, ...tickets.map(contender => contender.ticket)) + 1
     ticketPath = join(gatePath, `ticket.${ticket}.${contenderId}`)
     await rename(choosingPath, ticketPath)
 
-    await waitForChoosingContenders(gatePath, contenderId)
-    const contenders = await readLiveTickets(gatePath)
+    const contenders = await waitForChoosingContenders(gatePath, contenderId)
     if (contenders.some(contender => compareContenders(contender, { id: contenderId, ticket: ticket! }) < 0)) {
       throw Object.assign(new Error('Acquisition gate is already being held'), { code: 'EEXIST' })
     }
@@ -92,12 +91,11 @@ async function acquireAcquisitionGate(gatePath: string): Promise<() => Promise<v
 
   return async () => {
     try {
-      await lstat(ticketPath!)
+      await unlink(ticketPath!)
     } catch (error) {
       if (hasErrorCode(error, 'ENOENT')) throw compromisedGateError(ticketPath!)
       throw error
     }
-    await unlink(ticketPath!)
   }
 }
 
@@ -118,40 +116,49 @@ interface AcquisitionContender {
   ticket: number
 }
 
-async function readLiveTickets(gatePath: string): Promise<AcquisitionContender[]> {
-  const entries = await readdir(gatePath)
-  const contenders: AcquisitionContender[] = []
-  for (const entry of entries) {
-    const match = /^ticket\.(\d+)\.(\d+)-([^.]+)$/.exec(entry)
-    if (!match) continue
-    const ticket = Number(match[1])
-    const pid = Number(match[2])
-    const path = join(gatePath, entry)
-    if (!isProcessAlive(pid)) {
-      await unlinkIfPresent(path)
-      continue
-    }
-    if (!Number.isSafeInteger(ticket) || ticket < 1) throw compromisedGateError(path)
-    contenders.push({ id: `${match[2]}-${match[3]}`, ticket })
-  }
-  return contenders
+interface AcquisitionGateState {
+  tickets: AcquisitionContender[]
+  hasLiveChoosing: boolean
 }
 
-async function waitForChoosingContenders(gatePath: string, contenderId: string): Promise<void> {
-  const deadline = Date.now() + ACQUISITION_GATE_WAIT_MS
-  do {
-    let hasLiveContender = false
-    for (const entry of await readdir(gatePath)) {
-      const match = /^choosing\.(\d+)-([^.]+)$/.exec(entry)
-      if (!match || `${match[1]}-${match[2]}` === contenderId) continue
-      const path = join(gatePath, entry)
-      if (!isProcessAlive(Number(match[1]))) {
+async function readGateState(gatePath: string, contenderId: string): Promise<AcquisitionGateState> {
+  const entries = await readdir(gatePath)
+  const tickets: AcquisitionContender[] = []
+  let hasLiveChoosing = false
+  for (const entry of entries) {
+    const path = join(gatePath, entry)
+    const ticketMatch = /^ticket\.(\d+)\.(\d+)-([^.]+)$/.exec(entry)
+    if (ticketMatch) {
+      const ticket = Number(ticketMatch[1])
+      const pid = Number(ticketMatch[2])
+      if (!isProcessAlive(pid)) {
+        await unlinkIfPresent(path)
+        continue
+      }
+      if (!Number.isSafeInteger(ticket) || ticket < 1) throw compromisedGateError(path)
+      tickets.push({ id: `${ticketMatch[2]}-${ticketMatch[3]}`, ticket })
+      continue
+    }
+    const choosingMatch = /^choosing\.(\d+)-([^.]+)$/.exec(entry)
+    if (choosingMatch && `${choosingMatch[1]}-${choosingMatch[2]}` !== contenderId) {
+      if (!isProcessAlive(Number(choosingMatch[1]))) {
         await unlinkIfPresent(path)
       } else {
-        hasLiveContender = true
+        hasLiveChoosing = true
       }
     }
-    if (!hasLiveContender) return
+  }
+  return { tickets, hasLiveChoosing }
+}
+
+async function waitForChoosingContenders(
+  gatePath: string,
+  contenderId: string
+): Promise<AcquisitionContender[]> {
+  const deadline = Date.now() + ACQUISITION_GATE_WAIT_MS
+  do {
+    const state = await readGateState(gatePath, contenderId)
+    if (!state.hasLiveChoosing) return state.tickets
     await new Promise(resolve => setTimeout(resolve, ACQUISITION_GATE_POLL_MS))
   } while (Date.now() < deadline)
   throw Object.assign(new Error('Acquisition gate contender did not finish choosing'), { code: 'EEXIST' })
