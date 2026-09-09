@@ -27,6 +27,21 @@ async function waitForFile(path: string): Promise<void> {
   throw new Error(`timed out waiting for ${path}`)
 }
 
+async function waitForExitCount(
+  processes: Array<{ exited: Promise<number> }>,
+  count: number
+): Promise<number[]> {
+  const exitCodes: number[] = []
+  for (const process of processes) {
+    void process.exited.then(exitCode => exitCodes.push(exitCode))
+  }
+  for (let attempt = 0; attempt < 500; attempt++) {
+    if (exitCodes.length >= count) return exitCodes
+    await Bun.sleep(10)
+  }
+  throw new Error(`timed out waiting for ${count} lock contenders to exit`)
+}
+
 describe('skill target lifecycle lock', () => {
   test('creates or repairs a private lock root and rejects unsafe roots', async () => {
     const parent = await mkdtemp(join(tmpdir(), 'skillhub-lock-root-'))
@@ -82,11 +97,8 @@ describe('skill target lifecycle lock', () => {
       await Promise.all(readyPaths.map(waitForFile))
       await writeFile(startPath, 'start')
       await waitForFile(acquiredPath)
-      const loserExitCode = await Promise.race([
-        ...processes.map(process => process.exited),
-        Bun.sleep(5_000).then(() => { throw new Error('timed out waiting for the lock loser') })
-      ])
-      expect(loserExitCode).toBe(4)
+      const loserExitCodes = await waitForExitCount(processes, workerCount - 1)
+      expect(loserExitCodes).toEqual(Array(workerCount - 1).fill(4))
     } finally {
       try {
         await writeFile(releasePath, 'release')
