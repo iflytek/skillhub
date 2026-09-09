@@ -8,7 +8,7 @@ import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 
 const ACQUISITION_GATE_WAIT_MS = 1_000
-const ACQUISITION_GATE_POLL_MS = 5
+const ACQUISITION_GATE_MAX_POLL_MS = 100
 
 /** Serializes every local lifecycle mutation for one Skill target directory. */
 export async function acquireSkillTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
@@ -156,16 +156,20 @@ async function waitForChoosingContenders(
   contenderId: string
 ): Promise<AcquisitionContender[]> {
   const deadline = Date.now() + ACQUISITION_GATE_WAIT_MS
+  let delayMs = 5
   do {
     const state = await readGateState(gatePath, contenderId)
     if (!state.hasLiveChoosing) return state.tickets
-    await new Promise(resolve => setTimeout(resolve, ACQUISITION_GATE_POLL_MS))
+    await new Promise(resolve => setTimeout(resolve, delayMs))
+    delayMs = Math.min(delayMs * 2, ACQUISITION_GATE_MAX_POLL_MS)
   } while (Date.now() < deadline)
   throw Object.assign(new Error('Acquisition gate contender did not finish choosing'), { code: 'EEXIST' })
 }
 
 function compareContenders(left: AcquisitionContender, right: AcquisitionContender): number {
-  return left.ticket - right.ticket || left.id.localeCompare(right.id)
+  if (left.ticket !== right.ticket) return left.ticket < right.ticket ? -1 : 1
+  if (left.id === right.id) return 0
+  return left.id < right.id ? -1 : 1
 }
 
 function isProcessAlive(pid: number): boolean {
