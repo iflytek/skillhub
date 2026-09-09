@@ -44,6 +44,56 @@ grep -F 'skillhub publish ./my-skill' \
 grep -F '`--dry-run` sends the package bytes to the selected registry' \
   "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
 
+# Keep the launcher takeover decision executable as a contract instead of only
+# checking for isolated safety phrases. A connect request has three disjoint
+# states; the non-first-party state must identify provenance and obtain a
+# separate confirmation before the first permitted write.
+python3 - "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" <<'PY'
+import sys
+from pathlib import Path
+
+guide = Path(sys.argv[1]).read_text(encoding="utf-8")
+missing = guide.index("If the command is missing")
+install = guide.index("npm install --global @astron-team/skillhub", missing)
+foreign = guide.index("If `skillhub version` returns anything else")
+confirm = guide.index("Only after the user separately confirms removal", foreign)
+verified = guide.index("When the existing command already reports `SkillHub CLI <version>`")
+
+assert missing < install < foreign < confirm < verified
+inspection = guide[foreign:confirm]
+for required in ("exact command selected by the shell", "follow symlinks", "owner", "package manager or package"):
+    assert required in inspection, required
+for forbidden in ("npm install --global", "uninstall", "unlink"):
+    assert forbidden not in inspection, forbidden
+
+authorization = guide[guide.index("An explicit request to connect SkillHub authorizes"):]
+assert "does not authorize removing another `skillhub` launcher" in authorization
+assert "Launcher removal requires the separate, exact confirmation" in authorization
+assert "If the owner or package source cannot be proven, stop" in guide
+PY
+
+# The guide response stays constant-time: its request handler returns the
+# startup-loaded template without network calls or directory traversal. The
+# container entrypoint performs one local guide copy and no guide-time fetch.
+python3 - \
+  "$REPO_ROOT/web/vite.config.ts" \
+  "$REPO_ROOT/web/docker-entrypoint.d/30-runtime-config.sh" <<'PY'
+import sys
+from pathlib import Path
+
+vite = Path(sys.argv[1]).read_text(encoding="utf-8")
+handler = vite[vite.index("configureServer(server)"):vite.index("export default defineConfig")]
+assert "response.end(guideTemplate)" in handler
+for forbidden in ("fetch(", "readFile", "readdir", "glob("):
+    assert forbidden not in handler, forbidden
+
+entrypoint = Path(sys.argv[2]).read_text(encoding="utf-8")
+guide_setup = entrypoint[entrypoint.index("# The guide derives its registry"):]
+assert guide_setup.count("\ncp ") == 1
+for forbidden in ("curl ", "wget ", "find ", "envsubst"):
+    assert forbidden not in guide_setup, forbidden
+PY
+
 runtime_manifest="$REPO_ROOT/server/skillhub-app/src/main/resources/builtin-skills/manifest.json"
 python3 - "$first/artifacts.json" "$runtime_manifest" <<'PY'
 import json
