@@ -1,4 +1,4 @@
-import { access, chmod, lstat, mkdir, mkdtemp, readdir, rm, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdir, mkdtemp, readdir, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -144,9 +144,16 @@ describe('skill target lifecycle lock', () => {
     const staleTime = new Date(Date.now() - 60_000)
     await utimes(liveContenderPath, staleTime, staleTime)
 
-    await expect(acquireSkillTargetLock(rootDir, 'demo')).rejects.toThrow('install target is busy')
+    const acquisition = acquireSkillTargetLock(rootDir, 'demo')
+    const state = await Promise.race([
+      acquisition.then(() => 'acquired', () => 'rejected'),
+      Bun.sleep(50).then(() => 'waiting')
+    ])
+    expect(state).toBe('waiting')
     expect(await exists(liveContenderPath)).toBe(true)
-    await rm(acquisitionGatePath, { recursive: true })
+    await unlink(liveContenderPath)
+    const release = await acquisition
+    await release()
   })
 
   test('does not pass a live acquisition ticket', async () => {
@@ -157,9 +164,16 @@ describe('skill target lifecycle lock', () => {
     const liveTicketPath = join(acquisitionGatePath, `ticket.1.${process.pid}-suspended`)
     await writeFile(liveTicketPath, '')
 
-    await expect(acquireSkillTargetLock(rootDir, 'demo')).rejects.toThrow('install target is busy')
+    const acquisition = acquireSkillTargetLock(rootDir, 'demo')
+    const state = await Promise.race([
+      acquisition.then(() => 'acquired', () => 'rejected'),
+      Bun.sleep(50).then(() => 'waiting')
+    ])
+    expect(state).toBe('waiting')
     expect(await exists(liveTicketPath)).toBe(true)
-    await rm(acquisitionGatePath, { recursive: true })
+    await unlink(liveTicketPath)
+    const release = await acquisition
+    await release()
   })
 
   test('recovers acquisition contenders whose owner process exited', async () => {
