@@ -230,6 +230,24 @@ public class GovernanceWorkflowAppService {
         return skillLifecycleAppService.deleteVersion(namespace, slug, version, userId, userNsRoles, auditContext);
     }
 
+    public SkillLifecycleMutationResponse yankVersion(String namespace,
+                                                      String slug,
+                                                      String version,
+                                                      AdminSkillActionRequest request,
+                                                      String userId,
+                                                      Map<Long, NamespaceRole> userNsRoles,
+                                                      AuditRequestContext auditContext) {
+        return skillLifecycleAppService.yankVersion(
+                namespace,
+                slug,
+                version,
+                request,
+                userId,
+                userNsRoles,
+                auditContext
+        );
+    }
+
     public SkillLifecycleMutationResponse withdrawReviewVersion(String namespace,
                                                                 String slug,
                                                                 String version,

@@ -380,7 +380,7 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 - 存储：只存 SHA-256 哈希，明文只展示一次
 - 校验：从 `Authorization: Bearer <token>` 提取 → 哈希比对 → 加载关联用户 → 检查用户状态
 - 失败闭合与身份优先级：共享认证过滤器只识别 Bearer scheme。有效 Bearer 覆盖已加载的 Web Session 身份；Bearer 为空、格式错误、未知、过期、已吊销、用户缺失或用户禁用时立即返回 401，即使存在有效 Session 也不得回退。缺少 `Authorization` 头或使用 Basic/其他非 Bearer scheme 时保留有效 Session；若无 Session，公共读接口按匿名访问，`whoami` 返回 401
-- 作用域：`skill:read`, `skill:publish`, `skill:delete`, `token:manage`
+- 作用域：`skill:read`, `skill:publish`, `skill:delete`, `skill:yank`, `token:manage`
 - 拒绝原因：API Token 缺少作用域或不能访问某个接口时，403 响应返回本地化的安全原因和 `requestId`；其他授权失败仍返回通用信息，避免暴露内部异常
 
 > **一期作用域说明（非最小权限）**：一期 Token 作用域为粗粒度动作级别，不与 namespace 绑定。Token 继承用户的全部权限——如果用户是某个 namespace 的 MEMBER，则该用户的任何 Token（只要包含 `skill:publish` scope）都可以向该 namespace 发布技能。这是有意的一期简化，不满足最小权限原则。后续版本计划引入 namespace 级别的 Token 作用域限定（如 `namespace:ai-team:skill:publish`），或通过 `api_token_scope` 子表实现 Token 与 namespace 的绑定。
@@ -621,6 +621,7 @@ window.location.href = '/oauth2/authorization/github'
 | `POST /api/v1/skills/{ns}/{slug}/archive` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
 | `POST .../versions/{ver}/rerelease` | namespace ADMIN 以上 或 owner；源版本必须 `PUBLISHED` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
 | `DELETE .../versions/{ver}` | namespace ADMIN 以上 或 owner（仅 `DRAFT` / `REJECTED`） | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+| `POST .../versions/{ver}/yank` | namespace ADMIN 以上 或 owner；版本必须 `PUBLISHED`；API Token 需 `skill:yank` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
 
 ### 10.3 CLI API
 

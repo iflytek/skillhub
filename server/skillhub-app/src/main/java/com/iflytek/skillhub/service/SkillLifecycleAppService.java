@@ -113,6 +113,28 @@ public class SkillLifecycleAppService {
     }
 
     @Transactional
+    public SkillLifecycleMutationResponse yankVersion(String namespace,
+                                                      String slug,
+                                                      String version,
+                                                      AdminSkillActionRequest request,
+                                                      String userId,
+                                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                                      AuditRequestContext auditContext) {
+        Skill skill = findSkill(namespace, slug, userId);
+        SkillVersion skillVersion = findVersion(skill.getId(), version);
+        SkillVersion yanked = skillGovernanceService.yankVersion(
+                skill,
+                skillVersion,
+                userId,
+                normalizeRoles(userNamespaceRoles),
+                auditContext.clientIp(),
+                auditContext.userAgent(),
+                request != null ? request.reason() : null
+        );
+        return new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "YANK", yanked.getStatus().name());
+    }
+
+    @Transactional
     public SkillLifecycleMutationResponse withdrawReview(String namespace,
                                                          String slug,
                                                          String version,

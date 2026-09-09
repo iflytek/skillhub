@@ -148,6 +148,8 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/*/unarchive", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/*/archive", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/*/unarchive", "skill:publish"),
+            ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/*/versions/*/yank", "skill:yank"),
+            ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/*/versions/*/yank", "skill:yank"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/publish", "skill:publish"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/versions/*/security-audit/retry", "skill:publish"),
