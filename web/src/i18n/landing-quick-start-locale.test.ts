@@ -46,7 +46,9 @@ describe('landing quick start locales', () => {
     expect(skillGuideTemplate).not.toContain('${SKILLHUB_PUBLIC_BASE_URL}')
     expect(skillGuideTemplate).toContain('separately confirms removal of that exact identified launcher')
     expect(skillGuideTemplate).toContain('Never unlink an executable directly')
-    expect(skillGuideTemplate).toContain('do not run the global installation yet')
+    expect(skillGuideTemplate).toContain('do not run the global installation or update yet')
+    expect(skillGuideTemplate).toContain('resolved package metadata proves')
+    expect(skillGuideTemplate).toContain('even when it prints `SkillHub CLI <version>`')
     expect(skillGuideTemplate).toContain('does not authorize removing another `skillhub` launcher')
     expect(skillGuideTemplate).toContain('Treat `<registry>` below as a value to replace')
     expect(skillGuideTemplate).toContain([
