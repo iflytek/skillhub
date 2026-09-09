@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { chmod, link, lstat, mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { chmod, lstat, mkdir, readdir, rename, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { lock } from 'proper-lockfile'
@@ -7,7 +7,8 @@ import { canonicalizeExistingPath } from '../platform/paths'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 
-const ACQUISITION_GATE_STALE_MS = 10_000
+const ACQUISITION_GATE_WAIT_MS = 1_000
+const ACQUISITION_GATE_POLL_MS = 5
 
 /** Serializes every local lifecycle mutation for one Skill target directory. */
 export async function acquireSkillTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
@@ -61,63 +62,131 @@ function acquireTargetLock(lockPath: string): Promise<() => Promise<void>> {
 }
 
 async function acquireAcquisitionGate(gatePath: string): Promise<() => Promise<void>> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const token = randomUUID()
-    try {
-      await writeFile(gatePath, token, { flag: 'wx', mode: 0o600 })
-    } catch (error) {
-      if (attempt === 0 && hasErrorCode(error, 'EEXIST') && await recoverStaleAcquisitionGate(gatePath)) {
-        continue
-      }
-      throw error
-    }
+  await ensureAcquisitionGateDirectory(gatePath)
+  // A per-target Lamport bakery queue avoids deleting a shared stale gate. Every removable path
+  // contains a nonce and is owned by one PID, so crash recovery cannot unlink a replacement owner.
+  const contenderId = `${process.pid}-${randomUUID()}`
+  const choosingPath = join(gatePath, `choosing.${contenderId}`)
+  let ticketPath: string | null = null
+  let ticket: number | null = null
 
-    return async () => {
-      const currentToken = await readFile(gatePath, 'utf8')
-      if (currentToken !== token) throw compromisedGateError(gatePath)
-      await unlink(gatePath)
+  await writeFile(choosingPath, '', { flag: 'wx', mode: 0o600 })
+  try {
+    const tickets = await readLiveTickets(gatePath)
+    ticket = Math.max(0, ...tickets.map(contender => contender.ticket)) + 1
+    ticketPath = join(gatePath, `ticket.${ticket}.${contenderId}`)
+    await rename(choosingPath, ticketPath)
+
+    await waitForChoosingContenders(gatePath, contenderId)
+    const contenders = await readLiveTickets(gatePath)
+    if (contenders.some(contender => compareContenders(contender, { id: contenderId, ticket: ticket! }) < 0)) {
+      throw Object.assign(new Error('Acquisition gate is already being held'), { code: 'EEXIST' })
     }
+  } catch (operationError) {
+    const cleanupErrors = await removeContenderFiles(choosingPath, ...(ticketPath === null ? [] : [ticketPath]))
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError([operationError, ...cleanupErrors], 'acquisition gate attempt and cleanup both failed')
+    }
+    throw operationError
   }
 
-  throw new Error('unreachable acquisition gate retry state')
+  return async () => {
+    try {
+      await lstat(ticketPath!)
+    } catch (error) {
+      if (hasErrorCode(error, 'ENOENT')) throw compromisedGateError(ticketPath!)
+      throw error
+    }
+    await unlink(ticketPath!)
+  }
 }
 
-async function recoverStaleAcquisitionGate(gatePath: string): Promise<boolean> {
-  let observedToken: string
-  let observedMtime: number
+async function ensureAcquisitionGateDirectory(gatePath: string): Promise<void> {
   try {
-    observedToken = await readFile(gatePath, 'utf8')
-    observedMtime = (await lstat(gatePath)).mtimeMs
+    await mkdir(gatePath, { mode: 0o700 })
   } catch (error) {
-    if (hasErrorCode(error, 'ENOENT')) return true
-    throw error
+    if (!hasErrorCode(error, 'EEXIST')) throw error
   }
-  if (observedMtime >= Date.now() - ACQUISITION_GATE_STALE_MS) return false
-
-  const claimDigest = createHash('sha256').update(observedToken).digest('hex')
-  const claimPath = `${gatePath}.stale-${claimDigest}`
-  try {
-    await link(gatePath, claimPath)
-  } catch (error) {
-    if (hasErrorCode(error, 'ENOENT')) return true
-    if (hasErrorCode(error, 'EEXIST')) return false
-    throw error
+  const details = await lstat(gatePath)
+  if (!details.isDirectory() || details.isSymbolicLink()) {
+    throw new Error(`unsafe SkillHub CLI acquisition gate directory: ${gatePath}`)
   }
+}
 
-  try {
-    if (await readFile(claimPath, 'utf8') !== observedToken) return false
-    let currentToken: string
-    try {
-      currentToken = await readFile(gatePath, 'utf8')
-    } catch (error) {
-      if (hasErrorCode(error, 'ENOENT')) return true
-      throw error
+interface AcquisitionContender {
+  id: string
+  ticket: number
+}
+
+async function readLiveTickets(gatePath: string): Promise<AcquisitionContender[]> {
+  const entries = await readdir(gatePath)
+  const contenders: AcquisitionContender[] = []
+  for (const entry of entries) {
+    const match = /^ticket\.(\d+)\.(\d+)-([^.]+)$/.exec(entry)
+    if (!match) continue
+    const ticket = Number(match[1])
+    const pid = Number(match[2])
+    const path = join(gatePath, entry)
+    if (!isProcessAlive(pid)) {
+      await unlinkIfPresent(path)
+      continue
     }
-    if (currentToken !== observedToken) return false
-    await unlink(gatePath)
+    if (!Number.isSafeInteger(ticket) || ticket < 1) throw compromisedGateError(path)
+    contenders.push({ id: `${match[2]}-${match[3]}`, ticket })
+  }
+  return contenders
+}
+
+async function waitForChoosingContenders(gatePath: string, contenderId: string): Promise<void> {
+  const deadline = Date.now() + ACQUISITION_GATE_WAIT_MS
+  do {
+    let hasLiveContender = false
+    for (const entry of await readdir(gatePath)) {
+      const match = /^choosing\.(\d+)-([^.]+)$/.exec(entry)
+      if (!match || `${match[1]}-${match[2]}` === contenderId) continue
+      const path = join(gatePath, entry)
+      if (!isProcessAlive(Number(match[1]))) {
+        await unlinkIfPresent(path)
+      } else {
+        hasLiveContender = true
+      }
+    }
+    if (!hasLiveContender) return
+    await new Promise(resolve => setTimeout(resolve, ACQUISITION_GATE_POLL_MS))
+  } while (Date.now() < deadline)
+  throw Object.assign(new Error('Acquisition gate contender did not finish choosing'), { code: 'EEXIST' })
+}
+
+function compareContenders(left: AcquisitionContender, right: AcquisitionContender): number {
+  return left.ticket - right.ticket || left.id.localeCompare(right.id)
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
     return true
-  } finally {
-    await unlink(claimPath).catch(() => {})
+  } catch (error) {
+    return !hasErrorCode(error, 'ESRCH')
+  }
+}
+
+async function removeContenderFiles(...paths: string[]): Promise<Error[]> {
+  const errors: Error[] = []
+  for (const path of paths) {
+    try {
+      await unlink(path)
+    } catch (error) {
+      if (!hasErrorCode(error, 'ENOENT')) errors.push(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+  return errors
+}
+
+async function unlinkIfPresent(path: string): Promise<void> {
+  try {
+    await unlink(path)
+  } catch (error) {
+    if (!hasErrorCode(error, 'ENOENT')) throw error
   }
 }
 
