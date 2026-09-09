@@ -122,7 +122,7 @@
       },
       "agent": {
         "description": "发送提示词给你的 Agent，以设置SkillHub Registry",
-        "command": "请根据 https://www.example.com/install/skillhub.md 接入 SkillHub",
+        "command": "请根据 https://www.example.com/registry/skill.md 接入 SkillHub",
         "commandTemplate": "请根据 {{url}} 接入 SkillHub"
       },
       "human": {

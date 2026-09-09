@@ -21,9 +21,7 @@ envsubst '${SKILLHUB_WEB_API_BASE_URL} ${SKILLHUB_PUBLIC_BASE_URL} ${SKILLHUB_WE
   < /usr/share/nginx/html/runtime-config.js.template \
   > /usr/share/nginx/html/runtime-config.js
 
-# Generate both the preferred install guide and the compatibility route from
-# one template so self-hosted deployments keep their own registry URL.
-mkdir -p /usr/share/nginx/html/install
+# Generate the Agent bootstrap guide with the current self-hosted registry URL.
 guide_public_base_url="$SKILLHUB_PUBLIC_BASE_URL"
 guide_url_config="${SKILLHUB_NGINX_GUIDE_URL_CONFIG:-/etc/nginx/skillhub-guide-public-url.conf}"
 if [ -z "$guide_public_base_url" ]; then
@@ -40,4 +38,3 @@ fi
 SKILLHUB_PUBLIC_BASE_URL="$guide_public_base_url" envsubst '${SKILLHUB_PUBLIC_BASE_URL}' \
   < /usr/share/nginx/html/registry/skill.md.template \
   > /usr/share/nginx/html/registry/skill.md
-cp /usr/share/nginx/html/registry/skill.md /usr/share/nginx/html/install/skillhub.md

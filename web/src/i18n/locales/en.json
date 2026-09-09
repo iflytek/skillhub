@@ -122,7 +122,7 @@
       },
       "agent": {
         "description": "Send a prompt to your Agent to set up the SkillHub Registry",
-        "command": "Connect SkillHub using https://www.example.com/install/skillhub.md",
+        "command": "Connect SkillHub using https://www.example.com/registry/skill.md",
         "commandTemplate": "Connect SkillHub using {{url}}"
       },
       "human": {

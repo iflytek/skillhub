@@ -122,7 +122,7 @@
       },
       "agent": {
         "description": "Отправьте промпт своему Agent, чтобы настроить SkillHub Registry",
-        "command": "Подключите SkillHub по инструкции https://www.example.com/install/skillhub.md",
+        "command": "Подключите SkillHub по инструкции https://www.example.com/registry/skill.md",
         "commandTemplate": "Подключите SkillHub по инструкции {{url}}"
       },
       "human": {

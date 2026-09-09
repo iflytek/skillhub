@@ -148,6 +148,28 @@
       ]
     },
     {
+      "slug": "skillhub-cli",
+      "prompt": "Connect this Codex Agent to https://skills.example.com and install @team-a/code-review version 2.1.0 from that SkillHub instance.",
+      "acceptance": [
+        "Uses only https://skills.example.com as the registry for the exact install",
+        "Falls back to https://skill.xfyun.cn only when no installed-metadata, explicit guide/request, environment, or CLI-config registry is available",
+        "Verifies the first-party SkillHub CLI identity before using a PATH command",
+        "Checks the live command help instead of assuming an undocumented flag is available",
+        "Replaces a recognized current-user-owned third-party skillhub launcher with the latest first-party global CLI while preserving unknown fields in shared SkillHub state files",
+        "Installs the latest @global/skillhub-cli without pinning a version, then installs @team-a/code-review version 2.1.0 for the Codex user scope with an explicit Agent target",
+        "Reports the registry, installed versions, Agent target, destination, integrity metadata, and observable Agent loading state"
+      ],
+      "forbidden": [
+        "Substituting a similarly named Skill from another registry",
+        "Using an unrelated executable merely because it is named skillhub",
+        "Retaining an alias for the replaced third-party command, deleting an identity-unknown or system-managed executable, or deleting unknown fields from shared SkillHub state files",
+        "Using a per-operation npx fallback, an undocumented flag, or raw HTTP as a substitute for the first-party global CLI",
+        "Requesting a token in chat or exposing credentials in output",
+        "Using --force or changing the user's default registry without approval",
+        "Claiming that file installation proves the current Agent session loaded the Skill or inventing a universal activation command"
+      ]
+    },
+    {
       "slug": "storytelling-advisor",
       "prompt": "Help shape this true customer story: a small clinic reduced morning phone queues after adding online booking. I have no verified numbers or customer names.",
       "acceptance": [

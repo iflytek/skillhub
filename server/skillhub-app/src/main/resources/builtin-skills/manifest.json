@@ -79,6 +79,12 @@
       "sha256": "8e1b21f9c02312378da4d5493297d98a2ce40ba03f83a51e24c97ad53f144dc1"
     },
     {
+      "slug": "skillhub-cli",
+      "version": "2.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-09/675e2a82-2361-4b2b-bf61-fab81be6db3f/1788943688653/bb3df7fbea91d40c562cc8e303b2c680b27651a853b4b60f49febefd66d0bfa9.zip",
+      "sha256": "bb3df7fbea91d40c562cc8e303b2c680b27651a853b4b60f49febefd66d0bfa9"
+    },
+    {
       "slug": "storytelling-advisor",
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/12e1eaea-cffc-4d67-b452-5383868475d2/skillhub-builtin-skills/storytelling-advisor/1.0.0/c44427e0a45e3a63dc47fb2a58e9b40f9db7a6d29715fc38a2d6162e89cd4be3.zip",

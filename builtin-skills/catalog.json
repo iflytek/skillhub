@@ -112,6 +112,16 @@
       }
     },
     {
+      "slug": "skillhub-cli",
+      "version": "2.0.0",
+      "license": "Apache-2.0",
+      "upstream": {
+        "repository": "https://github.com/iflytek/skillhub",
+        "commit": "42a0e423f4ac01e5e7e0801c786735cdd4a818cf",
+        "path": "web/src/docs/skill.md"
+      }
+    },
+    {
       "slug": "storytelling-advisor",
       "version": "1.0.0",
       "license": "MIT",

@@ -150,7 +150,7 @@ expect_fail "$missing_trailing_base_env" "must be '/' or start and end with '/'"
 
 # A base path whose first segment collides with a server Nginx location (/api/,
 # /oauth2/, ...) must be rejected: it would shadow the real route and break the app.
-for reserved in /api/ /oauth2/ /login/ /assets/ /install/ /registry/ /nginx-health/ /.well-known/ /runtime-config.js/ /api/nested/; do
+for reserved in /api/ /oauth2/ /login/ /assets/ /registry/ /nginx-health/ /.well-known/ /runtime-config.js/ /api/nested/; do
   reserved_base_env="$tmp/reserved-base.env"
   write_env "$reserved_base_env" "release-download-secret-32-bytes-minimum"
   printf 'SKILLHUB_WEB_BASE_PATH=%s\n' "$reserved" >>"$reserved_base_env"

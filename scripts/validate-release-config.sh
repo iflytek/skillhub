@@ -139,7 +139,7 @@ validate_web_base_path_format() {
     first_segment=${value#/}
     first_segment=${first_segment%%/*}
     case "$first_segment" in
-      api|oauth2|login|assets|install|registry|nginx-health|.well-known|runtime-config.js)
+      api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
         error "SKILLHUB_WEB_BASE_PATH must not start with a segment reserved by the SkillHub server ($first_segment); it would shadow the server's own Nginx location: $value"
         ;;
     esac

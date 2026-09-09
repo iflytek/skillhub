@@ -28,13 +28,13 @@ describe('install-for-agent-button', () => {
 
   it('builds a prompt for a global skill using the instance guide', () => {
     expect(buildAgentInstallPrompt('global', 'my-skill', '1.2.3', 'https://skill.example.com', formatPrompt)).toBe(
-      'Connect with https://skill.example.com/install/skillhub.md; install @global/my-skill version 1.2.3.',
+      'Connect with https://skill.example.com/registry/skill.md; install @global/my-skill version 1.2.3.',
     )
   })
 
   it('keeps a sub-path base and namespace in the copied prompt', () => {
     expect(buildAgentInstallPrompt('team-alpha', 'my-skill', '2.0.0', 'https://skill.example.com/skillhub/', formatPrompt)).toBe(
-      'Connect with https://skill.example.com/skillhub/install/skillhub.md; install @team-alpha/my-skill version 2.0.0.',
+      'Connect with https://skill.example.com/skillhub/registry/skill.md; install @team-alpha/my-skill version 2.0.0.',
     )
   })
 
@@ -88,7 +88,7 @@ describe('install-for-agent-button', () => {
     await act(async () => fireEvent.click(getByTestId('install-for-agent-button')))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(
-      'Connect with https://skill.example.com/skillhub/install/skillhub.md; install @team-alpha/my-skill version 2.0.0.',
+      'Connect with https://skill.example.com/skillhub/registry/skill.md; install @team-alpha/my-skill version 2.0.0.',
     ))
   })
 })

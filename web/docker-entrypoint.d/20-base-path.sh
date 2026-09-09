@@ -55,7 +55,7 @@ case "$SKILLHUB_WEB_BASE_PATH" in
 esac
 
 # Reject base paths whose first segment is reserved by the server's own Nginx
-# locations (/api/, /oauth2/, /login/, /assets/, /install/, /registry/, /nginx-health,
+# locations (/api/, /oauth2/, /login/, /assets/, /registry/, /nginx-health,
 # /.well-known/, /runtime-config.js). Generating `location ^~ /api/` would
 # shadow the real API route and take down the whole app. Kept in sync with
 # web/base-path-config.ts, validate-release-config.sh and the Helm checks.
@@ -63,7 +63,7 @@ if [ "$SKILLHUB_WEB_BASE_PATH" != / ]; then
   first_segment=${SKILLHUB_WEB_BASE_PATH#/}
   first_segment=${first_segment%%/*}
   case "$first_segment" in
-    api|oauth2|login|assets|install|registry|nginx-health|.well-known|runtime-config.js)
+    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
       echo "SKILLHUB_WEB_BASE_PATH must not start with a segment reserved by the SkillHub server ($first_segment); it would shadow the server's own Nginx location: $SKILLHUB_WEB_BASE_PATH" >&2
       exit 1
       ;;

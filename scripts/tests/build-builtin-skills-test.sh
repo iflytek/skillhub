@@ -18,6 +18,26 @@ python3 "$BUILDER" --output "$second"
 
 cmp "$first/artifacts.json" "$second/artifacts.json"
 
+# The anonymous Agent bootstrap route and the installable helper Skill share
+# one reviewed instruction body. The web copy exists only because its Docker
+# build context is intentionally limited to web/.
+cmp \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" \
+  "$REPO_ROOT/web/src/docs/skill.md.template"
+test -f "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md"
+grep -F 'npm install --global @astron-team/skillhub' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'version: 2.0.0' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'installed but not yet loaded' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'skillhub sync pull --namespace team-a' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
+grep -F 'skillhub publish ./my-skill' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
+grep -F '`--dry-run` sends the package bytes to the selected registry' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
+
 runtime_manifest="$REPO_ROOT/server/skillhub-app/src/main/resources/builtin-skills/manifest.json"
 python3 - "$first/artifacts.json" "$runtime_manifest" <<'PY'
 import json
