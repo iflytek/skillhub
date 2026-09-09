@@ -240,7 +240,7 @@ export function Layout() {
               <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.developers')}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
                 <li><a href="https://github.com/iflytek/skillhub/tree/main/docs/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.docs')}</a></li>
-                <li><a href="/v3/api-docs" className={FOOTER_LINK_CLASS_NAME}>{t('footer.api')}</a></li>
+                <li><a href="/swagger-ui.html" className={FOOTER_LINK_CLASS_NAME}>{t('footer.api')}</a></li>
                 <li><a href="https://github.com/iflytek/skillhub/tree/main/cli" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>CLI</a></li>
                 <li><a href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>GitHub</a></li>
               </ul>
