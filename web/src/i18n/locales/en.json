@@ -146,6 +146,125 @@
           "code": "# Publish skill\nclawhub publish\n\n# Or use web interface\n# Click \"Publish Skill\""
         }
       }
+    },
+    "experience": {
+      "heroBadge": "Agent skill management platform",
+      "heroTitle": "Turn team expertise into Agent-ready skills",
+      "heroDescription": "Make individual AI know-how reusable, manageable, and trusted across the organization.",
+      "browseAll": "Browse all",
+      "marketplace": "Marketplace",
+      "latest": "Latest",
+      "demoSkills": {
+        "weather": "Query real-time weather for cities worldwide",
+        "gitHelper": "Assisted Git workflows",
+        "diagramMaker": "Generate flowcharts and architecture diagrams",
+        "codeReviewer": "Automated code review",
+        "caption": "Interface preview · 4 sample skills"
+      },
+      "highlights": {
+        "selfHosted": "Self-hosted registry",
+        "governance": "Review and governance",
+        "multiClient": "Agent, CLI, and Web access",
+        "traceable": "Traceable versions"
+      },
+      "capabilities": {
+        "eyebrow": "Capabilities",
+        "title": "Manage the complete skill lifecycle, from registration to distribution",
+        "description": "More than a package repository: one platform for publishing, review, distribution, and governance."
+      },
+      "stats": {
+        "publicSkills": "Public skills in this registry",
+        "accessModes": "Access modes",
+        "permissionScopes": "RBAC scopes",
+        "license": "Open-source license"
+      },
+      "enterprise": {
+        "title": "Built for teams and enterprises",
+        "description": "Self-hosting, access control, review workflows, and auditability in one registry.",
+        "clientLayer": "Clients",
+        "serviceLayer": "Service",
+        "storageLayer": "Storage",
+        "networkBoundary": "Deploy inside your organization and retain control of registry data",
+        "deployment": {
+          "title": "Self-hosted deployment",
+          "description": "Run SkillHub on your infrastructure with Docker Compose or the provided Kubernetes manifests, using local or S3-compatible object storage."
+        },
+        "security": {
+          "title": "Validation and review",
+          "description": "Package validation, security scanning, and review workflows help teams assess skills before publication."
+        },
+        "rbac": {
+          "title": "Layered RBAC",
+          "description": "Platform and namespace roles separate organization-wide administration from team ownership."
+        },
+        "access": {
+          "title": "Flexible access",
+          "description": "OAuth2 and local accounts support browser sign-in, while API tokens enable programmatic access."
+        },
+        "audit": {
+          "title": "Audit trail",
+          "description": "Audit records make key publishing, download, deletion, and authorization operations traceable."
+        },
+        "openSource": {
+          "title": "Open source",
+          "description": "The code is available under Apache-2.0 for inspection, self-hosting, and community contribution."
+        }
+      },
+      "cta": {
+        "title": "Build your team skill registry",
+        "description": "Review the source and deployment guide, then run SkillHub in your own environment.",
+        "deploy": "View source",
+        "docs": "Read the docs"
+      },
+      "quickStart": {
+        "title": "Choose an access method",
+        "description": "Use the same registry through an Agent, the CLI, or the Web interface.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyErrorTitle": "Copy failed",
+        "modes": {
+          "agent": { "title": "Agent integration", "description": "Configure the Registry once and discover skills as needed" },
+          "cli": { "title": "CLI", "description": "Search, install, and publish skills" },
+          "web": { "title": "Web interface", "description": "Browse, read, and download skills visually" }
+        },
+        "agent": {
+          "tablist": "Agent integration demo",
+          "registryTab": "Registry setup",
+          "discoveryTab": "Implicit discovery",
+          "live": "Agent live",
+          "instruction": "Read {{url}} and follow it to configure the SkillHub Skills Registry",
+          "instructionLead": "Copy this instruction and send it to your Agent",
+          "instructionPrefix": "Read",
+          "instructionSuffix": "and follow it to configure the SkillHub Skills Registry.",
+          "copyInstruction": "Copy instruction",
+          "copyErrorDescription": "Select and copy the Registry setup instruction manually.",
+          "steps": { "read": "Read the guide", "configure": "Configure Registry", "discover": "Discover skills on demand" },
+          "prompt": "What is the weather in Hefei today?",
+          "discovery": {
+            "intentTitle": "Identify the task", "intentDescription": "Real-time weather and travel advice are needed",
+            "searchTitle": "Search SkillHub Registry", "searchDescription": "Match @global/weather · v1.3.0",
+            "readTitle": "Read skill instructions", "readDescription": "Confirm the input and invocation contract"
+          },
+          "answerLead": "Hefei is cloudy today, 26°C",
+          "answerTail": ", with possible brief showers this afternoon. Carrying rain gear is recommended."
+        },
+        "cli": {
+          "copyErrorDescription": "Select and copy the CLI command manually.",
+          "skillsFound": "Sample results:",
+          "forecastSummary": "Seven-day weather forecast",
+          "installed": "@global/weather installed to ./skills/global/weather",
+          "connected": "connected",
+          "docs": "CLI docs"
+        },
+        "web": {
+          "marketplace": "Skill marketplace", "publicSkills": "Public skills", "search": "Search skills",
+          "status": "Public · Available", "summary": "Real-time weather, forecasts, and travel information",
+          "download": "Download ZIP", "readTitle": "Read before using",
+          "readDescription": "Review the purpose, inputs, and execution instructions in SKILL.md before downloading the complete package.",
+          "version": "Version", "files": "Files", "format": "Format",
+          "browse": "Browse and search", "preview": "Content preview", "versions": "Files and versions", "favorites": "Stars and subscriptions"
+        }
+      }
     }
   },
   "home": {
@@ -1293,6 +1412,8 @@
     "folderHint": "Or select a folder to package and upload"
   },
   "layout": {
+    "openNavigation": "Open navigation menu",
+    "closeNavigation": "Close navigation menu",
     "footerDescription": "Skill registry, providing efficient skill management and distribution for developers."
   },
   "nsReviews": {
@@ -1414,6 +1535,9 @@
     "subscribe": "Subscribe"
   },
   "skillCard": {
+    "downloads": "{{value}} downloads",
+    "stars": "{{count}} stars",
+    "rating": "Rating {{rating}}",
     "starred": "Starred",
     "starredAction": "Click to unstar",
     "unstarTitle": "Remove from starred",
@@ -1425,6 +1549,7 @@
     "copy": "Copy"
   },
   "pagination": {
+    "label": "Pagination",
     "prev": "Previous",
     "next": "Next",
     "pagePrefix": "Page",

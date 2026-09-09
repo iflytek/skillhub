@@ -146,6 +146,125 @@
           "code": "# 发布技能\nclawhub publish\n\n# 或使用网页界面\n# 点击\"发布技能\""
         }
       }
+    },
+    "experience": {
+      "heroBadge": "Agent 技能管理平台",
+      "heroTitle": "把团队的专业能力，沉淀成 Agent 可用的技能",
+      "heroDescription": "让 AI 能力从个人经验变成可复用、可管理、可信赖的组织资产。",
+      "browseAll": "浏览全部",
+      "marketplace": "技能市场",
+      "latest": "最新发布",
+      "demoSkills": {
+        "weather": "查询全球城市实时天气",
+        "gitHelper": "智能 Git 操作辅助",
+        "diagramMaker": "生成流程图和架构图",
+        "codeReviewer": "自动代码审查",
+        "caption": "界面预览 · 4 个示例技能"
+      },
+      "highlights": {
+        "selfHosted": "自托管 Registry",
+        "governance": "审核与治理",
+        "multiClient": "Agent、CLI、Web 接入",
+        "traceable": "版本可追溯"
+      },
+      "capabilities": {
+        "eyebrow": "核心能力",
+        "title": "从注册到分发，管理完整的技能生命周期",
+        "description": "不只是技能仓库，而是一套覆盖发布、审核、分发和治理的平台。"
+      },
+      "stats": {
+        "publicSkills": "当前 Registry 公开技能",
+        "accessModes": "接入方式",
+        "permissionScopes": "RBAC 层级",
+        "license": "开源许可证"
+      },
+      "enterprise": {
+        "title": "为团队和企业而建",
+        "description": "在一个 Registry 中提供自托管、权限控制、审核流程与审计能力。",
+        "clientLayer": "接入端",
+        "serviceLayer": "服务层",
+        "storageLayer": "存储层",
+        "networkBoundary": "部署在企业环境中，自主管理 Registry 数据",
+        "deployment": {
+          "title": "自托管部署",
+          "description": "使用 Docker Compose 或仓库提供的 Kubernetes 清单部署 SkillHub，并选择本地或 S3 兼容对象存储。"
+        },
+        "security": {
+          "title": "校验与审核",
+          "description": "通过技能包校验、安全扫描和审核流程，帮助团队在发布前评估技能。"
+        },
+        "rbac": {
+          "title": "分层 RBAC",
+          "description": "平台角色与命名空间角色分离全局管理和团队所有权。"
+        },
+        "access": {
+          "title": "灵活接入",
+          "description": "浏览器支持 OAuth2 和本地账号登录，API Token 用于程序化访问。"
+        },
+        "audit": {
+          "title": "审计记录",
+          "description": "关键的发布、下载、删除和授权操作都有审计记录，便于追溯。"
+        },
+        "openSource": {
+          "title": "开源透明",
+          "description": "代码采用 Apache-2.0 许可证，可用于检查、自托管和社区贡献。"
+        }
+      },
+      "cta": {
+        "title": "构建团队自己的技能 Registry",
+        "description": "查看源代码和部署文档，然后在自己的环境中运行 SkillHub。",
+        "deploy": "查看源码",
+        "docs": "查看文档"
+      },
+      "quickStart": {
+        "title": "选择接入方式",
+        "description": "通过 Agent、CLI 或 Web 界面使用同一个技能 Registry。",
+        "copy": "复制",
+        "copied": "已复制",
+        "copyErrorTitle": "复制失败",
+        "modes": {
+          "agent": { "title": "Agent 自动接入", "description": "配置一次 Registry，按需发现技能" },
+          "cli": { "title": "CLI 命令行", "description": "搜索、获取和发布技能" },
+          "web": { "title": "Web 界面", "description": "可视化浏览、阅读并下载技能" }
+        },
+        "agent": {
+          "tablist": "Agent 接入演示",
+          "registryTab": "Registry 配置",
+          "discoveryTab": "隐式发现",
+          "live": "Agent 实时",
+          "instruction": "阅读 {{url}}，并按照说明完成 SkillHub Skills Registry 的配置",
+          "instructionLead": "复制以下指令，发送给 Agent 即可完成配置",
+          "instructionPrefix": "阅读",
+          "instructionSuffix": "，并按照说明完成 SkillHub Skills Registry 的配置。",
+          "copyInstruction": "复制指令",
+          "copyErrorDescription": "请手动选择并复制这条 Registry 配置指令。",
+          "steps": { "read": "读取文档", "configure": "配置 Registry", "discover": "按需发现技能" },
+          "prompt": "帮我查下合肥今天的天气",
+          "discovery": {
+            "intentTitle": "识别任务意图", "intentDescription": "需要实时天气与出行建议",
+            "searchTitle": "检索 SkillHub Registry", "searchDescription": "匹配 @global/weather · v1.3.0",
+            "readTitle": "读取技能说明", "readDescription": "确认输入格式和调用方式"
+          },
+          "answerLead": "合肥今天多云，26°C",
+          "answerTail": "，下午可能有短时阵雨，外出建议携带雨具。"
+        },
+        "cli": {
+          "copyErrorDescription": "请手动选择并复制这条 CLI 命令。",
+          "skillsFound": "示例结果：",
+          "forecastSummary": "7 天天气预报",
+          "installed": "@global/weather 已安装到 ./skills/global/weather",
+          "connected": "已连接",
+          "docs": "CLI 文档"
+        },
+        "web": {
+          "marketplace": "技能市场", "publicSkills": "公开技能", "search": "搜索技能",
+          "status": "公开 · 可用", "summary": "查询实时天气、未来预报和出行信息",
+          "download": "下载 ZIP", "readTitle": "先阅读，再使用",
+          "readDescription": "阅读 SKILL.md 中的用途、输入要求和执行方式，确认适合当前任务后再获取完整技能包。",
+          "version": "版本", "files": "文件", "format": "格式",
+          "browse": "浏览与搜索", "preview": "内容预览", "versions": "文件与版本", "favorites": "收藏和订阅"
+        }
+      }
     }
   },
   "home": {
@@ -1293,6 +1412,8 @@
     "folderHint": "或选择文件夹，自动打包上传"
   },
   "layout": {
+    "openNavigation": "打开导航菜单",
+    "closeNavigation": "关闭导航菜单",
     "footerDescription": "技能注册中心，为开发者提供高效的技能管理和分发平台。"
   },
   "nsReviews": {
@@ -1413,6 +1534,9 @@
     "subscribe": "订阅"
   },
   "skillCard": {
+    "downloads": "下载 {{value}}",
+    "stars": "收藏 {{count}}",
+    "rating": "评分 {{rating}}",
     "starred": "已收藏",
     "starredAction": "点击取消收藏",
     "unstarTitle": "取消收藏",
@@ -1424,6 +1548,7 @@
     "copy": "复制"
   },
   "pagination": {
+    "label": "分页导航",
     "prev": "上一页",
     "next": "下一页",
     "pagePrefix": "第",

@@ -13,4 +13,8 @@ describe('pagination module exports', () => {
   it('exports the Pagination component', () => {
     expect(mod.Pagination).toBeTypeOf('function')
   })
+
+  it('bounds long page ranges with first, current neighbours, and last page', () => {
+    expect(mod.buildPageItems(5, 12)).toEqual([0, 'ellipsis', 4, 5, 6, 'ellipsis', 11])
+  })
 })

@@ -10,7 +10,7 @@ export function NotificationSettingsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       <DashboardPageHeader title={t('notification.preferences.title')} subtitle={t('notification.preferences.description')} />
-      <NotificationPreferenceForm />
+      <NotificationPreferenceForm showHeader={false} />
     </div>
   )
 }

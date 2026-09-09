@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, ChevronRight, Copy, Download, FileText, Search } from 'lucide-react'
 import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { copyToClipboard, useCopyToClipboard } from '@/shared/lib/clipboard'
@@ -11,14 +12,14 @@ type AgentView = 'registry' | 'discovery'
 interface AccessModeOption {
   id: AccessMode
   number: string
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
 }
 
 const ACCESS_MODES: AccessModeOption[] = [
-  { id: 'agent', number: '01', title: 'Agent 自动接入', description: '配置一次 Registry，按需发现技能' },
-  { id: 'cli', number: '02', title: 'CLI 命令行', description: '搜索、获取和发布技能' },
-  { id: 'web', number: '03', title: 'Web 界面', description: '可视化浏览、阅读并下载技能' },
+  { id: 'agent', number: '01', titleKey: 'agent.title', descriptionKey: 'agent.description' },
+  { id: 'cli', number: '02', titleKey: 'cli.title', descriptionKey: 'cli.description' },
+  { id: 'web', number: '03', titleKey: 'web.title', descriptionKey: 'web.description' },
 ]
 
 function getRegistryUrl(): string {
@@ -33,18 +34,19 @@ function getRegistryUrl(): string {
 }
 
 function AgentAccessPanel() {
+  const { t } = useTranslation()
   const [activeView, setActiveView] = useState<AgentView>('registry')
   const [copied, copy] = useCopyToClipboard()
   const registryUrl = useMemo(getRegistryUrl, [])
-  const instruction = `阅读 ${registryUrl}/registry/skill.md，并按照说明完成 SkillHub Skills Registry 的配置`
+  const instruction = t('landing.experience.quickStart.agent.instruction', { url: `${registryUrl}/registry/skill.md` })
 
   return (
     <div className="min-h-[340px]">
       <div className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex w-fit items-center gap-1 border-b border-border/70" role="tablist" aria-label="Agent 接入演示">
+        <div className="inline-flex w-fit items-center gap-1 border-b border-border/70" role="tablist" aria-label={t('landing.experience.quickStart.agent.tablist')}>
           {([
-            ['registry', 'Registry 配置'],
-            ['discovery', '隐式发现'],
+            ['registry', t('landing.experience.quickStart.agent.registryTab')],
+            ['discovery', t('landing.experience.quickStart.agent.discoveryTab')],
           ] as const).map(([id, label]) => (
             <button
               key={id}
@@ -61,33 +63,37 @@ function AgentAccessPanel() {
         </div>
         <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-          Agent 实时
+          {t('landing.experience.quickStart.agent.live')}
         </span>
       </div>
 
       {activeView === 'registry' ? (
         <div className="animate-fade-up py-9">
-          <p className="mb-5 text-xs text-muted-foreground">复制以下指令，发送给 Agent 即可完成配置</p>
+          <p className="mb-5 text-xs text-muted-foreground">{t('landing.experience.quickStart.agent.instructionLead')}</p>
           <div className="flex flex-col gap-5 border-y border-border/70 py-5 sm:flex-row sm:items-start">
             <span className="mt-1 hidden h-12 w-1 flex-shrink-0 bg-foreground sm:block" aria-hidden />
             <p className="min-w-0 flex-1 text-sm leading-7 text-foreground">
-              阅读 <span className="break-all text-blue-600 underline decoration-blue-300 underline-offset-4">{registryUrl}/registry/skill.md</span>，并按照说明完成 SkillHub Skills Registry 的配置
+              {t('landing.experience.quickStart.agent.instructionPrefix')} <span className="break-all text-blue-600 underline decoration-blue-300 underline-offset-4">{registryUrl}/registry/skill.md</span> {t('landing.experience.quickStart.agent.instructionSuffix')}
             </p>
             <button
               type="button"
               onClick={() => {
                 void copy(instruction).catch(() => {
-                  toast.error('复制失败', '请手动选择并复制这条 Registry 配置指令。')
+                  toast.error(t('landing.experience.quickStart.copyErrorTitle'), t('landing.experience.quickStart.agent.copyErrorDescription'))
                 })
               }}
               className="inline-flex w-fit flex-shrink-0 items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-xs font-semibold text-background shadow-sm transition-[transform,opacity,box-shadow] duration-150 hover:-translate-y-px hover:opacity-90 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? '已复制' : '复制指令'}
+              {copied ? t('landing.experience.quickStart.copied') : t('landing.experience.quickStart.agent.copyInstruction')}
             </button>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {['读取文档', '配置 Registry', '按需发现技能'].map((step, index) => (
+            {[
+              t('landing.experience.quickStart.agent.steps.read'),
+              t('landing.experience.quickStart.agent.steps.configure'),
+              t('landing.experience.quickStart.agent.steps.discover'),
+            ].map((step, index) => (
               <div key={step} className="flex items-center gap-2">
                 {index > 0 ? <span className="h-px w-6 bg-border" /> : null}
                 <span>{step}</span>
@@ -98,13 +104,13 @@ function AgentAccessPanel() {
       ) : (
         <div className="animate-fade-up py-8">
           <div className="mb-7 flex justify-end">
-            <span className="border-b border-foreground pb-2 text-sm text-foreground">帮我查下合肥今天的天气</span>
+            <span className="border-b border-foreground pb-2 text-sm text-foreground">{t('landing.experience.quickStart.agent.prompt')}</span>
           </div>
           <div className="relative space-y-0 pl-7 before:absolute before:bottom-3 before:left-[5px] before:top-3 before:w-px before:bg-border">
             {[
-              ['识别任务意图', '需要实时天气与出行建议'],
-              ['检索 SkillHub Registry', '匹配 @global/weather · v1.3.0'],
-              ['读取技能说明', '确认输入格式和调用方式'],
+              [t('landing.experience.quickStart.agent.discovery.intentTitle'), t('landing.experience.quickStart.agent.discovery.intentDescription')],
+              [t('landing.experience.quickStart.agent.discovery.searchTitle'), t('landing.experience.quickStart.agent.discovery.searchDescription')],
+              [t('landing.experience.quickStart.agent.discovery.readTitle'), t('landing.experience.quickStart.agent.discovery.readDescription')],
             ].map(([title, description], index) => (
               <div key={title} className={`relative grid grid-cols-1 gap-1 border-b border-border/60 py-3.5 sm:grid-cols-[9rem_1fr] animate-fade-up delay-${index + 1}`}>
                 <span className="absolute -left-[26px] top-[20px] h-2.5 w-2.5 rounded-full border-2 border-background bg-muted-foreground ring-1 ring-border" />
@@ -114,7 +120,7 @@ function AgentAccessPanel() {
             ))}
           </div>
           <p className="mt-6 border-t-2 border-foreground pt-5 text-sm leading-7 text-foreground">
-            <strong className="text-emerald-700 dark:text-emerald-400">合肥今天多云，26°C</strong>，下午可能有短时阵雨，外出建议携带雨具。
+            <strong className="text-emerald-700 dark:text-emerald-400">{t('landing.experience.quickStart.agent.answerLead')}</strong>{t('landing.experience.quickStart.agent.answerTail')}
           </p>
         </div>
       )}
@@ -123,6 +129,7 @@ function AgentAccessPanel() {
 }
 
 function CliAccessPanel() {
+  const { t } = useTranslation()
   const [copiedIdx, setCopiedIdx] = useState(-1)
 
   const handleCopy = (text: string, idx: number) => {
@@ -132,7 +139,7 @@ function CliAccessPanel() {
         window.setTimeout(() => setCopiedIdx((prev) => (prev === idx ? -1 : prev)), 2000)
       })
       .catch(() => {
-        toast.error('复制失败', '请手动选择并复制这条 CLI 命令。')
+        toast.error(t('landing.experience.quickStart.copyErrorTitle'), t('landing.experience.quickStart.cli.copyErrorDescription'))
       })
   }
 
@@ -169,7 +176,7 @@ function CliAccessPanel() {
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
               >
                 {copiedIdx === 0 ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedIdx === 0 ? '已复制' : '复制'}
+                {copiedIdx === 0 ? t('landing.experience.quickStart.copied') : t('landing.experience.quickStart.copy')}
               </button>
             </div>
           </div>
@@ -188,7 +195,7 @@ function CliAccessPanel() {
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
               >
                 {copiedIdx === 1 ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedIdx === 1 ? '已复制' : '复制'}
+                {copiedIdx === 1 ? t('landing.experience.quickStart.copied') : t('landing.experience.quickStart.copy')}
               </button>
             </div>
           </div>
@@ -201,16 +208,16 @@ function CliAccessPanel() {
             <span className="text-neutral-800 dark:text-neutral-200">5</span>
           </div>
           <div className="mt-1 space-y-0.5 pl-5">
-            <div className="text-[11px] text-muted-foreground">Skills found:</div>
+            <div className="text-[11px] text-muted-foreground">{t('landing.experience.quickStart.cli.skillsFound')}</div>
             <div className="flex gap-4">
               <span className="text-blue-600 dark:text-blue-400">@global/weather</span>
               <span className="text-muted-foreground">v1.3.0</span>
-              <span className="text-neutral-600 dark:text-neutral-400">查询全球城市天气</span>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('landing.experience.demoSkills.weather')}</span>
             </div>
             <div className="flex gap-4">
               <span className="text-blue-600 dark:text-blue-400">@global/forecast</span>
               <span className="text-muted-foreground">v2.1.0</span>
-              <span className="text-neutral-600 dark:text-neutral-400">7 天天气预报</span>
+              <span className="text-neutral-600 dark:text-neutral-400">{t('landing.experience.quickStart.cli.forecastSummary')}</span>
             </div>
           </div>
         </div>
@@ -227,7 +234,7 @@ function CliAccessPanel() {
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
               >
                 {copiedIdx === 2 ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedIdx === 2 ? '已复制' : '复制'}
+                {copiedIdx === 2 ? t('landing.experience.quickStart.copied') : t('landing.experience.quickStart.copy')}
               </button>
             </div>
           </div>
@@ -241,7 +248,7 @@ function CliAccessPanel() {
           </div>
           <div className="mt-1 flex items-center gap-1.5 pl-5 text-[11px] text-emerald-600 dark:text-emerald-400">
             <Check className="h-3 w-3" strokeWidth={2.5} />
-            <span>@global/weather installed to ./skills/global/weather</span>
+            <span>{t('landing.experience.quickStart.cli.installed')}</span>
           </div>
         </div>
 
@@ -257,13 +264,13 @@ function CliAccessPanel() {
         <div className="flex items-center gap-3 text-muted-foreground">
           <span className="flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            connected
+            {t('landing.experience.quickStart.cli.connected')}
           </span>
           <span className="text-border">·</span>
           <span className="font-mono">registry: skill.xfyun.cn</span>
         </div>
         <a href="https://github.com/iflytek/skillhub/tree/main/cli" target="_blank" rel="noreferrer" className="group flex items-center gap-1 font-medium text-blue-600 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400 dark:hover:text-blue-300">
-          CLI 文档
+          {t('landing.experience.quickStart.cli.docs')}
           <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
         </a>
       </div>
@@ -272,17 +279,19 @@ function CliAccessPanel() {
 }
 
 function WebAccessPanel() {
+  const { t } = useTranslation()
+
   return (
     <div className="min-h-[340px]">
       <div className="grid gap-6 md:grid-cols-[11rem_minmax(0,1fr)]">
         <div className="border-b border-border/70 pb-5 md:border-b-0 md:border-r md:pb-0 md:pr-5">
           <div className="mb-4 flex items-center justify-between">
-            <strong className="text-xs font-semibold text-foreground">技能市场</strong>
-            <span className="text-[10px] text-muted-foreground">公开技能</span>
+            <strong className="text-xs font-semibold text-foreground">{t('landing.experience.quickStart.web.marketplace')}</strong>
+            <span className="text-[10px] text-muted-foreground">{t('landing.experience.quickStart.web.publicSkills')}</span>
           </div>
           <div className="mb-3 flex items-center gap-2 border-b border-border/70 pb-2.5 text-[11px] text-muted-foreground">
             <Search className="h-3.5 w-3.5" />
-            搜索技能
+            {t('landing.experience.quickStart.web.search')}
           </div>
           {[
             ['W', 'weather', '@global'],
@@ -303,13 +312,13 @@ function WebAccessPanel() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />公开 · 正常
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('landing.experience.quickStart.web.status')}
               </span>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">weather <span className="font-mono text-xs font-normal text-muted-foreground">@global</span></h3>
-              <p className="mt-1 text-xs text-muted-foreground">查询实时天气、未来预报和出行信息</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('landing.experience.quickStart.web.summary')}</p>
             </div>
             <a href={buildApiUrl(`${WEB_API_PREFIX}/skills/global/weather/download`)} className="inline-flex w-fit items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-xs font-semibold text-background shadow-sm transition-[transform,opacity,box-shadow] duration-150 hover:-translate-y-px hover:opacity-90 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none">
-              <Download className="h-3.5 w-3.5" />下载 ZIP
+              <Download className="h-3.5 w-3.5" />{t('landing.experience.quickStart.web.download')}
             </a>
           </div>
 
@@ -317,21 +326,21 @@ function WebAccessPanel() {
             <div>
               <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
                 <FileText className="h-3.5 w-3.5" />
-                先阅读，再使用
+                {t('landing.experience.quickStart.web.readTitle')}
               </div>
               <p className="text-[11px] leading-6 text-muted-foreground">
-                阅读 SKILL.md 中的用途、输入要求和执行方式，确认适合当前任务后再获取完整技能包。
+                {t('landing.experience.quickStart.web.readDescription')}
               </p>
             </div>
             <dl className="space-y-3 text-[10px]">
-              <div className="flex justify-between border-b border-border/60 pb-2"><dt className="text-muted-foreground">版本</dt><dd className="font-mono text-foreground">v1.3.0</dd></div>
-              <div className="flex justify-between border-b border-border/60 pb-2"><dt className="text-muted-foreground">文件</dt><dd className="text-foreground">3</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">格式</dt><dd className="text-foreground">ZIP</dd></div>
+              <div className="flex justify-between border-b border-border/60 pb-2"><dt className="text-muted-foreground">{t('landing.experience.quickStart.web.version')}</dt><dd className="font-mono text-foreground">v1.3.0</dd></div>
+              <div className="flex justify-between border-b border-border/60 pb-2"><dt className="text-muted-foreground">{t('landing.experience.quickStart.web.files')}</dt><dd className="text-foreground">3</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">{t('landing.experience.quickStart.web.format')}</dt><dd className="text-foreground">ZIP</dd></div>
             </dl>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
-            <span>浏览与搜索</span><span>内容预览</span><span>文件与版本</span><span>收藏和订阅</span>
+            <span>{t('landing.experience.quickStart.web.browse')}</span><span>{t('landing.experience.quickStart.web.preview')}</span><span>{t('landing.experience.quickStart.web.versions')}</span><span>{t('landing.experience.quickStart.web.favorites')}</span>
           </div>
         </div>
       </div>
@@ -340,6 +349,7 @@ function WebAccessPanel() {
 }
 
 export function LandingQuickStartSection() {
+  const { t } = useTranslation()
   const [activeMode, setActiveMode] = useState<AccessMode>('agent')
 
   return (
@@ -347,9 +357,9 @@ export function LandingQuickStartSection() {
       <div className="absolute inset-0 bg-dots opacity-40" aria-hidden />
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-12 max-w-3xl">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Quick Start</p>
-          <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">选择你的接入方式</h2>
-          <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">三种路径，获得同一套技能能力。选择最适合你工作流的入口。</p>
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.quickStart.title')}</p>
+          <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">{t('landing.experience.quickStart.title')}</h2>
+          <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">{t('landing.experience.quickStart.description')}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-12">
@@ -367,8 +377,8 @@ export function LandingQuickStartSection() {
                   <span className={`absolute inset-y-3 left-0 w-0.5 origin-center bg-foreground transition-transform duration-200 ${active ? 'scale-y-100' : 'scale-y-0'}`} aria-hidden />
                   <span className={`font-mono text-[11px] font-semibold transition-colors duration-200 ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{mode.number}</span>
                   <span className="min-w-0 flex-1">
-                    <strong className={`block text-sm font-semibold transition-colors ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{mode.title}</strong>
-                    <span className="mt-1 block text-[11px] text-muted-foreground">{mode.description}</span>
+                    <strong className={`block text-sm font-semibold transition-colors ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{t(`landing.experience.quickStart.modes.${mode.titleKey}`)}</strong>
+                    <span className="mt-1 block text-[11px] text-muted-foreground">{t(`landing.experience.quickStart.modes.${mode.descriptionKey}`)}</span>
                   </span>
                   <span className={`h-1.5 w-1.5 rounded-full transition-colors ${active ? 'bg-foreground' : 'bg-border'}`} />
                 </button>

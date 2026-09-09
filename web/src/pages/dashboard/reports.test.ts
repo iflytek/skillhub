@@ -56,10 +56,16 @@ vi.mock('@/shared/lib/toast', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-import { ReportsPage } from './reports'
+import { clampReportPage, ReportsPage } from './reports'
 
 describe('ReportsPage', () => {
   it('exports a named component function', () => {
     expect(typeof ReportsPage).toBe('function')
+  })
+
+  it('moves an out-of-range page back after the last item is handled', () => {
+    expect(clampReportPage(2, { total: 20, size: 10 })).toBe(1)
+    expect(clampReportPage(1, { total: 0, size: 10 })).toBe(0)
+    expect(clampReportPage(1, { total: 25, size: 10 })).toBe(1)
   })
 })

@@ -1,10 +1,12 @@
 import type { SkillSummary } from '@/api/types'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { useStarredIdSet } from '@/features/social/use-star'
 import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 import { Bookmark, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
@@ -13,29 +15,11 @@ interface SkillCardProps {
   highlightStarred?: boolean
 }
 
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  const diffMonths = Math.floor(diffDays / 30)
-  const diffYears = Math.floor(diffDays / 365)
-
-  if (diffSeconds < 60) return '刚刚'
-  if (diffMinutes < 60) return `${diffMinutes}分钟前`
-  if (diffHours < 24) return `${diffHours}小时前`
-  if (diffDays < 30) return `${diffDays}天前`
-  if (diffMonths < 12) return `${diffMonths}个月前`
-  return `${diffYears}年前`
-}
-
 /**
  * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
  */
 export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuth()
   // Batch highlight via shared ['skills','stars'] — never N× useStar per grid row.
   const { starredIds } = useStarredIdSet(highlightStarred && isAuthenticated)
@@ -43,8 +27,9 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
   const headlineVersion = getHeadlineVersion(skill)
   const isInteractive = typeof onClick === 'function'
   const complianceItems = skill.complianceSnapshot?.items?.filter((item) => item.standard || item.controlId) ?? []
-  const downloadLabel = `下载 ${formatCompactCount(skill.downloadCount)}`
-  const starLabel = `收藏 ${skill.starCount}`
+  const downloadLabel = t('skillCard.downloads', { value: formatCompactCount(skill.downloadCount) })
+  const starLabel = t('skillCard.stars', { count: skill.starCount })
+  const ratingLabel = t('skillCard.rating', { rating: skill.ratingAvg?.toFixed(1) ?? '0.0' })
 
   return (
     <Card
@@ -126,7 +111,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             {skill.starCount}
           </span>
           {skill.ratingAvg !== undefined && skill.ratingCount > 0 && (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400" title={`评分 ${skill.ratingAvg.toFixed(1)}`} aria-label={`评分 ${skill.ratingAvg.toFixed(1)}`}>
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400" title={ratingLabel} aria-label={ratingLabel}>
               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
@@ -145,7 +130,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             {skill.updatedAt && (
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {formatRelativeTime(skill.updatedAt)}
+                {formatRelativeTime(skill.updatedAt, i18n.language)}
               </span>
             )}
           </div>

@@ -161,7 +161,7 @@ test.describe('Light and dark theme', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(page.getByRole('switch', { name: 'Dark theme' })).toHaveAttribute('aria-checked', 'true')
-    await expect(page.getByRole('heading', { name: 'SkillHub', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Turn team expertise into Agent-ready skills' })).toBeVisible()
     await expect.poll(() => page.evaluate(() => (
       window as Window & { __themeAtFirstReactContent?: boolean }
     ).__themeAtFirstReactContent)).toBe(true)

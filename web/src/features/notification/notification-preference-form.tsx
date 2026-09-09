@@ -36,7 +36,7 @@ function buildUpdatedPreferences(
 /**
  * Renders the notification preference toggles for all supported categories.
  */
-export function NotificationPreferenceForm() {
+export function NotificationPreferenceForm({ showHeader = true }: { showHeader?: boolean }) {
   const { t } = useTranslation()
   const { data: preferences = [], isLoading } = useNotificationPreferences()
   const { mutate: updatePreferences, isPending } = useUpdateNotificationPreferences()
@@ -49,10 +49,12 @@ export function NotificationPreferenceForm() {
 
   return (
     <Card className="glass-strong">
-      <CardHeader>
-        <CardTitle>{t('notification.preferences.title')}</CardTitle>
-        <CardDescription>{t('notification.preferences.description')}</CardDescription>
-      </CardHeader>
+      {showHeader ? (
+        <CardHeader>
+          <CardTitle>{t('notification.preferences.title')}</CardTitle>
+          <CardDescription>{t('notification.preferences.description')}</CardDescription>
+        </CardHeader>
+      ) : null}
       <CardContent>
         <div className="divide-y divide-border">
           {CATEGORIES.map((category) => {

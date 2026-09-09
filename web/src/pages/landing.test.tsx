@@ -75,6 +75,6 @@ describe('LandingPage', () => {
     const html = renderToStaticMarkup(<LandingPage />)
 
     expect(html).toContain('SkillHub')
-    expect(html).toContain('把团队的专业能力，沉淀成 Agent 可用的技能')
+    expect(html).toContain('landing.experience.heroTitle')
   })
 })

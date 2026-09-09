@@ -9,7 +9,7 @@ test.describe('Landing Navigation (Real API)', () => {
   test('submits the hero search to the search page', async ({ page }) => {
     await page.goto('/')
 
-    await expect(page.getByRole('heading', { name: 'Discover & Share AI Skills' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Turn team expertise into Agent-ready skills' })).toBeVisible()
 
     const searchInput = page.getByPlaceholder('Search skills...')
     await searchInput.fill('agent ops')

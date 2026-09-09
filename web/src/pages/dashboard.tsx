@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import {
   Star, Heart, Package, Key, Shield, Flag, Globe,
   UserCog, Lock, Bell, Clock, ChevronRight,
@@ -21,6 +22,7 @@ interface SidebarItem {
   label: string
   to: string
   admin?: boolean
+  passwordCapability?: boolean
   badge?: string
 }
 
@@ -34,7 +36,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: 'sidebar.account',
     items: [
       { key: 'profile', icon: UserCog, label: 'sidebar.profile', to: '/settings/profile' },
-      { key: 'security', icon: Lock, label: 'sidebar.security', to: '/settings/security' },
+      { key: 'security', icon: Lock, label: 'sidebar.security', to: '/settings/security', passwordCapability: true },
       { key: 'notifications', icon: Bell, label: 'sidebar.notifications', to: '/settings/notifications' },
     ],
   },
@@ -61,12 +63,13 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
 // Flatten for backward compatibility with layout.tsx
 const SIDEBAR_NAV_ITEMS = SIDEBAR_GROUPS.flatMap((g) => g.items)
 
-export const SIDEBAR_NAV = SIDEBAR_NAV_ITEMS.map(({ key, icon, label, to, admin }) => ({
+export const SIDEBAR_NAV = SIDEBAR_NAV_ITEMS.map(({ key, icon, label, to, admin, passwordCapability }) => ({
   key,
   icon,
   label,
   to,
   admin,
+  passwordCapability,
   exact: false,
 }))
 
@@ -93,12 +96,16 @@ export function DashboardPage() {
   const filteredGroups = SIDEBAR_GROUPS
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.admin || governanceVisible),
+      items: group.items.filter((item) => (
+        (!item.admin || governanceVisible)
+        && (!item.passwordCapability || user?.canChangePassword === true)
+      )),
     }))
     .filter((group) => group.items.length > 0)
 
   return (
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
+      <DashboardPageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
       {/* Two-column layout */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left sidebar */}
@@ -107,7 +114,7 @@ export function DashboardPage() {
         {/* Right content - overview cards */}
         <div className="flex-1 min-w-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {OVERVIEW_CARDS.map((card) => {
+            {OVERVIEW_CARDS.filter((card) => card.key !== 'security' || user?.canChangePassword === true).map((card) => {
               const Icon = card.icon
               return (
                 <Link
@@ -169,6 +176,9 @@ export function DashboardSidebar({
           </div>
           <div className="text-xs truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {user?.email}
+          </div>
+          <div className="text-xs truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            {t('dashboard.userId')}: {user?.userId}
           </div>
         </div>
       </div>

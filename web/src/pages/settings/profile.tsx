@@ -7,7 +7,7 @@ import { useAuth } from '@/features/auth/use-auth'
 import { truncateErrorMessage } from '@/shared/lib/error-display'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Card, CardContent, CardHeader } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 
@@ -179,16 +179,14 @@ export function ProfileSettingsPage() {
     <div className="space-y-8 animate-fade-up">
       <DashboardPageHeader title={t('profile.title')} subtitle={t('profile.subtitle')} />
       <Card className="glass-strong">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>{t('profile.title')}</CardTitle>
-            <CardDescription>{t('profile.subtitle')}</CardDescription>
-          </div>
+        <CardHeader className="flex flex-row items-center justify-end">
           {!isEditing ? (
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/settings/security' })}>
-                {t('profile.resetPassword')}
-              </Button>
+              {user?.canChangePassword === true ? (
+                <Button type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/settings/security' })}>
+                  {t('profile.resetPassword')}
+                </Button>
+              ) : null}
               {hasEditableFields ? (
                 <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
                   {t('profile.edit')}

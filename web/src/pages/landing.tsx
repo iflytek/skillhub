@@ -27,7 +27,7 @@ import { Button } from '@/shared/ui/button'
 interface HeroSkillItem {
   name: string
   namespace: string
-  summary: string
+  summaryKey: string
   version: string
   badgeClassName: string
   statusClassName: string
@@ -37,7 +37,7 @@ const HERO_SKILLS: HeroSkillItem[] = [
   {
     name: 'weather',
     namespace: 'global',
-    summary: '查询全球城市实时天气',
+    summaryKey: 'landing.experience.demoSkills.weather',
     version: '1.3.0',
     badgeClassName: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300',
     statusClassName: 'bg-emerald-500',
@@ -45,7 +45,7 @@ const HERO_SKILLS: HeroSkillItem[] = [
   {
     name: 'git-helper',
     namespace: 'devtools',
-    summary: '智能 Git 操作辅助',
+    summaryKey: 'landing.experience.demoSkills.gitHelper',
     version: '2.1.0',
     badgeClassName: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300',
     statusClassName: 'bg-emerald-500',
@@ -53,7 +53,7 @@ const HERO_SKILLS: HeroSkillItem[] = [
   {
     name: 'diagram-maker',
     namespace: 'global',
-    summary: '生成流程图、架构图',
+    summaryKey: 'landing.experience.demoSkills.diagramMaker',
     version: '0.9.2',
     badgeClassName: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
     statusClassName: 'bg-amber-500',
@@ -61,7 +61,7 @@ const HERO_SKILLS: HeroSkillItem[] = [
   {
     name: 'code-reviewer',
     namespace: 'devtools',
-    summary: '自动代码审查',
+    summaryKey: 'landing.experience.demoSkills.codeReviewer',
     version: '1.5.0',
     badgeClassName: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-300',
     statusClassName: 'bg-emerald-500',
@@ -69,6 +69,8 @@ const HERO_SKILLS: HeroSkillItem[] = [
 ]
 
 function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) {
+  const { t } = useTranslation()
+
   return (
     <div className="relative mt-8 lg:mt-0">
       <div className="absolute -inset-3 -z-10 hidden rotate-1 rounded-2xl bg-secondary lg:block" />
@@ -89,7 +91,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
             <SearchIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <input
               type="text"
-              placeholder="搜索技能..."
+              placeholder={t('landing.hero.searchPlaceholder')}
               className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -115,7 +117,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
                     <span className="truncate text-sm font-semibold text-foreground">{skill.name}</span>
                     <span className="font-mono text-xs text-muted-foreground">@{skill.namespace}</span>
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">{skill.summary}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{t(skill.summaryKey)}</span>
                 </span>
                 <span className="flex-shrink-0 text-right">
                   <span className={`mb-1 inline-block h-2 w-2 rounded-full ${skill.statusClassName}`} />
@@ -126,13 +128,13 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
           </div>
 
           <div className="mt-auto flex items-center justify-between border-t border-border/70 pt-3">
-            <span className="text-xs text-muted-foreground">显示 4 / 1000+ 技能</span>
+            <span className="text-xs text-muted-foreground">{t('landing.experience.demoSkills.caption')}</span>
             <Link
               to="/search"
               search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
               className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary"
             >
-              浏览全部 <ArrowRight className="h-3 w-3" />
+              {t('landing.experience.browseAll')} <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
         </div>
@@ -141,7 +143,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
       <div className="absolute -bottom-3 -right-3 hidden items-center gap-3 rounded-xl border border-border/70 bg-background p-3 shadow-lg sm:flex">
         <BrandMark className="h-9 w-9 rounded-lg bg-background ring-1 ring-border/70" />
         <div>
-          <div className="text-sm font-semibold text-foreground">发布技能</div>
+          <div className="text-sm font-semibold text-foreground">{t('landing.hero.publishSkill')}</div>
           <div className="text-xs text-muted-foreground">Web · CLI · Agent</div>
         </div>
       </div>
@@ -149,12 +151,13 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
   )
 }
 
-function LandingStatsSection() {
+function LandingStatsSection({ skillCount }: { skillCount?: number }) {
+  const { t, i18n } = useTranslation()
   const stats = [
-    { value: '500', suffix: '+', label: '已注册技能' },
-    { value: '50', suffix: '+', label: '团队使用' },
-    { value: '10', suffix: '万+', label: '累计下载' },
-    { value: '99.9', suffix: '%', label: '服务可用性' },
+    { value: skillCount === undefined ? '—' : skillCount.toLocaleString(i18n.language), label: t('landing.experience.stats.publicSkills') },
+    { value: '3', label: t('landing.experience.stats.accessModes') },
+    { value: '2', label: t('landing.experience.stats.permissionScopes') },
+    { value: 'Apache-2.0', label: t('landing.experience.stats.license') },
   ]
 
   return (
@@ -163,7 +166,7 @@ function LandingStatsSection() {
         {stats.map((stat) => (
           <div key={stat.label} className="text-center">
             <div className="mb-1 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              {stat.value}<span className="text-muted-foreground/45">{stat.suffix}</span>
+              {stat.value}
             </div>
             <div className="text-sm text-muted-foreground">{stat.label}</div>
           </div>
@@ -174,13 +177,15 @@ function LandingStatsSection() {
 }
 
 function EnterpriseSection() {
+  const { t } = useTranslation()
+
   return (
     <section className="w-full bg-background px-6 py-16 md:py-20">
       <div className="mx-auto max-w-6xl">
         <div className="text-center mb-12">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Enterprise</p>
-          <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">为团队和企业而建</h2>
-          <p className="text-muted-foreground">从代码到部署，全链路企业级保障</p>
+          <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">{t('landing.experience.enterprise.title')}</h2>
+          <p className="text-muted-foreground">{t('landing.experience.enterprise.description')}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -189,15 +194,15 @@ function EnterpriseSection() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white">
                 <Server className="h-4 w-4" />
               </div>
-              <h3 className="font-semibold text-foreground">私有化部署</h3>
+              <h3 className="font-semibold text-foreground">{t('landing.experience.enterprise.deployment.title')}</h3>
             </div>
             <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-              部署在企业内网，数据自主可控。Docker 一键启动，Kubernetes 横向扩展，支持气隙环境离线运行。
+              {t('landing.experience.enterprise.deployment.description')}
             </p>
             <div className="flex-1 rounded-lg border border-border/70 bg-secondary/50 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <div className="mb-0.5 text-center text-[10px] text-muted-foreground">接入端</div>
+                  <div className="mb-0.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.clientLayer')}</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">Agent</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">CLI</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">Web</div>
@@ -206,61 +211,61 @@ function EnterpriseSection() {
                   <svg className="h-4 w-16 text-border" fill="none" stroke="currentColor" viewBox="0 0 64 16"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" strokeDasharray="3 3" d="M0 8h54" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M50 4l6 4-6 4" /></svg>
                 </div>
                 <div className="flex flex-col items-center flex-shrink-0">
-                  <div className="mb-0.5 text-center text-[10px] text-muted-foreground">服务层</div>
+                  <div className="mb-0.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.serviceLayer')}</div>
                   <div className="rounded-lg bg-neutral-900 px-3.5 py-3 text-center text-xs font-semibold leading-tight text-white">SkillHub<br />Registry</div>
                 </div>
                 <div className="flex flex-1 items-center justify-center">
                   <svg className="h-4 w-16 text-border" fill="none" stroke="currentColor" viewBox="0 0 64 16"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" strokeDasharray="3 3" d="M0 8h54" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M50 4l6 4-6 4" /></svg>
                 </div>
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <div className="mb-0.5 text-center text-[10px] text-muted-foreground">存储层</div>
+                  <div className="mb-0.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.storageLayer')}</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">PostgreSQL</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">Redis</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">MinIO / S3</div>
                 </div>
               </div>
-              <div className="border-t border-dashed border-border/70 pt-2.5 text-center text-[10px] text-muted-foreground">企业网络边界 · 数据不出网</div>
+              <div className="border-t border-dashed border-border/70 pt-2.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.networkBoundary')}</div>
             </div>
           </div>
 
           <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="mb-2 flex items-center gap-3">
               <Shield className="h-5 w-5 text-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">安全合规</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('landing.experience.enterprise.security.title')}</h3>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">三道安全防线：内容合规审核、依赖漏洞扫描、AI 安全评估。发布前全量检查。</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('landing.experience.enterprise.security.description')}</p>
           </div>
 
           <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="mb-2 flex items-center gap-3">
               <Lock className="h-5 w-5 text-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">RBAC 权限体系</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('landing.experience.enterprise.rbac.title')}</h3>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">平台级与命名空间级双层 RBAC，Owner / Admin / Member 角色模型，权限边界清晰。</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('landing.experience.enterprise.rbac.description')}</p>
           </div>
 
           <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="mb-2 flex items-center gap-3">
               <Settings className="h-5 w-5 text-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">SSO 集成</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('landing.experience.enterprise.access.title')}</h3>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">OAuth2 / SAML 对接企业 SSO，API Token 程序化访问，无需重复登录。</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('landing.experience.enterprise.access.description')}</p>
           </div>
 
           <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="mb-2 flex items-center gap-3">
               <Monitor className="h-5 w-5 text-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">审计日志</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('landing.experience.enterprise.audit.title')}</h3>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">发布、下载、权限变更全记录，操作可追溯、可审计。</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('landing.experience.enterprise.audit.description')}</p>
           </div>
 
           <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="mb-2 flex items-center gap-3">
               <GitBranch className="h-5 w-5 text-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">开源透明</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('landing.experience.enterprise.openSource.title')}</h3>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">Apache-2.0 协议，代码与审核规则完全开源，社区驱动。</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('landing.experience.enterprise.openSource.description')}</p>
           </div>
         </div>
       </div>
@@ -310,48 +315,48 @@ export function LandingPage() {
   const features = [
     {
       icon: <Shield className="h-5 w-5" strokeWidth={1.75} />,
-      title: t('landing.features.secure.title', { defaultValue: '安全私密' }),
-      description: t('landing.features.secure.description', { defaultValue: '企业级安全保护您的 AI 工作流' }),
+      title: t('landing.features.secure.title'),
+      description: t('landing.features.secure.description'),
     },
     {
       icon: <Users className="h-5 w-5" strokeWidth={1.75} />,
-      title: t('landing.features.community.title', { defaultValue: '社区驱动' }),
-      description: t('landing.features.community.description', { defaultValue: '与全球开发者分享和发现技能' }),
+      title: t('landing.features.community.title'),
+      description: t('landing.features.community.description'),
     },
     {
       icon: <PackageOpen className="h-5 w-5" strokeWidth={1.75} />,
-      title: t('landing.features.integration.title', { defaultValue: '轻松集成' }),
-      description: t('landing.features.integration.description', { defaultValue: '无缝集成到您现有的工具中' }),
+      title: t('landing.features.integration.title'),
+      description: t('landing.features.integration.description'),
     },
     {
       icon: <GitBranch className="h-5 w-5" strokeWidth={1.75} />,
-      title: t('landing.features.versionControl.title', { defaultValue: '版本控制' }),
-      description: t('landing.features.versionControl.description', { defaultValue: '完善的版本管理和发布流程，确保技能包的质量和可追溯性。' }),
+      title: t('landing.features.versionControl.title'),
+      description: t('landing.features.versionControl.description'),
     },
     {
       icon: <Terminal className="h-5 w-5" strokeWidth={1.75} />,
-      title: t('landing.features.cli.title', { defaultValue: 'CLI 工具' }),
-      description: t('landing.features.cli.description', { defaultValue: '强大的命令行工具，支持快速发布、安装和管理技能包。' }),
+      title: t('landing.features.cli.title'),
+      description: t('landing.features.cli.description'),
     },
     {
       icon: <Settings className="h-5 w-5" strokeWidth={1.75} />,
-      title: t('landing.features.governance.title', { defaultValue: '审核治理' }),
-      description: t('landing.features.governance.description', { defaultValue: '内置审核流程和权限管理，保障企业级技能质量。' }),
+      title: t('landing.features.governance.title'),
+      description: t('landing.features.governance.description'),
     },
   ]
 
   const heroHighlights = [
-    { icon: <PackageOpen className="h-4 w-4" strokeWidth={1.5} />, label: '1000+ 可用技能' },
-    { icon: <Shield className="h-4 w-4" strokeWidth={1.5} />, label: '3 道安全审核' },
-    { icon: <Terminal className="h-4 w-4" strokeWidth={1.5} />, label: '多平台接入' },
-    { icon: <Clock3 className="h-4 w-4" strokeWidth={1.5} />, label: '版本可追溯' },
+    { icon: <PackageOpen className="h-4 w-4" strokeWidth={1.5} />, label: t('landing.experience.highlights.selfHosted') },
+    { icon: <Shield className="h-4 w-4" strokeWidth={1.5} />, label: t('landing.experience.highlights.governance') },
+    { icon: <Terminal className="h-4 w-4" strokeWidth={1.5} />, label: t('landing.experience.highlights.multiClient') },
+    { icon: <Clock3 className="h-4 w-4" strokeWidth={1.5} />, label: t('landing.experience.highlights.traceable') },
   ]
 
-  const popularTitle = t('home.popularTitle', { defaultValue: '热门下载' })
-  const popularDescription = t('home.popularDescription', { defaultValue: '社区最受欢迎的技能' })
-  const latestTitle = t('home.latestTitle', { defaultValue: '最新发布' })
-  const latestDescription = t('home.latestDescription', { defaultValue: '社区最新贡献的技能' })
-  const viewAllText = t('home.viewAll', { defaultValue: '查看全部 →' })
+  const popularTitle = t('home.popularTitle')
+  const popularDescription = t('home.popularDescription')
+  const latestTitle = t('home.latestTitle')
+  const latestDescription = t('home.latestDescription')
+  const viewAllText = t('home.viewAll')
 
   return (
     <>
@@ -363,27 +368,27 @@ export function LandingPage() {
           <div>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/70 bg-secondary/80 px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              Agent 技能管理平台
+              {t('landing.experience.heroBadge')}
             </div>
 
             <h1 className="mb-5 max-w-2xl text-4xl font-medium leading-[1.12] tracking-tight text-foreground md:text-5xl">
-              把团队的专业能力，沉淀成 Agent 可用的技能
+              {t('landing.experience.heroTitle')}
             </h1>
 
             <p className="mb-8 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              让 AI 能力从个人经验变成可复用、可管理、可信赖的组织资产。
+              {t('landing.experience.heroDescription')}
             </p>
 
             <div className="mb-8 flex flex-wrap gap-3">
               <Link to="/dashboard/publish" className="btn-pill btn-pill-primary">
-                {t('landing.hero.publishSkill', { defaultValue: '发布技能' })}
+                {t('landing.hero.publishSkill')}
               </Link>
               <Link
                 to="/search"
                 search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
                 className="group btn-pill btn-pill-outline inline-flex items-center gap-2"
               >
-                {t('landing.hero.exploreSkills', { defaultValue: '探索技能' })} <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+                {t('landing.hero.exploreSkills')} <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transform-none" />
               </Link>
             </div>
 
@@ -406,12 +411,12 @@ export function LandingPage() {
       <section ref={featuresView.ref} className={`relative z-10 w-full bg-background px-6 py-16 scroll-fade-up${featuresView.inView ? ' in-view' : ''} md:py-20`}>
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 max-w-3xl">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Capabilities</p>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.experience.capabilities.eyebrow')}</p>
             <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-              从注册到分发，完整的技能生命周期管理
+              {t('landing.experience.capabilities.title')}
             </h2>
             <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              不只是一个技能仓库，而是一套覆盖发布、审核、分发、治理的完整平台。
+              {t('landing.experience.capabilities.description')}
             </p>
           </div>
 
@@ -437,7 +442,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Marketplace</p>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.experience.marketplace')}</p>
               <h2 className="mb-2 text-3xl font-medium tracking-tight text-foreground">{popularTitle}</h2>
               <p className="text-sm text-muted-foreground">{popularDescription}</p>
             </div>
@@ -466,7 +471,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Latest</p>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.experience.latest')}</p>
               <h2 className="mb-2 text-3xl font-medium tracking-tight text-foreground">{latestTitle}</h2>
               <p className="text-sm text-muted-foreground">{latestDescription}</p>
             </div>
@@ -491,7 +496,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <LandingStatsSection />
+      <LandingStatsSection skillCount={popularSkills?.total} />
 
       <div ref={enterpriseView.ref} className={`scroll-fade-up${enterpriseView.inView ? ' in-view' : ''}`}>
         <EnterpriseSection />
@@ -499,14 +504,14 @@ export function LandingPage() {
 
       <section className="relative z-10 w-full border-t border-border/70 bg-background px-6 py-16 text-center md:py-20">
         <div className="mx-auto max-w-4xl">
-          <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">开始构建你的技能体系</h2>
-          <p className="mb-8 text-muted-foreground">几分钟内部署 SkillHub，让团队的专业能力可复用、可管理</p>
+          <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">{t('landing.experience.cta.title')}</h2>
+          <p className="mb-8 text-muted-foreground">{t('landing.experience.cta.description')}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <a href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className="btn-pill btn-pill-primary">
-              立即部署
+              {t('landing.experience.cta.deploy')}
             </a>
             <a href="https://iflytek.github.io/skillhub/" target="_blank" rel="noreferrer" className="group btn-pill btn-pill-outline inline-flex items-center gap-2">
-              查看文档 <CheckCircle2 className="h-4 w-4" />
+              {t('landing.experience.cta.docs')} <CheckCircle2 className="h-4 w-4" />
             </a>
           </div>
         </div>

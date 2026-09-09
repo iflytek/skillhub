@@ -8,11 +8,10 @@ test.describe('User ID Display', () => {
     await registerSession(page, testInfo)
   })
 
-  test('shows user ID in dashboard account card', async ({ page }) => {
+  test('shows user ID in the dashboard sidebar', async ({ page }) => {
     await page.goto('/dashboard')
-    await expect(page.getByText('Account Information')).toBeVisible()
 
-    const userIdText = page.getByText('User ID', { exact: false })
+    const userIdText = page.getByRole('complementary').getByText('User ID', { exact: false })
     await expect(userIdText).toBeVisible()
 
     // The dashboard renders "User ID: <value>" in a single element.

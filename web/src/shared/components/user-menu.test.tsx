@@ -108,6 +108,18 @@ describe('UserMenu navigation', () => {
     expect(html).toContain('user.menu.auditLog')
   })
 
+  it('shows security settings only for accounts that can change a password', () => {
+    const enabledHtml = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'Local User', platformRoles: ['USER'], canChangePassword: true }} />,
+    )
+    const disabledHtml = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'OAuth User', platformRoles: ['USER'], canChangePassword: false }} />,
+    )
+
+    expect(enabledHtml).toContain('user.menu.security')
+    expect(disabledHtml).not.toContain('user.menu.security')
+  })
+
   it('always keeps logout available', () => {
     const html = renderToStaticMarkup(
       <UserMenu

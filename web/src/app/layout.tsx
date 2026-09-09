@@ -43,7 +43,10 @@ export function Layout() {
   const filteredDashboardGroups = SIDEBAR_GROUPS
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.admin || governanceVisible),
+      items: group.items.filter((item) => (
+        (!item.admin || governanceVisible)
+        && (!item.passwordCapability || user?.canChangePassword === true)
+      )),
     }))
     .filter((group) => group.items.length > 0)
 
@@ -145,7 +148,7 @@ export function Layout() {
             className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 hover:bg-accent transition-colors"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
             aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? '关闭导航菜单' : '打开导航菜单'}
+            aria-label={t(mobileMenuOpen ? 'layout.closeNavigation' : 'layout.openNavigation')}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>

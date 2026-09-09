@@ -10,6 +10,13 @@ vi.mock('@/features/auth/use-auth', () => ({
   }),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en' },
+  }),
+}))
+
 vi.mock('@/features/social/use-star', () => ({
   useStarredIdSet: () => ({
     starredIds: new Set<number>(),

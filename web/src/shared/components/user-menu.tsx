@@ -143,6 +143,11 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             <Link to="/dashboard" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.dashboard')}
             </Link>
+            {user.canChangePassword === true ? (
+              <Link to="/settings/security" className={menuItemClassName} onClick={closeMenu}>
+                {t('user.menu.security')}
+              </Link>
+            ) : null}
             {isUserAdmin || isAuditor || isSuperAdmin ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}
             {isUserAdmin ? (
               <Link to="/admin/users" className={menuItemClassName} onClick={closeMenu}>

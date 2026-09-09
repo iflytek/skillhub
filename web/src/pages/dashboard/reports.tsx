@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
@@ -12,6 +12,16 @@ import { useDismissSkillReport, useResolveSkillReport, useSkillReports } from '@
 import { REPORT_TEXT_WRAP_CLASS_NAME } from '@/features/report/report-text'
 import { toast } from '@/shared/lib/toast'
 import type { ReportDisposition } from '@/api/types'
+
+interface ReportPageMetadata {
+  total: number
+  size: number
+}
+
+export function clampReportPage(page: number, reports?: ReportPageMetadata): number {
+  if (!reports) return page
+  return Math.min(page, Math.max(Math.ceil(reports.total / reports.size) - 1, 0))
+}
 
 /**
  * Moderation page for skill reports. The route keeps the confirmation state
@@ -38,6 +48,28 @@ export function ReportsPage() {
   const { data: dismissedReports, isLoading: isDismissedLoading } = useSkillReports('DISMISSED', pages.DISMISSED, pageSize)
   const resolveMutation = useResolveSkillReport()
   const dismissMutation = useDismissSkillReport()
+
+  useEffect(() => {
+    const totals = {
+      PENDING: pendingReports,
+      RESOLVED: resolvedReports,
+      DISMISSED: dismissedReports,
+    }
+    setPages((current) => {
+      const next = { ...current }
+      let changed = false
+      for (const status of ['PENDING', 'RESOLVED', 'DISMISSED'] as const) {
+        const reports = totals[status]
+        if (!reports) continue
+        const clampedPage = clampReportPage(next[status], reports)
+        if (next[status] !== clampedPage) {
+          next[status] = clampedPage
+          changed = true
+        }
+      }
+      return changed ? next : current
+    })
+  }, [dismissedReports, pendingReports, resolvedReports])
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 

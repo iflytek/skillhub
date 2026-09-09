@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError } from '@/shared/lib/api-error'
+import { shouldFallbackToLegacyNamespaceList } from './use-namespace-queries'
 
 /**
  * use-namespace-queries.ts exports React hooks that wrap @tanstack/react-query
@@ -24,5 +26,12 @@ describe('use-namespace-queries exports', () => {
     expect(typeof mod.useUnfreezeNamespace).toBe('function')
     expect(typeof mod.useArchiveNamespace).toBe('function')
     expect(typeof mod.useRestoreNamespace).toBe('function')
+  })
+
+  it('falls back to the legacy list only when the paginated endpoint is absent', () => {
+    expect(shouldFallbackToLegacyNamespaceList(new ApiError('not found', 404))).toBe(true)
+    expect(shouldFallbackToLegacyNamespaceList(new ApiError('unauthorized', 401))).toBe(false)
+    expect(shouldFallbackToLegacyNamespaceList(new ApiError('server error', 500))).toBe(false)
+    expect(shouldFallbackToLegacyNamespaceList(new TypeError('network error'))).toBe(false)
   })
 })
