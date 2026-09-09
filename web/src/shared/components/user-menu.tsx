@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/client'
 import { clearSessionScopedQueries } from '@/features/notification/notification-session'
+import { canAccessGlobalReviewCenter } from '@/features/review/review-paths'
 import { withBasePath } from '@/shared/lib/base-path'
 import { cn } from '@/shared/lib/utils'
 
@@ -32,6 +33,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
   const isAuditor = hasRole('AUDITOR') || hasRole('SUPER_ADMIN')
   const isSuperAdmin = hasRole('SUPER_ADMIN')
+  const canReview = canAccessGlobalReviewCenter(user.platformRoles)
   const open = isHovered || isClickOpen
 
   const clearCloseTimer = () => {
@@ -148,7 +150,12 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
                 {t('user.menu.security')}
               </Link>
             ) : null}
-            {isUserAdmin || isAuditor || isSuperAdmin ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}
+            {canReview ? (
+              <Link to="/dashboard/reviews" className={menuItemClassName} onClick={closeMenu}>
+                {t('user.menu.reviews')}
+              </Link>
+            ) : null}
+            {canReview || isUserAdmin || isAuditor || isSuperAdmin ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}
             {isUserAdmin ? (
               <Link to="/admin/users" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.users')}

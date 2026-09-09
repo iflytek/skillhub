@@ -108,6 +108,26 @@ describe('UserMenu navigation', () => {
     expect(html).toContain('user.menu.auditLog')
   })
 
+  it.each(['SKILL_ADMIN', 'USER_ADMIN', 'SUPER_ADMIN'])(
+    'keeps the review center available to %s users',
+    (role) => {
+      const html = renderToStaticMarkup(
+        <UserMenu user={{ displayName: 'Reviewer', platformRoles: [role] }} />,
+      )
+
+      expect(html).toContain('href="/dashboard/reviews"')
+      expect(html).toContain('user.menu.reviews')
+    },
+  )
+
+  it('does not show the global review center to regular users', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'Regular User', platformRoles: ['USER'] }} />,
+    )
+
+    expect(html).not.toContain('href="/dashboard/reviews"')
+  })
+
   it('shows security settings only for accounts that can change a password', () => {
     const enabledHtml = renderToStaticMarkup(
       <UserMenu user={{ displayName: 'Local User', platformRoles: ['USER'], canChangePassword: true }} />,

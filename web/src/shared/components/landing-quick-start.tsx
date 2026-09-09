@@ -131,6 +131,7 @@ function AgentAccessPanel() {
 function CliAccessPanel() {
   const { t } = useTranslation()
   const [copiedIdx, setCopiedIdx] = useState(-1)
+  const registryUrl = useMemo(getRegistryUrl, [])
 
   const handleCopy = (text: string, idx: number) => {
     void copyToClipboard(text)
@@ -191,7 +192,7 @@ function CliAccessPanel() {
               <span className="text-neutral-800 dark:text-neutral-200">npx -y @astron-team/skillhub@0.1.11 search weather \</span>
               <button
                 type="button"
-                onClick={() => handleCopy('npx -y @astron-team/skillhub@0.1.11 search weather --registry https://skill.xfyun.cn --limit 5', 1)}
+                onClick={() => handleCopy(`npx -y @astron-team/skillhub@0.1.11 search weather --registry ${registryUrl} --limit 5`, 1)}
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
               >
                 {copiedIdx === 1 ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -201,7 +202,7 @@ function CliAccessPanel() {
           </div>
           <div className="pl-5 text-neutral-600 dark:text-neutral-400">
             <span className="text-muted-foreground">{'  --registry'} </span>
-            <span className="text-blue-600 dark:text-blue-400">https://skill.xfyun.cn</span> \
+            <span className="break-all text-blue-600 dark:text-blue-400">{registryUrl}</span> \
           </div>
           <div className="pl-5 text-neutral-600 dark:text-neutral-400">
             <span className="text-muted-foreground">{'  --limit'} </span>
@@ -230,7 +231,7 @@ function CliAccessPanel() {
               <span className="text-neutral-800 dark:text-neutral-200">npx -y @astron-team/skillhub@0.1.11 install @global/weather \</span>
               <button
                 type="button"
-                onClick={() => handleCopy('npx -y @astron-team/skillhub@0.1.11 install @global/weather --dir ./skills --registry https://skill.xfyun.cn', 2)}
+                onClick={() => handleCopy(`npx -y @astron-team/skillhub@0.1.11 install @global/weather --dir ./skills --registry ${registryUrl}`, 2)}
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
               >
                 {copiedIdx === 2 ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -244,7 +245,7 @@ function CliAccessPanel() {
           </div>
           <div className="pl-5 text-neutral-600 dark:text-neutral-400">
             <span className="text-muted-foreground">{'  --registry'} </span>
-            <span className="text-blue-600 dark:text-blue-400">https://skill.xfyun.cn</span>
+            <span className="break-all text-blue-600 dark:text-blue-400">{registryUrl}</span>
           </div>
           <div className="mt-1 flex items-center gap-1.5 pl-5 text-[11px] text-emerald-600 dark:text-emerald-400">
             <Check className="h-3 w-3" strokeWidth={2.5} />
@@ -260,14 +261,14 @@ function CliAccessPanel() {
       </div>
 
       {/* Bottom status bar */}
-      <div className="flex items-center justify-between border-t border-border/60 bg-white px-4 py-2.5 text-[11px] dark:bg-neutral-900">
-        <div className="flex items-center gap-3 text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-white px-4 py-2.5 text-[11px] dark:bg-neutral-900">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
           <span className="flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             {t('landing.experience.quickStart.cli.connected')}
           </span>
           <span className="text-border">·</span>
-          <span className="font-mono">registry: skill.xfyun.cn</span>
+          <span className="break-all font-mono">registry: {registryUrl}</span>
         </div>
         <a href="https://github.com/iflytek/skillhub/tree/main/cli" target="_blank" rel="noreferrer" className="group flex items-center gap-1 font-medium text-blue-600 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400 dark:hover:text-blue-300">
           {t('landing.experience.quickStart.cli.docs')}
