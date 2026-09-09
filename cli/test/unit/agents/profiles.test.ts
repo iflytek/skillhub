@@ -53,21 +53,22 @@ describe('agent profiles', () => {
   test('AstronStudio is detected only when the user .acode skills directory exists', async () => {
     const home = await mkdtemp(join(tmpdir(), 'skillhub-astron-studio-home-'))
     const profile = profileMap.get('astron-studio')!
-    const rootDir = join(home, '.acode', 'skills')
+    const nativeRootDir = join(home, '.acode', 'skills')
+    const profileRootDir = nativeRootDir.replace(/\\/g, '/')
 
     try {
       expect(await profile.detectInstalled('/repo', home)).toEqual([])
 
       await mkdir(join(home, '.acode'), { recursive: true })
-      await writeFile(rootDir, 'not a directory')
+      await writeFile(nativeRootDir, 'not a directory')
       expect(await profile.detectInstalled('/repo', home)).toEqual([])
 
-      await rm(rootDir)
-      await mkdir(rootDir, { recursive: true })
+      await rm(nativeRootDir)
+      await mkdir(nativeRootDir, { recursive: true })
 
       expect(await profile.detectInstalled('/repo', home)).toEqual([{
         agent: 'astron-studio',
-        rootDir,
+        rootDir: profileRootDir,
         scope: 'user',
         source: 'detected'
       }])

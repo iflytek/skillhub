@@ -37,10 +37,11 @@ const { resolveInstallTargets } = await import('../../../src/agents/resolver')
 describe('resolveInstallTargets interactive prompt', () => {
   test('renders AstronStudio by display name when its directory was detected', async () => {
     const home = await mkdtemp(join(tmpdir(), 'skillhub-astron-studio-resolver-'))
-    const rootDir = join(home, '.acode', 'skills')
+    const nativeRootDir = join(home, '.acode', 'skills')
+    const profileRootDir = nativeRootDir.replace(/\\/g, '/')
 
     try {
-      await mkdir(rootDir, { recursive: true })
+      await mkdir(nativeRootDir, { recursive: true })
       await resolveInstallTargets({
         cwd: '/repo',
         home,
@@ -50,7 +51,7 @@ describe('resolveInstallTargets interactive prompt', () => {
         interactive: true
       })
 
-      expect(renderedChoices[0]?.title).toBe(`AstronStudio (${rootDir})`)
+      expect(renderedChoices[0]?.title).toBe(`AstronStudio (${profileRootDir})`)
     } finally {
       await rm(home, { recursive: true, force: true })
     }
@@ -75,7 +76,7 @@ describe('resolveInstallTargets interactive prompt', () => {
       expect(renderedChoices.some(choice => choice.value.agent === 'astron-studio')).toBe(false)
       expect(targets).toEqual([{
         agent: 'generic',
-        rootDir: join(home, '.agents', 'skills'),
+        rootDir: `${home}/.agents/skills`,
         scope: 'user',
         source: 'fallback'
       }])
