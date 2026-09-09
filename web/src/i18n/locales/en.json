@@ -172,12 +172,6 @@
         "title": "Manage the complete skill lifecycle, from registration to distribution",
         "description": "More than a package repository: one platform for publishing, review, distribution, and governance."
       },
-      "stats": {
-        "publicSkills": "Public skills in this registry",
-        "accessModes": "Access modes",
-        "permissionScopes": "RBAC scopes",
-        "license": "Open-source license"
-      },
       "enterprise": {
         "title": "Built for teams and enterprises",
         "description": "Self-hosting, access control, review workflows, and auditability in one registry.",

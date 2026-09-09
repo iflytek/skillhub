@@ -151,31 +151,6 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
   )
 }
 
-function LandingStatsSection({ skillCount }: { skillCount?: number }) {
-  const { t, i18n } = useTranslation()
-  const stats = [
-    { value: skillCount === undefined ? '—' : skillCount.toLocaleString(i18n.language), label: t('landing.experience.stats.publicSkills') },
-    { value: '3', label: t('landing.experience.stats.accessModes') },
-    { value: '2', label: t('landing.experience.stats.permissionScopes') },
-    { value: 'Apache-2.0', label: t('landing.experience.stats.license') },
-  ]
-
-  return (
-    <section className="w-full border-y border-border/70 bg-background px-6 py-14 md:py-16">
-      <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 md:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="text-center">
-            <div className="mb-1 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              {stat.value}
-            </div>
-            <div className="text-sm text-muted-foreground">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
 function EnterpriseSection() {
   const { t } = useTranslation()
 
@@ -495,8 +470,6 @@ export function LandingPage() {
           )}
         </div>
       </section>
-
-      <LandingStatsSection skillCount={popularSkills?.total} />
 
       <div ref={enterpriseView.ref} className={`scroll-fade-up${enterpriseView.inView ? ' in-view' : ''}`}>
         <EnterpriseSection />

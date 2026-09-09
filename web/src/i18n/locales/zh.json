@@ -172,12 +172,6 @@
         "title": "从注册到分发，管理完整的技能生命周期",
         "description": "不只是技能仓库，而是一套覆盖发布、审核、分发和治理的平台。"
       },
-      "stats": {
-        "publicSkills": "当前 Registry 公开技能",
-        "accessModes": "接入方式",
-        "permissionScopes": "RBAC 层级",
-        "license": "开源许可证"
-      },
       "enterprise": {
         "title": "为团队和企业而建",
         "description": "在一个 Registry 中提供自托管、权限控制、审核流程与审计能力。",
