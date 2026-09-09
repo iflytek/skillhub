@@ -34,12 +34,16 @@ test.describe('Landing access methods (Real API)', () => {
 
   test('agent views expose Registry configuration and implicit discovery', async ({ page }) => {
     await page.goto('/')
+    const origin = new URL(page.url()).origin
 
     const registryTab = page.getByRole('tab', { name: 'Registry setup' })
     const discoveryTab = page.getByRole('tab', { name: 'Implicit discovery' })
 
     await expect(registryTab).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText(/registry\/skill\.md/).first()).toBeVisible()
+    await expect(
+      page.getByText(`${origin}/registry/skill.md`, { exact: true }),
+    ).toBeVisible()
 
     await discoveryTab.click()
     await expect(discoveryTab).toHaveAttribute('aria-selected', 'true')
