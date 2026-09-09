@@ -70,7 +70,8 @@ describe('skill target lifecycle lock', () => {
     const acquiredPath = join(rootDir, 'acquired')
     const releasePath = join(rootDir, 'release')
     const startPath = join(rootDir, 'start')
-    const readyPaths = [join(rootDir, 'ready-0'), join(rootDir, 'ready-1')]
+    const workerCount = 8
+    const readyPaths = Array.from({ length: workerCount }, (_, index) => join(rootDir, `ready-${index}`))
 
     const processes = readyPaths.map(readyPath => Bun.spawn({
       cmd: [bunPath, worker, rootDir, 'demo', readyPath, startPath, acquiredPath, releasePath],
@@ -106,7 +107,7 @@ describe('skill target lifecycle lock', () => {
       stderr: (await new Response(process.stderr).text()).trim()
     })))
 
-    expect(results.map(result => result.exitCode).sort()).toEqual([0, 4])
+    expect(results.map(result => result.exitCode).sort()).toEqual([0, ...Array(workerCount - 1).fill(4)])
     expect(results.filter(result => result.stdout === 'acquired')).toHaveLength(1)
     expect(await exists(lockPath)).toBe(false)
     if (process.platform !== 'win32') {
