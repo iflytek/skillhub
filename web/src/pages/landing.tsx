@@ -502,10 +502,10 @@ export function LandingPage() {
           <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">开始构建你的技能体系</h2>
           <p className="mb-8 text-muted-foreground">几分钟内部署 SkillHub，让团队的专业能力可复用、可管理</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <a href="#quickstart" className="btn-pill btn-pill-primary">
+            <a href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className="btn-pill btn-pill-primary">
               立即部署
             </a>
-            <a href="/registry/skill.md" className="group btn-pill btn-pill-outline inline-flex items-center gap-2">
+            <a href="https://iflytek.github.io/skillhub/" target="_blank" rel="noreferrer" className="group btn-pill btn-pill-outline inline-flex items-center gap-2">
               查看文档 <CheckCircle2 className="h-4 w-4" />
             </a>
           </div>
