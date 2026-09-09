@@ -80,6 +80,9 @@ describe('skill target lifecycle lock', () => {
     await mkdir(lockPath)
     const staleTime = new Date(Date.now() - 60_000)
     await utimes(lockPath, staleTime, staleTime)
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await writeFile(acquisitionGatePath, 'abandoned-owner')
+    await utimes(acquisitionGatePath, staleTime, staleTime)
     const worker = fileURLToPath(new URL('../../helpers/target-lock-worker.ts', import.meta.url))
     const bunPath = (await Bun.which('bun')) ?? process.execPath
     const acquiredPath = join(rootDir, 'acquired')
@@ -121,7 +124,11 @@ describe('skill target lifecycle lock', () => {
 
     expect(results.map(result => result.exitCode).sort()).toEqual([0, ...Array(workerCount - 1).fill(4)])
     expect(results.filter(result => result.stdout === 'acquired')).toHaveLength(1)
+    for (const loser of results.filter(result => result.exitCode === 4)) {
+      expect(loser.stderr).toContain('install target is busy')
+    }
     expect(await exists(lockPath)).toBe(false)
+    expect(await exists(acquisitionGatePath)).toBe(false)
     const releaseAfterContention = await acquireSkillTargetLock(rootDir, 'demo')
     await releaseAfterContention()
     if (process.platform !== 'win32') {

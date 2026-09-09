@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto'
-import { chmod, lstat, mkdir } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { chmod, link, lstat, mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { lock } from 'proper-lockfile'
@@ -7,7 +7,7 @@ import { canonicalizeExistingPath } from '../platform/paths'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 
-const NO_AUTOMATIC_STALE_RECOVERY_MS = Number.MAX_SAFE_INTEGER
+const ACQUISITION_GATE_STALE_MS = 10_000
 
 /** Serializes every local lifecycle mutation for one Skill target directory. */
 export async function acquireSkillTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
@@ -17,9 +17,9 @@ export async function acquireSkillTargetLock(rootDir: string, slug: string): Pro
   const acquisitionGatePath = `${lockPath}.acquire`
   let releaseAcquisitionGate: () => Promise<void>
   try {
-    releaseAcquisitionGate = await acquireLockWithoutStaleRecovery(acquisitionGatePath)
+    releaseAcquisitionGate = await acquireAcquisitionGate(acquisitionGatePath)
   } catch (error) {
-    if (hasErrorCode(error, 'ELOCKED')) throw targetBusyError(rootDir, slug)
+    if (hasErrorCode(error, 'EEXIST')) throw targetBusyError(rootDir, slug)
     throw error
   }
 
@@ -38,9 +38,13 @@ export async function acquireSkillTargetLock(rootDir: string, slug: string): Pro
 
   try {
     await releaseAcquisitionGate()
-  } catch (error) {
-    await releaseTarget().catch(() => {})
-    throw error
+  } catch (gateCleanupError) {
+    try {
+      await releaseTarget()
+    } catch (targetCleanupError) {
+      throw new AggregateError([gateCleanupError, targetCleanupError], 'target and acquisition gate cleanup both failed')
+    }
+    throw gateCleanupError
   }
 
   return releaseTarget
@@ -56,13 +60,70 @@ function acquireTargetLock(lockPath: string): Promise<() => Promise<void>> {
   })
 }
 
-function acquireLockWithoutStaleRecovery(lockPath: string): Promise<() => Promise<void>> {
-  return lock(lockPath, {
-    lockfilePath: lockPath,
-    realpath: false,
-    stale: NO_AUTOMATIC_STALE_RECOVERY_MS,
-    update: 3_000,
-    retries: 0
+async function acquireAcquisitionGate(gatePath: string): Promise<() => Promise<void>> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const token = randomUUID()
+    try {
+      await writeFile(gatePath, token, { flag: 'wx', mode: 0o600 })
+    } catch (error) {
+      if (attempt === 0 && hasErrorCode(error, 'EEXIST') && await recoverStaleAcquisitionGate(gatePath)) {
+        continue
+      }
+      throw error
+    }
+
+    return async () => {
+      const currentToken = await readFile(gatePath, 'utf8')
+      if (currentToken !== token) throw compromisedGateError(gatePath)
+      await unlink(gatePath)
+    }
+  }
+
+  throw new Error('unreachable acquisition gate retry state')
+}
+
+async function recoverStaleAcquisitionGate(gatePath: string): Promise<boolean> {
+  let observedToken: string
+  let observedMtime: number
+  try {
+    observedToken = await readFile(gatePath, 'utf8')
+    observedMtime = (await lstat(gatePath)).mtimeMs
+  } catch (error) {
+    if (hasErrorCode(error, 'ENOENT')) return true
+    throw error
+  }
+  if (observedMtime >= Date.now() - ACQUISITION_GATE_STALE_MS) return false
+
+  const claimDigest = createHash('sha256').update(observedToken).digest('hex')
+  const claimPath = `${gatePath}.stale-${claimDigest}`
+  try {
+    await link(gatePath, claimPath)
+  } catch (error) {
+    if (hasErrorCode(error, 'ENOENT')) return true
+    if (hasErrorCode(error, 'EEXIST')) return false
+    throw error
+  }
+
+  try {
+    if (await readFile(claimPath, 'utf8') !== observedToken) return false
+    let currentToken: string
+    try {
+      currentToken = await readFile(gatePath, 'utf8')
+    } catch (error) {
+      if (hasErrorCode(error, 'ENOENT')) return true
+      throw error
+    }
+    if (currentToken !== observedToken) return false
+    await unlink(gatePath)
+    return true
+  } finally {
+    await unlink(claimPath).catch(() => {})
+  }
+}
+
+function compromisedGateError(gatePath: string): Error {
+  return Object.assign(new Error(`SkillHub CLI acquisition gate was replaced: ${gatePath}`), {
+    code: 'ECOMPROMISED'
   })
 }
 
