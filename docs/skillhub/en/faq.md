@@ -140,7 +140,13 @@ A: When using the OpenClaw CLI, you can specify the namespace using the `<namesp
 
 ## Q: What is the recommended deployment method? Can I pull the images and deploy manually?
 
-A: We recommend the official one-line deployment script. Pulling images and deploying manually is not recommended (manual deployment is prone to initialization issues such as being redirected back to the login page after logging in):
+A: We recommend the official one-line deployment script. Pulling images and deploying manually is not recommended because it is prone to database initialization, dependency-order, and login redirect issues. By default, dependencies come from public registries, and the SkillHub application images come from GHCR:
+
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
+```
+
+If GHCR is unreachable from China, use the Aliyun mirror:
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest

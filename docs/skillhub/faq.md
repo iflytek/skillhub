@@ -140,7 +140,13 @@ A: 使用 OpenClaw CLI 命令行工具时，可以通过 `<namespace>--<skill-na
 
 ## Q: 推荐的部署方式是什么？可以自己拉镜像手动部署吗？
 
-A: 推荐使用官方一键部署脚本，不建议自己拉取镜像手动部署（手动部署容易出现登录后跳回登录页等初始化问题）：
+A: 推荐使用官方一键部署脚本，不建议自己拉取镜像手动部署（手动部署容易出现数据库初始化、依赖顺序或登录后跳回登录页等问题）。默认从公共镜像仓库拉取依赖，其中 SkillHub 应用镜像来自 GHCR：
+
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
+```
+
+国内网络无法访问 GHCR 时，使用阿里云镜像：
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest

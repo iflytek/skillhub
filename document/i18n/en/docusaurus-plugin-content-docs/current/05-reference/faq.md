@@ -20,20 +20,6 @@ Recommended to use reverse proxy (Nginx/Ingress) for TLS termination.
 
 Use PostgreSQL standard backup tools (pg_dump).
 
-### Image pull fails when deploying in China / an intranet, or the database errors when hand-writing compose?
-
-Prefer the official one-line `runtime.sh` script over a hand-written compose file:
-
-```bash
-# Pull images from ghcr.io (default)
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
-
-# If ghcr.io is unreachable in China, add --aliyun to use the Aliyun mirror
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
-```
-
-The script provisions PostgreSQL, Redis and object storage and starts them in the right order, avoiding the database-init / dependency-order errors that commonly appear with a hand-written compose. For fully air-gapped environments, first sync the images to an internal registry with `scripts/mirror-runtime-images.sh`, then point to it with `--mirror-registry <addr>`.
-
 ## Usage Related
 
 ### How to reset admin password?
