@@ -99,8 +99,12 @@ public class SkillSuiteBundleManifestParser {
         String version = requiredString(map, "version", "spec");
         validateVersion(version, "spec.version");
         String displayName = boundedRequiredString(map, "displayName", "spec", 256);
-        String summary = boundedRequiredString(map, "summary", "spec", 4_000);
-        String overview = boundedRequiredString(map, "overview", "spec", 20_000);
+        String summary = mode == SkillSuiteBundleMode.CREATE
+                ? boundedRequiredString(map, "summary", "spec", 4_000)
+                : boundedOptionalString(map, "summary", "spec", 4_000);
+        String overview = mode == SkillSuiteBundleMode.CREATE
+                ? boundedRequiredString(map, "overview", "spec", 20_000)
+                : boundedOptionalString(map, "overview", "spec", 20_000);
         SkillVisibility visibility = enumValue(
                 requiredString(map, "visibility", "spec"), SkillVisibility.class, "spec.visibility");
         String changelog = boundedOptionalString(map, "changelog", "spec", 4_000);

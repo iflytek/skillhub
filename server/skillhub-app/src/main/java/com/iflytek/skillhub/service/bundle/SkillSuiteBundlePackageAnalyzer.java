@@ -4,6 +4,8 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
+import com.iflytek.skillhub.domain.skill.validation.NoOpPrePublishValidator;
+import com.iflytek.skillhub.domain.skill.validation.PrePublishValidator;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
 import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
@@ -13,6 +15,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifest;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifestParser;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMember;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,15 +43,27 @@ public class SkillSuiteBundlePackageAnalyzer {
     private final SkillSuiteBundleManifestParser manifestParser;
     private final SkillMetadataParser metadataParser;
     private final SkillPackageValidator packageValidator;
+    private final PrePublishValidator prePublishValidator;
 
+    @Autowired
     public SkillSuiteBundlePackageAnalyzer(
             SkillSuiteBundleManifestParser manifestParser,
             SkillMetadataParser metadataParser,
-            SkillPackageValidator packageValidator
+            SkillPackageValidator packageValidator,
+            PrePublishValidator prePublishValidator
     ) {
         this.manifestParser = manifestParser;
         this.metadataParser = metadataParser;
         this.packageValidator = packageValidator;
+        this.prePublishValidator = prePublishValidator;
+    }
+
+    SkillSuiteBundlePackageAnalyzer(
+            SkillSuiteBundleManifestParser manifestParser,
+            SkillMetadataParser metadataParser,
+            SkillPackageValidator packageValidator
+    ) {
+        this(manifestParser, metadataParser, packageValidator, new NoOpPrePublishValidator());
     }
 
     public BundleAnalysis analyze(List<SkillSuiteBundleStagedEntry> stagedEntries) throws IOException {
@@ -191,6 +206,10 @@ public class SkillSuiteBundlePackageAnalyzer {
                 memberErrors.add("SKILL.md name resolves to " + metadataSlug
                         + " and does not match manifest skill " + coordinate.canonical());
             }
+            ValidationResult prePublish = prePublishValidator.validate(
+                    new PrePublishValidator.SkillPackageContext(packageEntries, metadata, null, null));
+            memberErrors.addAll(prePublish.errors());
+            memberWarnings.addAll(prePublish.warnings());
         }
 
         ValidationResult validation = ValidationResult.of(memberErrors, memberWarnings);

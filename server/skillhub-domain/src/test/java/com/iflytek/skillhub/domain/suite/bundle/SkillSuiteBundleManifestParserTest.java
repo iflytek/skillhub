@@ -51,6 +51,21 @@ class SkillSuiteBundleManifestParserTest {
     }
 
     @Test
+    void updateMayInheritSummaryAndOverviewButCreateMayNotOmitThem() {
+        String update = validManifest()
+                .replace("mode: CREATE", "mode: UPDATE\n  baseVersion: 0.9.0")
+                .replace("  summary: Valid summary\n", "")
+                .replace("  overview: Valid overview\n", "");
+
+        SkillSuiteBundleManifest manifest = parser.parse(update);
+
+        assertThat(manifest.spec().summary()).isNull();
+        assertThat(manifest.spec().overview()).isNull();
+        assertInvalid(validManifest().replace("  overview: Valid overview\n", ""),
+                "spec.overview is required");
+    }
+
+    @Test
     void rejectsMemberThatCarriesBothPackageAndReference() {
         assertInvalid(fixture("invalid-both-sources"), "exactly one of package or reference");
     }

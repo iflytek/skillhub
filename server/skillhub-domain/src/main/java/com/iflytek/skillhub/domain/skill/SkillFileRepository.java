@@ -7,6 +7,7 @@ import java.util.List;
  */
 public interface SkillFileRepository {
     List<SkillFile> findByVersionId(Long versionId);
+    List<SkillFile> findByVersionIdIn(List<Long> versionIds);
     SkillFile save(SkillFile file);
     <S extends SkillFile> List<S> saveAll(Iterable<S> files);
     void deleteByVersionId(Long versionId);

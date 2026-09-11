@@ -3,6 +3,7 @@ package com.iflytek.skillhub.service.bundle;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
+import com.iflytek.skillhub.domain.skill.validation.BasicPrePublishValidator;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifestParser;
 import org.junit.jupiter.api.Test;
 
@@ -126,6 +127,30 @@ class SkillSuiteBundlePackageAnalyzerTest {
 
         assertThat(result.packageMembers()).singleElement().satisfies(member ->
                 assertThat(member.validation().errors()).contains("Too many files: 2 (max: 1)"));
+    }
+
+    @Test
+    void reusesOrdinaryCredentialPrecheckWithoutBlockingPlaceholderValues() throws Exception {
+        SkillSuiteBundlePackageAnalyzer credentialAware = new SkillSuiteBundlePackageAnalyzer(
+                new SkillSuiteBundleManifestParser(), metadataParser,
+                new SkillPackageValidator(metadataParser), new BasicPrePublishValidator());
+
+        SkillSuiteBundlePackageAnalyzer.BundleAnalysis warning = credentialAware.analyze(List.of(
+                entry("SUITE.yaml", manifest(packageMember("credential"), "@global/credential")),
+                entry("skills/credential/SKILL.md", skillMd("credential", "1.0.0")),
+                entry("skills/credential/config.env", "API_KEY=sk-abcdefghijklmnopqrstuvwxyz")
+        ));
+        SkillSuiteBundlePackageAnalyzer.BundleAnalysis placeholder = credentialAware.analyze(List.of(
+                entry("SUITE.yaml", manifest(packageMember("credential"), "@global/credential")),
+                entry("skills/credential/SKILL.md", skillMd("credential", "1.0.0")),
+                entry("skills/credential/config.env", "API_KEY=your-api-key-placeholder")
+        ));
+
+        assertThat(warning.packageMembers()).singleElement().satisfies(member ->
+                assertThat(member.validation().warnings())
+                        .anyMatch(value -> value.contains("looks like a API key")));
+        assertThat(placeholder.packageMembers()).singleElement().satisfies(member ->
+                assertThat(member.validation().warnings()).isEmpty());
     }
 
     private SkillSuiteBundleStagedEntry entry(String path, String content) throws Exception {

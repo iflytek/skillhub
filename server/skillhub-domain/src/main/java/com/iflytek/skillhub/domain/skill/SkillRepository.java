@@ -14,6 +14,7 @@ public interface SkillRepository {
     List<Skill> findByIdIn(List<Long> ids);
     List<Skill> findAll();
     List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
+    List<Skill> findByNamespaceIdInAndSlugIn(List<Long> namespaceIds, List<String> slugs);
     Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
     List<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status);
     boolean existsByNamespaceId(Long namespaceId);
