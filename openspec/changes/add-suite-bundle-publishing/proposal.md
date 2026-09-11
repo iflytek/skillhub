@@ -83,3 +83,12 @@ Suite 时，维护者仍需逐个创建或上传 Skill，再手工把 Suite 固�
   固定版本说明。技能市场与套件专区导航保持不变。
 - **兼容性**：现有单 Skill 发布、单 Skill Label/Tag 管理、Suite 管理和安装 API、旧客户端以及
   已发布 SuiteVersion 快照保持不变。
+
+## 分阶段交付
+
+OpenSpec 保留完整产品方向，但实现和 PR 按以下边界拆分，后续阶段不得绕过第一阶段建立的权限、
+生命周期和性能约束：
+
+1. Suite 创建/更新 Bundle、成员格式验证、权限重检、生命周期协调和 Web 进度闭环。
+2. 基于 Suite 当前 `latestVersionId` 的任意成员反向发现。
+3. Suite Label、展示信息发布校验、概述模板和 Entry Skill 固定版本说明。

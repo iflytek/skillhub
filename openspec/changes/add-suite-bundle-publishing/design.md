@@ -52,8 +52,13 @@ Manifest 描述完整目标成员集合和顺序，每个成员只能选择一�
 
 ### 2. Suite 创建和更新使用同一个持久化 Saga
 
-Bundle 操作保存创建/更新模式、目标 Namespace/Suite/版本、操作者、归档摘要、过期时间、完整成员
-计划、已创建 Skill/SkillVersion ID、精确引用 ID 和失败原因。对外状态为 `PREVIEW_READY`、`RUNNING`、
+预览阶段保存有期限且归属当前操作者的 `PreviewSession`、临时归档和完整计划，但不占用 Suite 坐标
+或版本。`PREVIEW_READY` 是 PreviewSession 状态，不是执行操作状态。确认事务先创建持久化
+`ExecutionOperation` 并原子获取目标 Suite 坐标或版本占用；获取失败时必须在任何成员生命周期
+副作用前结束，并要求重新预览。
+
+ExecutionOperation 保存创建/更新模式、目标 Namespace/Suite/版本、操作者、归档摘要、完整成员计划、
+已创建 Skill/SkillVersion ID、精确引用 ID 和失败原因。对外状态为 `RUNNING`、
 `WAITING_FOR_MEMBERS`、`BLOCKED`、`SUITE_DRAFT_CREATED`、`CANCELLED` 和 `EXPIRED`。
 
 只有需要创建或发生变化且有权限的携带包成员进入现有 Skill 发布流程。所有新版本成为 PUBLISHED，
@@ -73,8 +78,9 @@ Web 接受一个 ZIP；支持目录选择的浏览器还可以选择一个根目
 `NONE`，避免混淆“加入 Suite”和“创建 Skill”。预览不产生任何生命周期副作用。
 
 确认使用不透明 token，并绑定操作者、模式、目标坐标、归档摘要、目标 Suite 版本和完整计划。
-每个非终态操作独占目标 Suite 坐标及版本。预览阶段解析出的包版本和引用 ID 在确认与重试过程中
-保持稳定。创建模式在成员就绪前只占用 Bundle 操作中的目标坐标，不创建对普通用户可见的空 Suite。
+只有确认成功创建的非终态 ExecutionOperation 才独占目标 Suite 坐标或版本。预览阶段解析出的包
+版本和引用 ID 在确认与重试过程中保持稳定。创建模式在成员就绪前只通过执行操作占用目标坐标，
+不创建对普通用户可见的空 Suite。
 
 ### 4. 每个异步边界都保留独立权限
 
@@ -95,6 +101,27 @@ Web 接受一个 ZIP；支持目录选择的浏览器还可以选择一个根目
 已经创建、另一个成员失败的情况。重试只处理未完成工作。取消会停止后续编排并阻止创建
 SuiteVersion，但不会删除独立创建的 SkillVersion 或已经形成的审核历史。
 
+Bundle 不得调用会自动撤回其他待审版本或删除替换已有版本的发布路径。预览发现同一 Skill 已有
+`PENDING_REVIEW` 版本，或目标版本号已经对应任一非 `PUBLISHED` 版本时，直接阻塞并要求用户先在
+现有 Skill 流程中处理。这里复用的是普通 Skill 的校验、存储、扫描、审核和审计规则，不是无条件
+复用当前具有替换副作用的内存型发布方法。
+
+成员状态收敛规则如下：
+
+| SkillVersion 状态或事件 | Bundle 状态 | 可执行动作 | ID 处理 |
+|---|---|---|---|
+| `SCANNING`、`PENDING_REVIEW` | `WAITING_FOR_MEMBERS` | 查看扫描或审核进度 | 保持预览绑定 ID |
+| PRIVATE 新版本进入 `UPLOADED` | `RUNNING` | 使用 Bundle 确认中已明确授予的私有发布授权，重新鉴权后执行现有 confirm-publish 转换 | 保持 ID |
+| `PUBLISHED` | 该成员完成 | 等待其他成员或创建 Suite 草稿 | 保持 ID |
+| `SCAN_FAILED` | `BLOCKED` | 仅在现有重扫动作能保留同一 ID 时允许重试，否则重新上传并预览 | 不得静默换 ID |
+| `REJECTED` | `BLOCKED` | 修改内容后重新上传并预览 | 原 ID 不再自动恢复 |
+| 待审版本被撤回为 `UPLOADED` | `BLOCKED` | 重新预览 | 不自动重新提交审核 |
+| 已绑定版本被删除、替换、下架或失去权限 | `BLOCKED` | 重新预览 | 不跟随新 ID |
+
+状态读取只允许原操作者或当前有权治理目标 Suite/Namespace 的角色。读取时仍按当前权限过滤成员
+元数据；重试和取消必须重新授权。最终创建 Suite 草稿前再次检查 Namespace 可写、Suite 创建或
+管理权限、已有 Suite 仍为 ACTIVE、目标坐标/版本占用和全部成员资格，任一失败均进入 `BLOCKED`。
+
 ### 6. 保持现有 Skill fingerprint 和 Suite 快照模型
 
 每个包目录都规范化为以自身 `SKILL.md` 为根的普通 Skill 包，并使用现有校验器和 fingerprint
@@ -108,8 +135,10 @@ Manifest 提供目标 Suite/SuiteVersion 的展示信息、完整顺序和 Entry
 ### 7. 限制资源成本并保证归档安全
 
 归档采用流式解析，拒绝危险路径、链接、重复规范化名称、过度解压以及超过配置的归档/成员/文件
-限制。每个携带包成员只解压和计算一次 hash。当前成员、引用、版本和权限批量读取。纯引用和
-未变化成员不复制对象、不扫描、不审核。
+限制。预览把成员文件保存为临时对象定位信息、大小、内容类型和已计算摘要，而不是把最大 Bundle
+展开为一组常驻内存的 `byte[]`。确认后的发布边界从暂存对象流式读取并复用预览摘要，不重新解压
+或计算 fingerprint；普通发布需要的文件 hash、包归档和存储对象也从该流式输入生成。当前成员、
+引用、版本和权限批量读取。纯引用和未变化成员不复制对象、不扫描、不审核。
 
 外层解析和成员解析分开执行。外层只负责唯一 Manifest、成员目录边界和文件归属；成员目录去除
 自身前缀后，必须成为一个普通的、根部含 `SKILL.md` 的 Skill 包，并复用现有

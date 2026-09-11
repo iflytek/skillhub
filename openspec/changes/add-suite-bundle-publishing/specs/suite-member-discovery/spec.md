@@ -23,8 +23,10 @@ SHALL NOT 在技能市场增加 Skill/Suite 类型切换。
 
 ### Requirement: REQ-SMD-02 任意成员 Skill SHALL 展示当前用户可见的所属 Suite
 
-Skill 详情 SHALL 列出包含当前 Skill 的最新 ACTIVE、非隐藏、PUBLISHED SuiteVersion，不再只
-查询当前 Skill 是 Entry Skill 的情况。每条引用 SHALL 标明当前 Skill 是否为 Entry Skill。
+Skill 详情 SHALL 只依据每个 ACTIVE、非隐藏 Suite 当前 `latestVersionId` 指向的 PUBLISHED
+SuiteVersion 判断是否包含当前 Skill，不再只查询当前 Skill 是 Entry Skill 的情况。每条引用
+SHALL 标明当前 Skill 是否为 Entry Skill；已从当前 latestVersionId 快照移除的 Skill 不得继续展示
+该 Suite，即使历史版本仍包含它。
 
 #### Scenario: 当前 Skill 是普通成员
 - **WHEN** 当前用户可见的最新 SuiteVersion 将该 Skill 作为非 Entry 成员
@@ -38,6 +40,10 @@ Skill 详情 SHALL 列出包含当前 Skill 的最新 ACTIVE、非隐藏、PUBLI
 #### Scenario: 引用该 Skill 的 Suite 不可见
 - **WHEN** Suite 属于其他人的 PRIVATE 内容，或者已隐藏、归档、未发布、当前用户无权访问
 - **THEN** Skill 详情既不暴露 Suite 坐标，也不暴露成员关系
+
+#### Scenario: Skill 只存在于 Suite 历史版本
+- **WHEN** 当前 Skill 存在于历史 PUBLISHED SuiteVersion，但不在 Suite 当前 latestVersionId 快照中
+- **THEN** Skill 详情不再把该 Suite 显示为当前所属 Suite
 
 ### Requirement: REQ-SMD-03 所属 Suite 信息 SHALL 保护兄弟成员元数据
 
