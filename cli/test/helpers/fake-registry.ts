@@ -168,6 +168,13 @@ interface FakeRegistryOptions {
   dryRunResponse?: { valid: boolean; errors: string[]; warnings: string[]; resolvedSlug: string | null; resolvedVersion: string | null }
   publishStatus?: string
   namespacePageSize?: number
+  deviceFlow?: {
+    accessToken: string
+    pendingPolls?: number
+    userCode?: string
+    expiresIn?: number
+    interval?: number
+  }
   /**
    * Per-endpoint failure injection. When set for an endpoint, that endpoint
    * ignores all other logic and returns the specified failure (or throws for
@@ -228,6 +235,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     downloads: number
     reviews: number
     namespaceRequests: number
+    devicePolls: number
   } = {
     publish: null,
     resolve: null,
@@ -237,7 +245,8 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     resolves: 0,
     downloads: 0,
     reviews: 0,
-    namespaceRequests: 0
+    namespaceRequests: 0,
+    devicePolls: 0
   }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
@@ -282,6 +291,33 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
       const url = new URL(req.url)
       const path = url.pathname
       const baseUrl = `${url.protocol}//${url.host}`
+
+      // ------------------------------------------------------------------ //
+      // POST /api/v1/auth/device/code and /api/v1/auth/device/token
+      // ------------------------------------------------------------------ //
+      if (path === '/api/v1/auth/device/code' && req.method === 'POST' && options.deviceFlow) {
+        return Response.json({
+          code: 0,
+          data: {
+            deviceCode: 'device-secret',
+            userCode: options.deviceFlow.userCode ?? 'ABCD-2345',
+            verificationUri: `${baseUrl}/device`,
+            expiresIn: options.deviceFlow.expiresIn ?? 60,
+            interval: options.deviceFlow.interval ?? 0.001
+          }
+        })
+      }
+
+      if (path === '/api/v1/auth/device/token' && req.method === 'POST' && options.deviceFlow) {
+        state.devicePolls += 1
+        if (state.devicePolls <= (options.deviceFlow.pendingPolls ?? 0)) {
+          return Response.json({ code: 0, data: { accessToken: null, tokenType: null, error: 'authorization_pending' } })
+        }
+        return Response.json({
+          code: 0,
+          data: { accessToken: options.deviceFlow.accessToken, tokenType: 'Bearer', error: null }
+        })
+      }
 
       // ------------------------------------------------------------------ //
       // GET /api/cli/v1/auth/whoami
