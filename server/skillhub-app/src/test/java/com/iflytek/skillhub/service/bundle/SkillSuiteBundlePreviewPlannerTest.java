@@ -331,6 +331,53 @@ class SkillSuiteBundlePreviewPlannerTest {
     }
 
     @Test
+    void updateIsNotConfirmableWhenPresentationCannotBeInherited() throws Exception {
+        Namespace global = namespace(1L, "global");
+        SkillSuite suite = mock(SkillSuite.class);
+        when(suite.getId()).thenReturn(50L);
+        when(suite.getNamespaceId()).thenReturn(1L);
+        when(suite.getCreatedBy()).thenReturn("actor");
+        when(suite.getStatus()).thenReturn(SkillSuiteStatus.ACTIVE);
+        SkillSuiteVersion base = mock(SkillSuiteVersion.class);
+        when(base.getId()).thenReturn(60L);
+        when(base.getStatus()).thenReturn(SkillSuiteVersionStatus.PUBLISHED);
+        when(base.getSummary()).thenReturn("  ");
+        when(base.getOverview()).thenReturn(null);
+        Skill keptSkill = skill(10L, 1L, "kept", "other", SkillVisibility.PUBLIC, 100L);
+        SkillVersion keptVersion = version(100L, 10L, "1.0.0", SkillVersionStatus.PUBLISHED, true);
+        SkillSuiteVersionMember kept = baselineMember(
+                60L, 10L, 100L, "global", "kept", "1.0.0", 0, true);
+
+        when(namespaceRepository.findBySlugIn(anyList())).thenReturn(List.of(global));
+        when(suiteRepository.findByNamespaceIdAndSlug(1L, "update-suite")).thenReturn(Optional.of(suite));
+        when(suiteVersionRepository.findBySuiteIdAndVersion(50L, "1.0.0")).thenReturn(Optional.of(base));
+        when(suiteVersionRepository.findBySuiteIdAndVersion(50L, "1.1.0")).thenReturn(Optional.empty());
+        when(suiteMemberRepository.findBySuiteVersionIdOrderByPosition(60L)).thenReturn(List.of(kept));
+        when(skillRepository.findByNamespaceIdInAndSlugIn(anyList(), anyList())).thenReturn(List.of(keptSkill));
+        when(skillVersionRepository.findBySkillIdInAndStatus(anyList(), eq(SkillVersionStatus.PENDING_REVIEW)))
+                .thenReturn(List.of());
+        when(skillVersionRepository.findBySkillIdInAndVersionIn(anyList(), anyList()))
+                .thenReturn(List.of(keptVersion));
+        when(skillVersionRepository.findByIdIn(anyList())).thenReturn(List.of(keptVersion));
+        when(skillFileRepository.findByVersionIdIn(anyList())).thenReturn(List.of());
+
+        SkillSuiteBundlePreviewPlanner.PreviewPlan result = planner.plan(
+                analyze(manifest("update-suite", "UPDATE", "1.0.0", """
+                            - skill: "@global/kept"
+                              reference:
+                                version: 1.0.0
+                        """, "@global/kept", false), Map.of()),
+                "actor", Map.of(1L, NamespaceRole.MEMBER), Set.of());
+
+        assertThat(result.confirmable()).isFalse();
+        assertThat(result.summary()).isBlank();
+        assertThat(result.overview()).isNull();
+        assertThat(result.errors()).contains(
+                "Suite summary is required after inheritance",
+                "Suite overview is required after inheritance");
+    }
+
+    @Test
     void oneHundredExistingMembersUseOnlyBoundedBatchReads() throws Exception {
         Namespace global = namespace(1L, "global");
         StringBuilder memberYaml = new StringBuilder();
