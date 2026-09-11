@@ -105,6 +105,15 @@ public class PostgresResourceDiscoveryQueryService implements ResourceDiscoveryQ
     private static final String FILTERS = """
             WHERE (:resourceType = '' OR resource_type = :resourceType)
               AND (:namespace = '' OR namespace_slug = :namespace)
+              AND (:labelFilter = FALSE OR (
+                   resource_type = 'SUITE'
+                   AND resource_id IN (
+                       SELECT suite_label.suite_id
+                       FROM skill_suite_label suite_label
+                       JOIN label_definition label ON label.id = suite_label.label_id
+                       WHERE LOWER(label.slug) IN (:labelSlugs)
+                   )
+              ))
               AND (:query = ''
                    OR LOWER(slug) LIKE :queryPattern
                    OR LOWER(display_name) LIKE :queryPattern
@@ -162,10 +171,13 @@ public class PostgresResourceDiscoveryQueryService implements ResourceDiscoveryQ
             boolean relevance
     ) {
         Set<Long> memberNamespaceIds = input.memberNamespaceIds();
+        List<String> labelSlugs = input.labelSlugs() == null ? List.of() : input.labelSlugs();
         query.setParameter("query", keyword)
                 .setParameter("queryPattern", "%" + keyword + "%")
                 .setParameter("namespace", namespace)
                 .setParameter("resourceType", resourceType)
+                .setParameter("labelFilter", !labelSlugs.isEmpty())
+                .setParameter("labelSlugs", labelSlugs.isEmpty() ? List.of("__none__") : labelSlugs)
                 .setParameter("memberNamespaceIds",
                         memberNamespaceIds == null || memberNamespaceIds.isEmpty()
                                 ? Set.of(-1L)

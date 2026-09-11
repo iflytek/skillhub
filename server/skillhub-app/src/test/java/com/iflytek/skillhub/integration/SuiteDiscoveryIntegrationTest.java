@@ -3,6 +3,10 @@ package com.iflytek.skillhub.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.label.LabelDefinition;
+import com.iflytek.skillhub.domain.label.LabelType;
+import com.iflytek.skillhub.domain.label.SkillLabel;
+import com.iflytek.skillhub.domain.label.SkillSuiteLabel;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -18,6 +22,7 @@ import com.iflytek.skillhub.domain.suite.SkillSuiteStatus;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.search.postgres.PostgresResourceDiscoveryQueryService;
 import com.iflytek.skillhub.service.ResourceDiscoveryAppService;
+import com.iflytek.skillhub.service.SkillSuiteLabelProjectionService;
 import com.iflytek.skillhub.repository.MySkillSuiteQueryRepository;
 import com.iflytek.skillhub.repository.SkillSuiteReferenceQueryRepository;
 import java.time.Instant;
@@ -30,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -72,6 +78,9 @@ class SuiteDiscoveryIntegrationTest {
     @Autowired
     private ResourceDiscoveryAppService appService;
 
+    @MockBean
+    private SkillSuiteLabelProjectionService suiteLabelProjectionService;
+
     @Autowired
     private MySkillSuiteQueryRepository mySuiteRepository;
 
@@ -83,6 +92,8 @@ class SuiteDiscoveryIntegrationTest {
 
     @BeforeEach
     void seedReferencedUsers() {
+        org.mockito.Mockito.when(suiteLabelProjectionService.labelsBySuiteIds(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(Map.of());
         entityManager.persist(new UserAccount("owner", "Owner", null, null));
         entityManager.persist(new UserAccount("author", "Author", null, null));
         entityManager.persist(new UserAccount("other-author", "Other Author", null, null));
@@ -124,6 +135,13 @@ class SuiteDiscoveryIntegrationTest {
                 true));
         suite.setLatestVersionId(suiteVersion.getId());
         entityManager.persistAndFlush(suite);
+        LabelDefinition suiteLabel = entityManager.persistFlushFind(
+                new LabelDefinition("suite-label", LabelType.RECOMMENDED, true, 0, "owner"));
+        LabelDefinition memberLabel = entityManager.persistFlushFind(
+                new LabelDefinition("member-only", LabelType.RECOMMENDED, true, 1, "owner"));
+        entityManager.persist(new SkillSuiteLabel(suite.getId(), suiteLabel.getId(), "owner"));
+        entityManager.persist(new SkillLabel(skill.getId(), memberLabel.getId(), "owner"));
+        entityManager.flush();
         entityManager.clear();
 
         var result = appService.search("starter", "team-ai", "", "relevance", 0, 20, Set.of());
@@ -144,6 +162,13 @@ class SuiteDiscoveryIntegrationTest {
                     assertThat(item.displayName()).isEqualTo("Published snapshot name");
                     assertThat(item.summary()).isEqualTo("Published snapshot summary");
                 });
+        assertThat(appService.search(
+                null, null, "SUITE", "newest", 0, 20, Set.of(), List.of("suite-label")).items())
+                .extracting(item -> item.slug())
+                .containsExactly("starter");
+        assertThat(appService.search(
+                null, null, "SUITE", "newest", 0, 20, Set.of(), List.of("member-only")).items())
+                .isEmpty();
         assertThat(suiteReferenceRepository.findVisibleEntryReferences(
                 skill.getId(), null, Map.of(), Set.of()))
                 .singleElement()
