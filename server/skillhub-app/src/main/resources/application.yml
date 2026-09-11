@@ -156,6 +156,7 @@ skillhub:
   label:
     max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
     max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
+    max-per-suite: ${SKILLHUB_LABEL_MAX_PER_SUITE:10}
   search:
     engine: postgres
     rebuild-on-startup: false
