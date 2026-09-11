@@ -20,9 +20,9 @@ public class SkillSuiteBundleResponseMapper {
         SkillSuiteBundlePreviewPlanner.PreviewPlan plan = outcome.plan();
         if (plan == null) {
             var manifest = outcome.packageAnalysis().manifest();
-            List<SkillSuiteBundlePreviewResponse.Member> members = outcome.packageAnalysis()
+            List<SkillSuiteBundlePreviewResponse.PreviewMember> members = outcome.packageAnalysis()
                     .packageMembers().stream()
-                    .map(member -> new SkillSuiteBundlePreviewResponse.Member(
+                    .map(member -> new SkillSuiteBundlePreviewResponse.PreviewMember(
                             member.coordinate().canonical(), SkillSuiteBundleMemberSourceType.PACKAGE,
                             SkillSuiteBundleRelationshipChange.ADDED, null, null, null, null,
                             member.metadata() == null ? null : member.metadata().version(),
@@ -40,8 +40,8 @@ public class SkillSuiteBundleResponseMapper {
                     members, List.of(), outcome.errors(), List.copyOf(warnings), null);
         }
 
-        List<SkillSuiteBundlePreviewResponse.Member> members = plan.members().stream()
-                .map(member -> new SkillSuiteBundlePreviewResponse.Member(
+        List<SkillSuiteBundlePreviewResponse.PreviewMember> members = plan.members().stream()
+                .map(member -> new SkillSuiteBundlePreviewResponse.PreviewMember(
                         member.coordinate().canonical(), member.sourceType(), member.relationship(),
                         member.publishAction(), member.skillId(), member.skillVersionId(),
                         member.finalVisibility(), member.resolvedVersion(), member.fingerprint(),

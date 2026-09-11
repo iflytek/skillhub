@@ -1,13 +1,10 @@
 package com.iflytek.skillhub.service.bundle;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.config.SkillSuiteBundleProperties;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
-import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
-import com.iflytek.skillhub.domain.skill.validation.ValidationResult;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperation;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperationRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleCoordinate;
@@ -15,11 +12,9 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifest;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMember;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResult;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultRepository;
-import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberSourceType;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSession;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSessionRepository;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
-import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +24,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -42,29 +36,23 @@ public class SkillSuiteBundleConfirmationAppService {
     private final SkillSuiteBundlePreviewSessionRepository previewRepository;
     private final SkillSuiteBundleExecutionOperationRepository operationRepository;
     private final SkillSuiteBundleMemberResultRepository memberRepository;
-    private final SkillSuiteBundlePreviewPlanner planner;
-    private final ObjectStorageService objectStorageService;
+    private final SkillSuiteBundlePreviewRevalidationService revalidationService;
     private final SkillSuiteBundleProperties properties;
-    private final ObjectMapper objectMapper;
     private final Clock clock;
 
     public SkillSuiteBundleConfirmationAppService(
             SkillSuiteBundlePreviewSessionRepository previewRepository,
             SkillSuiteBundleExecutionOperationRepository operationRepository,
             SkillSuiteBundleMemberResultRepository memberRepository,
-            SkillSuiteBundlePreviewPlanner planner,
-            ObjectStorageService objectStorageService,
+            SkillSuiteBundlePreviewRevalidationService revalidationService,
             SkillSuiteBundleProperties properties,
-            ObjectMapper objectMapper,
             Clock clock
     ) {
         this.previewRepository = previewRepository;
         this.operationRepository = operationRepository;
         this.memberRepository = memberRepository;
-        this.planner = planner;
-        this.objectStorageService = objectStorageService;
+        this.revalidationService = revalidationService;
         this.properties = properties;
-        this.objectMapper = objectMapper;
         this.clock = clock;
     }
 
@@ -95,18 +83,10 @@ public class SkillSuiteBundleConfirmationAppService {
 
         Instant now = clock.instant();
         preview.requireConfirmableBy(actorId, confirmedWarningDigest, now);
-        if (!objectStorageService.exists(preview.getArchiveObjectKey())) {
-            throw new DomainBadRequestException("error.suite.bundle.preview.stateChanged");
-        }
-        SkillSuiteBundlePreviewPlanner.PreviewPlan previewPlan = objectMapper.convertValue(
-                preview.getPlan(), SkillSuiteBundlePreviewPlanner.PreviewPlan.class);
-        SkillSuiteBundleManifest manifest = objectMapper.convertValue(
-                preview.getManifest(), SkillSuiteBundleManifest.class);
-        SkillSuiteBundlePreviewPlanner.PreviewPlan currentPlan = planner.plan(
-                rebuildAnalysis(manifest, previewPlan), actorId, namespaceRoles, platformRoles);
-        if (!currentPlan.confirmable() || !currentPlan.equals(previewPlan)) {
-            throw new DomainBadRequestException("error.suite.bundle.preview.stateChanged");
-        }
+        SkillSuiteBundlePreviewRevalidationService.ValidatedPreview validated =
+                revalidationService.requireUnchanged(preview, actorId, namespaceRoles, platformRoles);
+        SkillSuiteBundlePreviewPlanner.PreviewPlan previewPlan = validated.plan();
+        SkillSuiteBundleManifest manifest = validated.manifest();
 
         String operationId = UUID.randomUUID().toString();
         SkillSuiteBundleExecutionOperation operation = new SkillSuiteBundleExecutionOperation(
@@ -145,27 +125,6 @@ public class SkillSuiteBundleConfirmationAppService {
             throw new DomainConflictException("error.suite.bundle.confirmation.operationConflict");
         }
         return new ConfirmationOutcome(existing.getOperationId(), existing.getStatus().name(), true);
-    }
-
-    private SkillSuiteBundlePackageAnalyzer.BundleAnalysis rebuildAnalysis(
-            SkillSuiteBundleManifest manifest,
-            SkillSuiteBundlePreviewPlanner.PreviewPlan plan
-    ) {
-        Map<SkillSuiteBundleCoordinate, SkillSuiteBundleMember> manifestMembers =
-                manifest.spec().members().stream().collect(Collectors.toMap(
-                        SkillSuiteBundleMember::coordinate, Function.identity()));
-        List<SkillSuiteBundlePackageAnalyzer.MemberPackageAnalysis> packages = plan.members().stream()
-                .filter(member -> member.sourceType() == SkillSuiteBundleMemberSourceType.PACKAGE)
-                .map(member -> {
-                    var source = Objects.requireNonNull(manifestMembers.get(member.coordinate()).packageSource());
-                    SkillMetadata metadata = new SkillMetadata(
-                            member.coordinate().slug(), "", member.resolvedVersion(), "", Map.of());
-                    return new SkillSuiteBundlePackageAnalyzer.MemberPackageAnalysis(
-                            member.coordinate(), source.path(), metadata,
-                            ValidationResult.of(List.of(), member.warnings()), member.files(), member.fingerprint());
-                })
-                .toList();
-        return new SkillSuiteBundlePackageAnalyzer.BundleAnalysis(manifest, packages, List.of());
     }
 
     private List<SkillSuiteBundleMemberResult> toMemberResults(

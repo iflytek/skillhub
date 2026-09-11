@@ -23,6 +23,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChan
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleConfirmationAppService;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundlePreviewPlanner;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundlePreviewRevalidationService;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -217,9 +218,11 @@ class SkillSuiteBundlePersistenceTest {
         when(storage.exists(any())).thenReturn(true);
         SkillSuiteBundleProperties properties = new SkillSuiteBundleProperties();
         properties.setConfirmationEnabled(true);
+        SkillSuiteBundlePreviewRevalidationService revalidation =
+                new SkillSuiteBundlePreviewRevalidationService(planner, storage, objectMapper);
         SkillSuiteBundleConfirmationAppService confirmation = new SkillSuiteBundleConfirmationAppService(
-                previewRepository, operationRepository, memberRepository, planner, storage, properties,
-                objectMapper, java.time.Clock.fixed(now(), java.time.ZoneOffset.UTC));
+                previewRepository, operationRepository, memberRepository, revalidation, properties,
+                java.time.Clock.fixed(now(), java.time.ZoneOffset.UTC));
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);

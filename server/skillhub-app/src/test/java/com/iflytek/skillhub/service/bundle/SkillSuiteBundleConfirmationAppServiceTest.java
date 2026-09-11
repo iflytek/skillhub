@@ -20,7 +20,6 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSessionRe
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
-import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,8 +51,7 @@ class SkillSuiteBundleConfirmationAppServiceTest {
     private SkillSuiteBundlePreviewSessionRepository previewRepository;
     private SkillSuiteBundleExecutionOperationRepository operationRepository;
     private SkillSuiteBundleMemberResultRepository memberRepository;
-    private SkillSuiteBundlePreviewPlanner planner;
-    private ObjectStorageService objectStorageService;
+    private SkillSuiteBundlePreviewRevalidationService revalidationService;
     private SkillSuiteBundleProperties properties;
     private SkillSuiteBundleConfirmationAppService service;
 
@@ -62,14 +60,12 @@ class SkillSuiteBundleConfirmationAppServiceTest {
         previewRepository = mock(SkillSuiteBundlePreviewSessionRepository.class);
         operationRepository = mock(SkillSuiteBundleExecutionOperationRepository.class);
         memberRepository = mock(SkillSuiteBundleMemberResultRepository.class);
-        planner = mock(SkillSuiteBundlePreviewPlanner.class);
-        objectStorageService = mock(ObjectStorageService.class);
-        when(objectStorageService.exists("archive.zip")).thenReturn(true);
+        revalidationService = mock(SkillSuiteBundlePreviewRevalidationService.class);
         properties = new SkillSuiteBundleProperties();
         properties.setConfirmationEnabled(true);
         service = new SkillSuiteBundleConfirmationAppService(
-                previewRepository, operationRepository, memberRepository, planner, objectStorageService, properties,
-                objectMapper, Clock.fixed(NOW, ZoneOffset.UTC));
+                previewRepository, operationRepository, memberRepository, revalidationService, properties,
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -80,7 +76,8 @@ class SkillSuiteBundleConfirmationAppServiceTest {
         when(operationRepository.findByActorIdAndClientRequestId("actor", "request-1"))
                 .thenReturn(Optional.empty());
         when(previewRepository.findByIdForUpdate("preview-1")).thenReturn(Optional.of(preview));
-        when(planner.plan(any(), any(), any(), any())).thenReturn(plan);
+        when(revalidationService.requireUnchanged(any(), any(), any(), any()))
+                .thenReturn(new SkillSuiteBundlePreviewRevalidationService.ValidatedPreview(manifest, plan));
 
         SkillSuiteBundleConfirmationAppService.ConfirmationOutcome outcome = service.confirm(
                 "preview-1", "request-1", "warning-digest", "actor", Map.of(), Set.of());
@@ -99,15 +96,6 @@ class SkillSuiteBundleConfirmationAppServiceTest {
             assertThat(member.getSkillSlug()).isEqualTo("member");
             assertThat(member.getPackagePath()).isEqualTo("skills/member");
             assertThat(member.getPublishAction()).isEqualTo(SkillSuiteBundlePublishAction.CREATE_SKILL);
-        });
-
-        ArgumentCaptor<SkillSuiteBundlePackageAnalyzer.BundleAnalysis> analysis =
-                ArgumentCaptor.forClass(SkillSuiteBundlePackageAnalyzer.BundleAnalysis.class);
-        verify(planner).plan(analysis.capture(), any(), any(), any());
-        assertThat(analysis.getValue().packageMembers()).singleElement().satisfies(member -> {
-            assertThat(member.directory()).isEqualTo("skills/member");
-            assertThat(member.metadata().version()).isEqualTo("1.0.0");
-            assertThat(member.fingerprint()).isEqualTo("sha256:member");
         });
     }
 
@@ -129,15 +117,11 @@ class SkillSuiteBundleConfirmationAppServiceTest {
     @Test
     void rejectsChangedLivePlanBeforeAcquiringReservation() {
         SkillSuiteBundlePreviewPlanner.PreviewPlan original = plan();
-        SkillSuiteBundlePreviewPlanner.PreviewPlan changed = new SkillSuiteBundlePreviewPlanner.PreviewPlan(
-                original.mode(), original.target(), original.targetNamespaceId(), original.targetSuiteId(),
-                original.baseSuiteVersionId(), original.targetVersion(), original.displayName(),
-                original.summary(), original.overview(), original.visibility(), original.members(),
-                original.removedMembers(), List.of("state changed"), original.warnings(), original.warningDigest());
         when(operationRepository.findByActorIdAndClientRequestId(any(), any())).thenReturn(Optional.empty());
         when(previewRepository.findByIdForUpdate("preview-1"))
                 .thenReturn(Optional.of(preview(manifest(), original)));
-        when(planner.plan(any(), any(), any(), any())).thenReturn(changed);
+        when(revalidationService.requireUnchanged(any(), any(), any(), any()))
+                .thenThrow(new DomainBadRequestException("error.suite.bundle.preview.stateChanged"));
 
         assertThatThrownBy(() -> service.confirm(
                 "preview-1", "request-1", "warning-digest", "actor", Map.of(), Set.of()))
@@ -154,7 +138,8 @@ class SkillSuiteBundleConfirmationAppServiceTest {
         when(operationRepository.findByActorIdAndClientRequestId(any(), any())).thenReturn(Optional.empty());
         when(previewRepository.findByIdForUpdate("preview-1"))
                 .thenReturn(Optional.of(preview(manifest(), plan)));
-        when(planner.plan(any(), any(), any(), any())).thenReturn(plan);
+        when(revalidationService.requireUnchanged(any(), any(), any(), any()))
+                .thenReturn(new SkillSuiteBundlePreviewRevalidationService.ValidatedPreview(manifest(), plan));
         doThrow(new DataIntegrityViolationException("reservation collision"))
                 .when(operationRepository).flush();
 
@@ -181,23 +166,6 @@ class SkillSuiteBundleConfirmationAppServiceTest {
                 .isInstanceOf(DomainBadRequestException.class)
                 .extracting("messageCode")
                 .isEqualTo("error.suite.bundle.confirmation.idempotencyKey.invalid");
-        verify(operationRepository, never()).save(any());
-    }
-
-    @Test
-    void missingImmutableArchiveRequiresNewPreviewBeforeReplanning() {
-        SkillSuiteBundlePreviewPlanner.PreviewPlan plan = plan();
-        when(operationRepository.findByActorIdAndClientRequestId(any(), any())).thenReturn(Optional.empty());
-        when(previewRepository.findByIdForUpdate("preview-1"))
-                .thenReturn(Optional.of(preview(manifest(), plan)));
-        when(objectStorageService.exists("archive.zip")).thenReturn(false);
-
-        assertThatThrownBy(() -> service.confirm(
-                "preview-1", "request-1", "warning-digest", "actor", Map.of(), Set.of()))
-                .isInstanceOf(DomainBadRequestException.class)
-                .extracting("messageCode")
-                .isEqualTo("error.suite.bundle.preview.stateChanged");
-        verify(planner, never()).plan(any(), any(), any(), any());
         verify(operationRepository, never()).save(any());
     }
 

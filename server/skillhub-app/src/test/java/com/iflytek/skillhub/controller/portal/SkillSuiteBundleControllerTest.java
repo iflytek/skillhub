@@ -5,9 +5,14 @@ import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.dto.SkillSuiteBundlePreviewResponse;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleConfirmationAppService;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundlePreviewAppService;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundleOperationQueryService;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundleOperationCommandService;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleResponseMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +40,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,6 +54,8 @@ class SkillSuiteBundleControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockBean private SkillSuiteBundlePreviewAppService previewService;
     @MockBean private SkillSuiteBundleConfirmationAppService confirmationService;
+    @MockBean private SkillSuiteBundleOperationQueryService operationQueryService;
+    @MockBean private SkillSuiteBundleOperationCommandService operationCommandService;
     @MockBean private SkillSuiteBundleResponseMapper responseMapper;
     @MockBean private NamespaceMemberRepository namespaceMemberRepository;
     @MockBean private DeviceAuthService deviceAuthService;
@@ -124,6 +132,47 @@ class SkillSuiteBundleControllerTest {
                 .andExpect(jsonPath("$.data.operationId").value("operation-1"))
                 .andExpect(jsonPath("$.data.status").value("RUNNING"))
                 .andExpect(jsonPath("$.data.replayed").value(false));
+    }
+
+    @Test
+    void authenticatedCallerCanReadRedactedOperationStatus() throws Exception {
+        SkillSuiteBundleOperationDetailResponse response = new SkillSuiteBundleOperationDetailResponse(
+                "operation-1", SkillSuiteBundleOperationStatus.RUNNING, SkillSuiteBundleMode.CREATE,
+                "@global/suite", 1L, null, "1.0.0", null, null, null,
+                Instant.parse("2026-09-11T08:00:00Z"), Instant.parse("2026-09-11T08:00:00Z"),
+                null, List.of());
+        when(operationQueryService.get("operation-1", "actor", Map.of(), Set.of()))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/suite-bundles/operations/operation-1")
+                        .with(authentication(authToken("actor"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.operationId").value("operation-1"))
+                .andExpect(jsonPath("$.data.targetCoordinate").value("@global/suite"))
+                .andExpect(jsonPath("$.data.actorId").doesNotExist())
+                .andExpect(jsonPath("$.data.archiveObjectKey").doesNotExist())
+                .andExpect(jsonPath("$.data.plan").doesNotExist());
+    }
+
+    @Test
+    void authenticatedCallerCanCancelAndRetryAnOperation() throws Exception {
+        when(operationCommandService.cancel("operation-1", "actor", Map.of(), Set.of()))
+                .thenReturn(new SkillSuiteBundleOperationResponse("operation-1", "CANCELLED", false));
+        when(operationCommandService.retry("operation-2", "actor", Map.of(), Set.of()))
+                .thenReturn(new SkillSuiteBundleOperationResponse("operation-2", "RUNNING", false));
+
+        mockMvc.perform(post("/api/v1/suite-bundles/operations/operation-1/cancel")
+                        .with(authentication(authToken("actor")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+
+        mockMvc.perform(post("/api/v1/suite-bundles/operations/operation-2/retry")
+                        .with(authentication(authToken("actor")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.operationId").value("operation-2"))
+                .andExpect(jsonPath("$.data.status").value("RUNNING"));
     }
 
     private UsernamePasswordAuthenticationToken authToken(String userId) {

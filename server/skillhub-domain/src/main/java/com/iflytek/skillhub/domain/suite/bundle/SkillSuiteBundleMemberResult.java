@@ -98,6 +98,27 @@ public class SkillSuiteBundleMemberResult {
         this.updatedAt = now;
     }
 
+    public void cancelUnlessCompleted(Instant now) {
+        if (status != SkillSuiteBundleMemberResultStatus.COMPLETED) {
+            status = SkillSuiteBundleMemberResultStatus.CANCELLED;
+            updatedAt = now;
+        }
+    }
+
+    public void retryUnlessCompleted(Instant now) {
+        if (status == SkillSuiteBundleMemberResultStatus.BLOCKED_RETRYABLE) {
+            status = SkillSuiteBundleMemberResultStatus.PLANNED;
+            updatedAt = now;
+        }
+    }
+
+    public void requireRepreviewUnlessCompleted(Instant now) {
+        if (status != SkillSuiteBundleMemberResultStatus.COMPLETED) {
+            status = SkillSuiteBundleMemberResultStatus.REPREVIEW_REQUIRED;
+            updatedAt = now;
+        }
+    }
+
     public Long getId() { return id; }
     public String getOperationId() { return operationId; }
     public int getPosition() { return position; }

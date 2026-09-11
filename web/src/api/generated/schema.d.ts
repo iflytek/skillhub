@@ -996,6 +996,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/suite-bundles/operations/{operationId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry one blocked Suite Bundle operation */
+        post: operations["retrySkillSuiteBundleOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite-bundles/operations/{operationId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry one blocked Suite Bundle operation */
+        post: operations["retrySkillSuiteBundleOperation_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite-bundles/operations/{operationId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel one active Suite Bundle operation */
+        post: operations["cancelSkillSuiteBundleOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/suite-bundles/operations/{operationId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel one active Suite Bundle operation */
+        post: operations["cancelSkillSuiteBundleOperation_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
         parameters: {
             query?: never;
@@ -2562,6 +2630,40 @@ export interface paths {
         };
         /** Search exact Skill versions eligible for a Suite draft */
         get: operations["searchSkillSuiteMemberCandidates_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/suite-bundles/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one authorized Suite Bundle operation */
+        get: operations["getSkillSuiteBundleOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite-bundles/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one authorized Suite Bundle operation */
+        get: operations["getSkillSuiteBundleOperation_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4904,7 +5006,7 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
-        Member: {
+        PreviewMember: {
             coordinate?: string;
             /** @enum {string} */
             sourceType?: "PACKAGE" | "REFERENCE";
@@ -4938,7 +5040,7 @@ export interface components {
             expiresAt?: string;
             confirmable?: boolean;
             target?: components["schemas"]["Target"];
-            members?: components["schemas"]["Member"][];
+            members?: components["schemas"]["PreviewMember"][];
             removedMembers?: components["schemas"]["RemovedMember"][];
             errors?: string[];
             warnings?: string[];
@@ -5553,6 +5655,63 @@ export interface components {
             /** @enum {string} */
             visibility?: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
             recommended?: boolean;
+        };
+        ApiResponseSkillSuiteBundleOperationDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillSuiteBundleOperationDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        OperationMember: {
+            /** Format: int32 */
+            position?: number;
+            redacted?: boolean;
+            coordinate?: string;
+            /** @enum {string} */
+            sourceType?: "PACKAGE" | "REFERENCE";
+            /** @enum {string} */
+            relationship?: "ADDED" | "UPDATED" | "UNCHANGED" | "REMOVED";
+            /** @enum {string} */
+            publishAction?: "CREATE_SKILL" | "CREATE_VERSION" | "REUSE_VERSION" | "REFERENCE_VERSION" | "NONE";
+            /** @enum {string} */
+            status?: "PLANNED" | "RUNNING" | "WAITING_FOR_MEMBER" | "COMPLETED" | "BLOCKED_RETRYABLE" | "REPREVIEW_REQUIRED" | "CANCELLED";
+            /** @enum {string} */
+            visibility?: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+            version?: string;
+            /** Format: int64 */
+            skillId?: number;
+            /** Format: int64 */
+            skillVersionId?: number;
+            errors?: string[];
+            warnings?: string[];
+        };
+        SkillSuiteBundleOperationDetailResponse: {
+            operationId?: string;
+            /** @enum {string} */
+            status?: "RUNNING" | "WAITING_FOR_MEMBERS" | "BLOCKED_RETRYABLE" | "REPREVIEW_REQUIRED" | "SUITE_DRAFT_CREATED" | "CANCELLED";
+            /** @enum {string} */
+            mode?: "CREATE" | "UPDATE";
+            targetCoordinate?: string;
+            /** Format: int64 */
+            targetNamespaceId?: number;
+            /** Format: int64 */
+            targetSuiteId?: number;
+            targetVersion?: string;
+            failureCode?: string;
+            /** Format: int64 */
+            resultSuiteId?: number;
+            /** Format: int64 */
+            resultSuiteVersionId?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+            members?: components["schemas"]["OperationMember"][];
         };
         ApiResponseSearchResponse: {
             /** Format: int32 */
@@ -8892,6 +9051,94 @@ export interface operations {
             };
         };
     };
+    retrySkillSuiteBundleOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationResponse"];
+                };
+            };
+        };
+    };
+    retrySkillSuiteBundleOperation_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationResponse"];
+                };
+            };
+        };
+    };
+    cancelSkillSuiteBundleOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationResponse"];
+                };
+            };
+        };
+    };
+    cancelSkillSuiteBundleOperation_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationResponse"];
+                };
+            };
+        };
+    };
     withdrawReview: {
         parameters: {
             query?: never;
@@ -11649,6 +11896,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListSkillSuiteMemberCandidateResponse"];
+                };
+            };
+        };
+    };
+    getSkillSuiteBundleOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationDetailResponse"];
+                };
+            };
+        };
+    };
+    getSkillSuiteBundleOperation_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationDetailResponse"];
                 };
             };
         };

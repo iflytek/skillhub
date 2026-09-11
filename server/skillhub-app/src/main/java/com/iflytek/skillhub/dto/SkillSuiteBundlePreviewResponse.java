@@ -14,7 +14,7 @@ public record SkillSuiteBundlePreviewResponse(
         Instant expiresAt,
         boolean confirmable,
         Target target,
-        List<Member> members,
+        List<PreviewMember> members,
         List<RemovedMember> removedMembers,
         List<String> errors,
         List<String> warnings,
@@ -34,7 +34,7 @@ public record SkillSuiteBundlePreviewResponse(
     ) {
     }
 
-    public record Member(
+    public record PreviewMember(
             String coordinate,
             SkillSuiteBundleMemberSourceType sourceType,
             SkillSuiteBundleRelationshipChange relationship,

@@ -307,12 +307,24 @@ class RouteSecurityPolicyRegistryTest {
         for (String path : List.of(
                 "/api/v1/suite-bundles/preview",
                 "/api/v1/suite-bundles/previews/token/confirm",
+                "/api/v1/suite-bundles/operations/operation/cancel",
+                "/api/v1/suite-bundles/operations/operation/retry",
                 "/api/web/suite-bundles/preview",
-                "/api/web/suite-bundles/previews/token/confirm")) {
+                "/api/web/suite-bundles/previews/token/confirm",
+                "/api/web/suite-bundles/operations/operation/cancel",
+                "/api/web/suite-bundles/operations/operation/retry")) {
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
                     registry.accessLevel("POST", path));
             assertTrue(registry.authorizeApiToken("POST", path, Set.of("skill:publish")).allowed());
             assertFalse(registry.authorizeApiToken("POST", path, Set.of("skill:read")).allowed());
+        }
+        for (String path : List.of(
+                "/api/v1/suite-bundles/operations/operation",
+                "/api/web/suite-bundles/operations/operation")) {
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                    registry.accessLevel("GET", path));
+            assertTrue(registry.authorizeApiToken("GET", path, Set.of("skill:publish")).allowed());
+            assertFalse(registry.authorizeApiToken("GET", path, Set.of("skill:read")).allowed());
         }
     }
 

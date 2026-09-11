@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.suite.bundle;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -131,6 +132,45 @@ public class SkillSuiteBundleExecutionOperation {
             this.reservationActive = false;
             this.completedAt = now;
         }
+    }
+
+    public boolean cancel(Instant now) {
+        if (status == SkillSuiteBundleOperationStatus.CANCELLED) {
+            return false;
+        }
+        if (status == SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED
+                || status == SkillSuiteBundleOperationStatus.REPREVIEW_REQUIRED) {
+            throw new DomainBadRequestException("error.suite.bundle.operation.cancel.notAllowed");
+        }
+        transition(SkillSuiteBundleOperationStatus.CANCELLED, now);
+        return true;
+    }
+
+    public void markBlockedRetryable(String code, String detail, Instant now) {
+        this.failureCode = code;
+        this.failureDetail = detail;
+        transition(SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE, now);
+    }
+
+    public void retry(Instant now) {
+        if (status != SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE) {
+            throw new DomainBadRequestException("error.suite.bundle.operation.retry.notAllowed");
+        }
+        this.failureCode = null;
+        this.failureDetail = null;
+        transition(SkillSuiteBundleOperationStatus.RUNNING, now);
+    }
+
+    public void requireRetryable() {
+        if (status != SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE) {
+            throw new DomainBadRequestException("error.suite.bundle.operation.retry.notAllowed");
+        }
+    }
+
+    public void markRepreviewRequired(String code, Instant now) {
+        this.failureCode = code;
+        this.failureDetail = null;
+        transition(SkillSuiteBundleOperationStatus.REPREVIEW_REQUIRED, now);
     }
 
     public String getOperationId() { return operationId; }
