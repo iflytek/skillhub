@@ -438,7 +438,7 @@ type RequiredGenerated<T, Optional extends keyof T = never> =
   Required<Omit<T, Optional>> & Pick<T, Optional>
 
 type GeneratedResourceSummary = components['schemas']['ResourceSummaryResponse']
-export type ResourceSummary = Omit<RequiredGenerated<GeneratedResourceSummary, 'summary'>, 'resourceType'> & {
+export type ResourceSummary = Omit<RequiredGenerated<GeneratedResourceSummary, 'summary' | 'labels'>, 'resourceType'> & {
   resourceType: ResourceType
 }
 
@@ -446,6 +446,7 @@ export interface ResourceSearchParams {
   q?: string
   namespace?: string
   resourceType?: ResourceType
+  labels?: string[]
   sort?: string
   page?: number
   size?: number

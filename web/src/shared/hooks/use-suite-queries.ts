@@ -23,6 +23,7 @@ function buildResourceSearchUrl(params: ResourceSearchParams) {
   if (params.q) query.set('q', params.q)
   if (params.namespace) query.set('namespace', normalizeNamespace(params.namespace))
   if (params.resourceType) query.set('resourceType', params.resourceType)
+  params.labels?.forEach((label) => query.append('label', label))
   if (params.sort) query.set('sort', params.sort)
   query.set('page', String(params.page ?? 0))
   query.set('size', String(params.size ?? 20))
