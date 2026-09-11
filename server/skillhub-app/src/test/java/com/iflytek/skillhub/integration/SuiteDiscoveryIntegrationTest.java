@@ -3,6 +3,10 @@ package com.iflytek.skillhub.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.label.LabelDefinition;
+import com.iflytek.skillhub.domain.label.LabelType;
+import com.iflytek.skillhub.domain.label.SkillLabel;
+import com.iflytek.skillhub.domain.label.SkillSuiteLabel;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -14,9 +18,11 @@ import com.iflytek.skillhub.domain.suite.SkillSuiteVersion;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersionMember;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersionMemberRepository;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersionStatus;
+import com.iflytek.skillhub.domain.suite.SkillSuiteStatus;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.search.postgres.PostgresResourceDiscoveryQueryService;
 import com.iflytek.skillhub.service.ResourceDiscoveryAppService;
+import com.iflytek.skillhub.service.SkillSuiteLabelProjectionService;
 import com.iflytek.skillhub.repository.MySkillSuiteQueryRepository;
 import com.iflytek.skillhub.repository.SkillSuiteReferenceQueryRepository;
 import java.time.Instant;
@@ -29,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -46,7 +53,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @TestPropertySource(properties = {
         "spring.flyway.enabled=true",
-        "spring.jpa.hibernate.ddl-auto=validate"
+        "spring.jpa.hibernate.ddl-auto=validate",
+        "spring.jpa.show-sql=false",
+        "logging.level.org.hibernate.SQL=OFF"
 })
 class SuiteDiscoveryIntegrationTest {
 
@@ -69,6 +78,9 @@ class SuiteDiscoveryIntegrationTest {
     @Autowired
     private ResourceDiscoveryAppService appService;
 
+    @MockBean
+    private SkillSuiteLabelProjectionService suiteLabelProjectionService;
+
     @Autowired
     private MySkillSuiteQueryRepository mySuiteRepository;
 
@@ -80,6 +92,8 @@ class SuiteDiscoveryIntegrationTest {
 
     @BeforeEach
     void seedReferencedUsers() {
+        org.mockito.Mockito.when(suiteLabelProjectionService.labelsBySuiteIds(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(Map.of());
         entityManager.persist(new UserAccount("owner", "Owner", null, null));
         entityManager.persist(new UserAccount("author", "Author", null, null));
         entityManager.persist(new UserAccount("other-author", "Other Author", null, null));
@@ -121,6 +135,13 @@ class SuiteDiscoveryIntegrationTest {
                 true));
         suite.setLatestVersionId(suiteVersion.getId());
         entityManager.persistAndFlush(suite);
+        LabelDefinition suiteLabel = entityManager.persistFlushFind(
+                new LabelDefinition("suite-label", LabelType.RECOMMENDED, true, 0, "owner"));
+        LabelDefinition memberLabel = entityManager.persistFlushFind(
+                new LabelDefinition("member-only", LabelType.RECOMMENDED, true, 1, "owner"));
+        entityManager.persist(new SkillSuiteLabel(suite.getId(), suiteLabel.getId(), "owner"));
+        entityManager.persist(new SkillLabel(skill.getId(), memberLabel.getId(), "owner"));
+        entityManager.flush();
         entityManager.clear();
 
         var result = appService.search("starter", "team-ai", "", "relevance", 0, 20, Set.of());
@@ -141,6 +162,13 @@ class SuiteDiscoveryIntegrationTest {
                     assertThat(item.displayName()).isEqualTo("Published snapshot name");
                     assertThat(item.summary()).isEqualTo("Published snapshot summary");
                 });
+        assertThat(appService.search(
+                null, null, "SUITE", "newest", 0, 20, Set.of(), List.of("suite-label")).items())
+                .extracting(item -> item.slug())
+                .containsExactly("starter");
+        assertThat(appService.search(
+                null, null, "SUITE", "newest", 0, 20, Set.of(), List.of("member-only")).items())
+                .isEmpty();
         assertThat(suiteReferenceRepository.findVisibleEntryReferences(
                 skill.getId(), null, Map.of(), Set.of()))
                 .singleElement()
@@ -188,6 +216,157 @@ class SuiteDiscoveryIntegrationTest {
                 skill.getId(), "author", Map.of(namespace.getId(), NamespaceRole.MEMBER), Set.of()))
                 .singleElement()
                 .satisfies(reference -> assertThat(reference.slug()).isEqualTo("private-suite"));
+
+        suite = entityManager.find(SkillSuite.class, suite.getId());
+        suite.setHidden(true);
+        entityManager.persistAndFlush(suite);
+        entityManager.clear();
+        assertThat(suiteReferenceRepository.findVisibleMemberships(
+                skill.getId(), "author", Map.of(namespace.getId(), NamespaceRole.MEMBER),
+                Set.of(), 0, 20).items()).isEmpty();
+
+        suite = entityManager.find(SkillSuite.class, suite.getId());
+        suite.setHidden(false);
+        suite.setStatus(SkillSuiteStatus.ARCHIVED);
+        entityManager.persistAndFlush(suite);
+        entityManager.clear();
+        assertThat(suiteReferenceRepository.findVisibleMemberships(
+                skill.getId(), "author", Map.of(namespace.getId(), NamespaceRole.MEMBER),
+                Set.of(), 0, 20).items()).isEmpty();
+    }
+
+    @Test
+    void findsOrdinaryMembershipAndProtectsPrivateSiblingMetadata() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("member-team", "Member Team", "owner"));
+        PublishedSkill current = publishedSkill(
+                namespace, "ordinary", "owner", SkillVisibility.PUBLIC, "Ordinary");
+        PublishedSkill entry = publishedSkill(
+                namespace, "entry", "owner", SkillVisibility.PUBLIC, "Entry");
+        PublishedSkill restricted = publishedSkill(
+                namespace, "private-helper", "other-author", SkillVisibility.PRIVATE,
+                "Private Helper");
+
+        SkillSuite suite = entityManager.persistFlushFind(
+                new SkillSuite(namespace.getId(), "member-pack", "Member Pack", "author"));
+        SkillSuiteVersion suiteVersion = new SkillSuiteVersion(
+                suite.getId(), "2.0.0", "Member Pack", "Current members",
+                SkillVisibility.PUBLIC, "author");
+        suiteVersion.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+        suiteVersion = entityManager.persistFlushFind(suiteVersion);
+        persistMember(suiteVersion, entry, 0, true);
+        persistMember(suiteVersion, current, 1, false);
+        persistMember(suiteVersion, restricted, 2, false);
+        for (int index = 0; index < 9; index++) {
+            persistMember(suiteVersion, publishedSkill(
+                    namespace, "helper-" + index, "owner", SkillVisibility.PUBLIC,
+                    "Helper " + index), index + 3, false);
+        }
+        suite.setLatestVersionId(suiteVersion.getId());
+        entityManager.persistAndFlush(suite);
+        entityManager.clear();
+
+        var page = suiteReferenceRepository.findVisibleMemberships(
+                current.skill().getId(), null, Map.of(), Set.of(), 0, 20);
+
+        assertThat(page.total()).isEqualTo(1);
+        assertThat(page.items()).singleElement().satisfies(reference -> {
+            assertThat(reference.slug()).isEqualTo("member-pack");
+            assertThat(reference.currentSkillEntry()).isFalse();
+            assertThat(reference.memberCount()).isEqualTo(12);
+            assertThat(reference.visibleSiblingMembers()).hasSize(8);
+            assertThat(reference.visibleSiblingMembers().getFirst()).satisfies(member -> {
+                assertThat(member.slug()).isEqualTo("entry");
+                assertThat(member.entry()).isTrue();
+                assertThat(member.available()).isTrue();
+            });
+            assertThat(reference.restrictedMemberCount()).isEqualTo(1);
+            assertThat(reference.omittedVisibleMemberCount()).isEqualTo(2);
+        });
+
+        entityManager.getEntityManager().createNativeQuery(
+                        "UPDATE skill SET latest_version_id = NULL WHERE id = :id")
+                .setParameter("id", restricted.skill().getId())
+                .executeUpdate();
+        entityManager.getEntityManager().createNativeQuery("DELETE FROM skill_version WHERE id = :id")
+                .setParameter("id", restricted.version().getId())
+                .executeUpdate();
+        entityManager.getEntityManager().createNativeQuery("DELETE FROM skill WHERE id = :id")
+                .setParameter("id", restricted.skill().getId())
+                .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(suiteReferenceRepository.findVisibleMemberships(
+                current.skill().getId(), null, Map.of(), Set.of(), 0, 20).items())
+                .singleElement()
+                .satisfies(reference -> {
+                    assertThat(reference.restrictedMemberCount()).isEqualTo(1);
+                    assertThat(reference.visibleSiblingMembers())
+                            .noneMatch(member -> member.slug().equals("private-helper"));
+                });
+    }
+
+    @Test
+    void ignoresHistoricalMembershipOutsideLatestSuiteSnapshot() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("history-team", "History Team", "owner"));
+        PublishedSkill removed = publishedSkill(
+                namespace, "removed", "owner", SkillVisibility.PUBLIC, "Removed");
+        PublishedSkill replacement = publishedSkill(
+                namespace, "replacement", "owner", SkillVisibility.PUBLIC, "Replacement");
+        SkillSuite suite = entityManager.persistFlushFind(
+                new SkillSuite(namespace.getId(), "evolving-pack", "Evolving Pack", "owner"));
+
+        SkillSuiteVersion oldVersion = new SkillSuiteVersion(
+                suite.getId(), "1.0.0", SkillVisibility.PUBLIC, "owner");
+        oldVersion.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+        oldVersion = entityManager.persistFlushFind(oldVersion);
+        persistMember(oldVersion, removed, 0, true);
+
+        SkillSuiteVersion latestVersion = new SkillSuiteVersion(
+                suite.getId(), "2.0.0", SkillVisibility.PUBLIC, "owner");
+        latestVersion.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+        latestVersion = entityManager.persistFlushFind(latestVersion);
+        persistMember(latestVersion, replacement, 0, true);
+        suite.setLatestVersionId(latestVersion.getId());
+        entityManager.persistAndFlush(suite);
+        entityManager.clear();
+
+        assertThat(suiteReferenceRepository.findVisibleMemberships(
+                removed.skill().getId(), null, Map.of(), Set.of(), 0, 20).items()).isEmpty();
+    }
+
+    @Test
+    void boundsMembershipPagesAndExposesTotalForContinuation() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("many-suite-team", "Many Suite Team", "owner"));
+        PublishedSkill current = publishedSkill(
+                namespace, "popular-member", "owner", SkillVisibility.PUBLIC, "Popular Member");
+        for (int index = 0; index < 21; index++) {
+            SkillSuite suite = new SkillSuite(
+                    namespace.getId(), "pack-" + index, "Pack " + index, "owner");
+            entityManager.persist(suite);
+            SkillSuiteVersion version = new SkillSuiteVersion(
+                    suite.getId(), "1.0.0", SkillVisibility.PUBLIC, "owner");
+            version.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+            entityManager.persist(version);
+            persistMember(version, current, 0, true);
+            suite.setLatestVersionId(version.getId());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        var first = suiteReferenceRepository.findVisibleMemberships(
+                current.skill().getId(), null, Map.of(), Set.of(), 0, 100);
+        var second = suiteReferenceRepository.findVisibleMemberships(
+                current.skill().getId(), null, Map.of(), Set.of(), 1, 100);
+
+        assertThat(first.size()).isEqualTo(20);
+        assertThat(first.total()).isEqualTo(21);
+        assertThat(first.items()).hasSize(20);
+        assertThat(second.total()).isEqualTo(21);
+        assertThat(second.items()).hasSize(1);
     }
 
     @Test
@@ -210,6 +389,32 @@ class SuiteDiscoveryIntegrationTest {
                 "", "", "SKILL", "newest", 0, 20, Set.of(namespace.getId())).items())
                 .singleElement()
                 .satisfies(item -> assertThat(item.slug()).isEqualTo("internal"));
+    }
+
+    @Test
+    void exposesNamespaceOnlySuiteMembershipOnlyToNamespaceMembers() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("membership-team", "Membership Team", "owner"));
+        PublishedSkill current = publishedSkill(
+                namespace, "shared-member", "owner", SkillVisibility.PUBLIC, "Shared Member");
+        SkillSuite suite = entityManager.persistFlushFind(new SkillSuite(
+                namespace.getId(), "internal-pack", "Internal Pack", "owner"));
+        SkillSuiteVersion version = new SkillSuiteVersion(
+                suite.getId(), "1.0.0", SkillVisibility.NAMESPACE_ONLY, "owner");
+        version.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+        version = entityManager.persistFlushFind(version);
+        persistMember(version, current, 0, true);
+        suite.setLatestVersionId(version.getId());
+        entityManager.persistAndFlush(suite);
+        entityManager.clear();
+
+        assertThat(suiteReferenceRepository.findVisibleMemberships(
+                current.skill().getId(), null, Map.of(), Set.of(), 0, 20).items()).isEmpty();
+        assertThat(suiteReferenceRepository.findVisibleMemberships(
+                current.skill().getId(), "author",
+                Map.of(namespace.getId(), NamespaceRole.MEMBER), Set.of(), 0, 20).items())
+                .singleElement()
+                .satisfies(reference -> assertThat(reference.slug()).isEqualTo("internal-pack"));
     }
 
     @Test
@@ -334,5 +539,43 @@ class SuiteDiscoveryIntegrationTest {
                     assertThat(member.getSkillVersionId()).isEqualTo(secondVersion.getId());
                     assertThat(member.getSkillVersionSnapshot()).isEqualTo("2.0.0");
                 });
+    }
+
+    private PublishedSkill publishedSkill(
+            Namespace namespace,
+            String slug,
+            String ownerId,
+            SkillVisibility visibility,
+            String displayName
+    ) {
+        Skill skill = new Skill(namespace.getId(), slug, ownerId, visibility);
+        skill.setDisplayName(displayName);
+        entityManager.persist(skill);
+        SkillVersion version = new SkillVersion(skill.getId(), "1.0.0", ownerId);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setDownloadReady(true);
+        entityManager.persist(version);
+        skill.setLatestVersionId(version.getId());
+        return new PublishedSkill(skill, version, namespace.getSlug());
+    }
+
+    private void persistMember(
+            SkillSuiteVersion suiteVersion,
+            PublishedSkill publishedSkill,
+            int position,
+            boolean entry
+    ) {
+        entityManager.persist(new SkillSuiteVersionMember(
+                suiteVersion.getId(),
+                new SkillSuiteMemberSelection(
+                        publishedSkill.skill().getId(), publishedSkill.version().getId(),
+                        publishedSkill.namespaceSlug(),
+                        publishedSkill.skill().getSlug(), publishedSkill.version().getVersion(),
+                        "sha256:" + Integer.toHexString(position).repeat(64).substring(0, 64)),
+                position,
+                entry));
+    }
+
+    private record PublishedSkill(Skill skill, SkillVersion version, String namespaceSlug) {
     }
 }

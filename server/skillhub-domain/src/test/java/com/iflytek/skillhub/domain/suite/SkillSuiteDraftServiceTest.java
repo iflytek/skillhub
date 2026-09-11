@@ -20,6 +20,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -86,6 +87,41 @@ class SkillSuiteDraftServiceTest {
                 });
         assertThat(result.version().getOverview()).isEqualTo("## Start here");
         verify(publicationValidator).validate(result.suite(), result.version());
+    }
+
+    @Test
+    void savesDraftWithIncompleteDisplayMetadataWithoutApplyingPublicationRules() {
+        Namespace namespace = new Namespace("team", "Team", "owner");
+        setId(namespace, 1L);
+        when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
+        when(suiteRepository.findByNamespaceIdAndSlug(1L, "writers")).thenReturn(Optional.empty());
+        when(suiteRepository.save(any())).thenAnswer(invocation -> {
+            SkillSuite saved = invocation.getArgument(0);
+            setId(saved, 10L);
+            return saved;
+        });
+        when(versionRepository.save(any())).thenAnswer(invocation -> {
+            SkillSuiteVersion saved = invocation.getArgument(0);
+            setId(saved, 20L);
+            return saved;
+        });
+        when(memberRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SkillSuiteMemberSelection member = new SkillSuiteMemberSelection(
+                30L, 40L, "global", "writer", "1.0.0", "sha256:abc");
+        SkillSuiteDraftService.CreatedDraft result = service.create(
+                new CreateSkillSuiteDraftCommand(
+                        1L, "writers", "Writers", null, null, "1.0.0",
+                        SkillVisibility.PRIVATE, null, 40L, List.of(member)),
+                new SkillSuiteActionContext(
+                        "author", Map.of(1L, NamespaceRole.MEMBER), Set.of(),
+                        "request-1", "127.0.0.1", "test"));
+
+        assertThat(result.version().getSummary()).isNull();
+        assertThat(result.version().getOverview()).isNull();
+        assertThat(result.version().getStatus()).isEqualTo(SkillSuiteVersionStatus.DRAFT);
+        verify(publicationValidator).validate(result.suite(), result.version());
+        verify(publicationValidator, never()).validateForPublication(any(), any());
     }
 
     @Test

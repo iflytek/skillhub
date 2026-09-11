@@ -26,6 +26,7 @@ describe('ResourceCard', () => {
           installCount: 3,
           available: true,
           updatedAt: '2026-09-07T10:00:00Z',
+          labels: [{ slug: 'healthcare', type: 'RECOMMENDED', displayName: '医疗健康' }],
         }}
         onClick={() => undefined}
       />,
@@ -35,6 +36,7 @@ describe('ResourceCard', () => {
     expect(html).toContain('Starter Suite')
     expect(html).toContain('@team-ai')
     expect(html).toContain('v2.0.0')
+    expect(html).toContain('医疗健康')
   })
 
   it('shows the computed unavailable state', () => {

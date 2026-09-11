@@ -21,6 +21,10 @@ import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { toast } from '@/shared/lib/toast'
+import { SuiteBundleImport } from '@/features/suite/suite-bundle-import'
+import { SuiteLabelPanel } from '@/features/skill/skill-label-panel'
+import { useSuiteLabels } from '@/shared/hooks/use-label-queries'
+import { useAuth } from '@/features/auth/use-auth'
 
 type SelectedMember = SkillSuiteMemberInput & { skillId: number; skillVersionId: number; displayName: string }
 
@@ -34,6 +38,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const creatingVersion = mode === 'new-version'
   const loadingSource = editing || creatingVersion
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
   const navigate = useNavigate()
   const { data: namespaces } = useMyNamespaces()
   const { data: existing, isLoading: isLoadingExisting, error: existingError } = useSuiteDetail(
@@ -51,6 +56,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const [selected, setSelected] = useState<SelectedMember[]>([])
   const [entrySkillVersionId, setEntrySkillVersionId] = useState<number | null>(null)
   const [pendingVersionUpdate, setPendingVersionUpdate] = useState<SkillSuiteMemberCandidate | null>(null)
+  const [authoringMode, setAuthoringMode] = useState<'manual' | 'import'>('manual')
   const debouncedQuery = useDebounce(candidateQuery.trim(), 250)
   const { data: candidates, isLoading: isLoadingCandidates } = useSuiteMemberCandidates(
     namespace, visibility, debouncedQuery, Boolean(namespace),
@@ -58,6 +64,9 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const createMutation = useCreateSuite()
   const createVersionMutation = useCreateSuiteVersion(existing?.id ?? 0)
   const updateMutation = useUpdateSuiteDraft(existing?.id ?? 0, existing?.versionId ?? 0)
+  const { data: suiteLabels } = useSuiteLabels(
+    existing?.namespace ?? '', existing?.slug ?? '', Boolean(existing && loadingSource),
+  )
 
   useEffect(() => {
     if (!namespace && namespaces?.length) setNamespace(namespaces[0].slug)
@@ -206,6 +215,37 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
         subtitle={t('suite.editorDescription')}
       />
 
+      {!editing ? (
+        <div className="flex w-fit rounded-lg border bg-muted/30 p-1" role="tablist" aria-label={t('suite.authoringMode')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authoringMode === 'manual'}
+            className={authoringMode === 'manual' ? 'rounded-md bg-background px-4 py-2 text-sm font-medium shadow-sm' : 'px-4 py-2 text-sm text-muted-foreground'}
+            onClick={() => setAuthoringMode('manual')}
+          >
+            {t('suite.manualAuthoring')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authoringMode === 'import'}
+            className={authoringMode === 'import' ? 'rounded-md bg-background px-4 py-2 text-sm font-medium shadow-sm' : 'px-4 py-2 text-sm text-muted-foreground'}
+            onClick={() => setAuthoringMode('import')}
+          >
+            {t('suite.localImport')}
+          </button>
+        </div>
+      ) : null}
+
+      {!editing && authoringMode === 'import' ? (
+        <SuiteBundleImport
+          expectedMode={creatingVersion ? 'UPDATE' : 'CREATE'}
+          expectedCoordinate={creatingVersion && existing ? `@${existing.namespace}/${existing.slug}` : undefined}
+        />
+      ) : (
+        <>
+
       <Card className="grid gap-5 p-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="suite-namespace">{t('suite.namespace')}</Label>
@@ -242,14 +282,45 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           </Select>
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="suite-summary">{t('suite.summary')}</Label>
-          <Textarea id="suite-summary" value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} />
+          <Label htmlFor="suite-summary">
+            {t('suite.summary')}
+            <span aria-hidden="true" className="ml-1 text-xs font-normal text-muted-foreground">
+              · {t('suite.requiredForPublish')}
+            </span>
+          </Label>
+          <Textarea
+            id="suite-summary"
+            aria-label={t('suite.summary')}
+            value={summary}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={3}
+          />
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="suite-overview">{t('suite.overview')}</Label>
+          <Label htmlFor="suite-overview">
+            {t('suite.overview')}
+            <span aria-hidden="true" className="ml-1 text-xs font-normal text-muted-foreground">
+              · {t('suite.requiredForPublish')}
+            </span>
+          </Label>
           <p className="text-xs text-muted-foreground">{t('suite.overviewHint')}</p>
+          <div className="grid gap-2 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+            {[
+              'suite.overviewPromptScenario',
+              'suite.overviewPromptPreparation',
+              'suite.overviewPromptSequence',
+              'suite.overviewPromptInputsOutputs',
+              'suite.overviewPromptBoundaries',
+            ].map(prompt => (
+              <span key={prompt} className="flex gap-2">
+                <span aria-hidden="true" className="text-primary">•</span>
+                {t(prompt)}
+              </span>
+            ))}
+          </div>
           <Textarea
             id="suite-overview"
+            aria-label={t('suite.overview')}
             value={overview}
             onChange={(event) => setOverview(event.target.value)}
             maxLength={20000}
@@ -261,6 +332,30 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           <Textarea id="suite-changelog" value={changelog} onChange={(event) => setChangelog(event.target.value)} rows={2} />
         </div>
       </Card>
+
+      <Card className="p-5" aria-live="polite">
+        <h2 className="font-semibold">{t('suite.publishReadinessTitle')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t('suite.publishReadinessDescription')}</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <span className={summary.trim() ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-400'}>
+            {summary.trim() ? t('suite.summaryComplete') : t('suite.summaryIncomplete')}
+          </span>
+          <span aria-hidden="true" className="text-muted-foreground">·</span>
+          <span className={overview.trim() ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-400'}>
+            {overview.trim() ? t('suite.overviewComplete') : t('suite.overviewIncomplete')}
+          </span>
+        </div>
+      </Card>
+
+      {existing ? (
+        <SuiteLabelPanel
+          namespace={existing.namespace}
+          slug={existing.slug}
+          initialLabels={suiteLabels ?? []}
+          canManage
+          isSuperAdmin={hasRole('SUPER_ADMIN')}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
@@ -340,6 +435,8 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           if (pendingVersionUpdate) applyCandidateUpdate(pendingVersionUpdate)
         }}
       />
+        </>
+      )}
     </div>
   )
 }

@@ -100,6 +100,9 @@ skillhub:
     # Fail closed for deployment modes whose upgrade topology is unknown. Single-instance
     # distributions explicitly enable this after ruling out mixed application versions.
     review-writes-enabled: ${SKILLHUB_SUITE_REVIEW_WRITES_ENABLED:false}
+    bundle:
+      preview-ttl: ${SKILLHUB_SUITE_BUNDLE_PREVIEW_TTL:30m}
+      confirmation-enabled: ${SKILLHUB_SUITE_BUNDLE_CONFIRMATION_ENABLED:false}
   observability:
     tracing-mode: ${SKILLHUB_TRACING_MODE:none}
     log-format: ${SKILLHUB_LOG_FORMAT:text}
@@ -153,6 +156,7 @@ skillhub:
   label:
     max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
     max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
+    max-per-suite: ${SKILLHUB_LABEL_MAX_PER_SUITE:10}
   search:
     engine: postgres
     rebuild-on-startup: false

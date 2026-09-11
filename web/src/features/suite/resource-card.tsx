@@ -40,6 +40,19 @@ export function ResourceCard({ resource, onClick }: { resource: ResourceSummary;
         <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">
           {resource.summary || t('suite.noSummary')}
         </p>
+        {isSuite && resource.labels?.length ? (
+          <div className="flex flex-wrap gap-1.5" aria-label={t('suite.assignedLabels')}>
+            {resource.labels.map(label => (
+              <span
+                key={label.slug}
+                className="max-w-full truncate rounded-full border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground"
+                title={label.displayName}
+              >
+                {label.displayName}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-auto flex items-center gap-3 text-xs text-muted-foreground">
           <span
             className="max-w-[50%] truncate rounded-full bg-secondary/70 px-2.5 py-1 font-mono"

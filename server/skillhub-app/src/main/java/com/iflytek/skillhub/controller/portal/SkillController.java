@@ -15,6 +15,7 @@ import com.iflytek.skillhub.dto.ResolveVersionResponse;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
+import com.iflytek.skillhub.dto.SkillSuiteReferenceResponse;
 import com.iflytek.skillhub.dto.SkillVersionCompareFileResponse;
 import com.iflytek.skillhub.dto.SkillVersionCompareHunkResponse;
 import com.iflytek.skillhub.dto.SkillVersionCompareLineResponse;
@@ -89,8 +90,13 @@ public class SkillController extends BaseApiController {
             @AuthenticationPrincipal PlatformPrincipal principal) {
 
         Map<Long, NamespaceRole> namespaceRoles = userNsRoles != null ? userNsRoles : Map.of();
+        Set<String> platformRoles = principal == null || principal.platformRoles() == null
+                ? Set.of() : principal.platformRoles();
         SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
                 namespace, slug, userId, namespaceRoles);
+        PageResponse<SkillSuiteReferenceResponse> memberOfSuites =
+                skillSuiteAppService.findVisibleMemberships(
+                        detail.id(), userId, namespaceRoles, platformRoles, 0, 20);
 
         SkillDetailResponse response = new SkillDetailResponse(
                 detail.id(),
@@ -118,13 +124,34 @@ public class SkillController extends BaseApiController {
                 toLifecycleVersion(detail.ownerPreviewVersion()),
                 detail.ownerPreviewReviewComment(),
                 detail.resolutionMode(),
-                skillSuiteAppService.findVisibleEntryReferences(
-                        detail.id(), userId, namespaceRoles,
-                        principal == null || principal.platformRoles() == null
-                                ? Set.of() : principal.platformRoles())
+                memberOfSuites.items().stream()
+                        .filter(SkillSuiteReferenceResponse::currentSkillEntry)
+                        .toList(),
+                memberOfSuites
         );
 
         return ok("response.success.read", response);
+    }
+
+    /** Returns a bounded page of visible current Suite snapshots containing this Skill. */
+    @GetMapping("/{namespace}/{slug}/suite-memberships")
+    public ApiResponse<PageResponse<SkillSuiteReferenceResponse>>
+            listSuiteMemberships(
+                    @PathVariable String namespace,
+                    @PathVariable String slug,
+                    @RequestParam(defaultValue = "0") int page,
+                    @RequestParam(defaultValue = "20") int size,
+                    @RequestAttribute(value = "userId", required = false) String userId,
+                    @RequestAttribute(value = "userNsRoles", required = false)
+                            Map<Long, NamespaceRole> userNsRoles,
+                    @AuthenticationPrincipal PlatformPrincipal principal) {
+        Map<Long, NamespaceRole> namespaceRoles = userNsRoles != null ? userNsRoles : Map.of();
+        Set<String> platformRoles = principal == null || principal.platformRoles() == null
+                ? Set.of() : principal.platformRoles();
+        SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
+                namespace, slug, userId, namespaceRoles);
+        return ok("response.success.read", skillSuiteAppService.findVisibleMemberships(
+                detail.id(), userId, namespaceRoles, platformRoles, page, size));
     }
 
     /**

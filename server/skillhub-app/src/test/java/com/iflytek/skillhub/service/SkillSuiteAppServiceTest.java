@@ -121,6 +121,30 @@ class SkillSuiteAppServiceTest {
     }
 
     @Test
+    void createInstallPlan_keepsHistoricalEmptyDisplayMetadataInstallable() {
+        version.setOverview(null);
+        SkillSuiteQueryService.Detail detail = detail(true);
+        given(queryService.getDetail("global", "starter", null, "user-1", Map.of(), Set.of()))
+                .willReturn(detail);
+        given(skillQueryService.resolveVersionById(101L, "user-1", Map.of(), Set.of()))
+                .willReturn(resolved(11L, 101L, "first", "1.0.0", "sha256:first"));
+        given(skillQueryService.resolveVersionById(102L, "user-1", Map.of(), Set.of()))
+                .willReturn(resolved(12L, 102L, "second", "2.0.0", "sha256:second"));
+        given(installOperationRepository.insertIfAbsent(
+                any(), org.mockito.ArgumentMatchers.eq("historical-1"),
+                org.mockito.ArgumentMatchers.eq("user:user-1"),
+                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(70L))).willReturn(1);
+
+        var result = service.createInstallPlan(
+                "global", "starter", null, "user-1", Map.of(), Set.of(), "historical-1", request);
+
+        assertThat(version.getSummary()).isNull();
+        assertThat(version.getOverview()).isNull();
+        assertThat(result.members()).hasSize(2);
+        verify(installMetricsService).recordIssuedPlan(7L);
+    }
+
+    @Test
     void createInstallPlan_preservesSuperAdminAccessWhenResolvingPrivateMembers() {
         Set<String> platformRoles = Set.of("SUPER_ADMIN");
         SkillSuiteQueryService.Detail detail = detail(true);

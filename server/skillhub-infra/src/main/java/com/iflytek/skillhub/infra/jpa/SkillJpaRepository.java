@@ -22,6 +22,7 @@ import java.util.Optional;
 public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRepository {
     List<Skill> findByIdIn(List<Long> ids);
     List<Skill> findByNamespaceIdAndSlug(Long namespaceId, String slug);
+    List<Skill> findByNamespaceIdInAndSlugIn(List<Long> namespaceIds, List<String> slugs);
     Optional<Skill> findByNamespaceIdAndSlugAndOwnerId(Long namespaceId, String slug, String ownerId);
     boolean existsByNamespaceId(Long namespaceId);
 

@@ -282,6 +282,20 @@ export interface SkillSuiteReference {
   displayName: string
   version: string
   memberCount: number
+  currentSkillEntry?: boolean
+  visibleSiblingMembers?: SkillSuiteSiblingMember[]
+  restrictedMemberCount?: number
+  omittedVisibleMemberCount?: number
+}
+
+export interface SkillSuiteSiblingMember {
+  skillId: number
+  namespace: string
+  slug: string
+  displayName: string
+  version: string
+  entry: boolean
+  available: boolean
 }
 
 export interface SkillDetail {
@@ -310,6 +324,7 @@ export interface SkillDetail {
   ownerPreviewReviewComment?: string
   resolutionMode?: string
   entryForSuites?: SkillSuiteReference[]
+  memberOfSuites?: PagedResponse<SkillSuiteReference>
 }
 
 export interface SubmitPromotionRequest {
@@ -423,7 +438,7 @@ type RequiredGenerated<T, Optional extends keyof T = never> =
   Required<Omit<T, Optional>> & Pick<T, Optional>
 
 type GeneratedResourceSummary = components['schemas']['ResourceSummaryResponse']
-export type ResourceSummary = Omit<RequiredGenerated<GeneratedResourceSummary, 'summary'>, 'resourceType'> & {
+export type ResourceSummary = Omit<RequiredGenerated<GeneratedResourceSummary, 'summary' | 'labels'>, 'resourceType'> & {
   resourceType: ResourceType
 }
 
@@ -431,6 +446,7 @@ export interface ResourceSearchParams {
   q?: string
   namespace?: string
   resourceType?: ResourceType
+  labels?: string[]
   sort?: string
   page?: number
   size?: number
@@ -461,6 +477,12 @@ export type MySkillSuiteSummary = RequiredGenerated<
   components['schemas']['MySkillSuiteSummaryResponse'],
   'summary'
 >
+
+export type SkillSuiteBundlePreview = components['schemas']['SkillSuiteBundlePreviewResponse']
+export type SkillSuiteBundlePreviewMember = components['schemas']['PreviewMember']
+export type SkillSuiteBundleRemovedMember = components['schemas']['RemovedMember']
+export type SkillSuiteBundleOperation = components['schemas']['SkillSuiteBundleOperationDetailResponse']
+export type SkillSuiteBundleOperationResult = components['schemas']['SkillSuiteBundleOperationResponse']
 
 // Publish
 export interface PublishResult {

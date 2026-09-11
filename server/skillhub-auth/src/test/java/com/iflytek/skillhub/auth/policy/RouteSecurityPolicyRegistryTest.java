@@ -75,6 +75,12 @@ class RouteSecurityPolicyRegistryTest {
         assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
                 registry.accessLevel("GET", "/api/v1/suites/global/starter"));
         assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/v1/suites/global/starter/labels"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("PUT", "/api/v1/suites/global/starter/labels/official"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("DELETE", "/api/web/suites/global/starter/labels/official"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
                 registry.accessLevel("POST", "/api/v1/suites/global/starter/install-plan"));
         assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
                 registry.accessLevel("GET", "/api/v1/suites/member-candidates"));
@@ -88,6 +94,13 @@ class RouteSecurityPolicyRegistryTest {
                 "GET", "/api/v1/suites/global/starter", Set.of()).allowed());
         assertTrue(registry.authorizeApiToken(
                 "POST", "/api/v1/suites/global/starter/install-plan", Set.of()).allowed());
+        var deniedAttachLabel = registry.authorizeApiToken(
+                "PUT", "/api/v1/suites/global/starter/labels/official", Set.of("skill:read"));
+        var allowedAttachLabel = registry.authorizeApiToken(
+                "PUT", "/api/v1/suites/global/starter/labels/official", Set.of("skill:publish"));
+        assertFalse(deniedAttachLabel.allowed());
+        assertEquals("skill:publish", deniedAttachLabel.requiredScope());
+        assertTrue(allowedAttachLabel.allowed());
 
         var deniedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("skill:read"));
         var allowedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("skill:publish"));
@@ -300,6 +313,32 @@ class RouteSecurityPolicyRegistryTest {
 
         assertTrue(gaps.isEmpty(),
                 "Authorization routes with no API-token policy and no session-only declaration: " + gaps);
+    }
+
+    @Test
+    void suiteBundleWritesRequireAuthenticationAndPublishTokenScope() {
+        for (String path : List.of(
+                "/api/v1/suite-bundles/preview",
+                "/api/v1/suite-bundles/previews/token/confirm",
+                "/api/v1/suite-bundles/operations/operation/cancel",
+                "/api/v1/suite-bundles/operations/operation/retry",
+                "/api/web/suite-bundles/preview",
+                "/api/web/suite-bundles/previews/token/confirm",
+                "/api/web/suite-bundles/operations/operation/cancel",
+                "/api/web/suite-bundles/operations/operation/retry")) {
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                    registry.accessLevel("POST", path));
+            assertTrue(registry.authorizeApiToken("POST", path, Set.of("skill:publish")).allowed());
+            assertFalse(registry.authorizeApiToken("POST", path, Set.of("skill:read")).allowed());
+        }
+        for (String path : List.of(
+                "/api/v1/suite-bundles/operations/operation",
+                "/api/web/suite-bundles/operations/operation")) {
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                    registry.accessLevel("GET", path));
+            assertTrue(registry.authorizeApiToken("GET", path, Set.of("skill:publish")).allowed());
+            assertFalse(registry.authorizeApiToken("GET", path, Set.of("skill:read")).allowed());
+        }
     }
 
     @Test

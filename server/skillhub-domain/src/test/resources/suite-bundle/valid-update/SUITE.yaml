@@ -1,0 +1,21 @@
+apiVersion: skillhub.iflytek.com/v1alpha1
+kind: SkillSuiteBundle
+metadata:
+  namespace: global
+  slug: clinical-workflow
+spec:
+  mode: UPDATE
+  baseVersion: 1.0.0
+  version: 1.1.0
+  displayName: 临床工作流
+  summary: 更新后的临床工作流
+  overview: 更新成员并重新固定公共引用。
+  visibility: PUBLIC
+  entry: "@global/intake"
+  members:
+    - skill: "@global/intake"
+      package:
+        path: members/intake
+    - skill: "@public/shared-dictionary"
+      reference:
+        version: 3.0.0

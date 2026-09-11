@@ -17,8 +17,27 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+}))
 vi.mock('@/shared/lib/toast', () => ({ toast: mocks.toast }))
+vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ hasRole: () => false }) }))
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSuiteLabels: () => ({ data: [] }),
+  useSkillLabels: () => ({ data: [] }),
+  useVisibleLabels: () => ({ data: [], isLoading: false }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useAttachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+vi.mock('@/features/suite/suite-bundle-import', () => ({
+  SuiteBundleImport: ({ expectedMode, expectedCoordinate }: {
+    expectedMode: string
+    expectedCoordinate?: string
+  }) => <div>{`bundle-import:${expectedMode}:${expectedCoordinate ?? ''}`}</div>,
+}))
 vi.mock('@/shared/hooks/use-debounce', () => ({ useDebounce: (value: string) => value }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useMyNamespaces: () => ({ data: [{ id: 1, slug: 'global' }] }),
@@ -111,6 +130,13 @@ describe('SuiteEditor', () => {
       .toBe('Starter suite'))
     expect((screen.getByLabelText('suite.overview') as HTMLTextAreaElement).value)
       .toBe('## Use this suite')
+    expect(screen.getByText('suite.summaryComplete')).not.toBeNull()
+    expect(screen.getByText('suite.overviewComplete')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptScenario')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptPreparation')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptSequence')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptInputsOutputs')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptBoundaries')).not.toBeNull()
     const version = screen.getByLabelText('suite.version') as HTMLInputElement
     expect(version.value).toBe('')
     fireEvent.change(version, { target: { value: '2.0.0' } })
@@ -166,5 +192,18 @@ describe('SuiteEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'suite.confirmVersionUpdate' }))
 
     await waitFor(() => expect(screen.getByText('@global/weather@2.0.0')).not.toBeNull())
+  })
+
+  it('offers local Bundle import for create and binds update imports to the current Suite', async () => {
+    const { unmount } = render(<SuiteEditor />)
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.localImport' }))
+    expect(screen.getByText('bundle-import:CREATE:')).not.toBeNull()
+    unmount()
+
+    mocks.detail = { data: sourceSuite(['CREATE_VERSION']), isLoading: false, error: null }
+    render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="new-version" />)
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'suite.localImport' })).not.toBeNull())
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.localImport' }))
+    expect(screen.getByText('bundle-import:UPDATE:@global/starter')).not.toBeNull()
   })
 })
