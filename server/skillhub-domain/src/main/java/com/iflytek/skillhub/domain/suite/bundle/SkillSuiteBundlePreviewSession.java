@@ -59,6 +59,12 @@ public class SkillSuiteBundlePreviewSession {
     private Instant expiresAt;
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
+    @Column(name = "staged_objects_cleaned_at")
+    private Instant stagedObjectsCleanedAt;
+    @Column(name = "staged_cleanup_failed_at")
+    private Instant stagedCleanupFailedAt;
+    @Column(name = "staged_cleanup_failure_code", length = 128)
+    private String stagedCleanupFailureCode;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Version
@@ -101,6 +107,17 @@ public class SkillSuiteBundlePreviewSession {
         this.status = SkillSuiteBundlePreviewStatus.EXPIRED;
     }
 
+    public void markStagedCleanupFailed(String failureCode, Instant now) {
+        this.stagedCleanupFailureCode = failureCode;
+        this.stagedCleanupFailedAt = now;
+    }
+
+    public void markStagedObjectsCleaned(Instant now) {
+        this.stagedObjectsCleanedAt = now;
+        this.stagedCleanupFailedAt = null;
+        this.stagedCleanupFailureCode = null;
+    }
+
     /**
      * Verifies immutable PreviewSession invariants before confirmation starts revalidating live state.
      */
@@ -132,6 +149,9 @@ public class SkillSuiteBundlePreviewSession {
     public SkillSuiteBundlePreviewStatus getStatus() { return status; }
     public Instant getExpiresAt() { return expiresAt; }
     public Instant getConfirmedAt() { return confirmedAt; }
+    public Instant getStagedObjectsCleanedAt() { return stagedObjectsCleanedAt; }
+    public Instant getStagedCleanupFailedAt() { return stagedCleanupFailedAt; }
+    public String getStagedCleanupFailureCode() { return stagedCleanupFailureCode; }
     public Instant getCreatedAt() { return createdAt; }
     public long getLockVersion() { return lockVersion; }
 

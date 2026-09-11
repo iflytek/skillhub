@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSession;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSessionRepository;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -45,6 +46,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -313,6 +315,47 @@ class SkillSuiteBundlePersistenceTest {
                     assertThat(member.getSkillSlug()).isEqualTo("member");
                     assertThat(member.getWarnings()).containsExactly("review warning");
                 });
+    }
+
+    @Test
+    void cleanupQueriesReturnOnlyExpiredPreviewsAndUncleanedTerminalOperations() {
+        Namespace namespace = persistNamespace("bundle-cleanup-query");
+        SkillSuiteBundlePreviewSession expired = preview(
+                "cleanup-expired", "actor", namespace.getId(), "expired", null, null);
+        expired.markExpired();
+        previewRepository.save(expired);
+        SkillSuiteBundlePreviewSession activePreview = preview(
+                "cleanup-active-preview", "actor", namespace.getId(), "active", null, null);
+        activePreview.markConfirmed(now());
+        previewRepository.save(activePreview);
+        operationRepository.save(operation(
+                "cleanup-active", "cleanup-active-preview", "cleanup-active-request", "actor",
+                SkillSuiteBundleMode.CREATE, namespace.getId(), "active", null, null));
+        SkillSuiteBundlePreviewSession terminalPreview = preview(
+                "cleanup-terminal-preview", "actor", namespace.getId(), "terminal", null, null);
+        terminalPreview.markConfirmed(now());
+        previewRepository.save(terminalPreview);
+        SkillSuiteBundleExecutionOperation terminal = operation(
+                "cleanup-terminal", "cleanup-terminal-preview", "cleanup-request", "actor",
+                SkillSuiteBundleMode.CREATE, namespace.getId(), "terminal", null, null);
+        terminal.cancel(now().plusSeconds(1));
+        operationRepository.save(terminal);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(previewRepository
+                .findTop100ByStatusAndStagedObjectsCleanedAtIsNullOrderByExpiresAtAsc(
+                        SkillSuiteBundlePreviewStatus.EXPIRED))
+                .extracting(SkillSuiteBundlePreviewSession::getToken)
+                .containsExactly("cleanup-expired");
+        assertThat(operationRepository
+                .findTop100ByStatusInAndStagedObjectsCleanedAtIsNullOrderByCompletedAtAsc(Set.of(
+                        SkillSuiteBundleOperationStatus.REPREVIEW_REQUIRED,
+                        SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED,
+                        SkillSuiteBundleOperationStatus.CANCELLED)))
+                .extracting(SkillSuiteBundleExecutionOperation::getOperationId)
+                .contains("cleanup-terminal")
+                .doesNotContain("cleanup-active");
     }
 
     @Test

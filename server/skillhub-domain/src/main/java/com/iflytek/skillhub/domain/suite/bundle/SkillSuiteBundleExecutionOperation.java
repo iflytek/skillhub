@@ -73,6 +73,12 @@ public class SkillSuiteBundleExecutionOperation {
     private Instant updatedAt;
     @Column(name = "completed_at")
     private Instant completedAt;
+    @Column(name = "staged_objects_cleaned_at")
+    private Instant stagedObjectsCleanedAt;
+    @Column(name = "staged_cleanup_failed_at")
+    private Instant stagedCleanupFailedAt;
+    @Column(name = "staged_cleanup_failure_code", length = 128)
+    private String stagedCleanupFailureCode;
     @Version
     @Column(name = "lock_version", nullable = false)
     private long lockVersion;
@@ -196,6 +202,17 @@ public class SkillSuiteBundleExecutionOperation {
         transition(SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED, now);
     }
 
+    public void markStagedCleanupFailed(String failureCode, Instant now) {
+        this.stagedCleanupFailureCode = failureCode;
+        this.stagedCleanupFailedAt = now;
+    }
+
+    public void markStagedObjectsCleaned(Instant now) {
+        this.stagedObjectsCleanedAt = now;
+        this.stagedCleanupFailedAt = null;
+        this.stagedCleanupFailureCode = null;
+    }
+
     public String getOperationId() { return operationId; }
     public String getPreviewToken() { return previewToken; }
     public String getClientRequestId() { return clientRequestId; }
@@ -220,5 +237,8 @@ public class SkillSuiteBundleExecutionOperation {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getCompletedAt() { return completedAt; }
+    public Instant getStagedObjectsCleanedAt() { return stagedObjectsCleanedAt; }
+    public Instant getStagedCleanupFailedAt() { return stagedCleanupFailedAt; }
+    public String getStagedCleanupFailureCode() { return stagedCleanupFailureCode; }
     public long getLockVersion() { return lockVersion; }
 }

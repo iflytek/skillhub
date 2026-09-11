@@ -14,4 +14,7 @@ public interface SkillSuiteBundleExecutionOperationRepository {
     Optional<SkillSuiteBundleExecutionOperation> findByPreviewToken(String previewToken);
     List<SkillSuiteBundleExecutionOperation> findTop100ByStatusInOrderByUpdatedAtAsc(
             Collection<SkillSuiteBundleOperationStatus> statuses);
+    List<SkillSuiteBundleExecutionOperation>
+            findTop100ByStatusInAndStagedObjectsCleanedAtIsNullOrderByCompletedAtAsc(
+                    Collection<SkillSuiteBundleOperationStatus> statuses);
 }
