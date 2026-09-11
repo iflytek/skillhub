@@ -55,7 +55,7 @@ function preview(overrides: Record<string, unknown> = {}) {
   return {
     previewToken: 'preview-1',
     warningDigest: 'digest-1',
-    expiresAt: '2026-09-11T09:00:00Z',
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
     confirmable: true,
     target: { mode: 'CREATE', coordinate: '@global/suite', targetVersion: '1.0.0' },
     members: [{

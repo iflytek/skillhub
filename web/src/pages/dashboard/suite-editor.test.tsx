@@ -17,8 +17,21 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+}))
 vi.mock('@/shared/lib/toast', () => ({ toast: mocks.toast }))
+vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ hasRole: () => false }) }))
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSuiteLabels: () => ({ data: [] }),
+  useSkillLabels: () => ({ data: [] }),
+  useVisibleLabels: () => ({ data: [], isLoading: false }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useAttachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
+}))
 vi.mock('@/features/suite/suite-bundle-import', () => ({
   SuiteBundleImport: ({ expectedMode, expectedCoordinate }: {
     expectedMode: string
@@ -117,6 +130,8 @@ describe('SuiteEditor', () => {
       .toBe('Starter suite'))
     expect((screen.getByLabelText('suite.overview') as HTMLTextAreaElement).value)
       .toBe('## Use this suite')
+    expect(screen.getByText('suite.summaryComplete')).not.toBeNull()
+    expect(screen.getByText('suite.overviewComplete')).not.toBeNull()
     const version = screen.getByLabelText('suite.version') as HTMLInputElement
     expect(version.value).toBe('')
     fireEvent.change(version, { target: { value: '2.0.0' } })

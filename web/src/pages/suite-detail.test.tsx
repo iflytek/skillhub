@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   detail: { data: undefined as SkillSuite | undefined, isLoading: false, error: null as Error | null },
   submit: { mutateAsync: vi.fn(), isPending: false },
+  suiteLabels: [] as Array<{ slug: string; type: string; displayName: string }>,
 }))
 const originalRuntimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
 
@@ -33,11 +34,26 @@ vi.mock('@tanstack/react-router', () => ({
     </a>
   ),
 }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+}))
 vi.mock('@/features/skill/markdown-renderer', () => ({
   MarkdownRenderer: ({ content }: { content: string }) => <div data-testid="suite-overview">{content}</div>,
 }))
 vi.mock('@/features/suite/suite-management-actions', () => ({ SuiteManagementActions: () => null }))
+vi.mock('@/features/auth/use-auth', () => ({
+  useAuth: () => ({ user: null, hasRole: () => false }),
+}))
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSuiteLabels: () => ({ data: mocks.suiteLabels }),
+  useSkillLabels: () => ({ data: [] }),
+  useVisibleLabels: () => ({ data: [], isLoading: false }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useAttachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
+}))
 vi.mock('@/shared/hooks/use-suite-queries', () => ({
   useSuiteDetail: () => mocks.detail,
   useSuiteVersions: () => ({ data: [] }),
@@ -92,7 +108,17 @@ describe('SuiteDetailPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    mocks.suiteLabels = []
     window.__SKILLHUB_RUNTIME_CONFIG__ = originalRuntimeConfig
+  })
+
+  it('shows labels directly associated with the Suite', () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
+    mocks.suiteLabels = [{ slug: 'healthcare', type: 'RECOMMENDED', displayName: '医疗健康' }]
+
+    render(<SuiteDetailPage />)
+
+    expect(screen.getByText('医疗健康')).not.toBeNull()
   })
 
   it('adds entry skill guidance to the overview and keeps the full member grid separate', () => {
