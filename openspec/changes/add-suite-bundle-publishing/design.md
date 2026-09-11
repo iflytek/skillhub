@@ -194,6 +194,11 @@ Manifest 提供目标 Suite/SuiteVersion 的展示信息、完整顺序和 Entry
 或计算 fingerprint；普通发布需要的文件 hash、包归档和存储对象也从该流式输入生成。当前成员、
 引用、版本和权限批量读取。纯引用和未变化成员不复制对象、不扫描、不审核。
 
+首版复用 `skillhub.publish.max-package-size` 同时限制 ZIP 压缩体积和整个 Bundle 的解压后总量，
+单文件限制继续复用 `skillhub.publish.max-single-file-size`；Bundle 总文件数上限为普通单 Skill 文件数
+上限乘以协议允许的 100 个成员。上传流先写入独立临时目录，每个 ZIP 文件只在解压时计算一次
+SHA-256 并写入临时对象，分析阶段只读取本地暂存文件，返回计划不保留文件字节。
+
 外层解析和成员解析分开执行。外层只负责唯一 Manifest、成员目录边界和文件归属；成员目录去除
 自身前缀后，必须成为一个普通的、根部含 `SKILL.md` 的 Skill 包，并复用现有
 `SkillPackageValidator`、元数据解析、合规规则和错误/警告等级。成员目录不得重叠或嵌套，未声明的
