@@ -32,6 +32,7 @@ public record SkillSuiteBundleOperationDetailResponse(
             boolean redacted,
             String coordinate,
             SkillSuiteBundleMemberSourceType sourceType,
+            String packagePath,
             SkillSuiteBundleRelationshipChange relationship,
             SkillSuiteBundlePublishAction publishAction,
             SkillSuiteBundleMemberResultStatus status,

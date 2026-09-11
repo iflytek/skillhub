@@ -126,7 +126,7 @@ public class SkillSuiteBundleOperationQueryService {
     ) {
         return new SkillSuiteBundleOperationDetailResponse.OperationMember(
                 member.getPosition(), false, "@" + member.getNamespaceSlug() + "/" + member.getSkillSlug(),
-                member.getSourceType(), member.getRelationshipChange(), member.getPublishAction(),
+                member.getSourceType(), member.getPackagePath(), member.getRelationshipChange(), member.getPublishAction(),
                 member.getStatus(), member.getRequestedVisibility(), member.getRequestedVersion(),
                 member.getSkillId(), member.getSkillVersionId(), member.getErrors(), member.getWarnings());
     }
@@ -135,7 +135,7 @@ public class SkillSuiteBundleOperationQueryService {
             SkillSuiteBundleMemberResult member
     ) {
         return new SkillSuiteBundleOperationDetailResponse.OperationMember(
-                member.getPosition(), true, null, null, null, null, member.getStatus(),
+                member.getPosition(), true, null, null, null, null, null, member.getStatus(),
                 null, null, null, null, List.of(), List.of());
     }
 

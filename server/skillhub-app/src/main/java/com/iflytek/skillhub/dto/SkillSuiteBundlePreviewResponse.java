@@ -37,6 +37,7 @@ public record SkillSuiteBundlePreviewResponse(
     public record PreviewMember(
             String coordinate,
             SkillSuiteBundleMemberSourceType sourceType,
+            String packagePath,
             SkillSuiteBundleRelationshipChange relationship,
             SkillSuiteBundlePublishAction publishAction,
             Long skillId,

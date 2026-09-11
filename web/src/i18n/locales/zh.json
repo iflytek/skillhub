@@ -2006,7 +2006,10 @@
       "previewExpired": "预览已过期，请重新选择并上传 Bundle。",
       "noChanges": "所有成员和固定版本都没有变化。",
       "removedMember": "将移除 {{coordinate}}@{{version}}",
+      "removedEntryMember": "当前入口技能",
+      "memberDirectory": "成员目录：{{path}}",
       "acceptWarnings": "我已逐项检查并接受 {{count}} 条警告",
+      "acceptRisks": "我已逐项检查并接受 {{warningCount}} 条警告和 {{removalCount}} 个成员移除项",
       "confirm": "确认并开始发布",
       "chooseAgain": "重新选择",
       "progressTitle": "Bundle 发布进度",
@@ -2014,6 +2017,10 @@
       "operationLoadFailed": "无法读取 Bundle 操作状态，请检查网络后重试。",
       "reloadOperation": "重新读取",
       "redactedMember": "无权查看的成员",
+      "viewMemberReview": "查看技能版本与审核状态",
+      "forgetOperation": "放弃恢复此操作",
+      "importAnother": "导入另一个 Bundle",
+      "openDraft": "打开套件草稿",
       "retry": "重试未完成工作",
       "retryFailed": "重试 Bundle 操作失败",
       "cancelOperation": "取消后续处理",
@@ -2038,6 +2045,15 @@
         "REUSE_VERSION": "复用已有版本",
         "REFERENCE_VERSION": "引用精确版本",
         "NONE": "不产生发布写入"
+      },
+      "source": {
+        "PACKAGE": "携带成员包",
+        "REFERENCE": "引用已有版本"
+      },
+      "path": {
+        "noWrite": "复用或引用已有版本，不产生 Skill 发布写入。",
+        "private": "创建 PRIVATE Skill 版本并保持私有，不自动公开。",
+        "publish": "创建 Skill 版本并进入现有扫描、发布或审核流程；最终状态以进度页为准。"
       },
       "errors": {
         "empty-folder": "所选目录或 ZIP 为空。",

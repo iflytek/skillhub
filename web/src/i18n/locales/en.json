@@ -2007,7 +2007,10 @@
       "previewExpired": "This preview expired. Select and upload the Bundle again.",
       "noChanges": "All members and pinned versions are unchanged.",
       "removedMember": "Remove {{coordinate}}@{{version}}",
+      "removedEntryMember": "current Entry Skill",
+      "memberDirectory": "Member directory: {{path}}",
       "acceptWarnings": "I reviewed and accept all {{count}} warnings",
+      "acceptRisks": "I reviewed and accept {{warningCount}} warnings and {{removalCount}} member removals",
       "confirm": "Confirm and start publishing",
       "chooseAgain": "Choose again",
       "progressTitle": "Bundle publishing progress",
@@ -2015,6 +2018,10 @@
       "operationLoadFailed": "Unable to load the Bundle operation. Check your connection and try again.",
       "reloadOperation": "Reload",
       "redactedMember": "Member hidden by access policy",
+      "viewMemberReview": "View Skill version and review status",
+      "forgetOperation": "Stop restoring this operation",
+      "importAnother": "Import another Bundle",
+      "openDraft": "Open Suite draft",
       "retry": "Retry unfinished work",
       "retryFailed": "Failed to retry the Bundle operation",
       "cancelOperation": "Cancel remaining work",
@@ -2039,6 +2046,15 @@
         "REUSE_VERSION": "Reuse existing version",
         "REFERENCE_VERSION": "Reference exact version",
         "NONE": "No publication write"
+      },
+      "source": {
+        "PACKAGE": "Included member package",
+        "REFERENCE": "Existing version reference"
+      },
+      "path": {
+        "noWrite": "Reuse or reference an existing version without a Skill publishing write.",
+        "private": "Create a PRIVATE Skill version and keep it private without automatic publication.",
+        "publish": "Create a Skill version and enter the existing scan, publish, or review flow. Follow progress for the final state."
       },
       "errors": {
         "empty-folder": "The selected folder or ZIP is empty.",

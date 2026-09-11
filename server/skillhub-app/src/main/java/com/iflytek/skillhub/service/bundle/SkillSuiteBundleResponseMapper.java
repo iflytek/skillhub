@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service.bundle;
 
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleCoordinate;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberSourceType;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Maps internal Bundle plans to stable transport responses without exposing staged object keys. */
 @Component
@@ -24,6 +27,7 @@ public class SkillSuiteBundleResponseMapper {
                     .packageMembers().stream()
                     .map(member -> new SkillSuiteBundlePreviewResponse.PreviewMember(
                             member.coordinate().canonical(), SkillSuiteBundleMemberSourceType.PACKAGE,
+                            member.directory(),
                             SkillSuiteBundleRelationshipChange.ADDED, null, null, null, null,
                             member.metadata() == null ? null : member.metadata().version(),
                             member.fingerprint(), member.validation().errors(), member.validation().warnings()))
@@ -40,9 +44,16 @@ public class SkillSuiteBundleResponseMapper {
                     members, List.of(), outcome.errors(), List.copyOf(warnings), null);
         }
 
+        var packagePaths = outcome.packageAnalysis() == null
+                ? Map.<SkillSuiteBundleCoordinate, String>of()
+                : outcome.packageAnalysis().packageMembers().stream().collect(
+                        Collectors.toMap(
+                                SkillSuiteBundlePackageAnalyzer.MemberPackageAnalysis::coordinate,
+                                SkillSuiteBundlePackageAnalyzer.MemberPackageAnalysis::directory));
         List<SkillSuiteBundlePreviewResponse.PreviewMember> members = plan.members().stream()
                 .map(member -> new SkillSuiteBundlePreviewResponse.PreviewMember(
-                        member.coordinate().canonical(), member.sourceType(), member.relationship(),
+                        member.coordinate().canonical(), member.sourceType(), packagePaths.get(member.coordinate()),
+                        member.relationship(),
                         member.publishAction(), member.skillId(), member.skillVersionId(),
                         member.finalVisibility(), member.resolvedVersion(), member.fingerprint(),
                         member.errors(), member.warnings()))

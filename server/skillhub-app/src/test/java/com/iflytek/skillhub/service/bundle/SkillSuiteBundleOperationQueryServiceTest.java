@@ -74,6 +74,7 @@ class SkillSuiteBundleOperationQueryServiceTest {
         assertThat(response.targetNamespaceId()).isEqualTo(1L);
         assertThat(response.members()).singleElement().satisfies(member -> {
             assertThat(member.coordinate()).isEqualTo("@global/member");
+            assertThat(member.packagePath()).isEqualTo("members/member");
             assertThat(member.version()).isEqualTo("1.0.0");
             assertThat(member.redacted()).isFalse();
         });
@@ -124,6 +125,7 @@ class SkillSuiteBundleOperationQueryServiceTest {
             assertThat(member.redacted()).isTrue();
             assertThat(member.status()).isNotNull();
             assertThat(member.coordinate()).isNull();
+            assertThat(member.packagePath()).isNull();
             assertThat(member.skillId()).isNull();
             assertThat(member.version()).isNull();
             assertThat(member.errors()).isEmpty();
@@ -145,8 +147,8 @@ class SkillSuiteBundleOperationQueryServiceTest {
     private SkillSuiteBundleMemberResult member(String namespace, SkillVisibility visibility) {
         return new SkillSuiteBundleMemberResult(
                 "operation-1", 0, new SkillSuiteBundleCoordinate(namespace, "member"),
-                SkillSuiteBundleMemberSourceType.REFERENCE, null, visibility, "1.0.0",
-                SkillSuiteBundleRelationshipChange.ADDED, SkillSuiteBundlePublishAction.REFERENCE_VERSION,
+                SkillSuiteBundleMemberSourceType.PACKAGE, "members/member", visibility, "1.0.0",
+                SkillSuiteBundleRelationshipChange.ADDED, SkillSuiteBundlePublishAction.CREATE_VERSION,
                 "sha256:member", 10L, 20L, List.of(), List.of("warning"), NOW);
     }
 

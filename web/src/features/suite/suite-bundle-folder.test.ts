@@ -41,6 +41,26 @@ describe('validateSuiteBundleFolder', () => {
       fileAt(index === 0 ? 'bundle/SUITE.yaml' : `bundle/chunk-${index}`, 10 * 1024 * 1024))
     expect(validateSuiteBundleFolder(files)).toBe('bundle-too-large')
   })
+
+  it('accepts exact byte limits and rejects the first byte above them', () => {
+    expect(validateSuiteBundleFolder([
+      fileAt('bundle/SUITE.yaml', 1),
+      ...Array.from({ length: 10 }, (_, index) =>
+        fileAt(`bundle/chunk-${index}`, 10 * 1024 * 1024 - (index === 0 ? 1 : 0))),
+    ])).toBeNull()
+    expect(validateSuiteBundleFolder([
+      fileAt('bundle/SUITE.yaml'),
+      fileAt('bundle/large.bin', 10 * 1024 * 1024 + 1),
+    ])).toBe('file-too-large')
+  })
+
+  it('rejects more than 50,000 included files using metadata only', () => {
+    const files = [fileAt('bundle/SUITE.yaml'), ...Array.from(
+      { length: 50_000 },
+      (_, index) => fileAt(`bundle/member-${index}.md`, 0),
+    )]
+    expect(validateSuiteBundleFolder(files)).toBe('too-many-files')
+  })
 })
 
 describe('validateSuiteBundleZip', () => {
@@ -48,5 +68,14 @@ describe('validateSuiteBundleZip', () => {
     expect(validateSuiteBundleZip(new File(['zip'], 'bundle.zip'))).toBeNull()
     expect(validateSuiteBundleZip(new File(['text'], 'bundle.txt'))).toBe('invalid-zip')
     expect(validateSuiteBundleZip(new File([], 'bundle.zip'))).toBe('empty-folder')
+  })
+
+  it('accepts an archive at 100 MB and rejects one byte above it', () => {
+    const atLimit = new File(['x'], 'bundle.zip')
+    Object.defineProperty(atLimit, 'size', { value: 100 * 1024 * 1024 })
+    const aboveLimit = new File(['x'], 'bundle.zip')
+    Object.defineProperty(aboveLimit, 'size', { value: 100 * 1024 * 1024 + 1 })
+    expect(validateSuiteBundleZip(atLimit)).toBeNull()
+    expect(validateSuiteBundleZip(aboveLimit)).toBe('bundle-too-large')
   })
 })
