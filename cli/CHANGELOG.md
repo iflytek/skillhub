@@ -6,6 +6,8 @@ All notable CLI behavior changes are documented in this file.
 
 ### Added
 
+- Add OAuth Device Flow to `skillhub login` when no API token is supplied, including best-effort
+  browser launch, a `--no-open` headless mode, bounded polling, and non-secret JSON progress output.
 - Add the user-level `astudio` agent profile, displayed as AStudio, with automatic detection of
   `~/.acode/skills` on Linux, macOS, and Windows.
 - Add repeatable `sync pull --skill <slug>` selection for non-interactive and JSON workflows, with

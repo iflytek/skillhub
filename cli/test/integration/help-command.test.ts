@@ -2,6 +2,14 @@ import { describe, expect, test } from 'bun:test'
 import { runCli } from '../helpers/run-cli'
 
 describe('help command', () => {
+  test('documents interactive device login and the headless fallback', async () => {
+    const result = await runCli(['help', 'login'])
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('OAuth Device Flow')
+    expect(result.stdout).toContain('--no-open')
+    expect(result.stdout).toContain('--token')
+  })
   test('prints detailed help for install', async () => {
     const result = await runCli(['help', 'install'])
     expect(result.exitCode).toBe(0)

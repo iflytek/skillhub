@@ -3,7 +3,7 @@ import { createTempHome } from '../helpers/temp-env'
 import { startFakeRegistry } from '../helpers/fake-registry'
 import { runCli } from '../helpers/run-cli'
 
-let registry: { url: string; stop: () => void } | undefined
+let registry: Awaited<ReturnType<typeof startFakeRegistry>> | undefined
 
 afterEach(() => {
   registry?.stop()
@@ -79,18 +79,51 @@ describe('auth commands', () => {
     expect(result.stderr).toContain('authentication failed')
   })
 
-  // [P0] missing token → EXIT.usage, stderr contains "token is required"
-  test('login without --token exits with usage error', async () => {
+  test('login without a token uses device flow and never prints the access token', async () => {
     const env = await createTempHome()
-    registry = await startFakeRegistry({ token: 'sk_ok' })
+    registry = await startFakeRegistry({
+      token: 'oauth-secret',
+      user: { handle: 'oauth-user', displayName: 'OAuth User' },
+      deviceFlow: { accessToken: 'oauth-secret', pendingPolls: 1 }
+    })
 
-    const result = await runCli(['login', '--registry', registry.url], {
+    const result = await runCli(['login', '--registry', registry.url, '--no-open'], {
       HOME: env.home,
       USERPROFILE: env.home
     })
 
-    expect(result.exitCode).toBe(5) // EXIT.usage
-    expect(result.stderr).toContain('token is required')
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('Logged in')
+    expect(result.stderr).toContain('ABCD-2345')
+    expect(result.stderr).toContain('/device')
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain('oauth-secret')
+    expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json())
+      .toMatchObject({ tokens: { [registry.url]: 'oauth-secret' } })
+    expect(registry.received.devicePolls).toBe(2)
+  })
+
+  test('device login --json emits a non-secret authorization event and final result', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'oauth-secret',
+      user: { handle: 'oauth-user', displayName: 'OAuth User' },
+      deviceFlow: { accessToken: 'oauth-secret' }
+    })
+
+    const result = await runCli(['login', '--registry', registry.url, '--no-open', '--json'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout)).toEqual({ ok: true, registry: registry.url, handle: 'oauth-user' })
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      event: 'device_authorization',
+      userCode: 'ABCD-2345',
+      verificationUri: `${registry.url}/device`
+    })
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain('oauth-secret')
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain('device-secret')
   })
 
   // [P0] whoami failure must NOT write credentials
