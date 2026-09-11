@@ -47,6 +47,41 @@ Manifest 描述完整目标成员集合和顺序，每个成员只能选择一�
 未出现在 Manifest 中时才视为移除，不能因为没有包目录就视为移除。引用成员可以新增，也可以
 显式重新固定到另一个合规 PUBLISHED 版本。Entry Skill 可以使用任一成员形式。
 
+实现协议使用归档根级唯一文件 `SUITE.yaml`。首版结构固定为：
+
+```yaml
+apiVersion: skillhub.iflytek.com/v1alpha1
+kind: SkillSuiteBundle
+metadata:
+  namespace: global
+  slug: clinical-workflow
+spec:
+  mode: CREATE # 或 UPDATE
+  baseVersion: 1.0.0 # 仅 UPDATE 必填，CREATE 禁止提供
+  version: 1.1.0
+  displayName: 临床工作流
+  summary: 套件摘要
+  overview: 套件 Markdown 概述
+  visibility: PUBLIC
+  changelog: 本次更新说明
+  entry: "@global/intake"
+  members:
+    - skill: "@global/intake"
+      package:
+        path: skills/intake
+        visibility: PUBLIC # 仅新 Skill 必填
+    - skill: "@global/shared-dictionary"
+      reference:
+        version: 2.3.1
+```
+
+协议采用严格字段集合，不识别的字段直接报错，避免拼写错误被静默忽略。`metadata` 坐标和
+`spec.version` 是目标 Suite 身份；成员 `skill` 是唯一 Skill 身份；`SKILL.md` 的 `name`、
+`description` 和可选 `version` 继续作为 Skill 自身发布元数据。若携带包的 `SKILL.md` 解析出的
+slug 与成员 `skill` 的 slug 不同，或显式版本与预览解析出的目标版本冲突，预览阻塞，不设置覆盖
+优先级。引用成员只能提供精确 `version`，不能同时携带包。已有 Skill 的 `package.visibility`
+可以省略并继承当前值；若显式提供则必须与当前值一致。新 Skill 必须明确提供该字段。
+
 **备选方案：要求每个成员都有包目录。** 不采用。Suite 可以合法引用其他用户的公开 Skill，强制
 打包会错误暗示操作者可以重新发布或复制这些内容。
 
