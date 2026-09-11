@@ -31,7 +31,7 @@
 
 ## 5. Suite 展示信息与 Label
 
-- [ ] 5.1 `[REQ-SMT-01, REQ-SMT-02, REQ-SMT-03]` 在 Suite 提交、直接发布和批准边界要求非空摘要和概述，同时允许不完整 DRAFT 和历史发布数据读取；通过生命周期测试覆盖所有边界和兼容场景。
+- [x] 5.1 `[REQ-SMT-01, REQ-SMT-02, REQ-SMT-03]` 在 Suite 提交、直接发布和批准边界要求非空摘要和概述，同时允许不完整 DRAFT 和历史发布数据读取；通过生命周期测试覆盖所有边界和兼容场景。
 - [ ] 5.2 `[REQ-SMT-04]` Bundle 从 Manifest 显式值或当前非空值解析展示内容；验证创建/更新模式展示信息不完整时，在发布包副作用发生前阻止确认。
 - [ ] 5.3 `[REQ-SMT-05, REQ-SMT-06, REQ-SMT-08, REQ-SMT-09]` 新增 Suite-to-Label 关联并复用 Label 定义、本地化和权限类型；通过持久化与权限测试覆盖普通、特权、重复、数量上限和删除行为，确保不修改成员或 Skill Tag。
 - [ ] 5.4 `[REQ-SMT-05, REQ-SMT-06, REQ-SMT-07, REQ-SMT-09]` 新增 Suite Label 查询、变更和筛选 API 并重新生成 OpenAPI 类型；验证批量投影、Suite 专属审计和搜索筛选不会使用成员 Skill 关联。

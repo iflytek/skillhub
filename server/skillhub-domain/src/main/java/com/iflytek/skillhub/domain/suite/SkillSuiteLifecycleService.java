@@ -83,7 +83,7 @@ public class SkillSuiteLifecycleService {
         if (loaded.version().getStatus() != SkillSuiteVersionStatus.DRAFT) {
             throw new DomainBadRequestException("error.suite.review.notDraft", loaded.version().getVersion());
         }
-        publicationValidator.validate(loaded.suite(), loaded.version());
+        publicationValidator.validateForPublication(loaded.suite(), loaded.version());
 
         loaded.version().setStatus(SkillSuiteVersionStatus.PENDING_REVIEW);
         versionRepository.save(loaded.version());
@@ -111,7 +111,7 @@ public class SkillSuiteLifecycleService {
         if (loaded.version().getStatus() != SkillSuiteVersionStatus.DRAFT) {
             throw new DomainBadRequestException("error.suite.publish.notDraft", loaded.version().getVersion());
         }
-        publicationValidator.validate(loaded.suite(), loaded.version());
+        publicationValidator.validateForPublication(loaded.suite(), loaded.version());
         publish(loaded.suite(), loaded.version(), context.actorUserId());
         audit(context, "PUBLISH_SKILL_SUITE_VERSION", "SKILL_SUITE_VERSION", versionId, null);
         log.info("Private Suite published [suiteId={}, versionId={}, actorId={}, requestId={}]",
@@ -128,7 +128,7 @@ public class SkillSuiteLifecycleService {
         if (loaded.version().getStatus() != SkillSuiteVersionStatus.PENDING_REVIEW) {
             throw new DomainBadRequestException("error.suite.review.notPending", loaded.version().getVersion());
         }
-        publicationValidator.validate(loaded.suite(), loaded.version());
+        publicationValidator.validateForPublication(loaded.suite(), loaded.version());
         completeTask(task, ReviewTaskStatus.APPROVED, context.actorUserId(), comment);
         publish(loaded.suite(), loaded.version(), context.actorUserId());
         audit(context, "APPROVE_SKILL_SUITE_REVIEW", "REVIEW_TASK", reviewTaskId,

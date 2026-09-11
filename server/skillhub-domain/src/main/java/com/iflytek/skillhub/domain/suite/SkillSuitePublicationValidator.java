@@ -20,6 +20,11 @@ public class SkillSuitePublicationValidator {
         this.stateResolver = stateResolver;
     }
 
+    public SkillSuiteAvailability validateForPublication(SkillSuite suite, SkillSuiteVersion version) {
+        validateDisplayMetadata(version);
+        return validate(suite, version);
+    }
+
     public SkillSuiteAvailability validate(SkillSuite suite, SkillSuiteVersion version) {
         List<SkillSuiteVersionMember> members =
                 memberRepository.findBySuiteVersionIdOrderByPosition(version.getId());
@@ -38,5 +43,14 @@ public class SkillSuitePublicationValidator {
             throw new DomainBadRequestException("error.suite.members.unavailable", reasons);
         }
         return availability;
+    }
+
+    private void validateDisplayMetadata(SkillSuiteVersion version) {
+        if (version.getSummary() == null || version.getSummary().isBlank()) {
+            throw new DomainBadRequestException("error.suite.summary.required");
+        }
+        if (version.getOverview() == null || version.getOverview().isBlank()) {
+            throw new DomainBadRequestException("error.suite.overview.required");
+        }
     }
 }
