@@ -59,7 +59,9 @@ Manifest 描述完整目标成员集合和顺序，每个成员只能选择一�
 
 ExecutionOperation 保存创建/更新模式、目标 Namespace/Suite/版本、操作者、归档摘要、完整成员计划、
 已创建 Skill/SkillVersion ID、精确引用 ID 和失败原因。对外状态为 `RUNNING`、
-`WAITING_FOR_MEMBERS`、`BLOCKED`、`SUITE_DRAFT_CREATED`、`CANCELLED` 和 `EXPIRED`。
+`WAITING_FOR_MEMBERS`、`BLOCKED_RETRYABLE`、`REPREVIEW_REQUIRED`、`SUITE_DRAFT_CREATED` 和
+`CANCELLED`。只有 PreviewSession 使用 `PREVIEW_READY`、`CONFIRMED` 和 `EXPIRED`；等待人工审核的
+ExecutionOperation 不受 PreviewSession TTL 影响。
 
 只有需要创建或发生变化且有权限的携带包成员进入现有 Skill 发布流程。所有新版本成为 PUBLISHED，
 并且复用成员和引用成员最终仍符合要求后，更新模式才创建 SuiteVersion DRAFT；创建模式原子创建
@@ -113,14 +115,31 @@ Bundle 不得调用会自动撤回其他待审版本或删除替换已有版本�
 | `SCANNING`、`PENDING_REVIEW` | `WAITING_FOR_MEMBERS` | 查看扫描或审核进度 | 保持预览绑定 ID |
 | PRIVATE 新版本进入 `UPLOADED` | `RUNNING` | 使用 Bundle 确认中已明确授予的私有发布授权，重新鉴权后执行现有 confirm-publish 转换 | 保持 ID |
 | `PUBLISHED` | 该成员完成 | 等待其他成员或创建 Suite 草稿 | 保持 ID |
-| `SCAN_FAILED` | `BLOCKED` | 仅在现有重扫动作能保留同一 ID 时允许重试，否则重新上传并预览 | 不得静默换 ID |
-| `REJECTED` | `BLOCKED` | 修改内容后重新上传并预览 | 原 ID 不再自动恢复 |
-| 待审版本被撤回为 `UPLOADED` | `BLOCKED` | 重新预览 | 不自动重新提交审核 |
-| 已绑定版本被删除、替换、下架或失去权限 | `BLOCKED` | 重新预览 | 不跟随新 ID |
+| `SCAN_FAILED` | 能以同一 ID 重扫时为 `BLOCKED_RETRYABLE`，否则为 `REPREVIEW_REQUIRED` | 重扫或重新上传预览 | 不得静默换 ID |
+| `REJECTED` | `REPREVIEW_REQUIRED` | 修改内容后重新上传并预览 | 原 ID 不再自动恢复 |
+| 待审版本被撤回为 `UPLOADED` | `REPREVIEW_REQUIRED` | 重新预览 | 不自动重新提交审核 |
+| 已绑定版本被删除、替换、下架或引用身份变化 | `REPREVIEW_REQUIRED` | 重新预览 | 不跟随新 ID |
+| 权限暂时撤销或 Namespace 冻结且计划身份未变化 | `BLOCKED_RETRYABLE` | 恢复权限或状态后重试，也可由有权角色取消 | 保持 ID |
+
+`BLOCKED_RETRYABLE` 保留坐标/版本占用，只允许同一 ExecutionOperation 按原计划和原 ID 重试。
+`REPREVIEW_REQUIRED` 是终态，进入时与坐标/版本占用在同一事务中释放。`CANCELLED` 和
+`SUITE_DRAFT_CREATED` 同样在终态事务中释放占用。数据库使用仅覆盖占用状态的唯一约束，防止释放
+与新确认并发时出现双写。等待审核和可重试阻塞不会因 PreviewSession 过期而自动释放；原操作者或
+当前治理角色可以按权限取消长期操作。
 
 状态读取只允许原操作者或当前有权治理目标 Suite/Namespace 的角色。读取时仍按当前权限过滤成员
 元数据；重试和取消必须重新授权。最终创建 Suite 草稿前再次检查 Namespace 可写、Suite 创建或
-管理权限、已有 Suite 仍为 ACTIVE、目标坐标/版本占用和全部成员资格，任一失败均进入 `BLOCKED`。
+管理权限、已有 Suite 仍为 ACTIVE、目标坐标/版本占用和全部成员资格。权限或 Namespace 状态暂时
+不可用且计划身份未变化时进入 `BLOCKED_RETRYABLE`；资源身份或目标计划失效时进入
+`REPREVIEW_REQUIRED`。
+
+新 Skill 的目标可见性必须由 Manifest 明确提供。已有 Skill 始终继承当前 Skill 可见性，本功能不
+承担可见性迁移；Manifest 提供不同值时阻止确认。预览展示每个携带包成员的最终可见性以及审核或
+PRIVATE 直接发布路径，并在确认、成员写入和 Suite 草稿创建前使用现有受众兼容规则重新检查。
+
+预览还保存每个成员当前 warning 集合及其摘要。确认页逐成员展示 warning，用户必须对 warning
+执行独立于通用 Bundle 确认的明确确认；确认请求绑定已展示的 warning 摘要。warning 变化会使
+预览失效，服务端不得因为用户只点击通用确认就静默启用普通发布的 `confirmWarnings`。
 
 ### 6. 保持现有 Skill fingerprint 和 Suite 快照模型
 

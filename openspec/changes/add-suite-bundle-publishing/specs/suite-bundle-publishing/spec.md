@@ -34,7 +34,8 @@
 Manifest SHALL 描述完整目标成员顺序和 Entry Skill。每个成员 SHALL 只能是以下一种形式：
 操作者有权创建或发布的 Skill 包，或者一个合规的精确 PUBLISHED SkillVersion 引用。纯引用成员
 SHALL NOT 要求操作者拥有该 Skill，也不要求提供包目录。创建模式把全部成员视为新增；更新模式
-只有基准成员未出现在完整 Manifest 中时，才视为移除。
+只有基准成员未出现在完整 Manifest 中时，才视为移除。新 Skill 的目标可见性 SHALL 在 Manifest
+中明确提供；已有 Skill SHALL 继承当前可见性，本功能不得通过 Manifest 改变已有 Skill 可见性。
 
 #### Scenario: 从文件夹创建新 Skill
 - **WHEN** 携带包成员指向尚不存在的 Skill 坐标
@@ -54,6 +55,19 @@ SHALL NOT 要求操作者拥有该 Skill，也不要求提供包目录。创建�
 #### Scenario: 新 Skill 坐标与不可管理 Skill 冲突
 - **WHEN** 携带包坐标已经属于操作者无权发布的 Skill
 - **THEN** 预览拒绝携带包，而不是将其作为新 Skill 或覆盖现有内容
+
+#### Scenario: 新 Skill 缺少目标可见性
+- **WHEN** 携带包成员指向不存在的 Skill 且 Manifest 没有提供目标可见性
+- **THEN** 预览以阻塞性协议错误拒绝该成员
+
+#### Scenario: 尝试通过 Bundle 修改已有 Skill 可见性
+- **WHEN** Manifest 为已有 Skill 提供了不同于当前值的目标可见性
+- **THEN** 预览阻止确认并要求使用现有 Skill 生命周期独立处理可见性
+
+#### Scenario: 成员可见性与 Suite 受众不兼容
+- **WHEN** 新 Skill 的目标可见性或已有 Skill 的继承可见性不能覆盖目标 Suite 受众
+- **THEN** 预览拒绝该成员
+- **AND** 确认、成员写入和 Suite 草稿创建前均重新执行同一兼容性检查
 
 #### Scenario: 保留非本人所有的公开成员
 - **WHEN** Manifest 以纯引用形式保留其他用户拥有的合规精确 PUBLIC SkillVersion
@@ -85,7 +99,8 @@ SHALL NOT 要求操作者拥有该 Skill，也不要求提供包目录。创建�
 确认前，预览 SHALL 返回完整目标 Suite 快照，并区分携带包成员和纯引用成员。预览 SHALL NOT
 创建 Skill、SkillVersion、Suite、SuiteVersion、扫描、审核任务、Label 或 Tag 变更。临时归档和
 PreviewSession 不属于生命周期对象，并且 SHALL 受有效期和清理策略约束；预览 SHALL NOT 占用
-Suite 坐标或目标版本。
+Suite 坐标或目标版本。预览 SHALL 展示每个携带包成员的最终可见性、对应审核/PRIVATE 发布路径和
+当前 warning 集合。
 
 #### Scenario: 预览混合变更
 - **WHEN** 合法 Bundle 同时包含未变化/变化的包、新增/更新/未变化的引用以及被移除成员
@@ -98,6 +113,11 @@ Suite 坐标或目标版本。
 - **WHEN** 包 fingerprint、精确引用、顺序、Entry Skill、可见性和 Suite 元数据均与当前快照一致
 - **THEN** 预览报告没有有效变化
 - **AND** 确认不能创建冗余 SkillVersion 或 SuiteVersion
+
+#### Scenario: 成员存在可确认 warning
+- **WHEN** 普通 Skill 预发布规则为至少一个成员返回非阻塞 warning
+- **THEN** 预览按成员展示 warning 内容并绑定 warning 集合摘要
+- **AND** warning 不得被当成已自动确认
 
 ### Requirement: REQ-SBP-04 携带包成员差异 SHALL 使用规范化 Skill fingerprint
 
@@ -210,7 +230,8 @@ Manifest 或任何声明成员目录的文件 SHALL 作为格式错误处理。
 坐标、归档摘要、目标 Suite 版本和完整成员计划。确认和重试 SHALL 保持预览阶段解析出的包版本
 和精确引用 ID，并满足幂等性。确认时 SHALL 重新检查 Suite、Namespace、Skill 和引用权限，并在
 一个事务中创建 ExecutionOperation、原子获取目标 Suite 坐标或版本占用。获取占用失败时，SHALL
-在创建任何 Skill 或 SkillVersion 前结束。
+在创建任何 Skill 或 SkillVersion 前结束。存在 warning 时，确认 SHALL 额外携带用户对已展示
+warning 集合的明确确认并匹配预览摘要；通用 Bundle 确认不得隐式代替 warning 确认。
 
 #### Scenario: 确认已检查计划
 - **WHEN** 同一有权限操作者确认仍有效且相关状态未变化的预览
@@ -236,6 +257,11 @@ Manifest 或任何声明成员目录的文件 SHALL 作为格式错误处理。
 - **WHEN** 多个用户同时预览同一 Suite 坐标或目标版本
 - **THEN** 系统允许生成彼此隔离且有期限的 PreviewSession
 - **AND** 只有确认事务中成功获得占用的一个计划可以执行
+
+#### Scenario: warning 未确认或发生变化
+- **WHEN** 用户没有明确确认全部当前 warning，或者确认时 warning 集合摘要与预览不一致
+- **THEN** 系统不创建 ExecutionOperation 或成员版本
+- **AND** warning 变化时要求重新预览
 
 ### Requirement: REQ-SBP-09 Bundle 预览 SHALL 解析可发布的 Suite 展示信息
 
@@ -269,12 +295,17 @@ Bundle SHALL 复用普通发布的规则与生命周期，但 SHALL NOT 自动�
 #### Scenario: 确认后创建新 Skill
 - **WHEN** 已确认计划包含通过预览的新 Skill 包，且写入时权限仍然有效
 - **THEN** 系统通过现有 Skill 创建和首版发布流程处理该成员
-- **AND** 操作记录新 Skill、SkillVersion 及其状态
+- **AND** 操作记录新 Skill、SkillVersion、最终可见性及其状态
 
 #### Scenario: 发布有权限的变化包
 - **WHEN** 已确认计划包含操作者有权发布的变化包
 - **THEN** 独立 SkillVersion 进入现有扫描和审核流程
 - **AND** 操作记录每个版本及其状态
+
+#### Scenario: 新 Skill 使用显式可见性
+- **WHEN** 已确认计划创建新 Skill
+- **THEN** 创建动作使用预览绑定且重新校验过的 Manifest 目标可见性
+- **AND** 进度页展示该成员进入审核还是 PRIVATE 直接发布路径
 
 #### Scenario: 复用未变化包
 - **WHEN** 携带包成员的发布动作被判断为 `REUSE_VERSION`
@@ -288,7 +319,7 @@ Bundle SHALL 复用普通发布的规则与生命周期，但 SHALL NOT 自动�
 
 #### Scenario: 异步写入前 Skill 权限被撤销
 - **WHEN** 操作者在确认后、创建成员版本前失去对应权限
-- **THEN** 该成员进入 `BLOCKED` 且不创建新版本
+- **THEN** 计划身份未变化时操作进入 `BLOCKED_RETRYABLE` 并保留目标占用，且不创建新版本
 - **AND** 其他已创建成员保持独立生命周期
 
 #### Scenario: 已有 Skill 存在待审版本
@@ -339,20 +370,21 @@ Bundle SHALL 复用普通发布的规则与生命周期，但 SHALL NOT 自动�
 
 #### Scenario: 引用成员失效
 - **WHEN** 创建草稿前精确引用被下架、隐藏、删除或不再符合受众可见性
-- **THEN** 操作状态为 `BLOCKED`
+- **THEN** 操作状态为 `REPREVIEW_REQUIRED`，并在同一事务中释放目标占用
 - **AND** 不创建 SuiteVersion
 
 #### Scenario: 异步完成前 Suite 权限或状态变化
 - **WHEN** 成员就绪前 Namespace 变为不可写、操作者失去 Suite 创建/管理权限，或更新目标 Suite 不再 ACTIVE
-- **THEN** 操作状态变为 `BLOCKED`
+- **THEN** 计划身份未变化时操作状态变为 `BLOCKED_RETRYABLE` 并保留目标占用
 - **AND** 不创建 Suite 或 SuiteVersion
 
 ### Requirement: REQ-SBP-13 Bundle 恢复 SHALL 幂等且不破坏成员
 
-系统 SHALL 展示成员级进度，并能处理重复、延迟或丢失的生命周期通知。重试 SHALL 只处理未完成
-工作。取消 SHALL 停止后续编排和 SuiteVersion 创建，但 SHALL NOT 修改已创建 SkillVersion、
-精确引用或已完成审核。状态读取只允许原操作者或当前具备目标 Suite/Namespace 治理权限的角色；
-重试和取消 SHALL 重新检查当前操作权限，且响应 SHALL 对当前无权读取的成员信息脱敏。
+系统 SHALL 展示成员级进度，并能处理重复、延迟或丢失的生命周期通知。`BLOCKED_RETRYABLE`
+SHALL 保留目标占用，只允许同一操作按原版本 ID 重试；`REPREVIEW_REQUIRED` SHALL 作为终态释放
+占用并要求新预览。取消 SHALL 停止后续编排和 SuiteVersion 创建，但 SHALL NOT 修改已创建
+SkillVersion、精确引用或已完成审核。状态读取只允许原操作者或当前具备目标 Suite/Namespace 治理
+权限的角色；重试和取消 SHALL 重新检查当前操作权限，且响应 SHALL 对当前无权读取的成员信息脱敏。
 
 #### Scenario: 生命周期通知重复到达
 - **WHEN** 同一成员生命周期通知被重复处理
@@ -370,12 +402,12 @@ Bundle SHALL 复用普通发布的规则与生命周期，但 SHALL NOT 自动�
 
 #### Scenario: 成员扫描失败
 - **WHEN** 已绑定成员版本进入 `SCAN_FAILED`
-- **THEN** 操作变为 `BLOCKED`
-- **AND** 仅当现有重扫动作保留同一版本 ID 时允许重试，否则要求重新上传并预览
+- **THEN** 现有重扫动作保留同一版本 ID 时，操作变为 `BLOCKED_RETRYABLE` 并保留占用
+- **AND** 否则操作变为 `REPREVIEW_REQUIRED` 并释放占用
 
 #### Scenario: 成员审核被拒绝
 - **WHEN** 已绑定成员版本进入 `REJECTED`
-- **THEN** 操作变为 `BLOCKED` 并要求修改内容后重新上传预览
+- **THEN** 操作变为 `REPREVIEW_REQUIRED`，释放占用并要求修改内容后重新上传预览
 - **AND** 不自动删除被拒绝版本或改绑新版本 ID
 
 #### Scenario: PRIVATE 成员完成上传
@@ -385,12 +417,27 @@ Bundle SHALL 复用普通发布的规则与生命周期，但 SHALL NOT 自动�
 
 #### Scenario: 已绑定成员发生外部状态漂移
 - **WHEN** 待审成员被其他操作撤回、删除、替换、下架或变为当前操作者不可读
-- **THEN** 操作变为 `BLOCKED` 并要求重新预览
+- **THEN** 操作变为 `REPREVIEW_REQUIRED`，释放占用并要求重新预览
 - **AND** 不自动提交、恢复或跟随另一个 SkillVersion ID
 
 #### Scenario: 未授权用户读取或操作进度
 - **WHEN** 非原操作者且不具备当前治理权限的用户读取、重试或取消操作
 - **THEN** 系统拒绝请求且不泄露成员坐标、版本、审核状态或错误详情
+
+#### Scenario: 可重试阻塞恢复
+- **WHEN** 权限或 Namespace 可写状态恢复，且绑定资源身份和版本计划未变化
+- **THEN** 有权操作者可以重试同一 `BLOCKED_RETRYABLE` 操作
+- **AND** 系统保持原目标占用和成员版本 ID
+
+#### Scenario: 执行操作进入终态
+- **WHEN** 操作变为 `REPREVIEW_REQUIRED`、`CANCELLED` 或 `SUITE_DRAFT_CREATED`
+- **THEN** 系统在同一状态事务中释放 Suite 坐标或版本占用
+- **AND** 后续确认可以按照唯一约束重新竞争该目标
+
+#### Scenario: 等待审核超过预览有效期
+- **WHEN** ExecutionOperation 正在等待成员审核且原 PreviewSession 已到期
+- **THEN** 执行操作和目标占用保持有效
+- **AND** 不因 PreviewSession TTL 自动过期或释放占用
 
 ### Requirement: REQ-SBP-14 并发导入 SHALL NOT 占用相同 Suite 坐标或目标版本
 
@@ -463,8 +510,9 @@ SHALL 支持上传一个 ZIP；浏览器支持安全目录选择时，也可以�
 ### Requirement: REQ-SBP-18 Web 确认和进度 SHALL 准确展示副作用
 
 确认页面 SHALL 展示将创建的 Skill、将创建的 SkillVersion、复用版本、纯引用和移除成员数量，
-并说明成员就绪后只生成 Suite 草稿。确认后，进度页 SHALL 展示每个成员的创建、扫描、审核、复用、
-引用、失败或阻塞状态，并能通过操作 ID 在刷新或重新登录后恢复。
+每个携带包成员的最终可见性、发布路径和 warning，并说明成员就绪后只生成 Suite 草稿。warning
+必须逐成员明确确认。确认后，进度页 SHALL 展示每个成员的创建、扫描、审核、复用、引用、失败或
+阻塞状态，并能通过操作 ID 在刷新或重新登录后恢复。
 
 #### Scenario: 用户确认混合计划
 - **WHEN** 预览同时包含创建 Skill、创建版本、复用、引用和移除

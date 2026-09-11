@@ -35,7 +35,7 @@ Suite 时，维护者仍需逐个创建或上传 Skill，再手工把 Suite 固�
 
 | Issue 原提议 | 结论 | OpenSpec 决策 |
 |---|---|---|
-| 上传一个多 Skill 归档 | 保留 | 预览和确认复用一个带有效期的服务端操作，归档只上传一次。 |
+| 上传一个多 Skill 归档 | 保留 | 归档只上传一次；预览使用不占位且有期限的 PreviewSession，确认后才创建并占位的 ExecutionOperation。 |
 | 每个 Suite 成员都必须在归档中有目录 | 调整 | 只有需要发布内容的成员才提供包目录；纯引用成员在 Manifest 中填写精确已发布版本。 |
 | 被引用 Skill 必须属于 Suite 维护者 | 拒绝 | Suite 可以引用其他人发布的合规公开 Skill；引用权限与发布权限相互独立。 |
 | 通过 fingerprint 判断包内容变化 | 保留并澄清 | 携带包的成员使用现有 Skill 规范化 fingerprint；纯引用成员比较精确 SkillVersion 身份。 |
