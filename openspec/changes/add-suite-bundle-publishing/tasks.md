@@ -36,7 +36,7 @@
 - [x] 5.3 `[REQ-SMT-05, REQ-SMT-06, REQ-SMT-08, REQ-SMT-09]` 新增 Suite-to-Label 关联并复用 Label 定义、本地化和权限类型；通过持久化与权限测试覆盖普通、特权、重复、数量上限和删除行为，确保不修改成员或 Skill Tag。
 - [x] 5.4 `[REQ-SMT-05, REQ-SMT-06, REQ-SMT-07, REQ-SMT-09]` 新增 Suite Label 查询、变更和筛选 API 并重新生成 OpenAPI 类型；验证批量投影、Suite 专属审计和搜索筛选不会使用成员 Skill 关联。
 - [x] 5.5 `[REQ-SMT-01, REQ-SMT-02, REQ-SMT-03, REQ-SMT-05, REQ-SMT-06, REQ-SMT-07]` 在 Suite 编辑、详情、卡片和套件专区增加必填展示信息与 Suite Label；通过测试验证草稿校验、历史缺失信息、国际化标签、筛选、权限和响应式状态。
-- [ ] 5.6 `[REQ-SMT-02, REQ-SMT-03, REQ-SMT-10]` 为 Suite 概述编辑器增加结构化提示，并在详情页增加 Entry Skill 固定版本说明的独立按需展开区域；通过测试验证精确版本、延迟加载、读取权限、安全 Markdown、无权访问和加载失败不会替代或泄露概述内容。
+- [x] 5.6 `[REQ-SMT-02, REQ-SMT-03, REQ-SMT-10]` 为 Suite 概述编辑器增加结构化提示，并在详情页增加 Entry Skill 固定版本说明的独立按需展开区域；通过测试验证精确版本、延迟加载、读取权限、安全 Markdown、无权访问和加载失败不会替代或泄露概述内容。
 
 ## 6. 兼容性、安全、性能与交付验证
 

@@ -1,13 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ArrowUpRight, Boxes, CheckCircle2, Copy, Terminal, Wrench } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, Boxes, CheckCircle2, ChevronDown, ChevronUp, Copy, Terminal, Wrench } from 'lucide-react'
 import { useSuiteDetail, useSuiteVersions, useSubmitSuite } from '@/shared/hooks/use-suite-queries'
 import { useSuiteLabels } from '@/shared/hooks/use-label-queries'
 import { suiteBlockingReasonLabel, suiteStatusLabel, suiteVisibilityLabel } from '@/features/suite/suite-labels'
 import { SuiteManagementActions } from '@/features/suite/suite-management-actions'
 import { SuiteLabelPanel } from '@/features/skill/skill-label-panel'
 import { useAuth } from '@/features/auth/use-auth'
+import { useSkillFile } from '@/shared/hooks/use-skill-queries'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { getBaseUrl, isPortableSkillVersion } from '@/features/skill/install-command'
 import { Card } from '@/shared/ui/card'
@@ -24,10 +25,29 @@ export function SuiteDetailPage() {
   const { t } = useTranslation()
   const search = useSearch({ from: '/suite/$namespace/$slug' })
   const navigate = useNavigate()
+  const [entryGuideExpanded, setEntryGuideExpanded] = useState(false)
   const { user, hasRole } = useAuth()
   const { data: suite, isLoading, error } = useSuiteDetail(namespace, slug, search.version)
   const { data: versions } = useSuiteVersions(namespace, slug)
   const { data: suiteLabels } = useSuiteLabels(namespace, slug, Boolean(suite))
+  const entryMember = suite?.members.find(member => member.entry)
+  const entryGuideReadable = Boolean(
+    entryMember?.browsable
+    && !entryMember.blockingReason
+    && entryMember.skillId
+    && entryMember.skillVersionId,
+  )
+  const {
+    data: entryGuide,
+    isLoading: isLoadingEntryGuide,
+    error: entryGuideError,
+  } = useSkillFile(
+    entryMember?.namespace ?? '',
+    entryMember?.slug ?? '',
+    entryMember?.version,
+    'SKILL.md',
+    entryGuideExpanded && entryGuideReadable,
+  )
   const submitMutation = useSubmitSuite()
   const registryUrl = useMemo(() => getBaseUrl(), [])
   const command = useMemo(
@@ -62,7 +82,6 @@ export function SuiteDetailPage() {
   const hasPrimaryActions = suite.allowedActions.includes('EDIT')
     || suite.allowedActions.includes('SUBMIT')
     || suite.allowedActions.includes('PUBLISH_PRIVATE')
-  const entryMember = suite.members.find(member => member.entry)
   const canManageLabels = Boolean(user && (
     hasRole('SUPER_ADMIN')
     || suite.allowedActions.some(action => ['EDIT', 'CREATE_VERSION', 'HIDE', 'RESTORE', 'ARCHIVE', 'UNARCHIVE'].includes(action))
@@ -236,6 +255,50 @@ export function SuiteDetailPage() {
               </div>
             </TabsContent>
           </Tabs>
+
+          {entryMember ? (
+            <Card className="overflow-hidden">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6"
+                aria-expanded={entryGuideExpanded}
+                onClick={() => setEntryGuideExpanded(current => !current)}
+              >
+                <span className="min-w-0">
+                  <span className="block font-heading font-semibold text-foreground">
+                    {t('suite.entryGuideTitle')}
+                  </span>
+                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                    @{entryMember.namespace}/{entryMember.slug}@{entryMember.version}
+                  </span>
+                </span>
+                {entryGuideExpanded
+                  ? <ChevronUp className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  : <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />}
+              </button>
+              {entryGuideExpanded ? (
+                <div className="border-t border-border/60 p-5 sm:p-6">
+                  {!entryGuideReadable ? (
+                    <p className="text-sm text-muted-foreground">{t('suite.entryGuideUnavailable')}</p>
+                  ) : isLoadingEntryGuide ? (
+                    <div className="h-24 animate-shimmer rounded-lg" aria-label={t('suite.entryGuideLoading')} />
+                  ) : entryGuideError ? (
+                    <p role="alert" className="text-sm text-destructive">{t('suite.entryGuideLoadFailed')}</p>
+                  ) : entryGuide ? (
+                    <>
+                      <p className="mb-5 text-xs text-muted-foreground">
+                        {t('suite.entryGuideSource', {
+                          coordinate: `@${entryMember.namespace}/${entryMember.slug}`,
+                          version: entryMember.version,
+                        })}
+                      </p>
+                      <MarkdownRenderer content={entryGuide} />
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+            </Card>
+          ) : null}
         </div>
 
         <aside

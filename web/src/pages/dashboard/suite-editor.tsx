@@ -304,6 +304,20 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
             </span>
           </Label>
           <p className="text-xs text-muted-foreground">{t('suite.overviewHint')}</p>
+          <div className="grid gap-2 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+            {[
+              'suite.overviewPromptScenario',
+              'suite.overviewPromptPreparation',
+              'suite.overviewPromptSequence',
+              'suite.overviewPromptInputsOutputs',
+              'suite.overviewPromptBoundaries',
+            ].map(prompt => (
+              <span key={prompt} className="flex gap-2">
+                <span aria-hidden="true" className="text-primary">•</span>
+                {t(prompt)}
+              </span>
+            ))}
+          </div>
           <Textarea
             id="suite-overview"
             aria-label={t('suite.overview')}
