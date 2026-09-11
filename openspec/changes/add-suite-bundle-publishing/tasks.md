@@ -1,7 +1,7 @@
 ## 1. 协议与操作基础
 
 - [x] 1.1 `[REQ-SBP-02, REQ-SBP-06, REQ-SBP-07]` 确定同时支持创建/更新模式、“携带包成员”和“精确引用成员”的 Manifest，包括唯一根 Manifest、成员相对目录、新 Skill 必填可见性、已有 Skill 可见性继承、重复字段优先级和冲突规则；通过 fixture 验证新 Skill、自有已有 Skill、非本人所有的公开引用、重新固定版本、移除、歧义定义、危险路径和非法可见性。
-- [ ] 1.2 `[REQ-SBP-01, REQ-SBP-08, REQ-SBP-13, REQ-SBP-14]` 新增有期限且不占位的 PreviewSession，以及确认后才创建的 ExecutionOperation、目标 Suite 坐标/版本占用、成员结果、幂等字段和索引；通过 PostgreSQL 集成测试验证并发创建/更新唯一性、重启恢复和回滚不会修改现有生命周期数据。
+- [x] 1.2 `[REQ-SBP-01, REQ-SBP-08, REQ-SBP-13, REQ-SBP-14]` 新增有期限且不占位的 PreviewSession，以及确认后才创建的 ExecutionOperation、目标 Suite 坐标/版本占用、成员结果、幂等字段和索引；通过 PostgreSQL 集成测试验证并发创建/更新唯一性、重启恢复和回滚不会修改现有生命周期数据。
 - [ ] 1.3 `[REQ-SBP-08, REQ-SBP-13, REQ-SBP-17, REQ-SBP-18]` 新增预览、确认、状态、重试和取消的 API 契约，明确状态读取脱敏和操作重新授权；运行 `make generate-api` 和 `scripts/check-openapi-generated.sh` 验证生成类型无漂移。
 
 ## 2. Bundle 预览
