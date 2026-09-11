@@ -282,6 +282,20 @@ export interface SkillSuiteReference {
   displayName: string
   version: string
   memberCount: number
+  currentSkillEntry?: boolean
+  visibleSiblingMembers?: SkillSuiteSiblingMember[]
+  restrictedMemberCount?: number
+  omittedVisibleMemberCount?: number
+}
+
+export interface SkillSuiteSiblingMember {
+  skillId: number
+  namespace: string
+  slug: string
+  displayName: string
+  version: string
+  entry: boolean
+  available: boolean
 }
 
 export interface SkillDetail {
@@ -310,6 +324,7 @@ export interface SkillDetail {
   ownerPreviewReviewComment?: string
   resolutionMode?: string
   entryForSuites?: SkillSuiteReference[]
+  memberOfSuites?: PagedResponse<SkillSuiteReference>
 }
 
 export interface SubmitPromotionRequest {

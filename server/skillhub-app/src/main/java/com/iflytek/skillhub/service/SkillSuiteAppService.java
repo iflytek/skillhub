@@ -159,6 +159,18 @@ public class SkillSuiteAppService {
                 skillId, userId, namespaceRoles, platformRoles);
     }
 
+    public PageResponse<SkillSuiteReferenceResponse> findVisibleMemberships(
+            Long skillId,
+            String userId,
+            Map<Long, NamespaceRole> namespaceRoles,
+            Set<String> platformRoles,
+            int page,
+            int size
+    ) {
+        return referenceQueryRepository.findVisibleMemberships(
+                skillId, userId, namespaceRoles, platformRoles, page, size);
+    }
+
     @Transactional
     public SkillSuiteInstallPlanResponse createInstallPlan(
             String namespace,

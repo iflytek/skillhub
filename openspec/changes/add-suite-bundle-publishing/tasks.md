@@ -25,9 +25,9 @@
 
 ## 4. 任意成员的所属 Suite
 
-- [ ] 4.1 `[REQ-SMD-01]` 保持技能市场和套件专区的路由、API、筛选和卡片相互独立；验证现有 `/search` 和 `/suites` 测试不变。
-- [ ] 4.2 `[REQ-SMD-02, REQ-SMD-03, REQ-SMD-04]` 将 Entry-only 查询改为基于 Suite 当前 `latestVersionId` 的集合式、隐私过滤任意成员查询，返回 Entry 标记和有界兄弟成员摘要；验证历史已移除成员、PUBLIC、NAMESPACE_ONLY、PRIVATE、隐藏、归档、删除和无权访问场景，且无信息泄露或 N+1 查询。
-- [ ] 4.3 `[REQ-SMD-02, REQ-SMD-03]` 更新 Skill 详情中的所属 Suite 和可见兄弟成员展示；通过浏览器验证加载、空态、历史移除、降级、受限、Entry/非 Entry、多 Suite 和响应式状态。
+- [x] 4.1 `[REQ-SMD-01]` 保持技能市场和套件专区的路由、API、筛选和卡片相互独立；验证现有 `/search` 和 `/suites` 测试不变。
+- [x] 4.2 `[REQ-SMD-02, REQ-SMD-03, REQ-SMD-04]` 将 Entry-only 查询改为基于 Suite 当前 `latestVersionId` 的集合式、隐私过滤任意成员查询，返回 Entry 标记和有界兄弟成员摘要；验证历史已移除成员、PUBLIC、NAMESPACE_ONLY、PRIVATE、隐藏、归档、删除和无权访问场景，且无信息泄露或 N+1 查询。
+- [x] 4.3 `[REQ-SMD-02, REQ-SMD-03]` 更新 Skill 详情中的所属 Suite 和可见兄弟成员展示；通过浏览器验证加载、空态、历史移除、降级、受限、Entry/非 Entry、多 Suite 和响应式状态。
 
 ## 5. Suite 展示信息与 Label
 
