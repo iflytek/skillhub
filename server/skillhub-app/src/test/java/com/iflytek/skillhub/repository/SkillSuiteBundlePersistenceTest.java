@@ -1,6 +1,10 @@
 package com.iflytek.skillhub.repository;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.config.SkillSuiteBundleProperties;
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.suite.SkillSuite;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersion;
@@ -17,6 +21,9 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSessionRe
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundleConfirmationAppService;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundlePreviewPlanner;
+import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -43,12 +50,17 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Testcontainers
 class SkillSuiteBundlePersistenceTest {
+
+    private static final TypeReference<Map<String, Object>> JSON_OBJECT = new TypeReference<>() { };
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
@@ -166,6 +178,79 @@ class SkillSuiteBundlePersistenceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void confirmationServiceAtomicallyReservesTargetAndReplaysAfterResponseLoss() throws Exception {
+        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+        Long namespaceId = transactions.execute(status -> persistNamespace("bundle-confirm-service").getId());
+        ObjectMapper objectMapper = new ObjectMapper();
+        SkillSuiteBundlePreviewPlanner.PreviewPlan plan = confirmationPlan(namespaceId);
+        var manifest = new com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifestParser().parse("""
+                apiVersion: skillhub.iflytek.com/v1alpha1
+                kind: SkillSuiteBundle
+                metadata:
+                  namespace: bundle-confirm-service
+                  slug: target
+                spec:
+                  mode: CREATE
+                  version: 1.1.0
+                  displayName: Target
+                  summary: Summary
+                  overview: Overview
+                  visibility: PUBLIC
+                  entry: "@bundle-confirm-service/member"
+                  members:
+                    - skill: "@bundle-confirm-service/member"
+                      package:
+                        path: skills/member
+                        visibility: PUBLIC
+                """);
+        transactions.executeWithoutResult(status -> {
+            previewRepository.save(confirmablePreview(
+                    "confirm-service-a", "actor-a", namespaceId, manifest, plan, objectMapper));
+            previewRepository.save(confirmablePreview(
+                    "confirm-service-b", "actor-b", namespaceId, manifest, plan, objectMapper));
+        });
+
+        SkillSuiteBundlePreviewPlanner planner = mock(SkillSuiteBundlePreviewPlanner.class);
+        when(planner.plan(any(), any(), any(), any())).thenReturn(plan);
+        ObjectStorageService storage = mock(ObjectStorageService.class);
+        when(storage.exists(any())).thenReturn(true);
+        SkillSuiteBundleProperties properties = new SkillSuiteBundleProperties();
+        properties.setConfirmationEnabled(true);
+        SkillSuiteBundleConfirmationAppService confirmation = new SkillSuiteBundleConfirmationAppService(
+                previewRepository, operationRepository, memberRepository, planner, storage, properties,
+                objectMapper, java.time.Clock.fixed(now(), java.time.ZoneOffset.UTC));
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> attemptConfirmation(
+                    transactions, confirmation, ready, start,
+                    "confirm-service-a", "request-a", "actor-a"));
+            var second = executor.submit(() -> attemptConfirmation(
+                    transactions, confirmation, ready, start,
+                    "confirm-service-b", "request-b", "actor-b"));
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true, false);
+        } finally {
+            start.countDown();
+        }
+
+        SkillSuiteBundleExecutionOperation winner = transactions.execute(status -> operationRepository
+                .findByPreviewToken("confirm-service-a")
+                .or(() -> operationRepository.findByPreviewToken("confirm-service-b"))
+                .orElseThrow());
+        SkillSuiteBundleConfirmationAppService.ConfirmationOutcome replay = transactions.execute(status ->
+                confirmation.confirm(
+                        winner.getPreviewToken(), winner.getClientRequestId(), winner.getWarningDigest(),
+                        winner.getActorId(), Map.of(), java.util.Set.of()));
+        assertThat(replay.operationId()).isEqualTo(winner.getOperationId());
+        assertThat(replay.replayed()).isTrue();
+    }
+
+    @Test
     void updateReservationRejectsMissingSuiteIdentity() {
         assertThatThrownBy(() -> SkillSuiteBundleExecutionOperation.reservationKey(
                 SkillSuiteBundleMode.UPDATE, 1L, "target", null, "1.1.0"))
@@ -278,6 +363,60 @@ class SkillSuiteBundlePersistenceTest {
             Thread.currentThread().interrupt();
             throw new AssertionError("Interrupted while waiting to confirm", exception);
         }
+    }
+
+    private boolean attemptConfirmation(
+            TransactionTemplate transactions,
+            SkillSuiteBundleConfirmationAppService confirmation,
+            CountDownLatch ready,
+            CountDownLatch start,
+            String previewToken,
+            String requestId,
+            String actorId
+    ) {
+        ready.countDown();
+        try {
+            if (!start.await(10, TimeUnit.SECONDS)) {
+                throw new AssertionError("Timed out waiting to start concurrent confirmation");
+            }
+            transactions.execute(status -> confirmation.confirm(
+                    previewToken, requestId, "warning-digest", actorId, Map.of(), java.util.Set.of()));
+            return true;
+        } catch (DomainConflictException exception) {
+            return false;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while waiting to confirm", exception);
+        }
+    }
+
+    private SkillSuiteBundlePreviewSession confirmablePreview(
+            String token,
+            String actor,
+            Long namespaceId,
+            com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifest manifest,
+            SkillSuiteBundlePreviewPlanner.PreviewPlan plan,
+            ObjectMapper objectMapper
+    ) {
+        return new SkillSuiteBundlePreviewSession(
+                token, actor, SkillSuiteBundleMode.CREATE, namespaceId, "target", null, null, "1.1.0",
+                "temporary/" + token + ".zip", "a".repeat(64),
+                objectMapper.convertValue(manifest, JSON_OBJECT), objectMapper.convertValue(plan, JSON_OBJECT),
+                "warning-digest", now().plus(30, ChronoUnit.MINUTES), now());
+    }
+
+    private SkillSuiteBundlePreviewPlanner.PreviewPlan confirmationPlan(Long namespaceId) {
+        SkillSuiteBundlePreviewPlanner.MemberPlan member = new SkillSuiteBundlePreviewPlanner.MemberPlan(
+                new SkillSuiteBundleCoordinate("bundle-confirm-service", "member"),
+                SkillSuiteBundleMemberSourceType.PACKAGE,
+                SkillSuiteBundleRelationshipChange.ADDED, SkillSuiteBundlePublishAction.CREATE_SKILL,
+                null, null, SkillVisibility.PUBLIC, "1.0.0", "sha256:member",
+                List.of(), List.of(), List.of());
+        return new SkillSuiteBundlePreviewPlanner.PreviewPlan(
+                SkillSuiteBundleMode.CREATE,
+                new SkillSuiteBundleCoordinate("bundle-confirm-service", "target"), namespaceId,
+                null, null, "1.1.0", "Target", "Summary", "Overview", SkillVisibility.PUBLIC,
+                List.of(member), List.of(), List.of(), List.of(), "warning-digest");
     }
 
     private Namespace persistNamespace(String slug) {

@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.suite.bundle;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +13,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** Expiring, non-reserving result of parsing and planning one uploaded Suite Bundle. */
@@ -80,8 +84,8 @@ public class SkillSuiteBundlePreviewSession {
         this.targetVersion = targetVersion;
         this.archiveObjectKey = archiveObjectKey;
         this.archiveSha256 = archiveSha256;
-        this.manifest = Map.copyOf(manifest);
-        this.plan = Map.copyOf(plan);
+        this.manifest = immutableJsonMap(manifest);
+        this.plan = immutableJsonMap(plan);
         this.warningDigest = warningDigest;
         this.status = SkillSuiteBundlePreviewStatus.PREVIEW_READY;
         this.expiresAt = expiresAt;
@@ -95,6 +99,21 @@ public class SkillSuiteBundlePreviewSession {
 
     public void markExpired() {
         this.status = SkillSuiteBundlePreviewStatus.EXPIRED;
+    }
+
+    /**
+     * Verifies immutable PreviewSession invariants before confirmation starts revalidating live state.
+     */
+    public void requireConfirmableBy(String actorId, String confirmedWarningDigest, Instant now) {
+        if (!this.actorId.equals(actorId)) {
+            throw new DomainForbiddenException("error.suite.bundle.preview.ownerMismatch");
+        }
+        if (status != SkillSuiteBundlePreviewStatus.PREVIEW_READY || !expiresAt.isAfter(now)) {
+            throw new DomainBadRequestException("error.suite.bundle.preview.expired");
+        }
+        if (!warningDigest.equals(confirmedWarningDigest)) {
+            throw new DomainBadRequestException("error.suite.bundle.preview.warningMismatch");
+        }
     }
 
     public String getToken() { return token; }
@@ -115,4 +134,8 @@ public class SkillSuiteBundlePreviewSession {
     public Instant getConfirmedAt() { return confirmedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public long getLockVersion() { return lockVersion; }
+
+    private Map<String, Object> immutableJsonMap(Map<String, Object> value) {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(value));
+    }
 }

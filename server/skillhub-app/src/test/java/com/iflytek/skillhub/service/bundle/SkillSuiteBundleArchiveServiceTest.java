@@ -44,7 +44,7 @@ class SkillSuiteBundleArchiveServiceTest {
 
         assertThat(result.analysis().confirmable()).isTrue();
         assertThat(result.archiveSha256()).hasSize(64);
-        assertThat(result.objectKeys()).hasSize(4);
+        assertThat(result.objectKeys()).hasSize(3);
         assertThat(storage.objects).containsOnlyKeys(result.objectKeys().toArray(String[]::new));
         assertThat(result.analysis().packageMembers()).singleElement().satisfies(member -> {
             assertThat(member.fingerprint()).startsWith("sha256:");

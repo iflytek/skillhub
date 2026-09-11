@@ -24,6 +24,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -90,13 +92,22 @@ public class SkillSuiteBundleArchiveService {
                     archivePath, tempDirectory, prefix, localEntries, uploadedObjectKeys);
             SkillSuiteBundlePackageAnalyzer.BundleAnalysis analysis = analyzer.analyze(stagedEntries);
             if (!analysis.confirmable()) {
-                deleteUploaded(uploadedObjectKeys);
+                cleanupStagedObjects(uploadedObjectKeys);
                 return new StagedBundleAnalysis(null, null, analysis, List.of());
             }
+            Set<String> retainedKeys = analysis.packageMembers().stream()
+                    .flatMap(member -> member.files().stream())
+                    .map(SkillSuiteBundlePackageAnalyzer.StagedMemberFile::objectKey)
+                    .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+            retainedKeys.add(archiveObjectKey);
+            List<String> unusedKeys = uploadedObjectKeys.stream()
+                    .filter(key -> !retainedKeys.contains(key))
+                    .toList();
+            cleanupStagedObjects(unusedKeys);
             return new StagedBundleAnalysis(
-                    archiveObjectKey, archiveSha256, analysis, List.copyOf(uploadedObjectKeys));
+                    archiveObjectKey, archiveSha256, analysis, List.copyOf(retainedKeys));
         } catch (IOException | RuntimeException exception) {
-            deleteUploaded(uploadedObjectKeys);
+            cleanupStagedObjects(uploadedObjectKeys);
             throw exception;
         } finally {
             for (Path localEntry : localEntries) {
@@ -327,7 +338,7 @@ public class SkillSuiteBundleArchiveService {
         }
     }
 
-    private void deleteUploaded(List<String> objectKeys) {
+    public void cleanupStagedObjects(List<String> objectKeys) {
         if (objectKeys.isEmpty()) {
             return;
         }

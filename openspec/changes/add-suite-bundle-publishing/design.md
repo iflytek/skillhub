@@ -290,3 +290,8 @@ Manifest 中而被移除的成员。确认文案列出将创建的 Skill/SkillVe
    `/suites` 路由保持不变。
 5. 回滚时关闭新增接口和任务。已有 SkillVersion、SuiteVersion 继续有效；非终态操作保留，供兼容
    版本取消或过期处理。
+
+预览默认有效 30 分钟，可通过 `skillhub.suite.bundle.preview-ttl`（环境变量
+`SKILLHUB_SUITE_BUNDLE_PREVIEW_TTL`）调整。确认入口默认关闭，待所有实例完成升级后通过
+`skillhub.suite.bundle.confirmation-enabled`（环境变量
+`SKILLHUB_SUITE_BUNDLE_CONFIRMATION_ENABLED`）显式开启。

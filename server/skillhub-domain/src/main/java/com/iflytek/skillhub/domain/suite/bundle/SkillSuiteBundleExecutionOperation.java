@@ -11,6 +11,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** Durable execution state created only after explicit Bundle confirmation. */
@@ -97,7 +99,7 @@ public class SkillSuiteBundleExecutionOperation {
         this.reservationActive = true;
         this.archiveObjectKey = archiveObjectKey;
         this.archiveSha256 = archiveSha256;
-        this.plan = Map.copyOf(plan);
+        this.plan = Collections.unmodifiableMap(new LinkedHashMap<>(plan));
         this.warningDigest = warningDigest;
         this.status = SkillSuiteBundleOperationStatus.RUNNING;
         this.createdAt = now;

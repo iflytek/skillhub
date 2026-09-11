@@ -219,7 +219,7 @@ public class SkillSuiteBundlePreviewPlanner {
 
         ResolvedPresentation presentation = resolvePresentation(manifest, target, errors);
         return new PreviewPlan(
-                manifest.spec().mode(), manifest.metadata().coordinate(), target.suiteId(),
+                manifest.spec().mode(), manifest.metadata().coordinate(), target.namespaceId(), target.suiteId(),
                 target.baseVersionId(), manifest.spec().version(), presentation.displayName(),
                 presentation.summary(), presentation.overview(), manifest.spec().visibility(),
                 List.copyOf(members), removed, List.copyOf(errors), List.copyOf(warnings),
@@ -249,9 +249,9 @@ public class SkillSuiteBundlePreviewPlanner {
             }
             if (suite != null) {
                 errors.add("Target Suite coordinate already exists");
-                return new Target(suite.getId(), null, null, suite);
+                return new Target(namespace.getId(), suite.getId(), null, null, suite);
             }
-            return Target.empty();
+            return Target.empty(namespace.getId());
         }
         if (suite == null) {
             errors.add("Target Suite does not exist for UPDATE");
@@ -274,7 +274,7 @@ public class SkillSuiteBundlePreviewPlanner {
                 suite.getId(), manifest.spec().version()).isPresent()) {
             errors.add("Target Suite version already exists");
         }
-        return new Target(suite.getId(), base == null ? null : base.getId(), base, suite);
+        return new Target(namespace.getId(), suite.getId(), base == null ? null : base.getId(), base, suite);
     }
 
     private MemberPlan planPackageMember(
@@ -590,13 +590,18 @@ public class SkillSuiteBundlePreviewPlanner {
     }
 
     private record Target(
+            Long namespaceId,
             Long suiteId,
             Long baseVersionId,
             SkillSuiteVersion baseVersion,
             SkillSuite suite
     ) {
         private static Target empty() {
-            return new Target(null, null, null, null);
+            return new Target(null, null, null, null, null);
+        }
+
+        private static Target empty(Long namespaceId) {
+            return new Target(namespaceId, null, null, null, null);
         }
     }
 
@@ -609,6 +614,7 @@ public class SkillSuiteBundlePreviewPlanner {
     public record PreviewPlan(
             SkillSuiteBundleMode mode,
             SkillSuiteBundleCoordinate target,
+            Long targetNamespaceId,
             Long targetSuiteId,
             Long baseSuiteVersionId,
             String targetVersion,

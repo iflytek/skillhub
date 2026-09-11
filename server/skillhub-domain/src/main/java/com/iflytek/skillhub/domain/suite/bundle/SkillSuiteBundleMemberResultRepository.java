@@ -4,5 +4,6 @@ import java.util.List;
 
 public interface SkillSuiteBundleMemberResultRepository {
     List<SkillSuiteBundleMemberResult> saveAll(List<SkillSuiteBundleMemberResult> members);
+    void flush();
     List<SkillSuiteBundleMemberResult> findByOperationIdOrderByPosition(String operationId);
 }
