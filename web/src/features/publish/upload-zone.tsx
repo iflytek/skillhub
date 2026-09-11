@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDropzone } from 'react-dropzone'
 import { cn } from '@/shared/lib/utils'
@@ -10,6 +10,10 @@ interface UploadZoneProps {
   disabled?: boolean
 }
 
+export function supportsDirectorySelection(input: HTMLInputElement | null): boolean {
+  return Boolean(input && ('webkitdirectory' in input || 'directory' in input))
+}
+
 /**
  * Provides the publish page dropzone for uploading one zip package at a time.
  * The component is intentionally stateless so packaging validation can remain in
@@ -18,15 +22,18 @@ interface UploadZoneProps {
 export function UploadZone({ onFileSelect, onFolderSelect, disabled }: UploadZoneProps) {
   const { t } = useTranslation()
   const folderInputRef = useRef<HTMLInputElement>(null)
+  const [folderSelectionSupported, setFolderSelectionSupported] = useState(false)
 
   // `webkitdirectory` / `directory` are not in React's input attribute types;
   // set them imperatively so the folder picker works without an untyped cast.
   useEffect(() => {
     const el = folderInputRef.current
-    if (el) {
+    const supported = supportsDirectorySelection(el)
+    if (el && supported) {
       el.setAttribute('webkitdirectory', '')
       el.setAttribute('directory', '')
     }
+    setFolderSelectionSupported(supported)
   }, [])
 
   const onDrop = useCallback(
@@ -106,14 +113,16 @@ export function UploadZone({ onFileSelect, onFolderSelect, disabled }: UploadZon
             onChange={handleFolderChange}
             disabled={disabled}
           />
-          <button
-            type="button"
-            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => folderInputRef.current?.click()}
-            disabled={disabled}
-          >
-            {t('upload.folderHint')}
-          </button>
+          {folderSelectionSupported ? (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => folderInputRef.current?.click()}
+              disabled={disabled}
+            >
+              {t('upload.folderHint')}
+            </button>
+          ) : null}
         </div>
       )}
     </div>

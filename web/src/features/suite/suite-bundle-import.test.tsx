@@ -17,10 +17,12 @@ const mocks = vi.hoisted(() => ({
   },
   packageFolder: vi.fn(),
   toast: { error: vi.fn() },
+  navigate: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/shared/lib/toast', () => ({ toast: mocks.toast }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
 vi.mock('@/features/publish/folder-zip', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/publish/folder-zip')>()),
   packageFolderAsZip: mocks.packageFolder,
@@ -59,7 +61,7 @@ function preview(overrides: Record<string, unknown> = {}) {
     confirmable: true,
     target: { mode: 'CREATE', coordinate: '@global/suite', targetVersion: '1.0.0' },
     members: [{
-      coordinate: '@global/member', sourceType: 'PACKAGE', relationship: 'ADDED',
+      coordinate: '@global/member', sourceType: 'PACKAGE', packagePath: 'members/member', relationship: 'ADDED',
       publishAction: 'CREATE_SKILL', finalVisibility: 'PUBLIC', resolvedVersion: '1.0.0',
       errors: [], warnings: ['review visibility'],
     }],
@@ -71,6 +73,7 @@ function preview(overrides: Record<string, unknown> = {}) {
 describe('SuiteBundleImport', () => {
   beforeEach(() => {
     vi.stubGlobal('crypto', { randomUUID: () => 'request-1' })
+    window.sessionStorage.clear()
   })
 
   afterEach(() => {
@@ -89,6 +92,7 @@ describe('SuiteBundleImport', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
     await waitFor(() => expect(screen.getByText('@global/member')).not.toBeNull())
+    expect(screen.getByText('suite.bundle.memberDirectory')).not.toBeNull()
     expect(mocks.preview.mutateAsync).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('button', { name: 'suite.bundle.confirm' }).hasAttribute('disabled')).toBe(true)
 
@@ -128,6 +132,22 @@ describe('SuiteBundleImport', () => {
     expect(screen.getByRole('button', { name: 'suite.bundle.confirm' }).hasAttribute('disabled')).toBe(true)
   })
 
+  it('requires explicit acknowledgement for member removals even without warnings', async () => {
+    mocks.preview.mutateAsync.mockResolvedValue(preview({
+      members: [],
+      removedMembers: [{ coordinate: '@global/entry', version: '1.0.0', entry: true }],
+    }))
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+
+    await waitFor(() => expect(screen.getByText(/suite.bundle.removedEntryMember/)).not.toBeNull())
+    const confirmButton = screen.getByRole('button', { name: 'suite.bundle.confirm' })
+    expect(confirmButton.hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox'))
+    expect(confirmButton.hasAttribute('disabled')).toBe(false)
+  })
+
   it('reuses the same confirmation key after a lost or failed response', async () => {
     mocks.preview.mutateAsync.mockResolvedValue(preview({ members: [] }))
     mocks.confirm.mutateAsync.mockRejectedValue(new Error('response lost'))
@@ -154,6 +174,49 @@ describe('SuiteBundleImport', () => {
     expect(mocks.toast.error).toHaveBeenCalledWith('suite.bundle.errors.missing-suite-manifest')
     expect(mocks.packageFolder).not.toHaveBeenCalled()
     expect(mocks.preview.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('uploads a packaged folder once without recursively starting a new selection', async () => {
+    mocks.packageFolder.mockResolvedValue(new File(['zip'], 'bundle.zip'))
+    mocks.preview.mutateAsync.mockResolvedValue(preview({ members: [] }))
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-folder' }))
+
+    await waitFor(() => expect(mocks.preview.mutateAsync).toHaveBeenCalledTimes(1))
+    expect(mocks.packageFolder).toHaveBeenCalledTimes(1)
+  })
+
+  it('prevents an older folder packaging result from replacing a newer ZIP selection', async () => {
+    let finishFolder!: (file: File) => void
+    mocks.packageFolder.mockImplementation(() => new Promise<File>((resolve) => { finishFolder = resolve }))
+    mocks.preview.mutateAsync.mockResolvedValue(preview({ members: [] }))
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-folder' }))
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+    await waitFor(() => expect(mocks.preview.mutateAsync).toHaveBeenCalledTimes(1))
+    finishFolder(new File(['old'], 'old-folder.zip'))
+
+    await waitFor(() => expect(mocks.preview.mutateAsync).toHaveBeenCalledTimes(1))
+    expect(mocks.preview.mutateAsync.mock.calls[0][0].file.name).toBe('bundle.zip')
+  })
+
+  it('aborts the previous preview request when a newer archive is selected', async () => {
+    let firstSignal: AbortSignal | undefined
+    mocks.preview.mutateAsync
+      .mockImplementationOnce(({ signal }: { signal?: AbortSignal }) => {
+        firstSignal = signal
+        return new Promise(() => {})
+      })
+      .mockResolvedValueOnce(preview({ members: [] }))
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+
+    await waitFor(() => expect(mocks.preview.mutateAsync).toHaveBeenCalledTimes(2))
+    expect(firstSignal?.aborted).toBe(true)
   })
 
   it('shows redacted progress and exposes retry and non-destructive cancel actions', async () => {
@@ -193,5 +256,68 @@ describe('SuiteBundleImport', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /suite.bundle.reloadOperation/ })).not.toBeNull())
     fireEvent.click(screen.getByRole('button', { name: /suite.bundle.reloadOperation/ }))
     expect(mocks.operation.refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('restores an operation after refresh and can discard a stale recovery entry', async () => {
+    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-restored')
+    mocks.operation.error = new Error('not found')
+
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    expect(screen.getByText('operation-restored')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.forgetOperation' }))
+    await waitFor(() => expect(window.sessionStorage.getItem(
+      'skillhub:suite-bundle-operation:CREATE:new'
+    )).toBeNull())
+  })
+
+  it('links a waiting member to its exact Skill version and shows its package path', () => {
+    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-waiting')
+    mocks.operation.data = {
+      operationId: 'operation-waiting',
+      status: 'WAITING_FOR_MEMBERS',
+      members: [{
+        position: 0,
+        status: 'WAITING_FOR_MEMBER',
+        redacted: false,
+        coordinate: '@global/member-under-review',
+        version: '1.4.0',
+        visibility: 'PUBLIC',
+        sourceType: 'PACKAGE',
+        relationship: 'UPDATED',
+        publishAction: 'CREATE_VERSION',
+        packagePath: 'skills/member-under-review',
+        errors: [],
+        warnings: [],
+      }],
+    }
+
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+    expect(screen.getByText('suite.bundle.memberDirectory')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.viewMemberReview' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/space/global/member-under-review',
+      search: { version: '1.4.0' },
+    })
+  })
+
+  it('opens the exact generated Suite draft from a recovered terminal operation', () => {
+    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-complete')
+    mocks.operation.data = {
+      operationId: 'operation-complete',
+      status: 'SUITE_DRAFT_CREATED',
+      targetCoordinate: '@global/generated-suite',
+      targetVersion: '1.2.0',
+      members: [],
+    }
+
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.openDraft' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/suite/global/generated-suite',
+      search: { version: '1.2.0' },
+    })
   })
 })

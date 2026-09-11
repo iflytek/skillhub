@@ -5112,6 +5112,7 @@ export interface components {
             coordinate?: string;
             /** @enum {string} */
             sourceType?: "PACKAGE" | "REFERENCE";
+            packagePath?: string;
             /** @enum {string} */
             relationship?: "ADDED" | "UPDATED" | "UNCHANGED" | "REMOVED";
             /** @enum {string} */
@@ -5783,6 +5784,7 @@ export interface components {
             coordinate?: string;
             /** @enum {string} */
             sourceType?: "PACKAGE" | "REFERENCE";
+            packagePath?: string;
             /** @enum {string} */
             relationship?: "ADDED" | "UPDATED" | "UNCHANGED" | "REMOVED";
             /** @enum {string} */
