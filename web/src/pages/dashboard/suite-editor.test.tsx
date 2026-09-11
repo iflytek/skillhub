@@ -132,6 +132,11 @@ describe('SuiteEditor', () => {
       .toBe('## Use this suite')
     expect(screen.getByText('suite.summaryComplete')).not.toBeNull()
     expect(screen.getByText('suite.overviewComplete')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptScenario')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptPreparation')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptSequence')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptInputsOutputs')).not.toBeNull()
+    expect(screen.getByText('suite.overviewPromptBoundaries')).not.toBeNull()
     const version = screen.getByLabelText('suite.version') as HTMLInputElement
     expect(version.value).toBe('')
     fireEvent.change(version, { target: { value: '2.0.0' } })

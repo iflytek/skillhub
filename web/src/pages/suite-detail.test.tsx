@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   detail: { data: undefined as SkillSuite | undefined, isLoading: false, error: null as Error | null },
   submit: { mutateAsync: vi.fn(), isPending: false },
   suiteLabels: [] as Array<{ slug: string; type: string; displayName: string }>,
+  entryGuide: { data: undefined as string | undefined, isLoading: false, error: null as Error | null },
+  entryGuideCalls: vi.fn(),
 }))
 const originalRuntimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
 
@@ -38,7 +40,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }))
 vi.mock('@/features/skill/markdown-renderer', () => ({
-  MarkdownRenderer: ({ content }: { content: string }) => <div data-testid="suite-overview">{content}</div>,
+  MarkdownRenderer: ({ content }: { content: string }) => (
+    <div data-testid={content.includes('Pinned guide') ? 'entry-guide' : 'suite-overview'}>{content}</div>
+  ),
 }))
 vi.mock('@/features/suite/suite-management-actions', () => ({ SuiteManagementActions: () => null }))
 vi.mock('@/features/auth/use-auth', () => ({
@@ -58,6 +62,12 @@ vi.mock('@/shared/hooks/use-suite-queries', () => ({
   useSuiteDetail: () => mocks.detail,
   useSuiteVersions: () => ({ data: [] }),
   useSubmitSuite: () => mocks.submit,
+}))
+vi.mock('@/shared/hooks/use-skill-queries', () => ({
+  useSkillFile: (...args: unknown[]) => {
+    mocks.entryGuideCalls(...args)
+    return mocks.entryGuide
+  },
 }))
 
 function suite(): SkillSuite {
@@ -109,6 +119,7 @@ describe('SuiteDetailPage', () => {
     cleanup()
     vi.clearAllMocks()
     mocks.suiteLabels = []
+    mocks.entryGuide = { data: undefined, isLoading: false, error: null }
     window.__SKILLHUB_RUNTIME_CONFIG__ = originalRuntimeConfig
   })
 
@@ -130,7 +141,7 @@ describe('SuiteDetailPage', () => {
     expect(screen.getByText('suite.startWithEntry')).not.toBeNull()
     expect(screen.getByText('suite.startWithEntryDescription')).not.toBeNull()
     expect(screen.getByText('Medical Records')).not.toBeNull()
-    expect(screen.getByText('@global/medical-records@1.0.0')).not.toBeNull()
+    expect(screen.getAllByText('@global/medical-records@1.0.0')).toHaveLength(2)
     expect(screen.getByRole('link', { name: 'suite.viewEntrySkill' }).getAttribute('href'))
       .toContain('/space/global/medical-records')
     expect(screen.queryByText('@global/deleted-helper')).toBeNull()
@@ -141,6 +152,37 @@ describe('SuiteDetailPage', () => {
     expect(screen.getByText('Structures medical records.')).not.toBeNull()
     expect(screen.getByRole('link', { name: 'suite.viewMember' }).getAttribute('href'))
       .toContain('/space/global/medical-records')
+  })
+
+  it('loads the pinned Entry Skill SKILL.md only after the user expands it', () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
+    mocks.entryGuide = { data: '## Pinned guide\n\nExact version content.', isLoading: false, error: null }
+
+    render(<SuiteDetailPage />)
+
+    expect(screen.queryByTestId('entry-guide')).toBeNull()
+    expect(mocks.entryGuideCalls).toHaveBeenLastCalledWith(
+      'global', 'medical-records', '1.0.0', 'SKILL.md', false,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /suite.entryGuideTitle/ }))
+
+    expect(mocks.entryGuideCalls).toHaveBeenLastCalledWith(
+      'global', 'medical-records', '1.0.0', 'SKILL.md', true,
+    )
+    expect(screen.getByTestId('entry-guide').textContent).toContain('Exact version content.')
+    expect(screen.getByTestId('suite-overview')).not.toBeNull()
+  })
+
+  it('keeps the Suite overview visible when pinned Entry Skill instructions fail', () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
+    mocks.entryGuide = { data: undefined, isLoading: false, error: new Error('forbidden') }
+
+    render(<SuiteDetailPage />)
+    fireEvent.click(screen.getByRole('button', { name: /suite.entryGuideTitle/ }))
+
+    expect(screen.getByRole('alert').textContent).toBe('suite.entryGuideLoadFailed')
+    expect(screen.getByTestId('suite-overview')).not.toBeNull()
   })
 
   it('keeps a deleted member as a non-navigable historical card', () => {
@@ -165,7 +207,7 @@ describe('SuiteDetailPage', () => {
 
     render(<SuiteDetailPage />)
 
-    expect(screen.getByText('@global/medical-records@1.0.0')).not.toBeNull()
+    expect(screen.getAllByText('@global/medical-records@1.0.0')).toHaveLength(2)
     expect(screen.getByText('suite.blockingReasons.SKILL_HIDDEN')).not.toBeNull()
     expect(screen.queryByRole('link', { name: 'suite.viewEntrySkill' })).toBeNull()
   })
