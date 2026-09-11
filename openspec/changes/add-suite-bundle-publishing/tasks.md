@@ -17,9 +17,9 @@
 ## 3. Bundle 发布编排
 
 - [x] 3.1 `[REQ-SBP-08, REQ-SBP-14]` 实现幂等确认事务，并在任何成员写入前原子获取目标 Suite 坐标/版本占用；通过并发创建、并发更新和响应丢失测试确认最多创建一个操作且不重复创建包版本。
-- [ ] 3.2 `[REQ-SBP-10, REQ-SBP-11]` 将有 Namespace 创建权限的新 Skill 和有独立发布权限的变化包送入非破坏性的现有 Skill 规则/生命周期边界，并在每次写入前重新授权；验证 Suite 权限不能扩大 Skill 权限，不会撤回或替换已有版本，纯引用和未变化成员不会产生发布副作用。
-- [ ] 3.3 `[REQ-SBP-12, REQ-SBP-13]` 记录包和引用结果，并按规范状态矩阵通过领域事件与有界恢复任务完成协调；覆盖 PRIVATE `UPLOADED`、`SCANNING`、`SCAN_FAILED`、`PENDING_REVIEW`、`REJECTED`、外部撤回/删除/下架、`BLOCKED_RETRYABLE` 与 `REPREVIEW_REQUIRED`，验证占用随终态原子释放，重复、延迟、丢失和乱序时按原 ID 收敛或明确要求重新预览。
-- [ ] 3.4 `[REQ-SBP-12]` 仅在包发布成功、引用最终有效且最终权限/状态检查通过时，原子创建新 Suite 及首个 DRAFT，或为已有 Suite 创建一个 SuiteVersion DRAFT；验证权限撤销、Namespace 冻结、待审核、被拒绝、失败包和失效引用不会产生空 Suite 或部分草稿。
+- [x] 3.2 `[REQ-SBP-10, REQ-SBP-11]` 将有 Namespace 创建权限的新 Skill 和有独立发布权限的变化包送入非破坏性的现有 Skill 规则/生命周期边界，并在每次写入前重新授权；验证 Suite 权限不能扩大 Skill 权限，不会撤回或替换已有版本，纯引用和未变化成员不会产生发布副作用。
+- [x] 3.3 `[REQ-SBP-12, REQ-SBP-13]` 记录包和引用结果，并按规范状态矩阵通过领域事件与有界恢复任务完成协调；覆盖 PRIVATE `UPLOADED`、`SCANNING`、`SCAN_FAILED`、`PENDING_REVIEW`、`REJECTED`、外部撤回/删除/下架、`BLOCKED_RETRYABLE` 与 `REPREVIEW_REQUIRED`，验证占用随终态原子释放，重复、延迟、丢失和乱序时按原 ID 收敛或明确要求重新预览。
+- [x] 3.4 `[REQ-SBP-12]` 仅在包发布成功、引用最终有效且最终权限/状态检查通过时，原子创建新 Suite 及首个 DRAFT，或为已有 Suite 创建一个 SuiteVersion DRAFT；验证权限撤销、Namespace 冻结、待审核、被拒绝、失败包和失效引用不会产生空 Suite 或部分草稿。
 - [ ] 3.5 `[REQ-SBP-13, REQ-SBP-15]` 实现带当前授权和响应脱敏的状态读取、原 ID 重试、非破坏性取消、终态占用释放、PreviewSession/暂存对象过期和限定范围补偿清理；验证等待审核的 ExecutionOperation 不随预览过期，已有 SkillVersion 和引用保持不变，清理失败仍有可操作记录。
 - [ ] 3.6 `[REQ-SBP-17, REQ-SBP-18]` 在“创建 Suite”和“创建新版本”入口提供手工组合/本地导入选择，并实现准确列出副作用、最终可见性、发布路径和逐成员 warning 确认的确认页及可恢复进度页；展示包/引用状态、Skill 审核链接、阻塞原因、重试/取消和生成的 Suite 草稿，通过正常、等待、可重试阻塞、必须重预览、取消、权限变化、刷新和重新登录用例验证。
 
