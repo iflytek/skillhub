@@ -303,6 +303,20 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void suiteBundleWritesRequireAuthenticationAndPublishTokenScope() {
+        for (String path : List.of(
+                "/api/v1/suite-bundles/preview",
+                "/api/v1/suite-bundles/previews/token/confirm",
+                "/api/web/suite-bundles/preview",
+                "/api/web/suite-bundles/previews/token/confirm")) {
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                    registry.accessLevel("POST", path));
+            assertTrue(registry.authorizeApiToken("POST", path, Set.of("skill:publish")).allowed());
+            assertFalse(registry.authorizeApiToken("POST", path, Set.of("skill:read")).allowed());
+        }
+    }
+
+    @Test
     void sessionOnlyRoutes_areRejectedForApiTokens() {
         for (String route : registry.sessionOnlyRoutes()) {
             String[] parts = route.split(" ", 2);

@@ -928,6 +928,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/suite-bundles/previews/{previewToken}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm one exact Suite Bundle preview */
+        post: operations["confirmSkillSuiteBundle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite-bundles/previews/{previewToken}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm one exact Suite Bundle preview */
+        post: operations["confirmSkillSuiteBundle_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/suite-bundles/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate and preview one Suite Bundle archive */
+        post: operations["previewSkillSuiteBundle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite-bundles/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate and preview one Suite Bundle archive */
+        post: operations["previewSkillSuiteBundle_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
         parameters: {
             query?: never;
@@ -4810,6 +4878,89 @@ export interface components {
         SkillSuiteReviewRequest: {
             comment?: string;
         };
+        SkillSuiteBundleConfirmRequest: {
+            warningDigest: string;
+        };
+        ApiResponseSkillSuiteBundleOperationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillSuiteBundleOperationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SkillSuiteBundleOperationResponse: {
+            operationId?: string;
+            status?: string;
+            replayed?: boolean;
+        };
+        ApiResponseSkillSuiteBundlePreviewResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillSuiteBundlePreviewResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        Member: {
+            coordinate?: string;
+            /** @enum {string} */
+            sourceType?: "PACKAGE" | "REFERENCE";
+            /** @enum {string} */
+            relationship?: "ADDED" | "UPDATED" | "UNCHANGED" | "REMOVED";
+            /** @enum {string} */
+            publishAction?: "CREATE_SKILL" | "CREATE_VERSION" | "REUSE_VERSION" | "REFERENCE_VERSION" | "NONE";
+            /** Format: int64 */
+            skillId?: number;
+            /** Format: int64 */
+            skillVersionId?: number;
+            /** @enum {string} */
+            finalVisibility?: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+            resolvedVersion?: string;
+            fingerprint?: string;
+            errors?: string[];
+            warnings?: string[];
+        };
+        RemovedMember: {
+            coordinate?: string;
+            /** Format: int64 */
+            skillId?: number;
+            /** Format: int64 */
+            skillVersionId?: number;
+            version?: string;
+            entry?: boolean;
+        };
+        SkillSuiteBundlePreviewResponse: {
+            previewToken?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            confirmable?: boolean;
+            target?: components["schemas"]["Target"];
+            members?: components["schemas"]["Member"][];
+            removedMembers?: components["schemas"]["RemovedMember"][];
+            errors?: string[];
+            warnings?: string[];
+            warningDigest?: string;
+        };
+        Target: {
+            /** @enum {string} */
+            mode?: "CREATE" | "UPDATE";
+            coordinate?: string;
+            /** Format: int64 */
+            namespaceId?: number;
+            /** Format: int64 */
+            suiteId?: number;
+            /** Format: int64 */
+            baseSuiteVersionId?: number;
+            targetVersion?: string;
+            displayName?: string;
+            summary?: string;
+            overview?: string;
+            /** @enum {string} */
+            visibility?: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+        };
         ApiResponseSkillLifecycleMutationResponse: {
             /** Format: int32 */
             code?: number;
@@ -8627,6 +8778,116 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillSuiteResponse"];
+                };
+            };
+        };
+    };
+    confirmSkillSuiteBundle: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                previewToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillSuiteBundleConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationResponse"];
+                };
+            };
+        };
+    };
+    confirmSkillSuiteBundle_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                previewToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillSuiteBundleConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationResponse"];
+                };
+            };
+        };
+    };
+    previewSkillSuiteBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundlePreviewResponse"];
+                };
+            };
+        };
+    };
+    previewSkillSuiteBundle_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundlePreviewResponse"];
                 };
             };
         };
