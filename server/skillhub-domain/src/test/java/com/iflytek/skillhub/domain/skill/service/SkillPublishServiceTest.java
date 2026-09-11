@@ -1734,13 +1734,18 @@ class SkillPublishServiceTest {
         when(skillRepository.save(skill)).thenReturn(skill);
 
         SkillPublishService.PublishResult result = service.publishBundleMemberFromEntries(
-                "test-ns", 21L, "test-skill", "2.0.0", entries, actorId,
+                "test-ns", 21L, "test-skill", "2.0.0", entries,
+                entries.stream().collect(java.util.stream.Collectors.toMap(
+                        PackageEntry::path, ignored -> "a".repeat(64))), actorId,
                 SkillVisibility.PUBLIC, Map.of(1L, NamespaceRole.ADMIN), Set.of(), true);
 
         assertEquals(21L, result.skillId());
         assertEquals(31L, result.version().getId());
         assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
         verify(reviewTaskRepository, never()).delete(any());
+        ArgumentCaptor<List<SkillFile>> savedFiles = ArgumentCaptor.forClass(List.class);
+        verify(skillFileRepository).saveAll(savedFiles.capture());
+        assertTrue(savedFiles.getValue().stream().allMatch(file -> "a".repeat(64).equals(file.getSha256())));
     }
 
     @Test

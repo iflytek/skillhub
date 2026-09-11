@@ -16,6 +16,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSession;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSessionRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
+import com.iflytek.skillhub.service.SecurityScanRetryAppService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +43,7 @@ class SkillSuiteBundleOperationCommandServiceTest {
     private SkillSuiteBundleMemberResultRepository memberRepository;
     private SkillSuiteBundlePreviewSessionRepository previewRepository;
     private SkillSuiteBundlePreviewRevalidationService revalidationService;
+    private SecurityScanRetryAppService securityScanRetryAppService;
     private SkillSuiteBundleOperationCommandService service;
 
     @BeforeEach
@@ -50,8 +52,11 @@ class SkillSuiteBundleOperationCommandServiceTest {
         memberRepository = mock(SkillSuiteBundleMemberResultRepository.class);
         previewRepository = mock(SkillSuiteBundlePreviewSessionRepository.class);
         revalidationService = mock(SkillSuiteBundlePreviewRevalidationService.class);
+        securityScanRetryAppService = mock(SecurityScanRetryAppService.class);
         service = new SkillSuiteBundleOperationCommandService(
                 operationRepository, memberRepository, previewRepository, revalidationService,
+                securityScanRetryAppService,
+                mock(org.springframework.context.ApplicationEventPublisher.class),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -149,6 +154,59 @@ class SkillSuiteBundleOperationCommandServiceTest {
         assertThat(response.status()).isEqualTo("REPREVIEW_REQUIRED");
         assertThat(operation.isReservationActive()).isFalse();
         assertThat(blocked.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.REPREVIEW_REQUIRED);
+    }
+
+    @Test
+    void retriesFailedScanOnTheOriginalVersionWithoutReplanningOrRepublishing() {
+        SkillSuiteBundleExecutionOperation operation = operation();
+        operation.markBlockedRetryable("MEMBER_SCAN_FAILED", null, NOW.minusSeconds(1));
+        SkillSuiteBundleMemberResult blocked = member("blocked");
+        setStatus(blocked, SkillSuiteBundleMemberResultStatus.BLOCKED_RETRYABLE);
+        org.springframework.test.util.ReflectionTestUtils.setField(blocked, "skillId", 41L);
+        org.springframework.test.util.ReflectionTestUtils.setField(blocked, "skillVersionId", 42L);
+        when(operationRepository.findByIdForUpdate("operation-1")).thenReturn(Optional.of(operation));
+        when(previewRepository.findById("preview-1")).thenReturn(Optional.of(mock(SkillSuiteBundlePreviewSession.class)));
+        when(memberRepository.findByOperationIdOrderByPositionForUpdate("operation-1"))
+                .thenReturn(List.of(blocked));
+
+        var response = service.retry(
+                "operation-1", "actor", Map.of(1L, NamespaceRole.ADMIN), Set.of("SKILL_ADMIN"));
+
+        assertThat(response.status()).isEqualTo("RUNNING");
+        assertThat(blocked.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.WAITING_FOR_MEMBER);
+        verify(securityScanRetryAppService).retry(
+                org.mockito.ArgumentMatchers.eq(41L), org.mockito.ArgumentMatchers.eq(42L),
+                org.mockito.ArgumentMatchers.eq("actor"),
+                org.mockito.ArgumentMatchers.eq(Set.of("SKILL_ADMIN")),
+                org.mockito.ArgumentMatchers.eq(Map.of(1L, NamespaceRole.ADMIN)),
+                org.mockito.ArgumentMatchers.any());
+        verify(revalidationService, never()).requireUnchanged(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyMap(), org.mockito.ArgumentMatchers.anySet());
+    }
+
+    @Test
+    void progressedOperationRetriesOnlyUnboundWorkWithoutComparingAgainstObsoletePreviewState() {
+        SkillSuiteBundleExecutionOperation operation = operation();
+        operation.markBlockedRetryable("MEMBER_EXECUTION_FAILED", null, NOW.minusSeconds(1));
+        SkillSuiteBundleMemberResult completed = member("completed");
+        org.springframework.test.util.ReflectionTestUtils.setField(completed, "skillId", 11L);
+        org.springframework.test.util.ReflectionTestUtils.setField(completed, "skillVersionId", 12L);
+        setStatus(completed, SkillSuiteBundleMemberResultStatus.COMPLETED);
+        SkillSuiteBundleMemberResult blocked = member("blocked");
+        setStatus(blocked, SkillSuiteBundleMemberResultStatus.BLOCKED_RETRYABLE);
+        when(operationRepository.findByIdForUpdate("operation-1")).thenReturn(Optional.of(operation));
+        when(previewRepository.findById("preview-1")).thenReturn(Optional.of(mock(SkillSuiteBundlePreviewSession.class)));
+        when(memberRepository.findByOperationIdOrderByPositionForUpdate("operation-1"))
+                .thenReturn(List.of(completed, blocked));
+
+        assertThat(service.retry("operation-1", "actor", Map.of(), Set.of()).status()).isEqualTo("RUNNING");
+
+        assertThat(completed.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.COMPLETED);
+        assertThat(blocked.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.PLANNED);
+        verify(revalidationService, never()).requireUnchanged(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyMap(), org.mockito.ArgumentMatchers.anySet());
     }
 
     @Test

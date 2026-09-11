@@ -312,9 +312,29 @@ public class SkillPublishService {
             Set<String> platformRoles,
             boolean confirmWarnings
     ) {
+        return publishBundleMemberFromEntries(
+                namespaceSlug, expectedSkillId, expectedSkillSlug, expectedVersion, entries,
+                Map.of(), publisherId, visibility, userNamespaceRoles, platformRoles, confirmWarnings);
+    }
+
+    @Transactional
+    public PublishResult publishBundleMemberFromEntries(
+            String namespaceSlug,
+            Long expectedSkillId,
+            String expectedSkillSlug,
+            String expectedVersion,
+            List<PackageEntry> entries,
+            Map<String, String> stagedSha256,
+            String publisherId,
+            SkillVisibility visibility,
+            Map<Long, NamespaceRole> userNamespaceRoles,
+            Set<String> platformRoles,
+            boolean confirmWarnings
+    ) {
         BundlePublicationTarget target = new BundlePublicationTarget(
                 expectedSkillId, expectedSkillSlug, expectedVersion,
-                userNamespaceRoles == null ? Map.of() : Map.copyOf(userNamespaceRoles));
+                userNamespaceRoles == null ? Map.of() : Map.copyOf(userNamespaceRoles),
+                stagedSha256 == null ? Map.of() : Map.copyOf(stagedSha256));
         return publishFromEntriesInternal(
                 namespaceSlug, entries, publisherId, visibility,
                 platformRoles == null ? Set.of() : platformRoles,
@@ -565,8 +585,13 @@ public class SkillPublishService {
                 );
 
                 // Compute SHA-256
-                byte[] hash = digest.digest(entry.content());
-                String sha256 = hexFormat.formatHex(hash);
+                String sha256 = bundleTarget == null
+                        ? null
+                        : bundleTarget.stagedSha256().get(entry.path());
+                if (sha256 == null) {
+                    byte[] hash = digest.digest(entry.content());
+                    sha256 = hexFormat.formatHex(hash);
+                }
 
                 // Create SkillFile record
                 SkillFile skillFile = new SkillFile(
@@ -820,12 +845,17 @@ public class SkillPublishService {
             Long expectedSkillId,
             String expectedSkillSlug,
             String expectedVersion,
-            Map<Long, NamespaceRole> userNamespaceRoles
+            Map<Long, NamespaceRole> userNamespaceRoles,
+            Map<String, String> stagedSha256
     ) {
         private BundlePublicationTarget {
             if (expectedSkillSlug == null || expectedSkillSlug.isBlank()
                     || expectedVersion == null || expectedVersion.isBlank()) {
                 throw new IllegalArgumentException("Bundle publication target must include slug and version");
+            }
+            if (stagedSha256.values().stream().anyMatch(
+                    hash -> hash == null || !hash.matches("[0-9a-f]{64}"))) {
+                throw new IllegalArgumentException("Bundle staged hashes must be lowercase SHA-256 values");
             }
         }
     }

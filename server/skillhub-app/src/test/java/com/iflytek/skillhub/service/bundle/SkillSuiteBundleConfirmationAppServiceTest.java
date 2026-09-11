@@ -65,6 +65,7 @@ class SkillSuiteBundleConfirmationAppServiceTest {
         properties.setConfirmationEnabled(true);
         service = new SkillSuiteBundleConfirmationAppService(
                 previewRepository, operationRepository, memberRepository, revalidationService, properties,
+                mock(org.springframework.context.ApplicationEventPublisher.class),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 

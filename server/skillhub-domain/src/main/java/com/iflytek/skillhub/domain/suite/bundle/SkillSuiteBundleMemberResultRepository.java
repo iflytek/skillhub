@@ -7,4 +7,5 @@ public interface SkillSuiteBundleMemberResultRepository {
     void flush();
     List<SkillSuiteBundleMemberResult> findByOperationIdOrderByPosition(String operationId);
     List<SkillSuiteBundleMemberResult> findByOperationIdOrderByPositionForUpdate(String operationId);
+    List<SkillSuiteBundleMemberResult> findBySkillVersionId(Long skillVersionId);
 }

@@ -105,6 +105,49 @@ public class SkillSuiteBundleMemberResult {
         }
     }
 
+    public boolean start(Instant now) {
+        if (status != SkillSuiteBundleMemberResultStatus.PLANNED) {
+            return false;
+        }
+        status = SkillSuiteBundleMemberResultStatus.RUNNING;
+        updatedAt = now;
+        return true;
+    }
+
+    public void bindVersion(Long resolvedSkillId, Long resolvedSkillVersionId, Instant now) {
+        if (resolvedSkillId == null || resolvedSkillVersionId == null) {
+            throw new IllegalArgumentException("Completed Bundle member requires Skill and version IDs");
+        }
+        skillId = resolvedSkillId;
+        skillVersionId = resolvedSkillVersionId;
+        updatedAt = now;
+    }
+
+    public void markWaiting(Instant now) {
+        status = SkillSuiteBundleMemberResultStatus.WAITING_FOR_MEMBER;
+        updatedAt = now;
+    }
+
+    public void markCompleted(Instant now) {
+        if (skillId == null || skillVersionId == null) {
+            throw new IllegalStateException("Bundle member cannot complete without bound IDs");
+        }
+        status = SkillSuiteBundleMemberResultStatus.COMPLETED;
+        updatedAt = now;
+    }
+
+    public void markBlockedRetryable(String errorCode, Instant now) {
+        status = SkillSuiteBundleMemberResultStatus.BLOCKED_RETRYABLE;
+        errors = appendError(errorCode);
+        updatedAt = now;
+    }
+
+    public void markRepreviewRequired(String errorCode, Instant now) {
+        status = SkillSuiteBundleMemberResultStatus.REPREVIEW_REQUIRED;
+        errors = appendError(errorCode);
+        updatedAt = now;
+    }
+
     public void retryUnlessCompleted(Instant now) {
         if (status == SkillSuiteBundleMemberResultStatus.BLOCKED_RETRYABLE) {
             status = SkillSuiteBundleMemberResultStatus.PLANNED;
@@ -117,6 +160,15 @@ public class SkillSuiteBundleMemberResult {
             status = SkillSuiteBundleMemberResultStatus.REPREVIEW_REQUIRED;
             updatedAt = now;
         }
+    }
+
+    private List<String> appendError(String errorCode) {
+        if (errorCode == null || errorCode.isBlank() || errors.contains(errorCode)) {
+            return errors;
+        }
+        java.util.ArrayList<String> updated = new java.util.ArrayList<>(errors);
+        updated.add(errorCode);
+        return List.copyOf(updated);
     }
 
     public Long getId() { return id; }

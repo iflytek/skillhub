@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service.bundle;
 
 import com.iflytek.skillhub.config.SkillSuiteBundleProperties;
+import com.iflytek.skillhub.domain.event.SkillSuiteBundleAdvanceRequestedEvent;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
@@ -16,6 +17,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSession;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSessionRepository;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class SkillSuiteBundleConfirmationAppService {
     private final SkillSuiteBundleMemberResultRepository memberRepository;
     private final SkillSuiteBundlePreviewRevalidationService revalidationService;
     private final SkillSuiteBundleProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public SkillSuiteBundleConfirmationAppService(
@@ -46,6 +49,7 @@ public class SkillSuiteBundleConfirmationAppService {
             SkillSuiteBundleMemberResultRepository memberRepository,
             SkillSuiteBundlePreviewRevalidationService revalidationService,
             SkillSuiteBundleProperties properties,
+            ApplicationEventPublisher eventPublisher,
             Clock clock
     ) {
         this.previewRepository = previewRepository;
@@ -53,6 +57,7 @@ public class SkillSuiteBundleConfirmationAppService {
         this.memberRepository = memberRepository;
         this.revalidationService = revalidationService;
         this.properties = properties;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -110,6 +115,7 @@ public class SkillSuiteBundleConfirmationAppService {
         } catch (DataIntegrityViolationException exception) {
             throw new DomainBadRequestException("error.suite.bundle.preview.stateChanged");
         }
+        eventPublisher.publishEvent(new SkillSuiteBundleAdvanceRequestedEvent(operationId));
         return new ConfirmationOutcome(operationId, operation.getStatus().name(), false);
     }
 

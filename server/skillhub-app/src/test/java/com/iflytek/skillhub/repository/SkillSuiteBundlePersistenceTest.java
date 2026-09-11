@@ -222,6 +222,7 @@ class SkillSuiteBundlePersistenceTest {
                 new SkillSuiteBundlePreviewRevalidationService(planner, storage, objectMapper);
         SkillSuiteBundleConfirmationAppService confirmation = new SkillSuiteBundleConfirmationAppService(
                 previewRepository, operationRepository, memberRepository, revalidation, properties,
+                mock(org.springframework.context.ApplicationEventPublisher.class),
                 java.time.Clock.fixed(now(), java.time.ZoneOffset.UTC));
 
         CountDownLatch ready = new CountDownLatch(2);

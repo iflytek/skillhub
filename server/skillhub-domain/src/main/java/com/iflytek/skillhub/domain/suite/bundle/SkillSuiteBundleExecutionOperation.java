@@ -173,6 +173,29 @@ public class SkillSuiteBundleExecutionOperation {
         transition(SkillSuiteBundleOperationStatus.REPREVIEW_REQUIRED, now);
     }
 
+    public void markWaitingForMembers(Instant now) {
+        this.failureCode = null;
+        this.failureDetail = null;
+        transition(SkillSuiteBundleOperationStatus.WAITING_FOR_MEMBERS, now);
+    }
+
+    public void markRunning(Instant now) {
+        this.failureCode = null;
+        this.failureDetail = null;
+        transition(SkillSuiteBundleOperationStatus.RUNNING, now);
+    }
+
+    public void markSuiteDraftCreated(Long suiteId, Long suiteVersionId, Instant now) {
+        if (suiteId == null || suiteVersionId == null) {
+            throw new IllegalArgumentException("Bundle result requires Suite and version IDs");
+        }
+        this.resultSuiteId = suiteId;
+        this.resultSuiteVersionId = suiteVersionId;
+        this.failureCode = null;
+        this.failureDetail = null;
+        transition(SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED, now);
+    }
+
     public String getOperationId() { return operationId; }
     public String getPreviewToken() { return previewToken; }
     public String getClientRequestId() { return clientRequestId; }
