@@ -3,8 +3,11 @@ import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, ArrowUpRight, Boxes, CheckCircle2, Copy, Terminal, Wrench } from 'lucide-react'
 import { useSuiteDetail, useSuiteVersions, useSubmitSuite } from '@/shared/hooks/use-suite-queries'
+import { useSuiteLabels } from '@/shared/hooks/use-label-queries'
 import { suiteBlockingReasonLabel, suiteStatusLabel, suiteVisibilityLabel } from '@/features/suite/suite-labels'
 import { SuiteManagementActions } from '@/features/suite/suite-management-actions'
+import { SuiteLabelPanel } from '@/features/skill/skill-label-panel'
+import { useAuth } from '@/features/auth/use-auth'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { getBaseUrl, isPortableSkillVersion } from '@/features/skill/install-command'
 import { Card } from '@/shared/ui/card'
@@ -21,8 +24,10 @@ export function SuiteDetailPage() {
   const { t } = useTranslation()
   const search = useSearch({ from: '/suite/$namespace/$slug' })
   const navigate = useNavigate()
+  const { user, hasRole } = useAuth()
   const { data: suite, isLoading, error } = useSuiteDetail(namespace, slug, search.version)
   const { data: versions } = useSuiteVersions(namespace, slug)
+  const { data: suiteLabels } = useSuiteLabels(namespace, slug, Boolean(suite))
   const submitMutation = useSubmitSuite()
   const registryUrl = useMemo(() => getBaseUrl(), [])
   const command = useMemo(
@@ -58,6 +63,10 @@ export function SuiteDetailPage() {
     || suite.allowedActions.includes('SUBMIT')
     || suite.allowedActions.includes('PUBLISH_PRIVATE')
   const entryMember = suite.members.find(member => member.entry)
+  const canManageLabels = Boolean(user && (
+    hasRole('SUPER_ADMIN')
+    || suite.allowedActions.some(action => ['EDIT', 'CREATE_VERSION', 'HIDE', 'RESTORE', 'ARCHIVE', 'UNARCHIVE'].includes(action))
+  ))
 
   return (
     <div className={cn(APP_SHELL_PAGE_CLASS_NAME, 'mx-auto max-w-6xl')}>
@@ -78,6 +87,18 @@ export function SuiteDetailPage() {
             <p className="text-lg leading-relaxed text-muted-foreground">
               {suite.summary || t('suite.noSummary')}
             </p>
+            {suiteLabels?.length ? (
+              <div className="flex flex-wrap gap-2" aria-label={t('suite.assignedLabels')}>
+                {suiteLabels.map(label => (
+                  <span
+                    key={label.slug}
+                    className="rounded-full border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground"
+                  >
+                    {label.displayName}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {!suite.available ? (
@@ -312,6 +333,14 @@ export function SuiteDetailPage() {
           ) : null}
 
           <SuiteManagementActions suite={suite} />
+
+          <SuiteLabelPanel
+            namespace={suite.namespace}
+            slug={suite.slug}
+            initialLabels={suiteLabels ?? []}
+            canManage={canManageLabels}
+            isSuperAdmin={hasRole('SUPER_ADMIN')}
+          />
         </aside>
       </div>
     </div>

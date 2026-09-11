@@ -22,6 +22,9 @@ import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { toast } from '@/shared/lib/toast'
 import { SuiteBundleImport } from '@/features/suite/suite-bundle-import'
+import { SuiteLabelPanel } from '@/features/skill/skill-label-panel'
+import { useSuiteLabels } from '@/shared/hooks/use-label-queries'
+import { useAuth } from '@/features/auth/use-auth'
 
 type SelectedMember = SkillSuiteMemberInput & { skillId: number; skillVersionId: number; displayName: string }
 
@@ -35,6 +38,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const creatingVersion = mode === 'new-version'
   const loadingSource = editing || creatingVersion
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
   const navigate = useNavigate()
   const { data: namespaces } = useMyNamespaces()
   const { data: existing, isLoading: isLoadingExisting, error: existingError } = useSuiteDetail(
@@ -60,6 +64,9 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const createMutation = useCreateSuite()
   const createVersionMutation = useCreateSuiteVersion(existing?.id ?? 0)
   const updateMutation = useUpdateSuiteDraft(existing?.id ?? 0, existing?.versionId ?? 0)
+  const { data: suiteLabels } = useSuiteLabels(
+    existing?.namespace ?? '', existing?.slug ?? '', Boolean(existing && loadingSource),
+  )
 
   useEffect(() => {
     if (!namespace && namespaces?.length) setNamespace(namespaces[0].slug)
@@ -275,14 +282,31 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           </Select>
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="suite-summary">{t('suite.summary')}</Label>
-          <Textarea id="suite-summary" value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} />
+          <Label htmlFor="suite-summary">
+            {t('suite.summary')}
+            <span aria-hidden="true" className="ml-1 text-xs font-normal text-muted-foreground">
+              · {t('suite.requiredForPublish')}
+            </span>
+          </Label>
+          <Textarea
+            id="suite-summary"
+            aria-label={t('suite.summary')}
+            value={summary}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={3}
+          />
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="suite-overview">{t('suite.overview')}</Label>
+          <Label htmlFor="suite-overview">
+            {t('suite.overview')}
+            <span aria-hidden="true" className="ml-1 text-xs font-normal text-muted-foreground">
+              · {t('suite.requiredForPublish')}
+            </span>
+          </Label>
           <p className="text-xs text-muted-foreground">{t('suite.overviewHint')}</p>
           <Textarea
             id="suite-overview"
+            aria-label={t('suite.overview')}
             value={overview}
             onChange={(event) => setOverview(event.target.value)}
             maxLength={20000}
@@ -294,6 +318,30 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           <Textarea id="suite-changelog" value={changelog} onChange={(event) => setChangelog(event.target.value)} rows={2} />
         </div>
       </Card>
+
+      <Card className="p-5" aria-live="polite">
+        <h2 className="font-semibold">{t('suite.publishReadinessTitle')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t('suite.publishReadinessDescription')}</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <span className={summary.trim() ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-400'}>
+            {summary.trim() ? t('suite.summaryComplete') : t('suite.summaryIncomplete')}
+          </span>
+          <span aria-hidden="true" className="text-muted-foreground">·</span>
+          <span className={overview.trim() ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-400'}>
+            {overview.trim() ? t('suite.overviewComplete') : t('suite.overviewIncomplete')}
+          </span>
+        </div>
+      </Card>
+
+      {existing ? (
+        <SuiteLabelPanel
+          namespace={existing.namespace}
+          slug={existing.slug}
+          initialLabels={suiteLabels ?? []}
+          canManage
+          isSuperAdmin={hasRole('SUPER_ADMIN')}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
