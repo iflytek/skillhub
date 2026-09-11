@@ -19,6 +19,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/shared/lib/toast', () => ({ toast: mocks.toast }))
+vi.mock('@/features/suite/suite-bundle-import', () => ({
+  SuiteBundleImport: ({ expectedMode, expectedCoordinate }: {
+    expectedMode: string
+    expectedCoordinate?: string
+  }) => <div>{`bundle-import:${expectedMode}:${expectedCoordinate ?? ''}`}</div>,
+}))
 vi.mock('@/shared/hooks/use-debounce', () => ({ useDebounce: (value: string) => value }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useMyNamespaces: () => ({ data: [{ id: 1, slug: 'global' }] }),
@@ -166,5 +172,18 @@ describe('SuiteEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'suite.confirmVersionUpdate' }))
 
     await waitFor(() => expect(screen.getByText('@global/weather@2.0.0')).not.toBeNull())
+  })
+
+  it('offers local Bundle import for create and binds update imports to the current Suite', async () => {
+    const { unmount } = render(<SuiteEditor />)
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.localImport' }))
+    expect(screen.getByText('bundle-import:CREATE:')).not.toBeNull()
+    unmount()
+
+    mocks.detail = { data: sourceSuite(['CREATE_VERSION']), isLoading: false, error: null }
+    render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="new-version" />)
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'suite.localImport' })).not.toBeNull())
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.localImport' }))
+    expect(screen.getByText('bundle-import:UPDATE:@global/starter')).not.toBeNull()
   })
 })

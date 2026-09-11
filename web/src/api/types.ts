@@ -462,6 +462,12 @@ export type MySkillSuiteSummary = RequiredGenerated<
   'summary'
 >
 
+export type SkillSuiteBundlePreview = components['schemas']['SkillSuiteBundlePreviewResponse']
+export type SkillSuiteBundlePreviewMember = components['schemas']['PreviewMember']
+export type SkillSuiteBundleRemovedMember = components['schemas']['RemovedMember']
+export type SkillSuiteBundleOperation = components['schemas']['SkillSuiteBundleOperationDetailResponse']
+export type SkillSuiteBundleOperationResult = components['schemas']['SkillSuiteBundleOperationResponse']
+
 // Publish
 export interface PublishResult {
   skillId: number

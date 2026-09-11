@@ -21,6 +21,7 @@ import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { toast } from '@/shared/lib/toast'
+import { SuiteBundleImport } from '@/features/suite/suite-bundle-import'
 
 type SelectedMember = SkillSuiteMemberInput & { skillId: number; skillVersionId: number; displayName: string }
 
@@ -51,6 +52,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const [selected, setSelected] = useState<SelectedMember[]>([])
   const [entrySkillVersionId, setEntrySkillVersionId] = useState<number | null>(null)
   const [pendingVersionUpdate, setPendingVersionUpdate] = useState<SkillSuiteMemberCandidate | null>(null)
+  const [authoringMode, setAuthoringMode] = useState<'manual' | 'import'>('manual')
   const debouncedQuery = useDebounce(candidateQuery.trim(), 250)
   const { data: candidates, isLoading: isLoadingCandidates } = useSuiteMemberCandidates(
     namespace, visibility, debouncedQuery, Boolean(namespace),
@@ -206,6 +208,37 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
         subtitle={t('suite.editorDescription')}
       />
 
+      {!editing ? (
+        <div className="flex w-fit rounded-lg border bg-muted/30 p-1" role="tablist" aria-label={t('suite.authoringMode')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authoringMode === 'manual'}
+            className={authoringMode === 'manual' ? 'rounded-md bg-background px-4 py-2 text-sm font-medium shadow-sm' : 'px-4 py-2 text-sm text-muted-foreground'}
+            onClick={() => setAuthoringMode('manual')}
+          >
+            {t('suite.manualAuthoring')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authoringMode === 'import'}
+            className={authoringMode === 'import' ? 'rounded-md bg-background px-4 py-2 text-sm font-medium shadow-sm' : 'px-4 py-2 text-sm text-muted-foreground'}
+            onClick={() => setAuthoringMode('import')}
+          >
+            {t('suite.localImport')}
+          </button>
+        </div>
+      ) : null}
+
+      {!editing && authoringMode === 'import' ? (
+        <SuiteBundleImport
+          expectedMode={creatingVersion ? 'UPDATE' : 'CREATE'}
+          expectedCoordinate={creatingVersion && existing ? `@${existing.namespace}/${existing.slug}` : undefined}
+        />
+      ) : (
+        <>
+
       <Card className="grid gap-5 p-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="suite-namespace">{t('suite.namespace')}</Label>
@@ -340,6 +373,8 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           if (pendingVersionUpdate) applyCandidateUpdate(pendingVersionUpdate)
         }}
       />
+        </>
+      )}
     </div>
   )
 }
