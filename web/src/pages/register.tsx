@@ -1,7 +1,7 @@
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, Navigate, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ApiError } from '@/api/client'
+import { ApiError, isLocalRegistrationEnabled } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { useLocalRegister } from '@/features/auth/use-local-auth'
 import { Button } from '@/shared/ui/button'
@@ -62,6 +62,10 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
+
+  if (!isLocalRegistrationEnabled()) {
+    return <Navigate to="/login" search={{ returnTo }} />
+  }
 
   function validateUsername(value: string) {
     const trimmed = value.trim()

@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -29,23 +30,31 @@ import org.springframework.stereotype.Service;
 @Service
 public class OAuthLoginFlowService {
 
-    private final DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
+    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> defaultUserService = new DefaultOAuth2UserService();
     private final Map<String, OAuthClaimsExtractor> extractors;
+    private final Map<String, ProviderOAuth2UserService> userServiceOverrides;
     private final AccessPolicy accessPolicy;
     private final IdentityBindingService identityBindingService;
 
     public OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                                 List<ProviderOAuth2UserService> userServiceList,
                                  AccessPolicy accessPolicy,
                                  IdentityBindingService identityBindingService) {
         this.extractors = extractorList.stream()
                 .collect(Collectors.toMap(OAuthClaimsExtractor::getProvider, Function.identity()));
+        this.userServiceOverrides = userServiceList.stream()
+                .collect(Collectors.toMap(ProviderOAuth2UserService::getProvider, Function.identity()));
         this.accessPolicy = accessPolicy;
         this.identityBindingService = identityBindingService;
     }
 
     public AuthenticatedLoginContext loadLoginContext(OAuth2UserRequest request) {
-        OAuth2User upstreamUser = delegate.loadUser(request);
         String registrationId = request.getClientRegistration().getRegistrationId();
+        OAuth2UserService<OAuth2UserRequest, OAuth2User> userService = userServiceOverrides.get(registrationId);
+        if (userService == null) {
+            userService = defaultUserService;
+        }
+        OAuth2User upstreamUser = userService.loadUser(request);
 
         OAuthClaimsExtractor extractor = extractors.get(registrationId);
         if (extractor == null) {

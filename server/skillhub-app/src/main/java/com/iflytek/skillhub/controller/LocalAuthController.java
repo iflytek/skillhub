@@ -13,6 +13,7 @@ import com.iflytek.skillhub.dto.LocalLoginRequest;
 import com.iflytek.skillhub.dto.LocalRegisterRequest;
 import com.iflytek.skillhub.dto.PasswordResetConfirmRequest;
 import com.iflytek.skillhub.dto.PasswordResetRequestDto;
+import com.iflytek.skillhub.exception.ForbiddenException;
 import com.iflytek.skillhub.exception.UnauthorizedException;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
@@ -20,6 +21,7 @@ import com.iflytek.skillhub.security.AuthFailureThrottleService;
 import com.iflytek.skillhub.service.AuthMeResponseAssembler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +42,7 @@ public class LocalAuthController extends BaseApiController {
     private final AuthFailureThrottleService authFailureThrottleService;
     private final PasswordResetService passwordResetService;
     private final AuthMeResponseAssembler authMeResponseAssembler;
+    private final boolean registrationEnabled;
 
     public LocalAuthController(ApiResponseFactory responseFactory,
                                LocalAuthService localAuthService,
@@ -47,7 +50,8 @@ public class LocalAuthController extends BaseApiController {
                                PlatformSessionService platformSessionService,
                                AuthFailureThrottleService authFailureThrottleService,
                                PasswordResetService passwordResetService,
-                               AuthMeResponseAssembler authMeResponseAssembler) {
+                               AuthMeResponseAssembler authMeResponseAssembler,
+                               @Value("${skillhub.auth.local.registration-enabled:true}") boolean registrationEnabled) {
         super(responseFactory);
         this.localAuthService = localAuthService;
         this.skillHubMetrics = skillHubMetrics;
@@ -55,12 +59,16 @@ public class LocalAuthController extends BaseApiController {
         this.authFailureThrottleService = authFailureThrottleService;
         this.passwordResetService = passwordResetService;
         this.authMeResponseAssembler = authMeResponseAssembler;
+        this.registrationEnabled = registrationEnabled;
     }
 
     @PostMapping("/register")
     @RateLimit(category = "auth-register", authenticated = 10, anonymous = 5, windowSeconds = 300)
     public ApiResponse<AuthMeResponse> register(@Valid @RequestBody LocalRegisterRequest request,
                                                 HttpServletRequest httpRequest) {
+        if (!registrationEnabled) {
+            throw new ForbiddenException("error.auth.local.registration.disabled");
+        }
         PlatformPrincipal principal = localAuthService.register(request.username(), request.password(), request.email());
         skillHubMetrics.incrementUserRegister();
         platformSessionService.establishSession(principal, httpRequest);
