@@ -14,6 +14,7 @@ public record NamespaceResponse(
         String description,
         NamespaceType type,
         String avatarUrl,
+        boolean allowMemberOverwrite,
         String createdBy,
         Instant createdAt,
         Instant updatedAt
@@ -27,6 +28,7 @@ public record NamespaceResponse(
                 namespace.getDescription(),
                 namespace.getType(),
                 namespace.getAvatarUrl(),
+                namespace.isAllowMemberOverwrite(),
                 namespace.getCreatedBy(),
                 namespace.getCreatedAt(),
                 namespace.getUpdatedAt()

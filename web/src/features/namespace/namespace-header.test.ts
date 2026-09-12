@@ -32,6 +32,7 @@ describe('NamespaceHeader', () => {
     status: 'ACTIVE',
     avatarUrl: 'https://example.com/avatar.png',
     description: 'Shared namespace for all skills',
+    allowMemberOverwrite: false,
     createdAt: '2026-03-23T00:00:00.000Z',
   }
 

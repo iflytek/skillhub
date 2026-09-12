@@ -108,6 +108,7 @@ export interface Namespace {
   description?: string
   type: 'GLOBAL' | 'TEAM'
   avatarUrl?: string
+  allowMemberOverwrite: boolean
   status: NamespaceStatus
   createdAt: string
   updatedAt?: string
