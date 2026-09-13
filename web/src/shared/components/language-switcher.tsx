@@ -28,8 +28,15 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   ]
 
   // Primary language code only (strip region, e.g. ru-RU → ru).
-  const currentLangCode = i18n.language?.split('-')[0] || 'zh'
+  const currentLangCode = i18n.language?.split('-')[0] || i18n.defaultLanguage || 'en'
   const currentLanguage = languages.find((lang) => lang.code === currentLangCode) || languages[0]
+
+  // Ensure we update when language changes
+  useEffect(() => {
+    // This effect runs whenever i18n.language changes
+    // The currentLangCode and currentLanguage will update automatically
+    // since they're derived from i18n.language
+  }, [i18n.language])
 
   useEffect(() => {
     if (!open) {
