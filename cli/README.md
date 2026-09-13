@@ -18,8 +18,8 @@ bun add -g @astron-team/skillhub
 ## 🚀 Quick Start
 
 ```bash
-# Login
-skillhub login --token sk_xxx
+# Log in interactively with OAuth Device Flow
+skillhub login
 
 # Search skills
 skillhub search pdf
@@ -68,7 +68,8 @@ set SKILLHUB_REGISTRY=https://skillhub.example.com
 
 ## 🔐 Authentication
 
-Token resolution priority:
+`skillhub login` uses OAuth Device Flow when no API token is supplied. Token resolution priority for
+explicit token-based login and all other authenticated commands is:
 
 1. `--token <token>` command-line argument
 2. `SKILLHUB_TOKEN` environment variable
@@ -77,14 +78,23 @@ Token resolution priority:
 ### Login
 
 ```bash
-# Login with API token
-skillhub login --token sk_xxx
+# Interactive login: opens the registry's verification page and displays a user code
+skillhub login
 
-# Login to specific registry
+# Interactive login on a remote/headless terminal
+skillhub login --no-open --registry https://skillhub.example.com
+
+# Non-interactive login with an API token
 skillhub login --token sk_xxx --registry https://skillhub.example.com
 ```
 
-`login` validates the token, stores it in `~/.skillhub/credentials.json`, and writes the registry to `~/.skillhub/config.json`.
+During interactive login, complete authentication in the browser and enter the displayed user code.
+The CLI polls only until the server-provided expiry. It then validates the issued token, stores it in
+`~/.skillhub/credentials.json`, and writes the registry to `~/.skillhub/config.json`. `--no-open`
+suppresses automatic browser launch while retaining the verification URL and code in the terminal.
+
+Token-based login remains available for CI and other non-interactive automation. In both modes,
+credentials are persisted only after `whoami` succeeds.
 
 Both files are updated non-destructively: SkillHub CLI changes only its own `tokens` and `registry`
 fields and preserves unknown fields written by other compatible tools. This allows tools that share
@@ -457,7 +467,7 @@ Update mechanism:
 |---------|-------------|
 | `skillhub help [command]` | Display help information |
 | `skillhub version [--json]`, `skillhub --version`, `skillhub -v` | Display CLI version |
-| `skillhub login --token <token> [--registry <url>] [--json]` | Save token and registry configuration |
+| `skillhub login [--no-open] [--token <token>] [--registry <url>] [--json]` | Log in with OAuth Device Flow or an API token |
 | `skillhub logout [--registry <url>] [--json]` | Remove token for specified registry |
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
@@ -487,7 +497,10 @@ Update mechanism:
 # Verify token validity
 skillhub whoami
 
-# Re-login
+# Re-login interactively
+skillhub login
+
+# Or use a token for non-interactive automation
 skillhub login --token sk_xxx
 ```
 

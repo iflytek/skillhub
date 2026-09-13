@@ -7,6 +7,20 @@ export interface WhoAmIResponse {
   email?: string
 }
 
+export interface DeviceCodeResponse {
+  deviceCode: string
+  userCode: string
+  verificationUri: string
+  expiresIn: number
+  interval: number
+}
+
+export interface DeviceTokenResponse {
+  accessToken?: string | null
+  tokenType?: string | null
+  error?: string | null
+}
+
 export interface SearchItem {
   namespace: string
   slug: string
@@ -144,6 +158,14 @@ export class SkillHubClient {
 
   async whoami(): Promise<WhoAmIResponse> {
     return this.getJson('/auth/whoami')
+  }
+
+  async requestDeviceCode(): Promise<DeviceCodeResponse> {
+    return this.postPublicJson('/api/v1/auth/device/code')
+  }
+
+  async pollDeviceToken(deviceCode: string): Promise<DeviceTokenResponse> {
+    return this.postPublicJson('/api/v1/auth/device/token', { deviceCode })
   }
 
   async serverMetadata(): Promise<ServerMetadata> {
@@ -342,6 +364,20 @@ export class SkillHubClient {
         headers: this.headers()
       })
     } catch (err) {
+      throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
+    }
+    return this.handleJsonResponse<T>(response)
+  }
+
+  private async postPublicJson<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+    let response: Response
+    try {
+      response = await this.fetchImpl(`${this.registry}${path}`, {
+        method: 'POST',
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        ...(body ? { body: JSON.stringify(body) } : {})
+      })
+    } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
     return this.handleJsonResponse<T>(response)
