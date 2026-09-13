@@ -70,6 +70,15 @@ spring:
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
+          feishu:
+            client-id: ${OAUTH2_FEISHU_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_FEISHU_CLIENT_SECRET:placeholder}
+            # Feishu scopes are configured on the open platform app itself
+            # (contact:user.base:readonly, contact:user.email:readonly).
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: ${OAUTH2_FEISHU_DISPLAY_NAME:飞书}
         provider:
           github:
             api-base-url: ${OAUTH2_GITHUB_API_BASE_URL:https://api.github.com}
@@ -79,6 +88,11 @@ spring:
             token-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/token
             user-info-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/api/v4/user
             user-name-attribute: username
+          feishu:
+            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize
+            token-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v2/oauth/token
+            user-info-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info
+            user-name-attribute: open_id
   servlet:
     multipart:
       max-file-size: 100MB

@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * OAuth2 authorization request resolver that preserves a sanitized post-login redirect target in
- * the HTTP session.
+ * the HTTP session. Authorization URIs are taken verbatim from the client registration; Feishu's
+ * current authorize endpoint accepts standard OAuth2 parameters (client_id, optional scope).
  */
 @Component
 public class SkillHubOAuth2AuthorizationRequestResolver

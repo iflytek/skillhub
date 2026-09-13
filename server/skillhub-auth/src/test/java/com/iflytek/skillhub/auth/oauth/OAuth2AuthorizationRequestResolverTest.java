@@ -30,13 +30,26 @@ class OAuth2AuthorizationRequestResolverTest {
                 .scope("read:user")
                 .clientName("GitHub")
                 .build();
+        ClientRegistration feishu = ClientRegistration.withRegistrationId("feishu")
+                .clientId("cli_test123")
+                .clientSecret("secret")
+                .authorizationUri("https://accounts.feishu.cn/open-apis/authen/v1/authorize")
+                .tokenUri("https://open.feishu.cn/open-apis/authen/v2/oauth/token")
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .userInfoUri("https://open.feishu.cn/open-apis/authen/v1/user_info")
+                .userNameAttributeName("open_id")
+                .authorizationGrantType(org.springframework.security.oauth2.core.AuthorizationGrantType.AUTHORIZATION_CODE)
+                .clientAuthenticationMethod(org.springframework.security.oauth2.core.ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                .clientName("飞书")
+                .build();
         OAuthLoginFlowService oauthLoginFlowService = new OAuthLoginFlowService(
+                java.util.List.of(),
                 java.util.List.of(),
                 mock(AccessPolicy.class),
                 mock(IdentityBindingService.class)
         );
         resolver = new SkillHubOAuth2AuthorizationRequestResolver(
-                new InMemoryClientRegistrationRepository(github),
+                new InMemoryClientRegistrationRepository(github, feishu),
                 oauthLoginFlowService
         );
     }
@@ -83,5 +96,33 @@ class OAuth2AuthorizationRequestResolverTest {
         HttpSession session = request.getSession(false);
         assertThat(session).isNotNull();
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
+    }
+
+    @Test
+    void resolve_feishu_usesStandardOAuth2Parameters() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/feishu");
+
+        var authorizationRequest = resolver.resolve(request, "feishu");
+
+        assertThat(authorizationRequest).isNotNull();
+        String uri = authorizationRequest.getAuthorizationRequestUri();
+        assertThat(uri).startsWith("https://accounts.feishu.cn/open-apis/authen/v1/authorize");
+        assertThat(uri).contains("client_id=cli_test123");
+        assertThat(uri).contains("response_type=code");
+        assertThat(uri).contains("state=");
+        assertThat(uri).doesNotContain("app_id=");
+    }
+
+    @Test
+    void resolve_github_keepsStandardParameters() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/github");
+
+        var authorizationRequest = resolver.resolve(request, "github");
+
+        assertThat(authorizationRequest).isNotNull();
+        String uri = authorizationRequest.getAuthorizationRequestUri();
+        assertThat(uri).contains("client_id=client");
+        assertThat(uri).contains("scope=read:user");
+        assertThat(uri).doesNotContain("app_id=");
     }
 }
