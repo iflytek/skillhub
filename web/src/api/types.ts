@@ -475,7 +475,7 @@ export type SkillSuiteBundleOperation = components['schemas']['SkillSuiteBundleO
 export type SkillSuiteBundleOperationResult = components['schemas']['SkillSuiteBundleOperationResponse']
 export type SkillSuiteBundleOperationSummary = RequiredGenerated<
   components['schemas']['SkillSuiteBundleOperationSummaryResponse'],
-  'failureCode'
+  'failureCode' | 'baseVersion'
 >
 
 // Publish

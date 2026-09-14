@@ -13,6 +13,7 @@ public record SkillSuiteBundleOperationSummaryResponse(
         String targetVersion,
         SkillSuiteBundleOperationStatus status,
         String failureCode,
+        String baseVersion,
         int totalMembers,
         int completedMembers,
         int waitingMembers,

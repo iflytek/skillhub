@@ -19,16 +19,18 @@ export function MySuitesPage() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
+  const [activePage, setActivePage] = useState(0)
   const { data, isLoading } = useMySuites(query.trim(), page, PAGE_SIZE)
-  const { data: activeOperations, isLoading: isLoadingOperations } = useActiveSuiteBundleOperations()
+  const { data: activeOperations, isLoading: isLoadingOperations } =
+    useActiveSuiteBundleOperations(activePage, PAGE_SIZE)
 
-  const continueOperation = (operation: NonNullable<typeof activeOperations>[number]) => {
+  const continueOperation = (operation: NonNullable<typeof activeOperations>['items'][number]) => {
     rememberSuiteBundleOperation(operation.mode, operation.targetCoordinate, operation.operationId)
     const coordinate = operation.targetCoordinate.match(/^@([^/]+)\/(.+)$/)
     if (operation.mode === 'UPDATE' && coordinate) {
       navigate({
         to: `/dashboard/suites/${coordinate[1]}/${encodeURIComponent(coordinate[2])}/new-version`,
-        search: { sourceVersion: undefined },
+        search: { sourceVersion: operation.baseVersion },
       })
       return
     }
@@ -53,7 +55,7 @@ export function MySuitesPage() {
       />
       {isLoadingOperations ? (
         <div className="h-28 animate-shimmer rounded-xl" />
-      ) : activeOperations?.length ? (
+      ) : activeOperations?.items.length ? (
         <section className="space-y-3" aria-labelledby="active-suite-operations-title">
           <div>
             <h2 id="active-suite-operations-title" className="text-lg font-semibold">
@@ -62,7 +64,7 @@ export function MySuitesPage() {
             <p className="text-sm text-muted-foreground">{t('suite.bundle.activeDescription')}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {activeOperations.map(operation => (
+            {activeOperations.items.map(operation => (
               <Card key={operation.operationId} className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -94,6 +96,11 @@ export function MySuitesPage() {
               </Card>
             ))}
           </div>
+          <Pagination
+            page={activePage}
+            totalPages={Math.max(1, Math.ceil(activeOperations.total / activeOperations.size))}
+            onPageChange={setActivePage}
+          />
         </section>
       ) : null}
       {isLoading ? (

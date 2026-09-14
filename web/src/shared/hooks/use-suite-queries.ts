@@ -167,13 +167,14 @@ export function useSuiteBundleOperation(operationId?: string) {
   })
 }
 
-export function useActiveSuiteBundleOperations() {
+export function useActiveSuiteBundleOperations(page = 0, size = 12) {
   return useQuery({
-    queryKey: ['suite-bundles', 'operations', 'active'],
-    queryFn: () => fetchJson<SkillSuiteBundleOperationSummary[]>(
-      `${WEB_API_PREFIX}/suite-bundles/operations/active`,
+    queryKey: ['suite-bundles', 'operations', 'active', page, size],
+    queryFn: () => fetchJson<PagedResponse<SkillSuiteBundleOperationSummary>>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/active?page=${page}&size=${size}`,
     ),
-    refetchInterval: (query) => query.state.data?.length ? 2_000 : false,
+    refetchInterval: (query) => query.state.data?.items.some(operation =>
+      operation.status === 'RUNNING' || operation.status === 'WAITING_FOR_MEMBERS') ? 2_000 : false,
   })
 }
 

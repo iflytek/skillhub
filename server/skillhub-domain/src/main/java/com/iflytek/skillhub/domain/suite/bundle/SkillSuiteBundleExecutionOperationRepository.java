@@ -12,8 +12,6 @@ public interface SkillSuiteBundleExecutionOperationRepository {
     Optional<SkillSuiteBundleExecutionOperation> findByActorIdAndClientRequestId(
             String actorId, String clientRequestId);
     Optional<SkillSuiteBundleExecutionOperation> findByPreviewToken(String previewToken);
-    List<SkillSuiteBundleExecutionOperation> findTop50ByActorIdAndStatusInOrderByUpdatedAtDesc(
-            String actorId, Collection<SkillSuiteBundleOperationStatus> statuses);
     List<SkillSuiteBundleExecutionOperation> findTop100ByStatusInOrderByUpdatedAtAsc(
             Collection<SkillSuiteBundleOperationStatus> statuses);
     List<SkillSuiteBundleExecutionOperation>

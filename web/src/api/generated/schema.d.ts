@@ -5860,14 +5860,23 @@ export interface components {
             completedAt?: string;
             members?: components["schemas"]["OperationMember"][];
         };
-        ApiResponseListSkillSuiteBundleOperationSummaryResponse: {
+        ApiResponsePageResponseSkillSuiteBundleOperationSummaryResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
+            data?: components["schemas"]["PageResponseSkillSuiteBundleOperationSummaryResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+        };
+        PageResponseSkillSuiteBundleOperationSummaryResponse: {
+            items?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
         };
         SkillSuiteBundleOperationSummaryResponse: {
             operationId?: string;
@@ -5878,6 +5887,7 @@ export interface components {
             /** @enum {string} */
             status?: "RUNNING" | "WAITING_FOR_MEMBERS" | "BLOCKED_RETRYABLE" | "REPREVIEW_REQUIRED" | "SUITE_DRAFT_CREATED" | "CANCELLED";
             failureCode?: string;
+            baseVersion?: string;
             /** Format: int32 */
             totalMembers?: number;
             /** Format: int32 */
@@ -12289,7 +12299,10 @@ export interface operations {
     };
     listActiveSkillSuiteBundleOperations: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12302,14 +12315,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillSuiteBundleOperationSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSuiteBundleOperationSummaryResponse"];
                 };
             };
         };
     };
     listActiveSkillSuiteBundleOperations_1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12322,7 +12338,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillSuiteBundleOperationSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSuiteBundleOperationSummaryResponse"];
                 };
             };
         };

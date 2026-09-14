@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
+import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.dto.SkillSuiteBundlePreviewResponse;
@@ -165,18 +166,19 @@ class SkillSuiteBundleControllerTest {
 
     @Test
     void authenticatedCallerCanListTheirActiveOperations() throws Exception {
-        when(operationQueryService.listActive("actor")).thenReturn(List.of(
+        when(operationQueryService.listActive("actor", 0, 12)).thenReturn(new PageResponse<>(List.of(
                 new SkillSuiteBundleOperationSummaryResponse(
                         "operation-1", SkillSuiteBundleMode.CREATE, "@global/suite", "1.0.0",
                         SkillSuiteBundleOperationStatus.WAITING_FOR_MEMBERS, null,
-                        2, 1, 1, Instant.parse("2026-09-11T08:00:00Z"))));
+                        null, 2, 1, 1, Instant.parse("2026-09-11T08:00:00Z"))), 1, 0, 12));
 
         mockMvc.perform(get("/api/v1/suite-bundles/operations/active")
                         .with(authentication(authToken("actor"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].operationId").value("operation-1"))
-                .andExpect(jsonPath("$.data[0].targetCoordinate").value("@global/suite"))
-                .andExpect(jsonPath("$.data[0].completedMembers").value(1));
+                .andExpect(jsonPath("$.data.items[0].operationId").value("operation-1"))
+                .andExpect(jsonPath("$.data.items[0].targetCoordinate").value("@global/suite"))
+                .andExpect(jsonPath("$.data.items[0].completedMembers").value(1))
+                .andExpect(jsonPath("$.data.total").value(1));
     }
 
     @Test
