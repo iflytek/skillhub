@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PagedResponse, SkillSuiteBundleOperationSummary } from '@/api/types'
 import { MySuitesPage } from './my-suites'
@@ -8,6 +8,7 @@ import { MySuitesPage } from './my-suites'
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   remember: vi.fn(),
+  activeHook: vi.fn(),
   active: { items: [], total: 0, page: 0, size: 12 } as PagedResponse<SkillSuiteBundleOperationSummary>,
 }))
 
@@ -18,7 +19,10 @@ vi.mock('@/features/suite/suite-bundle-import', () => ({
 }))
 vi.mock('@/shared/hooks/use-suite-queries', () => ({
   useMySuites: () => ({ data: { items: [], total: 0, page: 0, size: 12 }, isLoading: false }),
-  useActiveSuiteBundleOperations: () => ({ data: mocks.active, isLoading: false }),
+  useActiveSuiteBundleOperations: (page: number) => {
+    mocks.activeHook(page)
+    return { data: mocks.active, isLoading: false }
+  },
 }))
 
 describe('MySuitesPage', () => {
@@ -85,5 +89,35 @@ describe('MySuitesPage', () => {
       to: '/dashboard/suites/team-ai/care-suite/new-version',
       search: { sourceVersion: '1.0.0' },
     })
+  })
+
+  it('returns to the previous active page when the last page becomes empty', async () => {
+    mocks.active = {
+      items: [{
+        operationId: 'operation-13',
+        mode: 'CREATE',
+        targetCoordinate: '@global/suite-13',
+        targetVersion: '1.0.0',
+        status: 'WAITING_FOR_MEMBERS',
+        failureCode: undefined,
+        baseVersion: undefined,
+        totalMembers: 1,
+        completedMembers: 0,
+        waitingMembers: 1,
+        updatedAt: '2026-09-14T06:00:00Z',
+      }],
+      total: 13,
+      page: 0,
+      size: 12,
+    }
+    const view = render(<MySuitesPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'pagination.next' }))
+    expect(mocks.activeHook).toHaveBeenCalledWith(1)
+
+    mocks.active = { items: [], total: 12, page: 1, size: 12 }
+    view.rerender(<MySuitesPage />)
+
+    await waitFor(() => expect(mocks.activeHook).toHaveBeenLastCalledWith(0))
+    expect(screen.getByRole('button', { name: 'pagination.next' })).not.toBeNull()
   })
 })

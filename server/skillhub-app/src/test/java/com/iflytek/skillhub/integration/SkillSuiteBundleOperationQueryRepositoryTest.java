@@ -91,12 +91,28 @@ class SkillSuiteBundleOperationQueryRepositoryTest {
         entityManager.persist(operation);
         entityManager.persist(member(0, "first", false));
         entityManager.persist(member(1, "second", true));
+        SkillSuiteBundleExecutionOperation newest = createOperation(
+                "operation-2", "actor", namespace, "newer-suite");
+        newest.markWaitingForMembers(NOW.plusSeconds(2));
+        entityManager.persist(newest);
+        SkillSuiteBundleExecutionOperation terminal = createOperation(
+                "operation-3", "actor", namespace, "finished-suite");
+        terminal.cancel(NOW.plusSeconds(3));
+        entityManager.persist(terminal);
+        SkillSuiteBundleExecutionOperation anotherActor = createOperation(
+                "operation-4", "another-actor", namespace, "other-suite");
+        anotherActor.markWaitingForMembers(NOW.plusSeconds(4));
+        entityManager.persist(anotherActor);
         entityManager.flush();
 
-        var page = repository.findActive("actor", 0, 1);
+        var firstPage = repository.findActive("actor", 0, 1);
+        var secondPage = repository.findActive("actor", 1, 1);
 
-        assertThat(page.total()).isEqualTo(1);
-        assertThat(page.items()).singleElement().satisfies(summary -> {
+        assertThat(firstPage.total()).isEqualTo(2);
+        assertThat(firstPage.items()).singleElement()
+                .extracting(summary -> summary.operationId())
+                .isEqualTo("operation-2");
+        assertThat(secondPage.items()).singleElement().satisfies(summary -> {
             assertThat(summary.operationId()).isEqualTo("operation-1");
             assertThat(summary.targetCoordinate()).isEqualTo("@team-ai/care-suite");
             assertThat(summary.baseVersion()).isEqualTo("1.0.0");
@@ -104,7 +120,14 @@ class SkillSuiteBundleOperationQueryRepositoryTest {
             assertThat(summary.completedMembers()).isZero();
             assertThat(summary.waitingMembers()).isEqualTo(1);
         });
-        assertThat(repository.findActive("another-actor", 0, 1).items()).isEmpty();
+        assertThat(repository.findActive("another-actor", 0, 1).items()).singleElement()
+                .extracting(summary -> summary.operationId())
+                .isEqualTo("operation-4");
+        assertThat(entityManager.getEntityManager().createNativeQuery("""
+                SELECT indexdef FROM pg_indexes
+                WHERE indexname = 'idx_suite_bundle_operation_actor_status_updated'
+                """).getSingleResult().toString())
+                .contains("(actor_id, status, updated_at DESC, operation_id DESC)");
     }
 
     private SkillSuiteBundleMemberResult member(int position, String slug, boolean waiting) {
@@ -116,5 +139,25 @@ class SkillSuiteBundleOperationQueryRepositoryTest {
                 null, null, List.of(), List.of(), NOW);
         if (waiting) member.markWaiting(NOW.plusSeconds(1));
         return member;
+    }
+
+    private SkillSuiteBundleExecutionOperation createOperation(
+            String operationId,
+            String actorId,
+            Namespace namespace,
+            String suiteSlug
+    ) {
+        String suffix = operationId.substring(operationId.lastIndexOf('-') + 1);
+        SkillSuiteBundlePreviewSession preview = entityManager.persistFlushFind(
+                new SkillSuiteBundlePreviewSession(
+                        "preview-" + suffix, actorId, SkillSuiteBundleMode.CREATE, namespace.getId(),
+                        suiteSlug, null, null, "1.0.0", "staging/" + suffix + ".zip",
+                        suffix.repeat(64), Map.of(), Map.of(), "warning-" + suffix,
+                        NOW.plusSeconds(600), NOW));
+        return new SkillSuiteBundleExecutionOperation(
+                operationId, preview.getToken(), "request-" + suffix, actorId,
+                SkillSuiteBundleMode.CREATE, namespace.getId(), suiteSlug, null, null, "1.0.0",
+                "staging/" + suffix + ".zip", suffix.repeat(64), Map.of(),
+                "warning-" + suffix, NOW);
     }
 }

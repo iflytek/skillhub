@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Boxes, Loader2 } from 'lucide-react'
@@ -23,6 +23,11 @@ export function MySuitesPage() {
   const { data, isLoading } = useMySuites(query.trim(), page, PAGE_SIZE)
   const { data: activeOperations, isLoading: isLoadingOperations } =
     useActiveSuiteBundleOperations(activePage, PAGE_SIZE)
+  const activeTotalPages = Math.max(1, Math.ceil((activeOperations?.total ?? 0) / PAGE_SIZE))
+
+  useEffect(() => {
+    if (activePage >= activeTotalPages) setActivePage(activeTotalPages - 1)
+  }, [activePage, activeTotalPages])
 
   const continueOperation = (operation: NonNullable<typeof activeOperations>['items'][number]) => {
     rememberSuiteBundleOperation(operation.mode, operation.targetCoordinate, operation.operationId)
@@ -55,7 +60,7 @@ export function MySuitesPage() {
       />
       {isLoadingOperations ? (
         <div className="h-28 animate-shimmer rounded-xl" />
-      ) : activeOperations?.items.length ? (
+      ) : activeOperations?.total ? (
         <section className="space-y-3" aria-labelledby="active-suite-operations-title">
           <div>
             <h2 id="active-suite-operations-title" className="text-lg font-semibold">
@@ -98,7 +103,7 @@ export function MySuitesPage() {
           </div>
           <Pagination
             page={activePage}
-            totalPages={Math.max(1, Math.ceil(activeOperations.total / activeOperations.size))}
+            totalPages={activeTotalPages}
             onPageChange={setActivePage}
           />
         </section>
