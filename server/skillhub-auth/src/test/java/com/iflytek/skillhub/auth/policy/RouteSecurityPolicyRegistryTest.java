@@ -126,6 +126,40 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizeApiToken_requiresPublishScopeForArchiveAndUnarchive() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            for (String action : List.of("archive", "unarchive")) {
+                String path = prefix + "/skills/global/demo-skill/" + action;
+                var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
+                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+
+                assertFalse(denied.allowed(), path);
+                assertEquals("skill:publish", denied.requiredScope(), path);
+                assertTrue(allowed.allowed(), path);
+            }
+        }
+    }
+
+    @Test
+    void authorizeApiToken_requiresDeleteScopeForVersionDeleteEndpoint() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            String path = prefix + "/skills/global/demo-skill/versions/1.2.3";
+            var denied = registry.authorizeApiToken("DELETE", path, Set.of("skill:publish"));
+            var allowed = registry.authorizeApiToken("DELETE", path, Set.of("skill:delete"));
+
+            assertFalse(denied.allowed(), path);
+            assertEquals("skill:delete", denied.requiredScope(), path);
+            assertTrue(allowed.allowed(), path);
+        }
+    }
+
+    @Test
+    void authorizeApiToken_keepsWholeSkillWebDeleteSessionOnlyWhileAllowingVersionDelete() {
+        assertFalse(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill", ALL_SCOPES).allowed());
+        assertTrue(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill/versions/1.2.3", ALL_SCOPES).allowed());
+    }
+
+    @Test
     void authorizationPolicies_shouldDeclareSuperAdminDeleteRuleForHardDeleteEndpoint() {
         boolean matched = registry.authorizationPolicies().stream()
                 .anyMatch(policy -> policy.method() == HttpMethod.DELETE
