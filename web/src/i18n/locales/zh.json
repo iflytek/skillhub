@@ -2020,6 +2020,7 @@
       "progressTitle": "Bundle 发布进度",
       "loadingOperation": "正在读取操作状态",
       "operationLoadFailed": "无法读取 Bundle 操作状态，请检查网络后重试。",
+      "operationTargetMismatch": "恢复的 Bundle 操作与当前套件不匹配，已清除该恢复记录。",
       "reloadOperation": "重新读取",
       "redactedMember": "无权查看的成员",
       "viewMemberReview": "查看技能版本与审核状态",

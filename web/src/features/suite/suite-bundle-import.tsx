@@ -71,12 +71,22 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
   const selectionVersionRef = useRef(0)
   const idempotencyKeyRef = useRef<string | null>(null)
   const operationQuery = useSuiteBundleOperation(operationId)
+  const operation = operationQuery.data
+  const operationMatchesTarget = !operation
+    || (operation.mode === expectedMode
+      && (expectedCoordinate === undefined || operation.targetCoordinate === expectedCoordinate))
 
   useEffect(() => () => {
     selectionVersionRef.current += 1
     requestRef.current?.abort()
   }, [])
   useEffect(() => writeStoredOperation(storageKey, operationId), [operationId, storageKey])
+  useEffect(() => {
+    if (!operationId || !operation || operationMatchesTarget) return
+    writeStoredOperation(storageKey)
+    setOperationId(undefined)
+    toast.error(t('suite.bundle.operationTargetMismatch'))
+  }, [operation, operationId, operationMatchesTarget, storageKey, t])
   useEffect(() => {
     if (!preview) return undefined
     const timer = window.setInterval(() => setNow(Date.now()), 1_000)
@@ -185,7 +195,9 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
   }
 
   if (operationId) {
-    const operation = operationQuery.data
+    if (!operationMatchesTarget) {
+      return <Card className="p-6 text-sm text-destructive" role="alert">{t('suite.bundle.operationTargetMismatch')}</Card>
+    }
     const status = operation?.status
     const draftCoordinate = splitCoordinate(operation?.targetCoordinate)
     const resetOperation = () => {

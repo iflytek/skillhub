@@ -2021,6 +2021,7 @@
       "progressTitle": "Bundle publishing progress",
       "loadingOperation": "Loading operation status",
       "operationLoadFailed": "Unable to load the Bundle operation. Check your connection and try again.",
+      "operationTargetMismatch": "The restored Bundle operation does not match this Suite. Its recovery entry was cleared.",
       "reloadOperation": "Reload",
       "redactedMember": "Member hidden by access policy",
       "viewMemberReview": "View Skill version and review status",

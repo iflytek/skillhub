@@ -39,6 +39,10 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
 }) {
   const editing = mode === 'edit'
   const creatingVersion = mode === 'new-version'
+  const bundleMode = creatingVersion ? 'UPDATE' : 'CREATE'
+  const bundleCoordinate = creatingVersion && routeNamespace && routeSlug
+    ? `@${routeNamespace}/${routeSlug}`
+    : undefined
   const loadingSource = editing || creatingVersion
   const { t } = useTranslation()
   const { hasRole } = useAuth()
@@ -61,11 +65,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const [pendingVersionUpdate, setPendingVersionUpdate] = useState<SkillSuiteMemberCandidate | null>(null)
   const [authoringMode, setAuthoringMode] = useState<'manual' | 'import'>(() => {
     if (editing) return 'manual'
-    const bundleMode = creatingVersion ? 'UPDATE' : 'CREATE'
-    const coordinate = creatingVersion && routeNamespace && routeSlug
-      ? `@${routeNamespace}/${routeSlug}`
-      : undefined
-    return hasStoredSuiteBundleOperation(bundleMode, coordinate) ? 'import' : 'manual'
+    return hasStoredSuiteBundleOperation(bundleMode, bundleCoordinate) ? 'import' : 'manual'
   })
   const debouncedQuery = useDebounce(candidateQuery.trim(), 250)
   const { data: candidates, isLoading: isLoadingCandidates } = useSuiteMemberCandidates(
@@ -250,8 +250,9 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
 
       {!editing && authoringMode === 'import' ? (
         <SuiteBundleImport
-          expectedMode={creatingVersion ? 'UPDATE' : 'CREATE'}
-          expectedCoordinate={creatingVersion && existing ? `@${existing.namespace}/${existing.slug}` : undefined}
+          key={`${bundleMode}:${bundleCoordinate ?? 'new'}`}
+          expectedMode={bundleMode}
+          expectedCoordinate={creatingVersion && existing ? bundleCoordinate : undefined}
         />
       ) : (
         <>

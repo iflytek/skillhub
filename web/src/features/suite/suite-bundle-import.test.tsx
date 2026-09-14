@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   packageFolder: vi.fn(),
   toast: { error: vi.fn() },
   navigate: vi.fn(),
+  requestedOperationIds: [] as Array<string | undefined>,
 }))
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
@@ -44,7 +45,10 @@ vi.mock('@/shared/hooks/use-suite-queries', () => ({
   useConfirmSuiteBundle: () => mocks.confirm,
   useCancelSuiteBundleOperation: () => mocks.cancel,
   useRetrySuiteBundleOperation: () => mocks.retry,
-  useSuiteBundleOperation: () => mocks.operation,
+  useSuiteBundleOperation: (operationId?: string) => {
+    mocks.requestedOperationIds.push(operationId)
+    return mocks.operation
+  },
 }))
 
 function folderFile(path: string): File {
@@ -83,6 +87,7 @@ describe('SuiteBundleImport', () => {
     mocks.operation.data = undefined
     mocks.operation.error = null
     mocks.preview.isPending = false
+    mocks.requestedOperationIds = []
   })
 
   it('uploads one archive, requires explicit warning acceptance and confirms the exact preview', async () => {
@@ -278,6 +283,7 @@ describe('SuiteBundleImport', () => {
     mocks.operation.data = {
       operationId: 'operation-1',
       status: 'BLOCKED_RETRYABLE',
+      mode: 'CREATE',
       members: [{ position: 0, status: 'FAILED_RETRYABLE', redacted: true }],
     }
     render(<SuiteBundleImport expectedMode="CREATE" />)
@@ -329,6 +335,7 @@ describe('SuiteBundleImport', () => {
     mocks.operation.data = {
       operationId: 'operation-waiting',
       status: 'WAITING_FOR_MEMBERS',
+      mode: 'CREATE',
       members: [{
         position: 0,
         status: 'WAITING_FOR_MEMBER',
@@ -360,6 +367,7 @@ describe('SuiteBundleImport', () => {
     mocks.operation.data = {
       operationId: 'operation-complete',
       status: 'SUITE_DRAFT_CREATED',
+      mode: 'CREATE',
       targetCoordinate: '@global/generated-suite',
       targetVersion: '1.2.0',
       members: [],
@@ -372,5 +380,55 @@ describe('SuiteBundleImport', () => {
       to: '/suite/global/generated-suite',
       search: { version: '1.2.0' },
     })
+  })
+
+  it('reads the new Suite recovery key when an UPDATE route changes without a full page reload', async () => {
+    window.sessionStorage.setItem(
+      'skillhub:suite-bundle-operation:UPDATE:@global/suite-a',
+      'operation-a',
+    )
+    window.sessionStorage.setItem(
+      'skillhub:suite-bundle-operation:UPDATE:@global/suite-b',
+      'operation-b',
+    )
+    const Harness = ({ coordinate }: { coordinate: string }) => (
+      <SuiteBundleImport
+        key={`UPDATE:${coordinate}`}
+        expectedMode="UPDATE"
+        expectedCoordinate={coordinate}
+      />
+    )
+    const { rerender } = render(<Harness coordinate="@global/suite-a" />)
+    expect(mocks.requestedOperationIds[mocks.requestedOperationIds.length - 1]).toBe('operation-a')
+
+    rerender(<Harness coordinate="@global/suite-b" />)
+
+    await waitFor(() => expect(
+      mocks.requestedOperationIds[mocks.requestedOperationIds.length - 1]
+    ).toBe('operation-b'))
+    expect(window.sessionStorage.getItem(
+      'skillhub:suite-bundle-operation:UPDATE:@global/suite-b'
+    )).toBe('operation-b')
+  })
+
+  it('clears a restored UPDATE operation that belongs to another Suite without exposing actions', async () => {
+    const key = 'skillhub:suite-bundle-operation:UPDATE:@global/suite-b'
+    window.sessionStorage.setItem(key, 'operation-a')
+    mocks.operation.data = {
+      operationId: 'operation-a',
+      status: 'BLOCKED_RETRYABLE',
+      mode: 'UPDATE',
+      targetCoordinate: '@global/suite-a',
+      members: [{ position: 0, status: 'FAILED_RETRYABLE', redacted: true }],
+    }
+
+    render(<SuiteBundleImport expectedMode="UPDATE" expectedCoordinate="@global/suite-b" />)
+
+    expect(screen.queryByText('suite.bundle.redactedMember')).toBeNull()
+    expect(screen.queryByRole('button', { name: /suite.bundle.retry/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'suite.bundle.cancelOperation' })).toBeNull()
+    await waitFor(() => expect(window.sessionStorage.getItem(key)).toBeNull())
+    expect(screen.getByText('suite.bundle.uploadTitle')).not.toBeNull()
+    expect(mocks.toast.error).toHaveBeenCalledWith('suite.bundle.operationTargetMismatch')
   })
 })

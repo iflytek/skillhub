@@ -2018,6 +2018,7 @@
       "progressTitle": "Ход публикации Bundle",
       "loadingOperation": "Загрузка состояния операции",
       "operationLoadFailed": "Не удалось загрузить операцию Bundle. Проверьте подключение и повторите попытку.",
+      "operationTargetMismatch": "Восстановленная операция Bundle не соответствует этому набору. Запись восстановления удалена.",
       "reloadOperation": "Загрузить снова",
       "redactedMember": "Участник скрыт политикой доступа",
       "viewMemberReview": "Открыть версию Skill и состояние проверки",
