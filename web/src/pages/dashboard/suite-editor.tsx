@@ -21,7 +21,10 @@ import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { toast } from '@/shared/lib/toast'
-import { SuiteBundleImport } from '@/features/suite/suite-bundle-import'
+import {
+  hasStoredSuiteBundleOperation,
+  SuiteBundleImport,
+} from '@/features/suite/suite-bundle-import'
 import { SuiteLabelPanel } from '@/features/skill/skill-label-panel'
 import { useSuiteLabels } from '@/shared/hooks/use-label-queries'
 import { useAuth } from '@/features/auth/use-auth'
@@ -56,7 +59,14 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   const [selected, setSelected] = useState<SelectedMember[]>([])
   const [entrySkillVersionId, setEntrySkillVersionId] = useState<number | null>(null)
   const [pendingVersionUpdate, setPendingVersionUpdate] = useState<SkillSuiteMemberCandidate | null>(null)
-  const [authoringMode, setAuthoringMode] = useState<'manual' | 'import'>('manual')
+  const [authoringMode, setAuthoringMode] = useState<'manual' | 'import'>(() => {
+    if (editing) return 'manual'
+    const bundleMode = creatingVersion ? 'UPDATE' : 'CREATE'
+    const coordinate = creatingVersion && routeNamespace && routeSlug
+      ? `@${routeNamespace}/${routeSlug}`
+      : undefined
+    return hasStoredSuiteBundleOperation(bundleMode, coordinate) ? 'import' : 'manual'
+  })
   const debouncedQuery = useDebounce(candidateQuery.trim(), 250)
   const { data: candidates, isLoading: isLoadingCandidates } = useSuiteMemberCandidates(
     namespace, visibility, debouncedQuery, Boolean(namespace),

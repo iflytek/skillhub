@@ -32,12 +32,16 @@ vi.mock('@/shared/hooks/use-label-queries', () => ({
   useAttachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useDetachSuiteLabel: () => ({ mutate: vi.fn(), isPending: false }),
 }))
-vi.mock('@/features/suite/suite-bundle-import', () => ({
-  SuiteBundleImport: ({ expectedMode, expectedCoordinate }: {
-    expectedMode: string
-    expectedCoordinate?: string
-  }) => <div>{`bundle-import:${expectedMode}:${expectedCoordinate ?? ''}`}</div>,
-}))
+vi.mock('@/features/suite/suite-bundle-import', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/suite/suite-bundle-import')>()
+  return {
+    ...actual,
+    SuiteBundleImport: ({ expectedMode, expectedCoordinate }: {
+      expectedMode: string
+      expectedCoordinate?: string
+    }) => <div>{`bundle-import:${expectedMode}:${expectedCoordinate ?? ''}`}</div>,
+  }
+})
 vi.mock('@/shared/hooks/use-debounce', () => ({ useDebounce: (value: string) => value }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useMyNamespaces: () => ({ data: [{ id: 1, slug: 'global' }] }),
@@ -91,6 +95,7 @@ describe('SuiteEditor', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    window.sessionStorage.clear()
     mocks.detail = { data: undefined, isLoading: false, error: null }
     mocks.candidates = []
   })
@@ -205,5 +210,31 @@ describe('SuiteEditor', () => {
     await waitFor(() => expect(screen.getByRole('tab', { name: 'suite.localImport' })).not.toBeNull())
     fireEvent.click(screen.getByRole('tab', { name: 'suite.localImport' }))
     expect(screen.getByText('bundle-import:UPDATE:@global/starter')).not.toBeNull()
+  })
+
+  it('reopens local import after reload when a CREATE operation is stored', () => {
+    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-create')
+
+    render(<SuiteEditor />)
+
+    expect(screen.getByRole('tab', { name: 'suite.localImport' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('bundle-import:CREATE:')).not.toBeNull()
+  })
+
+  it('reopens the matching UPDATE import without using another Suite operation', async () => {
+    window.sessionStorage.setItem(
+      'skillhub:suite-bundle-operation:UPDATE:@global/starter',
+      'operation-update',
+    )
+    window.sessionStorage.setItem(
+      'skillhub:suite-bundle-operation:UPDATE:@global/another',
+      'operation-other',
+    )
+    mocks.detail = { data: sourceSuite(['CREATE_VERSION']), isLoading: false, error: null }
+
+    render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="new-version" />)
+
+    await waitFor(() => expect(screen.getByText('bundle-import:UPDATE:@global/starter')).not.toBeNull())
+    expect(screen.getByRole('tab', { name: 'suite.localImport' }).getAttribute('aria-selected')).toBe('true')
   })
 })

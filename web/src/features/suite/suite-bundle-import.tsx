@@ -40,6 +40,10 @@ function writeStoredOperation(key: string, operationId?: string): void {
   }
 }
 
+export function hasStoredSuiteBundleOperation(mode: BundleMode, coordinate?: string): boolean {
+  return Boolean(readStoredOperation(operationStorageKey(mode, coordinate)))
+}
+
 function splitCoordinate(coordinate?: string): { namespace: string; slug: string } | null {
   const match = coordinate?.match(/^@([^/]+)\/(.+)$/)
   return match ? { namespace: match[1], slug: match[2] } : null
