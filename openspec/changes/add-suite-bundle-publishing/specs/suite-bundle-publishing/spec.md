@@ -512,7 +512,9 @@ SHALL 支持上传一个 ZIP；浏览器支持安全目录选择时，也可以�
 确认页面 SHALL 展示将创建的 Skill、将创建的 SkillVersion、复用版本、纯引用和移除成员数量，
 每个携带包成员的最终可见性、发布路径和 warning，并说明成员就绪后只生成 Suite 草稿。warning
 必须逐成员明确确认。确认后，进度页 SHALL 展示每个成员的创建、扫描、审核、复用、引用、失败或
-阻塞状态，并能通过操作 ID 在刷新或重新登录后恢复。
+阻塞状态，并能通过操作 ID 在刷新或重新登录后恢复。“我的套件” SHALL 展示当前用户发起的非终态
+Bundle 操作，使尚未生成 Suite 草稿的发布过程仍有稳定入口；公开套件专区 SHALL 继续只展示已发布
+Suite，不得把执行操作伪装成已经创建的 Suite。
 
 #### Scenario: 用户确认混合计划
 - **WHEN** 预览同时包含创建 Skill、创建版本、复用、引用和移除
@@ -523,6 +525,12 @@ SHALL 支持上传一个 ZIP；浏览器支持安全目录选择时，也可以�
 - **WHEN** 已确认操作至少有一个成员等待独立审核
 - **THEN** 进度页展示 `WAITING_FOR_MEMBERS` 和成员审核入口
 - **AND** 不把操作展示为 Suite 已更新
+
+#### Scenario: 从我的套件继续查看发布
+- **WHEN** 当前用户发起的 Bundle 操作仍为 `RUNNING`、`WAITING_FOR_MEMBERS` 或 `BLOCKED_RETRYABLE`
+- **THEN** “我的套件”展示目标坐标、目标版本、整体状态和成员完成数量
+- **AND** 用户可以回到该操作的进度页继续查看或处理
+- **AND** 公开套件专区不展示该未完成操作
 
 #### Scenario: 操作创建 Suite 草稿
 - **WHEN** 操作达到 `SUITE_DRAFT_CREATED`

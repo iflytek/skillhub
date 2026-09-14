@@ -11,6 +11,7 @@ import type {
   SkillSuiteBundlePreview,
   SkillSuiteBundleOperation,
   SkillSuiteBundleOperationResult,
+  SkillSuiteBundleOperationSummary,
 } from '@/api/types'
 import { fetchJson, getCsrfHeaders, suiteApi, WEB_API_PREFIX } from '@/api/client'
 
@@ -163,6 +164,16 @@ export function useSuiteBundleOperation(operationId?: string) {
       const status = query.state.data?.status
       return status === 'RUNNING' || status === 'WAITING_FOR_MEMBERS' ? 2_000 : false
     },
+  })
+}
+
+export function useActiveSuiteBundleOperations() {
+  return useQuery({
+    queryKey: ['suite-bundles', 'operations', 'active'],
+    queryFn: () => fetchJson<SkillSuiteBundleOperationSummary[]>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/active`,
+    ),
+    refetchInterval: (query) => query.state.data?.length ? 2_000 : false,
   })
 }
 

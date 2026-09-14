@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Boxes } from 'lucide-react'
-import { useMySuites } from '@/shared/hooks/use-suite-queries'
+import { AlertTriangle, Boxes, Loader2 } from 'lucide-react'
+import { useActiveSuiteBundleOperations, useMySuites } from '@/shared/hooks/use-suite-queries'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { EmptyState } from '@/shared/components/empty-state'
 import { Pagination } from '@/shared/components/pagination'
@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { suiteStatusLabel } from '@/features/suite/suite-labels'
+import { rememberSuiteBundleOperation } from '@/features/suite/suite-bundle-import'
 
 const PAGE_SIZE = 12
 
@@ -19,6 +20,20 @@ export function MySuitesPage() {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const { data, isLoading } = useMySuites(query.trim(), page, PAGE_SIZE)
+  const { data: activeOperations, isLoading: isLoadingOperations } = useActiveSuiteBundleOperations()
+
+  const continueOperation = (operation: NonNullable<typeof activeOperations>[number]) => {
+    rememberSuiteBundleOperation(operation.mode, operation.targetCoordinate, operation.operationId)
+    const coordinate = operation.targetCoordinate.match(/^@([^/]+)\/(.+)$/)
+    if (operation.mode === 'UPDATE' && coordinate) {
+      navigate({
+        to: `/dashboard/suites/${coordinate[1]}/${encodeURIComponent(coordinate[2])}/new-version`,
+        search: { sourceVersion: undefined },
+      })
+      return
+    }
+    navigate({ to: '/dashboard/suites/new' })
+  }
 
   return (
     <div className="space-y-8 animate-fade-up">
@@ -36,6 +51,51 @@ export function MySuitesPage() {
           setPage(0)
         }}
       />
+      {isLoadingOperations ? (
+        <div className="h-28 animate-shimmer rounded-xl" />
+      ) : activeOperations?.length ? (
+        <section className="space-y-3" aria-labelledby="active-suite-operations-title">
+          <div>
+            <h2 id="active-suite-operations-title" className="text-lg font-semibold">
+              {t('suite.bundle.activeTitle')}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t('suite.bundle.activeDescription')}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {activeOperations.map(operation => (
+              <Card key={operation.operationId} className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-sm font-semibold">
+                      {operation.targetCoordinate}@{operation.targetVersion}
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {t(`suite.bundle.status.${operation.status}`)}
+                    </p>
+                  </div>
+                  {operation.status === 'BLOCKED_RETRYABLE' ? (
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+                  ) : (
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                  )}
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {t('suite.bundle.memberProgress', {
+                    completed: operation.completedMembers,
+                    total: operation.totalMembers,
+                    waiting: operation.waitingMembers,
+                  })}
+                </p>
+                <div className="mt-4">
+                  <Button variant="outline" size="sm" onClick={() => continueOperation(operation)}>
+                    {t('suite.bundle.continueOperation')}
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
       {isLoading ? (
         <div className="h-40 animate-shimmer rounded-xl" />
       ) : data?.items.length ? (

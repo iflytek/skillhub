@@ -8,6 +8,7 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.SkillSuiteBundleConfirmRequest;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundlePreviewResponse;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleConfirmationAppService;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -106,6 +108,14 @@ public class SkillSuiteBundleController extends BaseApiController {
     ) {
         return ok("response.success.read", operationQueryService.get(
                 operationId, userId, roles == null ? Map.of() : roles, platformRoles(principal)));
+    }
+
+    @GetMapping("/operations/active")
+    @Operation(operationId = "listActiveSkillSuiteBundleOperations", summary = "List active Bundle operations started by the current user")
+    public ApiResponse<List<SkillSuiteBundleOperationSummaryResponse>> listActiveOperations(
+            @RequestAttribute("userId") String userId
+    ) {
+        return ok("response.success.read", operationQueryService.listActive(userId));
     }
 
     @PostMapping("/operations/{operationId}/cancel")

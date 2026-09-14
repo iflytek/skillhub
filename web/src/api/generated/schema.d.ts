@@ -2742,6 +2742,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/suite-bundles/operations/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active Bundle operations started by the current user */
+        get: operations["listActiveSkillSuiteBundleOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite-bundles/operations/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active Bundle operations started by the current user */
+        get: operations["listActiveSkillSuiteBundleOperations_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/skills": {
         parameters: {
             query?: never;
@@ -5825,6 +5859,33 @@ export interface components {
             /** Format: date-time */
             completedAt?: string;
             members?: components["schemas"]["OperationMember"][];
+        };
+        ApiResponseListSkillSuiteBundleOperationSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SkillSuiteBundleOperationSummaryResponse: {
+            operationId?: string;
+            /** @enum {string} */
+            mode?: "CREATE" | "UPDATE";
+            targetCoordinate?: string;
+            targetVersion?: string;
+            /** @enum {string} */
+            status?: "RUNNING" | "WAITING_FOR_MEMBERS" | "BLOCKED_RETRYABLE" | "REPREVIEW_REQUIRED" | "SUITE_DRAFT_CREATED" | "CANCELLED";
+            failureCode?: string;
+            /** Format: int32 */
+            totalMembers?: number;
+            /** Format: int32 */
+            completedMembers?: number;
+            /** Format: int32 */
+            waitingMembers?: number;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         ApiResponseSearchResponse: {
             /** Format: int32 */
@@ -12222,6 +12283,46 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationDetailResponse"];
+                };
+            };
+        };
+    };
+    listActiveSkillSuiteBundleOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillSuiteBundleOperationSummaryResponse"];
+                };
+            };
+        };
+    };
+    listActiveSkillSuiteBundleOperations_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSkillSuiteBundleOperationSummaryResponse"];
                 };
             };
         };

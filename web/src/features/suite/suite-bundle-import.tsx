@@ -44,6 +44,14 @@ export function hasStoredSuiteBundleOperation(mode: BundleMode, coordinate?: str
   return Boolean(readStoredOperation(operationStorageKey(mode, coordinate)))
 }
 
+export function rememberSuiteBundleOperation(
+  mode: BundleMode,
+  coordinate: string,
+  operationId: string,
+): void {
+  writeStoredOperation(operationStorageKey(mode, mode === 'UPDATE' ? coordinate : undefined), operationId)
+}
+
 function splitCoordinate(coordinate?: string): { namespace: string; slug: string } | null {
   const match = coordinate?.match(/^@([^/]+)\/(.+)$/)
   return match ? { namespace: match[1], slug: match[2] } : null

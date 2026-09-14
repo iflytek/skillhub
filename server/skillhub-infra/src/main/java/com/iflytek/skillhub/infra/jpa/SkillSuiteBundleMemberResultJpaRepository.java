@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -29,4 +30,13 @@ public interface SkillSuiteBundleMemberResultJpaRepository
             """)
     List<SkillSuiteBundleMemberResult> findByOperationIdOrderByPositionForUpdate(
             @Param("operationId") String operationId);
+
+    @Override
+    @Query("""
+            SELECT member FROM SkillSuiteBundleMemberResult member
+             WHERE member.operationId IN :operationIds
+             ORDER BY member.operationId, member.position
+            """)
+    List<SkillSuiteBundleMemberResult> findByOperationIdInOrderByOperationIdAscPositionAsc(
+            @Param("operationIds") Collection<String> operationIds);
 }

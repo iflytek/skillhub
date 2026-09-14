@@ -15,6 +15,8 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResult;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberSourceType;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultStatus;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +31,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -131,6 +134,42 @@ class SkillSuiteBundleOperationQueryServiceTest {
             assertThat(member.errors()).isEmpty();
             assertThat(member.warnings()).isEmpty();
         });
+    }
+
+    @Test
+    void listsOnlyTheActorsActiveOperationsWithBatchedMemberCounts() {
+        SkillSuiteBundleExecutionOperation operation = operation();
+        operation.markWaitingForMembers(NOW.plusSeconds(1));
+        Namespace namespace = mock(Namespace.class);
+        when(namespace.getId()).thenReturn(1L);
+        when(namespace.getSlug()).thenReturn("global");
+        SkillSuiteBundleMemberResult completed = mock(SkillSuiteBundleMemberResult.class);
+        when(completed.getOperationId()).thenReturn("operation-1");
+        when(completed.getStatus()).thenReturn(SkillSuiteBundleMemberResultStatus.COMPLETED);
+        SkillSuiteBundleMemberResult waiting = mock(SkillSuiteBundleMemberResult.class);
+        when(waiting.getOperationId()).thenReturn("operation-1");
+        when(waiting.getStatus()).thenReturn(SkillSuiteBundleMemberResultStatus.WAITING_FOR_MEMBER);
+        when(operationRepository.findTop50ByActorIdAndStatusInOrderByUpdatedAtDesc(
+                eq("actor"), eq(Set.of(
+                        SkillSuiteBundleOperationStatus.RUNNING,
+                        SkillSuiteBundleOperationStatus.WAITING_FOR_MEMBERS,
+                        SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE))))
+                .thenReturn(List.of(operation));
+        when(namespaceRepository.findByIdIn(List.of(1L))).thenReturn(List.of(namespace));
+        when(memberRepository.findByOperationIdInOrderByOperationIdAscPositionAsc(List.of("operation-1")))
+                .thenReturn(List.of(completed, waiting));
+
+        var result = service.listActive("actor");
+
+        assertThat(result).singleElement().satisfies(summary -> {
+            assertThat(summary.operationId()).isEqualTo("operation-1");
+            assertThat(summary.targetCoordinate()).isEqualTo("@global/suite");
+            assertThat(summary.status()).isEqualTo(SkillSuiteBundleOperationStatus.WAITING_FOR_MEMBERS);
+            assertThat(summary.totalMembers()).isEqualTo(2);
+            assertThat(summary.completedMembers()).isEqualTo(1);
+            assertThat(summary.waitingMembers()).isEqualTo(1);
+        });
+        verify(memberRepository).findByOperationIdInOrderByOperationIdAscPositionAsc(List.of("operation-1"));
     }
 
     private SkillSuiteBundleExecutionOperation operation() {

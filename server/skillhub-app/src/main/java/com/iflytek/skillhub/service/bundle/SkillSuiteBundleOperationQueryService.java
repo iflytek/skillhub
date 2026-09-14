@@ -11,11 +11,17 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperati
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperationRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResult;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultRepository;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationAuthorizationPolicy;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,6 +32,11 @@ import java.util.stream.Collectors;
 /** Reads one Bundle operation through an actor/governance authorization and redaction boundary. */
 @Service
 public class SkillSuiteBundleOperationQueryService {
+
+    private static final Set<SkillSuiteBundleOperationStatus> ACTIVE_STATUSES = EnumSet.of(
+            SkillSuiteBundleOperationStatus.RUNNING,
+            SkillSuiteBundleOperationStatus.WAITING_FOR_MEMBERS,
+            SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE);
 
     private final SkillSuiteBundleExecutionOperationRepository operationRepository;
     private final SkillSuiteBundleMemberResultRepository memberRepository;
@@ -95,6 +106,54 @@ public class SkillSuiteBundleOperationQueryService {
                 operation.getTargetSuiteId(), operation.getTargetVersion(),
                 operation.getFailureCode(), operation.getResultSuiteId(), operation.getResultSuiteVersionId(),
                 operation.getCreatedAt(), operation.getUpdatedAt(), operation.getCompletedAt(), members);
+    }
+
+    /** Returns the caller's active operations in bounded batches without exposing member metadata. */
+    @Transactional(readOnly = true)
+    public List<SkillSuiteBundleOperationSummaryResponse> listActive(String actorId) {
+        var operations = operationRepository
+                .findTop50ByActorIdAndStatusInOrderByUpdatedAtDesc(actorId, ACTIVE_STATUSES);
+        if (operations.isEmpty()) {
+            return List.of();
+        }
+        var namespaceIds = operations.stream()
+                .map(SkillSuiteBundleExecutionOperation::getNamespaceId)
+                .distinct()
+                .toList();
+        Map<Long, String> namespaceSlugs = namespaceRepository.findByIdIn(namespaceIds).stream()
+                .collect(Collectors.toMap(namespace -> namespace.getId(), namespace -> namespace.getSlug()));
+        var operationIds = operations.stream()
+                .map(SkillSuiteBundleExecutionOperation::getOperationId)
+                .toList();
+        Map<String, List<SkillSuiteBundleMemberResult>> membersByOperation = new HashMap<>();
+        memberRepository.findByOperationIdInOrderByOperationIdAscPositionAsc(operationIds)
+                .forEach(member -> membersByOperation
+                        .computeIfAbsent(member.getOperationId(), ignored -> new ArrayList<>())
+                        .add(member));
+        return operations.stream()
+                .filter(operation -> namespaceSlugs.containsKey(operation.getNamespaceId()))
+                .map(operation -> summary(
+                        operation, namespaceSlugs.get(operation.getNamespaceId()),
+                        membersByOperation.getOrDefault(operation.getOperationId(), List.of())))
+                .toList();
+    }
+
+    private SkillSuiteBundleOperationSummaryResponse summary(
+            SkillSuiteBundleExecutionOperation operation,
+            String namespaceSlug,
+            List<SkillSuiteBundleMemberResult> members
+    ) {
+        int completed = (int) members.stream()
+                .filter(member -> member.getStatus() == SkillSuiteBundleMemberResultStatus.COMPLETED)
+                .count();
+        int waiting = (int) members.stream()
+                .filter(member -> member.getStatus() == SkillSuiteBundleMemberResultStatus.WAITING_FOR_MEMBER)
+                .count();
+        return new SkillSuiteBundleOperationSummaryResponse(
+                operation.getOperationId(), operation.getMode(),
+                "@" + namespaceSlug + "/" + operation.getTargetSuiteSlug(),
+                operation.getTargetVersion(), operation.getStatus(), operation.getFailureCode(),
+                members.size(), completed, waiting, operation.getUpdatedAt());
     }
 
     private boolean canReadMember(

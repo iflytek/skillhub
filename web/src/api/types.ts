@@ -473,6 +473,10 @@ export type SkillSuiteBundlePreviewMember = components['schemas']['PreviewMember
 export type SkillSuiteBundleRemovedMember = components['schemas']['RemovedMember']
 export type SkillSuiteBundleOperation = components['schemas']['SkillSuiteBundleOperationDetailResponse']
 export type SkillSuiteBundleOperationResult = components['schemas']['SkillSuiteBundleOperationResponse']
+export type SkillSuiteBundleOperationSummary = RequiredGenerated<
+  components['schemas']['SkillSuiteBundleOperationSummaryResponse'],
+  'failureCode'
+>
 
 // Publish
 export interface PublishResult {
