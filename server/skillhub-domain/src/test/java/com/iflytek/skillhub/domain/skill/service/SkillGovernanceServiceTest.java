@@ -148,6 +148,7 @@ class SkillGovernanceServiceTest {
     @Test
     void yankVersion_setsYankedStatus() {
         SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 22L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
         given(skillVersionRepository.findById(22L)).willReturn(Optional.of(version));
         given(skillVersionRepository.save(version)).willReturn(version);
@@ -159,6 +160,72 @@ class SkillGovernanceServiceTest {
         assertThat(result.getYankedBy()).isEqualTo("admin");
         assertThat(result.getYankedAt()).isEqualTo(Instant.now(CLOCK));
         verify(auditLogService).record("admin", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
+    }
+
+    @Test
+    void yankVersion_allowsSkillOwnerWithoutAdminRole() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 2L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 22L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.save(version)).willReturn(version);
+        given(skillRepository.findById(2L)).willReturn(Optional.of(skill));
+
+        SkillVersion result = service.yankVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", "broken");
+
+        assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.YANKED);
+        assertThat(result.getYankedBy()).isEqualTo("owner");
+        assertThat(result.isDownloadReady()).isFalse();
+        verify(auditLogService).record("owner", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
+        verify(eventPublisher).publishEvent(any(com.iflytek.skillhub.domain.event.SkillVersionYankedEvent.class));
+    }
+
+    @Test
+    void yankVersion_allowsNamespaceAdminWhoIsNotOwner() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 2L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 22L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        given(skillVersionRepository.save(version)).willReturn(version);
+        given(skillRepository.findById(2L)).willReturn(Optional.of(skill));
+
+        SkillVersion result = service.yankVersion(
+                skill, version, "ns-admin", Map.of(1L, NamespaceRole.ADMIN), "127.0.0.1", "JUnit", null);
+
+        assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.YANKED);
+        assertThat(result.getYankedBy()).isEqualTo("ns-admin");
+    }
+
+    @Test
+    void yankVersion_rejectsMemberWhoIsNotOwner() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 2L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 22L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+
+        assertThrows(DomainForbiddenException.class,
+                () -> service.yankVersion(skill, version, "other", Map.of(1L, NamespaceRole.MEMBER), "127.0.0.1", "JUnit", null));
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
+        verify(skillVersionRepository, never()).save(any());
+        verify(auditLogService, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void yankVersion_rejectsUnpublishedVersionForOwner() {
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC);
+        setField(skill, "id", 2L);
+        SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
+        setField(version, "id", 22L);
+        version.setStatus(SkillVersionStatus.DRAFT);
+
+        assertThrows(DomainBadRequestException.class,
+                () -> service.yankVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", null));
+
+        verify(skillVersionRepository, never()).save(any());
     }
 
     @Test

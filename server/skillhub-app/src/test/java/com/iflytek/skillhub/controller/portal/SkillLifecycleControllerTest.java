@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.portal;
 
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -158,6 +159,76 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.versionId").value(2))
                 .andExpect(jsonPath("$.data.action").value("DELETE_VERSION"))
                 .andExpect(jsonPath("$.data.status").value("1.0.0"));
+    }
+
+    @Test
+    void yankVersion_returnsUnifiedEnvelope() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(version, 2L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillVersion yanked = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(yanked, 2L);
+        yanked.setStatus(SkillVersionStatus.YANKED);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(version));
+        given(skillGovernanceService.yankVersion(
+                eq(skill), eq(version), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("broken")))
+                .willReturn(yanked);
+
+        mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/yank")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"broken\"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.skillId").value(1))
+                .andExpect(jsonPath("$.data.versionId").value(2))
+                .andExpect(jsonPath("$.data.action").value("YANK"))
+                .andExpect(jsonPath("$.data.status").value("YANKED"));
+
+        verify(skillGovernanceService).yankVersion(
+                eq(skill), eq(version), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("broken"));
+    }
+
+    @Test
+    void yankVersion_acceptsMissingBodyAndPassesNullReason() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "owner", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(version, 2L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        SkillVersion yanked = new SkillVersion(1L, "1.2.3", "owner");
+        setSkillVersionId(yanked, 2L);
+        yanked.setStatus(SkillVersionStatus.YANKED);
+
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
+                .willReturn(skill);
+        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(version));
+        given(skillGovernanceService.yankVersion(
+                eq(skill), eq(version), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), isNull()))
+                .willReturn(yanked);
+
+        mockMvc.perform(post("/api/v1/skills/global/demo-skill/versions/1.2.3/yank")
+                        .requestAttr("userId", "usr_1")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.action").value("YANK"))
+                .andExpect(jsonPath("$.data.status").value("YANKED"));
     }
 
     @Test

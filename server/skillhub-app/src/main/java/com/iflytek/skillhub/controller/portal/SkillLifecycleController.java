@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Endpoints that mutate skill lifecycle state, including archive, unarchive,
- * withdraw-review, delete-version, and rerelease operations.
+ * withdraw-review, delete-version, yank-version, and rerelease operations.
  */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
@@ -82,6 +82,25 @@ public class SkillLifecycleController extends BaseApiController {
                         namespace,
                         slug,
                         version,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
+    }
+
+    @PostMapping("/{namespace}/{slug}/versions/{version}/yank")
+    public ApiResponse<SkillLifecycleMutationResponse> yankVersion(@PathVariable String namespace,
+                                                                  @PathVariable String slug,
+                                                                  @PathVariable String version,
+                                                                  @RequestBody(required = false) AdminSkillActionRequest request,
+                                                                  @RequestAttribute("userId") String userId,
+                                                                  @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                  HttpServletRequest httpRequest) {
+        return ok("response.success.updated",
+                governanceWorkflowAppService.yankVersion(
+                        namespace,
+                        slug,
+                        version,
+                        request,
                         userId,
                         userNsRoles,
                         AuditRequestContext.from(httpRequest)));

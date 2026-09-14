@@ -14,7 +14,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class RouteSecurityPolicyRegistryTest {
 
     private static final Set<String> ALL_SCOPES =
-            Set.of("skill:read", "skill:publish", "skill:delete", "token:manage");
+            Set.of("skill:read", "skill:publish", "skill:delete", "skill:yank", "token:manage");
 
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
@@ -123,6 +123,58 @@ class RouteSecurityPolicyRegistryTest {
         assertFalse(denied.allowed());
         assertEquals("skill:delete", denied.requiredScope());
         assertTrue(allowed.allowed());
+    }
+
+    @Test
+    void authorizeApiToken_requiresPublishScopeForArchiveAndUnarchive() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            for (String action : List.of("archive", "unarchive")) {
+                String path = prefix + "/skills/global/demo-skill/" + action;
+                var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
+                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+
+                assertFalse(denied.allowed(), path);
+                assertEquals("skill:publish", denied.requiredScope(), path);
+                assertTrue(allowed.allowed(), path);
+            }
+        }
+    }
+
+    @Test
+    void authorizeApiToken_requiresDeleteScopeForVersionDeleteEndpoint() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            String path = prefix + "/skills/global/demo-skill/versions/1.2.3";
+            var denied = registry.authorizeApiToken("DELETE", path, Set.of("skill:publish"));
+            var allowed = registry.authorizeApiToken("DELETE", path, Set.of("skill:delete"));
+
+            assertFalse(denied.allowed(), path);
+            assertEquals("skill:delete", denied.requiredScope(), path);
+            assertTrue(allowed.allowed(), path);
+        }
+    }
+
+    @Test
+    void authorizeApiToken_requiresYankScopeForOwnerYankEndpoint() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            String path = prefix + "/skills/global/demo-skill/versions/1.2.3/yank";
+            var denied = registry.authorizeApiToken("POST", path, Set.of("skill:publish", "skill:delete"));
+            var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:yank"));
+
+            assertFalse(denied.allowed(), path);
+            assertEquals("skill:yank", denied.requiredScope(), path);
+            assertTrue(allowed.allowed(), path);
+        }
+    }
+
+    @Test
+    void authorizeApiToken_keepsAdminYankSessionOnly() {
+        assertFalse(registry.authorizeApiToken("POST", "/api/v1/admin/skills/versions/42/yank", ALL_SCOPES).allowed());
+    }
+
+    @Test
+    void authorizeApiToken_keepsWholeSkillWebDeleteSessionOnlyWhileAllowingVersionDelete() {
+        assertFalse(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill", ALL_SCOPES).allowed());
+        assertTrue(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill/versions/1.2.3", ALL_SCOPES).allowed());
     }
 
     @Test
