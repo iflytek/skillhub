@@ -85,7 +85,7 @@ public class SkillSuiteBundleController extends BaseApiController {
     @RateLimit(category = "publish", authenticated = 10, anonymous = 0)
     public ApiResponse<SkillSuiteBundleOperationResponse> confirm(
             @PathVariable String previewToken,
-            @RequestHeader(value = "Idempotency-Key", required = false) String clientRequestId,
+            @RequestHeader("Idempotency-Key") String clientRequestId,
             @Valid @RequestBody SkillSuiteBundleConfirmRequest request,
             @RequestAttribute("userId") String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles,

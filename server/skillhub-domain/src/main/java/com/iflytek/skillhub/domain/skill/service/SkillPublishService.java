@@ -15,6 +15,7 @@ import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException;
 import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.domain.skill.metadata.ComplianceMetadataService;
 import com.iflytek.skillhub.domain.skill.metadata.ComplianceSnapshot;
@@ -36,9 +37,10 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Instant;
@@ -52,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -78,6 +81,15 @@ public class SkillPublishService {
             Long skillId,
             String slug,
             SkillVersion version
+    ) {}
+
+    private record StagedPackageFile(
+            Path path,
+            String filePath,
+            String storageKey,
+            long size,
+            String contentType,
+            String sha256
     ) {}
 
     private final NamespaceRepository namespaceRepository;
@@ -306,24 +318,6 @@ public class SkillPublishService {
             String expectedSkillSlug,
             String expectedVersion,
             List<PackageEntry> entries,
-            String publisherId,
-            SkillVisibility visibility,
-            Map<Long, NamespaceRole> userNamespaceRoles,
-            Set<String> platformRoles,
-            boolean confirmWarnings
-    ) {
-        return publishBundleMemberFromEntries(
-                namespaceSlug, expectedSkillId, expectedSkillSlug, expectedVersion, entries,
-                Map.of(), publisherId, visibility, userNamespaceRoles, platformRoles, confirmWarnings);
-    }
-
-    @Transactional
-    public PublishResult publishBundleMemberFromEntries(
-            String namespaceSlug,
-            Long expectedSkillId,
-            String expectedSkillSlug,
-            String expectedVersion,
-            List<PackageEntry> entries,
             Map<String, String> stagedSha256,
             String publisherId,
             SkillVisibility visibility,
@@ -445,6 +439,10 @@ public class SkillPublishService {
         if (bundleTarget != null
                 && (!bundleTarget.expectedSkillSlug().equals(skillSlug)
                 || !bundleTarget.expectedVersion().equals(metadata.version()))) {
+            throw bundleStateChanged();
+        }
+        if (bundleTarget != null && !bundleTarget.stagedSha256().keySet().equals(
+                entries.stream().map(PackageEntry::path).collect(Collectors.toSet()))) {
             throw bundleStateChanged();
         }
 
@@ -569,60 +567,80 @@ public class SkillPublishService {
         List<SkillFile> skillFiles = new ArrayList<>();
         long totalSize = 0;
 
+        Path bundleZip = null;
+        List<StagedPackageFile> stagedFiles = new ArrayList<>();
+        List<Path> temporaryEntryFiles = new ArrayList<>();
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             HexFormat hexFormat = HexFormat.of();
-
-            for (PackageEntry entry : entries) {
-                String storageKey = String.format("skills/%d/%d/%s", skill.getId(), version.getId(), entry.path());
-
-                // Upload to storage
-                objectStorageService.putObject(
-                        storageKey,
-                        new ByteArrayInputStream(entry.content()),
-                        entry.size(),
-                        entry.contentType()
-                );
-
-                // Compute SHA-256
-                String sha256 = bundleTarget == null
-                        ? null
-                        : bundleTarget.stagedSha256().get(entry.path());
-                if (sha256 == null) {
-                    byte[] hash = digest.digest(entry.content());
-                    sha256 = hexFormat.formatHex(hash);
+            bundleZip = Files.createTempFile("skillhub-package-", ".zip");
+            try (OutputStream bundleOutput = Files.newOutputStream(bundleZip);
+                 ZipOutputStream zipOutput = new ZipOutputStream(bundleOutput)) {
+                for (PackageEntry entry : entries) {
+                    String storageKey = String.format(
+                            "skills/%d/%d/%s", skill.getId(), version.getId(), entry.path());
+                    Path stagedFile = Files.createTempFile("skillhub-package-entry-", ".tmp");
+                    temporaryEntryFiles.add(stagedFile);
+                    ZipEntry zipEntry = new ZipEntry(entry.path());
+                    zipOutput.putNextEntry(zipEntry);
+                    long actualSize = 0;
+                    digest.reset();
+                    try (InputStream input = entry.openStream();
+                         OutputStream stagedOutput = Files.newOutputStream(stagedFile)) {
+                        byte[] buffer = new byte[64 * 1024];
+                        int read;
+                        while ((read = input.read(buffer)) != -1) {
+                            stagedOutput.write(buffer, 0, read);
+                            zipOutput.write(buffer, 0, read);
+                            digest.update(buffer, 0, read);
+                            actualSize += read;
+                        }
+                    }
+                    zipOutput.closeEntry();
+                    if (actualSize != entry.size()) {
+                        throw new DomainBadRequestException(
+                                "error.suite.bundle.member.stateChanged");
+                    }
+                    String sha256 = hexFormat.formatHex(digest.digest());
+                    String expectedSha256 = bundleTarget == null
+                            ? null
+                            : bundleTarget.stagedSha256().get(entry.path());
+                    if (expectedSha256 != null && !expectedSha256.equalsIgnoreCase(sha256)) {
+                        throw new DomainBadRequestException(
+                                "error.suite.bundle.member.stateChanged");
+                    }
+                    stagedFiles.add(new StagedPackageFile(
+                            stagedFile, entry.path(), storageKey, actualSize, entry.contentType(), sha256));
                 }
-
-                // Create SkillFile record
-                SkillFile skillFile = new SkillFile(
-                        version.getId(),
-                        entry.path(),
-                        entry.size(),
-                        entry.contentType(),
-                        sha256,
-                        storageKey
-                );
-                skillFiles.add(skillFile);
-                totalSize += entry.size();
-
-                digest.reset();
+                zipOutput.finish();
             }
+            for (StagedPackageFile staged : stagedFiles) {
+                try (InputStream stagedInput = Files.newInputStream(staged.path())) {
+                    objectStorageService.putObject(
+                            staged.storageKey(), stagedInput, staged.size(), staged.contentType());
+                }
+                skillFiles.add(new SkillFile(
+                        version.getId(), staged.filePath(), staged.size(),
+                        staged.contentType(), staged.sha256(), staged.storageKey()));
+                totalSize += staged.size();
+            }
+            String bundleKey = String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId());
+            long bundleSize = Files.size(bundleZip);
+            try (InputStream bundleInput = Files.newInputStream(bundleZip)) {
+                objectStorageService.putObject(
+                        bundleKey, bundleInput, bundleSize, "application/zip");
+            }
+        } catch (LocalizedDomainException exception) {
+            throw exception;
         } catch (Exception e) {
             throw new IllegalStateException("Failed to process files", e);
+        } finally {
+            temporaryEntryFiles.forEach(this::deleteTemporaryFile);
+            deleteTemporaryFile(bundleZip);
         }
 
         // 10. Save SkillFile records
         skillFileRepository.saveAll(skillFiles);
-
-        // 10.5 Build and upload bundle zip for download endpoints
-        byte[] bundleZip = buildBundle(entries);
-        String bundleKey = String.format("packages/%d/%d/bundle.zip", skill.getId(), version.getId());
-        objectStorageService.putObject(
-                bundleKey,
-                new ByteArrayInputStream(bundleZip),
-                bundleZip.length,
-                "application/zip"
-        );
 
         // 11. Update version stats
         version.setFileCount(skillFiles.size());
@@ -924,19 +942,14 @@ public class SkillPublishService {
         return parsedMetadata;
     }
 
-    private byte[] buildBundle(List<PackageEntry> entries) {
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-             ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
-            for (PackageEntry entry : entries) {
-                ZipEntry zipEntry = new ZipEntry(entry.path());
-                zipOutputStream.putNextEntry(zipEntry);
-                zipOutputStream.write(entry.content());
-                zipOutputStream.closeEntry();
-            }
-            zipOutputStream.finish();
-            return outputStream.toByteArray();
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to build bundle zip", e);
+    private void deleteTemporaryFile(Path path) {
+        if (path == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException exception) {
+            log.warn("Failed to delete temporary package file {}", path, exception);
         }
     }
 }

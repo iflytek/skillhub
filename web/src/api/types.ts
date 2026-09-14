@@ -275,54 +275,44 @@ export interface ComplianceSnapshot {
   digest?: string
 }
 
-export interface SkillSuiteReference {
-  suiteId: number
-  namespace: string
-  slug: string
-  displayName: string
-  version: string
-  memberCount: number
-  currentSkillEntry?: boolean
+type GeneratedSkillSuiteSiblingMember = components['schemas']['SkillSuiteSiblingMemberResponse']
+export type SkillSuiteSiblingMember = Required<GeneratedSkillSuiteSiblingMember>
+
+type GeneratedSkillSuiteReference = components['schemas']['SkillSuiteReferenceResponse']
+export type SkillSuiteReference = Omit<
+  RequiredGenerated<
+    GeneratedSkillSuiteReference,
+    'currentSkillEntry' | 'visibleSiblingMembers' | 'restrictedMemberCount' | 'omittedVisibleMemberCount'
+  >,
+  'visibleSiblingMembers'
+> & {
   visibleSiblingMembers?: SkillSuiteSiblingMember[]
-  restrictedMemberCount?: number
-  omittedVisibleMemberCount?: number
 }
 
-export interface SkillSuiteSiblingMember {
-  skillId: number
-  namespace: string
-  slug: string
-  displayName: string
-  version: string
-  entry: boolean
-  available: boolean
-}
-
-export interface SkillDetail {
-  id: number
-  slug: string
-  displayName: string
-  ownerId?: string
-  ownerDisplayName?: string
-  summary?: string
-  visibility: string
-  status: string
-  downloadCount: number
-  starCount: number
-  ratingAvg?: number
-  ratingCount: number
-  hidden: boolean
-  namespace: string
+type GeneratedSkillDetail = components['schemas']['SkillDetailResponse']
+export type SkillDetail = Omit<
+  RequiredGenerated<
+    GeneratedSkillDetail,
+    | 'ownerId'
+    | 'ownerDisplayName'
+    | 'summary'
+    | 'subscriptionCount'
+    | 'ratingAvg'
+    | 'labels'
+    | 'headlineVersion'
+    | 'publishedVersion'
+    | 'ownerPreviewVersion'
+    | 'ownerPreviewReviewComment'
+    | 'resolutionMode'
+    | 'entryForSuites'
+    | 'memberOfSuites'
+  >,
+  'labels' | 'headlineVersion' | 'publishedVersion' | 'ownerPreviewVersion' | 'entryForSuites' | 'memberOfSuites'
+> & {
   labels?: LabelItem[]
-  canManageLifecycle: boolean
-  canSubmitPromotion: boolean
-  canInteract: boolean
-  canReport: boolean
   headlineVersion?: SkillLifecycleVersion
   publishedVersion?: SkillLifecycleVersion
   ownerPreviewVersion?: SkillLifecycleVersion
-  ownerPreviewReviewComment?: string
-  resolutionMode?: string
   entryForSuites?: SkillSuiteReference[]
   memberOfSuites?: PagedResponse<SkillSuiteReference>
 }

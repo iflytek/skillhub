@@ -163,6 +163,11 @@ class SkillSuiteBundleConfirmationAppServiceTest {
 
         properties.setConfirmationEnabled(true);
         assertThatThrownBy(() -> service.confirm(
+                "preview-1", "  ", "warning-digest", "actor", Map.of(), Set.of()))
+                .isInstanceOf(DomainBadRequestException.class)
+                .extracting("messageCode")
+                .isEqualTo("error.suite.bundle.confirmation.idempotencyKey.invalid");
+        assertThatThrownBy(() -> service.confirm(
                 "preview-1", "not valid!", "warning-digest", "actor", Map.of(), Set.of()))
                 .isInstanceOf(DomainBadRequestException.class)
                 .extracting("messageCode")

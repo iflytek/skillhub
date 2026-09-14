@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service.bundle;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -66,5 +67,31 @@ class SkillSuiteBundleCoordinatorTest {
         verify(stateService).markBlockedRetryable(
                 "operation", "MEMBER_EXECUTION_FAILED", "IllegalStateException");
         verify(draftCreationService, never()).create("operation");
+    }
+
+    @Test
+    void frozenNamespaceKeepsTheOperationRetryable() {
+        when(executionService.executeNext("operation"))
+                .thenThrow(new DomainBadRequestException("error.namespace.frozen", "global"));
+
+        coordinator.advance("operation");
+
+        verify(stateService).markBlockedRetryable(
+                "operation", "AUTHORIZATION_OR_NAMESPACE_BLOCKED", "error.namespace.frozen");
+        verify(stateService, never()).markRepreviewRequired(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void revokedPermissionKeepsTheOperationRetryable() {
+        when(executionService.executeNext("operation"))
+                .thenThrow(new DomainForbiddenException("error.skill.lifecycle.noPermission"));
+
+        coordinator.advance("operation");
+
+        verify(stateService).markBlockedRetryable(
+                "operation", "AUTHORIZATION_OR_NAMESPACE_BLOCKED", "error.skill.lifecycle.noPermission");
+        verify(stateService, never()).markRepreviewRequired(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
     }
 }

@@ -158,7 +158,7 @@ public class SkillSuiteBundleConfirmationAppService {
 
     private String normalizeRequestId(String requestId) {
         if (requestId == null || requestId.isBlank()) {
-            return UUID.randomUUID().toString();
+            throw new DomainBadRequestException("error.suite.bundle.confirmation.idempotencyKey.invalid");
         }
         if (!RequestIdAccessor.isValid(requestId)) {
             throw new DomainBadRequestException("error.suite.bundle.confirmation.idempotencyKey.invalid");

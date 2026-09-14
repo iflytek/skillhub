@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.repository.SkillSuiteLabelQueryRepository;
+
 import com.iflytek.skillhub.dto.ResourceSearchResponse;
 import com.iflytek.skillhub.dto.ResourceSummaryResponse;
 import com.iflytek.skillhub.dto.SkillLabelDto;
@@ -16,11 +18,11 @@ import org.springframework.stereotype.Service;
 public class ResourceDiscoveryAppService {
 
     private final ResourceDiscoveryQueryService queryService;
-    private final SkillSuiteLabelProjectionService suiteLabelProjectionService;
+    private final SkillSuiteLabelQueryRepository suiteLabelProjectionService;
 
     public ResourceDiscoveryAppService(
             ResourceDiscoveryQueryService queryService,
-            SkillSuiteLabelProjectionService suiteLabelProjectionService
+            SkillSuiteLabelQueryRepository suiteLabelProjectionService
     ) {
         this.queryService = queryService;
         this.suiteLabelProjectionService = suiteLabelProjectionService;

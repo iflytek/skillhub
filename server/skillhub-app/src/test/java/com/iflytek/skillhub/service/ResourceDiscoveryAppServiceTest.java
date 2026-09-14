@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.repository.SkillSuiteLabelQueryRepository;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -18,8 +20,8 @@ import org.junit.jupiter.api.Test;
 class ResourceDiscoveryAppServiceTest {
 
     private final ResourceDiscoveryQueryService queryService = mock(ResourceDiscoveryQueryService.class);
-    private final SkillSuiteLabelProjectionService projectionService =
-            mock(SkillSuiteLabelProjectionService.class);
+    private final SkillSuiteLabelQueryRepository projectionService =
+            mock(SkillSuiteLabelQueryRepository.class);
     private final ResourceDiscoveryAppService service =
             new ResourceDiscoveryAppService(queryService, projectionService);
 

@@ -1,4 +1,4 @@
-package com.iflytek.skillhub.service;
+package com.iflytek.skillhub.repository;
 
 import com.iflytek.skillhub.domain.label.LabelDefinition;
 import com.iflytek.skillhub.domain.label.LabelDefinitionService;
@@ -6,23 +6,24 @@ import com.iflytek.skillhub.domain.label.LabelTranslation;
 import com.iflytek.skillhub.domain.label.SkillSuiteLabel;
 import com.iflytek.skillhub.domain.label.SkillSuiteLabelService;
 import com.iflytek.skillhub.dto.SkillLabelDto;
+import com.iflytek.skillhub.service.LabelLocalizationService;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
-/** Projects direct Suite labels for a page of Suites with a bounded query count. */
-@Service
-public class SkillSuiteLabelProjectionService {
+/** Assembles localized direct Suite labels for a page of Suites with bounded query count. */
+@Repository
+public class SkillSuiteLabelQueryRepository {
 
     private final SkillSuiteLabelService suiteLabelService;
     private final LabelDefinitionService labelDefinitionService;
     private final LabelLocalizationService labelLocalizationService;
 
-    public SkillSuiteLabelProjectionService(
+    public SkillSuiteLabelQueryRepository(
             SkillSuiteLabelService suiteLabelService,
             LabelDefinitionService labelDefinitionService,
             LabelLocalizationService labelLocalizationService

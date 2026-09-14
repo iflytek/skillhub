@@ -33,7 +33,8 @@ import java.util.Set;
 
 /**
  * Resolves the outer Bundle tree and validates each staged package as an independent Skill package.
- * Only one member is materialized as byte arrays at a time; returned plans keep staged locations.
+ * Only the file currently inspected by a content validator is materialized; returned plans keep
+ * staged locations rather than retaining member packages in heap memory.
  */
 @Service
 public class SkillSuiteBundlePackageAnalyzer {
@@ -176,11 +177,11 @@ public class SkillSuiteBundlePackageAnalyzer {
         String prefix = directory + "/";
         for (IndexedEntry indexed : indexedEntries) {
             String relativePath = indexed.rootPath().substring(prefix.length());
-            byte[] bytes = readStagedContent(indexed.staged());
-            packageEntries.add(new PackageEntry(
-                    relativePath, bytes, bytes.length, indexed.staged().contentType()));
+            packageEntries.add(PackageEntry.streaming(
+                    relativePath, indexed.staged().size(), indexed.staged().contentType(),
+                    indexed.staged().content()::open));
             stagedFiles.add(new StagedMemberFile(
-                    relativePath, bytes.length, indexed.staged().contentType(),
+                    relativePath, indexed.staged().size(), indexed.staged().contentType(),
                     indexed.staged().sha256(), indexed.staged().objectKey()));
         }
         packageEntries.sort(Comparator.comparing(PackageEntry::path));
@@ -234,19 +235,6 @@ public class SkillSuiteBundlePackageAnalyzer {
                 throw invalid("SUITE.yaml exceeds max size " + MAX_MANIFEST_BYTES);
             }
             return new String(bytes, StandardCharsets.UTF_8);
-        }
-    }
-
-    private byte[] readStagedContent(SkillSuiteBundleStagedEntry entry) throws IOException {
-        if (entry.size() < 0 || entry.size() >= Integer.MAX_VALUE) {
-            throw invalid("Invalid staged file size: " + entry.path());
-        }
-        try (InputStream input = entry.content().open()) {
-            byte[] bytes = input.readNBytes((int) entry.size() + 1);
-            if (bytes.length != entry.size()) {
-                throw invalid("Staged file size changed: " + entry.path());
-            }
-            return bytes;
         }
     }
 

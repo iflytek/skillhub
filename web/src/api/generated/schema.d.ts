@@ -9180,8 +9180,8 @@ export interface operations {
     confirmSkillSuiteBundle: {
         parameters: {
             query?: never;
-            header?: {
-                "Idempotency-Key"?: string;
+            header: {
+                "Idempotency-Key": string;
             };
             path: {
                 previewToken: string;
@@ -9208,8 +9208,8 @@ export interface operations {
     confirmSkillSuiteBundle_1: {
         parameters: {
             query?: never;
-            header?: {
-                "Idempotency-Key"?: string;
+            header: {
+                "Idempotency-Key": string;
             };
             path: {
                 previewToken: string;

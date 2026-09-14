@@ -22,7 +22,7 @@ import com.iflytek.skillhub.domain.suite.SkillSuiteStatus;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.search.postgres.PostgresResourceDiscoveryQueryService;
 import com.iflytek.skillhub.service.ResourceDiscoveryAppService;
-import com.iflytek.skillhub.service.SkillSuiteLabelProjectionService;
+import com.iflytek.skillhub.repository.SkillSuiteLabelQueryRepository;
 import com.iflytek.skillhub.repository.MySkillSuiteQueryRepository;
 import com.iflytek.skillhub.repository.SkillSuiteReferenceQueryRepository;
 import java.time.Instant;
@@ -79,7 +79,7 @@ class SuiteDiscoveryIntegrationTest {
     private ResourceDiscoveryAppService appService;
 
     @MockBean
-    private SkillSuiteLabelProjectionService suiteLabelProjectionService;
+    private SkillSuiteLabelQueryRepository suiteLabelProjectionService;
 
     @Autowired
     private MySkillSuiteQueryRepository mySuiteRepository;

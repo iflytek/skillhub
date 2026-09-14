@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.repository.SkillSuiteLabelQueryRepository;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,8 +35,8 @@ class SkillSuiteLabelAppServiceTest {
     private final SkillSuiteRepository suiteRepository = mock(SkillSuiteRepository.class);
     private final SkillSuiteQueryService suiteQueryService = mock(SkillSuiteQueryService.class);
     private final SkillSuiteLabelService suiteLabelService = mock(SkillSuiteLabelService.class);
-    private final SkillSuiteLabelProjectionService projectionService =
-            mock(SkillSuiteLabelProjectionService.class);
+    private final SkillSuiteLabelQueryRepository projectionService =
+            mock(SkillSuiteLabelQueryRepository.class);
     private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final RequestIdAccessor requestIdAccessor = new RequestIdAccessor();
     private final SkillSuiteLabelAppService service = new SkillSuiteLabelAppService(

@@ -39,6 +39,7 @@ export default defineConfig({
             text: '核心功能',
             items: [
               { text: 'Skill 发布与版本管理', link: '/guide/skill-publish' },
+              { text: 'Suite Bundle 批量导入', link: '/guide/suite-bundle' },
               { text: 'Skill 搜索与发现', link: '/guide/skill-discovery' },
               { text: '命名空间与团队管理', link: '/guide/namespace' },
               { text: '审核与治理', link: '/guide/review' },
@@ -86,6 +87,7 @@ export default defineConfig({
             text: 'Core Features',
             items: [
               { text: 'Skill Publishing & Versioning', link: '/en/guide/skill-publish' },
+              { text: 'Suite Bundle Import', link: '/en/guide/suite-bundle' },
               { text: 'Skill Search & Discovery', link: '/en/guide/skill-discovery' },
               { text: 'Namespace & Team Management', link: '/en/guide/namespace' },
               { text: 'Review & Governance', link: '/en/guide/review' },

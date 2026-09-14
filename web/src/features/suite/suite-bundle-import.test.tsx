@@ -106,6 +106,37 @@ describe('SuiteBundleImport', () => {
     }))
   })
 
+  it('requires warning acceptance for every affected member', async () => {
+    mocks.preview.mutateAsync.mockResolvedValue(preview({
+      members: [
+        {
+          coordinate: '@global/first', sourceType: 'PACKAGE', packagePath: 'members/first',
+          relationship: 'ADDED', publishAction: 'CREATE_SKILL', finalVisibility: 'PUBLIC',
+          resolvedVersion: '1.0.0', errors: [], warnings: ['first warning'],
+        },
+        {
+          coordinate: '@global/second', sourceType: 'PACKAGE', packagePath: 'members/second',
+          relationship: 'ADDED', publishAction: 'CREATE_SKILL', finalVisibility: 'PUBLIC',
+          resolvedVersion: '1.0.0', errors: [], warnings: ['second warning'],
+        },
+      ],
+      warnings: ['@global/first: first warning', '@global/second: second warning'],
+    }))
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+    await waitFor(() => expect(screen.getAllByRole('checkbox')).toHaveLength(2))
+    const [first, second] = screen.getAllByRole('checkbox')
+    const confirmButton = screen.getByRole('button', { name: 'suite.bundle.confirm' })
+
+    fireEvent.click(first)
+    expect(confirmButton.hasAttribute('disabled')).toBe(true)
+    fireEvent.click(second)
+    expect(confirmButton.hasAttribute('disabled')).toBe(false)
+    expect(screen.getAllByText('first warning')).toHaveLength(1)
+    expect(screen.getAllByText('second warning')).toHaveLength(1)
+  })
+
   it('blocks a Bundle targeting a different workflow entry', async () => {
     mocks.preview.mutateAsync.mockResolvedValue(preview({
       target: { mode: 'UPDATE', coordinate: '@global/other', targetVersion: '2.0.0' },

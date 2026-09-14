@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.repository.SkillSuiteLabelQueryRepository;
+
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.label.SkillSuiteLabel;
@@ -28,7 +30,7 @@ public class SkillSuiteLabelAppService {
     private final SkillSuiteRepository suiteRepository;
     private final SkillSuiteQueryService suiteQueryService;
     private final SkillSuiteLabelService suiteLabelService;
-    private final SkillSuiteLabelProjectionService projectionService;
+    private final SkillSuiteLabelQueryRepository projectionService;
     private final AuditLogService auditLogService;
     private final RequestIdAccessor requestIdAccessor;
 
@@ -37,7 +39,7 @@ public class SkillSuiteLabelAppService {
             SkillSuiteRepository suiteRepository,
             SkillSuiteQueryService suiteQueryService,
             SkillSuiteLabelService suiteLabelService,
-            SkillSuiteLabelProjectionService projectionService,
+            SkillSuiteLabelQueryRepository projectionService,
             AuditLogService auditLogService,
             RequestIdAccessor requestIdAccessor
     ) {

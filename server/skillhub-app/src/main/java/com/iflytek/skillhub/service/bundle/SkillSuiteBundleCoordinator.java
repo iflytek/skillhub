@@ -43,13 +43,32 @@ public class SkillSuiteBundleCoordinator {
                 draftCreationService.create(operationId);
             }
         } catch (LocalizedDomainException exception) {
-            stateService.markRepreviewRequired(operationId, "BUNDLE_PLAN_CHANGED");
-            log.info("Suite Bundle requires a new preview [operationId={}, reason={}]",
-                    operationId, exception.messageCode());
+            if (isRetryableBlock(exception)) {
+                stateService.markBlockedRetryable(
+                        operationId, "AUTHORIZATION_OR_NAMESPACE_BLOCKED", exception.messageCode());
+                log.info("Suite Bundle is temporarily blocked [operationId={}, reason={}]",
+                        operationId, exception.messageCode());
+            } else {
+                stateService.markRepreviewRequired(operationId, "BUNDLE_PLAN_CHANGED");
+                log.info("Suite Bundle requires a new preview [operationId={}, reason={}]",
+                        operationId, exception.messageCode());
+            }
         } catch (RuntimeException exception) {
             stateService.markBlockedRetryable(
                     operationId, "MEMBER_EXECUTION_FAILED", exception.getClass().getSimpleName());
             log.error("Suite Bundle execution blocked [operationId={}]", operationId, exception);
         }
+    }
+
+    private boolean isRetryableBlock(LocalizedDomainException exception) {
+        if ("error.namespace.frozen".equals(exception.messageCode())
+                || "error.skill.lifecycle.noPermission".equals(exception.messageCode())
+                || "error.suite.lifecycle.noPermission".equals(exception.messageCode())
+                || "error.suite.bundle.actor.inactive".equals(exception.messageCode())) {
+            return true;
+        }
+        return "error.suite.namespace.notWritable".equals(exception.messageCode())
+                && exception.messageArgs().length > 0
+                && "FROZEN".equals(String.valueOf(exception.messageArgs()[0]));
     }
 }

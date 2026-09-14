@@ -378,6 +378,99 @@ class SkillSuiteBundlePreviewPlannerTest {
     }
 
     @Test
+    void rejectsAnUpdateThatDoesNotChangePresentationOrMembers() throws Exception {
+        Namespace global = namespace(1L, "global");
+        SkillSuite suite = updateSuite();
+        SkillSuiteVersion base = updateBaseVersion();
+        Skill keptSkill = skill(10L, 1L, "kept", "other", SkillVisibility.PUBLIC, 100L);
+        SkillVersion keptVersion = version(100L, 10L, "1.0.0", SkillVersionStatus.PUBLISHED, true);
+        SkillSuiteVersionMember kept = baselineMember(
+                60L, 10L, 100L, "global", "kept", "1.0.0", 0, true);
+
+        stubUpdate("no-op-suite", global, suite, base, List.of(kept), List.of(keptSkill), List.of(keptVersion));
+
+        SkillSuiteBundlePreviewPlanner.PreviewPlan result = planner.plan(
+                analyze(manifest("no-op-suite", "UPDATE", "1.0.0", """
+                            - skill: "@global/kept"
+                              reference:
+                                version: 1.0.0
+                        """, "@global/kept", false), Map.of()),
+                "actor", Map.of(1L, NamespaceRole.MEMBER), Set.of());
+
+        assertThat(result.confirmable()).isFalse();
+        assertThat(result.members()).singleElement().satisfies(member ->
+                assertThat(member.relationship()).isEqualTo(SkillSuiteBundleRelationshipChange.UNCHANGED));
+        assertThat(result.errors()).contains(
+                "Bundle does not contain an effective change from the base Suite version");
+    }
+
+    @Test
+    void treatsMemberReorderingAsAnEffectiveUpdate() throws Exception {
+        Namespace global = namespace(1L, "global");
+        SkillSuite suite = updateSuite();
+        SkillSuiteVersion base = updateBaseVersion();
+        Skill firstSkill = skill(10L, 1L, "first", "other", SkillVisibility.PUBLIC, 100L);
+        Skill secondSkill = skill(11L, 1L, "second", "other", SkillVisibility.PUBLIC, 110L);
+        SkillVersion firstVersion = version(100L, 10L, "1.0.0", SkillVersionStatus.PUBLISHED, true);
+        SkillVersion secondVersion = version(110L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, true);
+        List<SkillSuiteVersionMember> baseline = List.of(
+                baselineMember(60L, 10L, 100L, "global", "first", "1.0.0", 0, true),
+                baselineMember(60L, 11L, 110L, "global", "second", "1.0.0", 1, false));
+        stubUpdate("reordered-suite", global, suite, base, baseline,
+                List.of(firstSkill, secondSkill), List.of(firstVersion, secondVersion));
+
+        SkillSuiteBundlePreviewPlanner.PreviewPlan result = planner.plan(
+                analyze(manifest("reordered-suite", "UPDATE", "1.0.0", """
+                            - skill: "@global/second"
+                              reference:
+                                version: 1.0.0
+                            - skill: "@global/first"
+                              reference:
+                                version: 1.0.0
+                        """, "@global/first", false), Map.of()),
+                "actor", Map.of(1L, NamespaceRole.MEMBER), Set.of());
+
+        assertThat(result.confirmable()).isTrue();
+        assertThat(result.members()).extracting(SkillSuiteBundlePreviewPlanner.MemberPlan::relationship)
+                .containsExactly(
+                        SkillSuiteBundleRelationshipChange.UPDATED,
+                        SkillSuiteBundleRelationshipChange.UPDATED);
+    }
+
+    @Test
+    void treatsEntryChangeAsAnEffectiveUpdateEvenWhenPinnedVersionsStayTheSame() throws Exception {
+        Namespace global = namespace(1L, "global");
+        SkillSuite suite = updateSuite();
+        SkillSuiteVersion base = updateBaseVersion();
+        Skill firstSkill = skill(10L, 1L, "first", "other", SkillVisibility.PUBLIC, 100L);
+        Skill secondSkill = skill(11L, 1L, "second", "other", SkillVisibility.PUBLIC, 110L);
+        SkillVersion firstVersion = version(100L, 10L, "1.0.0", SkillVersionStatus.PUBLISHED, true);
+        SkillVersion secondVersion = version(110L, 11L, "1.0.0", SkillVersionStatus.PUBLISHED, true);
+        List<SkillSuiteVersionMember> baseline = List.of(
+                baselineMember(60L, 10L, 100L, "global", "first", "1.0.0", 0, true),
+                baselineMember(60L, 11L, 110L, "global", "second", "1.0.0", 1, false));
+        stubUpdate("entry-suite", global, suite, base, baseline,
+                List.of(firstSkill, secondSkill), List.of(firstVersion, secondVersion));
+
+        SkillSuiteBundlePreviewPlanner.PreviewPlan result = planner.plan(
+                analyze(manifest("entry-suite", "UPDATE", "1.0.0", """
+                            - skill: "@global/first"
+                              reference:
+                                version: 1.0.0
+                            - skill: "@global/second"
+                              reference:
+                                version: 1.0.0
+                        """, "@global/second", false), Map.of()),
+                "actor", Map.of(1L, NamespaceRole.MEMBER), Set.of());
+
+        assertThat(result.confirmable()).isTrue();
+        assertThat(result.members()).extracting(SkillSuiteBundlePreviewPlanner.MemberPlan::relationship)
+                .containsExactly(
+                        SkillSuiteBundleRelationshipChange.UPDATED,
+                        SkillSuiteBundleRelationshipChange.UPDATED);
+    }
+
+    @Test
     void oneHundredExistingMembersUseOnlyBoundedBatchReads() throws Exception {
         Namespace global = namespace(1L, "global");
         StringBuilder memberYaml = new StringBuilder();
@@ -497,6 +590,48 @@ class SkillSuiteBundlePreviewPlannerTest {
                 new SkillSuiteMemberSelection(
                         skillId, skillVersionId, namespace, slug, version, "sha256:test"),
                 position, entry);
+    }
+
+    private SkillSuite updateSuite() {
+        SkillSuite suite = mock(SkillSuite.class);
+        when(suite.getId()).thenReturn(50L);
+        when(suite.getNamespaceId()).thenReturn(1L);
+        when(suite.getCreatedBy()).thenReturn("actor");
+        when(suite.getStatus()).thenReturn(SkillSuiteStatus.ACTIVE);
+        return suite;
+    }
+
+    private SkillSuiteVersion updateBaseVersion() {
+        SkillSuiteVersion base = mock(SkillSuiteVersion.class);
+        when(base.getId()).thenReturn(60L);
+        when(base.getStatus()).thenReturn(SkillSuiteVersionStatus.PUBLISHED);
+        when(base.getDisplayName()).thenReturn("Test Suite");
+        when(base.getSummary()).thenReturn("Suite summary");
+        when(base.getOverview()).thenReturn("Suite overview");
+        when(base.getVisibility()).thenReturn(SkillVisibility.PUBLIC);
+        return base;
+    }
+
+    private void stubUpdate(
+            String suiteSlug,
+            Namespace namespace,
+            SkillSuite suite,
+            SkillSuiteVersion base,
+            List<SkillSuiteVersionMember> baseline,
+            List<Skill> skills,
+            List<SkillVersion> versions
+    ) {
+        when(namespaceRepository.findBySlugIn(anyList())).thenReturn(List.of(namespace));
+        when(suiteRepository.findByNamespaceIdAndSlug(1L, suiteSlug)).thenReturn(Optional.of(suite));
+        when(suiteVersionRepository.findBySuiteIdAndVersion(50L, "1.0.0")).thenReturn(Optional.of(base));
+        when(suiteVersionRepository.findBySuiteIdAndVersion(50L, "1.1.0")).thenReturn(Optional.empty());
+        when(suiteMemberRepository.findBySuiteVersionIdOrderByPosition(60L)).thenReturn(baseline);
+        when(skillRepository.findByNamespaceIdInAndSlugIn(anyList(), anyList())).thenReturn(skills);
+        when(skillVersionRepository.findBySkillIdInAndStatus(anyList(), eq(SkillVersionStatus.PENDING_REVIEW)))
+                .thenReturn(List.of());
+        when(skillVersionRepository.findBySkillIdInAndVersionIn(anyList(), anyList())).thenReturn(versions);
+        when(skillVersionRepository.findByIdIn(anyList())).thenReturn(versions);
+        when(skillFileRepository.findByVersionIdIn(anyList())).thenReturn(List.of());
     }
 
     private String manifest(

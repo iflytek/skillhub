@@ -58,7 +58,8 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
   const retryMutation = useRetrySuiteBundleOperation()
   const [preview, setPreview] = useState<SkillSuiteBundlePreview | null>(null)
   const [fileName, setFileName] = useState('')
-  const [warningsAccepted, setWarningsAccepted] = useState(false)
+  const [acceptedWarningMembers, setAcceptedWarningMembers] = useState<Set<string>>(() => new Set())
+  const [removalsAccepted, setRemovalsAccepted] = useState(false)
   const [operationId, setOperationId] = useState<string | undefined>(() => readStoredOperation(storageKey))
   const [packaging, setPackaging] = useState(false)
   const [now, setNow] = useState(() => Date.now())
@@ -85,7 +86,8 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
     setPackaging(false)
     setPreview(null)
     setOperationId(undefined)
-    setWarningsAccepted(false)
+    setAcceptedWarningMembers(new Set())
+    setRemovalsAccepted(false)
     idempotencyKeyRef.current = null
     return selectionVersion
   }
@@ -145,17 +147,21 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
     && (expectedCoordinate === undefined || preview.target.coordinate === expectedCoordinate)
   const targetMismatch = preview !== null && !targetMatches
   const previewExpired = Boolean(preview?.expiresAt && Date.parse(preview.expiresAt) <= now)
-  const warningCount = (preview?.warnings?.length ?? 0)
-    + (preview?.members ?? []).reduce((count, member) => count + (member.warnings?.length ?? 0), 0)
+  const warningMembers = (preview?.members ?? [])
+    .filter((member) => (member.warnings?.length ?? 0) > 0)
   const removalCount = preview?.removedMembers?.length ?? 0
-  const requiresAcknowledgement = warningCount > 0 || removalCount > 0
+  const allWarningMembersAccepted = warningMembers
+    .every((member) => Boolean(
+      member.coordinate && acceptedWarningMembers.has(member.coordinate)
+    ))
   const canConfirm = Boolean(
     preview?.confirmable
     && preview.previewToken
     && preview.warningDigest
     && targetMatches
     && !previewExpired
-    && (!requiresAcknowledgement || warningsAccepted)
+    && allWarningMembersAccepted
+    && (removalCount === 0 || removalsAccepted)
   )
 
   const confirm = async () => {
@@ -364,10 +370,6 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
           {(preview.errors ?? []).map((error) => (
             <p key={error} className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
           ))}
-          {(preview.warnings ?? []).map((warning) => (
-            <p key={warning} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">{warning}</p>
-          ))}
-
           <div className="space-y-2">
             {(preview.members ?? []).map((member) => (
               <div key={member.coordinate} className="rounded-lg border p-4">
@@ -395,6 +397,27 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
                 </p>
                 {(member.errors ?? []).map((error) => <p key={error} className="mt-2 text-xs text-destructive">{error}</p>)}
                 {(member.warnings ?? []).map((warning) => <p key={warning} className="mt-2 text-xs text-amber-700 dark:text-amber-300">{warning}</p>)}
+                {(member.warnings?.length ?? 0) > 0 ? (
+                  <label className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/30 p-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(
+                        member.coordinate && acceptedWarningMembers.has(member.coordinate)
+                      )}
+                      onChange={(event) => setAcceptedWarningMembers((current) => {
+                        const next = new Set(current)
+                        if (!member.coordinate) return next
+                        if (event.target.checked) next.add(member.coordinate)
+                        else next.delete(member.coordinate)
+                        return next
+                      })}
+                    />
+                    <span>{t('suite.bundle.acceptMemberWarnings', {
+                      coordinate: member.coordinate,
+                      count: member.warnings?.length ?? 0,
+                    })}</span>
+                  </label>
+                ) : null}
               </div>
             ))}
             {(preview.removedMembers ?? []).map((member) => (
@@ -414,14 +437,14 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
               ) : null}
           </div>
 
-          {requiresAcknowledgement ? (
+          {removalCount > 0 ? (
             <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
               <input
                 type="checkbox"
-                checked={warningsAccepted}
-                onChange={(event) => setWarningsAccepted(event.target.checked)}
+                checked={removalsAccepted}
+                onChange={(event) => setRemovalsAccepted(event.target.checked)}
               />
-              <span>{t('suite.bundle.acceptRisks', { warningCount, removalCount })}</span>
+              <span>{t('suite.bundle.acceptRemovals', { removalCount })}</span>
             </label>
           ) : null}
 

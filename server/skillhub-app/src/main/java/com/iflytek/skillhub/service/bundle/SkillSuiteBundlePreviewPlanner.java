@@ -178,7 +178,8 @@ public class SkillSuiteBundlePreviewPlanner {
         List<MemberPlan> members = new ArrayList<>();
         Set<SkillSuiteBundleCoordinate> desiredCoordinates = new LinkedHashSet<>();
 
-        for (SkillSuiteBundleMember member : manifest.spec().members()) {
+        for (int position = 0; position < manifest.spec().members().size(); position++) {
+            SkillSuiteBundleMember member = manifest.spec().members().get(position);
             desiredCoordinates.add(member.coordinate());
             Namespace namespace = namespaces.get(member.coordinate().namespace());
             List<Skill> coordinateSkills = namespace == null ? List.of() : skills.stream()
@@ -194,9 +195,12 @@ public class SkillSuiteBundlePreviewPlanner {
                             manifest, member, namespace, coordinateSkills, namedBySkill,
                             fingerprints, actorId, safeNamespaceRoles, safePlatformRoles);
             SkillSuiteVersionMember previous = baseline.get(member.coordinate());
+            boolean requestedEntry = member.coordinate().equals(manifest.spec().entry());
             SkillSuiteBundleRelationshipChange relationship = previous == null
                     ? SkillSuiteBundleRelationshipChange.ADDED
                     : Objects.equals(previous.getSkillVersionId(), planned.skillVersionId())
+                            && previous.getPosition() == position
+                            && previous.isEntry() == requestedEntry
                     ? SkillSuiteBundleRelationshipChange.UNCHANGED
                     : SkillSuiteBundleRelationshipChange.UPDATED;
             planned = planned.withRelationship(relationship);
@@ -218,6 +222,13 @@ public class SkillSuiteBundlePreviewPlanner {
                 .toList();
 
         ResolvedPresentation presentation = resolvePresentation(manifest, target, errors);
+        boolean memberRelationshipChanged = !removed.isEmpty() || members.stream()
+                .anyMatch(member -> member.relationship() != SkillSuiteBundleRelationshipChange.UNCHANGED);
+        if (manifest.spec().mode() == SkillSuiteBundleMode.UPDATE
+                && !memberRelationshipChanged
+                && !presentationChanged(manifest, target, presentation)) {
+            errors.add("Bundle does not contain an effective change from the base Suite version");
+        }
         return new PreviewPlan(
                 manifest.spec().mode(), manifest.metadata().coordinate(), target.namespaceId(), target.suiteId(),
                 target.baseVersionId(), manifest.spec().version(), presentation.displayName(),
@@ -521,6 +532,17 @@ public class SkillSuiteBundlePreviewPlanner {
             errors.add("Suite overview is required after inheritance");
         }
         return new ResolvedPresentation(displayName, summary, overview);
+    }
+
+    private boolean presentationChanged(
+            SkillSuiteBundleManifest manifest, Target target, ResolvedPresentation presentation
+    ) {
+        SkillSuiteVersion base = target.baseVersion();
+        return base == null
+                || !Objects.equals(base.getDisplayName(), presentation.displayName())
+                || !Objects.equals(base.getSummary(), presentation.summary())
+                || !Objects.equals(base.getOverview(), presentation.overview())
+                || base.getVisibility() != manifest.spec().visibility();
     }
 
     private List<String> requestedVersions(

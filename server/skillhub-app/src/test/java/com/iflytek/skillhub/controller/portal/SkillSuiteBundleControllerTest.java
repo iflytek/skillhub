@@ -113,6 +113,14 @@ class SkillSuiteBundleControllerTest {
                 .andExpect(status().isBadRequest());
         verify(confirmationService, never()).confirm(any(), any(), any(), any(), any(), any());
 
+        mockMvc.perform(post("/api/v1/suite-bundles/previews/preview-1/confirm")
+                        .with(authentication(authToken("actor")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"warningDigest\":\"warning-digest\"}"))
+                .andExpect(status().isBadRequest());
+        verify(confirmationService, never()).confirm(any(), any(), any(), any(), any(), any());
+
         SkillSuiteBundleConfirmationAppService.ConfirmationOutcome outcome =
                 new SkillSuiteBundleConfirmationAppService.ConfirmationOutcome(
                         "operation-1", "RUNNING", false);

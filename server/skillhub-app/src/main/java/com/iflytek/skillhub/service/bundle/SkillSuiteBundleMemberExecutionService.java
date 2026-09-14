@@ -22,12 +22,17 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultRepo
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.storage.ObjectStorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -38,6 +43,8 @@ import java.util.stream.Collectors;
 /** Executes at most one confirmed Bundle member in its own transaction. */
 @Service
 public class SkillSuiteBundleMemberExecutionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SkillSuiteBundleMemberExecutionService.class);
 
     private final SkillSuiteBundleExecutionOperationRepository operationRepository;
     private final SkillSuiteBundleMemberResultRepository memberRepository;
@@ -137,16 +144,24 @@ public class SkillSuiteBundleMemberExecutionService {
         if (planned.files().isEmpty() || member.getRequestedVisibility() == null) {
             throw stateChanged();
         }
-        List<PackageEntry> entries = readEntries(planned.files());
-        SkillPublishService.PublishResult result = skillPublishService.publishBundleMemberFromEntries(
-                member.getNamespaceSlug(), member.getSkillId(), member.getSkillSlug(),
-                member.getRequestedVersion(), entries, planned.files().stream().collect(Collectors.toUnmodifiableMap(
-                        SkillSuiteBundlePackageAnalyzer.StagedMemberFile::relativePath,
-                        SkillSuiteBundlePackageAnalyzer.StagedMemberFile::sha256)),
-                operation.getActorId(),
-                member.getRequestedVisibility(), actor.namespaceRoles(), actor.platformRoles(), true);
-        member.bindVersion(result.skillId(), result.version().getId(), now);
-        advanceCreatedVersion(operation, member, result.version(), actor, now);
+        Path localDirectory = null;
+        try {
+            localDirectory = Files.createTempDirectory("skillhub-suite-member-");
+            List<PackageEntry> entries = readEntries(planned.files(), localDirectory);
+            SkillPublishService.PublishResult result = skillPublishService.publishBundleMemberFromEntries(
+                    member.getNamespaceSlug(), member.getSkillId(), member.getSkillSlug(),
+                    member.getRequestedVersion(), entries, planned.files().stream().collect(Collectors.toUnmodifiableMap(
+                            SkillSuiteBundlePackageAnalyzer.StagedMemberFile::relativePath,
+                            SkillSuiteBundlePackageAnalyzer.StagedMemberFile::sha256)),
+                    operation.getActorId(),
+                    member.getRequestedVisibility(), actor.namespaceRoles(), actor.platformRoles(), true);
+            member.bindVersion(result.skillId(), result.version().getId(), now);
+            advanceCreatedVersion(operation, member, result.version(), actor, now);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to stage Bundle member locally", exception);
+        } finally {
+            deleteLocalDirectory(localDirectory);
+        }
     }
 
     private void advanceCreatedVersion(
@@ -208,25 +223,58 @@ public class SkillSuiteBundleMemberExecutionService {
     }
 
     private List<PackageEntry> readEntries(
-            List<SkillSuiteBundlePackageAnalyzer.StagedMemberFile> files
-    ) {
+            List<SkillSuiteBundlePackageAnalyzer.StagedMemberFile> files, Path localDirectory
+    ) throws IOException {
         List<PackageEntry> entries = new ArrayList<>(files.size());
-        for (SkillSuiteBundlePackageAnalyzer.StagedMemberFile file : files) {
+        for (int index = 0; index < files.size(); index++) {
+            SkillSuiteBundlePackageAnalyzer.StagedMemberFile file = files.get(index);
             if (file.size() < 0 || file.size() >= Integer.MAX_VALUE) {
                 throw stateChanged();
             }
-            try (InputStream input = objectStorageService.getObject(file.objectKey())) {
-                byte[] content = input.readNBytes((int) file.size() + 1);
-                if (content.length != file.size()) {
-                    throw stateChanged();
+            Path localFile = localDirectory.resolve("entry-" + index);
+            long copied = 0;
+            try (InputStream input = objectStorageService.getObject(file.objectKey());
+                 OutputStream output = Files.newOutputStream(localFile)) {
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    copied += read;
+                    if (copied > file.size()) {
+                        throw stateChanged();
+                    }
+                    output.write(buffer, 0, read);
                 }
-                entries.add(new PackageEntry(
-                        file.relativePath(), content, file.size(), file.contentType()));
-            } catch (IOException exception) {
-                throw new IllegalStateException("Failed to read staged Bundle member", exception);
             }
+            if (copied != file.size()) {
+                throw stateChanged();
+            }
+            entries.add(PackageEntry.streaming(
+                    file.relativePath(), file.size(), file.contentType(),
+                    () -> Files.newInputStream(localFile)));
         }
         return List.copyOf(entries);
+    }
+
+    private void deleteLocalDirectory(Path directory) {
+        if (directory == null) {
+            return;
+        }
+        try {
+            List<Path> localFiles;
+            try (var files = Files.list(directory)) {
+                localFiles = files.toList();
+            }
+            for (Path path : localFiles) {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException exception) {
+                    log.warn("Failed to delete staged Bundle member file {}", path, exception);
+                }
+            }
+            Files.deleteIfExists(directory);
+        } catch (IOException exception) {
+            log.warn("Failed to delete staged Bundle member directory {}", directory, exception);
+        }
     }
 
     private void assertPlanBinding(
