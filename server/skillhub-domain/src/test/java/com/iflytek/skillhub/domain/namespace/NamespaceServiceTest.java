@@ -95,6 +95,7 @@ class NamespaceServiceTest {
                 "New Name",
                 "New Desc",
                 "http://avatar.url",
+                null,
                 operatorUserId
         );
 
@@ -103,11 +104,29 @@ class NamespaceServiceTest {
     }
 
     @Test
+    void updateNamespace_shouldUpdateAllowMemberOverwrite() {
+        Long namespaceId = 1L;
+        String operatorUserId = "user-1";
+        Namespace namespace = new Namespace("slug", "Old Name", "user-1");
+        when(namespaceRepository.findById(namespaceId)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, operatorUserId))
+                .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.OWNER)));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canMutateSettings(namespace)).thenReturn(true);
+        when(namespaceRepository.save(any(Namespace.class))).thenReturn(namespace);
+
+        namespaceService.updateNamespace(namespaceId, null, null, null, true, operatorUserId);
+
+        assertTrue(namespace.isAllowMemberOverwrite());
+        verify(namespaceRepository).save(namespace);
+    }
+
+    @Test
     void updateNamespace_shouldThrowExceptionWhenNotFound() {
         when(namespaceRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(DomainBadRequestException.class, () ->
-                namespaceService.updateNamespace(1L, "Name", "Desc", null, "user-1"));
+                namespaceService.updateNamespace(1L, "Name", "Desc", null, null, "user-1"));
     }
 
     @Test
@@ -120,7 +139,7 @@ class NamespaceServiceTest {
                 .thenReturn(Optional.of(new NamespaceMember(namespaceId, operatorUserId, NamespaceRole.MEMBER)));
 
         assertThrows(DomainForbiddenException.class, () ->
-                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, null, operatorUserId));
     }
 
     @Test
@@ -136,7 +155,7 @@ class NamespaceServiceTest {
         when(namespaceAccessPolicy.canMutateSettings(namespace)).thenReturn(false);
 
         assertThrows(DomainBadRequestException.class, () ->
-                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, null, operatorUserId));
     }
 
     @Test
@@ -149,7 +168,7 @@ class NamespaceServiceTest {
         when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
 
         assertThrows(DomainBadRequestException.class, () ->
-                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, null, operatorUserId));
     }
 
     @Test
@@ -162,7 +181,7 @@ class NamespaceServiceTest {
         when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(true);
 
         DomainBadRequestException exception = assertThrows(DomainBadRequestException.class, () ->
-                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, operatorUserId));
+                namespaceService.updateNamespace(namespaceId, "Name", "Desc", null, null, operatorUserId));
 
         assertEquals("error.namespace.system.immutable", exception.messageCode());
         verify(namespaceMemberRepository, never()).findByNamespaceIdAndUserId(namespaceId, operatorUserId);

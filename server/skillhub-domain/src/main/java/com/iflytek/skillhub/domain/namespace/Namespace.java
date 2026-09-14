@@ -31,6 +31,9 @@ public class Namespace {
     @Column(name = "avatar_url", length = 512)
     private String avatarUrl;
 
+    @Column(name = "allow_member_overwrite", nullable = false)
+    private boolean allowMemberOverwrite = false;
+
     @Column(name = "created_by")
     private String createdBy;
 
@@ -71,6 +74,8 @@ public class Namespace {
     public void setType(NamespaceType type) { this.type = type; }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public boolean isAllowMemberOverwrite() { return allowMemberOverwrite; }
+    public void setAllowMemberOverwrite(boolean allowMemberOverwrite) { this.allowMemberOverwrite = allowMemberOverwrite; }
     public String getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

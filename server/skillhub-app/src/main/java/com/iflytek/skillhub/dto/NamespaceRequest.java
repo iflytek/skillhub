@@ -13,5 +13,7 @@ public record NamespaceRequest(
         String displayName,
 
         @Size(max = 512, message = "{validation.namespace.description.size}")
-        String description
+        String description,
+
+        Boolean allowMemberOverwrite
 ) {}

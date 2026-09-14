@@ -28,11 +28,13 @@ export function EditNamespaceDialog({ namespace, children }: EditNamespaceDialog
   const [open, setOpen] = useState(false)
   const [displayName, setDisplayName] = useState(namespace.displayName)
   const [description, setDescription] = useState(namespace.description ?? '')
+  const [allowMemberOverwrite, setAllowMemberOverwrite] = useState(namespace.allowMemberOverwrite)
   const [displayNameError, setDisplayNameError] = useState<string | null>(null)
 
   const resetDialog = () => {
     setDisplayName(namespace.displayName)
     setDescription(namespace.description ?? '')
+    setAllowMemberOverwrite(namespace.allowMemberOverwrite)
     setDisplayNameError(null)
     updateMutation.reset()
   }
@@ -56,6 +58,7 @@ export function EditNamespaceDialog({ namespace, children }: EditNamespaceDialog
         slug: namespace.slug,
         displayName: trimmedDisplayName,
         description: description.trim(),
+        allowMemberOverwrite,
       })
       toast.success(t('namespaceEdit.saveSuccess'))
       setOpen(false)
@@ -96,6 +99,24 @@ export function EditNamespaceDialog({ namespace, children }: EditNamespaceDialog
               onChange={(event) => setDescription(event.target.value)}
               rows={3}
             />
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <input
+              id="edit-allow-member-overwrite"
+              type="checkbox"
+              checked={allowMemberOverwrite}
+              onChange={(event) => setAllowMemberOverwrite(event.target.checked)}
+              className="mt-1.5 h-4 w-4 shrink-0 accent-primary"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="edit-allow-member-overwrite">
+                {t('namespaceEdit.allowMemberOverwriteLabel')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('namespaceEdit.allowMemberOverwriteHint')}
+              </p>
+            </div>
           </div>
         </div>
 

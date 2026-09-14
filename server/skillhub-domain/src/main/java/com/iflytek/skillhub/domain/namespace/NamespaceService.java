@@ -65,7 +65,7 @@ public class NamespaceService {
      */
     @Transactional
     public Namespace updateNamespace(Long namespaceId, String displayName, String description, String avatarUrl,
-                                     String operatorUserId) {
+                                     Boolean allowMemberOverwrite, String operatorUserId) {
         Namespace namespace = namespaceRepository.findById(namespaceId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.id.notFound", namespaceId));
         assertNotImmutable(namespace);
@@ -80,6 +80,9 @@ public class NamespaceService {
         }
         if (avatarUrl != null) {
             namespace.setAvatarUrl(avatarUrl);
+        }
+        if (allowMemberOverwrite != null) {
+            namespace.setAllowMemberOverwrite(allowMemberOverwrite);
         }
 
         return namespaceRepository.save(namespace);
