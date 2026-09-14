@@ -175,24 +175,24 @@ function EnterpriseSection() {
               {t('landing.experience.enterprise.deployment.description')}
             </p>
             <div className="flex-1 rounded-lg border border-border/70 bg-secondary/50 p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="flex flex-col gap-1.5 flex-shrink-0">
+              <div className="mb-3 flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-1.5 sm:flex-shrink-0">
                   <div className="mb-0.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.clientLayer')}</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">Agent</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">CLI</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">Web</div>
                 </div>
-                <div className="flex flex-1 items-center justify-center">
-                  <svg className="h-4 w-16 text-border" fill="none" stroke="currentColor" viewBox="0 0 64 16"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" strokeDasharray="3 3" d="M0 8h54" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M50 4l6 4-6 4" /></svg>
+                <div className="flex h-8 items-center justify-center sm:h-auto sm:min-w-0 sm:flex-1">
+                  <svg className="h-4 w-16 rotate-90 text-border sm:w-full sm:max-w-16 sm:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 64 16"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" strokeDasharray="3 3" d="M0 8h54" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M50 4l6 4-6 4" /></svg>
                 </div>
-                <div className="flex flex-col items-center flex-shrink-0">
+                <div className="flex flex-col items-center sm:flex-shrink-0">
                   <div className="mb-0.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.serviceLayer')}</div>
                   <div className="rounded-lg bg-neutral-900 px-3.5 py-3 text-center text-xs font-semibold leading-tight text-white">SkillHub<br />Registry</div>
                 </div>
-                <div className="flex flex-1 items-center justify-center">
-                  <svg className="h-4 w-16 text-border" fill="none" stroke="currentColor" viewBox="0 0 64 16"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" strokeDasharray="3 3" d="M0 8h54" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M50 4l6 4-6 4" /></svg>
+                <div className="flex h-8 items-center justify-center sm:h-auto sm:min-w-0 sm:flex-1">
+                  <svg className="h-4 w-16 rotate-90 text-border sm:w-full sm:max-w-16 sm:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 64 16"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" strokeDasharray="3 3" d="M0 8h54" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M50 4l6 4-6 4" /></svg>
                 </div>
-                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                <div className="flex flex-col gap-1.5 sm:flex-shrink-0">
                   <div className="mb-0.5 text-center text-[10px] text-muted-foreground">{t('landing.experience.enterprise.storageLayer')}</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">PostgreSQL</div>
                   <div className="rounded-md border border-border/70 bg-background px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">Redis</div>

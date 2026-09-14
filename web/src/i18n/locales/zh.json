@@ -13,6 +13,7 @@
     "landing": "首页",
     "home": "技能中心",
     "search": "搜索",
+    "marketplace": "技能市场",
     "skillDetail": "技能详情",
     "explore": "探索",
     "dashboard": "控制台",
@@ -471,6 +472,7 @@
     "notifications": "通知设置",
     "skillsAndData": "技能与数据",
     "mySkills": "我的技能",
+    "mySuites": "我的套件",
     "publish": "技能发布",
     "namespaces": "命名空间",
     "stars": "我的收藏",
@@ -484,6 +486,8 @@
   "overview": {
     "mySkills": "我的技能",
     "mySkillsDesc": "查看和管理你发布的所有技能",
+    "mySuites": "我的套件",
+    "mySuitesDesc": "查看和管理你的技能套件",
     "publish": "技能发布",
     "publishDesc": "上传并发布新的技能到平台",
     "tokens": "Token 凭证",
@@ -1568,6 +1572,7 @@
     "menu": {
       "dashboard": "控制台",
       "mySkills": "我的技能",
+      "mySuites": "我的套件",
       "myNamespaces": "我的命名空间",
       "governance": "治理中心",
       "stars": "我的收藏",

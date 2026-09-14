@@ -46,6 +46,8 @@ services:
       SKILLHUB_SECURITY_SCANNER_ENABLED: "true"
       SKILLHUB_SECURITY_SCANNER_URL: http://skill-scanner:8000
       SKILLHUB_SECURITY_SCANNER_MODE: upload
+      # Local staging needs typed Suite review writes so public Suite market fixtures can be submitted and approved.
+      SKILLHUB_SUITE_REVIEW_WRITES_ENABLED: "true"
     depends_on:
       postgres:
         condition: service_healthy

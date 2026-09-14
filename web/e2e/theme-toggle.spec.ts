@@ -166,7 +166,7 @@ test.describe('Light and dark theme', () => {
       window as Window & { __themeAtFirstReactContent?: boolean }
     ).__themeAtFirstReactContent)).toBe(true)
 
-    await page.getByRole('link', { name: 'Search', exact: true }).first().click()
+    await page.getByRole('link', { name: 'Skill Marketplace', exact: true }).first().click()
     await expect(page).toHaveURL(/\/search(?:\?|$)/)
     await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(page.getByPlaceholder('Search skills...')).toBeVisible()

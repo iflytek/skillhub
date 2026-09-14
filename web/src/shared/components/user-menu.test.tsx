@@ -77,6 +77,23 @@ describe('user-menu module exports', () => {
 })
 
 describe('UserMenu navigation', () => {
+  it('lists personal destinations in the requested order', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Skill Author',
+          platformRoles: ['USER'],
+        }}
+      />,
+    )
+
+    expect(html).toContain('user.menu.mySkills')
+    expect(html).toContain('user.menu.mySuites')
+    expect(html).toContain('user.menu.dashboard')
+    expect(html.indexOf('user.menu.mySkills')).toBeLessThan(html.indexOf('user.menu.mySuites'))
+    expect(html.indexOf('user.menu.mySuites')).toBeLessThan(html.indexOf('user.menu.dashboard'))
+  })
+
   it('keeps dashboard-only personal links out of the compact avatar menu', () => {
     const html = renderToStaticMarkup(
       <UserMenu

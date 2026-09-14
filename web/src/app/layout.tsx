@@ -84,11 +84,9 @@ export function Layout() {
   }> = [
     { label: t('nav.landing'), to: '/', exact: true },
     { label: t('nav.publish'), to: '/dashboard/publish', auth: true },
-    { label: t('nav.search'), to: '/search' },
-    { label: t('nav.suites', { defaultValue: '技能套件' }), to: '/suites' },
+    { label: t('nav.marketplace'), to: '/search' },
+    { label: t('nav.suites'), to: '/suites' },
     { label: t('nav.dashboard'), to: '/dashboard', auth: true },
-    { label: t('nav.mySkills'), to: '/dashboard/skills', auth: true },
-    { label: t('nav.mySuites'), to: '/dashboard/suites', auth: true },
   ]
 
   const isActive = (to: string, exact?: boolean) => {

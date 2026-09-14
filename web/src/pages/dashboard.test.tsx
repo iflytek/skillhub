@@ -67,6 +67,8 @@ describe('DashboardPage', () => {
 
     expect(html).toContain('sidebar.skillsAndData')
     expect(html).toContain('overview.mySkills')
+    expect(html).toContain('sidebar.mySuites')
+    expect(html).toContain('overview.mySuites')
     expect(html).not.toContain('overview.publish')
   })
 })

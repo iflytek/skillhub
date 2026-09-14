@@ -23,4 +23,12 @@ test.describe('Landing Navigation (Real API)', () => {
     await page.getByRole('link', { name: 'Publish Skill' }).click()
     await expect(page).toHaveURL(/\/login\?returnTo=%2Fdashboard%2Fpublish$/)
   })
+
+  test('keeps the landing page within a 390px viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/')
+
+    await expect(page.getByRole('heading', { name: 'Turn team expertise into Agent-ready skills' })).toBeVisible()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
 })

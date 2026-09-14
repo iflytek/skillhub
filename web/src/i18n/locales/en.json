@@ -13,6 +13,7 @@
     "landing": "Home",
     "home": "Skill Center",
     "search": "Search",
+    "marketplace": "Skill Marketplace",
     "skillDetail": "Skill Detail",
     "explore": "Explore Skills",
     "dashboard": "Dashboard",
@@ -471,6 +472,7 @@
     "notifications": "Notifications",
     "skillsAndData": "Skills & Data",
     "mySkills": "My Skills",
+    "mySuites": "My Suites",
     "publish": "Publish",
     "namespaces": "Namespaces",
     "stars": "My Stars",
@@ -484,6 +486,8 @@
   "overview": {
     "mySkills": "My Skills",
     "mySkillsDesc": "View and manage all your published skills",
+    "mySuites": "My Suites",
+    "mySuitesDesc": "View and manage your skill suites",
     "publish": "Publish",
     "publishDesc": "Upload and publish a new skill",
     "tokens": "API Tokens",
@@ -1569,6 +1573,7 @@
     "menu": {
       "dashboard": "Dashboard",
       "mySkills": "My Skills",
+      "mySuites": "My Suites",
       "myNamespaces": "My Namespaces",
       "governance": "Governance Center",
       "stars": "Starred",
