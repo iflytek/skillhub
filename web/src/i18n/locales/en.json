@@ -1998,6 +1998,10 @@
     "authoringMode": "Suite authoring method",
     "manualAuthoring": "Compose manually",
     "localImport": "Import locally",
+    "tabs": {
+      "suites": "Skill Suites",
+      "publishing": "Publishing tasks"
+    },
     "bundle": {
       "uploadTitle": "Upload a Suite Bundle",
       "uploadDescription": "Choose one ZIP or a root folder containing SUITE.yaml and multiple Skill folders. The browser creates and uploads one ZIP only.",
@@ -2034,15 +2038,71 @@
       "openDraft": "Open Suite draft",
       "retry": "Retry unfinished work",
       "retryFailed": "Failed to retry the Bundle operation",
-      "cancelOperation": "Cancel remaining work",
+      "cancelOperation": "Stop creating Suite",
       "cancelFailed": "Failed to cancel the Bundle operation",
+      "openingTask": "Opening the publishing task…",
+      "taskListTitle": "Suite publishing tasks",
+      "taskListDescription": "Review tasks that need attention, are in progress, or recently finished.",
+      "taskDetailTitle": "Suite publishing task",
+      "taskDetailDescription": "Track member publishing and Suite draft creation outside the authoring page.",
+      "backToTasks": "Back to publishing tasks",
+      "taskEmpty": "No publishing tasks",
+      "taskEmptyDescription": "Publishing progress appears here after you import and confirm a Suite Bundle.",
+      "groups": {
+        "attention": "Needs attention",
+        "attentionDescription": "Blocked or requires a new preview",
+        "attentionEmpty": "No tasks currently need attention.",
+        "progress": "In progress",
+        "progressDescription": "Processing member Skills or waiting for review",
+        "progressEmpty": "No tasks are currently in progress.",
+        "recent": "Recently finished",
+        "recentDescription": "Drafts created or tasks stopped",
+        "recentEmpty": "No recently finished tasks."
+      },
+      "statusLabel": {
+        "RUNNING": "Processing",
+        "WAITING_FOR_MEMBERS": "Waiting for members",
+        "BLOCKED_RETRYABLE": "Needs attention",
+        "REPREVIEW_REQUIRED": "New preview required",
+        "SUITE_DRAFT_CREATED": "Draft created",
+        "CANCELLED": "Stopped"
+      },
+      "lifecycleTitle": "Suite publishing stages",
+      "lifecycle": {
+        "preview": "Confirm changes",
+        "previewDescription": "The upload and member changes are locked",
+        "members": "Publish members",
+        "membersDescription": "Create or reuse Skill versions and wait for review",
+        "draft": "Create Suite draft",
+        "draftDescription": "Runs only after every member is ready"
+      },
+      "operationId": "Task ID",
+      "lastUpdated": "Last updated",
+      "memberTitle": "Member Skills",
+      "memberDescription": "Each member follows the existing scan and review workflow.",
+      "memberStatus": {
+        "PLANNED": "Planned",
+        "RUNNING": "Processing",
+        "WAITING_FOR_MEMBER": "Waiting for scan or review",
+        "COMPLETED": "Ready",
+        "BLOCKED_RETRYABLE": "Retryable block",
+        "REPREVIEW_REQUIRED": "New preview required",
+        "CANCELLED": "Further work stopped"
+      },
+      "noMembers": "No member progress yet.",
+      "cancelConfirmTitle": "Stop creating this Suite?",
+      "cancelConfirmDescription": "SkillHub will stop waiting for members and will not create the Suite draft. Skill versions and review tasks already created remain available and are not withdrawn.",
+      "cancelConfirmAction": "Stop creating Suite",
+      "cancelledTitle": "Suite creation stopped",
+      "cancelledDescription": "This task remains in history. Existing Skill versions and review tasks are not withdrawn or deleted.",
+      "startAgain": "Import Bundle again",
       "status": {
         "RUNNING": "Member skills are being processed.",
         "WAITING_FOR_MEMBERS": "Waiting for member scans or reviews.",
         "BLOCKED_RETRYABLE": "A recoverable condition blocked progress. Retry after it is resolved.",
         "REPREVIEW_REQUIRED": "The plan or permissions changed. Upload and preview the Bundle again.",
         "SUITE_DRAFT_CREATED": "Members are ready and the Suite draft was created.",
-        "CANCELLED": "The operation was cancelled. Existing Skill versions were not deleted."
+        "CANCELLED": "Suite creation was stopped. Existing Skill versions were not deleted."
       },
       "relationship": {
         "ADDED": "Add member",

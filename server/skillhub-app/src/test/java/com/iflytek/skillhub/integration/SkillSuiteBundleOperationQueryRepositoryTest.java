@@ -9,6 +9,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperati
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResult;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberSourceType;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePreviewSession;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
@@ -123,11 +124,58 @@ class SkillSuiteBundleOperationQueryRepositoryTest {
         assertThat(repository.findActive("another-actor", 0, 1).items()).singleElement()
                 .extracting(summary -> summary.operationId())
                 .isEqualTo("operation-4");
+        var history = repository.findMine("actor", 0, 10);
+        assertThat(history.total()).isEqualTo(3);
+        assertThat(history.hasChangingOperations()).isTrue();
+        assertThat(history.items()).extracting(summary -> summary.operationId())
+                .containsExactly("operation-2", "operation-1", "operation-3");
+        assertThat(repository.findMine("another-actor", 0, 10).items()).singleElement()
+                .extracting(summary -> summary.operationId())
+                .isEqualTo("operation-4");
         assertThat(entityManager.getEntityManager().createNativeQuery("""
                 SELECT indexdef FROM pg_indexes
                 WHERE indexname = 'idx_suite_bundle_operation_actor_status_updated'
                 """).getSingleResult().toString())
                 .contains("(actor_id, status, updated_at DESC, operation_id DESC)");
+        assertThat(entityManager.getEntityManager().createNativeQuery("""
+                SELECT indexdef FROM pg_indexes
+                WHERE indexname = 'idx_suite_bundle_operation_actor_priority_updated'
+                """).getSingleResult().toString())
+                .contains("actor_id", "CASE", "updated_at DESC", "operation_id DESC");
+    }
+
+    @Test
+    void prioritizesActionableAndChangingTasksAheadOfNewerTerminalHistory() {
+        entityManager.persist(new UserAccount("actor", "Actor", null, null));
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("team-ai", "AI Team", "actor"));
+        List<String> terminalTokens = List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b");
+        for (int index = 0; index < terminalTokens.size(); index++) {
+            String token = terminalTokens.get(index);
+            SkillSuiteBundleExecutionOperation terminal = createOperation(
+                    "operation-" + token, "actor", namespace, "terminal-" + token);
+            terminal.cancel(NOW.plusSeconds(100L + index));
+            entityManager.persist(terminal);
+        }
+        SkillSuiteBundleExecutionOperation running = createOperation(
+                "operation-c", "actor", namespace, "running-suite");
+        entityManager.persist(running);
+        SkillSuiteBundleExecutionOperation blocked = createOperation(
+                "operation-d", "actor", namespace, "blocked-suite");
+        blocked.markBlockedRetryable("MEMBER_FAILED", "retry", NOW.plusSeconds(1));
+        entityManager.persist(blocked);
+        entityManager.flush();
+
+        var page = repository.findMine("actor", 0, 12);
+
+        assertThat(page.total()).isEqualTo(14);
+        assertThat(page.hasChangingOperations()).isTrue();
+        assertThat(page.items()).hasSize(12);
+        assertThat(page.items()).extracting(summary -> summary.operationId())
+                .startsWith("operation-d", "operation-c");
+        assertThat(page.items()).extracting(summary -> summary.status())
+                .startsWith(SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE,
+                        SkillSuiteBundleOperationStatus.RUNNING);
     }
 
     private SkillSuiteBundleMemberResult member(int position, String slug, boolean waiting) {

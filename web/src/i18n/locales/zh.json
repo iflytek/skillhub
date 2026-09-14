@@ -1997,6 +1997,10 @@
     "authoringMode": "套件创建方式",
     "manualAuthoring": "手工组合",
     "localImport": "本地导入",
+    "tabs": {
+      "suites": "技能套件",
+      "publishing": "发布任务"
+    },
     "bundle": {
       "uploadTitle": "上传 Suite Bundle",
       "uploadDescription": "选择一个 ZIP，或选择包含 SUITE.yaml 和多个 Skill 文件夹的根目录。浏览器只会生成并上传一个 ZIP。",
@@ -2033,15 +2037,71 @@
       "openDraft": "打开套件草稿",
       "retry": "重试未完成工作",
       "retryFailed": "重试 Bundle 操作失败",
-      "cancelOperation": "取消后续处理",
+      "cancelOperation": "停止创建套件",
       "cancelFailed": "取消 Bundle 操作失败",
+      "openingTask": "正在打开独立发布任务页面…",
+      "taskListTitle": "套件发布任务",
+      "taskListDescription": "集中查看需要处理、正在推进和最近完成的 Bundle 发布记录。",
+      "taskDetailTitle": "套件发布任务",
+      "taskDetailDescription": "跟踪成员技能发布与套件草稿创建，不会跳回创建页面。",
+      "backToTasks": "返回发布任务",
+      "taskEmpty": "暂无发布任务",
+      "taskEmptyDescription": "从本地导入 Suite Bundle 并确认后，发布进度会显示在这里。",
+      "groups": {
+        "attention": "需要处理",
+        "attentionDescription": "存在阻塞或需要重新预览",
+        "attentionEmpty": "当前没有需要处理的任务。",
+        "progress": "进行中",
+        "progressDescription": "正在处理成员技能或等待审核",
+        "progressEmpty": "当前没有进行中的任务。",
+        "recent": "最近完成",
+        "recentDescription": "已创建草稿或已停止的记录",
+        "recentEmpty": "暂无最近完成的任务。"
+      },
+      "statusLabel": {
+        "RUNNING": "处理中",
+        "WAITING_FOR_MEMBERS": "等待成员",
+        "BLOCKED_RETRYABLE": "需要处理",
+        "REPREVIEW_REQUIRED": "需要重新预览",
+        "SUITE_DRAFT_CREATED": "草稿已创建",
+        "CANCELLED": "已停止"
+      },
+      "lifecycleTitle": "套件发布阶段",
+      "lifecycle": {
+        "preview": "确认差异",
+        "previewDescription": "已锁定本次上传与成员变更",
+        "members": "推进成员发布",
+        "membersDescription": "创建或复用技能版本并等待审核",
+        "draft": "创建套件草稿",
+        "draftDescription": "仅在所有成员就绪后执行"
+      },
+      "operationId": "任务 ID",
+      "lastUpdated": "最近更新",
+      "memberTitle": "成员技能",
+      "memberDescription": "每个成员独立走现有扫描与审核流程。",
+      "memberStatus": {
+        "PLANNED": "待处理",
+        "RUNNING": "处理中",
+        "WAITING_FOR_MEMBER": "等待扫描或审核",
+        "COMPLETED": "已就绪",
+        "BLOCKED_RETRYABLE": "可重试阻塞",
+        "REPREVIEW_REQUIRED": "需要重新预览",
+        "CANCELLED": "已停止后续处理"
+      },
+      "noMembers": "暂无成员进度。",
+      "cancelConfirmTitle": "停止创建这个套件？",
+      "cancelConfirmDescription": "停止后，SkillHub 不再等待成员或创建套件草稿。已经创建的技能版本和已经提交的审核任务不会撤回，仍可在技能审核中继续处理。",
+      "cancelConfirmAction": "停止创建套件",
+      "cancelledTitle": "套件创建已停止",
+      "cancelledDescription": "任务记录会保留。已创建的技能版本和审核任务仍然存在，不会自动撤回或删除。",
+      "startAgain": "重新导入 Bundle",
       "status": {
         "RUNNING": "正在处理成员技能。",
         "WAITING_FOR_MEMBERS": "正在等待成员扫描或审核。",
         "BLOCKED_RETRYABLE": "遇到可恢复阻塞，可以在条件恢复后重试。",
         "REPREVIEW_REQUIRED": "计划或权限已经变化，必须重新上传并预览。",
         "SUITE_DRAFT_CREATED": "成员已就绪，套件草稿已创建。",
-        "CANCELLED": "操作已取消；已创建的技能版本不会被删除。"
+        "CANCELLED": "套件创建已停止；已创建的技能版本不会被删除。"
       },
       "relationship": {
         "ADDED": "新增成员",

@@ -6,6 +6,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationPageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
@@ -179,6 +180,23 @@ class SkillSuiteBundleControllerTest {
                 .andExpect(jsonPath("$.data.items[0].targetCoordinate").value("@global/suite"))
                 .andExpect(jsonPath("$.data.items[0].completedMembers").value(1))
                 .andExpect(jsonPath("$.data.total").value(1));
+    }
+
+    @Test
+    void authenticatedCallerCanListTheirOperationHistory() throws Exception {
+        when(operationQueryService.listMine("actor", 0, 12)).thenReturn(new SkillSuiteBundleOperationPageResponse(List.of(
+                new SkillSuiteBundleOperationSummaryResponse(
+                        "operation-cancelled", SkillSuiteBundleMode.CREATE, "@global/suite", "1.0.0",
+                        SkillSuiteBundleOperationStatus.CANCELLED, null,
+                        null, 2, 1, 0, Instant.parse("2026-09-11T08:00:00Z"))), 1, 0, 12, true));
+
+        mockMvc.perform(get("/api/v1/suite-bundles/operations/mine")
+                        .with(authentication(authToken("actor"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.hasChangingOperations").value(true))
+                .andExpect(jsonPath("$.data.items[0].operationId").value("operation-cancelled"))
+                .andExpect(jsonPath("$.data.items[0].status").value("CANCELLED"));
     }
 
     @Test

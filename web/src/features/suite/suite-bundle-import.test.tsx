@@ -277,15 +277,9 @@ describe('SuiteBundleImport', () => {
     expect(firstSignal?.aborted).toBe(true)
   })
 
-  it('shows redacted progress and exposes retry and non-destructive cancel actions', async () => {
+  it('opens the dedicated publishing task after confirmation', async () => {
     mocks.preview.mutateAsync.mockResolvedValue(preview({ members: [] }))
     mocks.confirm.mutateAsync.mockResolvedValue({ operationId: 'operation-1', status: 'RUNNING' })
-    mocks.operation.data = {
-      operationId: 'operation-1',
-      status: 'BLOCKED_RETRYABLE',
-      mode: 'CREATE',
-      members: [{ position: 0, status: 'FAILED_RETRYABLE', redacted: true }],
-    }
     render(<SuiteBundleImport expectedMode="CREATE" />)
     fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
     await waitFor(() => expect(
@@ -293,93 +287,47 @@ describe('SuiteBundleImport', () => {
     ).toBe(false))
     fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.confirm' }))
 
-    await waitFor(() => expect(screen.getByText('suite.bundle.redactedMember')).not.toBeNull())
-    fireEvent.click(screen.getByRole('button', { name: /suite.bundle.retry/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.cancelOperation' }))
-
-    expect(mocks.retry.mutate).toHaveBeenCalledWith('operation-1', expect.objectContaining({ onError: expect.any(Function) }))
-    expect(mocks.cancel.mutate).toHaveBeenCalledWith('operation-1', expect.objectContaining({ onError: expect.any(Function) }))
-  })
-
-  it('lets the user reload an operation after a status request fails', async () => {
-    mocks.preview.mutateAsync.mockResolvedValue(preview({ members: [] }))
-    mocks.confirm.mutateAsync.mockResolvedValue({ operationId: 'operation-1', status: 'RUNNING' })
-    mocks.operation.error = new Error('offline')
-    render(<SuiteBundleImport expectedMode="CREATE" />)
-    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
-    await waitFor(() => expect(
-      screen.getByRole('button', { name: 'suite.bundle.confirm' }).hasAttribute('disabled')
-    ).toBe(false))
-    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.confirm' }))
-
-    await waitFor(() => expect(screen.getByRole('button', { name: /suite.bundle.reloadOperation/ })).not.toBeNull())
-    fireEvent.click(screen.getByRole('button', { name: /suite.bundle.reloadOperation/ }))
-    expect(mocks.operation.refetch).toHaveBeenCalledTimes(1)
-  })
-
-  it('restores an operation after refresh and can discard a stale recovery entry', async () => {
-    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-restored')
-    mocks.operation.error = new Error('not found')
-
-    render(<SuiteBundleImport expectedMode="CREATE" />)
-
-    expect(screen.getByText('operation-restored')).not.toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.forgetOperation' }))
-    await waitFor(() => expect(window.sessionStorage.getItem(
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/publishing/operation-1',
+      replace: true,
+    }))
+    expect(window.sessionStorage.getItem(
       'skillhub:suite-bundle-operation:CREATE:new'
-    )).toBeNull())
+    )).toBeNull()
   })
 
-  it('links a waiting member to its exact Skill version and shows its package path', () => {
-    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-waiting')
+  it('opens the dedicated publishing task when a stored operation is restored', async () => {
+    const key = 'skillhub:suite-bundle-operation:CREATE:new'
+    window.sessionStorage.setItem(key, 'operation-restored')
     mocks.operation.data = {
-      operationId: 'operation-waiting',
-      status: 'WAITING_FOR_MEMBERS',
+      operationId: 'operation-restored',
+      status: 'RUNNING',
       mode: 'CREATE',
-      members: [{
-        position: 0,
-        status: 'WAITING_FOR_MEMBER',
-        redacted: false,
-        coordinate: '@global/member-under-review',
-        version: '1.4.0',
-        visibility: 'PUBLIC',
-        sourceType: 'PACKAGE',
-        relationship: 'UPDATED',
-        publishAction: 'CREATE_VERSION',
-        packagePath: 'skills/member-under-review',
-        errors: [],
-        warnings: [],
-      }],
-    }
-
-    render(<SuiteBundleImport expectedMode="CREATE" />)
-    expect(screen.getByText('suite.bundle.memberDirectory')).not.toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.viewMemberReview' }))
-
-    expect(mocks.navigate).toHaveBeenCalledWith({
-      to: '/space/global/member-under-review',
-      search: { version: '1.4.0' },
-    })
-  })
-
-  it('opens the exact generated Suite draft from a recovered terminal operation', () => {
-    window.sessionStorage.setItem('skillhub:suite-bundle-operation:CREATE:new', 'operation-complete')
-    mocks.operation.data = {
-      operationId: 'operation-complete',
-      status: 'SUITE_DRAFT_CREATED',
-      mode: 'CREATE',
-      targetCoordinate: '@global/generated-suite',
-      targetVersion: '1.2.0',
+      targetCoordinate: '@global/suite',
       members: [],
     }
 
     render(<SuiteBundleImport expectedMode="CREATE" />)
-    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.openDraft' }))
 
-    expect(mocks.navigate).toHaveBeenCalledWith({
-      to: '/suite/global/generated-suite',
-      search: { version: '1.2.0' },
-    })
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/publishing/operation-restored',
+      replace: true,
+    }))
+    expect(window.sessionStorage.getItem(key)).toBeNull()
+  })
+
+  it('opens the dedicated task when restoring its status fails instead of staying stuck', async () => {
+    const key = 'skillhub:suite-bundle-operation:CREATE:new'
+    window.sessionStorage.setItem(key, 'operation-offline')
+    mocks.operation.error = new Error('offline')
+
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/publishing/operation-offline',
+      replace: true,
+    }))
+    expect(window.sessionStorage.getItem(key)).toBeNull()
   })
 
   it('reads the new Suite recovery key when an UPDATE route changes without a full page reload', async () => {

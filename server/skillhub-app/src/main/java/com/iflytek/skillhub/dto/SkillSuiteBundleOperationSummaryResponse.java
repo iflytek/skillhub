@@ -5,7 +5,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 
 import java.time.Instant;
 
-/** Active Bundle operation shown before its Suite draft exists. */
+/** Bundle operation summary shown in the current user's publishing task list. */
 public record SkillSuiteBundleOperationSummaryResponse(
         String operationId,
         SkillSuiteBundleMode mode,

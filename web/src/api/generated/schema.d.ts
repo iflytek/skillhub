@@ -2742,6 +2742,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/suite-bundles/operations/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List current and completed Bundle operations started by the current user */
+        get: operations["listMySkillSuiteBundleOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/suite-bundles/operations/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List current and completed Bundle operations started by the current user */
+        get: operations["listMySkillSuiteBundleOperations_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/suite-bundles/operations/active": {
         parameters: {
             query?: never;
@@ -5860,16 +5894,16 @@ export interface components {
             completedAt?: string;
             members?: components["schemas"]["OperationMember"][];
         };
-        ApiResponsePageResponseSkillSuiteBundleOperationSummaryResponse: {
+        ApiResponseSkillSuiteBundleOperationPageResponse: {
             /** Format: int32 */
             code?: number;
             msg?: string;
-            data?: components["schemas"]["PageResponseSkillSuiteBundleOperationSummaryResponse"];
+            data?: components["schemas"]["SkillSuiteBundleOperationPageResponse"];
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
         };
-        PageResponseSkillSuiteBundleOperationSummaryResponse: {
+        SkillSuiteBundleOperationPageResponse: {
             items?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
             /** Format: int64 */
             total?: number;
@@ -5877,6 +5911,7 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+            hasChangingOperations?: boolean;
         };
         SkillSuiteBundleOperationSummaryResponse: {
             operationId?: string;
@@ -5896,6 +5931,24 @@ export interface components {
             waitingMembers?: number;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        ApiResponsePageResponseSkillSuiteBundleOperationSummaryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseSkillSuiteBundleOperationSummaryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseSkillSuiteBundleOperationSummaryResponse: {
+            items?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
         };
         ApiResponseSearchResponse: {
             /** Format: int32 */
@@ -12293,6 +12346,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationDetailResponse"];
+                };
+            };
+        };
+    };
+    listMySkillSuiteBundleOperations: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationPageResponse"];
+                };
+            };
+        };
+    };
+    listMySkillSuiteBundleOperations_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSkillSuiteBundleOperationPageResponse"];
                 };
             };
         };

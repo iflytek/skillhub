@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, FileArchive, RefreshCw, ShieldAlert, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileArchive, ShieldAlert, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import type { SkillSuiteBundlePreview } from '@/api/types'
 import { packageFolderAsZip } from '@/features/publish/folder-zip'
 import { UploadZone } from '@/features/publish/upload-zone'
 import {
-  useCancelSuiteBundleOperation,
   useConfirmSuiteBundle,
   usePreviewSuiteBundle,
-  useRetrySuiteBundleOperation,
   useSuiteBundleOperation,
 } from '@/shared/hooks/use-suite-queries'
 import { Button } from '@/shared/ui/button'
@@ -52,11 +50,6 @@ export function rememberSuiteBundleOperation(
   writeStoredOperation(operationStorageKey(mode, mode === 'UPDATE' ? coordinate : undefined), operationId)
 }
 
-function splitCoordinate(coordinate?: string): { namespace: string; slug: string } | null {
-  const match = coordinate?.match(/^@([^/]+)\/(.+)$/)
-  return match ? { namespace: match[1], slug: match[2] } : null
-}
-
 export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
   expectedMode: BundleMode
   expectedCoordinate?: string
@@ -66,13 +59,12 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
   const storageKey = operationStorageKey(expectedMode, expectedCoordinate)
   const previewMutation = usePreviewSuiteBundle()
   const confirmMutation = useConfirmSuiteBundle()
-  const cancelMutation = useCancelSuiteBundleOperation()
-  const retryMutation = useRetrySuiteBundleOperation()
   const [preview, setPreview] = useState<SkillSuiteBundlePreview | null>(null)
   const [fileName, setFileName] = useState('')
   const [acceptedWarningMembers, setAcceptedWarningMembers] = useState<Set<string>>(() => new Set())
   const [removalsAccepted, setRemovalsAccepted] = useState(false)
   const [operationId, setOperationId] = useState<string | undefined>(() => readStoredOperation(storageKey))
+  const restoredOperationIdRef = useRef(operationId)
   const [packaging, setPackaging] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const requestRef = useRef<AbortController | null>(null)
@@ -95,6 +87,13 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
     setOperationId(undefined)
     toast.error(t('suite.bundle.operationTargetMismatch'))
   }, [operation, operationId, operationMatchesTarget, storageKey, t])
+  useEffect(() => {
+    if (!operationId || !operationMatchesTarget) return
+    if (restoredOperationIdRef.current === operationId && !operation && !operationQuery.error) return
+    writeStoredOperation(storageKey)
+    restoredOperationIdRef.current = undefined
+    void navigate({ to: `/dashboard/suites/publishing/${operationId}`, replace: true })
+  }, [navigate, operation, operationId, operationMatchesTarget, operationQuery.error, storageKey])
   useEffect(() => {
     if (!preview) return undefined
     const timer = window.setInterval(() => setNow(Date.now()), 1_000)
@@ -206,133 +205,9 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
     if (!operationMatchesTarget) {
       return <Card className="p-6 text-sm text-destructive" role="alert">{t('suite.bundle.operationTargetMismatch')}</Card>
     }
-    const status = operation?.status
-    const draftCoordinate = splitCoordinate(operation?.targetCoordinate)
-    const resetOperation = () => {
-      setOperationId(undefined)
-      setPreview(null)
-      setFileName('')
-    }
     return (
-      <Card className="space-y-5 p-6" aria-live="polite">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-semibold">{t('suite.bundle.progressTitle')}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {operationQuery.isLoading
-                ? t('suite.bundle.loadingOperation')
-                : status
-                  ? t(`suite.bundle.status.${status}`)
-                  : t('suite.bundle.operationLoadFailed')}
-            </p>
-          </div>
-          <span className="rounded-full bg-secondary px-3 py-1 font-mono text-xs">{status ?? 'RUNNING'}</span>
-        </div>
-        <p className="break-all font-mono text-xs text-muted-foreground">{operationId}</p>
-        {operationQuery.error ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-            <span>{t('suite.bundle.operationLoadFailed')}</span>
-            <Button variant="outline" size="sm" onClick={() => operationQuery.refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" />{t('suite.bundle.reloadOperation')}
-            </Button>
-          </div>
-        ) : null}
-        {operation?.failureCode ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-            {operation.failureCode}
-          </div>
-        ) : null}
-        <div className="space-y-2">
-          {(operation?.members ?? []).map((member) => (
-            <div key={member.position} className="space-y-2 rounded-lg border p-3 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="min-w-0 break-all font-mono">
-                  {member.redacted ? t('suite.bundle.redactedMember') : member.coordinate}
-                </span>
-                <span className="font-mono text-xs text-muted-foreground">{member.status}</span>
-              </div>
-              {!member.redacted ? (
-                <>
-                  <p className="text-xs text-muted-foreground">
-                    {member.sourceType ? t(`suite.bundle.source.${member.sourceType}`) : null}
-                    {member.relationship ? ` · ${t(`suite.bundle.relationship.${member.relationship}`)}` : null}
-                    {member.publishAction ? ` · ${t(`suite.bundle.action.${member.publishAction}`)}` : null}
-                  </p>
-                  {member.packagePath ? (
-                    <p className="break-all text-xs text-muted-foreground">
-                      {t('suite.bundle.memberDirectory', { path: member.packagePath })}
-                    </p>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">
-                    {member.visibility ?? '—'} · v{member.version ?? '—'}
-                  </p>
-                  {(member.errors ?? []).map((error) => <p key={error} className="text-xs text-destructive">{error}</p>)}
-                  {(member.warnings ?? []).map((warning) => <p key={warning} className="text-xs text-amber-700 dark:text-amber-300">{warning}</p>)}
-                  {member.coordinate && member.version && member.status === 'WAITING_FOR_MEMBER' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const coordinate = splitCoordinate(member.coordinate)
-                        if (coordinate) {
-                          navigate({
-                            to: `/space/${coordinate.namespace}/${encodeURIComponent(coordinate.slug)}`,
-                            search: { version: member.version },
-                          })
-                        }
-                      }}
-                    >
-                      {t('suite.bundle.viewMemberReview')}
-                    </Button>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap justify-end gap-3">
-          {status === 'BLOCKED_RETRYABLE' ? (
-            <Button
-              variant="outline"
-              disabled={retryMutation.isPending}
-              onClick={() => retryMutation.mutate(operationId, {
-                onError: (error) => toast.error(t('suite.bundle.retryFailed'), error.message),
-              })}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />{t('suite.bundle.retry')}
-            </Button>
-          ) : null}
-          {status !== 'CANCELLED' && status !== 'REPREVIEW_REQUIRED' && status !== 'SUITE_DRAFT_CREATED' ? (
-            <Button
-              variant="outline"
-              disabled={cancelMutation.isPending}
-              onClick={() => cancelMutation.mutate(operationId, {
-                onError: (error) => toast.error(t('suite.bundle.cancelFailed'), error.message),
-              })}
-            >
-              {t('suite.bundle.cancelOperation')}
-            </Button>
-          ) : null}
-          {status === 'REPREVIEW_REQUIRED' || status === 'CANCELLED' ? (
-            <Button onClick={resetOperation}>
-              {t('suite.bundle.chooseAgain')}
-            </Button>
-          ) : null}
-          {operationQuery.error ? (
-            <Button variant="ghost" onClick={resetOperation}>{t('suite.bundle.forgetOperation')}</Button>
-          ) : null}
-          {status === 'SUITE_DRAFT_CREATED' && draftCoordinate && operation?.targetVersion ? (
-            <>
-              <Button variant="outline" onClick={resetOperation}>{t('suite.bundle.importAnother')}</Button>
-              <Button onClick={() => navigate({
-                to: `/suite/${draftCoordinate.namespace}/${encodeURIComponent(draftCoordinate.slug)}`,
-                search: { version: operation.targetVersion },
-              })}>
-                {t('suite.bundle.openDraft')}
-              </Button>
-            </>
-          ) : null}
-        </div>
+      <Card className="p-6 text-sm text-muted-foreground" aria-live="polite">
+        {t('suite.bundle.openingTask')}
       </Card>
     )
   }

@@ -11,6 +11,7 @@ import type {
   SkillSuiteBundlePreview,
   SkillSuiteBundleOperation,
   SkillSuiteBundleOperationResult,
+  SkillSuiteBundleOperationPage,
   SkillSuiteBundleOperationSummary,
 } from '@/api/types'
 import { fetchJson, getCsrfHeaders, suiteApi, WEB_API_PREFIX } from '@/api/client'
@@ -40,7 +41,7 @@ export function useResourceSearch(params: ResourceSearchParams, enabled = true) 
   })
 }
 
-export function useMySuites(query = '', page = 0, size = 20) {
+export function useMySuites(query = '', page = 0, size = 20, enabled = true) {
   return useQuery({
     queryKey: ['suites', 'mine', query, page, size],
     queryFn: () => {
@@ -48,6 +49,7 @@ export function useMySuites(query = '', page = 0, size = 20) {
       return fetchJson<PagedResponse<MySkillSuiteSummary>>(`${WEB_API_PREFIX}/me/suites?${params.toString()}`)
     },
     placeholderData: keepPreviousData,
+    enabled,
   })
 }
 
@@ -178,6 +180,18 @@ export function useActiveSuiteBundleOperations(page = 0, size = 12) {
   })
 }
 
+export function useMySuiteBundleOperations(page = 0, size = 12, enabled = true) {
+  return useQuery({
+    queryKey: ['suite-bundles', 'operations', 'mine', page, size],
+    queryFn: () => fetchJson<SkillSuiteBundleOperationPage>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/mine?page=${page}&size=${size}`,
+    ),
+    placeholderData: keepPreviousData,
+    enabled,
+    refetchInterval: (query) => query.state.data?.hasChangingOperations ? 2_000 : false,
+  })
+}
+
 function useSuiteBundleCommand(command: 'cancel' | 'retry') {
   const queryClient = useQueryClient()
   return useMutation({
@@ -185,9 +199,13 @@ function useSuiteBundleCommand(command: 'cancel' | 'retry') {
       `${WEB_API_PREFIX}/suite-bundles/operations/${encodeURIComponent(operationId)}/${command}`,
       { method: 'POST', headers: getCsrfHeaders() },
     ),
-    onSuccess: (_result, operationId) => queryClient.invalidateQueries({
-      queryKey: ['suite-bundles', 'operations', operationId],
-    }),
+    onSuccess: async (_result, operationId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', operationId] }),
+        queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'mine'] }),
+        queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'active'] }),
+      ])
+    },
   })
 }
 

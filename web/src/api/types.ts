@@ -477,6 +477,11 @@ export type SkillSuiteBundleOperationSummary = RequiredGenerated<
   components['schemas']['SkillSuiteBundleOperationSummaryResponse'],
   'failureCode' | 'baseVersion'
 >
+type GeneratedSkillSuiteBundleOperationPage = components['schemas']['SkillSuiteBundleOperationPageResponse']
+export type SkillSuiteBundleOperationPage = Omit<
+  RequiredGenerated<GeneratedSkillSuiteBundleOperationPage>,
+  'items'
+> & { items: SkillSuiteBundleOperationSummary[] }
 
 // Publish
 export interface PublishResult {

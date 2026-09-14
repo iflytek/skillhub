@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationPageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.repository.SkillSuiteBundleOperationQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -146,6 +147,16 @@ class SkillSuiteBundleOperationQueryServiceTest {
 
         assertThat(service.listActive("actor", 2, 100)).isSameAs(expected);
         verify(operationQueryRepository).findActive("actor", 2, 50);
+    }
+
+    @Test
+    void delegatesOperationHistoryPagingToTheReadModel() {
+        SkillSuiteBundleOperationPageResponse expected =
+                new SkillSuiteBundleOperationPageResponse(List.of(), 0, 2, 50, true);
+        when(operationQueryRepository.findMine("actor", 2, 50)).thenReturn(expected);
+
+        assertThat(service.listMine("actor", 2, 100)).isSameAs(expected);
+        verify(operationQueryRepository).findMine("actor", 2, 50);
     }
 
     private SkillSuiteBundleExecutionOperation operation() {

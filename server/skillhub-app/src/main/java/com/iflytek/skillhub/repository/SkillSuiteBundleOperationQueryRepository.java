@@ -3,6 +3,7 @@ package com.iflytek.skillhub.repository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMode;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationStatus;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationPageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -15,7 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * Dashboard read model for active Bundle operations owned by one actor.
+ * Dashboard read model for Bundle operations owned by one actor.
  *
  * <p>The native query pages operations before joining member rows, then computes status counts in
  * PostgreSQL. This keeps each poll bounded and avoids loading member errors and warnings.</p>
@@ -84,6 +85,71 @@ public class SkillSuiteBundleOperationQueryRepository {
         return new PageResponse<>(
                 rows.stream().map(this::map).toList(),
                 ((Number) count.getSingleResult()).longValue(), page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public SkillSuiteBundleOperationPageResponse findMine(
+            String actorId,
+            int page,
+            int size
+    ) {
+        Query select = entityManager.createNativeQuery("""
+                WITH selected_operation AS (
+                    SELECT operation.operation_id, operation.mode,
+                           '@' || namespace.slug || '/' || operation.target_suite_slug AS target_coordinate,
+                           operation.target_version, operation.status, operation.failure_code,
+                           base_version.version AS base_version, operation.updated_at
+                    FROM skill_suite_bundle_operation operation
+                    JOIN namespace ON namespace.id = operation.namespace_id
+                    LEFT JOIN skill_suite_version base_version
+                           ON base_version.id = operation.base_suite_version_id
+                    WHERE operation.actor_id = :actorId
+                    ORDER BY CASE
+                                 WHEN operation.status IN ('BLOCKED_RETRYABLE', 'REPREVIEW_REQUIRED') THEN 0
+                                 WHEN operation.status IN ('RUNNING', 'WAITING_FOR_MEMBERS') THEN 1
+                                 ELSE 2
+                             END,
+                             operation.updated_at DESC, operation.operation_id DESC
+                    OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY
+                )
+                SELECT operation.operation_id, operation.mode, operation.target_coordinate,
+                       operation.target_version, operation.status, operation.failure_code,
+                       operation.base_version, operation.updated_at,
+                       COUNT(member.id) AS total_members,
+                       COUNT(member.id) FILTER (WHERE member.status = 'COMPLETED') AS completed_members,
+                       COUNT(member.id) FILTER (WHERE member.status = 'WAITING_FOR_MEMBER') AS waiting_members
+                FROM selected_operation operation
+                LEFT JOIN skill_suite_bundle_member_result member
+                       ON member.operation_id = operation.operation_id
+                GROUP BY operation.operation_id, operation.mode, operation.target_coordinate,
+                         operation.target_version, operation.status, operation.failure_code,
+                         operation.base_version, operation.updated_at
+                ORDER BY CASE
+                             WHEN operation.status IN ('BLOCKED_RETRYABLE', 'REPREVIEW_REQUIRED') THEN 0
+                             WHEN operation.status IN ('RUNNING', 'WAITING_FOR_MEMBERS') THEN 1
+                             ELSE 2
+                         END,
+                         operation.updated_at DESC, operation.operation_id DESC
+                """);
+        select.setParameter("actorId", actorId)
+                .setParameter("offset", (long) page * size)
+                .setParameter("size", size);
+        Query count = entityManager.createNativeQuery("""
+                SELECT (SELECT COUNT(*)
+                        FROM skill_suite_bundle_operation operation
+                        WHERE operation.actor_id = :actorId),
+                       EXISTS(SELECT 1
+                              FROM skill_suite_bundle_operation changing
+                              WHERE changing.actor_id = :actorId
+                                AND changing.status IN ('RUNNING', 'WAITING_FOR_MEMBERS'))
+                """).setParameter("actorId", actorId);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = select.getResultList();
+        Object[] metrics = (Object[]) count.getSingleResult();
+        return new SkillSuiteBundleOperationPageResponse(
+                rows.stream().map(this::map).toList(),
+                ((Number) metrics[0]).longValue(), page, size, (Boolean) metrics[1]);
     }
 
     private Query bind(Query query, String actorId) {

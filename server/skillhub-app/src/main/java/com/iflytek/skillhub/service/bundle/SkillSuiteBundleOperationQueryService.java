@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResultRepo
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleOperationAuthorizationPolicy;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationPageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.repository.SkillSuiteBundleOperationQueryRepository;
 import org.springframework.stereotype.Service;
@@ -111,6 +112,17 @@ public class SkillSuiteBundleOperationQueryService {
             int size
     ) {
         return operationQueryRepository.findActive(
+                actorId, Math.max(0, page), Math.min(Math.max(1, size), 50));
+    }
+
+    /** Returns one bounded page of the caller's operations, including terminal history. */
+    @Transactional(readOnly = true)
+    public SkillSuiteBundleOperationPageResponse listMine(
+            String actorId,
+            int page,
+            int size
+    ) {
+        return operationQueryRepository.findMine(
                 actorId, Math.max(0, page), Math.min(Math.max(1, size), 50));
     }
 

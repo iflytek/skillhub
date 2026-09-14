@@ -121,6 +121,11 @@ const MySuitesPage = createLazyRouteComponent(
   'MySuitesPage',
   dashboardRouteOptions,
 )
+const SuitePublishingTaskPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/suite-publishing-task'),
+  'SuitePublishingTaskPage',
+  dashboardRouteOptions,
+)
 const MyNamespacesPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/my-namespaces'),
   'MyNamespacesPage',
@@ -377,7 +382,17 @@ const dashboardSuitesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/suites',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { tab?: 'suites' | 'publishing' } => ({
+    tab: search.tab === 'publishing' ? 'publishing' : undefined,
+  }),
   component: MySuitesPage,
+})
+
+const dashboardSuitePublishingTaskRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites/publishing/$operationId',
+  beforeLoad: requireAuth,
+  component: SuitePublishingTaskPage,
 })
 
 const dashboardSuiteEditRoute = createRoute({
@@ -611,6 +626,7 @@ const routeTree = rootRoute.addChildren([
   dashboardSkillsRoute,
   dashboardPublishRoute,
   dashboardSuitesRoute,
+  dashboardSuitePublishingTaskRoute,
   dashboardSuiteCreateRoute,
   dashboardSuiteEditRoute,
   dashboardSuiteVersionCreateRoute,

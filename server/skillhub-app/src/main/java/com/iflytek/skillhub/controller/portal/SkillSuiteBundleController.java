@@ -7,15 +7,16 @@ import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleConfirmRequest;
-import com.iflytek.skillhub.dto.SkillSuiteBundleOperationResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationPageResponse;
+import com.iflytek.skillhub.dto.SkillSuiteBundleOperationResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundlePreviewResponse;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleConfirmationAppService;
-import com.iflytek.skillhub.service.bundle.SkillSuiteBundlePreviewAppService;
-import com.iflytek.skillhub.service.bundle.SkillSuiteBundleOperationQueryService;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleOperationCommandService;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundleOperationQueryService;
+import com.iflytek.skillhub.service.bundle.SkillSuiteBundlePreviewAppService;
 import com.iflytek.skillhub.service.bundle.SkillSuiteBundleResponseMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -119,6 +120,16 @@ public class SkillSuiteBundleController extends BaseApiController {
             @RequestParam(defaultValue = "12") int size
     ) {
         return ok("response.success.read", operationQueryService.listActive(userId, page, size));
+    }
+
+    @GetMapping("/operations/mine")
+    @Operation(operationId = "listMySkillSuiteBundleOperations", summary = "List current and completed Bundle operations started by the current user")
+    public ApiResponse<SkillSuiteBundleOperationPageResponse> listMyOperations(
+            @RequestAttribute("userId") String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        return ok("response.success.read", operationQueryService.listMine(userId, page, size));
     }
 
     @PostMapping("/operations/{operationId}/cancel")
