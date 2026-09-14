@@ -430,7 +430,8 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
               </div>
             ))}
             {(preview.members ?? []).every((member) => member.relationship === 'UNCHANGED')
-              && (preview.removedMembers?.length ?? 0) === 0 ? (
+              && (preview.removedMembers?.length ?? 0) === 0
+              && !preview.confirmable ? (
                 <p className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
                   {t('suite.bundle.noChanges')}
                 </p>

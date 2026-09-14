@@ -27,6 +27,9 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChan
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -34,11 +37,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -117,5 +123,83 @@ class SkillSuiteBundleMemberExecutionServiceTest {
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyMap(),
                 org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.anyBoolean());
         verify(storage, never()).getObject(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void packagedMemberDownloadsEachObjectOnceAndRemovesLocalSnapshot() throws Exception {
+        Instant now = Instant.parse("2026-09-11T08:00:00Z");
+        byte[] content = "---\nname: member\ndescription: test\nversion: 1.0.0\n---\n"
+                .getBytes(StandardCharsets.UTF_8);
+        var file = new SkillSuiteBundlePackageAnalyzer.StagedMemberFile(
+                "SKILL.md", content.length, "text/markdown", "a".repeat(64), "staged/key");
+        SkillSuiteBundleExecutionOperationRepository operationRepository =
+                mock(SkillSuiteBundleExecutionOperationRepository.class);
+        SkillSuiteBundleMemberResultRepository memberRepository = mock(SkillSuiteBundleMemberResultRepository.class);
+        SkillSuiteBundleActorContextService actorContextService = mock(SkillSuiteBundleActorContextService.class);
+        NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        SkillVersionRepository versionRepository = mock(SkillVersionRepository.class);
+        VisibilityChecker visibilityChecker = mock(VisibilityChecker.class);
+        SkillPublishService publishService = mock(SkillPublishService.class);
+        SkillReviewSubmitService reviewSubmitService = mock(SkillReviewSubmitService.class);
+        ObjectStorageService storage = mock(ObjectStorageService.class);
+        ObjectMapper objectMapper = mock(ObjectMapper.class);
+        SkillSuiteBundleExecutionOperation operation = new SkillSuiteBundleExecutionOperation(
+                "operation", "preview", "request", "actor", SkillSuiteBundleMode.CREATE,
+                1L, "suite", null, null, "1.0.0", "archive", "a".repeat(64),
+                Map.of("plan", "value"), "digest", now.minusSeconds(1));
+        SkillSuiteBundleCoordinate coordinate = new SkillSuiteBundleCoordinate("global", "member");
+        SkillSuiteBundleMemberResult member = new SkillSuiteBundleMemberResult(
+                "operation", 0, coordinate, SkillSuiteBundleMemberSourceType.PACKAGE, "members/member",
+                SkillVisibility.PUBLIC, "1.0.0", SkillSuiteBundleRelationshipChange.ADDED,
+                SkillSuiteBundlePublishAction.CREATE_SKILL, "sha256:fingerprint",
+                null, null, List.of(), List.of(), now.minusSeconds(1));
+        SkillSuiteBundlePreviewPlanner.MemberPlan memberPlan = new SkillSuiteBundlePreviewPlanner.MemberPlan(
+                coordinate, SkillSuiteBundleMemberSourceType.PACKAGE,
+                SkillSuiteBundleRelationshipChange.ADDED, SkillSuiteBundlePublishAction.CREATE_SKILL,
+                null, null, SkillVisibility.PUBLIC, "1.0.0", "sha256:fingerprint",
+                List.of(file), List.of(), List.of());
+        SkillSuiteBundlePreviewPlanner.PreviewPlan plan = new SkillSuiteBundlePreviewPlanner.PreviewPlan(
+                SkillSuiteBundleMode.CREATE, new SkillSuiteBundleCoordinate("global", "suite"),
+                1L, null, null, "1.0.0", "Suite", "Summary", "Overview",
+                SkillVisibility.PUBLIC, List.of(memberPlan), List.of(), List.of(), List.of(), "digest");
+        SkillVersion publishedVersion = mock(SkillVersion.class);
+        AtomicReference<List<com.iflytek.skillhub.domain.skill.validation.PackageEntry>> capturedEntries =
+                new AtomicReference<>();
+
+        when(operationRepository.findByIdForUpdate("operation")).thenReturn(Optional.of(operation));
+        when(memberRepository.findByOperationIdOrderByPositionForUpdate("operation")).thenReturn(List.of(member));
+        when(actorContextService.requireCurrent("actor")).thenReturn(
+                new SkillSuiteBundleActorContextService.ActorContext(Map.of(), Set.of()));
+        when(objectMapper.convertValue(operation.getPlan(), SkillSuiteBundlePreviewPlanner.PreviewPlan.class))
+                .thenReturn(plan);
+        when(storage.getObject("staged/key")).thenReturn(new ByteArrayInputStream(content));
+        when(publishedVersion.getId()).thenReturn(12L);
+        when(publishedVersion.getStatus()).thenReturn(SkillVersionStatus.PUBLISHED);
+        when(publishService.publishBundleMemberFromEntries(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.nullable(Long.class),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyMap(),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyMap(), org.mockito.ArgumentMatchers.anySet(),
+                org.mockito.ArgumentMatchers.anyBoolean())).thenAnswer(invocation -> {
+                    List<com.iflytek.skillhub.domain.skill.validation.PackageEntry> entries = invocation.getArgument(4);
+                    capturedEntries.set(entries);
+                    assertThat(entries.getFirst().content()).isEqualTo(content);
+                    assertThat(entries.getFirst().content()).isEqualTo(content);
+                    return new SkillPublishService.PublishResult(11L, "member", publishedVersion);
+                });
+        SkillSuiteBundleMemberExecutionService service = new SkillSuiteBundleMemberExecutionService(
+                operationRepository, memberRepository, actorContextService, namespaceRepository,
+                skillRepository, versionRepository, visibilityChecker, publishService,
+                reviewSubmitService, storage, objectMapper, Clock.fixed(now, ZoneOffset.UTC));
+
+        assertThat(service.executeNext("operation"))
+                .isEqualTo(SkillSuiteBundleMemberExecutionService.ExecutionOutcome.PROGRESSED);
+
+        verify(storage, times(1)).getObject("staged/key");
+        assertThat(member.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.COMPLETED);
+        assertThatThrownBy(() -> capturedEntries.get().getFirst().content())
+                .isInstanceOf(UncheckedIOException.class);
     }
 }

@@ -1814,6 +1814,27 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void publishBundleMember_removedNamespaceMemberUsesRetryableAuthorizationError() throws Exception {
+        String actorId = "removed-member";
+        List<PackageEntry> entries = skillEntries("test-skill", "2.0.0");
+        Namespace namespace = new Namespace("test-ns", "Test NS", "owner");
+        setId(namespace, 1L);
+
+        when(namespaceRepository.findBySlug("test-ns")).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, actorId))
+                .thenReturn(Optional.empty());
+
+        DomainBadRequestException exception = assertThrows(DomainBadRequestException.class,
+                () -> service.publishBundleMemberFromEntries(
+                        "test-ns", 21L, "test-skill", "2.0.0", entries, entryHashes(entries), actorId,
+                        SkillVisibility.PUBLIC, Map.of(), Set.of(), true));
+
+        assertEquals("error.skill.publish.publisher.notMember", exception.messageCode());
+        verify(skillVersionRepository, never()).save(any());
+        verify(objectStorageService, never()).putObject(anyString(), any(), anyLong(), anyString());
+    }
+
+    @Test
     void publishBundleMember_pendingReviewAppeared_doesNotWithdrawOrWrite() throws Exception {
         String actorId = "owner";
         List<PackageEntry> entries = skillEntries("test-skill", "2.0.0");

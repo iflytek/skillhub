@@ -137,6 +137,28 @@ describe('SuiteBundleImport', () => {
     expect(screen.getAllByText('second warning')).toHaveLength(1)
   })
 
+  it('does not report no changes for a confirmable presentation-only update', async () => {
+    mocks.preview.mutateAsync.mockResolvedValue(preview({
+      confirmable: true,
+      target: {
+        mode: 'UPDATE', coordinate: '@global/suite', targetVersion: '2.0.0',
+        displayName: 'Updated suite', summary: 'Updated summary', overview: 'Updated overview',
+        visibility: 'PUBLIC',
+      },
+      members: [{
+        coordinate: '@global/member', sourceType: 'REFERENCE', relationship: 'UNCHANGED',
+        publishAction: 'REFERENCE_VERSION', finalVisibility: 'PUBLIC', resolvedVersion: '1.0.0',
+        errors: [], warnings: [],
+      }],
+    }))
+    render(<SuiteBundleImport expectedMode="UPDATE" expectedCoordinate="@global/suite" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'suite.bundle.confirm' })).toBeTruthy())
+
+    expect(screen.queryByText('suite.bundle.noChanges')).toBeNull()
+  })
+
   it('blocks a Bundle targeting a different workflow entry', async () => {
     mocks.preview.mutateAsync.mockResolvedValue(preview({
       target: { mode: 'UPDATE', coordinate: '@global/other', targetVersion: '2.0.0' },

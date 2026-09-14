@@ -62,6 +62,7 @@ public class SkillSuiteBundleCoordinator {
 
     private boolean isRetryableBlock(LocalizedDomainException exception) {
         if ("error.namespace.frozen".equals(exception.messageCode())
+                || "error.skill.publish.publisher.notMember".equals(exception.messageCode())
                 || "error.skill.lifecycle.noPermission".equals(exception.messageCode())
                 || "error.suite.lifecycle.noPermission".equals(exception.messageCode())
                 || "error.suite.bundle.actor.inactive".equals(exception.messageCode())) {

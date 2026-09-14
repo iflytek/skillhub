@@ -94,4 +94,19 @@ class SkillSuiteBundleCoordinatorTest {
         verify(stateService, never()).markRepreviewRequired(
                 org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
     }
+
+    @Test
+    void removedNamespaceMemberKeepsTheOperationRetryable() {
+        when(executionService.executeNext("operation"))
+                .thenThrow(new DomainBadRequestException(
+                        "error.skill.publish.publisher.notMember", "global"));
+
+        coordinator.advance("operation");
+
+        verify(stateService).markBlockedRetryable(
+                "operation", "AUTHORIZATION_OR_NAMESPACE_BLOCKED",
+                "error.skill.publish.publisher.notMember");
+        verify(stateService, never()).markRepreviewRequired(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+    }
 }
