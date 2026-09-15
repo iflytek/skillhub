@@ -32,10 +32,10 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
   const status = operation?.status
   const draftCoordinate = splitCoordinate(operation?.targetCoordinate)
   const restartOperation = () => {
-    if (operation?.mode === 'UPDATE' && draftCoordinate && operation.baseVersion) {
+    if (operation?.mode === 'UPDATE' && draftCoordinate) {
       void navigate({
         to: `/dashboard/suites/${draftCoordinate.namespace}/${encodeURIComponent(draftCoordinate.slug)}/new-version`,
-        search: { sourceVersion: operation.baseVersion },
+        search: { sourceVersion: operation.baseVersion ?? undefined },
       })
       return
     }
