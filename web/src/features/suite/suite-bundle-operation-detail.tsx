@@ -31,6 +31,16 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
   const operation = operationQuery.data
   const status = operation?.status
   const draftCoordinate = splitCoordinate(operation?.targetCoordinate)
+  const restartOperation = () => {
+    if (operation?.mode === 'UPDATE' && draftCoordinate && operation.baseVersion) {
+      void navigate({
+        to: `/dashboard/suites/${draftCoordinate.namespace}/${encodeURIComponent(draftCoordinate.slug)}/new-version`,
+        search: { sourceVersion: operation.baseVersion },
+      })
+      return
+    }
+    void navigate({ to: '/dashboard/suites/new' })
+  }
   const canCancel = Boolean(status && !TERMINAL_STATUSES.has(status))
   const memberStageComplete = status === 'SUITE_DRAFT_CREATED'
   const memberStageActive = status === 'RUNNING' || status === 'WAITING_FOR_MEMBERS'
@@ -48,6 +58,11 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
             <p className="mt-2 text-sm text-muted-foreground">
               {status ? t(`suite.bundle.status.${status}`) : t('suite.bundle.loadingOperation')}
             </p>
+            {status ? (
+              <p className="mt-2 text-sm font-medium text-foreground">
+                {t(`suite.bundle.nextStep.${status}`)}
+              </p>
+            ) : null}
           </div>
           {status ? (
             <span className={cn(
@@ -207,7 +222,7 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
           </Button>
         ) : null}
         {status === 'REPREVIEW_REQUIRED' || status === 'CANCELLED' ? (
-          <Button onClick={() => navigate({ to: '/dashboard/suites/new' })}>
+          <Button onClick={restartOperation}>
             {t('suite.bundle.startAgain')}
           </Button>
         ) : null}

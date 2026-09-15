@@ -46,6 +46,8 @@ describe('SuiteBundleOperationDetail', () => {
     }
 
     render(<SuiteBundleOperationDetail operationId="operation-1" />)
+
+    expect(screen.getByText('suite.bundle.nextStep.WAITING_FOR_MEMBERS')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.cancelOperation' }))
 
     expect(screen.getByText('suite.bundle.cancelConfirmDescription')).not.toBeNull()
@@ -102,10 +104,33 @@ describe('SuiteBundleOperationDetail', () => {
     }
 
     render(<SuiteBundleOperationDetail operationId="operation-2" />)
+    expect(screen.getByText('suite.bundle.nextStep.SUITE_DRAFT_CREATED')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.openDraft' }))
     expect(mocks.navigate).toHaveBeenCalledWith({
       to: '/suite/global/generated-suite',
       search: { version: '1.2.0' },
+    })
+  })
+
+  it('restarts an update from the original Suite version after re-preview is required', () => {
+    mocks.operation.data = {
+      operationId: 'operation-3',
+      status: 'REPREVIEW_REQUIRED',
+      mode: 'UPDATE',
+      targetCoordinate: '@team-a/care-suite',
+      targetVersion: '1.2.0',
+      baseVersion: '1.1.0',
+      updatedAt: '2026-09-14T04:00:00Z',
+      members: [],
+    }
+
+    render(<SuiteBundleOperationDetail operationId="operation-3" />)
+
+    expect(screen.getByText('suite.bundle.nextStep.REPREVIEW_REQUIRED')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.startAgain' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/team-a/care-suite/new-version',
+      search: { sourceVersion: '1.1.0' },
     })
   })
 })

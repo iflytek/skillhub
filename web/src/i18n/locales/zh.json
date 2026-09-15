@@ -2066,6 +2066,14 @@
         "SUITE_DRAFT_CREATED": "草稿已创建",
         "CANCELLED": "已停止"
       },
+      "nextStep": {
+        "RUNNING": "下一步：系统正在自动处理，无需操作",
+        "WAITING_FOR_MEMBERS": "下一步：等待成员扫描或审核，可进入详情查看具体成员",
+        "BLOCKED_RETRYABLE": "下一步：进入详情确认原因，恢复条件后重试",
+        "REPREVIEW_REQUIRED": "下一步：重新上传 Bundle 并确认最新成员差异",
+        "SUITE_DRAFT_CREATED": "下一步：打开套件草稿，检查后按可见性提交审核或直接发布",
+        "CANCELLED": "下一步：任务已结束；已创建的成员版本和审核仍然保留"
+      },
       "lifecycleTitle": "套件发布阶段",
       "lifecycle": {
         "preview": "确认差异",

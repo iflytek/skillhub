@@ -19,6 +19,7 @@ public record SkillSuiteBundleOperationDetailResponse(
         Long targetNamespaceId,
         Long targetSuiteId,
         String targetVersion,
+        String baseVersion,
         String failureCode,
         Long resultSuiteId,
         Long resultSuiteVersionId,

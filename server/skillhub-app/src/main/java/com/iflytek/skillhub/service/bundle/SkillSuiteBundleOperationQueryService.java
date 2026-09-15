@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
+import com.iflytek.skillhub.domain.suite.SkillSuiteVersionRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperation;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperationRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleMemberResult;
@@ -35,6 +36,7 @@ public class SkillSuiteBundleOperationQueryService {
     private final SkillSuiteBundleMemberResultRepository memberRepository;
     private final NamespaceRepository namespaceRepository;
     private final SkillRepository skillRepository;
+    private final SkillSuiteVersionRepository suiteVersionRepository;
     private final VisibilityChecker visibilityChecker;
     private final SkillSuiteBundleOperationQueryRepository operationQueryRepository;
 
@@ -43,6 +45,7 @@ public class SkillSuiteBundleOperationQueryService {
             SkillSuiteBundleMemberResultRepository memberRepository,
             NamespaceRepository namespaceRepository,
             SkillRepository skillRepository,
+            SkillSuiteVersionRepository suiteVersionRepository,
             VisibilityChecker visibilityChecker,
             SkillSuiteBundleOperationQueryRepository operationQueryRepository
     ) {
@@ -50,6 +53,7 @@ public class SkillSuiteBundleOperationQueryService {
         this.memberRepository = memberRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
+        this.suiteVersionRepository = suiteVersionRepository;
         this.visibilityChecker = visibilityChecker;
         this.operationQueryRepository = operationQueryRepository;
     }
@@ -96,10 +100,15 @@ public class SkillSuiteBundleOperationQueryService {
         String namespaceSlug = namespaceRepository.findById(operation.getNamespaceId())
                 .map(namespace -> namespace.getSlug())
                 .orElseThrow(this::notFound);
+        String baseVersion = operation.getBaseSuiteVersionId() == null
+                ? null
+                : suiteVersionRepository.findById(operation.getBaseSuiteVersionId())
+                        .map(version -> version.getVersion())
+                        .orElse(null);
         return new SkillSuiteBundleOperationDetailResponse(
                 operation.getOperationId(), operation.getStatus(), operation.getMode(),
                 "@" + namespaceSlug + "/" + operation.getTargetSuiteSlug(), operation.getNamespaceId(),
-                operation.getTargetSuiteId(), operation.getTargetVersion(),
+                operation.getTargetSuiteId(), operation.getTargetVersion(), baseVersion,
                 operation.getFailureCode(), operation.getResultSuiteId(), operation.getResultSuiteVersionId(),
                 operation.getCreatedAt(), operation.getUpdatedAt(), operation.getCompletedAt(), members);
     }
