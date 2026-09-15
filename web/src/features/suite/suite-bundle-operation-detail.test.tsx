@@ -133,4 +133,25 @@ describe('SuiteBundleOperationDetail', () => {
       search: { sourceVersion: '1.1.0' },
     })
   })
+
+  it('keeps update semantics when the original Suite version no longer exists', () => {
+    mocks.operation.data = {
+      operationId: 'operation-4',
+      status: 'REPREVIEW_REQUIRED',
+      mode: 'UPDATE',
+      targetCoordinate: '@team-a/care-suite',
+      targetVersion: '1.2.0',
+      baseVersion: null,
+      updatedAt: '2026-09-14T04:00:00Z',
+      members: [],
+    }
+
+    render(<SuiteBundleOperationDetail operationId="operation-4" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.startAgain' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/team-a/care-suite/new-version',
+      search: { sourceVersion: undefined },
+    })
+  })
 })
