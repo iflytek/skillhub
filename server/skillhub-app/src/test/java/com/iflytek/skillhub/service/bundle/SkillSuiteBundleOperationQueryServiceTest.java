@@ -8,6 +8,8 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
+import com.iflytek.skillhub.domain.suite.SkillSuiteVersion;
+import com.iflytek.skillhub.domain.suite.SkillSuiteVersionRepository;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleCoordinate;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperation;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleExecutionOperationRepository;
@@ -45,6 +47,7 @@ class SkillSuiteBundleOperationQueryServiceTest {
     private SkillSuiteBundleMemberResultRepository memberRepository;
     private NamespaceRepository namespaceRepository;
     private SkillRepository skillRepository;
+    private SkillSuiteVersionRepository suiteVersionRepository;
     private SkillSuiteBundleOperationQueryRepository operationQueryRepository;
     private SkillSuiteBundleOperationQueryService service;
 
@@ -54,10 +57,11 @@ class SkillSuiteBundleOperationQueryServiceTest {
         memberRepository = mock(SkillSuiteBundleMemberResultRepository.class);
         namespaceRepository = mock(NamespaceRepository.class);
         skillRepository = mock(SkillRepository.class);
+        suiteVersionRepository = mock(SkillSuiteVersionRepository.class);
         operationQueryRepository = mock(SkillSuiteBundleOperationQueryRepository.class);
         service = new SkillSuiteBundleOperationQueryService(
                 operationRepository, memberRepository, namespaceRepository,
-                skillRepository, new VisibilityChecker(), operationQueryRepository);
+                skillRepository, suiteVersionRepository, new VisibilityChecker(), operationQueryRepository);
     }
 
     @Test
@@ -147,6 +151,26 @@ class SkillSuiteBundleOperationQueryServiceTest {
 
         assertThat(service.listActive("actor", 2, 100)).isSameAs(expected);
         verify(operationQueryRepository).findActive("actor", 2, 50);
+    }
+
+    @Test
+    void updateOperationIncludesItsBaseSuiteVersion() {
+        SkillSuiteBundleExecutionOperation operation = new SkillSuiteBundleExecutionOperation(
+                "operation-update", "preview-update", "request-update", "actor", SkillSuiteBundleMode.UPDATE,
+                1L, "suite", 40L, 50L, "1.1.0", "temporary/archive.zip", "a".repeat(64),
+                Map.of(), "warning-digest", NOW);
+        Namespace namespace = mock(Namespace.class);
+        when(namespace.getSlug()).thenReturn("global");
+        SkillSuiteVersion baseVersion = mock(SkillSuiteVersion.class);
+        when(baseVersion.getVersion()).thenReturn("1.0.0");
+        when(operationRepository.findById("operation-update")).thenReturn(Optional.of(operation));
+        when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
+        when(memberRepository.findByOperationIdOrderByPosition("operation-update")).thenReturn(List.of());
+        when(suiteVersionRepository.findById(50L)).thenReturn(Optional.of(baseVersion));
+
+        var response = service.get("operation-update", "actor", Map.of(), Set.of());
+
+        assertThat(response.baseVersion()).isEqualTo("1.0.0");
     }
 
     @Test

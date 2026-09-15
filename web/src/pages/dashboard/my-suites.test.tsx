@@ -66,11 +66,13 @@ describe('MySuitesPage publishing tasks', () => {
     mocks.operations = {
       items: [
         operation('blocked', 'BLOCKED_RETRYABLE'),
+        operation('repreview', 'REPREVIEW_REQUIRED'),
+        operation('running', 'RUNNING'),
         operation('waiting', 'WAITING_FOR_MEMBERS'),
         operation('draft', 'SUITE_DRAFT_CREATED'),
         operation('cancelled', 'CANCELLED'),
       ],
-      total: 4,
+      total: 6,
       page: 0,
       size: 12,
       hasChangingOperations: true,
@@ -82,6 +84,18 @@ describe('MySuitesPage publishing tasks', () => {
     expect(screen.getByText('suite.bundle.groups.progress')).not.toBeNull()
     expect(screen.getByText('suite.bundle.groups.recent')).not.toBeNull()
     expect(screen.getByText('@global/cancelled@1.0.0')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.BLOCKED_RETRYABLE')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.REPREVIEW_REQUIRED')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.RUNNING')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.WAITING_FOR_MEMBERS')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.SUITE_DRAFT_CREATED')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.CANCELLED')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.nextStep.BLOCKED_RETRYABLE')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.nextStep.REPREVIEW_REQUIRED')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.nextStep.RUNNING')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.nextStep.WAITING_FOR_MEMBERS')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.nextStep.SUITE_DRAFT_CREATED')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.nextStep.CANCELLED')).not.toBeNull()
     expect(container.querySelector('.animate-spin')).toBeNull()
     expect(mocks.suiteHook).toHaveBeenCalledWith('', 0, 12, false)
     expect(mocks.operationHook).toHaveBeenCalledWith(0, 12, true)

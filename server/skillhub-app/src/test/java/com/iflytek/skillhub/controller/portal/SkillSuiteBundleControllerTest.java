@@ -148,8 +148,8 @@ class SkillSuiteBundleControllerTest {
     @Test
     void authenticatedCallerCanReadRedactedOperationStatus() throws Exception {
         SkillSuiteBundleOperationDetailResponse response = new SkillSuiteBundleOperationDetailResponse(
-                "operation-1", SkillSuiteBundleOperationStatus.RUNNING, SkillSuiteBundleMode.CREATE,
-                "@global/suite", 1L, null, "1.0.0", null, null, null,
+                "operation-1", SkillSuiteBundleOperationStatus.RUNNING, SkillSuiteBundleMode.UPDATE,
+                "@global/suite", 1L, 10L, "1.1.0", "1.0.0", null, null, null,
                 Instant.parse("2026-09-11T08:00:00Z"), Instant.parse("2026-09-11T08:00:00Z"),
                 null, List.of());
         when(operationQueryService.get("operation-1", "actor", Map.of(), Set.of()))
@@ -160,6 +160,7 @@ class SkillSuiteBundleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.operationId").value("operation-1"))
                 .andExpect(jsonPath("$.data.targetCoordinate").value("@global/suite"))
+                .andExpect(jsonPath("$.data.baseVersion").value("1.0.0"))
                 .andExpect(jsonPath("$.data.actorId").doesNotExist())
                 .andExpect(jsonPath("$.data.archiveObjectKey").doesNotExist())
                 .andExpect(jsonPath("$.data.plan").doesNotExist());

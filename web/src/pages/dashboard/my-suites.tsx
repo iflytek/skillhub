@@ -13,6 +13,7 @@ import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { suiteStatusLabel } from '@/features/suite/suite-labels'
+import { cn } from '@/shared/lib/utils'
 
 const PAGE_SIZE = 12
 const NEEDS_ATTENTION = new Set(['BLOCKED_RETRYABLE', 'REPREVIEW_REQUIRED'])
@@ -179,14 +180,23 @@ function TaskSection({ title, description, operations, emptyLabel, icon, locale,
             <button
               key={operation.operationId}
               type="button"
-              className="flex w-full flex-col gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:flex-row sm:items-center sm:justify-between"
+              className={cn(
+                'flex w-full flex-col gap-3 border-l px-5 py-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:flex-row sm:items-center sm:justify-between',
+                operationRowClass(operation.status),
+              )}
               onClick={() => onOpen(operation.operationId)}
             >
               <div className="flex min-w-0 items-start gap-3">
                 <OperationStatusIcon status={operation.status} />
-                <div className="min-w-0">
-                  <p className="truncate font-mono text-sm font-medium">{operation.targetCoordinate}@{operation.targetVersion}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{t(`suite.bundle.status.${operation.status}`)}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <OperationStatusBadge status={operation.status} />
+                    <p className="min-w-0 max-w-full break-all font-mono text-sm font-medium">{operation.targetCoordinate}@{operation.targetVersion}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-foreground/80">{t(`suite.bundle.status.${operation.status}`)}</p>
+                  <p className="mt-1 text-xs font-medium text-muted-foreground">
+                    {t(`suite.bundle.nextStep.${operation.status}`)}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t('suite.bundle.memberProgress', {
                       completed: operation.completedMembers,
@@ -221,4 +231,35 @@ function OperationStatusIcon({ status }: { status: SkillSuiteBundleOperationSumm
     return <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
   }
   return <CircleDot className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+}
+
+function OperationStatusBadge({ status }: { status: SkillSuiteBundleOperationSummary['status'] }) {
+  const { t } = useTranslation()
+  return (
+    <span className={cn(
+      'inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold',
+      status === 'BLOCKED_RETRYABLE' || status === 'REPREVIEW_REQUIRED'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300'
+        : status === 'SUITE_DRAFT_CREATED'
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+          : status === 'CANCELLED'
+            ? 'border-border bg-muted text-muted-foreground'
+            : 'border-primary/25 bg-primary/10 text-primary',
+    )}>
+      {t(`suite.bundle.statusLabel.${status}`)}
+    </span>
+  )
+}
+
+function operationRowClass(status: SkillSuiteBundleOperationSummary['status']) {
+  if (status === 'BLOCKED_RETRYABLE' || status === 'REPREVIEW_REQUIRED') {
+    return 'border-l-amber-500 bg-amber-500/[0.03]'
+  }
+  if (status === 'SUITE_DRAFT_CREATED') {
+    return 'border-l-emerald-500 bg-emerald-500/[0.02]'
+  }
+  if (status === 'CANCELLED') {
+    return 'border-l-muted-foreground/30 bg-muted/20'
+  }
+  return 'border-l-primary bg-primary/[0.02]'
 }

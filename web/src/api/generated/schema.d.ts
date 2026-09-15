@@ -5881,6 +5881,7 @@ export interface components {
             /** Format: int64 */
             targetSuiteId?: number;
             targetVersion?: string;
+            baseVersion?: string;
             failureCode?: string;
             /** Format: int64 */
             resultSuiteId?: number;

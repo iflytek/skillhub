@@ -2067,6 +2067,14 @@
         "SUITE_DRAFT_CREATED": "Draft created",
         "CANCELLED": "Stopped"
       },
+      "nextStep": {
+        "RUNNING": "Next: SkillHub is processing automatically; no action is needed",
+        "WAITING_FOR_MEMBERS": "Next: wait for member scans or reviews, or open details to inspect each member",
+        "BLOCKED_RETRYABLE": "Next: open details, resolve the cause, then retry",
+        "REPREVIEW_REQUIRED": "Next: upload the Bundle again and confirm the latest member changes",
+        "SUITE_DRAFT_CREATED": "Next: open and review the Suite draft, then submit it for review or publish directly based on visibility",
+        "CANCELLED": "Next: this task ended; existing member versions and reviews remain"
+      },
       "lifecycleTitle": "Suite publishing stages",
       "lifecycle": {
         "preview": "Confirm changes",
