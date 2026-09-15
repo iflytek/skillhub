@@ -291,6 +291,34 @@ class SkillSuiteBundlePersistenceTest {
     }
 
     @Test
+    void deletingTheBaseSuiteVersionKeepsTheUpdateOperationAndClearsItsReference() {
+        SuiteFixture fixture = persistSuite("bundle-deleted-base-version");
+        previewRepository.save(preview(
+                "deleted-base-preview", "actor", fixture.namespaceId(), "target",
+                fixture.suiteId(), fixture.baseVersionId()));
+        operationRepository.save(operation(
+                "deleted-base-operation", "deleted-base-preview", "deleted-base-request", "actor",
+                SkillSuiteBundleMode.UPDATE, fixture.namespaceId(), "target",
+                fixture.suiteId(), fixture.baseVersionId()));
+        entityManager.flush();
+
+        entityManager.createNativeQuery("DELETE FROM skill_suite_version WHERE id = :id")
+                .setParameter("id", fixture.baseVersionId())
+                .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(previewRepository.findById("deleted-base-preview"))
+                .get()
+                .extracting(SkillSuiteBundlePreviewSession::getBaseSuiteVersionId)
+                .isNull();
+        assertThat(operationRepository.findById("deleted-base-operation"))
+                .get()
+                .extracting(SkillSuiteBundleExecutionOperation::getBaseSuiteVersionId)
+                .isNull();
+    }
+
+    @Test
     void operationAndMemberPlanRemainReadableAfterPersistenceContextIsCleared() {
         Namespace namespace = persistNamespace("bundle-recovery");
         previewRepository.save(preview("recovery-preview", "actor", namespace.getId(), "target", null, null));

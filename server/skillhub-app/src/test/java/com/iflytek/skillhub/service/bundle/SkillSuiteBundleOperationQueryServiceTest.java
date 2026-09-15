@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class SkillSuiteBundleOperationQueryServiceTest {
@@ -177,20 +178,20 @@ class SkillSuiteBundleOperationQueryServiceTest {
     void updateOperationRemainsReadableWhenItsBaseSuiteVersionWasDeleted() {
         SkillSuiteBundleExecutionOperation operation = new SkillSuiteBundleExecutionOperation(
                 "operation-update", "preview-update", "request-update", "actor", SkillSuiteBundleMode.UPDATE,
-                1L, "suite", 40L, 50L, "1.1.0", "temporary/archive.zip", "a".repeat(64),
+                1L, "suite", 40L, null, "1.1.0", "temporary/archive.zip", "a".repeat(64),
                 Map.of(), "warning-digest", NOW);
         Namespace namespace = mock(Namespace.class);
         when(namespace.getSlug()).thenReturn("global");
         when(operationRepository.findById("operation-update")).thenReturn(Optional.of(operation));
         when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
         when(memberRepository.findByOperationIdOrderByPosition("operation-update")).thenReturn(List.of());
-        when(suiteVersionRepository.findById(50L)).thenReturn(Optional.empty());
 
         var response = service.get("operation-update", "actor", Map.of(), Set.of());
 
         assertThat(response.mode()).isEqualTo(SkillSuiteBundleMode.UPDATE);
         assertThat(response.targetCoordinate()).isEqualTo("@global/suite");
         assertThat(response.baseVersion()).isNull();
+        verifyNoInteractions(suiteVersionRepository);
     }
 
     @Test
