@@ -8,8 +8,11 @@ import { cn } from '@/shared/lib/utils'
 import {
   useAdminLabelDefinitions,
   useAttachSkillLabel,
+  useAttachSuiteLabel,
   useDetachSkillLabel,
+  useDetachSuiteLabel,
   useSkillLabels,
+  useSuiteLabels,
   useVisibleLabels,
 } from '@/shared/hooks/use-label-queries'
 
@@ -19,6 +22,20 @@ type SkillLabelPanelProps = {
   initialLabels: LabelItem[]
   canManage: boolean
   isSuperAdmin: boolean
+}
+
+type MutationCallbacks = {
+  onSuccess: () => void
+  onError: (error: unknown) => void
+}
+
+type ResourceLabelPanelProps = SkillLabelPanelProps & {
+  currentLabels?: LabelItem[]
+  attachLabel: (labelSlug: string, callbacks: MutationCallbacks) => void
+  detachLabel: (labelSlug: string, callbacks: MutationCallbacks) => void
+  attachPending: boolean
+  detachPending: boolean
+  translationPrefix: 'skillDetail' | 'suite'
 }
 
 function canManageLabelType(type: string, isSuperAdmin: boolean) {
@@ -60,20 +77,29 @@ function sortByPresentation(left: { displayName: string; slug: string; sortOrder
     || left.slug.localeCompare(right.slug, undefined, { sensitivity: 'base' })
 }
 
-export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isSuperAdmin }: SkillLabelPanelProps) {
+function ResourceLabelPanel({
+  initialLabels,
+  canManage,
+  isSuperAdmin,
+  currentLabels: queriedLabels,
+  attachLabel,
+  detachLabel,
+  attachPending,
+  detachPending,
+  translationPrefix,
+}: ResourceLabelPanelProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.resolvedLanguage || i18n.language || 'en'
-  const { data: skillLabels } = useSkillLabels(namespace, slug, canManage)
   const { data: visibleLabels, isLoading: visibleLabelsLoading } = useVisibleLabels(canManage && !isSuperAdmin)
   const { data: adminDefinitions, isLoading: adminDefinitionsLoading } = useAdminLabelDefinitions(canManage && isSuperAdmin)
-  const attachMutation = useAttachSkillLabel()
-  const detachMutation = useDetachSkillLabel()
 
   if (!canManage) {
     return null
   }
 
-  const currentLabels = (skillLabels ?? initialLabels).slice().sort(sortByPresentation)
+  const currentLabels = (queriedLabels ?? initialLabels)
+    .slice()
+    .sort(sortByPresentation)
   const currentLabelSlugs = new Set(currentLabels.map((label) => label.slug))
   const candidateLabels = isSuperAdmin
     ? (adminDefinitions ?? []).map((definition) => toCandidateLabel(definition, locale))
@@ -83,40 +109,34 @@ export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isS
     .filter((label) => canManageLabelType(label.type, isSuperAdmin))
     .sort(sortByPresentation)
   const isCatalogLoading = isSuperAdmin ? adminDefinitionsLoading : visibleLabelsLoading
-  const isMutating = attachMutation.isPending || detachMutation.isPending
+  const isMutating = attachPending || detachPending
 
   const handleAttach = (labelSlug: string) => {
-    attachMutation.mutate(
-      { namespace, slug, labelSlug },
-      {
-        onSuccess: () => {
-          toast.success(t('skillDetail.labelAttachSuccessTitle'), t('skillDetail.labelAttachSuccessDescription'))
-        },
-        onError: (error) => {
-          toast.error(
-            t('skillDetail.labelAttachErrorTitle'),
-            error instanceof Error ? error.message : t('skillDetail.labelActionFallbackError'),
-          )
-        },
+    attachLabel(labelSlug, {
+      onSuccess: () => {
+        toast.success(t(`${translationPrefix}.labelAttachSuccessTitle`), t(`${translationPrefix}.labelAttachSuccessDescription`))
       },
-    )
+      onError: (error) => {
+        toast.error(
+          t(`${translationPrefix}.labelAttachErrorTitle`),
+          error instanceof Error ? error.message : t(`${translationPrefix}.labelActionFallbackError`),
+        )
+      },
+    })
   }
 
   const handleDetach = (label: LabelItem) => {
-    detachMutation.mutate(
-      { namespace, slug, labelSlug: label.slug },
-      {
-        onSuccess: () => {
-          toast.success(t('skillDetail.labelDetachSuccessTitle'), t('skillDetail.labelDetachSuccessDescription'))
-        },
-        onError: (error) => {
-          toast.error(
-            t('skillDetail.labelDetachErrorTitle'),
-            error instanceof Error ? error.message : t('skillDetail.labelActionFallbackError'),
-          )
-        },
+    detachLabel(label.slug, {
+      onSuccess: () => {
+        toast.success(t(`${translationPrefix}.labelDetachSuccessTitle`), t(`${translationPrefix}.labelDetachSuccessDescription`))
       },
-    )
+      onError: (error) => {
+        toast.error(
+          t(`${translationPrefix}.labelDetachErrorTitle`),
+          error instanceof Error ? error.message : t(`${translationPrefix}.labelActionFallbackError`),
+        )
+      },
+    })
   }
 
   return (
@@ -124,15 +144,15 @@ export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isS
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <Tag className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.labelsSectionTitle')}</span>
+          <span className="text-sm font-semibold font-heading text-foreground">{t(`${translationPrefix}.labelsSectionTitle`)}</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          {isSuperAdmin ? t('skillDetail.labelsSectionDescriptionSuperAdmin') : t('skillDetail.labelsSectionDescription')}
+          {isSuperAdmin ? t(`${translationPrefix}.labelsSectionDescriptionSuperAdmin`) : t(`${translationPrefix}.labelsSectionDescription`)}
         </p>
       </div>
 
       <div className="space-y-3">
-        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('skillDetail.currentLabelsTitle')}</div>
+        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t(`${translationPrefix}.currentLabelsTitle`)}</div>
         {currentLabels.length > 0 ? (
           <div className="space-y-2">
             {currentLabels.map((label) => {
@@ -162,10 +182,10 @@ export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isS
                       onClick={() => handleDetach(label)}
                       disabled={isMutating}
                     >
-                      {detachMutation.isPending ? t('skillDetail.processing') : t('skillDetail.removeLabel')}
+                      {detachPending ? t(`${translationPrefix}.processing`) : t(`${translationPrefix}.removeLabel`)}
                     </Button>
                   ) : (
-                    <span className="text-xs text-muted-foreground">{t('skillDetail.labelRestrictedHint')}</span>
+                    <span className="text-xs text-muted-foreground">{t(`${translationPrefix}.labelRestrictedHint`)}</span>
                   )}
                 </div>
               )
@@ -173,16 +193,16 @@ export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isS
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
-            {t('skillDetail.noLabelsAssigned')}
+            {t(`${translationPrefix}.noLabelsAssigned`)}
           </div>
         )}
       </div>
 
       <div className="space-y-3">
-        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('skillDetail.availableLabelsTitle')}</div>
+        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t(`${translationPrefix}.availableLabelsTitle`)}</div>
         {isCatalogLoading ? (
           <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
-            {t('skillDetail.loadingAvailableLabels')}
+            {t(`${translationPrefix}.loadingAvailableLabels`)}
           </div>
         ) : availableLabels.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -195,16 +215,58 @@ export function SkillLabelPanel({ namespace, slug, initialLabels, canManage, isS
                 onClick={() => handleAttach(label.slug)}
                 disabled={isMutating}
               >
-                {attachMutation.isPending ? t('skillDetail.processing') : t('skillDetail.addLabel', { label: label.displayName })}
+                {attachPending ? t(`${translationPrefix}.processing`) : t(`${translationPrefix}.addLabel`, { label: label.displayName })}
               </Button>
             ))}
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
-            {t('skillDetail.noAvailableLabels')}
+            {t(`${translationPrefix}.noAvailableLabels`)}
           </div>
         )}
       </div>
     </Card>
+  )
+}
+
+export function SkillLabelPanel(props: SkillLabelPanelProps) {
+  const { data: labels } = useSkillLabels(props.namespace, props.slug, props.canManage)
+  const attachMutation = useAttachSkillLabel()
+  const detachMutation = useDetachSkillLabel()
+  return (
+    <ResourceLabelPanel
+      {...props}
+      currentLabels={labels}
+      attachLabel={(labelSlug, callbacks) => attachMutation.mutate(
+        { namespace: props.namespace, slug: props.slug, labelSlug }, callbacks,
+      )}
+      detachLabel={(labelSlug, callbacks) => detachMutation.mutate(
+        { namespace: props.namespace, slug: props.slug, labelSlug }, callbacks,
+      )}
+      attachPending={attachMutation.isPending}
+      detachPending={detachMutation.isPending}
+      translationPrefix="skillDetail"
+    />
+  )
+}
+
+export function SuiteLabelPanel(props: SkillLabelPanelProps) {
+  const { data: labels } = useSuiteLabels(props.namespace, props.slug, props.canManage)
+  const attachMutation = useAttachSuiteLabel()
+  const detachMutation = useDetachSuiteLabel()
+  return (
+    <ResourceLabelPanel
+      {...props}
+      currentLabels={labels}
+      attachLabel={(labelSlug, callbacks) => attachMutation.mutate(
+        { namespace: props.namespace, slug: props.slug, labelSlug }, callbacks,
+      )}
+      detachLabel={(labelSlug, callbacks) => detachMutation.mutate(
+        { namespace: props.namespace, slug: props.slug, labelSlug }, callbacks,
+      )}
+      attachPending={attachMutation.isPending}
+      detachPending={detachMutation.isPending}
+      translationPrefix="suite"
+    />
   )
 }

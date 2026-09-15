@@ -207,6 +207,8 @@ export function SkillDetailPage() {
     ? ownerPreviewVersion
     : selectedVersionEntry
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
+  const suiteMemberships = skill?.memberOfSuites?.items ?? skill?.entryForSuites ?? []
+  const suiteMembershipTotal = skill?.memberOfSuites?.total ?? suiteMemberships.length
 
   useEffect(() => {
     // Recompute collapse rules whenever rendered documentation height changes so the page can keep
@@ -1185,40 +1187,98 @@ export function SkillDetailPage() {
           </div>
         </Card>
 
-        {(skill.entryForSuites?.length ?? 0) > 0 && (
-          <Card className="border-primary/20 bg-primary/[0.03] p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <Boxes className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold font-heading text-foreground">
-                {t('skillDetail.suiteEntryTitle')}
-              </span>
-            </div>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {t('skillDetail.suiteEntryDescription')}
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Boxes className="h-4 w-4 text-primary" aria-hidden="true" />
+            <span className="text-sm font-semibold font-heading text-foreground">
+              {t('skillDetail.suiteMembershipTitle')}
+            </span>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {t('skillDetail.suiteMembershipDescription')}
+          </p>
+
+          {suiteMemberships.length === 0 ? (
+            <p className="rounded-xl bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
+              {t('skillDetail.suiteMembershipEmpty')}
             </p>
-            <div className="space-y-2">
-              {skill.entryForSuites!.map((suite) => (
-                <Link
-                  key={suite.suiteId}
-                  to="/suite/$namespace/$slug"
-                  params={{ namespace: suite.namespace, slug: suite.slug }}
-                  search={{ version: suite.version }}
-                  className="block rounded-xl border border-border/70 bg-background p-3 transition-colors hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2"
-                >
-                  <span className="block break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]">
-                    {suite.displayName}
-                  </span>
-                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
-                    @{suite.namespace}/{suite.slug}@{suite.version}
-                  </span>
-                  <span className="mt-2 block text-xs font-medium text-primary">
-                    {t('skillDetail.suiteEntryMemberCount', { count: suite.memberCount })}
-                  </span>
-                </Link>
+          ) : (
+            <div className="divide-y divide-border/60 border-y border-border/60">
+              {suiteMemberships.map((suite) => (
+                <div key={suite.suiteId} className="min-w-0 py-4 first:pt-3 last:pb-3">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <Link
+                      to="/suite/$namespace/$slug"
+                      params={{ namespace: suite.namespace, slug: suite.slug }}
+                      search={{ version: suite.version }}
+                      className="min-w-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2"
+                    >
+                      <span className="block break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]">
+                        {suite.displayName}
+                      </span>
+                      <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                        @{suite.namespace}/{suite.slug}@{suite.version}
+                      </span>
+                    </Link>
+                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                      {t((suite.currentSkillEntry ?? !skill.memberOfSuites)
+                        ? 'skillDetail.suiteMembershipEntryRole'
+                        : 'skillDetail.suiteMembershipMemberRole')}
+                    </span>
+                  </div>
+
+                  {(suite.visibleSiblingMembers?.length ?? 0) > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t('skillDetail.suiteMembershipSiblingTitle')}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(suite.visibleSiblingMembers ?? []).map((member) => member.available ? (
+                          <Link
+                            key={member.skillId}
+                            to="/space/$namespace/$slug"
+                            params={{ namespace: member.namespace, slug: member.slug }}
+                            search={{ returnTo: undefined }}
+                            className="max-w-full rounded-full bg-muted px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2"
+                          >
+                            <span className="block max-w-[13rem] truncate">{member.displayName}</span>
+                          </Link>
+                        ) : (
+                          <span
+                            key={member.skillId}
+                            className="max-w-full rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                            title={t('skillDetail.suiteMembershipUnavailable')}
+                          >
+                            <span className="block max-w-[13rem] truncate">{member.displayName}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>{t('skillDetail.suiteEntryMemberCount', { count: suite.memberCount })}</span>
+                    {(suite.restrictedMemberCount ?? 0) > 0 && (
+                      <span>{t('skillDetail.suiteMembershipRestricted', { count: suite.restrictedMemberCount ?? 0 })}</span>
+                    )}
+                    {(suite.omittedVisibleMemberCount ?? 0) > 0 && (
+                      <span>{t('skillDetail.suiteMembershipOmitted', { count: suite.omittedVisibleMemberCount ?? 0 })}</span>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
-          </Card>
-        )}
+          )}
+
+          {suiteMembershipTotal > suiteMemberships.length && (
+            <p className="text-xs leading-5 text-muted-foreground">
+              {t('skillDetail.suiteMembershipMore', {
+                shown: suiteMemberships.length,
+                total: suiteMembershipTotal,
+              })}
+            </p>
+          )}
+        </Card>
 
         {publishedVersion && canInteract && (
           <Card className="p-5 space-y-4">

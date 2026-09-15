@@ -1,0 +1,20 @@
+apiVersion: skillhub.iflytek.com/v1alpha1
+kind: SkillSuiteBundle
+metadata:
+  namespace: global
+  slug: invalid-suite
+spec:
+  mode: CREATE
+  version: 1.0.0
+  displayName: Invalid
+  summary: Invalid member source
+  overview: Invalid member source
+  visibility: PUBLIC
+  entry: "@global/member"
+  members:
+    - skill: "@global/member"
+      package:
+        path: members/member
+        visibility: PUBLIC
+      reference:
+        version: 1.0.0

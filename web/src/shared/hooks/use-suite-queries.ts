@@ -8,6 +8,11 @@ import type {
   SkillSuiteDraftInput,
   SkillSuiteMemberCandidate,
   SkillSuiteVersion,
+  SkillSuiteBundlePreview,
+  SkillSuiteBundleOperation,
+  SkillSuiteBundleOperationResult,
+  SkillSuiteBundleOperationPage,
+  SkillSuiteBundleOperationSummary,
 } from '@/api/types'
 import { fetchJson, getCsrfHeaders, suiteApi, WEB_API_PREFIX } from '@/api/client'
 
@@ -20,6 +25,7 @@ function buildResourceSearchUrl(params: ResourceSearchParams) {
   if (params.q) query.set('q', params.q)
   if (params.namespace) query.set('namespace', normalizeNamespace(params.namespace))
   if (params.resourceType) query.set('resourceType', params.resourceType)
+  params.labels?.forEach((label) => query.append('label', label))
   if (params.sort) query.set('sort', params.sort)
   query.set('page', String(params.page ?? 0))
   query.set('size', String(params.size ?? 20))
@@ -35,7 +41,7 @@ export function useResourceSearch(params: ResourceSearchParams, enabled = true) 
   })
 }
 
-export function useMySuites(query = '', page = 0, size = 20) {
+export function useMySuites(query = '', page = 0, size = 20, enabled = true) {
   return useQuery({
     queryKey: ['suites', 'mine', query, page, size],
     queryFn: () => {
@@ -43,6 +49,7 @@ export function useMySuites(query = '', page = 0, size = 20) {
       return fetchJson<PagedResponse<MySkillSuiteSummary>>(`${WEB_API_PREFIX}/me/suites?${params.toString()}`)
     },
     placeholderData: keepPreviousData,
+    enabled,
   })
 }
 
@@ -110,6 +117,104 @@ export function useCreateSuiteVersion(suiteId: number) {
     mutationFn: (input: SkillSuiteDraftInput) => suiteApi.createVersion(suiteId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['suites'] }),
   })
+}
+
+export function usePreviewSuiteBundle() {
+  return useMutation({
+    mutationFn: ({ file, signal }: { file: File; signal?: AbortSignal }) => {
+      const body = new FormData()
+      body.append('file', file)
+      return fetchJson<SkillSuiteBundlePreview>(`${WEB_API_PREFIX}/suite-bundles/preview`, {
+        method: 'POST',
+        headers: getCsrfHeaders(),
+        body,
+        signal,
+        timeoutMs: 120_000,
+      })
+    },
+  })
+}
+
+export function useConfirmSuiteBundle() {
+  return useMutation({
+    mutationFn: ({ previewToken, warningDigest, idempotencyKey }: {
+      previewToken: string
+      warningDigest: string
+      idempotencyKey: string
+    }) => fetchJson<SkillSuiteBundleOperationResult>(
+      `${WEB_API_PREFIX}/suite-bundles/previews/${encodeURIComponent(previewToken)}/confirm`,
+      {
+        method: 'POST',
+        headers: getCsrfHeaders({
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        }),
+        body: JSON.stringify({ warningDigest }),
+      },
+    ),
+  })
+}
+
+export function useSuiteBundleOperation(operationId?: string) {
+  return useQuery({
+    queryKey: ['suite-bundles', 'operations', operationId],
+    queryFn: () => fetchJson<SkillSuiteBundleOperation>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/${encodeURIComponent(operationId!)}`,
+    ),
+    enabled: Boolean(operationId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'RUNNING' || status === 'WAITING_FOR_MEMBERS' ? 2_000 : false
+    },
+  })
+}
+
+export function useActiveSuiteBundleOperations(page = 0, size = 12) {
+  return useQuery({
+    queryKey: ['suite-bundles', 'operations', 'active', page, size],
+    queryFn: () => fetchJson<PagedResponse<SkillSuiteBundleOperationSummary>>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/active?page=${page}&size=${size}`,
+    ),
+    refetchInterval: (query) => query.state.data?.items.some(operation =>
+      operation.status === 'RUNNING' || operation.status === 'WAITING_FOR_MEMBERS') ? 2_000 : false,
+  })
+}
+
+export function useMySuiteBundleOperations(page = 0, size = 12, enabled = true) {
+  return useQuery({
+    queryKey: ['suite-bundles', 'operations', 'mine', page, size],
+    queryFn: () => fetchJson<SkillSuiteBundleOperationPage>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/mine?page=${page}&size=${size}`,
+    ),
+    placeholderData: keepPreviousData,
+    enabled,
+    refetchInterval: (query) => query.state.data?.hasChangingOperations ? 2_000 : false,
+  })
+}
+
+function useSuiteBundleCommand(command: 'cancel' | 'retry') {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (operationId: string) => fetchJson<SkillSuiteBundleOperationResult>(
+      `${WEB_API_PREFIX}/suite-bundles/operations/${encodeURIComponent(operationId)}/${command}`,
+      { method: 'POST', headers: getCsrfHeaders() },
+    ),
+    onSuccess: async (_result, operationId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', operationId] }),
+        queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'mine'] }),
+        queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'active'] }),
+      ])
+    },
+  })
+}
+
+export function useCancelSuiteBundleOperation() {
+  return useSuiteBundleCommand('cancel')
+}
+
+export function useRetrySuiteBundleOperation() {
+  return useSuiteBundleCommand('retry')
 }
 
 export function useUpdateSuiteDraft(suiteId: number, versionId: number) {

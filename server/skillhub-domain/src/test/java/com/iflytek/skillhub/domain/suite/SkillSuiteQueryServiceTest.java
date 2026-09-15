@@ -49,7 +49,7 @@ class SkillSuiteQueryServiceTest {
     }
 
     @Test
-    void anonymousUserReadsPublishedPublicSuiteWithOrderedAvailability() {
+    void anonymousUserReadsHistoricalPublishedSuiteWithoutDisplayMetadata() {
         Namespace namespace = new Namespace("global", "Global", "system");
         SkillSuite suite = new SkillSuite(1L, "writers", "Writers", "author");
         SkillSuiteVersion version = new SkillSuiteVersion(10L, "1.0.0", SkillVisibility.PUBLIC, "author");
@@ -80,6 +80,8 @@ class SkillSuiteQueryServiceTest {
 
         assertThat(result.available()).isTrue();
         assertThat(result.version().getVersion()).isEqualTo("1.0.0");
+        assertThat(result.version().getSummary()).isNull();
+        assertThat(result.version().getOverview()).isNull();
         assertThat(result.members()).singleElement().satisfies(item -> {
             assertThat(item.snapshot().getSkillVersionId()).isEqualTo(40L);
             assertThat(item.availability().available()).isTrue();

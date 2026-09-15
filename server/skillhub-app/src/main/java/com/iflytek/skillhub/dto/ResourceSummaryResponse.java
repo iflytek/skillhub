@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 /** Type-explicit discovery item used by new clients without changing the legacy Skill search API. */
 public record ResourceSummaryResponse(
@@ -15,6 +16,7 @@ public record ResourceSummaryResponse(
         String visibility,
         long installCount,
         boolean available,
-        Instant updatedAt
+        Instant updatedAt,
+        List<SkillLabelDto> labels
 ) {
 }
