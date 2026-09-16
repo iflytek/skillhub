@@ -252,6 +252,50 @@ class BuiltinSkillInitializerTest {
     }
 
     @Test
+    void skipsPackageWhenDownloadFailsBeforeExtraction() throws Exception {
+        givenManifestAndSystemPublisher();
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "skillhub-hello")).thenReturn(List.of());
+        when(downloader.download(URI.create(ITEM.url()))).thenReturn(Optional.empty());
+
+        runInitializer();
+
+        verify(downloader).download(URI.create(ITEM.url()));
+        verify(extractor, never()).extract(any());
+        verify(skillPublishService, never()).publishFromEntries(any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void continuesWithLaterManifestItemWhenEarlierDownloadFails() throws Exception {
+        ManifestItem laterItem = new ManifestItem(
+                "next-skill",
+                "1.0.0",
+                "https://bjcdn.openstorage.cn/skills/next-skill.zip",
+                PACKAGE_SHA256
+        );
+        List<PackageEntry> laterEntries = packageEntries("next-skill", "1.0.0", "same");
+        givenManifestAndSystemPublisher(List.of(ITEM, laterItem));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "skillhub-hello")).thenReturn(List.of());
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "next-skill")).thenReturn(List.of());
+        when(downloader.download(URI.create(ITEM.url()))).thenReturn(Optional.empty());
+        when(downloader.download(URI.create(laterItem.url()))).thenReturn(Optional.of(PACKAGE_BYTES));
+        when(extractor.extract(PACKAGE_BYTES))
+                .thenReturn(new SkillPackageArchiveExtractor.ExtractionResult(laterEntries, List.of()));
+
+        runInitializer();
+
+        verify(downloader).download(URI.create(ITEM.url()));
+        verify(downloader).download(URI.create(laterItem.url()));
+        verify(skillPublishService).publishFromEntries(
+                eq(GLOBAL),
+                eq(laterEntries),
+                eq(PUBLISHER),
+                eq(SkillVisibility.PUBLIC),
+                eq(Set.of("SUPER_ADMIN")),
+                eq(true)
+        );
+    }
+
+    @Test
     void skipsWhenManifestSlugDoesNotMatchPackageMetadata() throws Exception {
         givenExtractedPackage(packageEntries("other-skill", "1.0.0", "same"));
 

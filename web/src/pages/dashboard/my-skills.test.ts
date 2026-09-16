@@ -5,11 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const navigateMock = vi.fn()
 const buttonRecords: Array<{ label: string; onClick?: ((event?: { stopPropagation: () => void }) => void) | undefined }> = []
 const useMySkillsMock = vi.fn()
+const searchMock: { filter?: string } = {}
+let isSuperAdmin = false
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useLocation: () => ({ pathname: '/dashboard/skills' }),
-  useSearch: () => ({}),
+  useSearch: () => searchMock,
 }))
 
 vi.mock('react-i18next', async () => {
@@ -23,7 +25,7 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({ hasRole: () => false }),
+  useAuth: () => ({ hasRole: (role: string) => role === 'SUPER_ADMIN' && isSuperAdmin }),
 }))
 
 vi.mock('@/shared/ui/button', () => ({
@@ -79,6 +81,10 @@ vi.mock('@/shared/hooks/use-debounce', () => ({
   useDebounce: (value: string) => value,
 }))
 
+vi.mock('@/features/admin/use-admin-skills', () => ({
+  useRestoreHiddenSkill: () => ({ mutateAsync: vi.fn() }),
+}))
+
 vi.mock('@/shared/lib/skill-lifecycle', () => ({
   getHeadlineVersion: () => ({ id: 11, version: '1.0.0', status: 'PUBLISHED' }),
   getPublishedVersion: () => ({ id: 11, version: '1.0.0', status: 'PUBLISHED' }),
@@ -114,6 +120,8 @@ describe('MySkillsPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     buttonRecords.length = 0
+    delete searchMock.filter
+    isSuperAdmin = false
     useMySkillsMock.mockReturnValue({
       data: {
         items: [
@@ -214,6 +222,25 @@ describe('MySkillsPage', () => {
         visibility: 'PUBLIC',
       },
     })
+  })
+
+  it('shows a direct restore action instead of owner actions in the hidden governance view', () => {
+    searchMock.filter = 'HIDDEN'
+    isSuperAdmin = true
+
+    renderToStaticMarkup(createElement(MySkillsPage))
+
+    expect(buttonRecords.some((button) => button.label === 'mySkills.restoreHidden')).toBe(true)
+    expect(buttonRecords.some((button) => button.label === 'mySkills.update')).toBe(false)
+    expect(buttonRecords.some((button) => button.label === 'mySkills.archive')).toBe(false)
+  })
+
+  it('does not render the restore action for a non-super-admin even when the hidden filter is in the URL', () => {
+    searchMock.filter = 'HIDDEN'
+
+    renderToStaticMarkup(createElement(MySkillsPage))
+
+    expect(buttonRecords.some((button) => button.label === 'mySkills.restoreHidden')).toBe(false)
   })
 
   it('exports a named component function', () => {

@@ -2,7 +2,7 @@ import { startTransition, useCallback, useEffect, useRef, useState, type MouseEv
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
+import { ArrowLeft, ArrowUpCircle, Boxes, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { resolvePackageRelativeLink } from '@/features/skill/package-relative-link'
 import { FileTree } from '@/features/skill/file-tree'
@@ -1184,6 +1184,41 @@ export function SkillDetailPage() {
             )}
           </div>
         </Card>
+
+        {(skill.entryForSuites?.length ?? 0) > 0 && (
+          <Card className="border-primary/20 bg-primary/[0.03] p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Boxes className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold font-heading text-foreground">
+                {t('skillDetail.suiteEntryTitle')}
+              </span>
+            </div>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {t('skillDetail.suiteEntryDescription')}
+            </p>
+            <div className="space-y-2">
+              {skill.entryForSuites!.map((suite) => (
+                <Link
+                  key={suite.suiteId}
+                  to="/suite/$namespace/$slug"
+                  params={{ namespace: suite.namespace, slug: suite.slug }}
+                  search={{ version: suite.version }}
+                  className="block rounded-xl border border-border/70 bg-background p-3 transition-colors hover:border-primary/40 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2"
+                >
+                  <span className="block break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]">
+                    {suite.displayName}
+                  </span>
+                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                    @{suite.namespace}/{suite.slug}@{suite.version}
+                  </span>
+                  <span className="mt-2 block text-xs font-medium text-primary">
+                    {t('skillDetail.suiteEntryMemberCount', { count: suite.memberCount })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {publishedVersion && canInteract && (
           <Card className="p-5 space-y-4">

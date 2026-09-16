@@ -5,11 +5,16 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.report.SkillReport;
 import com.iflytek.skillhub.domain.review.PromotionRequest;
 import com.iflytek.skillhub.domain.review.ReviewTask;
+import com.iflytek.skillhub.domain.review.ReviewSubjectType;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.suite.SkillSuite;
+import com.iflytek.skillhub.domain.suite.SkillSuiteRepository;
+import com.iflytek.skillhub.domain.suite.SkillSuiteVersion;
+import com.iflytek.skillhub.domain.suite.SkillSuiteVersionRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.GovernanceInboxItemResponse;
@@ -32,15 +37,21 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
     private final SkillVersionRepository skillVersionRepository;
     private final NamespaceRepository namespaceRepository;
     private final UserAccountRepository userAccountRepository;
+    private final SkillSuiteRepository suiteRepository;
+    private final SkillSuiteVersionRepository suiteVersionRepository;
 
     public JpaGovernanceQueryRepository(SkillRepository skillRepository,
                                         SkillVersionRepository skillVersionRepository,
                                         NamespaceRepository namespaceRepository,
-                                        UserAccountRepository userAccountRepository) {
+                                        UserAccountRepository userAccountRepository,
+                                        SkillSuiteRepository suiteRepository,
+                                        SkillSuiteVersionRepository suiteVersionRepository) {
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.namespaceRepository = namespaceRepository;
         this.userAccountRepository = userAccountRepository;
+        this.suiteRepository = suiteRepository;
+        this.suiteVersionRepository = suiteVersionRepository;
     }
 
     @Override
@@ -111,8 +122,26 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
                 ? Map.of()
                 : skillRepository.findByIdIn(List.copyOf(skillIds)).stream()
                 .collect(Collectors.toMap(Skill::getId, Function.identity()));
+        List<Long> suiteVersionIds = distinct(tasks.stream()
+                .filter(this::isSuiteReview)
+                .map(ReviewTask::getSubjectVersionId)
+                .toList());
+        Map<Long, SkillSuiteVersion> suiteVersionsById = suiteVersionIds.isEmpty()
+                ? Map.of()
+                : suiteVersionRepository.findByIdIn(suiteVersionIds).stream()
+                .collect(Collectors.toMap(SkillSuiteVersion::getId, Function.identity()));
+        Set<Long> suiteIds = new LinkedHashSet<>(distinct(tasks.stream()
+                .filter(this::isSuiteReview)
+                .map(ReviewTask::getSubjectId)
+                .toList()));
+        suiteIds.addAll(suiteVersionsById.values().stream().map(SkillSuiteVersion::getSuiteId).toList());
+        Map<Long, SkillSuite> suitesById = suiteIds.isEmpty()
+                ? Map.of()
+                : suiteRepository.findByIdIn(List.copyOf(suiteIds)).stream()
+                .collect(Collectors.toMap(SkillSuite::getId, Function.identity()));
         Set<Long> namespaceIds = new LinkedHashSet<>(distinct(
                 skillsById.values().stream().map(Skill::getNamespaceId).toList()));
+        namespaceIds.addAll(suitesById.values().stream().map(SkillSuite::getNamespaceId).toList());
         namespaceIds.addAll(distinct(tasks.stream().map(ReviewTask::getNamespaceId).toList()));
         Map<Long, Namespace> namespacesById = namespaceIds.isEmpty()
                 ? Map.of()
@@ -126,7 +155,8 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
                 ? Map.of()
                 : userAccountRepository.findByIdIn(userIds).stream()
                 .collect(Collectors.toMap(UserAccount::getId, Function.identity()));
-        return new ReviewReadBundle(versionsById, skillsById, namespacesById, usersById);
+        return new ReviewReadBundle(
+                versionsById, skillsById, suiteVersionsById, suitesById, namespacesById, usersById);
     }
 
     private PromotionReadBundle loadPromotionBundle(List<PromotionRequest> requests) {
@@ -172,6 +202,20 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
     }
 
     private ReviewTaskResponse toReviewTaskResponse(ReviewTask task, ReviewReadBundle bundle) {
+        if (isSuiteReview(task)) {
+            SkillSuite suite = require(bundle.suitesById(), task.getSubjectId(), "error.suite.notFound");
+            Namespace namespace = require(bundle.namespacesById(), task.getNamespaceId(), "namespace.not_found");
+            UserAccount submittedBy = bundle.usersById().get(task.getSubmittedBy());
+            UserAccount reviewedBy = task.getReviewedBy() != null ? bundle.usersById().get(task.getReviewedBy()) : null;
+            return new ReviewTaskResponse(
+                    task.getId(), null, namespace.getSlug(), null, task.getSubjectVersion(),
+                    task.getStatus().name(), task.getSubmittedBy(),
+                    submittedBy != null ? submittedBy.getDisplayName() : null,
+                    task.getReviewedBy(), reviewedBy != null ? reviewedBy.getDisplayName() : null,
+                    task.getReviewComment(), task.getSubmittedAt(), task.getReviewedAt(),
+                    task.getSubjectType().name(), task.getSubjectId(),
+                    task.getSubjectVersionId(), suite.getSlug());
+        }
         Long skillId = task.getSkillId() != null
                 ? task.getSkillId()
                 : require(bundle.versionsById(), task.getSkillVersionId(), "skill_version.not_found").getSkillId();
@@ -195,7 +239,10 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
                 reviewedBy != null ? reviewedBy.getDisplayName() : null,
                 task.getReviewComment(),
                 task.getSubmittedAt(),
-                task.getReviewedAt()
+                task.getReviewedAt(),
+                subjectType(task), task.getSubjectId() != null ? task.getSubjectId() : skillId,
+                task.getSubjectVersionId() != null ? task.getSubjectVersionId() : task.getSkillVersionId(),
+                skill.getSlug()
         );
     }
 
@@ -232,6 +279,17 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
     }
 
     private GovernanceInboxItemResponse toReviewInboxItem(ReviewTask task, ReviewReadBundle bundle) {
+        if (isSuiteReview(task)) {
+            SkillSuite suite = bundle.suitesById().get(task.getSubjectId());
+            Namespace namespace = bundle.namespacesById().get(task.getNamespaceId());
+            String namespaceSlug = namespace != null ? namespace.getSlug() : null;
+            String suiteSlug = suite != null ? suite.getSlug() : null;
+            return new GovernanceInboxItemResponse(
+                    "REVIEW", task.getId(), join(namespaceSlug, suiteSlug, task.getSubjectVersion()),
+                    "Pending Suite review",
+                    task.getSubmittedAt() != null ? task.getSubmittedAt().toString() : null,
+                    namespaceSlug, null, "SUITE", suiteSlug);
+        }
         SkillVersion version = bundle.versionsById().get(task.getSkillVersionId());
         Skill skill = version != null ? bundle.skillsById().get(version.getSkillId()) : null;
         Namespace namespace = skill != null ? bundle.namespacesById().get(skill.getNamespaceId()) : null;
@@ -306,8 +364,20 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
         return version != null ? path + "@" + version : path;
     }
 
+    private boolean isSuiteReview(ReviewTask task) {
+        return task.getSubjectType() == ReviewSubjectType.SUITE_VERSION;
+    }
+
+    private String subjectType(ReviewTask task) {
+        return task.getSubjectType() != null
+                ? task.getSubjectType().name()
+                : ReviewSubjectType.SKILL_VERSION.name();
+    }
+
     private record ReviewReadBundle(Map<Long, SkillVersion> versionsById,
                                     Map<Long, Skill> skillsById,
+                                    Map<Long, SkillSuiteVersion> suiteVersionsById,
+                                    Map<Long, SkillSuite> suitesById,
                                     Map<Long, Namespace> namespacesById,
                                     Map<String, UserAccount> usersById) {
     }

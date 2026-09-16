@@ -161,12 +161,12 @@ test.describe('Light and dark theme', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(page.getByRole('switch', { name: 'Dark theme' })).toHaveAttribute('aria-checked', 'true')
-    await expect(page.getByRole('heading', { name: 'SkillHub', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Turn team expertise into Agent-ready skills' })).toBeVisible()
     await expect.poll(() => page.evaluate(() => (
       window as Window & { __themeAtFirstReactContent?: boolean }
     ).__themeAtFirstReactContent)).toBe(true)
 
-    await page.getByRole('link', { name: 'Search', exact: true }).first().click()
+    await page.getByRole('link', { name: 'Skill Marketplace', exact: true }).first().click()
     await expect(page).toHaveURL(/\/search(?:\?|$)/)
     await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(page.getByPlaceholder('Search skills...')).toBeVisible()

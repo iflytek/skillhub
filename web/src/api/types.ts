@@ -275,6 +275,15 @@ export interface ComplianceSnapshot {
   digest?: string
 }
 
+export interface SkillSuiteReference {
+  suiteId: number
+  namespace: string
+  slug: string
+  displayName: string
+  version: string
+  memberCount: number
+}
+
 export interface SkillDetail {
   id: number
   slug: string
@@ -300,6 +309,7 @@ export interface SkillDetail {
   ownerPreviewVersion?: SkillLifecycleVersion
   ownerPreviewReviewComment?: string
   resolutionMode?: string
+  entryForSuites?: SkillSuiteReference[]
 }
 
 export interface SubmitPromotionRequest {
@@ -407,6 +417,51 @@ export interface PagedResponse<T> {
   size: number
 }
 
+export type ResourceType = 'SKILL' | 'SUITE'
+
+type RequiredGenerated<T, Optional extends keyof T = never> =
+  Required<Omit<T, Optional>> & Pick<T, Optional>
+
+type GeneratedResourceSummary = components['schemas']['ResourceSummaryResponse']
+export type ResourceSummary = Omit<RequiredGenerated<GeneratedResourceSummary, 'summary'>, 'resourceType'> & {
+  resourceType: ResourceType
+}
+
+export interface ResourceSearchParams {
+  q?: string
+  namespace?: string
+  resourceType?: ResourceType
+  sort?: string
+  page?: number
+  size?: number
+}
+
+type GeneratedSuiteMember = components['schemas']['SkillSuiteMemberResponse']
+export type SkillSuiteMember = RequiredGenerated<
+  GeneratedSuiteMember,
+  'skillId' | 'skillVersionId' | 'displayName' | 'summary' | 'blockingReason'
+>
+
+type GeneratedSuite = components['schemas']['SkillSuiteResponse']
+export type SkillSuite = Omit<RequiredGenerated<GeneratedSuite, 'summary' | 'overview'>, 'members'> & {
+  members: SkillSuiteMember[]
+}
+
+type GeneratedSuiteVersion = components['schemas']['SkillSuiteVersionSummaryResponse']
+export type SkillSuiteVersion = RequiredGenerated<GeneratedSuiteVersion, 'publishedAt' | 'yankedAt'>
+
+export type SkillSuiteMemberCandidate = RequiredGenerated<
+  components['schemas']['SkillSuiteMemberCandidateResponse']
+>
+
+export type SkillSuiteMemberInput = components['schemas']['SkillSuiteMemberRequest']
+export type SkillSuiteDraftInput = components['schemas']['SkillSuiteCreateRequest']
+
+export type MySkillSuiteSummary = RequiredGenerated<
+  components['schemas']['MySkillSuiteSummaryResponse'],
+  'summary'
+>
+
 // Publish
 export interface PublishResult {
   skillId: number
@@ -429,7 +484,7 @@ export interface ReviewTask {
   id: number
   skillVersionId: number | null
   namespace: string
-  skillSlug: string
+  skillSlug?: string | null
   version: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   submittedBy: string
@@ -439,6 +494,10 @@ export interface ReviewTask {
   reviewComment?: string
   submittedAt: string
   reviewedAt?: string
+  subjectType?: 'SKILL_VERSION' | 'SUITE_VERSION'
+  subjectId?: number | null
+  subjectVersionId?: number | null
+  subjectSlug?: string | null
 }
 
 export interface ReviewProgress {

@@ -15,7 +15,7 @@ backend**, a **React web UI**, a **security scanner**, and a **ClawHub CLI compa
 | Cache      | Redis 7 (sessions, distributed locks, idempotency)         |
 | Storage    | LocalFile (dev) / S3/MinIO (prod)                          |
 | Build      | `make dev-all` (dev), `make staging` (pre-PR)              |
-| Docs       | `docs/` (design), `document/` (VitePress user guide)       |
+| Docs       | `docs/` (design), `docs/skillhub/` (VitePress user guide) |
 | CI         | GitHub Actions (`.github/workflows/`)                      |
 
 ## Directory Map
@@ -149,11 +149,6 @@ skillhub/
 │   ├── skillhub/                    # VitePress user guide source
 │   └── superpowers/                 # Internal tooling docs
 │
-├── document/                        # VitePress documentation site (published)
-│   ├── docs/                        # Markdown documentation
-│   ├── src/                         # VitePress theme
-│   └── i18n/                        # Internationalization
-│
 ├── deploy/k8s/                      # Kubernetes manifests (basic)
 ├── monitoring/                      # Prometheus + Grafana stack
 ├── scripts/                         # Build, test, and deployment scripts
@@ -210,7 +205,6 @@ skillhub/
 ### Do Not Manually Edit Generated Files
 
 - `web/src/api/generated/schema.d.ts` — regenerated via `make generate-api`
-- `document/docs/` — auto-generated user documentation (VitePress)
 - `server/skillhub-app/src/main/java/com/iflytek/skillhub/dto/` — some DTOs may be generated
 
 ### After Making Changes

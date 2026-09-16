@@ -9,6 +9,8 @@ const mergedNoProxy = Array.from(new Set([
 
 process.env.NO_PROXY = mergedNoProxy
 process.env.no_proxy = mergedNoProxy
+const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL
+const baseURL = externalBaseUrl ?? 'http://127.0.0.1:3000'
 
 export default defineConfig({
   testDir: './e2e',
@@ -19,7 +21,7 @@ export default defineConfig({
   workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 1),
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'on',
   },
@@ -29,10 +31,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort',
-    url: 'http://127.0.0.1:3000',
-    reuseExistingServer: true,
-    timeout: 120000,
-  },
+  webServer: externalBaseUrl
+    ? undefined
+    : {
+        command: 'pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort',
+        url: baseURL,
+        reuseExistingServer: true,
+        timeout: 120000,
+      },
 })

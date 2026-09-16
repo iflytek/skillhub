@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * PostgreSQL read-model query for review progress.
  *
- * <p>Direct SQL is intentional here: the page boundary applies to grouped skill-version attempts,
+ * <p>Direct SQL is intentional here: the page boundary applies to grouped resource-version attempts,
  * not individual review tasks. Window functions keep grouping, latest-attempt selection, counts,
  * filtering, and pagination in the database instead of loading an author's full history.</p>
  */
@@ -27,18 +27,21 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
             WITH ranked AS (
                 SELECT task.id,
                        task.skill_id,
+                       task.subject_type,
+                       task.subject_id,
+                       task.subject_version_id,
+                       task.subject_version,
                        task.namespace_id,
-                       task.skill_version,
                        task.status,
                        task.review_comment,
                        task.submitted_at,
                        task.reviewed_at,
                        ROW_NUMBER() OVER (
-                           PARTITION BY task.skill_id, task.skill_version
+                           PARTITION BY task.subject_type, task.subject_id, task.subject_version
                            ORDER BY task.submitted_at DESC, task.id DESC
                        ) AS attempt_rank,
                        COUNT(*) OVER (
-                           PARTITION BY task.skill_id, task.skill_version
+                           PARTITION BY task.subject_type, task.subject_id, task.subject_version
                        ) AS attempt_count
                 FROM review_task task
                 WHERE task.submitted_by = :userId
@@ -54,18 +57,25 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                    latest.skill_id,
                    namespace.slug,
                    skill.slug,
-                   latest.skill_version,
+                   latest.subject_version,
                    latest.status,
                    latest.review_comment,
                    latest.submitted_at,
                    latest.reviewed_at,
-                   latest.attempt_count
+                   latest.attempt_count,
+                   latest.subject_type,
+                   latest.subject_id,
+                   latest.subject_version_id,
+                   COALESCE(skill.slug, suite.slug) AS subject_slug
             FROM latest
-            JOIN skill ON skill.id = latest.skill_id
+            LEFT JOIN skill
+              ON latest.subject_type = 'SKILL_VERSION' AND skill.id = latest.subject_id
+            LEFT JOIN skill_suite suite
+              ON latest.subject_type = 'SUITE_VERSION' AND suite.id = latest.subject_id
             JOIN namespace ON namespace.id = latest.namespace_id
             WHERE (
                     :query = ''
-                    OR LOWER(skill.slug) LIKE :queryPattern
+                    OR LOWER(COALESCE(skill.slug, suite.slug)) LIKE :queryPattern
                     OR LOWER(namespace.slug) LIKE :queryPattern
                   )
               AND (:status = '' OR latest.status = :status)
@@ -79,10 +89,13 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                    COUNT(*) FILTER (WHERE latest.status = 'APPROVED') AS approved_count,
                    COUNT(*) FILTER (WHERE latest.status = 'REJECTED') AS rejected_count
             FROM latest
-            JOIN skill ON skill.id = latest.skill_id
+            LEFT JOIN skill
+              ON latest.subject_type = 'SKILL_VERSION' AND skill.id = latest.subject_id
+            LEFT JOIN skill_suite suite
+              ON latest.subject_type = 'SUITE_VERSION' AND suite.id = latest.subject_id
             JOIN namespace ON namespace.id = latest.namespace_id
             WHERE :query = ''
-               OR LOWER(skill.slug) LIKE :queryPattern
+               OR LOWER(COALESCE(skill.slug, suite.slug)) LIKE :queryPattern
                OR LOWER(namespace.slug) LIKE :queryPattern
             """;
 
@@ -147,7 +160,7 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
     private ReviewProgressResponse mapRow(Object[] row) {
         return new ReviewProgressResponse(
                 number(row[0]).longValue(),
-                number(row[1]).longValue(),
+                row[1] == null ? null : number(row[1]).longValue(),
                 (String) row[2],
                 (String) row[3],
                 (String) row[4],
@@ -155,7 +168,11 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                 (String) row[6],
                 instant(row[7]),
                 instant(row[8]),
-                number(row[9]).longValue()
+                number(row[9]).longValue(),
+                String.valueOf(row[10]),
+                number(row[11]).longValue(),
+                row[12] == null ? null : number(row[12]).longValue(),
+                (String) row[13]
         );
     }
 

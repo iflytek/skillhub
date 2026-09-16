@@ -2,6 +2,9 @@ package com.iflytek.skillhub.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -131,5 +134,36 @@ class JpaMySkillQueryRepositoryTest {
         assertThat(responses.get(0).namespace()).isNull();
         assertThat(responses.get(0).publishedVersion()).isNotNull();
         assertThat(responses.get(0).canSubmitPromotion()).isFalse();
+    }
+
+    @Test
+    void getHiddenSkillSummaries_batchesPublishedVersionProjection() {
+        Skill first = new Skill(101L, "first-hidden", "owner-1", SkillVisibility.PUBLIC);
+        Skill second = new Skill(101L, "second-hidden", "owner-2", SkillVisibility.PUBLIC);
+        ReflectionTestUtils.setField(first, "id", 10L);
+        ReflectionTestUtils.setField(second, "id", 20L);
+        first.setLatestVersionId(110L);
+        second.setLatestVersionId(120L);
+
+        SkillVersion firstVersion = new SkillVersion(10L, "1.0.0", "owner-1");
+        SkillVersion secondVersion = new SkillVersion(20L, "2.0.0", "owner-2");
+        firstVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        secondVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(firstVersion, "id", 110L);
+        ReflectionTestUtils.setField(secondVersion, "id", 120L);
+
+        Namespace namespace = new Namespace("team-ai", "Team AI", "owner-1");
+        ReflectionTestUtils.setField(namespace, "id", 101L);
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+        given(skillVersionRepository.findByIdIn(List.of(110L, 120L)))
+                .willReturn(List.of(firstVersion, secondVersion));
+
+        var responses = repository.getHiddenSkillSummaries(List.of(first, second));
+
+        assertThat(responses).extracting("slug").containsExactly("first-hidden", "second-hidden");
+        assertThat(responses).allMatch(response -> !response.canSubmitPromotion());
+        verify(skillVersionRepository).findByIdIn(List.of(110L, 120L));
+        verifyNoMoreInteractions(skillVersionRepository);
+        verifyNoInteractions(promotionRequestRepository);
     }
 }

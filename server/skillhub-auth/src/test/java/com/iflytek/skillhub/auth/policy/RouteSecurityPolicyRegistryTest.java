@@ -65,6 +65,45 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void suiteRoutes_keepDiscoveryPublicAndProtectMutations() {
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/v1/resources"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/web/resources"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("GET", "/api/web/me/suites"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("GET", "/api/v1/suites/global/starter"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
+                registry.accessLevel("POST", "/api/v1/suites/global/starter/install-plan"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("GET", "/api/v1/suites/member-candidates"));
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
+                registry.accessLevel("POST", "/api/v1/suites"));
+    }
+
+    @Test
+    void suiteApiTokenPolicies_requirePublishScopeAndKeepReviewSessionOnly() {
+        assertTrue(registry.authorizeApiToken(
+                "GET", "/api/v1/suites/global/starter", Set.of()).allowed());
+        assertTrue(registry.authorizeApiToken(
+                "POST", "/api/v1/suites/global/starter/install-plan", Set.of()).allowed());
+
+        var deniedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("skill:read"));
+        var allowedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("skill:publish"));
+        var deniedSubmit = registry.authorizeApiToken(
+                "POST", "/api/v1/suites/8/versions/42/submit", Set.of("skill:read"));
+
+        assertFalse(deniedCreate.allowed());
+        assertEquals("skill:publish", deniedCreate.requiredScope());
+        assertTrue(allowedCreate.allowed());
+        assertFalse(deniedSubmit.allowed());
+        assertEquals("skill:publish", deniedSubmit.requiredScope());
+        assertFalse(registry.authorizeApiToken(
+                "POST", "/api/v1/suites/reviews/7/approve", ALL_SCOPES).allowed());
+    }
+
+    @Test
     void authorizeApiToken_requiresPublishScopeForSecurityScanRetry() {
         var denied = registry.authorizeApiToken(
                 "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:read"));

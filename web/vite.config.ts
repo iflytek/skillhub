@@ -10,22 +10,33 @@ const basePath = validateBasePath(process.env.VITE_BASE_PATH ?? '/')
 const guideTemplate = readFileSync(path.resolve(__dirname, 'src/docs/skill.md.template'), 'utf8')
 const safeHostPattern = /^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?$/
 
-function installGuideDevPlugin(): Plugin {
+function registryGuidePlugin(): Plugin {
   const basePrefix = basePath === '/' ? '' : basePath.slice(0, -1)
-  const guidePaths = new Set([
-    `${basePrefix}/install/skillhub.md`,
-    `${basePrefix}/registry/skill.md`,
-  ])
+  const guidePath = `${basePrefix}/registry/skill.md`
+  const guideTemplatePath = `${basePrefix}/registry/skill.md.template`
 
   return {
-    name: 'skillhub-install-guide-dev',
+    name: 'skillhub-cli-guide',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'registry/skill.md',
+        source: guideTemplate,
+      })
+    },
     configureServer(server) {
-      // Install after Vite's built-in Host check so an untrusted Host can never
-      // be reflected into CLI commands. originalUrl survives SPA/base rewrites.
+      // Install after Vite's built-in Host check and reject malformed Host
+      // values consistently with the production route. originalUrl survives
+      // SPA/base rewrites.
       return () => {
         server.middlewares.use((request, response, next) => {
           const requestPath = new URL(request.originalUrl ?? request.url ?? '/', 'http://localhost').pathname
-          if (!guidePaths.has(requestPath)) {
+          if (requestPath === guideTemplatePath) {
+            response.statusCode = 404
+            response.end('Not Found')
+            return
+          }
+          if (requestPath !== guidePath) {
             next()
             return
           }
@@ -37,12 +48,10 @@ function installGuideDevPlugin(): Plugin {
             return
           }
 
-          const publicBaseUrl = `http://${host}${basePrefix}`
-          const guide = guideTemplate.replaceAll('${SKILLHUB_PUBLIC_BASE_URL}', publicBaseUrl)
           response.statusCode = 200
           response.setHeader('Content-Type', 'text/markdown; charset=utf-8')
           response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-          response.end(guide)
+          response.end(guideTemplate)
         })
       }
     },
@@ -51,7 +60,7 @@ function installGuideDevPlugin(): Plugin {
 
 export default defineConfig({
   base: basePath,
-  plugins: [installGuideDevPlugin(), react()],
+  plugins: [registryGuidePlugin(), react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

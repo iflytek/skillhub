@@ -19,6 +19,12 @@
       "sha256": "19fd699fc5e67469bb764d5f695894c1a39e49055060152aa6168629ca0f0ea5"
     },
     {
+      "slug": "cue-omni-reader",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-10/005725ab-145f-44c1-8325-aea268086156/1789021777994/3db1824b213292c7b858e84f591ead0b07fc6862aec33fb6cc95ab6dfc086c83.zip",
+      "sha256": "3db1824b213292c7b858e84f591ead0b07fc6862aec33fb6cc95ab6dfc086c83"
+    },
+    {
       "slug": "daily-standup-journal",
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/c6dc807b-5255-4aa9-8bdd-a708b9d159a6/skillhub-builtin-skills/daily-standup-journal/1.0.0/fd365dd3e1a4302044839bf3317c262c4bad650e0a677b7a1ca1d1ad5b8ab1bd.zip",
@@ -79,6 +85,18 @@
       "sha256": "8e1b21f9c02312378da4d5493297d98a2ce40ba03f83a51e24c97ad53f144dc1"
     },
     {
+      "slug": "sandbase",
+      "version": "0.1.17",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-10/0cc7b9c3-0e02-4a38-abe9-165e3bf512fb/1789021760801/434325f0b6c7c0b0c32c5608cd76f4fdf2de9e18a703450c80958fa58f970539.zip",
+      "sha256": "434325f0b6c7c0b0c32c5608cd76f4fdf2de9e18a703450c80958fa58f970539"
+    },
+    {
+      "slug": "skillhub-cli",
+      "version": "2.0.2",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-09/53469f90-68ea-4fb2-8a9d-9b129e7de240/1788951840562/4c3d788f83163877e5f4e0607bc2cfa09eb5bb81627e3d690d59d02ba8cf6c49.zip",
+      "sha256": "4c3d788f83163877e5f4e0607bc2cfa09eb5bb81627e3d690d59d02ba8cf6c49"
+    },
+    {
       "slug": "storytelling-advisor",
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/12e1eaea-cffc-4d67-b452-5383868475d2/skillhub-builtin-skills/storytelling-advisor/1.0.0/c44427e0a45e3a63dc47fb2a58e9b40f9db7a6d29715fc38a2d6162e89cd4be3.zip",
@@ -107,6 +125,12 @@
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/0170ce8f-ad41-4819-bc50-9b572b1c6510/skillhub-builtin-skills/weather/1.0.0/181e36c0fd6ca5f6cdf224276dd12e0fd203f83456a988a6bcf15cc4f3c20dd6.zip",
       "sha256": "181e36c0fd6ca5f6cdf224276dd12e0fd203f83456a988a6bcf15cc4f3c20dd6"
+    },
+    {
+      "slug": "zero-slop",
+      "version": "2.10.2",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-10/2abb2bab-737c-479e-9c79-d153a140e30b/1789010150588/d84fea7cd1ee53f6582889c89877d9423c1a79b419553f4626e7ab6409da10b0.zip",
+      "sha256": "d84fea7cd1ee53f6582889c89877d9423c1a79b419553f4626e7ab6409da10b0"
     }
   ]
 }

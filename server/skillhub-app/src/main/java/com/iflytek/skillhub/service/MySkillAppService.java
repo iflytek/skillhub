@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import com.iflytek.skillhub.domain.social.SkillSubscriptionRepository;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
+import com.iflytek.skillhub.repository.HiddenSkillQueryRepository;
 import com.iflytek.skillhub.repository.MySkillQueryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -37,6 +38,7 @@ public class MySkillAppService {
     private final SkillStarRepository skillStarRepository;
     private final SkillSubscriptionRepository skillSubscriptionRepository;
     private final MySkillQueryRepository mySkillQueryRepository;
+    private final HiddenSkillQueryRepository hiddenSkillQueryRepository;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
     private final NamespaceRepository namespaceRepository;
 
@@ -46,6 +48,7 @@ public class MySkillAppService {
             SkillStarRepository skillStarRepository,
             SkillSubscriptionRepository skillSubscriptionRepository,
             MySkillQueryRepository mySkillQueryRepository,
+            HiddenSkillQueryRepository hiddenSkillQueryRepository,
             SkillLifecycleProjectionService skillLifecycleProjectionService,
             NamespaceRepository namespaceRepository) {
         this.skillRepository = skillRepository;
@@ -53,6 +56,7 @@ public class MySkillAppService {
         this.skillStarRepository = skillStarRepository;
         this.skillSubscriptionRepository = skillSubscriptionRepository;
         this.mySkillQueryRepository = mySkillQueryRepository;
+        this.hiddenSkillQueryRepository = hiddenSkillQueryRepository;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
         this.namespaceRepository = namespaceRepository;
     }
@@ -79,17 +83,34 @@ public class MySkillAppService {
         MySkillFilter normalizedFilter = parseFilter(filter);
 
         Page<Skill> skillPage;
-        if (normalizedFilter == MySkillFilter.ALL
+        if (normalizedFilter == MySkillFilter.HIDDEN) {
+            skillPage = listHiddenSkills(page, size, keyword, namespace, platformRoles);
+        } else if (normalizedFilter == MySkillFilter.ALL
                 && (keyword == null || keyword.isBlank())
                 && (namespace == null || namespace.isBlank())) {
-            skillPage = skillRepository.findByOwnerId(userId, PageRequest.of(page, size));
+            skillPage = skillRepository.findVisibleByOwnerId(userId, PageRequest.of(page, size));
         } else {
             skillPage = filterSkills(userId, page, size, normalizedFilter, keyword, namespace, platformRoles);
         }
 
-        List<SkillSummaryResponse> items = mySkillQueryRepository.getSkillSummaries(skillPage.getContent(), userId);
+        List<SkillSummaryResponse> items = normalizedFilter == MySkillFilter.HIDDEN
+                ? mySkillQueryRepository.getHiddenSkillSummaries(skillPage.getContent())
+                : mySkillQueryRepository.getSkillSummaries(skillPage.getContent(), userId);
 
         return new PageResponse<>(items, skillPage.getTotalElements(), skillPage.getNumber(), skillPage.getSize());
+    }
+
+    private Page<Skill> listHiddenSkills(int page,
+                                         int size,
+                                         String keyword,
+                                         String namespace,
+                                         java.util.Set<String> platformRoles) {
+        PageRequest pageable = PageRequest.of(page, size);
+        if (!platformRoles.contains("SUPER_ADMIN")) {
+            return Page.empty(pageable);
+        }
+        Long namespaceId = resolveNamespaceId(namespace);
+        return hiddenSkillQueryRepository.search(normalizeKeyword(keyword), namespaceId, pageable);
     }
 
     public PageResponse<SkillSummaryResponse> listMyStars(String userId, int page, int size) {
@@ -150,17 +171,10 @@ public class MySkillAppService {
         List<Skill> skills = skillRepository.findByOwnerId(userId);
 
         // Namespace filter
-        Long namespaceId = null;
-        if (namespace != null && !namespace.isBlank()) {
-            namespaceId = namespaceRepository.findBySlug(namespace.trim())
-                    .map(Namespace::getId)
-                    .orElse(-1L);
-        }
+        Long namespaceId = resolveNamespaceId(namespace);
 
         final Long finalNamespaceId = namespaceId;
-        String normalizedKeyword = keyword != null && !keyword.isBlank()
-                ? keyword.trim().toLowerCase(java.util.Locale.ROOT)
-                : null;
+        String normalizedKeyword = normalizeKeyword(keyword);
 
         List<Skill> filtered = skills.stream()
                 .filter(skill -> matchesNamespace(skill, finalNamespaceId))
@@ -168,13 +182,28 @@ public class MySkillAppService {
                 .filter(skill -> matchesFilter(skill, filter, platformRoles))
                 .toList();
 
-        int fromIndex = Math.min(page * size, filtered.size());
-        int toIndex = Math.min(fromIndex + size, filtered.size());
-        return new PageImpl<>(
-                filtered.subList(fromIndex, toIndex),
-                PageRequest.of(page, size),
-                filtered.size()
-        );
+        return page(filtered, page, size);
+    }
+
+    private Long resolveNamespaceId(String namespace) {
+        if (namespace == null || namespace.isBlank()) {
+            return null;
+        }
+        return namespaceRepository.findBySlug(namespace.trim())
+                .map(Namespace::getId)
+                .orElse(-1L);
+    }
+
+    private String normalizeKeyword(String keyword) {
+        return keyword != null && !keyword.isBlank()
+                ? keyword.trim().toLowerCase(java.util.Locale.ROOT)
+                : null;
+    }
+
+    private Page<Skill> page(List<Skill> skills, int page, int size) {
+        int fromIndex = Math.min(page * size, skills.size());
+        int toIndex = Math.min(fromIndex + size, skills.size());
+        return new PageImpl<>(skills.subList(fromIndex, toIndex), PageRequest.of(page, size), skills.size());
     }
 
     private boolean matchesNamespace(Skill skill, Long namespaceId) {

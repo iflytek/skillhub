@@ -77,25 +77,14 @@ server {
     location = /registry/skill.md {
         default_type text/plain;
         include /etc/nginx/skillhub-guide-public-url*.conf;
-        sub_filter_types text/plain;
-        sub_filter_once off;
-        sub_filter '__SKILLHUB_PUBLIC_BASE_URL__' '$proxy_x_forwarded_proto://$http_host$skillhub_forwarded_prefix';
         add_header Cache-Control "no-cache";
         add_header Content-Disposition "inline";
         add_header X-Content-Type-Options "nosniff";
         try_files $uri =404;
     }
 
-    location = /install/skillhub.md {
-        default_type text/plain;
-        include /etc/nginx/skillhub-guide-public-url*.conf;
-        sub_filter_types text/plain;
-        sub_filter_once off;
-        sub_filter '__SKILLHUB_PUBLIC_BASE_URL__' '$proxy_x_forwarded_proto://$http_host$skillhub_forwarded_prefix';
-        add_header Cache-Control "no-cache";
-        add_header Content-Disposition "inline";
-        add_header X-Content-Type-Options "nosniff";
-        try_files $uri =404;
+    location = /registry/skill.md.template {
+        return 404;
     }
 
     location = /runtime-config.js {

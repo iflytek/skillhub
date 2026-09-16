@@ -37,6 +37,14 @@ fi
 grep -Fq 'fsGroup: 101' "$TMP_DIR/default.yaml"
 grep -Fq 'fsGroupChangePolicy: OnRootMismatch' "$TMP_DIR/default.yaml"
 grep -Fq 'type: Recreate' "$TMP_DIR/default.yaml"
+grep -A1 -F 'name: SKILLHUB_SUITE_REVIEW_WRITES_ENABLED' "$TMP_DIR/default.yaml" \
+  | grep -Fq 'value: "false"'
+
+render suite-review-enabled "$CHART_DIR" \
+  --set server.suiteReviewWritesEnabled=true \
+  --show-only templates/server-deployment.yaml >"$TMP_DIR/suite-review-enabled.yaml"
+grep -A1 -F 'name: SKILLHUB_SUITE_REVIEW_WRITES_ENABLED' "$TMP_DIR/suite-review-enabled.yaml" \
+  | grep -Fq 'value: "true"'
 
 render custom-server-fsgroup "$CHART_DIR" \
   --set server.podSecurityContext.fsGroup=2000 \

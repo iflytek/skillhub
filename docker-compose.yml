@@ -40,7 +40,7 @@ services:
       retries: 5
 
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:latest}
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:latest}
     ports:
       - "9000:9000"
       - "9001:9001"

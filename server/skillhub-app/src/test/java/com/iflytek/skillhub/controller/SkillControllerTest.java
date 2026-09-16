@@ -8,7 +8,9 @@ import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.dto.SkillSuiteReferenceResponse;
 import com.iflytek.skillhub.service.SkillLabelAppService;
+import com.iflytek.skillhub.service.SkillSuiteAppService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -49,6 +51,9 @@ class SkillControllerTest {
 
     @MockBean
     private SkillLabelAppService skillLabelAppService;
+
+    @MockBean
+    private SkillSuiteAppService skillSuiteAppService;
 
     @Test
     void getVersionDetailShouldReturnMetadataFields() throws Exception {
@@ -183,6 +188,10 @@ class SkillControllerTest {
                         null,
                         "OWNER_PREVIEW"
                 ));
+        when(skillSuiteAppService.findVisibleEntryReferences(
+                eq(1L), eq((String) null), eq(Map.of()), anySet()))
+                .thenReturn(List.of(new SkillSuiteReferenceResponse(
+                        9L, "team", "demo-suite", "Demo Suite", "2.0.0", 3)));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
@@ -192,6 +201,9 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data.headlineVersion.version").value("1.1.0"))
                 .andExpect(jsonPath("$.data.ownerPreviewVersion.id").value(11L))
                 .andExpect(jsonPath("$.data.resolutionMode").value("OWNER_PREVIEW"))
+                .andExpect(jsonPath("$.data.entryForSuites[0].slug").value("demo-suite"))
+                .andExpect(jsonPath("$.data.entryForSuites[0].version").value("2.0.0"))
+                .andExpect(jsonPath("$.data.entryForSuites[0].memberCount").value(3))
                 .andExpect(jsonPath("$.data.canInteract").value(false))
                 .andExpect(jsonPath("$.data.canReport").value(false));
     }

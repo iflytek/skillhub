@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.SkillFile;
@@ -24,6 +25,7 @@ import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.SkillLabelAppService;
 import com.iflytek.skillhub.service.ComplianceSnapshotProjectionService;
+import com.iflytek.skillhub.service.SkillSuiteAppService;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -38,6 +41,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +56,7 @@ public class SkillController extends BaseApiController {
     private final SkillDownloadService skillDownloadService;
     private final SkillLabelAppService skillLabelAppService;
     private final ComplianceSnapshotProjectionService complianceSnapshotProjectionService;
+    private final SkillSuiteAppService skillSuiteAppService;
     private final SkillHubMetrics metrics;
 
     public SkillController(
@@ -59,6 +64,7 @@ public class SkillController extends BaseApiController {
             SkillDownloadService skillDownloadService,
             SkillLabelAppService skillLabelAppService,
             ComplianceSnapshotProjectionService complianceSnapshotProjectionService,
+            SkillSuiteAppService skillSuiteAppService,
             SkillHubMetrics metrics,
             ApiResponseFactory responseFactory) {
         super(responseFactory);
@@ -66,6 +72,7 @@ public class SkillController extends BaseApiController {
         this.skillDownloadService = skillDownloadService;
         this.skillLabelAppService = skillLabelAppService;
         this.complianceSnapshotProjectionService = complianceSnapshotProjectionService;
+        this.skillSuiteAppService = skillSuiteAppService;
         this.metrics = metrics;
     }
 
@@ -78,10 +85,12 @@ public class SkillController extends BaseApiController {
             @PathVariable String namespace,
             @PathVariable String slug,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @AuthenticationPrincipal PlatformPrincipal principal) {
 
+        Map<Long, NamespaceRole> namespaceRoles = userNsRoles != null ? userNsRoles : Map.of();
         SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
-                namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of());
+                namespace, slug, userId, namespaceRoles);
 
         SkillDetailResponse response = new SkillDetailResponse(
                 detail.id(),
@@ -108,7 +117,11 @@ public class SkillController extends BaseApiController {
                 toLifecycleVersion(detail.publishedVersion()),
                 toLifecycleVersion(detail.ownerPreviewVersion()),
                 detail.ownerPreviewReviewComment(),
-                detail.resolutionMode()
+                detail.resolutionMode(),
+                skillSuiteAppService.findVisibleEntryReferences(
+                        detail.id(), userId, namespaceRoles,
+                        principal == null || principal.platformRoles() == null
+                                ? Set.of() : principal.platformRoles())
         );
 
         return ok("response.success.read", response);

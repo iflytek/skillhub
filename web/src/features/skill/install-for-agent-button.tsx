@@ -20,7 +20,7 @@ export function buildAgentInstallPrompt(
   formatPrompt: FormatAgentPrompt,
 ): string {
   const skill = buildSkillhubCoordinate(namespace, slug)
-  const guideUrl = `${baseUrl.replace(/\/+$/, '')}/install/skillhub.md`
+  const guideUrl = `${baseUrl.replace(/\/+$/, '')}/registry/skill.md`
 
   return formatPrompt(guideUrl, skill, version)
 }

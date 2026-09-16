@@ -86,6 +86,10 @@ skillhub login --token sk_xxx --registry https://skillhub.example.com
 
 `login` validates the token, stores it in `~/.skillhub/credentials.json`, and writes the registry to `~/.skillhub/config.json`.
 
+Both files are updated non-destructively: SkillHub CLI changes only its own `tokens` and `registry`
+fields and preserves unknown fields written by other compatible tools. This allows tools that share
+the `~/.skillhub` directory to keep independently named state in the same JSON documents.
+
 ### Check Current Identity
 
 ```bash
@@ -165,6 +169,9 @@ skillhub install pdf-parser --version 1.2.0
 # Install to specific Agent
 skillhub install pdf-parser --agent codex
 
+# Install to AStudio's fixed user-level directory
+skillhub install pdf-parser --agent astudio
+
 # Install to multiple Agents
 skillhub install pdf-parser --agent codex --agent claude-code
 
@@ -193,10 +200,11 @@ The CLI determines the installation location using the following logic:
 
 ### Install Paths
 
-Each Agent has both project-level and user-level skills directories. Use `--scope user|project` to control which one is used.
+Most Agents have both project-level and user-level skills directories. Use `--scope user|project` to control which one is used. AStudio uses its fixed user-level directory only.
 
 | Agent | Project-level Path | User-level Path |
 |-------|-------------------|-----------------|
+| `astudio` (AStudio) | Not supported | `~/.acode/skills/` |
 | `claude-code` | `<project>/.claude/skills/` | `~/.claude/skills/` |
 | `codex` | `<project>/.codex/skills/` | `~/.codex/skills/` |
 | `cursor` | `<project>/.cursor/skills/` | `~/.cursor/skills/` |
@@ -213,7 +221,7 @@ Each Agent has both project-level and user-level skills directories. Use `--scop
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
-For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
+For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. AStudio appears in that selector when `~/.acode/skills/` exists. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
 
 ### File Structure After Installation
 
@@ -252,10 +260,10 @@ installs a missing Skill and has no implicit upgrade-all mode.
 
 ```bash
 # Preview without changing files
-skillhub upgrade @global/skillhub-registry --check
+skillhub upgrade @global/skillhub-cli --check
 
 # Upgrade one or a bounded list of installed Skills
-skillhub upgrade @global/skillhub-registry
+skillhub upgrade @global/skillhub-cli
 skillhub upgrade @team/code-review @team/java-guide
 
 # Machine-readable plan

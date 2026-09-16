@@ -200,7 +200,8 @@ class ReviewPortalControllerTest {
                                 new SkillLifecycleVersionResponse(99L, "1.1.0", "PUBLISHED"),
                                 new SkillLifecycleVersionResponse(100L, "1.2.0", "PENDING_REVIEW"),
                                 null,
-                                "REVIEW_TASK"
+                                "REVIEW_TASK",
+                                List.of()
                         ),
                         List.of(new SkillVersionResponse(100L, "1.2.0", "PENDING_REVIEW", null, 1, 10L, null, true, null)),
                         List.of(new SkillFileResponse(1L, "README.md", 123L, "text/markdown", "sha")),

@@ -24,6 +24,8 @@ spring:
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
 
 skillhub:
+  suite:
+    review-writes-enabled: ${SKILLHUB_SUITE_REVIEW_WRITES_ENABLED:true}
   auth:
     mock:
       enabled: true

@@ -622,6 +622,34 @@ public class SkillQueryService {
         );
     }
 
+    /** Resolves the exact version selected by an authenticated authoring flow. */
+    public ResolvedVersionDTO resolveVersionById(
+            Long versionId,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles
+    ) {
+        SkillVersion version = skillVersionRepository.findById(versionId)
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionId));
+        Skill skill = skillRepository.findById(version.getSkillId())
+                .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", version.getSkillId()));
+        Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
+                .orElseThrow(() -> new DomainBadRequestException(
+                        "error.namespace.id.notFound", skill.getNamespaceId()));
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, platformRoles);
+        assertInstallableVersion(version, version.getVersion());
+        String fingerprint = computeFingerprint(version);
+        return new ResolvedVersionDTO(
+                skill.getId(), namespace.getSlug(), skill.getSlug(), version.getVersion(), version.getId(),
+                fingerprint, null,
+                String.format(
+                        "/api/v1/skills/%s/%s/versions/%s/download",
+                        encodePathSegment(namespace.getSlug()),
+                        encodePathSegment(skill.getSlug()),
+                        encodePathSegment(version.getVersion()))
+        );
+    }
+
     private Namespace findNamespace(String slug) {
         return namespaceRepository.findBySlug(slug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", slug));
@@ -854,6 +882,15 @@ public class SkillQueryService {
             Skill skill,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles, Set.of());
+    }
+
+    private void assertPublishedAccessible(
+            Namespace namespace,
+            Skill skill,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED && !isNamespaceMember(skill.getNamespaceId(), currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.namespace.archived", namespace.getSlug());
         }
@@ -863,7 +900,7 @@ public class SkillQueryService {
         if (skill.isHidden() && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
-        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
+        if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles, platformRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
     }

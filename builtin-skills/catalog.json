@@ -12,6 +12,16 @@
       }
     },
     {
+      "slug": "cue-omni-reader",
+      "version": "1.0.0",
+      "license": "MIT",
+      "upstream": {
+        "repository": "https://github.com/sensedeal/cue-skills",
+        "commit": "475c249f5d966dd9a4aba02d8af16b90e33ad1fe",
+        "path": "cue-omni-reader"
+      }
+    },
+    {
       "slug": "daily-standup-journal",
       "version": "1.0.0",
       "license": "MIT",
@@ -112,6 +122,26 @@
       }
     },
     {
+      "slug": "sandbase",
+      "version": "0.1.17",
+      "license": "Apache-2.0",
+      "upstream": {
+        "repository": "https://github.com/sandbaseai/cli",
+        "commit": "99a2f8102ce67f82080f67862d8ea81b87b37203",
+        "path": "skills/sandbase"
+      }
+    },
+    {
+      "slug": "skillhub-cli",
+      "version": "2.0.2",
+      "license": "Apache-2.0",
+      "upstream": {
+        "repository": "https://github.com/iflytek/skillhub",
+        "commit": "42a0e423f4ac01e5e7e0801c786735cdd4a818cf",
+        "path": "web/src/docs/skill.md"
+      }
+    },
+    {
       "slug": "storytelling-advisor",
       "version": "1.0.0",
       "license": "MIT",
@@ -159,6 +189,16 @@
         "repository": "https://github.com/openclaw/openclaw",
         "commit": "62cbbcc800214f05cdc4b97debdf7339bfa7c5f4",
         "path": "skills/weather"
+      }
+    },
+    {
+      "slug": "zero-slop",
+      "version": "2.10.2",
+      "license": "MIT",
+      "upstream": {
+        "repository": "https://github.com/manavmishra/ZeroSlop",
+        "commit": "f936fbaf7f162073299ed5f9bc1c536a2ba29caa",
+        "path": "."
       }
     }
   ]

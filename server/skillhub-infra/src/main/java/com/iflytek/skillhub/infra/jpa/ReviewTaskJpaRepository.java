@@ -3,6 +3,7 @@ package com.iflytek.skillhub.infra.jpa;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.review.ReviewSubjectType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,6 +24,10 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
 
     Optional<ReviewTask> findBySkillVersionIdAndStatus(Long skillVersionId, ReviewTaskStatus status);
 
+    @Override
+    Optional<ReviewTask> findBySubjectTypeAndSubjectVersionIdAndStatus(
+            ReviewSubjectType subjectType, Long subjectVersionId, ReviewTaskStatus status);
+
     Page<ReviewTask> findByStatus(ReviewTaskStatus status, Pageable pageable);
 
     Page<ReviewTask> findByNamespaceIdAndStatus(Long namespaceId, ReviewTaskStatus status, Pageable pageable);
@@ -35,13 +40,27 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
     List<ReviewTask> findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
             Long skillId, String skillVersion);
 
+    List<ReviewTask> findBySubmittedByAndSubjectTypeAndSubjectIdAndSubjectVersionOrderBySubmittedAtDescIdDesc(
+            String submittedBy,
+            ReviewSubjectType subjectType,
+            Long subjectId,
+            String subjectVersion);
+
+    List<ReviewTask> findBySubjectTypeAndSubjectIdAndSubjectVersionOrderBySubmittedAtDescIdDesc(
+            ReviewSubjectType subjectType,
+            Long subjectId,
+            String subjectVersion);
+
     boolean existsByNamespaceId(Long namespaceId);
 
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
 
     void deleteBySkillId(Long skillId);
 
-    @Modifying
+    @Override
+    void deleteBySubjectTypeAndSubjectId(ReviewSubjectType subjectType, Long subjectId);
+
+    @Modifying(clearAutomatically = true)
     @Query("""
         UPDATE ReviewTask t
         SET t.status = :status,

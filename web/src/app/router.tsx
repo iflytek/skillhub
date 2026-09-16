@@ -20,12 +20,29 @@ const ORIGINAL_URL_SEARCH = typeof window !== 'undefined' ? window.location.sear
 // Export for use in cli-auth page
 export { ORIGINAL_URL_SEARCH }
 
+function RouteLoadingFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+      Loading...
+    </div>
+  )
+}
+
+function SilentRouteFallback() {
+  return <div className="min-h-[40vh]" aria-hidden />
+}
+
+interface LazyRouteOptions {
+  silentFallback?: boolean
+}
+
 function createLazyRouteComponent<TModule extends Record<string, unknown>>(
   importer: () => Promise<TModule>,
   exportName: keyof TModule,
+  options: LazyRouteOptions = {},
 ) {
-  // Lazy route modules are wrapped in a uniform suspense fallback so route transitions behave
-  // consistently across public and dashboard pages.
+  // Most pages keep the visible route fallback. Dashboard-like tab pages can opt into a silent
+  // route fallback so their own local data skeleton remains the only loading state users see.
   const LazyComponent = lazy(async () => {
     const module = await importer().catch((error) => {
       if (recoverFromDynamicImportError(error)) {
@@ -41,13 +58,7 @@ function createLazyRouteComponent<TModule extends Record<string, unknown>>(
 
   return function LazyRouteComponent(props: Record<string, unknown>) {
     return (
-      <Suspense
-        fallback={
-          <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-            Loading...
-          </div>
-        }
-      >
+      <Suspense fallback={options.silentFallback ? <SilentRouteFallback /> : <RouteLoadingFallback />}>
         <LazyComponent {...props} />
       </Suspense>
     )
@@ -58,9 +69,10 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
   importer: () => Promise<TModule>,
   exportName: keyof TModule,
   allowedRoles: readonly string[],
+  options: LazyRouteOptions = {},
 ) {
   // Role checks stay at the route edge so page modules can assume the minimum permission level.
-  const RouteComponent = createLazyRouteComponent(importer, exportName)
+  const RouteComponent = createLazyRouteComponent(importer, exportName, options)
 
   return function RoleProtectedRouteComponent(props: Record<string, unknown>) {
     return (
@@ -78,62 +90,96 @@ const RegisterPage = createLazyRouteComponent(() => import('@/pages/register'), 
 const ResetPasswordPage = createLazyRouteComponent(() => import('@/pages/reset-password'), 'ResetPasswordPage')
 const PrivacyPolicyPage = createLazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
 const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'SearchPage')
+const SuitesPage = createLazyRouteComponent(() => import('@/pages/suites'), 'SuitesPage')
+const SuiteDetailPage = createLazyRouteComponent(() => import('@/pages/suite-detail'), 'SuiteDetailPage')
 const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
 const SkillVersionComparePage = createLazyRouteComponent(() => import('@/pages/skill-version-compare'), 'SkillVersionComparePage')
-const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
-const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
-const PublishPage = createLazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
+const dashboardRouteOptions = { silentFallback: true } satisfies LazyRouteOptions
+
+const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage', dashboardRouteOptions)
+const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage', dashboardRouteOptions)
+const PublishPage = createLazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage', dashboardRouteOptions)
+const SuiteCreatePage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/suite-editor'),
+  'SuiteCreatePage',
+  dashboardRouteOptions,
+)
+const SuiteEditPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/suite-editor'),
+  'SuiteEditPage',
+  dashboardRouteOptions,
+)
+const SuiteVersionCreatePage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/suite-editor'),
+  'SuiteVersionCreatePage',
+  dashboardRouteOptions,
+)
+const MySuitesPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/my-suites'),
+  'MySuitesPage',
+  dashboardRouteOptions,
+)
 const MyNamespacesPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/my-namespaces'),
   'MyNamespacesPage',
+  dashboardRouteOptions,
 )
 const NamespaceMembersPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-members'),
   'NamespaceMembersPage',
+  dashboardRouteOptions,
 )
 const NamespaceReviewsPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-reviews'),
   'NamespaceReviewsPage',
+  dashboardRouteOptions,
 )
 const NamespaceReviewDetailPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/review-detail'),
   'NamespaceReviewDetailPage',
+  dashboardRouteOptions,
 )
-const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage')
-const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage')
+const GovernancePage = createLazyRouteComponent(() => import('@/pages/dashboard/governance'), 'GovernancePage', dashboardRouteOptions)
+const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage', dashboardRouteOptions)
 const ReviewProgressPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/review-progress'),
   'ReviewProgressPage',
+  dashboardRouteOptions,
 )
 const ReportsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/reports'),
   'ReportsPage',
   ['SKILL_ADMIN', 'SUPER_ADMIN'],
+  dashboardRouteOptions,
 )
-const ReviewDetailPage = createLazyRouteComponent(() => import('@/pages/dashboard/review-detail'), 'ReviewDetailPage')
+const ReviewDetailPage = createLazyRouteComponent(() => import('@/pages/dashboard/review-detail'), 'ReviewDetailPage', dashboardRouteOptions)
 const PromotionsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/promotions'),
   'PromotionsPage',
   ['SKILL_ADMIN', 'SUPER_ADMIN'],
+  dashboardRouteOptions,
 )
-const MyStarsPage = createLazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage')
-const MySubscriptionsPage = createLazyRouteComponent(() => import('@/pages/dashboard/subscriptions'), 'MySubscriptionsPage')
+const MyStarsPage = createLazyRouteComponent(() => import('@/pages/dashboard/stars'), 'MyStarsPage', dashboardRouteOptions)
+const MySubscriptionsPage = createLazyRouteComponent(() => import('@/pages/dashboard/subscriptions'), 'MySubscriptionsPage', dashboardRouteOptions)
 const NotificationsPage = createLazyRouteComponent(() => import('@/pages/notifications'), 'NotificationsPage')
-const TokensPage = createLazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage')
+const TokensPage = createLazyRouteComponent(() => import('@/pages/dashboard/tokens'), 'TokensPage', dashboardRouteOptions)
 const CliAuthPage = createLazyRouteComponent(() => import('@/pages/cli-auth'), 'CliAuthPage')
 const SecuritySettingsPage = createLazyRouteComponent(
   () => import('@/pages/settings/security'),
   'SecuritySettingsPage',
+  dashboardRouteOptions,
 )
 const ProfileSettingsPage = createLazyRouteComponent(
   () => import('@/pages/settings/profile'),
   'ProfileSettingsPage',
+  dashboardRouteOptions,
 )
 const NotificationSettingsPage = createLazyRouteComponent(
   () => import('@/pages/settings/notification-settings'),
   'NotificationSettingsPage',
+  dashboardRouteOptions,
 )
 const AdminUsersPage = createRoleProtectedRouteComponent(
   () => import('@/pages/admin/users'),
@@ -231,6 +277,21 @@ const searchRoute = createRoute({
   },
 })
 
+const suitesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'suites',
+  component: SuitesPage,
+})
+
+const suiteDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/suite/$namespace/$slug',
+  validateSearch: (search: Record<string, unknown>): { version?: string } => ({
+    version: typeof search.version === 'string' && search.version ? search.version : undefined,
+  }),
+  component: SuiteDetailPage,
+})
+
 const termsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'terms',
@@ -303,6 +364,42 @@ const dashboardPublishRoute = createRoute({
       : undefined,
   }),
   component: PublishPage,
+})
+
+const dashboardSuiteCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites/new',
+  beforeLoad: requireAuth,
+  component: SuiteCreatePage,
+})
+
+const dashboardSuitesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites',
+  beforeLoad: requireAuth,
+  component: MySuitesPage,
+})
+
+const dashboardSuiteEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites/$namespace/$slug/edit',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { version: string } => ({
+    version: typeof search.version === 'string' ? search.version : '',
+  }),
+  component: SuiteEditPage,
+})
+
+const dashboardSuiteVersionCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites/$namespace/$slug/new-version',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { sourceVersion?: string } => ({
+    sourceVersion: typeof search.sourceVersion === 'string' && search.sourceVersion
+      ? search.sourceVersion
+      : undefined,
+  }),
+  component: SuiteVersionCreatePage,
 })
 
 const dashboardNamespacesRoute = createRoute({
@@ -504,6 +601,8 @@ const routeTree = rootRoute.addChildren([
   resetPasswordRoute,
   privacyRoute,
   searchRoute,
+  suitesRoute,
+  suiteDetailRoute,
   termsRoute,
   namespaceRoute,
   skillDetailRoute,
@@ -511,6 +610,10 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   dashboardSkillsRoute,
   dashboardPublishRoute,
+  dashboardSuitesRoute,
+  dashboardSuiteCreateRoute,
+  dashboardSuiteEditRoute,
+  dashboardSuiteVersionCreateRoute,
   dashboardNamespacesRoute,
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,

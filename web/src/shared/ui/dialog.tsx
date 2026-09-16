@@ -20,7 +20,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     translate="no"
-    className={cn('fixed inset-0 z-50 bg-black/60 backdrop-blur-sm', className)}
+    className={cn('fixed inset-0 z-50 bg-black/40 backdrop-blur-sm', className)}
     {...props}
   />
 ))
@@ -36,13 +36,13 @@ const DialogContent = React.forwardRef<
       ref={ref}
       translate="no"
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),32rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl border border-border/60 bg-card p-8 shadow-card',
+        'fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),30rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-2xl border border-border/40 bg-card text-card-foreground p-6 shadow-[0_20px_60px_-12px_rgb(0_0_0/0.30),0_0_0_1px_rgb(0_0_0/0.04)]',
         className
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground/60 transition-all duration-150 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none disabled:pointer-events-none">
         <span className="sr-only">Close</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +66,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = 'DialogContent'
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-1.5 text-center', className)} {...props} />
+  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
 )
 DialogHeader.displayName = 'DialogHeader'
 
@@ -81,7 +81,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-center text-xl font-bold font-heading leading-none tracking-tight', className)}
+    className={cn('text-lg font-semibold leading-tight tracking-tight', className)}
     {...props}
   />
 ))
@@ -93,7 +93,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('text-center text-sm text-muted-foreground', className)}
+    className={cn('text-sm text-muted-foreground/80', className)}
     {...props}
   />
 ))

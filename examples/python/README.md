@@ -82,4 +82,4 @@ automatically and raises `SkillHubError` on a non-zero business code.
   the `X-Request-Id` header for idempotency.
 - For the full API surface (namespaces, reviews, promotion, tags), see the
   [Developer Docs → API](https://iflytek.github.io/skillhub/) and
-  [`document/docs/04-developer/api`](../../document/docs/04-developer/api).
+  [API design reference](../../docs/06-api-design.md).

@@ -64,7 +64,7 @@ test.describe('Public Skill Detail Anonymous Access (Real API)', () => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: registryUrl })
     await page.getByTestId('install-for-agent-button').click()
     const agentPrompt = await page.evaluate(() => navigator.clipboard.readText())
-    expect(agentPrompt).toContain(`${registryUrl}/install/skillhub.md`)
+    expect(agentPrompt).toContain(`${registryUrl}/registry/skill.md`)
     expect(agentPrompt).toContain(skillhubCoordinate)
     expect(agentPrompt).toContain(current.skill.version)
     expect(agentPrompt).not.toContain('explain why and stop')

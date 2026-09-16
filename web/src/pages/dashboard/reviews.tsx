@@ -158,7 +158,12 @@ export function ReviewsPage() {
                 className="cursor-pointer transition-colors hover:bg-muted/30"
                 onClick={() => handleRowClick(review.id)}
               >
-                <TableCell className="font-medium">{review.namespace}/{review.skillSlug}</TableCell>
+                <TableCell className="font-medium">
+                  <span className="mr-2 rounded-full bg-secondary px-2 py-0.5 text-xs">
+                    {t(review.subjectType === 'SUITE_VERSION' ? 'suite.resourceTypeSuite' : 'suite.resourceTypeSkill')}
+                  </span>
+                  {review.namespace}/{review.subjectSlug || review.skillSlug}
+                </TableCell>
                 <TableCell>{review.version}</TableCell>
                 <TableCell>{review.submittedByName || review.submittedBy}</TableCell>
                 {status === 'PENDING' ? (

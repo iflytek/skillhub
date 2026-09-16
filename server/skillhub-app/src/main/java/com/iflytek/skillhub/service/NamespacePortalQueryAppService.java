@@ -104,6 +104,26 @@ public class NamespacePortalQueryAppService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<MyNamespaceResponse> listMyNamespacesPage(Pageable pageable,
+                                                                  Map<Long, NamespaceRole> userNamespaceRoles,
+                                                                  Set<String> platformRoles) {
+        Map<Long, NamespaceRole> namespaceRoles = userNamespaceRoles != null ? userNamespaceRoles : Map.of();
+        if (namespaceRoles.isEmpty()) {
+            Page<MyNamespaceResponse> empty = new PageImpl<>(List.of(), pageable, 0);
+            return PageResponse.from(empty);
+        }
+
+        Pageable sortedPageable = pageable.isPaged()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                        org.springframework.data.domain.Sort.by("slug").ascending())
+                : PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("slug").ascending());
+        Page<MyNamespaceResponse> page = namespaceRepository
+                .findByIdIn(namespaceRoles.keySet().stream().toList(), sortedPageable)
+                .map(namespace -> toMyNamespaceResponse(namespace, namespaceRoles.get(namespace.getId())));
+        return PageResponse.from(page);
+    }
+
+    @Transactional(readOnly = true)
     public NamespaceResponse getNamespace(String slug,
                                           String userId,
                                           Map<Long, NamespaceRole> userNamespaceRoles,

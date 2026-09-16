@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.task;
 
 import com.iflytek.skillhub.domain.idempotency.IdempotencyRecordRepository;
+import com.iflytek.skillhub.domain.suite.SkillSuiteInstallOperationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,12 +21,16 @@ class IdempotencyCleanupTaskTest {
     @Mock
     private IdempotencyRecordRepository idempotencyRecordRepository;
 
+    @Mock
+    private SkillSuiteInstallOperationRepository suiteInstallOperationRepository;
+
     private IdempotencyCleanupTask cleanupTask;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
-        cleanupTask = new IdempotencyCleanupTask(idempotencyRecordRepository, clock);
+        cleanupTask = new IdempotencyCleanupTask(
+                idempotencyRecordRepository, suiteInstallOperationRepository, clock);
     }
 
     @Test
@@ -35,6 +40,8 @@ class IdempotencyCleanupTaskTest {
         cleanupTask.cleanupExpiredRecords();
 
         verify(idempotencyRecordRepository).deleteExpired(any(Instant.class));
+        verify(suiteInstallOperationRepository).deleteCreatedBefore(
+                Instant.parse("2026-03-17T00:00:00Z"));
     }
 
     @Test

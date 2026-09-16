@@ -69,8 +69,11 @@ public class GovernanceWorkflowAppService {
         return reviewPortalAppService.rejectReview(reviewTaskId, comment, userId, userNsRoles, auditContext);
     }
 
-    public void withdrawReviewTask(Long reviewTaskId, String userId, AuditRequestContext auditContext) {
-        reviewPortalAppService.withdrawReview(reviewTaskId, userId, auditContext);
+    public void withdrawReviewTask(Long reviewTaskId,
+                                   String userId,
+                                   Map<Long, NamespaceRole> userNsRoles,
+                                   AuditRequestContext auditContext) {
+        reviewPortalAppService.withdrawReview(reviewTaskId, userId, userNsRoles, auditContext);
     }
 
     public PageResponse<ReviewTaskResponse> listReviews(String status,

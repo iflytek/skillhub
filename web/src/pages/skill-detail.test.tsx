@@ -355,6 +355,37 @@ describe('SkillDetailPage', () => {
     expect(html).not.toContain('skillDetail.deleteSkill')
   })
 
+  it('recommends visible suites that use this skill as their entry', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        entryForSuites: [{
+          suiteId: 7,
+          namespace: 'team-ai',
+          slug: 'research-workflow',
+          displayName: 'Research Workflow',
+          version: '2.0.0',
+          memberCount: 4,
+        }],
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.suiteEntryTitle')
+    expect(html).toContain('Research Workflow')
+    expect(html).toContain('@team-ai/research-workflow@2.0.0')
+    expect(html).toContain('skillDetail.suiteEntryMemberCount')
+  })
+
+  it('does not show a suite recommendation for an ordinary member skill', () => {
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).not.toContain('skillDetail.suiteEntryTitle')
+  })
+
   it('wraps a long skill name instead of widening the mobile page', () => {
     useSkillDetailMock.mockReturnValue({
       data: createSkill({ displayName: 'review-runtime-1788284593-353294' }),

@@ -160,6 +160,8 @@ class SkillSearchControllerTest {
         mockMvc.perform(get("/api/web/skills"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].slug").value("demo-skill"))
+                // Legacy clients keep receiving the Skill-only contract after Suite support ships.
+                .andExpect(jsonPath("$.data.items[0].resourceType").doesNotExist())
                 .andExpect(jsonPath("$.data.items[0].labels").doesNotExist());
     }
 

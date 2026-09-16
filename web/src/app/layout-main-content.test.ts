@@ -33,7 +33,7 @@ describe('getAppMainContentLayout', () => {
       mainClassName: CENTERED_MAIN_CLASS_NAME,
       contentClassName: CENTERED_DASHBOARD_CONTENT_CLASS_NAME,
     })
-    expect(layout.contentClassName).toContain('max-w-[1200px]')
+    expect(layout.contentClassName).toContain('max-w-[1100px]')
   })
 
   it('leaves other non-landing routes on the default full-width app content layout', () => {

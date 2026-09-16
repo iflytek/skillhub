@@ -164,6 +164,13 @@ describe('SearchPage', () => {
     expect(html).toContain('flex flex-wrap items-center gap-2')
   })
 
+  it('wraps sort controls within narrow viewports', () => {
+    const html = renderToStaticMarkup(<SearchPage />)
+
+    expect(html).toContain('flex min-w-0 flex-wrap items-center gap-3')
+    expect(html).toContain('flex max-w-full flex-wrap gap-2')
+  })
+
   it('toggles the selected label off and resets paging', () => {
     renderToStaticMarkup(<SearchPage />)
 
@@ -284,6 +291,7 @@ describe('SearchPage', () => {
     const html = renderToStaticMarkup(<SearchPage />)
 
     expect(html).toContain('skill-card')
+    expect(html).not.toContain('suite.resourceTypeSuite')
     expect(html).not.toContain('empty-state')
   })
 
@@ -311,5 +319,21 @@ describe('SearchPage', () => {
     expect(html).toContain('empty-state')
     expect(html).toContain('search.noResults')
     expect(html).not.toContain('search.enterKeyword')
+  })
+
+  it('keeps search skill-only when an obsolete Suite type query parameter is present', () => {
+    useSearchMock.mockReturnValue({
+      q: 'workflow',
+      resourceType: 'SUITE',
+      sort: 'newest',
+      page: 0,
+      starredOnly: false,
+    })
+
+    const html = renderToStaticMarkup(<SearchPage />)
+
+    expect(searchSkillParams[0]).not.toHaveProperty('resourceType')
+    expect(html).toContain('skill-card')
+    expect(html).not.toContain('suite.resourceTypeSuite')
   })
 })

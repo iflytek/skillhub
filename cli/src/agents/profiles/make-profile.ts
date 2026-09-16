@@ -1,9 +1,5 @@
-import { pathExists } from '../../platform/paths'
+import { directoryExists } from '../../platform/paths'
 import type { AgentProfile, AgentCandidate } from '../types'
-
-async function dirExists(path: string): Promise<boolean> {
-  return pathExists(path)
-}
 
 export function makeProfile(id: string, displayName: string, projectSkills: string, userSkills: string): AgentProfile {
   return {
@@ -15,7 +11,7 @@ export function makeProfile(id: string, displayName: string, projectSkills: stri
       const roots = [...this.projectRoots(cwd), ...this.userRoots(home)]
       const results: AgentCandidate[] = []
       for (const root of roots) {
-        if (await dirExists(root)) {
+        if (await directoryExists(root)) {
           results.push({
             agent: this.id,
             rootDir: root,

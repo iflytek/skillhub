@@ -14,7 +14,7 @@ type PageItem = number | 'ellipsis'
  * the current page, and one neighbour on each side, collapsing the rest into
  * ellipsis markers. Pages are 0-indexed internally; labels are 1-indexed.
  */
-function buildPageItems(current: number, totalPages: number): PageItem[] {
+export function buildPageItems(current: number, totalPages: number): PageItem[] {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i)
   }
@@ -45,18 +45,18 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
   const pageItems = buildPageItems(page, totalPages)
 
   return (
-    <div className="flex items-center justify-center gap-3 py-4">
+    <nav aria-label={t('pagination.label')} className="flex flex-wrap items-center justify-center gap-2 py-4 sm:gap-3">
       <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 0}
-        className="min-w-[90px]"
+        className="min-w-0 flex-1 sm:flex-none sm:min-w-[90px]"
       >
         {t('pagination.prev')}
       </Button>
 
-      <div className="flex items-center gap-1.5">
+      <div className="order-3 flex w-full items-center justify-center gap-1.5 sm:order-none sm:w-auto">
         {pageItems.map((item, index) =>
           item === 'ellipsis' ? (
             <span
@@ -88,10 +88,10 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
         size="sm"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages - 1}
-        className="min-w-[90px]"
+        className="min-w-0 flex-1 sm:flex-none sm:min-w-[90px]"
       >
         {t('pagination.next')}
       </Button>
-    </div>
+    </nav>
   )
 }

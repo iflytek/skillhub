@@ -126,7 +126,7 @@ export function SearchPage() {
     page,
     size: PAGE_SIZE,
     starredOnly,
-  })
+  }, !starredOnly)
   const { data: labels } = useVisibleLabels()
   const {
     data: starredSkills,
@@ -215,10 +215,16 @@ export function SearchPage() {
     : data
       ? Math.ceil(data.total / data.size)
       : 0
-  const displayItems = starredOnly ? starredPageItems : (data?.items ?? [])
+  const displayItems = starredOnly
+    ? starredPageItems
+    : (data?.items ?? [])
   const isPageLoading = starredOnly ? isLoadingStarred : isLoading
-  const isUpdatingResults = starredOnly ? isFetchingStarred && !isLoadingStarred : isFetching && !isLoading
-  const resultCount = starredOnly ? filteredStarredSkills.length : (data?.total ?? 0)
+  const isUpdatingResults = starredOnly
+    ? isFetchingStarred && !isLoadingStarred
+    : isFetching && !isLoading
+  const resultCount = starredOnly
+    ? filteredStarredSkills.length
+    : (data?.total ?? 0)
 
   return (
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
@@ -235,9 +241,9 @@ export function SearchPage() {
       {/* Sort And Filters */}
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-muted-foreground">{t('search.sort.label')}</span>
-            <div className="flex gap-2">
+            <div className="flex max-w-full flex-wrap gap-2">
               <Button
                 variant={sort === 'relevance' ? 'default' : 'outline'}
                 size="sm"
