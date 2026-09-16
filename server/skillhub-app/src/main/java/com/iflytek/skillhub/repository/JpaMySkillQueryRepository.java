@@ -63,6 +63,33 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                 .toList();
     }
 
+    @Override
+    public List<SkillSummaryResponse> getHiddenSkillSummaries(List<Skill> skills) {
+        if (skills.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Namespace> namespacesById = namespaceRepository.findByIdIn(
+                        skills.stream().map(Skill::getNamespaceId).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(Namespace::getId, Function.identity()));
+        Map<String, UserAccount> ownersById = userAccountRepository == null
+                ? Map.of()
+                : userAccountRepository.findByIdIn(skills.stream().map(Skill::getOwnerId).distinct().toList())
+                .stream().collect(Collectors.toMap(UserAccount::getId, Function.identity()));
+        Map<Long, SkillLifecycleProjectionService.Projection> projections =
+                skillLifecycleProjectionService.projectPublishedSummaries(skills);
+
+        return skills.stream()
+                .map(skill -> toSummaryResponse(
+                        skill,
+                        namespacesById,
+                        ownersById,
+                        projections.get(skill.getId()),
+                        false
+                ))
+                .toList();
+    }
+
     private SkillSummaryResponse toSummaryResponse(Skill skill,
                                                    String currentUserId,
                                                    Map<Long, Namespace> namespacesById,
@@ -76,6 +103,21 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
         if (skill.getOwnerId().equals(currentUserId)) {
             projection = skillLifecycleProjectionService.projectForOwnerSummary(skill);
         }
+        return toSummaryResponse(
+                skill,
+                namespacesById,
+                ownersById,
+                projection,
+                canSubmitPromotion(skill, projection.publishedVersion(), namespace)
+        );
+    }
+
+    private SkillSummaryResponse toSummaryResponse(Skill skill,
+                                                   Map<Long, Namespace> namespacesById,
+                                                   Map<String, UserAccount> ownersById,
+                                                   SkillLifecycleProjectionService.Projection projection,
+                                                   boolean canSubmitPromotion) {
+        Namespace namespace = namespacesById.get(skill.getNamespaceId());
         SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
         SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
         SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
@@ -97,7 +139,7 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                 ownersById.get(skill.getOwnerId()) != null
                         ? ownersById.get(skill.getOwnerId()).getDisplayName()
                         : null,
-                canSubmitPromotion(skill, publishedVersion, namespace),
+                canSubmitPromotion,
                 toLifecycleVersion(headlineVersion),
                 toLifecycleVersion(publishedVersion),
                 toLifecycleVersion(ownerPreviewVersion),

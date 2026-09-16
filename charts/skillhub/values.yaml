@@ -282,6 +282,10 @@ server:
   enabled: true
   replicaCount: 1
 
+  # Keep false while old and new Server versions overlap. Set true after every active
+  # Server instance supports typed review subjects; fresh non-rolling installs may enable it directly.
+  suiteReviewWritesEnabled: false
+
   image:
     registry: ""
     tag: ""

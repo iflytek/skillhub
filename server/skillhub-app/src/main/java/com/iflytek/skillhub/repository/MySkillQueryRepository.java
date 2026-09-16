@@ -10,4 +10,6 @@ import java.util.List;
  */
 public interface MySkillQueryRepository {
     List<SkillSummaryResponse> getSkillSummaries(List<Skill> skills, String currentUserId);
+
+    List<SkillSummaryResponse> getHiddenSkillSummaries(List<Skill> skills);
 }

@@ -140,7 +140,13 @@ A: When using the OpenClaw CLI, you can specify the namespace using the `<namesp
 
 ## Q: What is the recommended deployment method? Can I pull the images and deploy manually?
 
-A: We recommend the official one-line deployment script. Pulling images and deploying manually is not recommended (manual deployment is prone to initialization issues such as being redirected back to the login page after logging in):
+A: We recommend the official one-line deployment script. Pulling images and deploying manually is not recommended because it is prone to database initialization, dependency-order, and login redirect issues. By default, dependencies come from public registries, and the SkillHub application images come from GHCR:
+
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
+```
+
+If GHCR is unreachable from China, use the Aliyun mirror:
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
@@ -300,6 +306,17 @@ docker compose --env-file .env.release -f compose.release.yml up -d --force-recr
 A: PostgreSQL and Redis are required. Object storage supports both `local` and S3, controlled by `SKILLHUB_STORAGE_PROVIDER`. `.env.release.example` explicitly selects `local`, but if the variable is completely unset when using `compose.release.yml`, the Compose fallback is `s3`. Set it explicitly; S3 is recommended for production (configured via `SKILLHUB_STORAGE_S3_*`). Only PostgreSQL is supported as the database — MySQL is not.
 
 The release Compose file already bundles PostgreSQL and Redis, bound to `127.0.0.1` by default.
+
+## Q: What should I do when PostgreSQL reports `operation not permitted` while writing `postmaster.pid` or `pg_wal`?
+
+A: SkillHub's default Compose and `runtime.sh` use a Docker named volume (`postgres_data`), so host-directory permissions normally do not need manual changes. This error is more common after replacing that volume with a host bind mount, such as `/data/skillhub/postgres:/var/lib/postgresql/data`.
+
+Check the following in order:
+
+1. Prefer switching back to a Docker named volume, or use the official `runtime.sh` to avoid missing permission settings in a hand-written Compose file.
+2. If a bind mount is required, first identify the effective `POSTGRES_IMAGE` selected by `.env.release` or the `runtime.sh` options. Export that value in the current shell, then run `docker run --rm "$POSTGRES_IMAGE" id postgres`. Change the data-directory owner to the reported UID/GID, for example `chown -R <uid>:<gid> <data-dir>`. Do not assume the image is `postgres:16-alpine`, or that every environment uses `999:999`.
+3. Check SELinux on RHEL/CentOS. With AppArmor, rootless Docker, NFS, CIFS, or NAS storage, also verify that the host filesystem permits PostgreSQL to write, lock files, and change permissions.
+4. Avoid placing PostgreSQL `PGDATA` on network filesystems without full POSIX permission semantics. For production, prefer local disks, Docker named volumes, block storage, or an external PostgreSQL service.
 
 ## Q: How does an account created through OAuth (GitHub / GitLab, etc.) get admin rights?
 

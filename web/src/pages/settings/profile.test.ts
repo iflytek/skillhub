@@ -31,7 +31,7 @@ vi.mock('@/api/client', () => ({
 }))
 
 vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({ user: { displayName: 'Test', avatarUrl: null, email: 'test@test.com' } }),
+  useAuth: () => ({ user: { displayName: 'Test', avatarUrl: null, email: 'test@test.com', canChangePassword: true } }),
 }))
 
 vi.mock('@/shared/lib/error-display', () => ({

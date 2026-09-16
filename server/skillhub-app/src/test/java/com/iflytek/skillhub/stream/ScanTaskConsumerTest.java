@@ -880,6 +880,13 @@ class ScanTaskConsumerTest {
         }
 
         @Override
+        public void deleteBySubjectTypeAndSubjectId(
+                com.iflytek.skillhub.domain.review.ReviewSubjectType subjectType,
+                Long subjectId) {
+            throw unsupported();
+        }
+
+        @Override
         public void delete(ReviewTask reviewTask) {
             this.deletedTask = reviewTask;
         }

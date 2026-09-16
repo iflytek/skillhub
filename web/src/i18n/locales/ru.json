@@ -13,11 +13,14 @@
     "landing": "Главная",
     "home": "Центр скиллов",
     "search": "Поиск",
+    "marketplace": "Каталог навыков",
     "skillDetail": "Карточка скилла",
     "explore": "Обзор скиллов",
     "dashboard": "Панель управления",
     "mySkills": "Мои скиллы",
+    "mySuites": "Мои наборы",
     "publish": "Опубликовать",
+    "suites": "Наборы навыков",
     "login": "Вход"
   },
   "landing": {
@@ -122,7 +125,7 @@
       },
       "agent": {
         "description": "Отправьте промпт своему Agent, чтобы настроить SkillHub Registry",
-        "command": "Подключите SkillHub по инструкции https://www.example.com/install/skillhub.md",
+        "command": "Подключите SkillHub по инструкции https://www.example.com/registry/skill.md",
         "commandTemplate": "Подключите SkillHub по инструкции {{url}}"
       },
       "human": {
@@ -144,6 +147,119 @@
           "title": "3. Опубликуйте скиллы",
           "description": "Делитесь скиллами с командой",
           "code": "# Опубликовать скилл\nclawhub publish\n\n# Или через веб-интерфейс\n# Нажмите «Опубликовать скилл»"
+        }
+      }
+    },
+    "experience": {
+      "heroBadge": "Платформа управления скиллами агентов",
+      "heroTitle": "Превратите экспертизу команды в скиллы для агентов",
+      "heroDescription": "Сделайте индивидуальный опыт работы с AI повторно используемым, управляемым и надёжным активом организации.",
+      "browseAll": "Смотреть все",
+      "marketplace": "Каталог",
+      "latest": "Новинки",
+      "demoSkills": {
+        "weather": "Погода в городах мира в реальном времени",
+        "gitHelper": "Помощник для операций Git",
+        "diagramMaker": "Создание блок-схем и архитектурных диаграмм",
+        "codeReviewer": "Автоматическое ревью кода",
+        "caption": "Предпросмотр интерфейса · 4 примера"
+      },
+      "highlights": {
+        "selfHosted": "Self-hosted реестр",
+        "governance": "Ревью и управление",
+        "multiClient": "Доступ через Agent, CLI и Web",
+        "traceable": "Прослеживаемые версии"
+      },
+      "capabilities": {
+        "eyebrow": "Возможности",
+        "title": "Полный жизненный цикл скилла — от регистрации до распространения",
+        "description": "Единая платформа для публикации, ревью, распространения и управления, а не просто хранилище пакетов."
+      },
+      "enterprise": {
+        "title": "Для команд и предприятий",
+        "description": "Self-hosting, контроль доступа, ревью и аудит в одном реестре.",
+        "clientLayer": "Клиенты",
+        "serviceLayer": "Сервис",
+        "storageLayer": "Хранилище",
+        "networkBoundary": "Развёртывайте внутри организации и контролируйте данные реестра",
+        "deployment": {
+          "title": "Self-hosted развёртывание",
+          "description": "Запускайте SkillHub в своей инфраструктуре через Docker Compose или предоставленные Kubernetes-манифесты с локальным либо S3-совместимым хранилищем."
+        },
+        "security": {
+          "title": "Проверка и ревью",
+          "description": "Проверка пакетов, сканирование безопасности и процессы ревью помогают оценивать скиллы до публикации."
+        },
+        "rbac": {
+          "title": "Многоуровневый RBAC",
+          "description": "Роли платформы и пространства имён разделяют глобальное администрирование и владение команды."
+        },
+        "access": {
+          "title": "Гибкий доступ",
+          "description": "OAuth2 и локальные аккаунты поддерживают вход в браузере, а API-токены — программный доступ."
+        },
+        "audit": {
+          "title": "Аудит",
+          "description": "Ключевые операции публикации, загрузки, удаления и авторизации сохраняются для последующего анализа."
+        },
+        "openSource": {
+          "title": "Открытый код",
+          "description": "Код доступен по лицензии Apache-2.0 для проверки, самостоятельного размещения и участия сообщества."
+        }
+      },
+      "cta": {
+        "title": "Создайте реестр скиллов своей команды",
+        "description": "Изучите исходный код и руководство по развёртыванию, затем запустите SkillHub в своей среде.",
+        "deploy": "Исходный код",
+        "docs": "Документация"
+      },
+      "quickStart": {
+        "title": "Выберите способ доступа",
+        "description": "Используйте один реестр через Agent, CLI или веб-интерфейс.",
+        "copy": "Копировать",
+        "copied": "Скопировано",
+        "copyErrorTitle": "Не удалось скопировать",
+        "modes": {
+          "agent": { "title": "Интеграция Agent", "description": "Настройте Registry один раз и находите скиллы по мере необходимости" },
+          "cli": { "title": "CLI", "description": "Ищите, устанавливайте и публикуйте скиллы" },
+          "web": { "title": "Веб-интерфейс", "description": "Просматривайте, читайте и загружайте скиллы" }
+        },
+        "agent": {
+          "tablist": "Демонстрация интеграции Agent",
+          "registryTab": "Настройка Registry",
+          "discoveryTab": "Неявный поиск",
+          "live": "Agent онлайн",
+          "instruction": "Прочитайте {{url}} и следуйте инструкции для настройки SkillHub Skills Registry",
+          "instructionLead": "Скопируйте инструкцию и отправьте её своему Agent",
+          "instructionPrefix": "Прочитайте",
+          "instructionSuffix": "и следуйте ей для настройки SkillHub Skills Registry.",
+          "copyInstruction": "Копировать инструкцию",
+          "copyErrorDescription": "Выделите и скопируйте инструкцию настройки Registry вручную.",
+          "steps": { "read": "Прочитать руководство", "configure": "Настроить Registry", "discover": "Находить скиллы по запросу" },
+          "prompt": "Какая сегодня погода в Хэфэе?",
+          "discovery": {
+            "intentTitle": "Определить задачу", "intentDescription": "Нужны погода и совет для поездки",
+            "searchTitle": "Поиск в SkillHub Registry", "searchDescription": "Найден @global/weather · v1.3.0",
+            "readTitle": "Прочитать инструкции", "readDescription": "Проверить входные данные и способ вызова"
+          },
+          "answerLead": "Сегодня в Хэфэе облачно, 26°C",
+          "answerTail": ", днём возможен кратковременный дождь. Рекомендуется взять зонт."
+        },
+        "cli": {
+          "copyErrorDescription": "Выделите и скопируйте команду CLI вручную.",
+          "skillsFound": "Пример результатов:",
+          "forecastSummary": "Прогноз погоды на семь дней",
+          "installed": "@global/weather установлен в ./skills/global/weather",
+          "connected": "подключено",
+          "docs": "Документация CLI"
+        },
+        "web": {
+          "marketplace": "Каталог скиллов", "publicSkills": "Публичные скиллы", "search": "Поиск скиллов",
+          "status": "Публичный · Доступен", "summary": "Погода, прогнозы и рекомендации для поездок",
+          "download": "Скачать ZIP", "readTitle": "Сначала прочитайте",
+          "readDescription": "Изучите назначение, входные данные и способ выполнения в SKILL.md перед загрузкой полного пакета.",
+          "version": "Версия", "files": "Файлы", "format": "Формат",
+          "browse": "Просмотр и поиск", "preview": "Предпросмотр", "versions": "Файлы и версии", "favorites": "Избранное и подписки"
         }
       }
     }
@@ -323,7 +439,8 @@
   },
   "dashboard": {
     "title": "Панель управления",
-    "subtitle": "Аккаунт, скиллы и учётные данные доступа — в одном месте",
+    "subtitle": "Управляйте скиллами, аккаунтом и настройками",
+    "overview": "Обзор",
     "backToDashboard": "Назад к панели",
     "userInfo": "Сведения об аккаунте",
     "userInfoDesc": "Основные данные аккаунта и роли на платформе",
@@ -347,6 +464,40 @@
     "previewMore": "...",
     "previewMoreLabel": "Смотреть все",
     "userId": "ID пользователя"
+  },
+  "sidebar": {
+    "account": "Аккаунт",
+    "profile": "Профиль",
+    "security": "Безопасность",
+    "notifications": "Уведомления",
+    "skillsAndData": "Скиллы и данные",
+    "mySkills": "Мои скиллы",
+    "mySuites": "Мои наборы",
+    "publish": "Публикация",
+    "namespaces": "Пространства",
+    "stars": "Мои звёзды",
+    "subscriptions": "Подписки",
+    "tokens": "Токены API",
+    "reviewProgress": "Статус проверки",
+    "admin": "Админ",
+    "governance": "Управление",
+    "reports": "Жалобы"
+  },
+  "overview": {
+    "mySkills": "Мои скиллы",
+    "mySkillsDesc": "Просмотр и управление опубликованными скиллами",
+    "mySuites": "Мои наборы",
+    "mySuitesDesc": "Просмотр и управление наборами навыков",
+    "publish": "Публикация",
+    "publishDesc": "Загрузить и опубликовать новый скилл",
+    "tokens": "Токены API",
+    "tokensDesc": "Управление токенами доступа к API",
+    "stars": "Мои звёзды",
+    "starsDesc": "Просмотр избранных и оценённых скиллов",
+    "profile": "Профиль",
+    "profileDesc": "Редактирование отображаемого имени и информации",
+    "security": "Безопасность",
+    "securityDesc": "Изменение пароля и параметров безопасности"
   },
   "mySkills": {
     "title": "Мои скиллы",
@@ -386,6 +537,12 @@
     "unarchiveSuccessTitle": "Скилл восстановлен",
     "unarchiveSuccessDescription": "«{{skill}}» восстановлен и снова может публиковать новые версии.",
     "unarchiveErrorTitle": "Не удалось восстановить скилл",
+    "restoreHidden": "Вернуть видимость",
+    "restoreHiddenConfirmTitle": "Восстановить скрытый скилл",
+    "restoreHiddenConfirmDescription": "«{{skill}}» снова появится в обычных разделах продукта.",
+    "restoreHiddenSuccessTitle": "Видимость скилла восстановлена",
+    "restoreHiddenSuccessDescription": "«{{skill}}» удалён из списка скрытых скиллов.",
+    "restoreHiddenErrorTitle": "Не удалось восстановить скрытый скилл",
     "withdrawReview": "Отозвать рецензию",
     "withdrawConfirmTitle": "Отозвать загрузку",
     "withdrawConfirmDescription": "После отзыва «{{skill}}» больше не будет рецензироваться, а ожидающая версия будет удалена.",
@@ -936,6 +1093,9 @@
     "namespaceLabel": "Пространство имён",
     "loginToRate": "Войдите, чтобы отметить звёздочкой и оценить",
     "install": "Установить",
+    "suiteEntryTitle": "Используется как вход набора",
+    "suiteEntryDescription": "Этот навык является входным для указанных ниже наборов. Установите соответствующий набор, чтобы использовать все входящие в него навыки.",
+    "suiteEntryMemberCount": "Открыть полный набор (навыков: {{count}})",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
     "installCommandUnsafeVersion": "Номер этой версии нельзя безопасно использовать в кроссплатформенной команде. Попросите автора исправить его.",
@@ -1393,15 +1553,23 @@
     "title": "Файлы"
   },
   "footer": {
+    "product": "Продукт",
+    "marketplace": "Каталог скиллов",
+    "publish": "Опубликовать скилл",
+    "developers": "Разработчикам",
+    "project": "Проект",
+    "codeOfConduct": "Кодекс поведения",
     "resources": "Ресурсы",
     "docs": "Документация",
     "api": "API",
     "community": "Сообщество",
     "privacy": "Политика конфиденциальности",
     "terms": "Условия использования",
-    "copyright": "© 2026 SkillHub. Все права защищены."
+    "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "layout": {
+    "openNavigation": "Открыть меню навигации",
+    "closeNavigation": "Закрыть меню навигации",
     "footerDescription": "Реестр скиллов: эффективное управление и распространение скиллов для разработчиков."
   },
   "loginButton": {
@@ -1463,6 +1631,7 @@
     "archivedReadOnly": "Это пространство имён в архиве. Историю ревью можно смотреть, но обрабатывать задачи нельзя, пока оно не восстановлено."
   },
   "pagination": {
+    "label": "Навигация по страницам",
     "prev": "Назад",
     "next": "Вперёд",
     "pagePrefix": "Стр.",
@@ -1648,6 +1817,9 @@
     }
   },
   "skillCard": {
+    "downloads": "Загрузки: {{value}}",
+    "stars": "Звёзды: {{count}}",
+    "rating": "Рейтинг {{rating}}",
     "starred": "В избранном",
     "starredAction": "Нажмите, чтобы убрать из избранного",
     "unstarTitle": "Убрать из избранного",
@@ -1710,6 +1882,7 @@
     "menu": {
       "dashboard": "Панель",
       "mySkills": "Мои скиллы",
+      "mySuites": "Мои наборы",
       "myNamespaces": "Мои пространства имён",
       "namespacesAdmin": "Управление пространствами имён",
       "governance": "Центр управления",
@@ -1727,6 +1900,139 @@
       "notifications": "Уведомления",
       "accounts": "Объединение учётных записей",
       "logout": "Выйти"
+    }
+  },
+  "suite": {
+    "listTitle": "Наборы навыков",
+    "listDescription": "Установите набор навыков с зафиксированными версиями одной операцией.",
+    "create": "Создать набор",
+    "searchPlaceholder": "Поиск по названию или описанию",
+    "emptyTitle": "Нет доступных наборов",
+    "emptyDescription": "Создайте первый набор для повторно используемого рабочего процесса.",
+    "noSummary": "Описание отсутствует",
+    "unavailable": "Недоступно",
+    "notFound": "Набор не существует или недоступен вашей учётной записи.",
+    "published": "Набор опубликован",
+    "submitted": "Набор отправлен на проверку",
+    "actionFailed": "Не удалось выполнить действие",
+    "editDraft": "Изменить черновик",
+    "publishDirectly": "Опубликовать",
+    "submitReview": "Отправить на проверку",
+    "version": "Версия",
+    "status": "Статус",
+    "visibility": "Видимость",
+    "installStatus": "Статус установки",
+    "available": "Доступно",
+    "degraded": "Ограничено",
+    "installCommand": "Команда установки",
+    "copyInstallCommand": "Копировать команду установки",
+    "detailsSidebar": "Информация о наборе и действия",
+    "commandCopied": "Команда установки скопирована",
+    "degradedDescription": "Участник или права доступа изменились. Восстановите всех участников перед установкой.",
+    "membersTitle": "Включённые навыки ({{count}})",
+    "overviewTab": "Обзор",
+    "membersTab": "Модули навыков ({{count}})",
+    "overviewTitle": "Обзор набора",
+    "noOverview": "Автор пока не добавил подробный обзор.",
+    "viewMember": "Открыть навык: {{name}}",
+    "pinnedVersion": "Зафиксированная версия v{{version}}",
+    "entrySkill": "Входной навык",
+    "startWithEntry": "Начните с входного навыка",
+    "startWithEntryDescription": "После установки набора вы получите {{count}} навыков с зафиксированными версиями. Сначала откройте входной навык, чтобы понять основной сценарий их совместного использования.",
+    "viewEntrySkill": "Открыть входной навык",
+    "versionHistory": "История версий",
+    "validationRequired": "Заполните обязательные поля и выберите хотя бы один навык",
+    "draftUpdated": "Черновик набора обновлён",
+    "draftCreated": "Черновик набора создан",
+    "saveFailed": "Не удалось сохранить",
+    "editTitle": "Изменить набор навыков",
+    "createTitle": "Создать набор навыков",
+    "newVersionTitle": "Создать версию набора",
+    "newVersionPlaceholder": "Введите новую версию, например 1.1.0",
+    "sourceLoadFailed": "Не удалось загрузить исходную версию набора. Вернитесь на страницу набора и повторите попытку.",
+    "editorAccessDenied": "Эта учётная запись не может редактировать данную версию набора.",
+    "editorDescription": "Выберите точные опубликованные версии. Опубликованный набор не обновляется автоматически.",
+    "namespace": "Пространство имён",
+    "slug": "Идентификатор",
+    "selectNamespace": "Выберите пространство имён",
+    "name": "Название",
+    "namePlaceholder": "Рабочий процесс маркетингового события",
+    "overview": "Обзор (Markdown)",
+    "overviewHint": "Опишите сценарий использования, порядок навыков, входные и выходные данные и важные ограничения.",
+    "visibilityPublic": "Публичный",
+    "visibilityNamespace": "Только пространство имён",
+    "visibilityPrivate": "Приватный",
+    "summary": "Описание",
+    "changelog": "Примечания к версии",
+    "selectSkills": "Выберите навыки",
+    "searchSkills": "Поиск доступных навыков",
+    "noCandidates": "Нет опубликованных версий с выбранной видимостью.",
+    "selectedMembers": "Участники набора ({{count}}/100)",
+    "setEntry": "Назначить входным навыком",
+    "entryRequired": "Выберите входной навык",
+    "confirmVersionUpdateTitle": "Подтвердите изменение закреплённой версии",
+    "confirmVersionUpdateDescription": "{{coordinate}} будет изменён с v{{from}} на v{{to}}. Набор останется закреплённым на новой версии и не будет обновляться автоматически.",
+    "confirmVersionUpdate": "Изменить версию",
+    "moveMemberUp": "Переместить {{name}} выше",
+    "moveMemberDown": "Переместить {{name}} ниже",
+    "removeMember": "Удалить {{name}}",
+    "setEntryFor": "Назначить {{name}} входным навыком",
+    "addMemberHint": "Добавьте хотя бы один навык слева.",
+    "cancel": "Отмена",
+    "saveDraft": "Сохранить черновик",
+    "resourceType": "Тип",
+    "allTypes": "Все",
+    "reviewSnapshot": "Снимок участников набора",
+    "reviewSnapshotDescription": "Проверяются точные версии Skill; после публикации они не обновятся автоматически.",
+    "publishable": "Можно опубликовать",
+    "reviewSnapshotFailed": "Не удалось загрузить снимок набора.",
+    "myTitle": "Мои наборы навыков",
+    "myDescription": "Управление черновиками, проверяемыми и опубликованными версиями наборов.",
+    "view": "Открыть",
+    "myEmpty": "Наборов навыков пока нет",
+    "myEmptyDescription": "Создайте набор, чтобы редактировать его и отслеживать проверку здесь.",
+    "updatePinnedVersion": "Обновить зафиксированную версию",
+    "resourceTypeSuite": "Набор навыков",
+    "resourceTypeSkill": "Навык",
+    "managementTitle": "Управление набором",
+    "managementDescription": "Управляйте версиями, публикацией и контейнером набора. Навыки-участники не изменяются.",
+    "reopenDraft": "Вернуть в черновик и изменить",
+    "reopened": "Версия возвращена в черновик",
+    "createVersion": "Создать новую версию",
+    "yankVersion": "Снять текущую версию",
+    "yanked": "Версия набора снята",
+    "yankConfirmTitle": "Снять версию набора",
+    "yankConfirmDescription": "После снятия v{{version}} новые пользователи не смогут её установить. Навыки не изменятся.",
+    "yankReasonPlaceholder": "Причина снятия версии",
+    "hide": "Скрыть набор",
+    "restore": "Вернуть видимость",
+    "archive": "Архивировать набор",
+    "unarchive": "Восстановить набор",
+    "delete": "Удалить набор",
+    "deleted": "Набор удалён",
+    "hideSuccess": "Набор скрыт",
+    "restoreSuccess": "Видимость набора восстановлена",
+    "archiveSuccess": "Набор архивирован",
+    "unarchiveSuccess": "Набор восстановлен",
+    "hideConfirmTitle": "Скрыть набор",
+    "hideConfirmDescription": "«{{name}}» больше не будет отображаться в обычном поиске.",
+    "restoreConfirmTitle": "Вернуть видимость набора",
+    "restoreConfirmDescription": "«{{name}}» снова будет доступен согласно настройкам видимости.",
+    "archiveConfirmTitle": "Архивировать набор",
+    "archiveConfirmDescription": "После архивации «{{name}}» нельзя создавать новые версии. Навыки не изменятся.",
+    "unarchiveConfirmTitle": "Восстановить набор",
+    "unarchiveConfirmDescription": "После восстановления «{{name}}» снова можно создавать версии.",
+    "deleteConfirmTitle": "Удалить набор",
+    "deleteConfirmDescription": "Безвозвратно удалить «{{name}}» и его версии, не удаляя навыки. Отменить действие нельзя.",
+    "deletePendingReviewHint": "Набор на проверке нельзя удалить",
+    "blockingReasons": {
+      "DELETED": "Компонент удалён",
+      "NAMESPACE_ARCHIVED": "Пространство имён компонента архивировано",
+      "NAMESPACE_FROZEN": "Пространство имён компонента заморожено",
+      "SKILL_HIDDEN": "Навык скрыт",
+      "SKILL_ARCHIVED": "Навык архивирован",
+      "VERSION_UNAVAILABLE": "Версия недоступна",
+      "VISIBILITY_INCOMPATIBLE": "Несовместимая видимость"
     }
   },
   "routeError": {

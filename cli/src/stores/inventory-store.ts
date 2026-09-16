@@ -8,6 +8,8 @@ export interface InventoryTarget {
   rootDir: string
   installDir: string
   installedAt: string
+  /** Sources that own this exact target. Missing values inherit the legacy item-level sources. */
+  installedBy?: string[]
 }
 
 export interface InventoryItem {
@@ -16,11 +18,54 @@ export interface InventoryItem {
   slug: string
   version: string
   fingerprint?: string
+  /** Missing on legacy records and therefore interpreted as a direct install. */
+  installedBy?: string[]
   targets: InventoryTarget[]
+}
+
+export interface InventorySuiteMember {
+  namespace: string
+  slug: string
+  version: string
+  fingerprint: string
+  installDirs: string[]
+}
+
+export interface InventorySuite {
+  registry: string
+  namespace: string
+  slug: string
+  version: string
+  fingerprint: string
+  members: InventorySuiteMember[]
 }
 
 export interface Inventory {
   items: InventoryItem[]
+  suites?: InventorySuite[]
+}
+
+export function installedBy(item: InventoryItem): string[] {
+  return item.installedBy ?? ['direct']
+}
+
+export function targetInstalledBy(item: InventoryItem, target: InventoryTarget): string[] {
+  return target.installedBy ?? installedBy(item)
+}
+
+function addDirectSource(item: InventoryItem, target: InventoryTarget): InventoryTarget {
+  return {
+    ...target,
+    installedBy: Array.from(new Set([...targetInstalledBy(item, target), 'direct']))
+  }
+}
+
+function refreshItemSources(item: InventoryItem): void {
+  item.installedBy = Array.from(new Set(item.targets.flatMap(target => targetInstalledBy(item, target))))
+}
+
+export function installedSuites(inventory: Inventory): InventorySuite[] {
+  return inventory.suites ?? []
 }
 
 export class InventoryVersionConflictError extends Error {
@@ -58,7 +103,7 @@ export class InventoryStore {
     }
   }
 
-  private async mutateAtomic<T>(mutate: (inventory: Inventory) => T): Promise<T> {
+  async mutateAtomic<T>(mutate: (inventory: Inventory) => T): Promise<T> {
     await ensureDir(dirname(this.path))
     let release: (() => Promise<void>) | null = null
     try {
@@ -118,8 +163,11 @@ export class InventoryStore {
       item.version = version
       if (fingerprint !== undefined) item.fingerprint = fingerprint
       const existingIdx = item.targets.findIndex(t => t.installDir === target.installDir)
-      if (existingIdx >= 0) item.targets[existingIdx] = target
-      else item.targets.push(target)
+      const previous = existingIdx >= 0 ? item.targets[existingIdx]! : target
+      const next = addDirectSource(item, { ...target, installedBy: targetInstalledBy(item, previous) })
+      if (existingIdx >= 0) item.targets[existingIdx] = next
+      else item.targets.push(next)
+      refreshItemSources(item)
     })
   }
 
@@ -165,12 +213,13 @@ export class InventoryStore {
       let item = inventory.items.find(candidate =>
         candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
       if (!item) {
-        item = { registry, namespace, slug, version, targets: [] }
+        item = { registry, namespace, slug, version, installedBy: ['direct'], targets: [] }
         inventory.items.push(item)
       }
       item.version = version
       if (fingerprint !== undefined) item.fingerprint = fingerprint
-      item.targets.push(target)
+      item.targets.push({ ...target, installedBy: ['direct'] })
+      refreshItemSources(item)
     })
   }
 
@@ -204,12 +253,13 @@ export class InventoryStore {
       let item = inventory.items.find(candidate =>
         candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
       if (!item) {
-        item = { registry, namespace, slug, version, targets: [] }
+        item = { registry, namespace, slug, version, installedBy: ['direct'], targets: [] }
         inventory.items.push(item)
       }
       item.version = version
       if (fingerprint !== undefined) item.fingerprint = fingerprint
-      item.targets.push(...targets)
+      item.targets.push(...targets.map(target => ({ ...target, installedBy: ['direct'] })))
+      refreshItemSources(item)
     })
   }
 }

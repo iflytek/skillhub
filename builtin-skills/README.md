@@ -4,8 +4,8 @@ This directory contains the reviewed source used to build SkillHub's official st
 packages. Each child of `skills/` is a complete package; generated ZIP files are release artifacts
 and are not committed.
 
-The first batch contains 15 general-purpose Skills covering study, office work, personal
-productivity, content creation, weather, media, and frontend design. Every package includes:
+The reviewed collection contains general-purpose Skills and focused operational Skills maintained
+for SkillHub itself. Every package includes:
 
 - a `SKILL.md` adapted for SkillHub;
 - `LICENSE.txt` and `NOTICE.md` with pinned upstream provenance;
@@ -25,8 +25,10 @@ added to the runtime manifest only after its immutable CDN URL is available; the
 the matching SHA-256 so the backend can reject changed or incorrectly uploaded bytes before
 extraction.
 
-The first batch of 15 packages is pinned in the runtime manifest. A clean deployment initializes
-these packages alongside the existing built-in Skills in the public `@global` namespace.
+Every released package is pinned in the runtime manifest. A clean deployment initializes these
+packages alongside the existing built-in Skills in the public `@global` namespace. Newly reviewed
+source packages remain outside the runtime manifest until their immutable CDN artifact and matching
+SHA-256 are available.
 
 ## Share a Skill with the Community
 

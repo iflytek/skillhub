@@ -24,6 +24,15 @@ export async function pathExists(path: string): Promise<boolean> {
   }
 }
 
+export async function directoryExists(path: string): Promise<boolean> {
+  const { stat } = await import('node:fs/promises')
+  try {
+    return (await stat(path)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 export async function canonicalizeExistingPath(path: string): Promise<string> {
   const { realpath } = await import('node:fs/promises')
   try {

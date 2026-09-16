@@ -10,14 +10,14 @@ import {
 
 describe('shared select contract', () => {
   it('keeps the trigger aligned with the existing input styling language', () => {
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('h-11')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('rounded-lg')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('h-9')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('rounded-md')
     expect(SELECT_TRIGGER_CLASS_NAME).toContain('border-border/60')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('bg-secondary/50')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('bg-background/40')
     expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:outline-none')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-2')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-primary/40')
-    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:border-primary/50')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-4')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-ring/15')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:border-ring')
   })
 
   it('uses themed panel and item classes for the floating listbox', () => {

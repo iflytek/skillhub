@@ -17,6 +17,7 @@ import com.iflytek.skillhub.domain.social.SkillStar;
 import com.iflytek.skillhub.domain.social.SkillStarRepository;
 import com.iflytek.skillhub.domain.social.SkillSubscriptionRepository;
 import com.iflytek.skillhub.repository.JpaMySkillQueryRepository;
+import com.iflytek.skillhub.repository.HiddenSkillQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +58,9 @@ class MySkillAppServiceTest {
     @Mock
     private PromotionRequestRepository promotionRequestRepository;
 
+    @Mock
+    private HiddenSkillQueryRepository hiddenSkillQueryRepository;
+
     private MySkillAppService service;
     private SkillLifecycleProjectionService skillLifecycleProjectionService;
     private JpaMySkillQueryRepository mySkillQueryRepository;
@@ -75,6 +79,7 @@ class MySkillAppServiceTest {
                 skillStarRepository,
                 skillSubscriptionRepository,
                 mySkillQueryRepository,
+                hiddenSkillQueryRepository,
                 skillLifecycleProjectionService,
                 namespaceRepository
         );
@@ -132,7 +137,7 @@ class MySkillAppServiceTest {
         ReflectionTestUtils.setField(pendingVersion, "id", 11L);
         ReflectionTestUtils.setField(pendingVersion, "createdAt", Instant.parse("2026-03-15T09:30:00Z"));
 
-        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+        given(skillRepository.findVisibleByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
         given(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).willReturn(List.of());
         given(skillVersionRepository.findBySkillId(1L)).willReturn(List.of(pendingVersion));
@@ -165,7 +170,7 @@ class MySkillAppServiceTest {
         Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
         ReflectionTestUtils.setField(namespace, "id", 101L);
 
-        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+        given(skillRepository.findVisibleByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
         given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(skillVersionRepository.findBySkillId(2L)).willReturn(List.of(publishedVersion));
@@ -197,7 +202,7 @@ class MySkillAppServiceTest {
         Namespace namespace = new Namespace("team-ai", "Team AI", "user-1");
         ReflectionTestUtils.setField(namespace, "id", 101L);
 
-        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+        given(skillRepository.findVisibleByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
         given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(skillVersionRepository.findBySkillId(2L)).willReturn(List.of(publishedVersion));
@@ -230,14 +235,12 @@ class MySkillAppServiceTest {
     }
 
     @Test
-    void listMySkills_filtersHiddenOnlyForSuperAdmins() {
-        Skill hiddenSkill = createSkill(3L, 101L, "hidden-skill", "user-1");
+    void listMySkills_listsHiddenSkillsAcrossOwnersOnlyForSuperAdmins() {
+        Skill hiddenSkill = createSkill(3L, 101L, "hidden-skill", "publisher");
         hiddenSkill.setHidden(true);
-        Skill publishedSkill = createSkill(4L, 101L, "published-skill", "user-1");
-        SkillVersion hiddenVersion = createVersion(3L, 33L, "1.0.0", SkillVersionStatus.PUBLISHED, "2026-03-15T09:30:00Z");
 
-        given(skillRepository.findByOwnerId("user-1")).willReturn(List.of(hiddenSkill, publishedSkill));
-        given(skillVersionRepository.findBySkillId(3L)).willReturn(List.of(hiddenVersion));
+        given(hiddenSkillQueryRepository.search(null, null, PageRequest.of(0, 10)))
+                .willReturn(new PageImpl<>(List.of(hiddenSkill), PageRequest.of(0, 10), 1));
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
 
         var regularUserResult = service.listMySkills("user-1", 0, 10, "HIDDEN", Set.of("USER"));
@@ -249,11 +252,40 @@ class MySkillAppServiceTest {
     }
 
     @Test
+    void listMySkills_doesNotExposeHiddenSkillsToSkillAdmins() {
+        var result = service.listMySkills("skill-admin", 0, 10, "HIDDEN", Set.of("SKILL_ADMIN"));
+
+        assertThat(result.total()).isZero();
+        assertThat(result.items()).isEmpty();
+    }
+
+    @Test
+    void listMySkills_delegatesHiddenFilteringAndPaginationToQueryRepository() {
+        Skill hiddenSkill = createSkill(7L, 101L, "hidden-agent", "publisher");
+        hiddenSkill.setHidden(true);
+        Namespace namespace = namespace(101L, "team-ai");
+        PageRequest pageRequest = PageRequest.of(1, 5);
+
+        given(namespaceRepository.findBySlug("team-ai")).willReturn(Optional.of(namespace));
+        given(hiddenSkillQueryRepository.search("agent", 101L, pageRequest))
+                .willReturn(new PageImpl<>(List.of(hiddenSkill), pageRequest, 6));
+        given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
+
+        var result = service.listMySkills(
+                "super-admin", 1, 5, "HIDDEN", " Agent ", "team-ai", Set.of("SUPER_ADMIN"));
+
+        assertThat(result.total()).isEqualTo(6);
+        assertThat(result.page()).isEqualTo(1);
+        assertThat(result.size()).isEqualTo(5);
+        assertThat(result.items()).extracting("slug").containsExactly("hidden-agent");
+    }
+
+    @Test
     void listMySkills_exposesRejectedOwnerPreviewInSummary() {
         Skill skill = createSkill(5L, 101L, "rejected-skill", "user-1");
         SkillVersion rejectedVersion = createVersion(5L, 55L, "1.1.0", SkillVersionStatus.REJECTED, "2026-03-15T09:30:00Z");
 
-        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+        given(skillRepository.findVisibleByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
         given(skillVersionRepository.findBySkillId(5L)).willReturn(List.of(rejectedVersion));
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace(101L, "team-ai")));
@@ -272,7 +304,7 @@ class MySkillAppServiceTest {
         SkillVersion rejectedVersion = createVersion(6L, 60L, "1.0.0", SkillVersionStatus.REJECTED, "2026-03-15T09:30:00Z");
         SkillVersion publishedVersion = createVersion(6L, 61L, "2.0.0", SkillVersionStatus.PUBLISHED, "2026-03-16T09:30:00Z");
 
-        given(skillRepository.findByOwnerId("user-1", PageRequest.of(0, 10)))
+        given(skillRepository.findVisibleByOwnerId("user-1", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 10), 1));
         given(skillVersionRepository.findBySkillIdAndStatus(6L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(skillVersionRepository.findBySkillId(6L)).willReturn(List.of(rejectedVersion, publishedVersion));

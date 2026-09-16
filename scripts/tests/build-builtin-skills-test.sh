@@ -18,6 +18,86 @@ python3 "$BUILDER" --output "$second"
 
 cmp "$first/artifacts.json" "$second/artifacts.json"
 
+# The anonymous Agent bootstrap route and the installable helper Skill share
+# one reviewed instruction body. The web copy exists only because its Docker
+# build context is intentionally limited to web/.
+cmp \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" \
+  "$REPO_ROOT/web/src/docs/skill.md.template"
+test -f "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md"
+grep -F 'npm install --global @astron-team/skillhub' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'version: 2.0.2' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'separately confirms removal of that exact identified launcher' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'Never unlink an executable directly' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'do not run the global installation or update yet' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'installed but not yet loaded' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" >/dev/null
+grep -F 'skillhub sync pull --namespace team-a' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
+grep -F 'skillhub publish ./my-skill' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
+grep -F '`--dry-run` sends the package bytes to the selected registry' \
+  "$REPO_ROOT/builtin-skills/skills/skillhub-cli/references/cli-operations.md" >/dev/null
+
+# Keep the launcher takeover decision executable as a contract instead of only
+# checking for isolated safety phrases. A connect request has three disjoint
+# states; the non-first-party state must identify provenance and obtain a
+# separate confirmation before the first permitted write.
+python3 - "$REPO_ROOT/builtin-skills/skills/skillhub-cli/SKILL.md" <<'PY'
+import sys
+from pathlib import Path
+
+guide = Path(sys.argv[1]).read_text(encoding="utf-8")
+missing = guide.index("If the command is missing")
+install = guide.index("npm install --global @astron-team/skillhub", missing)
+existing = guide.index("If the command exists")
+verified = guide.index("Treat an existing command as first-party only")
+foreign = guide.index("If package metadata proves another owner or package")
+confirm = guide.index("Only after the user separately confirms removal", foreign)
+
+assert missing < install < existing < verified < foreign < confirm
+inspection = guide[existing:verified]
+for required in ("exact command selected by the shell", "follow symlinks", "owner", "package manager or package"):
+    assert required in inspection, required
+for forbidden in ("npm install --global", "supported uninstall command", "unlink an executable"):
+    assert forbidden not in inspection, forbidden
+assert "resolved package metadata proves" in guide[verified:foreign]
+assert "installing package is `@astron-team/skillhub`" in guide[verified:foreign]
+assert "even when it prints `SkillHub CLI <version>`" in guide[foreign:confirm]
+
+authorization = guide[guide.index("An explicit request to connect SkillHub authorizes"):]
+assert "does not authorize removing another `skillhub` launcher" in authorization
+assert "Launcher removal requires the separate, exact confirmation" in authorization
+assert "If the owner or package source cannot be proven, stop" in guide
+PY
+
+# The guide response stays constant-time: its request handler returns the
+# startup-loaded template without network calls or directory traversal. The
+# container entrypoint performs one local guide copy and no guide-time fetch.
+python3 - \
+  "$REPO_ROOT/web/vite.config.ts" \
+  "$REPO_ROOT/web/docker-entrypoint.d/30-runtime-config.sh" <<'PY'
+import sys
+from pathlib import Path
+
+vite = Path(sys.argv[1]).read_text(encoding="utf-8")
+handler = vite[vite.index("configureServer(server)"):vite.index("export default defineConfig")]
+assert "response.end(guideTemplate)" in handler
+for forbidden in ("fetch(", "readFile", "readdir", "glob("):
+    assert forbidden not in handler, forbidden
+
+entrypoint = Path(sys.argv[2]).read_text(encoding="utf-8")
+guide_setup = entrypoint[entrypoint.index("# The guide derives its registry"):]
+assert guide_setup.count("\ncp ") == 1
+for forbidden in ("curl ", "wget ", "find ", "envsubst"):
+    assert forbidden not in guide_setup, forbidden
+PY
+
 runtime_manifest="$REPO_ROOT/server/skillhub-app/src/main/resources/builtin-skills/manifest.json"
 python3 - "$first/artifacts.json" "$runtime_manifest" <<'PY'
 import json
@@ -33,13 +113,17 @@ for item in runtime_items:
     assert coordinate not in runtime_by_coordinate, coordinate
     runtime_by_coordinate[coordinate] = item
 
-artifact_coordinates = {(item["slug"], item["version"]) for item in artifacts}
+artifacts_by_coordinate = {
+    (item["slug"], item["version"]): item for item in artifacts
+}
 legacy_coordinates = {("skillhub-hello", "1.0.0"), ("agentguard", "1.1")}
-assert set(runtime_by_coordinate) == artifact_coordinates | legacy_coordinates
+runtime_coordinates = set(runtime_by_coordinate)
+assert legacy_coordinates <= runtime_coordinates
+packaged_runtime_coordinates = runtime_coordinates - legacy_coordinates
+assert packaged_runtime_coordinates <= set(artifacts_by_coordinate)
 
-for artifact in artifacts:
-    coordinate = (artifact["slug"], artifact["version"])
-    assert coordinate in runtime_by_coordinate, coordinate
+for coordinate in packaged_runtime_coordinates:
+    artifact = artifacts_by_coordinate[coordinate]
     runtime_item = runtime_by_coordinate[coordinate]
     assert runtime_item["sha256"] == artifact["sha256"], coordinate
     parsed_url = urlsplit(runtime_item["url"])
@@ -83,6 +167,8 @@ for artifact in data["artifacts"]:
     print(artifact["file"])
 PY
 )
+
+python3 "$REPO_ROOT/scripts/tests/test_zero_slop.py"
 
 mini_source="$tmp/mini-source"
 mkdir -p "$mini_source"

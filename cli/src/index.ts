@@ -9,6 +9,7 @@ import { logoutCommand } from './commands/logout'
 import { publishCommand, type PublishCommandOptions } from './commands/publish'
 import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
+import { suiteCommand, type SuiteCommandOptions } from './commands/suite'
 import { syncDiffCommand, syncPullCommand, syncPushCommand, syncStatusCommand, type SyncCommonOptions, type SyncPullOptions, type SyncPushOptions } from './commands/sync'
 import { updateCommand } from './commands/update'
 import { upgradeCommand, type UpgradeCommandOptions } from './commands/upgrade'
@@ -24,6 +25,39 @@ const cli = cac('skillhub')
 function toArray(val: string | string[] | undefined): string[] | undefined {
   if (val === undefined) return undefined
   return Array.isArray(val) ? val : [val]
+}
+
+/** Read a string option before cac/mri coerces numeric-looking values to numbers. */
+function rawStringOption(argv: string[], name: string): string | undefined {
+  const optionWithEquals = `${name}=`
+  const end = argv.indexOf('--')
+  const args = end === -1 ? argv : argv.slice(0, end)
+  let value: string | undefined
+  let occurrences = 0
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]!
+    if (argument === name) {
+      occurrences += 1
+      const candidate = args[index + 1]
+      if (candidate === undefined || candidate.startsWith('-')) {
+        throw new CliError(`option "${name}" value is missing`, EXIT.usage)
+      }
+      value = candidate
+      index += 1
+    } else if (argument.startsWith(optionWithEquals)) {
+      occurrences += 1
+      value = argument.slice(optionWithEquals.length)
+      if (!value) {
+        throw new CliError(`option "${name}" value is missing`, EXIT.usage)
+      }
+    }
+  }
+
+  if (occurrences > 1) {
+    throw new CliError(`option "${name}" cannot be repeated`, EXIT.usage)
+  }
+  return value
 }
 
 async function runCommand(action: () => Promise<string>, json = false): Promise<void> {
@@ -245,7 +279,33 @@ cli
   .option('--token <token>', 'API token')
   .option('--json', 'Output JSON')
   .action((slug: string, options: InstallCommandOptions & { agent?: string | string[] }) => {
-    return runCommand(() => installCommand(slug, { ...options, agent: toArray(options.agent) }), Boolean(options.json))
+    return runCommand(() => installCommand(slug, {
+      ...options,
+      version: rawStringOption(process.argv.slice(2), '--version'),
+      agent: toArray(options.agent)
+    }), Boolean(options.json))
+  })
+
+cli
+  .command('suite <action> <coordinate>', 'Manage Skill Suites on compatible registries')
+  .option('--version <v>', 'Exact Suite version for install')
+  .option('--scope <scope>', 'Install scope: user or project')
+  .option('--agent <profile>', 'Agent profile (repeatable)')
+  .option('--dir <path>', 'Install directory')
+  .option('--force', 'Replace local changes during install or upgrade')
+  .option('--check', 'Show an upgrade plan without writing')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((action: string, coordinate: string, options: SuiteCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(
+      () => suiteCommand(action, coordinate, {
+        ...options,
+        version: rawStringOption(process.argv.slice(2), '--version'),
+        agent: toArray(options.agent)
+      }),
+      Boolean(options.json)
+    )
   })
 
 cli

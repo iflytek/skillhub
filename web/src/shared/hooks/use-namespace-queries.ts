@@ -1,11 +1,38 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole, BatchMemberResponse, PagedResponse } from '@/api/types'
 import { namespaceApi } from '@/api/client'
+import { ApiError } from '@/shared/lib/api-error'
 import { replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
 import { shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
 async function getMyNamespaces(): Promise<ManagedNamespace[]> {
   return namespaceApi.listMine()
+}
+
+export function shouldFallbackToLegacyNamespaceList(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404
+}
+
+async function getMyNamespacesPage(params: { page?: number; size?: number } = {}): Promise<PagedResponse<ManagedNamespace>> {
+  try {
+    return await namespaceApi.listMinePage(params)
+  } catch (error) {
+    if (!shouldFallbackToLegacyNamespaceList(error)) {
+      throw error
+    }
+    // Local development may still be backed by an older server image without the paginated endpoint.
+    // Fall back to the legacy list endpoint and slice client-side so the page remains usable.
+    const namespaces = await namespaceApi.listMine()
+    const page = params.page ?? 0
+    const size = params.size ?? 10
+    const start = page * size
+    return {
+      items: namespaces.slice(start, start + size),
+      total: namespaces.length,
+      page,
+      size,
+    }
+  }
 }
 
 async function createNamespace(request: CreateNamespaceRequest): Promise<Namespace> {
@@ -55,6 +82,14 @@ export function useMyNamespaces() {
   return useQuery({
     queryKey: ['namespaces', 'my'],
     queryFn: getMyNamespaces,
+  })
+}
+
+export function useMyNamespacesPage(params: { page?: number; size?: number } = {}) {
+  return useQuery({
+    queryKey: ['namespaces', 'my', 'page', params],
+    queryFn: () => getMyNamespacesPage(params),
+    placeholderData: (previousData) => previousData,
   })
 }
 

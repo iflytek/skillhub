@@ -1,7 +1,7 @@
 import { homedir } from 'node:os'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
-import { canonicalizeExistingPath, pathExists } from '../platform/paths'
+import { canonicalizeExistingPath, directoryExists } from '../platform/paths'
 import type { AgentCandidate } from './types'
 import { allProfiles, profileMap } from './detector'
 
@@ -105,7 +105,7 @@ async function generateScopedCandidates(
   for (const profile of allProfiles) {
     const roots = scope === 'user' ? profile.userRoots(home) : profile.projectRoots(cwd)
     for (const root of roots) {
-      if (await pathExists(root)) {
+      if (await directoryExists(root)) {
         results.push({ agent: profile.id, rootDir: root, scope, source: 'detected' })
       }
     }
@@ -145,6 +145,11 @@ async function resolveExplicitAgents(
       const userRoots = home ? profile.userRoots(home) : []
       roots = userRoots.length > 0 ? userRoots : profile.projectRoots(cwd)
     }
+    if (roots.length === 0) {
+      throw new CliError(`agent ${agentId} does not support ${scope} scope`, EXIT.usage, {
+        next: 'choose a supported scope or omit --scope'
+      })
+    }
     const userRootSet = new Set(home ? profile.userRoots(home) : [])
     for (const root of roots) {
       const candidateScope: AgentCandidate['scope'] = scope !== undefined
@@ -183,7 +188,7 @@ async function selectTargetsInteractively(candidates: AgentCandidate[]): Promise
     name: 'selected',
     message: 'Select install targets',
     choices: candidates.map(c => ({
-      title: `${c.agent} (${c.rootDir})`,
+      title: `${profileMap.get(c.agent)?.displayName ?? c.agent} (${c.rootDir})`,
       value: c
     })),
     onRender: function (this: { cursor?: number }) {

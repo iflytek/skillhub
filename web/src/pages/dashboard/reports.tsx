@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Pagination } from '@/shared/components/pagination'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
@@ -11,6 +12,16 @@ import { useDismissSkillReport, useResolveSkillReport, useSkillReports } from '@
 import { REPORT_TEXT_WRAP_CLASS_NAME } from '@/features/report/report-text'
 import { toast } from '@/shared/lib/toast'
 import type { ReportDisposition } from '@/api/types'
+
+interface ReportPageMetadata {
+  total: number
+  size: number
+}
+
+export function clampReportPage(page: number, reports?: ReportPageMetadata): number {
+  if (!reports) return page
+  return Math.min(page, Math.max(Math.ceil(reports.total / reports.size) - 1, 0))
+}
 
 /**
  * Moderation page for skill reports. The route keeps the confirmation state
@@ -26,11 +37,39 @@ export function ReportsPage() {
     disposition?: ReportDisposition
     skillLabel: string
   } | null>(null)
-  const { data: pendingReports, isLoading: isPendingLoading } = useSkillReports('PENDING')
-  const { data: resolvedReports, isLoading: isResolvedLoading } = useSkillReports('RESOLVED')
-  const { data: dismissedReports, isLoading: isDismissedLoading } = useSkillReports('DISMISSED')
+  const [pages, setPages] = useState<Record<'PENDING' | 'RESOLVED' | 'DISMISSED', number>>({
+    PENDING: 0,
+    RESOLVED: 0,
+    DISMISSED: 0,
+  })
+  const pageSize = 10
+  const { data: pendingReports, isLoading: isPendingLoading } = useSkillReports('PENDING', pages.PENDING, pageSize)
+  const { data: resolvedReports, isLoading: isResolvedLoading } = useSkillReports('RESOLVED', pages.RESOLVED, pageSize)
+  const { data: dismissedReports, isLoading: isDismissedLoading } = useSkillReports('DISMISSED', pages.DISMISSED, pageSize)
   const resolveMutation = useResolveSkillReport()
   const dismissMutation = useDismissSkillReport()
+
+  useEffect(() => {
+    const totals = {
+      PENDING: pendingReports,
+      RESOLVED: resolvedReports,
+      DISMISSED: dismissedReports,
+    }
+    setPages((current) => {
+      const next = { ...current }
+      let changed = false
+      for (const status of ['PENDING', 'RESOLVED', 'DISMISSED'] as const) {
+        const reports = totals[status]
+        if (!reports) continue
+        const clampedPage = clampReportPage(next[status], reports)
+        if (next[status] !== clampedPage) {
+          next[status] = clampedPage
+          changed = true
+        }
+      }
+      return changed ? next : current
+    })
+  }, [dismissedReports, pendingReports, resolvedReports])
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
@@ -77,13 +116,13 @@ export function ReportsPage() {
       )
     }
 
-    if (!reports || reports.length === 0) {
+    if (!reports || reports.items.length === 0) {
       return <Card className="p-12 text-center text-muted-foreground">{t('reports.empty')}</Card>
     }
 
     return (
       <div className="space-y-4">
-        {reports.map((report) => {
+        {reports.items.map((report) => {
           const skillLabel = report.skillDisplayName || report.skillSlug || `#${report.skillId}`
           return (
             <Card key={report.id} className="p-5 space-y-4">
@@ -149,6 +188,13 @@ export function ReportsPage() {
             </Card>
           )
         })}
+        {reports.total > reports.size ? (
+          <Pagination
+            page={pages[status]}
+            totalPages={Math.max(Math.ceil(reports.total / reports.size), 1)}
+            onPageChange={(nextPage) => setPages((current) => ({ ...current, [status]: nextPage }))}
+          />
+        ) : null}
       </div>
     )
   }

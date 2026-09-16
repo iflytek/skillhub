@@ -35,7 +35,7 @@ export const commands = {
   },
   install: {
     summary: 'Install a skill locally',
-    usage: 'skillhub install <coordinate> [--scope <user|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--json]',
+    usage: 'skillhub install <coordinate> [--scope <user|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]',
     examples: [
       'skillhub install pdf-parser',
       'skillhub install team/my-skill',
@@ -45,11 +45,21 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  suite: {
+    summary: 'Manage Skill Suites on compatible registries',
+    usage: 'skillhub suite <install|check|upgrade|remove> <coordinate> [options]',
+    examples: [
+      'skillhub suite install @global/marketing --scope user',
+      'skillhub suite check @global/marketing',
+      'skillhub suite upgrade @global/marketing --check',
+      'skillhub suite remove @global/marketing'
+    ]
+  },
   upgrade: {
     summary: 'Upgrade explicitly selected installed skills',
-    usage: 'skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]',
+    usage: 'skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--check] [--force] [--json]',
     examples: [
-      'skillhub upgrade @global/skillhub-registry',
+      'skillhub upgrade @global/skillhub-cli',
       'skillhub upgrade @team/code-review @team/java-guide --check --json',
       'skillhub upgrade code-review --namespace team --agent codex'
     ]
@@ -70,7 +80,7 @@ export const commands = {
   },
   remove: {
     summary: 'Remove local or remote skill',
-    usage: 'skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--json]',
+    usage: 'skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]',
     examples: [
       'skillhub remove pdf-parser',
       'skillhub remove team/my-skill',
@@ -85,7 +95,7 @@ export const commands = {
   },
   publish: {
     summary: 'Publish a local skill package',
-    usage: 'skillhub publish <path> [--namespace <slug>] [--visibility <public|namespace-only|private>] [--registry <url>] [--json]',
+    usage: 'skillhub publish <path> [--namespace <slug>] [--visibility <public|namespace-only|private>] [--dry-run] [--registry <url>] [--token <token>] [--json]',
     examples: ['skillhub publish ./my-skill', 'skillhub publish ./my-skill --namespace myspace']
   },
   update: {

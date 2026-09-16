@@ -76,6 +76,58 @@ export interface DryRunResponse {
   resolvedVersion: string | null
 }
 
+export interface ServerMetadata {
+  apiBase?: string
+  capabilities?: string[]
+}
+
+export interface SuiteInstallMember {
+  skillId: number
+  skillVersionId: number
+  namespace: string
+  slug: string
+  version: string
+  fingerprint: string
+  downloadUrl: string
+  position: number
+  entry: boolean
+}
+
+export interface SuiteInstallPlan {
+  operationId: string
+  namespace: string
+  slug: string
+  version: string
+  fingerprint: string
+  members: SuiteInstallMember[]
+}
+
+export interface SuiteDetailMember {
+  skillId: number
+  skillVersionId: number
+  namespace: string
+  slug: string
+  version: string
+  fingerprint: string
+  position: number
+  entry: boolean
+  blockingReason?: string | null
+}
+
+export interface SuiteDetail {
+  id: number
+  versionId: number
+  namespace: string
+  slug: string
+  displayName: string
+  summary?: string | null
+  version: string
+  status: string
+  visibility: string
+  available: boolean
+  members: SuiteDetailMember[]
+}
+
 interface PublicErrorFields {
   msg?: string
   requestId?: string
@@ -92,6 +144,84 @@ export class SkillHubClient {
 
   async whoami(): Promise<WhoAmIResponse> {
     return this.getJson('/auth/whoami')
+  }
+
+  async serverMetadata(): Promise<ServerMetadata> {
+    let response: Response
+    try {
+      response = await this.fetchImpl(`${this.registry}/.well-known/clawhub.json`)
+    } catch {
+      throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
+    }
+    if (!response.ok) return {}
+    let body: unknown
+    try {
+      body = await response.json()
+    } catch {
+      // Older registries and reverse proxies may return an HTML landing page at this path.
+      return {}
+    }
+    return typeof body === 'object' && body !== null ? body as ServerMetadata : {}
+  }
+
+  async suiteInstallPlan(
+    namespace: string,
+    slug: string,
+    version?: string,
+    idempotencyKey?: string
+  ): Promise<SuiteInstallPlan> {
+    const params = version ? `?version=${encodeURIComponent(version)}` : ''
+    const url = `${this.registry}/api/v1/suites/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/install-plan${params}`
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let response: Response
+      try {
+        response = await this.fetchImpl(url, {
+          method: 'POST',
+          headers: { ...this.headers(), ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) }
+        })
+      } catch {
+        if (attempt === 0) continue
+        throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
+      }
+      if (attempt === 0 && [502, 503, 504].includes(response.status)) continue
+      try {
+        return await this.handleJsonResponse<SuiteInstallPlan>(response)
+      } catch (error) {
+        // A successful response whose body is truncated is safe to retry with the same key.
+        if (attempt === 0 && !(error instanceof CliError)) continue
+        throw error
+      }
+    }
+    throw new CliError('registry unreachable', EXIT.network, { registry: this.registry })
+  }
+
+  async suiteDetail(namespace: string, slug: string, version?: string): Promise<SuiteDetail> {
+    const params = version ? `?version=${encodeURIComponent(version)}` : ''
+    let response: Response
+    try {
+      response = await this.fetchImpl(
+        `${this.registry}/api/v1/suites/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}${params}`,
+        { headers: this.headers() }
+      )
+    } catch {
+      throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
+    }
+    if (response.status === 404) {
+      const error = await this.createResponseError(response, 'json')
+      throw new CliError(error.message, error.exitCode, { ...error.details, status: 404 })
+    }
+    return this.handleJsonResponse<SuiteDetail>(response)
+  }
+
+  async downloadFromUrl(downloadUrl: string): Promise<Response> {
+    let response: Response
+    try {
+      response = await this.fetchImpl(new URL(downloadUrl, `${this.registry}/`).toString(), { headers: this.headers() })
+    } catch {
+      throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
+    }
+    if (!response.ok) throw await this.createResponseError(response, 'download')
+    return response
   }
 
   async search(query: string, limit: number): Promise<SearchResponse> {
@@ -244,7 +374,7 @@ export class SkillHubClient {
       exitCode = EXIT.auth
     } else if (response.status === 404) {
       fallback = kind === 'download' ? 'skill or version not found' : 'resource not found'
-    } else if (response.status === 502 || response.status === 503) {
+    } else if (response.status === 502 || response.status === 503 || response.status === 504) {
       fallback = kind === 'download'
         ? `download failed with status ${response.status}`
         : `registry returned ${response.status}`

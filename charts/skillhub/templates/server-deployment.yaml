@@ -77,6 +77,8 @@ spec:
               {{- $profiles = printf "%s,redis-sentinel" $profiles }}
               {{- end }}
               value: {{ $profiles | quote }}
+            - name: SKILLHUB_SUITE_REVIEW_WRITES_ENABLED
+              value: {{ .Values.server.suiteReviewWritesEnabled | quote }}
 
             # Database
             - name: SPRING_DATASOURCE_URL

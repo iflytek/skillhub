@@ -18,6 +18,7 @@ import java.util.Optional;
 public interface NamespaceJpaRepository
         extends JpaRepository<Namespace, Long>, NamespaceRepository {
     List<Namespace> findByIdIn(List<Long> ids);
+    Page<Namespace> findByIdIn(List<Long> ids, Pageable pageable);
     Optional<Namespace> findBySlug(String slug);
     Page<Namespace> findByStatus(NamespaceStatus status, Pageable pageable);
 }

@@ -10,6 +10,13 @@ vi.mock('@/features/auth/use-auth', () => ({
   }),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en' },
+  }),
+}))
+
 vi.mock('@/features/social/use-star', () => ({
   useStarredIdSet: () => ({
     starredIds: new Set<number>(),
@@ -38,6 +45,30 @@ describe('skill-card module exports', () => {
   it('exports the SkillCard component', () => {
     expect(mod.SkillCard).toBeDefined()
     expect(typeof mod.SkillCard).toBe('function')
+  })
+
+  it('limits long summaries to the stable three-line description region', () => {
+    const summary = 'A long skill summary that should remain available as a tooltip while the visible card content stays clamped.'
+    const html = renderToStaticMarkup(
+      createElement(SkillCard, {
+        skill: {
+          id: 1,
+          slug: 'summary-writer',
+          displayName: 'Summary Writer',
+          summary,
+          downloadCount: 0,
+          starCount: 0,
+          ratingCount: 0,
+          namespace: 'global',
+          updatedAt: '2026-09-07T00:00:00Z',
+          canSubmitPromotion: false,
+        },
+      })
+    )
+
+    expect(html).toContain('skill-card-summary')
+    expect(html).toContain(`title="${summary}"`)
+    expect(html).toContain('[overflow-wrap:anywhere]')
   })
 
   it('renders compliance badges from the skill summary snapshot', () => {

@@ -23,27 +23,27 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       title={label}
       onClick={toggleTheme}
       className={cn(
-        'group relative inline-flex h-11 w-16 shrink-0 items-center rounded-full border border-border bg-muted/70 px-1 text-muted-foreground shadow-sm transition-[background-color,border-color] duration-200 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'group relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border/50 bg-muted/60 px-0.5 text-muted-foreground transition-[background-color,border-color] duration-150 hover:border-border focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15',
         className,
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          'absolute left-1 top-1.5 h-8 w-7 rounded-full border border-border/80 bg-card shadow-[0_3px_10px_-4px_hsl(var(--foreground)/0.45)] transition-transform duration-200 ease-out motion-reduce:transition-none',
-          isDark && 'translate-x-7',
+          'absolute left-0.5 top-0.5 h-5 w-5 rounded-full border border-border/50 bg-card shadow-[0_1px_2px_0_rgb(0_0_0/0.12)] transition-[transform,box-shadow] duration-150 ease-out motion-reduce:transition-none',
+          isDark && 'translate-x-[20px]',
         )}
       />
-      <span className="relative z-10 inline-flex h-8 w-7 items-center justify-center">
+      <span className="relative z-10 inline-flex h-5 w-5 items-center justify-center">
         <Sun
           aria-hidden="true"
-          className={cn('h-4 w-4 transition-colors duration-200', !isDark && 'text-foreground')}
+          className={cn('h-3 w-3 transition-colors duration-150', !isDark && 'text-foreground')}
         />
       </span>
-      <span className="relative z-10 inline-flex h-8 w-7 items-center justify-center">
+      <span className="relative z-10 inline-flex h-5 w-5 items-center justify-center">
         <Moon
           aria-hidden="true"
-          className={cn('h-4 w-4 transition-colors duration-200', isDark && 'text-foreground')}
+          className={cn('h-3 w-3 transition-colors duration-150', isDark && 'text-foreground')}
         />
       </span>
     </button>

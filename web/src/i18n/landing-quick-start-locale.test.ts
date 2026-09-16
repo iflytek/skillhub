@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import skillGuide from '../docs/skill.md?raw'
 import skillGuideTemplate from '../docs/skill.md.template?raw'
 import en from './locales/en.json'
 import ru from './locales/ru.json'
@@ -7,9 +6,9 @@ import zh from './locales/zh.json'
 
 describe('landing quick start locales', () => {
   it('uses localized agent setup prompts for chinese, english, and russian', () => {
-    expect(zh.landing.quickStart.agent.command).toBe('请根据 https://www.example.com/install/skillhub.md 接入 SkillHub')
-    expect(en.landing.quickStart.agent.command).toBe('Connect SkillHub using https://www.example.com/install/skillhub.md')
-    expect(ru.landing.quickStart.agent.command).toBe('Подключите SkillHub по инструкции https://www.example.com/install/skillhub.md')
+    expect(zh.landing.quickStart.agent.command).toBe('请根据 https://www.example.com/registry/skill.md 接入 SkillHub')
+    expect(en.landing.quickStart.agent.command).toBe('Connect SkillHub using https://www.example.com/registry/skill.md')
+    expect(ru.landing.quickStart.agent.command).toBe('Подключите SkillHub по инструкции https://www.example.com/registry/skill.md')
   })
 
   it('provides command templates with url placeholder for dynamic rendering', () => {
@@ -37,12 +36,28 @@ describe('landing quick start locales', () => {
     }
   })
 
-  it('limits fallback to discovery in both served guide sources', () => {
-    for (const guide of [skillGuide, skillGuideTemplate]) {
-      expect(guide).toContain('version: 1.1.1')
-      expect(guide).toContain('Fallback is only appropriate for discovery requests')
-      expect(guide).toContain('For an exact coordinate or version request, report the failure and stop')
-    }
+  it('keeps the native CLI guide bound to the selected registry', () => {
+    expect(skillGuideTemplate).toContain('name: skillhub-cli')
+    expect(skillGuideTemplate).toContain('version: 2.0.2')
+    expect(skillGuideTemplate).toContain('npm install --global @astron-team/skillhub')
+    expect(skillGuideTemplate).not.toContain('@astron-team/skillhub@0.1.12')
+    expect(skillGuideTemplate).toContain('the `registry` field in `~/.skillhub/config.json`')
+    expect(skillGuideTemplate).toContain('`https://skill.xfyun.cn`')
+    expect(skillGuideTemplate).not.toContain('${SKILLHUB_PUBLIC_BASE_URL}')
+    expect(skillGuideTemplate).toContain('separately confirms removal of that exact identified launcher')
+    expect(skillGuideTemplate).toContain('Never unlink an executable directly')
+    expect(skillGuideTemplate).toContain('do not run the global installation or update yet')
+    expect(skillGuideTemplate).toContain('resolved package metadata proves')
+    expect(skillGuideTemplate).toContain('even when it prints `SkillHub CLI <version>`')
+    expect(skillGuideTemplate).toContain('does not authorize removing another `skillhub` launcher')
+    expect(skillGuideTemplate).toContain('Treat `<registry>` below as a value to replace')
+    expect(skillGuideTemplate).toContain([
+      'skillhub install @global/skillhub-cli \\',
+      '  --scope user',
+    ].join('\n'))
+    expect(skillGuideTemplate).toContain('PowerShell 7')
+    expect(skillGuideTemplate).toContain('do not search for or substitute a similarly named package')
+    expect(skillGuideTemplate).toContain('ask before querying another registry')
   })
 
   it('exposes CLI install command in both locales', () => {

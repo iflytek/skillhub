@@ -24,7 +24,10 @@ import { SecurityAuditSection } from '@/features/security-audit/security-audit-s
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
+import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { useReviewFile } from '@/features/review/use-review-file'
+import { useSuiteDetail } from '@/shared/hooks/use-suite-queries'
+import { suiteBlockingReasonLabel } from '@/features/suite/suite-labels'
 import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import {
   useReviewAttempts,
@@ -58,11 +61,18 @@ function ReviewDetailScreen({
     isLoading: isLoadingReviewAttempts,
     isError: isReviewAttemptsError,
   } = useReviewAttempts(taskId)
+  const isSuiteReview = review?.subjectType === 'SUITE_VERSION'
   const {
     data: reviewSkillDetail,
     isLoading: isLoadingReviewSkillDetail,
     error: reviewSkillDetailError,
-  } = useReviewSkillDetail(taskId)
+  } = useReviewSkillDetail(taskId, Boolean(review) && !isSuiteReview)
+  const { data: reviewSuiteDetail, isLoading: isLoadingReviewSuiteDetail } = useSuiteDetail(
+    review?.namespace || '',
+    review?.subjectSlug || '',
+    review?.version,
+    isSuiteReview,
+  )
   const approveMutation = useApproveReview({
     onSuccess: () => {
       toast.success(t('review.approveSuccess'))
@@ -209,7 +219,12 @@ function ReviewDetailScreen({
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.namespace')}</Label>
-            <p className="font-semibold font-mono">{review.namespace}/{review.skillSlug}</p>
+            <p className="font-semibold font-mono">
+              <span className="mr-2 rounded-full bg-secondary px-2 py-0.5 text-xs">
+                {t(isSuiteReview ? 'suite.resourceTypeSuite' : 'suite.resourceTypeSkill')}
+              </span>
+              {review.namespace}/{review.subjectSlug || review.skillSlug}
+            </p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t('review.version')}</Label>
@@ -347,7 +362,7 @@ function ReviewDetailScreen({
         </Card>
       )}
 
-      {(() => {
+      {!isSuiteReview && (() => {
         const skillId = reviewSkillDetail?.skill?.id
         const versionId =
           reviewSkillDetail?.versions?.find((v) => v.version === review.version)?.id ??
@@ -357,12 +372,46 @@ function ReviewDetailScreen({
         ) : null
       })()}
 
-      <ReviewSkillDetailSection
-        detail={reviewSkillDetail}
-        isLoading={isLoadingReviewSkillDetail}
-        hasError={Boolean(reviewSkillDetailError)}
-        reviewId={taskId}
-      />
+      {isSuiteReview ? (
+        <Card className="space-y-5 p-6 md:p-8">
+          <div>
+            <h2 className="text-xl font-bold font-heading">{t('suite.reviewSnapshot')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t('suite.reviewSnapshotDescription')}</p>
+          </div>
+          {isLoadingReviewSuiteDetail ? (
+            <div className="h-24 animate-shimmer rounded-lg" />
+          ) : reviewSuiteDetail ? (
+            <div className="space-y-5">
+              {reviewSuiteDetail.overview ? (
+                <div className="rounded-xl border p-5">
+                  <h3 className="font-semibold">{t('suite.overviewTitle')}</h3>
+                  <MarkdownRenderer content={reviewSuiteDetail.overview} className="mt-3" />
+                </div>
+              ) : null}
+              <div className="divide-y divide-border rounded-xl border">
+                {reviewSuiteDetail.members.map((member) => (
+                  <div key={`${member.namespace}/${member.slug}@${member.version}`} className="flex items-center justify-between gap-4 p-4">
+                    <div>
+                      <p className="font-medium">{member.displayName || `@${member.namespace}/${member.slug}`}</p>
+                      <p className="text-xs text-muted-foreground">@{member.namespace}/{member.slug} · {t('suite.pinnedVersion', { version: member.version })}{member.entry ? ` · ${t('suite.entrySkill')}` : ''}</p>
+                    </div>
+                    {member.blockingReason ? <span className="text-sm text-destructive">{suiteBlockingReasonLabel(t, member.blockingReason)}</span> : <span className="text-sm text-emerald-600">{t('suite.publishable')}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-destructive">{t('suite.reviewSnapshotFailed')}</p>
+          )}
+        </Card>
+      ) : (
+        <ReviewSkillDetailSection
+          detail={reviewSkillDetail}
+          isLoading={isLoadingReviewSkillDetail}
+          hasError={Boolean(reviewSkillDetailError)}
+          reviewId={taskId}
+        />
+      )}
 
       <ConfirmDialog
         open={approveDialog}
@@ -386,7 +435,7 @@ function ReviewDetailScreen({
 
       {/* Sidebar — file browser for the review-bound active version */}
       <aside className="w-full lg:w-80 flex-shrink-0 space-y-5">
-        {reviewFiles && reviewFiles.length > 0 && (
+        {!isSuiteReview && reviewFiles && reviewFiles.length > 0 && (
           <Card className="p-5 space-y-3">
             <button
               type="button"
@@ -415,7 +464,7 @@ function ReviewDetailScreen({
             )}
           </Card>
         )}
-        {reviewSkillDetail?.activeVersion && (
+        {!isSuiteReview && reviewSkillDetail?.activeVersion && (
           <Card className="p-5 space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{t('review.activeReviewVersion')}</span>
@@ -426,7 +475,7 @@ function ReviewDetailScreen({
       </aside>
 
       {/* File preview dialog */}
-      <FilePreviewDialog
+      {!isSuiteReview ? <FilePreviewDialog
         open={previewDialogOpen}
         onOpenChange={setPreviewDialogOpen}
         node={previewNode}
@@ -434,7 +483,7 @@ function ReviewDetailScreen({
         isLoading={isLoadingPreview}
         error={previewError}
         onDownload={handleDownloadFile}
-      />
+      /> : null}
     </div>
   )
 }

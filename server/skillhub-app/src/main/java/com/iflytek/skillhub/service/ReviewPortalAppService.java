@@ -10,8 +10,11 @@ import com.iflytek.skillhub.domain.review.ReviewService;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.review.ReviewSubjectType;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
+import com.iflytek.skillhub.domain.suite.SkillSuiteActionContext;
+import com.iflytek.skillhub.domain.suite.SkillSuiteLifecycleService;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
 import com.iflytek.skillhub.dto.ReviewTaskResponse;
@@ -40,6 +43,7 @@ public class ReviewPortalAppService {
     private final RbacService rbacService;
     private final AuditLogService auditLogService;
     private final RequestIdAccessor requestIdAccessor;
+    private final SkillSuiteLifecycleService suiteLifecycleService;
 
     public ReviewPortalAppService(ReviewService reviewService,
                                   ReviewTaskRepository reviewTaskRepository,
@@ -48,7 +52,8 @@ public class ReviewPortalAppService {
                                   ReviewProgressQueryRepository reviewProgressQueryRepository,
                                   RbacService rbacService,
                                   AuditLogService auditLogService,
-                                  RequestIdAccessor requestIdAccessor) {
+                                  RequestIdAccessor requestIdAccessor,
+                                  SkillSuiteLifecycleService suiteLifecycleService) {
         this.reviewService = reviewService;
         this.reviewTaskRepository = reviewTaskRepository;
         this.namespaceRepository = namespaceRepository;
@@ -57,6 +62,7 @@ public class ReviewPortalAppService {
         this.rbacService = rbacService;
         this.auditLogService = auditLogService;
         this.requestIdAccessor = requestIdAccessor;
+        this.suiteLifecycleService = suiteLifecycleService;
     }
 
     @Transactional
@@ -80,6 +86,12 @@ public class ReviewPortalAppService {
                                             String userId,
                                             Map<Long, NamespaceRole> userNsRoles,
                                             AuditRequestContext auditContext) {
+        ReviewTask existing = findReview(reviewTaskId);
+        if (existing.getSubjectType() == ReviewSubjectType.SUITE_VERSION) {
+            ReviewTask task = suiteLifecycleService.approveReview(
+                    reviewTaskId, comment, suiteContext(userId, userNsRoles, auditContext));
+            return governanceQueryRepository.getReviewTaskResponse(task);
+        }
         ReviewTask task = reviewService.approveReview(
                 reviewTaskId,
                 userId,
@@ -97,6 +109,12 @@ public class ReviewPortalAppService {
                                            String userId,
                                            Map<Long, NamespaceRole> userNsRoles,
                                            AuditRequestContext auditContext) {
+        ReviewTask existing = findReview(reviewTaskId);
+        if (existing.getSubjectType() == ReviewSubjectType.SUITE_VERSION) {
+            ReviewTask task = suiteLifecycleService.rejectReview(
+                    reviewTaskId, comment, suiteContext(userId, userNsRoles, auditContext));
+            return governanceQueryRepository.getReviewTaskResponse(task);
+        }
         ReviewTask task = reviewService.rejectReview(
                 reviewTaskId,
                 userId,
@@ -111,9 +129,14 @@ public class ReviewPortalAppService {
     @Transactional
     public void withdrawReview(Long reviewTaskId,
                                String userId,
+                               Map<Long, NamespaceRole> userNsRoles,
                                AuditRequestContext auditContext) {
-        ReviewTask task = reviewTaskRepository.findById(reviewTaskId)
-                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+        ReviewTask task = findReview(reviewTaskId);
+        if (task.getSubjectType() == ReviewSubjectType.SUITE_VERSION) {
+            suiteLifecycleService.withdrawReview(
+                    reviewTaskId, suiteContext(userId, userNsRoles, auditContext));
+            return;
+        }
         reviewService.withdrawReview(task.getSkillVersionId(), userId);
         recordAudit(
                 "REVIEW_WITHDRAW",
@@ -244,7 +267,12 @@ public class ReviewPortalAppService {
             throw new DomainForbiddenException("review.no_permission");
         }
 
-        List<ReviewTask> attempts = reviewTaskRepository
+        List<ReviewTask> attempts = anchor.getSubjectType() == ReviewSubjectType.SUITE_VERSION
+                ? reviewTaskRepository
+                .findBySubmittedByAndSubjectTypeAndSubjectIdAndSubjectVersionOrderBySubmittedAtDescIdDesc(
+                        userId, ReviewSubjectType.SUITE_VERSION,
+                        anchor.getSubjectId(), anchor.getSubjectVersion())
+                : reviewTaskRepository
                 .findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
                         userId, anchor.getSkillId(), anchor.getSkillVersion());
         return governanceQueryRepository.getReviewTaskResponses(attempts);
@@ -268,7 +296,12 @@ public class ReviewPortalAppService {
             throw new DomainForbiddenException("review.no_permission");
         }
 
-        List<ReviewTask> attempts = reviewTaskRepository
+        List<ReviewTask> attempts = anchor.getSubjectType() == ReviewSubjectType.SUITE_VERSION
+                ? reviewTaskRepository
+                .findBySubjectTypeAndSubjectIdAndSubjectVersionOrderBySubmittedAtDescIdDesc(
+                        ReviewSubjectType.SUITE_VERSION,
+                        anchor.getSubjectId(), anchor.getSubjectVersion())
+                : reviewTaskRepository
                 .findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
                         anchor.getSkillId(), anchor.getSkillVersion());
         return governanceQueryRepository.getReviewTaskResponses(attempts);
@@ -306,6 +339,22 @@ public class ReviewPortalAppService {
 
     private Set<String> platformRoles(String userId) {
         return rbacService.getUserRoleCodes(userId);
+    }
+
+    private ReviewTask findReview(Long reviewTaskId) {
+        return reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+    }
+
+    private SkillSuiteActionContext suiteContext(
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles,
+            AuditRequestContext auditContext
+    ) {
+        return new SkillSuiteActionContext(
+                userId, normalizeRoles(userNsRoles), platformRoles(userId), requestIdAccessor.current(),
+                auditContext != null ? auditContext.clientIp() : null,
+                auditContext != null ? auditContext.userAgent() : null);
     }
 
     private boolean hasPlatformReviewRole(Set<String> platformRoles) {

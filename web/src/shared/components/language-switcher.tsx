@@ -61,18 +61,18 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
         size="sm"
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn('cursor-pointer gap-2 text-muted-foreground hover:text-foreground', className)}
+        className={cn('cursor-pointer gap-1.5 text-muted-foreground hover:text-foreground transition-colors', className)}
         onClick={() => setOpen((current) => !current)}
       >
         <Globe className="h-4 w-4" />
-        <span className="hidden text-sm text-inherit sm:inline">{currentLanguage.name}</span>
-        <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:block" />
+        <span className="hidden text-sm font-medium text-inherit sm:inline">{currentLanguage.name}</span>
+        <ChevronDown className={cn('hidden h-3.5 w-3.5 transition-transform duration-200 sm:block', open && 'rotate-180')} />
       </Button>
       {open ? (
-        <div className="absolute right-0 top-full z-50 pt-2">
+        <div className="absolute right-0 top-full z-50 pt-1.5">
           <div
             role="menu"
-            className="flex min-w-[9rem] flex-col gap-1.5 rounded-md border bg-popover p-2 text-popover-foreground shadow-md"
+            className="flex min-w-[8rem] flex-col overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           >
             {languages.map((lang) => (
               <button
@@ -81,8 +81,8 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
                 role="menuitem"
                 onClick={() => changeLanguage(lang.code)}
                 className={cn(
-                  'cursor-pointer rounded-md px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
-                  currentLangCode === lang.code ? 'bg-accent' : ''
+                  'w-full cursor-pointer rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
+                  currentLangCode === lang.code && 'bg-accent text-accent-foreground'
                 )}
               >
                 {lang.name}

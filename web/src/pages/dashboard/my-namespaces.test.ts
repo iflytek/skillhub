@@ -76,6 +76,10 @@ vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useDeleteNamespace: () => ({ mutateAsync: deleteMutateAsync }),
   useFreezeNamespace: () => ({ mutateAsync: freezeMutateAsync }),
   useMyNamespaces: () => ({ data: mockNamespaces, isLoading: false }),
+  useMyNamespacesPage: () => ({
+    data: { items: mockNamespaces, total: mockNamespaces.length, page: 0, size: 10 },
+    isLoading: false,
+  }),
   useRestoreNamespace: () => ({ mutateAsync: restoreMutateAsync }),
   useUnfreezeNamespace: () => ({ mutateAsync: unfreezeMutateAsync }),
 }))

@@ -100,8 +100,11 @@ public class ReviewController extends BaseApiController {
     @PostMapping("/{id}/withdraw")
     public ApiResponse<Void> withdrawReview(@PathVariable Long id,
                                             @RequestAttribute("userId") String userId,
+                                            @RequestAttribute(value = "userNsRoles", required = false)
+                                            Map<Long, NamespaceRole> userNsRoles,
                                             HttpServletRequest httpRequest) {
-        governanceWorkflowAppService.withdrawReviewTask(id, userId, AuditRequestContext.from(httpRequest));
+        governanceWorkflowAppService.withdrawReviewTask(
+                id, userId, userNsRoles, AuditRequestContext.from(httpRequest));
         return ok("response.success.updated", null);
     }
 

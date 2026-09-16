@@ -75,7 +75,7 @@ SkillHub includes controls that an operator can combine according to its risk:
 The implementation and operating guidance are documented in the
 [scanner guide](security-scanning.md),
 [review guide](skillhub/en/guide/review.md), and
-[security architecture](../document/docs/04-developer/architecture/security.md).
+[security architecture](03-authentication-design.md).
 
 ## Important limitations
 

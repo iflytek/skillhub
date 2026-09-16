@@ -96,6 +96,10 @@ spring:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
+  suite:
+    # Fail closed for deployment modes whose upgrade topology is unknown. Single-instance
+    # distributions explicitly enable this after ruling out mixed application versions.
+    review-writes-enabled: ${SKILLHUB_SUITE_REVIEW_WRITES_ENABLED:false}
   observability:
     tracing-mode: ${SKILLHUB_TRACING_MODE:none}
     log-format: ${SKILLHUB_LOG_FORMAT:text}

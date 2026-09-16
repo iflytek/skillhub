@@ -48,6 +48,8 @@ import type {
   LabelDefinition,
   LabelItem,
   BatchMemberResponse,
+  SkillSuite,
+  SkillSuiteDraftInput,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -147,6 +149,19 @@ async function ensureCsrfHeaders(headers?: HeadersInit): Promise<HeadersInit> {
 
 function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
   return typeof value === 'object' && value !== null && 'code' in value && 'msg' in value && 'data' in value
+}
+
+function unwrapOpenApiResponse<T>(data: unknown, error: unknown, response: Response): T {
+  const envelope = isApiEnvelope<T>(data)
+    ? data
+    : isApiEnvelope<T>(error)
+      ? error
+      : null
+  if (!response.ok || error || !envelope || envelope.code !== 0) {
+    const message = envelope?.msg || `HTTP ${response.status}`
+    throw new ApiError(message, response.status, envelope?.msg, envelope?.msg)
+  }
+  return envelope.data
 }
 
 export function getCsrfHeaders(headers?: HeadersInit): HeadersInit {
@@ -660,6 +675,13 @@ export const namespaceApi = {
     return fetchJson<ManagedNamespace[]>(`${WEB_API_PREFIX}/me/namespaces`)
   },
 
+  async listMinePage(params?: { page?: number; size?: number }): Promise<PagedResponse<ManagedNamespace>> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('page', String(params?.page ?? 0))
+    searchParams.set('size', String(params?.size ?? 10))
+    return fetchJson<PagedResponse<ManagedNamespace>>(`${WEB_API_PREFIX}/me/namespaces/page?${searchParams.toString()}`)
+  },
+
   async getDetail(slug: string): Promise<Namespace> {
     return fetchJson<Namespace>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}`)
   },
@@ -861,6 +883,68 @@ export const tokenApi = {
     if (!response.ok || error) {
       throw new ApiError(envelope?.msg || `HTTP ${response.status}`, response.status, envelope?.msg, envelope?.msg)
     }
+  },
+}
+
+export const suiteApi = {
+  async createVersion(suiteId: number, input: SkillSuiteDraftInput): Promise<SkillSuite> {
+    const { data, error, response } = await client.POST('/api/web/suites/{suiteId}/versions', {
+      params: { path: { suiteId } },
+      body: input,
+      headers: await ensureCsrfHeaders(),
+    })
+    return unwrapOpenApiResponse<SkillSuite>(data, error, response)
+  },
+
+  async reopen(suiteId: number, versionId: number): Promise<void> {
+    const { data, error, response } = await client.POST('/api/web/suites/{suiteId}/versions/{versionId}/reopen', {
+      params: { path: { suiteId, versionId } },
+      headers: await ensureCsrfHeaders(),
+    })
+    unwrapOpenApiResponse(data, error, response)
+  },
+
+  async yank(suiteId: number, versionId: number, reason: string): Promise<void> {
+    const { data, error, response } = await client.POST('/api/web/suites/{suiteId}/versions/{versionId}/yank', {
+      params: { path: { suiteId, versionId } },
+      body: { reason },
+      headers: await ensureCsrfHeaders(),
+    })
+    unwrapOpenApiResponse(data, error, response)
+  },
+
+  async setHidden(suiteId: number, hidden: boolean): Promise<void> {
+    const result = hidden
+      ? await client.POST('/api/web/suites/{suiteId}/hide', {
+        params: { path: { suiteId } },
+        headers: await ensureCsrfHeaders(),
+      })
+      : await client.POST('/api/web/suites/{suiteId}/restore', {
+        params: { path: { suiteId } },
+        headers: await ensureCsrfHeaders(),
+      })
+    unwrapOpenApiResponse(result.data, result.error, result.response)
+  },
+
+  async setArchived(suiteId: number, archived: boolean): Promise<void> {
+    const result = archived
+      ? await client.POST('/api/web/suites/{suiteId}/archive', {
+        params: { path: { suiteId } },
+        headers: await ensureCsrfHeaders(),
+      })
+      : await client.POST('/api/web/suites/{suiteId}/unarchive', {
+        params: { path: { suiteId } },
+        headers: await ensureCsrfHeaders(),
+      })
+    unwrapOpenApiResponse(result.data, result.error, result.response)
+  },
+
+  async delete(suiteId: number): Promise<void> {
+    const { data, error, response } = await client.DELETE('/api/web/suites/{suiteId}', {
+      params: { path: { suiteId } },
+      headers: await ensureCsrfHeaders(),
+    })
+    unwrapOpenApiResponse(data, error, response)
   },
 }
 

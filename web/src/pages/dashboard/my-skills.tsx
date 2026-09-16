@@ -14,6 +14,7 @@ import { useArchiveSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/sh
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { useMySkills, useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 import { useDebounce } from '@/shared/hooks/use-debounce'
+import { useRestoreHiddenSkill } from '@/features/admin/use-admin-skills'
 import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPendingOwnerPreview } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
@@ -63,6 +64,7 @@ export function MySkillsPage() {
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
+  const [restoreHiddenTarget, setRestoreHiddenTarget] = useState<{ skillId: number; name: string } | null>(null)
 
   const updateSearch = useCallback((next: Partial<typeof search>, options?: { replace?: boolean }) => {
     navigate({
@@ -96,12 +98,14 @@ export function MySkillsPage() {
   const skills = skillPage?.items ?? []
   const totalPages = skillPage ? Math.max(Math.ceil(skillPage.total / skillPage.size), 1) : 1
   const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
+  const canRestoreHidden = filter === 'HIDDEN' && hasRole('SUPER_ADMIN')
   const hasActiveSearch = keyword.trim() !== '' || namespaceFilter !== ''
   const emptyStateKey = getMySkillEmptyStateKey(filter)
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const withdrawMutation = useWithdrawSkillReview()
   const submitPromotionMutation = useSubmitPromotion()
+  const restoreHiddenMutation = useRestoreHiddenSkill()
 
   const handleSkillClick = (namespace: string, slug: string) => {
     navigate({
@@ -270,6 +274,23 @@ export function MySkillsPage() {
     }
   }
 
+  const handleRestoreHiddenSkill = async () => {
+    if (!restoreHiddenTarget) {
+      return
+    }
+    try {
+      await restoreHiddenMutation.mutateAsync(restoreHiddenTarget.skillId)
+      toast.success(
+        t('mySkills.restoreHiddenSuccessTitle'),
+        t('mySkills.restoreHiddenSuccessDescription', { skill: restoreHiddenTarget.name }),
+      )
+      setRestoreHiddenTarget(null)
+    } catch (error) {
+      toast.error(t('mySkills.restoreHiddenErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-up">
@@ -285,11 +306,6 @@ export function MySkillsPage() {
       <DashboardPageHeader
         title={t('mySkills.title')}
         subtitle={t('mySkills.subtitle')}
-        actions={(
-          <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
-          {t('mySkills.publishNew')}
-          </Button>
-        )}
       />
 
       <div className="flex flex-col gap-3">
@@ -302,24 +318,26 @@ export function MySkillsPage() {
             aria-label={t('mySkills.searchPlaceholder')}
             className="sm:max-w-md"
           />
-          <Select
-            value={namespaceFilter || ALL_NAMESPACES_VALUE}
-            onValueChange={(value) => {
-              updateSearch({ namespace: value === ALL_NAMESPACES_VALUE ? undefined : value, page: 0 })
-            }}
-          >
-            <SelectTrigger aria-label={t('mySkills.namespaceFilterLabel')} className="sm:max-w-[14rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_NAMESPACES_VALUE}>{t('mySkills.namespaceFilterAll')}</SelectItem>
-              {(namespaceOptions ?? []).map((ns: { id: number; slug: string }) => (
-                <SelectItem key={ns.id} value={ns.slug}>
-                  @{ns.slug}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {filter === 'HIDDEN' ? null : (
+            <Select
+              value={namespaceFilter || ALL_NAMESPACES_VALUE}
+              onValueChange={(value) => {
+                updateSearch({ namespace: value === ALL_NAMESPACES_VALUE ? undefined : value, page: 0 })
+              }}
+            >
+              <SelectTrigger aria-label={t('mySkills.namespaceFilterLabel')} className="sm:max-w-[14rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_NAMESPACES_VALUE}>{t('mySkills.namespaceFilterAll')}</SelectItem>
+                {(namespaceOptions ?? []).map((ns: { id: number; slug: string }) => (
+                  <SelectItem key={ns.id} value={ns.slug}>
+                    @{ns.slug}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {hasActiveSearch ? (
             <Button
               type="button"
@@ -362,8 +380,8 @@ export function MySkillsPage() {
                 return (
                   <Card
                     key={skill.id}
-                    className={`p-5 cursor-pointer group animate-fade-up delay-${Math.min(idx + 1, 6)}`}
-                    onClick={() => handleSkillClick(skill.namespace, skill.slug)}
+                    className={`p-5 group animate-fade-up delay-${Math.min(idx + 1, 6)} ${filter === 'HIDDEN' ? '' : 'cursor-pointer'}`}
+                    onClick={filter === 'HIDDEN' ? undefined : () => handleSkillClick(skill.namespace, skill.slug)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -407,7 +425,18 @@ export function MySkillsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pl-4">
-                        {skill.status !== 'ARCHIVED' && (
+                        {canRestoreHidden ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setRestoreHiddenTarget({ skillId: skill.id, name: skill.displayName })
+                            }}
+                          >
+                            {t('mySkills.restoreHidden')}
+                          </Button>
+                        ) : filter === 'HIDDEN' ? null : skill.status !== 'ARCHIVED' && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -419,7 +448,7 @@ export function MySkillsPage() {
                             {t('mySkills.update')}
                           </Button>
                         )}
-                        {hasPendingPreview && ownerPreviewVersion ? (
+                        {filter === 'HIDDEN' ? null : hasPendingPreview && ownerPreviewVersion ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -482,9 +511,11 @@ export function MySkillsPage() {
                             {t('mySkills.archive')}
                           </Button>
                         ) : null}
-                        <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                        {filter === 'HIDDEN' ? null : (
+                          <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -506,14 +537,23 @@ export function MySkillsPage() {
               <Button size="lg" variant="outline" onClick={handleClearSearch}>
                 {t('mySkills.clearSearch')}
               </Button>
-            ) : (
-              <Button size="lg" onClick={() => navigate({ to: '/dashboard/publish' })}>
-                {t('mySkills.publishSkill')}
-              </Button>
-            )
+            ) : undefined
           }
         />
       )}
+
+      <ConfirmDialog
+        open={!!restoreHiddenTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRestoreHiddenTarget(null)
+          }
+        }}
+        title={t('mySkills.restoreHiddenConfirmTitle')}
+        description={restoreHiddenTarget ? t('mySkills.restoreHiddenConfirmDescription', { skill: restoreHiddenTarget.name }) : ''}
+        confirmText={t('mySkills.restoreHidden')}
+        onConfirm={handleRestoreHiddenSkill}
+      />
 
       <ConfirmDialog
         open={!!promotionTarget}

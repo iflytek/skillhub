@@ -31,6 +31,7 @@ export interface InstallOptions {
   expectedTargetFiles?: Record<string, Record<string, string>> | undefined
   allowTargetDrift?: boolean | undefined
   requireExistingTargets?: boolean | undefined
+  client?: SkillHubClient | undefined
   /** Internal test seam for lock lifecycle failures; production uses acquireSkillTargetLock. */
   acquireTargetLock?: typeof acquireSkillTargetLock
 }
@@ -99,9 +100,11 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
     namespace: options.namespace,
     slug: options.slug
   }, options.force, inventory)
-  const client = new SkillHubClient(options.registry, options.token)
+  const client = options.client ?? new SkillHubClient(options.registry, options.token)
   const resolved = options.resolved ?? await client.resolve(options.namespace, options.slug, options.version)
-  const response = await client.download(options.namespace, options.slug, resolved.version)
+  const response = resolved.downloadUrl
+    ? await client.downloadFromUrl(resolved.downloadUrl)
+    : await client.download(options.namespace, options.slug, resolved.version)
   const buffer = await readBoundedResponseBody(response)
 
   const staged: StagedInstall[] = []

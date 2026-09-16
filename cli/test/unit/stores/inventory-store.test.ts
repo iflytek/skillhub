@@ -122,6 +122,6 @@ describe('InventoryStore', () => {
     const inventory = await store.read()
     expect(inventory.items).toHaveLength(1)
     expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: 'fp-v1' })
-    expect(inventory.items[0]?.targets).toEqual([retained])
+    expect(inventory.items[0]?.targets).toEqual([{ ...retained, installedBy: ['direct'] }])
   })
 })

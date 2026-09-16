@@ -76,8 +76,8 @@ describe('user-menu module exports', () => {
   })
 })
 
-describe('UserMenu security settings visibility', () => {
-  it('keeps author review progress separate from reviewer management', () => {
+describe('UserMenu navigation', () => {
+  it('lists personal destinations in the requested order', () => {
     const html = renderToStaticMarkup(
       <UserMenu
         user={{
@@ -87,36 +87,86 @@ describe('UserMenu security settings visibility', () => {
       />,
     )
 
-    expect(html).toContain('user.menu.reviewProgress')
-    expect(html).not.toContain('user.menu.reviews')
+    expect(html).toContain('user.menu.mySkills')
+    expect(html).toContain('user.menu.mySuites')
+    expect(html).toContain('user.menu.dashboard')
+    expect(html.indexOf('user.menu.mySkills')).toBeLessThan(html.indexOf('user.menu.mySuites'))
+    expect(html.indexOf('user.menu.mySuites')).toBeLessThan(html.indexOf('user.menu.dashboard'))
   })
 
-  it('shows security settings when password changes are allowed, independent of OAuth provider', () => {
+  it('keeps dashboard-only personal links out of the compact avatar menu', () => {
     const html = renderToStaticMarkup(
       <UserMenu
         user={{
-          displayName: 'OAuth Linked User',
-          oauthProvider: 'github',
+          displayName: 'Skill Author',
           platformRoles: ['USER'],
-          canChangePassword: true,
         }}
       />,
     )
 
-    expect(html).toContain('user.menu.security')
+    expect(html).toContain('user.menu.dashboard')
+    expect(html).not.toContain('user.menu.reviewProgress')
+    expect(html).not.toContain('user.menu.security')
   })
 
-  it('hides security settings when password changes are not allowed, even for a local-looking account', () => {
+  it('keeps administrator links available to administrators', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Administrator',
+          platformRoles: ['SUPER_ADMIN'],
+        }}
+      />,
+    )
+
+    expect(html).toContain('user.menu.users')
+    expect(html).toContain('user.menu.labels')
+    expect(html).toContain('user.menu.namespacesAdmin')
+    expect(html).toContain('user.menu.auditLog')
+  })
+
+  it.each(['SKILL_ADMIN', 'USER_ADMIN', 'SUPER_ADMIN'])(
+    'keeps the review center available to %s users',
+    (role) => {
+      const html = renderToStaticMarkup(
+        <UserMenu user={{ displayName: 'Reviewer', platformRoles: [role] }} />,
+      )
+
+      expect(html).toContain('href="/dashboard/reviews"')
+      expect(html).toContain('user.menu.reviews')
+    },
+  )
+
+  it('does not show the global review center to regular users', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'Regular User', platformRoles: ['USER'] }} />,
+    )
+
+    expect(html).not.toContain('href="/dashboard/reviews"')
+  })
+
+  it('shows security settings only for accounts that can change a password', () => {
+    const enabledHtml = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'Local User', platformRoles: ['USER'], canChangePassword: true }} />,
+    )
+    const disabledHtml = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'OAuth User', platformRoles: ['USER'], canChangePassword: false }} />,
+    )
+
+    expect(enabledHtml).toContain('user.menu.security')
+    expect(disabledHtml).not.toContain('user.menu.security')
+  })
+
+  it('always keeps logout available', () => {
     const html = renderToStaticMarkup(
       <UserMenu
         user={{
           displayName: 'Local User',
           platformRoles: ['USER'],
-          canChangePassword: false,
         }}
       />,
     )
 
-    expect(html).not.toContain('user.menu.security')
+    expect(html).toContain('user.menu.logout')
   })
 })

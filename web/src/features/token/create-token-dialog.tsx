@@ -144,9 +144,9 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       <DialogContent>
         {!createdToken ? (
           <>
-            <DialogHeader className="text-center sm:text-center">
-              <DialogTitle className="text-center">{t('createToken.title')}</DialogTitle>
-              <DialogDescription className="text-center">
+            <DialogHeader className="text-center">
+              <DialogTitle>{t('createToken.title')}</DialogTitle>
+              <DialogDescription>
                 {t('createToken.description')}
               </DialogDescription>
             </DialogHeader>
@@ -239,9 +239,9 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
           </>
         ) : (
           <>
-            <DialogHeader className="min-w-0 text-center sm:text-center">
-              <DialogTitle className="text-center">{t('createToken.successTitle')}</DialogTitle>
-              <DialogDescription className="text-center break-words">
+            <DialogHeader className="min-w-0 text-center">
+              <DialogTitle>{t('createToken.successTitle')}</DialogTitle>
+              <DialogDescription className="break-words">
                 {t('createToken.successDescription')}
               </DialogDescription>
             </DialogHeader>

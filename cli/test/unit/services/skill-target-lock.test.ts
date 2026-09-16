@@ -1,4 +1,4 @@
-import { access, chmod, lstat, mkdir, mkdtemp, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdir, mkdtemp, readdir, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -25,6 +25,21 @@ async function waitForFile(path: string): Promise<void> {
     await Bun.sleep(10)
   }
   throw new Error(`timed out waiting for ${path}`)
+}
+
+async function waitForExitCount(
+  processes: Array<{ exited: Promise<number> }>,
+  count: number
+): Promise<number[]> {
+  const exitCodes: number[] = []
+  for (const process of processes) {
+    void process.exited.then(exitCode => exitCodes.push(exitCode))
+  }
+  for (let attempt = 0; attempt < 500; attempt++) {
+    if (exitCodes.length >= count) return exitCodes
+    await Bun.sleep(10)
+  }
+  throw new Error(`timed out waiting for ${count} lock contenders to exit`)
 }
 
 describe('skill target lifecycle lock', () => {
@@ -65,12 +80,14 @@ describe('skill target lifecycle lock', () => {
     await mkdir(lockPath)
     const staleTime = new Date(Date.now() - 60_000)
     await utimes(lockPath, staleTime, staleTime)
+    const acquisitionGatePath = `${lockPath}.acquire`
     const worker = fileURLToPath(new URL('../../helpers/target-lock-worker.ts', import.meta.url))
     const bunPath = (await Bun.which('bun')) ?? process.execPath
     const acquiredPath = join(rootDir, 'acquired')
     const releasePath = join(rootDir, 'release')
     const startPath = join(rootDir, 'start')
-    const readyPaths = [join(rootDir, 'ready-0'), join(rootDir, 'ready-1')]
+    const workerCount = 8
+    const readyPaths = Array.from({ length: workerCount }, (_, index) => join(rootDir, `ready-${index}`))
 
     const processes = readyPaths.map(readyPath => Bun.spawn({
       cmd: [bunPath, worker, rootDir, 'demo', readyPath, startPath, acquiredPath, releasePath],
@@ -81,11 +98,8 @@ describe('skill target lifecycle lock', () => {
       await Promise.all(readyPaths.map(waitForFile))
       await writeFile(startPath, 'start')
       await waitForFile(acquiredPath)
-      const loserExitCode = await Promise.race([
-        ...processes.map(process => process.exited),
-        Bun.sleep(5_000).then(() => { throw new Error('timed out waiting for the lock loser') })
-      ])
-      expect(loserExitCode).toBe(4)
+      const loserExitCodes = await waitForExitCount(processes, workerCount - 1)
+      expect(loserExitCodes).toEqual(Array(workerCount - 1).fill(4))
     } finally {
       try {
         await writeFile(releasePath, 'release')
@@ -106,13 +120,82 @@ describe('skill target lifecycle lock', () => {
       stderr: (await new Response(process.stderr).text()).trim()
     })))
 
-    expect(results.map(result => result.exitCode).sort()).toEqual([0, 4])
+    expect(results.map(result => result.exitCode).sort()).toEqual([0, ...Array(workerCount - 1).fill(4)])
     expect(results.filter(result => result.stdout === 'acquired')).toHaveLength(1)
+    for (const loser of results.filter(result => result.exitCode === 4)) {
+      expect(loser.stderr).toContain('install target is busy')
+    }
     expect(await exists(lockPath)).toBe(false)
+    expect(await readdir(acquisitionGatePath)).toEqual([])
+    const releaseAfterContention = await acquireSkillTargetLock(rootDir, 'demo')
+    await releaseAfterContention()
     if (process.platform !== 'win32') {
       expect((await lstat(dirname(lockPath))).mode & 0o077).toBe(0)
     }
   }, 15_000)
+
+  test('does not recover a live acquisition contender solely because its file is old', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-live-gate-'))
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await mkdir(acquisitionGatePath)
+    const liveContenderPath = join(acquisitionGatePath, `choosing.${process.pid}-suspended`)
+    await writeFile(liveContenderPath, '')
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(liveContenderPath, staleTime, staleTime)
+
+    const acquisition = acquireSkillTargetLock(rootDir, 'demo')
+    const state = await Promise.race([
+      acquisition.then(() => 'acquired', () => 'rejected'),
+      Bun.sleep(50).then(() => 'waiting')
+    ])
+    expect(state).toBe('waiting')
+    expect(await exists(liveContenderPath)).toBe(true)
+    await unlink(liveContenderPath)
+    const release = await acquisition
+    await release()
+  })
+
+  test('does not pass a live acquisition ticket', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-live-ticket-'))
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await mkdir(acquisitionGatePath)
+    const liveTicketPath = join(acquisitionGatePath, `ticket.1.${process.pid}-suspended`)
+    await writeFile(liveTicketPath, '')
+
+    const acquisition = acquireSkillTargetLock(rootDir, 'demo')
+    const state = await Promise.race([
+      acquisition.then(() => 'acquired', () => 'rejected'),
+      Bun.sleep(50).then(() => 'waiting')
+    ])
+    expect(state).toBe('waiting')
+    expect(await exists(liveTicketPath)).toBe(true)
+    await unlink(liveTicketPath)
+    const release = await acquisition
+    await release()
+  })
+
+  test('recovers acquisition contenders whose owner process exited', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-dead-gate-'))
+    const lockPath = await skillTargetLockPath(rootDir, 'demo')
+    await mkdir(lockPath)
+    const staleTime = new Date(Date.now() - 60_000)
+    await utimes(lockPath, staleTime, staleTime)
+    const acquisitionGatePath = `${lockPath}.acquire`
+    await mkdir(acquisitionGatePath)
+    const bunPath = (await Bun.which('bun')) ?? process.execPath
+    const exitedOwner = Bun.spawn({ cmd: [bunPath, '-e', ''], stdout: 'ignore', stderr: 'ignore' })
+    const deadPid = exitedOwner.pid
+    expect(await exitedOwner.exited).toBe(0)
+    await writeFile(join(acquisitionGatePath, `choosing.${deadPid}-abandoned`), '')
+    await writeFile(join(acquisitionGatePath, `ticket.1.${deadPid}-abandoned`), '')
+
+    const release = await acquireSkillTargetLock(rootDir, 'demo')
+    await release()
+    expect(await exists(lockPath)).toBe(false)
+    expect(await readdir(acquisitionGatePath)).toEqual([])
+  })
 
   test('keeps one lock identity when a symlink target is removed', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-target-symlink-root-'))
