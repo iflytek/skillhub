@@ -131,7 +131,7 @@ class TokenControllerTest {
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.Instant.parse("2026-03-15T12:00:00Z"));
         token.setExpiresAt(java.time.Instant.parse("2026-04-15T12:00:00Z"));
 
-        given(apiTokenService.rotateToken("user-42", "cli", "[\"skill:read\",\"skill:publish\"]", "2026-04-15T12:00:00"))
+        given(apiTokenService.rotateToken("user-42", "cli", "[\"skill:read\",\"skill:publish\",\"skill:delete\"]", "2026-04-15T12:00:00"))
                 .willReturn(new ApiTokenService.TokenCreateResult("sk_raw", token));
 
         mockMvc.perform(post("/api/v1/tokens")

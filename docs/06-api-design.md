@@ -230,7 +230,7 @@ Public API 的可见性规则：
 | POST | `/api/v1/skills/{namespace}/{slug}/archive` | 归档技能（namespace ADMIN 或 owner） |
 | POST | `/api/v1/skills/{namespace}/{slug}/unarchive` | 恢复归档（namespace ADMIN 或 owner） |
 | DELETE | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | 删除 DRAFT/REJECTED 版本 |
-| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/yank` | 撤回已发布版本（namespace ADMIN 或 owner；可选 body `{"reason"}`；API Token 需 `skill:yank`） |
+| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/yank` | 撤回已发布版本（namespace ADMIN 或 owner；可选 body `{"reason"}`；API Token 需 `skill:publish`） |
 | POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease` | 从已发布版本重新发出一个新版本（namespace ADMIN 或 owner） |
 
 当前代码中的 skill 生命周期读模型不再依赖 `latestVersionStatus` / `viewingVersionStatus` 一类拼装字段，而统一使用以下 projection：

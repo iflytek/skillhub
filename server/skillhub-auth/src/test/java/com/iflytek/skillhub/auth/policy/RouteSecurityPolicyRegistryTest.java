@@ -14,7 +14,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class RouteSecurityPolicyRegistryTest {
 
     private static final Set<String> ALL_SCOPES =
-            Set.of("skill:read", "skill:publish", "skill:delete", "skill:yank", "token:manage");
+            Set.of("skill:read", "skill:publish", "skill:delete", "token:manage");
 
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
@@ -115,14 +115,14 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
-    void authorizeApiToken_requiresYankScopeForOwnerYankEndpoint() {
+    void authorizeApiToken_requiresPublishScopeForOwnerYankEndpoint() {
         for (String prefix : List.of("/api/v1", "/api/web")) {
             String path = prefix + "/skills/global/demo-skill/versions/1.2.3/yank";
-            var denied = registry.authorizeApiToken("POST", path, Set.of("skill:publish", "skill:delete"));
-            var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:yank"));
+            var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
+            var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
 
             assertFalse(denied.allowed(), path);
-            assertEquals("skill:yank", denied.requiredScope(), path);
+            assertEquals("skill:publish", denied.requiredScope(), path);
             assertTrue(allowed.allowed(), path);
         }
     }
@@ -130,6 +130,24 @@ class RouteSecurityPolicyRegistryTest {
     @Test
     void authorizeApiToken_keepsAdminYankSessionOnly() {
         assertFalse(registry.authorizeApiToken("POST", "/api/v1/admin/skills/versions/42/yank", ALL_SCOPES).allowed());
+    }
+
+    @Test
+    void authorizeApiToken_requiresPublishScopeForOwnerLifecycleEndpoints() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            for (String path : List.of(
+                    prefix + "/skills/global/demo-skill/versions/1.2.3/withdraw-review",
+                    prefix + "/skills/global/demo-skill/versions/1.2.3/rerelease",
+                    prefix + "/skills/global/demo-skill/submit-review",
+                    prefix + "/skills/global/demo-skill/confirm-publish")) {
+                var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
+                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+
+                assertFalse(denied.allowed(), path);
+                assertEquals("skill:publish", denied.requiredScope(), path);
+                assertTrue(allowed.allowed(), path);
+            }
+        }
     }
 
     @Test
