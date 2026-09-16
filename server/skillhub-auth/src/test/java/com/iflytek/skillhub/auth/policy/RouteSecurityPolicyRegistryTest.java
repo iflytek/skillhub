@@ -115,6 +115,24 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void authorizeApiToken_requiresPublishScopeForOwnerLifecycleEndpoints() {
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            for (String path : List.of(
+                    prefix + "/skills/global/demo-skill/versions/1.2.3/withdraw-review",
+                    prefix + "/skills/global/demo-skill/versions/1.2.3/rerelease",
+                    prefix + "/skills/global/demo-skill/submit-review",
+                    prefix + "/skills/global/demo-skill/confirm-publish")) {
+                var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
+                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+
+                assertFalse(denied.allowed(), path);
+                assertEquals("skill:publish", denied.requiredScope(), path);
+                assertTrue(allowed.allowed(), path);
+            }
+        }
+    }
+
+    @Test
     void authorizeApiToken_keepsWholeSkillWebDeleteSessionOnlyWhileAllowingVersionDelete() {
         assertFalse(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill", ALL_SCOPES).allowed());
         assertTrue(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill/versions/1.2.3", ALL_SCOPES).allowed());

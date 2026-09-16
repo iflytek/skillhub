@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.device;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
+import com.iflytek.skillhub.auth.token.ApiTokenScopes;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -30,7 +31,6 @@ public class DeviceAuthService {
     private static final long PENDING_CODE_TTL_MINUTES = EXPIRES_IN_SECONDS / 60L;
     private static final long USED_CODE_TTL_MINUTES = 1L;
     private static final String CLI_DEVICE_TOKEN_NAME = "CLI Device Flow";
-    private static final String CLI_DEVICE_SCOPE_JSON = "[\"skill:read\",\"skill:publish\"]";
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ApiTokenService apiTokenService;
@@ -133,7 +133,7 @@ public class DeviceAuthService {
             String token = apiTokenService.rotateToken(
                 data.getUserId(),
                 CLI_DEVICE_TOKEN_NAME,
-                CLI_DEVICE_SCOPE_JSON
+                ApiTokenScopes.DEFAULT_USER_SCOPE_JSON
             ).rawToken();
 
             data.setStatus(DeviceCodeStatus.USED);

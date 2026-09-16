@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
+import com.iflytek.skillhub.auth.token.ApiTokenScopes;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.PageResponse;
@@ -41,12 +42,12 @@ public class TokenController extends BaseApiController {
             @Valid @RequestBody TokenCreateRequest request) {
         String scopeJson;
         if (request.scopes() == null || request.scopes().isEmpty()) {
-            scopeJson = "[\"skill:read\",\"skill:publish\"]";
+            scopeJson = ApiTokenScopes.DEFAULT_USER_SCOPE_JSON;
         } else {
             try {
                 scopeJson = objectMapper.writeValueAsString(request.scopes());
             } catch (JsonProcessingException e) {
-                scopeJson = "[\"skill:read\",\"skill:publish\"]";
+                scopeJson = ApiTokenScopes.DEFAULT_USER_SCOPE_JSON;
             }
         }
 
