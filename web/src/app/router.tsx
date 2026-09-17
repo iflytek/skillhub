@@ -86,6 +86,7 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
 const LandingPage = createLazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
 const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
+const DeviceAuthPage = createLazyRouteComponent(() => import('@/pages/device'), 'DeviceAuthPage')
 const RegisterPage = createLazyRouteComponent(() => import('@/pages/register'), 'RegisterPage')
 const ResetPasswordPage = createLazyRouteComponent(() => import('@/pages/reset-password'), 'ResetPasswordPage')
 const PrivacyPolicyPage = createLazyRouteComponent(() => import('@/pages/privacy'), 'PrivacyPolicyPage')
@@ -119,6 +120,16 @@ const SuiteVersionCreatePage = createLazyRouteComponent(
 const MySuitesPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/my-suites'),
   'MySuitesPage',
+  dashboardRouteOptions,
+)
+const SuitePublishingTaskPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/suite-publishing-task'),
+  'SuitePublishingTaskPage',
+  dashboardRouteOptions,
+)
+const SuiteManagementPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/suite-management'),
+  'SuiteManagementPage',
   dashboardRouteOptions,
 )
 const MyNamespacesPage = createLazyRouteComponent(
@@ -308,8 +319,9 @@ const namespaceRoute = createRoute({
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace/$slug',
-  validateSearch: (search: Record<string, unknown>): { returnTo?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { returnTo?: string; version?: string } => ({
     returnTo: typeof search.returnTo === 'string' && search.returnTo.startsWith('/') ? search.returnTo : undefined,
+    version: typeof search.version === 'string' && search.version ? search.version : undefined,
   }),
   component: SkillDetailPage,
 })
@@ -377,7 +389,44 @@ const dashboardSuitesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/suites',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { tab?: 'suites' | 'publishing' } => ({
+    tab: search.tab === 'publishing' ? 'publishing' : undefined,
+  }),
   component: MySuitesPage,
+})
+
+const dashboardSuiteManagementRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites/$namespace/$slug',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): {
+    version?: string
+    tab?: 'members' | 'versions' | 'publishing'
+  } => ({
+    version: typeof search.version === 'string' && search.version ? search.version : undefined,
+    tab: search.tab === 'members' || search.tab === 'versions' || search.tab === 'publishing'
+      ? search.tab
+      : undefined,
+  }),
+  component: SuiteManagementPage,
+})
+
+const dashboardSuitePublishingTaskRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/suites/publishing/$operationId',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): {
+    suiteNamespace?: string
+    suiteSlug?: string
+    suiteVersion?: string
+  } => ({
+    suiteNamespace: typeof search.suiteNamespace === 'string' && search.suiteNamespace
+      ? search.suiteNamespace
+      : undefined,
+    suiteSlug: typeof search.suiteSlug === 'string' && search.suiteSlug ? search.suiteSlug : undefined,
+    suiteVersion: typeof search.suiteVersion === 'string' && search.suiteVersion ? search.suiteVersion : undefined,
+  }),
+  component: SuitePublishingTaskPage,
 })
 
 const dashboardSuiteEditRoute = createRoute({
@@ -446,11 +495,15 @@ const dashboardReviewProgressRoute = createRoute({
   beforeLoad: requireAuth,
   validateSearch: (search: Record<string, unknown>): {
     status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+    type?: 'SKILL_VERSION' | 'SUITE_VERSION'
     q?: string
     page?: number
   } => ({
     status: search.status === 'PENDING' || search.status === 'APPROVED' || search.status === 'REJECTED'
       ? search.status
+      : undefined,
+    type: search.type === 'SKILL_VERSION' || search.type === 'SUITE_VERSION'
+      ? search.type
       : undefined,
     q: typeof search.q === 'string' && search.q.trim() ? search.q.trim() : undefined,
     page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
@@ -535,6 +588,12 @@ const cliAuthRoute = createRoute({
   },
 })
 
+const deviceAuthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'device',
+  component: DeviceAuthPage,
+})
+
 const settingsSecurityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'settings/security',
@@ -611,6 +670,8 @@ const routeTree = rootRoute.addChildren([
   dashboardSkillsRoute,
   dashboardPublishRoute,
   dashboardSuitesRoute,
+  dashboardSuiteManagementRoute,
+  dashboardSuitePublishingTaskRoute,
   dashboardSuiteCreateRoute,
   dashboardSuiteEditRoute,
   dashboardSuiteVersionCreateRoute,
@@ -629,6 +690,7 @@ const routeTree = rootRoute.addChildren([
   dashboardNotificationsRoute,
   dashboardTokensRoute,
   cliAuthRoute,
+  deviceAuthRoute,
   settingsSecurityRoute,
   settingsProfileRoute,
   settingsNotificationsRoute,

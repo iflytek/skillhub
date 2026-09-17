@@ -92,19 +92,37 @@ grep -Fq "Generated SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET" "$stdout_generated" \
 if grep -Fq "$generated_secret" "$stdout_generated"; then
   fail "runtime must not print the generated secret value"
 fi
-grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- down --home $home_generated" "$stdout_generated" \
-  || fail "GitHub runtime should print the scripts/runtime.sh stop URL"
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- down --version sha-test --home $home_generated --public-url http://localhost" "$stdout_generated" \
+  || fail "GitHub runtime should print a reproducible down command"
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- up --version sha-test --home $home_generated --public-url http://localhost" "$stdout_generated" \
+  || fail "GitHub runtime should print a reproducible up command"
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- ps --version sha-test --home $home_generated --public-url http://localhost" "$stdout_generated" \
+  || fail "GitHub runtime should print a reproducible ps command"
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- logs --version sha-test --home $home_generated --public-url http://localhost" "$stdout_generated" \
+  || fail "GitHub runtime should print a reproducible logs command"
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- pull --version sha-test --home $home_generated --public-url http://localhost" "$stdout_generated" \
+  || fail "GitHub runtime should print a reproducible pull command"
 
 home_aliyun="$tmp/aliyun"
 stdout_aliyun="$tmp/aliyun.out"
 mkdir -p "$home_aliyun"
 run_runtime "$home_aliyun" "$bin_dir" "$stdout_aliyun" --aliyun
 
-grep -Fq "curl -fsSL file://$REPO_ROOT/runtime.sh | sh -s -- down --aliyun --home $home_aliyun" "$stdout_aliyun" \
+grep -Fq "curl -fsSL file://$REPO_ROOT/runtime.sh | sh -s -- down --aliyun --version sha-test --home $home_aliyun --public-url http://localhost" "$stdout_aliyun" \
   || fail "Aliyun runtime should preserve the root runtime.sh URL and --aliyun source mode"
 if grep -Fq "file://$REPO_ROOT/scripts/runtime.sh" "$stdout_aliyun"; then
   fail "Aliyun runtime must not print the GitHub scripts/runtime.sh path"
 fi
+
+home_ref="$tmp/ref"
+stdout_ref="$tmp/ref.out"
+mkdir -p "$home_ref"
+run_runtime "$home_ref" "$bin_dir" "$stdout_ref" --ref 36de54157bff59c18c5eff255d2c158df45a3e2a --no-scanner
+
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- down --ref 36de54157bff59c18c5eff255d2c158df45a3e2a --version sha-test --home $home_ref --public-url http://localhost --no-scanner" "$stdout_ref" \
+  || fail "GitHub runtime should preserve pinned --ref and --no-scanner in down command"
+grep -Fq "curl -fsSL file://$REPO_ROOT/scripts/runtime.sh | sh -s -- up --ref 36de54157bff59c18c5eff255d2c158df45a3e2a --version sha-test --home $home_ref --public-url http://localhost --no-scanner" "$stdout_ref" \
+  || fail "GitHub runtime should preserve pinned --ref and --no-scanner in up command"
 
 home_preserved="$tmp/preserved"
 stdout_preserved="$tmp/preserved.out"

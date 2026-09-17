@@ -138,16 +138,18 @@ export function createZipBlob(entries: ZipEntry[]): Blob {
   ev.setUint32(16, offset, true) // central dir offset
   ev.setUint16(20, 0, true) // comment length
 
-  // Concatenate into a single buffer so the Blob part is a Uint8Array<ArrayBuffer>.
+  // Keep the ZIP segmented. Concatenating here would allocate another buffer as large as
+  // the complete archive, doubling peak JavaScript heap usage for large folder uploads.
   const parts = [...localParts, ...centralParts, eocd]
-  const total = parts.reduce((n, p) => n + p.length, 0)
-  const out = new Uint8Array(total)
-  let pos = 0
-  for (const part of parts) {
-    out.set(part, pos)
-    pos += part.length
-  }
-  return new Blob([out], { type: 'application/zip' })
+  const blobParts = parts.map((part) => {
+    if (part.buffer instanceof ArrayBuffer
+      && part.byteOffset === 0
+      && part.byteLength === part.buffer.byteLength) {
+      return part.buffer
+    }
+    return part.slice().buffer as ArrayBuffer
+  })
+  return new Blob(blobParts, { type: 'application/zip' })
 }
 
 // --- Folder -> File ------------------------------------------------------------

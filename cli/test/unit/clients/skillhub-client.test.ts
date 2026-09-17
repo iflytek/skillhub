@@ -133,6 +133,39 @@ describe('SkillHubClient', () => {
     await err.toHaveProperty('exitCode', EXIT.auth)
   })
 
+  test('device authorization uses the public endpoints without bearer credentials', async () => {
+    const requests: Array<{ path: string; authorization: string | null; body?: unknown }> = []
+    const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      const url = new URL(String(input))
+      requests.push({
+        path: url.pathname,
+        authorization: new Headers(init?.headers).get('authorization'),
+        ...(init?.body ? { body: JSON.parse(String(init.body)) } : {})
+      })
+      if (url.pathname.endsWith('/code')) {
+        return Response.json({
+          data: {
+            deviceCode: 'device-secret',
+            userCode: 'ABCD-2345',
+            verificationUri: '/device',
+            expiresIn: 60,
+            interval: 5
+          }
+        })
+      }
+      return Response.json({ data: { accessToken: null, tokenType: null, error: 'authorization_pending' } })
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient('https://skillhub.example.com', 'stored-token', fetchImpl)
+
+    await client.requestDeviceCode()
+    await client.pollDeviceToken('device-secret')
+
+    expect(requests).toEqual([
+      { path: '/api/v1/auth/device/code', authorization: null },
+      { path: '/api/v1/auth/device/token', authorization: null, body: { deviceCode: 'device-secret' } }
+    ])
+  })
+
   // --- search() (P1) ---
 
   test('search() returns items', async () => {

@@ -41,7 +41,7 @@ public class DeviceAuthService {
     public DeviceAuthService(RedisTemplate<String, Object> redisTemplate,
                              ApiTokenService apiTokenService,
                              ObjectMapper objectMapper,
-                             @Value("${skillhub.device-auth.verification-uri:/cli/auth}") String verificationUri) {
+                             @Value("${skillhub.device-auth.verification-uri:/device}") String verificationUri) {
         this.redisTemplate = redisTemplate;
         this.apiTokenService = apiTokenService;
         this.objectMapper = objectMapper;

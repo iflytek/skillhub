@@ -157,6 +157,9 @@ skillhub install pdf-parser --agent codex
 # Install to AStudio's fixed user-level directory
 skillhub install pdf-parser --agent astudio
 
+# Install to Pi's user-level directory (use --scope project for the project directory)
+skillhub install pdf-parser --agent pi
+
 # Install to multiple Agents
 skillhub install pdf-parser --agent codex --agent claude-code
 
@@ -204,6 +207,7 @@ Most Agents have both project-level and user-level skills directories. Use `--sc
 | `openclaw` | `<project>/.openclaw/skills/` | `~/.openclaw/skills/` |
 | `opencode` | `<project>/.opencode/skills/` | `~/.opencode/skills/` |
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
+| `pi` (Pi) | `<project>/.pi/skills/` | `~/.pi/agent/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
 For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. AStudio appears in that selector when `~/.acode/skills/` exists. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.

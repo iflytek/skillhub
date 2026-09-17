@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { LabelItem, LabelDefinition } from '@/api/types'
 import { labelApi } from '@/api/client'
-import { getVisibleLabelsQueryKey, getSkillLabelsQueryKey, getAdminLabelDefinitionsQueryKey } from './query-keys'
+import {
+  getVisibleLabelsQueryKey,
+  getSkillLabelsQueryKey,
+  getSuiteLabelsQueryKey,
+  getAdminLabelDefinitionsQueryKey,
+} from './query-keys'
 
 async function getVisibleLabels(): Promise<LabelItem[]> {
   return labelApi.listVisible()
@@ -23,6 +28,18 @@ async function detachSkillLabel(params: { namespace: string; slug: string; label
   return labelApi.detachSkillLabel(params.namespace, params.slug, params.labelSlug)
 }
 
+async function getSuiteLabels(namespace: string, slug: string): Promise<LabelItem[]> {
+  return labelApi.listSuiteLabels(namespace, slug)
+}
+
+async function attachSuiteLabel(params: { namespace: string; slug: string; labelSlug: string }): Promise<LabelItem> {
+  return labelApi.attachSuiteLabel(params.namespace, params.slug, params.labelSlug)
+}
+
+async function detachSuiteLabel(params: { namespace: string; slug: string; labelSlug: string }): Promise<void> {
+  return labelApi.detachSuiteLabel(params.namespace, params.slug, params.labelSlug)
+}
+
 export function useVisibleLabels(enabled = true) {
   return useQuery({
     queryKey: getVisibleLabelsQueryKey(),
@@ -35,6 +52,14 @@ export function useSkillLabels(namespace: string, slug: string, enabled = true) 
   return useQuery({
     queryKey: getSkillLabelsQueryKey(namespace, slug),
     queryFn: () => getSkillLabels(namespace, slug),
+    enabled: enabled && !!namespace && !!slug,
+  })
+}
+
+export function useSuiteLabels(namespace: string, slug: string, enabled = true) {
+  return useQuery({
+    queryKey: getSuiteLabelsQueryKey(namespace, slug),
+    queryFn: () => getSuiteLabels(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
   })
 }
@@ -71,6 +96,33 @@ export function useDetachSkillLabel() {
     mutationFn: detachSkillLabel,
     onSuccess: (_data, variables) => {
       invalidateSkillLabelQueries(queryClient, variables.namespace, variables.slug)
+    },
+  })
+}
+
+function invalidateSuiteLabelQueries(queryClient: ReturnType<typeof useQueryClient>, namespace: string, slug: string) {
+  queryClient.invalidateQueries({ queryKey: ['labels', 'suite', namespace, slug] })
+  queryClient.invalidateQueries({ queryKey: ['resources', 'search'] })
+}
+
+export function useAttachSuiteLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: attachSuiteLabel,
+    onSuccess: (_data, variables) => {
+      invalidateSuiteLabelQueries(queryClient, variables.namespace, variables.slug)
+    },
+  })
+}
+
+export function useDetachSuiteLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: detachSuiteLabel,
+    onSuccess: (_data, variables) => {
+      invalidateSuiteLabelQueries(queryClient, variables.namespace, variables.slug)
     },
   })
 }

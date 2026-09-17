@@ -41,7 +41,9 @@ export async function runCli(
   const proc = Bun.spawn({
     cmd: [bunPath, entry, ...args],
     cwd: options.cwd ?? cliRoot,
-    env: { ...sanitizeProcessEnv(), ...env },
+    // Integration tests must never launch real desktop applications. Tests
+    // that exercise browser-launch behavior inject a fake launcher directly.
+    env: { ...sanitizeProcessEnv(), CI: 'true', ...env },
     stdout: 'pipe',
     stderr: 'pipe'
   })

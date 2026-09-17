@@ -16,7 +16,8 @@ public interface ResourceDiscoveryQueryService {
             String sort,
             int page,
             int size,
-            Set<Long> memberNamespaceIds
+            Set<Long> memberNamespaceIds,
+            List<String> labelSlugs
     ) {}
 
     record ResourceHit(

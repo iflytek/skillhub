@@ -10,6 +10,7 @@ import com.iflytek.skillhub.service.ResourceDiscoveryAppService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,10 +44,11 @@ public class ResourceDiscoveryController extends BaseApiController {
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(name = "label", required = false) List<String> labels,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles
     ) {
         return ok("response.success.read", appService.search(
                 q, namespace, resourceType, sort, page, size,
-                roles == null ? java.util.Set.of() : roles.keySet()));
+                roles == null ? java.util.Set.of() : roles.keySet(), labels));
     }
 }

@@ -133,30 +133,6 @@ export function SearchPage() {
     isLoading: isLoadingStarred,
     isFetching: isFetchingStarred,
   } = useMyStars(starredOnly && isAuthenticated)
-  useEffect(() => {
-    // Debounce URL updates while the user is typing so query state stays shareable without
-    // triggering a navigation on every keystroke.
-    const parsedInput = parseNamespaceSearchInput(queryInput)
-    if (parsedInput.query === q && parsedInput.namespace === namespace) {
-      return
-    }
-
-    if (!parsedInput.query && !parsedInput.namespace) {
-      startTransition(() => {
-        navigate({ to: '/search', search: { q: '', namespace: '', label: selectedLabel, sort, page: 0, starredOnly }, replace: page === 0 })
-      })
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      startTransition(() => {
-        navigate({ to: '/search', search: { q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
-      })
-    }, 250)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [navigate, namespace, page, q, queryInput, selectedLabel, sort, starredOnly])
-
   const handleSearch = (query: string) => {
     const parsedInput = parseNamespaceSearchInput(query)
     setQueryInput(query)

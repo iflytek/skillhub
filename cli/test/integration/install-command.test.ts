@@ -667,6 +667,72 @@ describe('install command — server errors', () => {
 // ---------------------------------------------------------------------------
 
 describe('install command — multi-agent & auto-detect', () => {
+  test('--agent pi defaults to the user root and persists the Pi agent id', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u', displayName: 'U' },
+      skills: [{ namespace: 'global', slug: 'pdf-parser', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+    await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+
+    const result = await runCli(
+      [
+        'install', 'pdf-parser',
+        '--agent', 'pi',
+        '--registry', registry.url,
+        '--token', 'sk_ok',
+        '--json'
+      ],
+      { HOME: env.home, USERPROFILE: env.home },
+      { cwd: env.cwd }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const installDir = join(env.home, '.pi', 'agent', 'skills', 'pdf-parser')
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
+    expect(parsed.installed).toEqual([{ agent: 'pi', dir: installDir }])
+
+    const metadataPath = join(installDir, '.skillhub', 'metadata.json')
+    expect(JSON.parse(await readFile(metadataPath, 'utf-8')).agent).toBe('pi')
+
+    const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')) as {
+      items: Array<{ targets: Array<{ agent: string; installDir: string }> }>
+    }
+    expect(inventory.items[0]?.targets[0]).toMatchObject({ agent: 'pi', installDir })
+  })
+
+  test('auto-detects an existing Pi project skills directory end to end', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u', displayName: 'U' },
+      skills: [{ namespace: 'global', slug: 'pdf-parser', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+    await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+    await mkdir(join(env.cwd, '.pi', 'skills'), { recursive: true })
+
+    const result = await runCli(
+      ['install', 'pdf-parser', '--registry', registry.url, '--token', 'sk_ok', '--json'],
+      { HOME: env.home, USERPROFILE: env.home },
+      { cwd: env.cwd }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
+    expect(parsed.installed).toHaveLength(1)
+    expect(parsed.installed[0]?.agent).toBe('pi')
+    expect(parsed.installed[0]?.dir).toMatch(/[/\\]\.pi[/\\]skills[/\\]pdf-parser/)
+    expect(await Bun.file(join(
+      env.cwd,
+      '.pi',
+      'skills',
+      'pdf-parser',
+      '.skillhub',
+      'metadata.json'
+    )).exists()).toBe(true)
+  })
+
   test('--agent astudio installs and persists the stable lowercase agent id', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({
@@ -993,6 +1059,38 @@ describe('install command — multi-agent & auto-detect', () => {
 // ---------------------------------------------------------------------------
 
 describe('install command — --scope', () => {
+  test('--scope project --agent pi installs to <cwd>/.pi/skills', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u1', displayName: 'User One' },
+      skills: [{ namespace: 'global', slug: 'foo', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+
+    await runCli(
+      ['login', '--registry', registry.url, '--token', 'sk_ok'],
+      { HOME: env.home, USERPROFILE: env.home }
+    )
+
+    const result = await runCli(
+      ['install', 'foo', '--scope', 'project', '--agent', 'pi',
+        '--registry', registry.url, '--token', 'sk_ok', '--json'],
+      { HOME: env.home, USERPROFILE: env.home },
+      { cwd: env.cwd }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const installDir = join(env.cwd, '.pi', 'skills', 'foo')
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
+    expect(parsed.installed).toHaveLength(1)
+    expect(parsed.installed[0]?.agent).toBe('pi')
+    expect(parsed.installed[0]?.dir).toMatch(/[/\\]\.pi[/\\]skills[/\\]foo/)
+    expect(JSON.parse(await readFile(
+      join(installDir, '.skillhub', 'metadata.json'),
+      'utf-8'
+    )).agent).toBe('pi')
+  })
+
   test('--scope project --agent codex installs to <cwd>/.codex/skills', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({

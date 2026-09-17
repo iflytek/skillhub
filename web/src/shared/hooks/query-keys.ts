@@ -16,6 +16,10 @@ export function getSkillLabelsQueryKey(namespace: string, slug: string) {
   return ['labels', 'skill', namespace, slug, getI18nCacheKey()] as const
 }
 
+export function getSuiteLabelsQueryKey(namespace: string, slug: string) {
+  return ['labels', 'suite', namespace, slug, getI18nCacheKey()] as const
+}
+
 export function getAdminLabelDefinitionsQueryKey() {
   return ['labels', 'admin', getI18nCacheKey()] as const
 }

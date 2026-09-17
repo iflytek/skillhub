@@ -143,6 +143,7 @@ public class ReviewController extends BaseApiController {
 
     @GetMapping("/my-progress")
     public ApiResponse<ReviewProgressPageResponse> listMyProgress(
+            @RequestParam(required = false) String subjectType,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
@@ -150,7 +151,7 @@ public class ReviewController extends BaseApiController {
             @RequestAttribute("userId") String userId) {
         return ok(
                 "response.success.read",
-                governanceWorkflowAppService.listMyReviewProgress(status, q, page, size, userId)
+                governanceWorkflowAppService.listMyReviewProgress(subjectType, status, q, page, size, userId)
         );
     }
 

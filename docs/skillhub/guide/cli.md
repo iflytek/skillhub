@@ -153,6 +153,9 @@ skillhub install pdf-parser --agent codex
 # 安装到 AStudio 的固定用户级目录
 skillhub install pdf-parser --agent astudio
 
+# 安装到 Pi 的用户级目录（添加 --scope project 可安装到项目级目录）
+skillhub install pdf-parser --agent pi
+
 # 安装到多个 Agent
 skillhub install pdf-parser --agent codex --agent claude-code
 
@@ -200,6 +203,7 @@ CLI 按以下逻辑确定安装位置：
 | `openclaw` | `<project>/.openclaw/skills/` | `~/.openclaw/skills/` |
 | `opencode` | `<project>/.opencode/skills/` | `~/.opencode/skills/` |
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
+| `pi`（Pi） | `<project>/.pi/skills/` | `~/.pi/agent/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
 对于自定义路径或不在列表中的 Agent 目录，使用 `--dir` 显式指定安装路径。交互式 user scope 下会与已探测 Agent 目标一同提供 `generic` 目标；当 `~/.acode/skills/` 存在时，选择器会显示 AStudio。当 `--scope user|project` 找不到匹配的 agent 目录时，CLI 会回退到上表的 `_fallback_` 行。

@@ -51,6 +51,8 @@ function suite(overrides: Partial<SkillSuite> = {}): SkillSuite {
     namespace: 'global',
     slug: 'starter',
     displayName: 'Starter suite',
+    createdBy: 'owner-1',
+    createdAt: '2026-09-15T10:00:00Z',
     version: '1.0.0',
     status: 'PUBLISHED',
     visibility: 'PUBLIC',
