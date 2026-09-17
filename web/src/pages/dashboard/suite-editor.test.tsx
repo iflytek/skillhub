@@ -36,10 +36,15 @@ vi.mock('@/features/suite/suite-bundle-import', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/suite/suite-bundle-import')>()
   return {
     ...actual,
-    SuiteBundleImport: ({ expectedMode, expectedCoordinate }: {
+    SuiteBundleImport: ({ expectedMode, expectedCoordinate, returnToSuite }: {
       expectedMode: string
       expectedCoordinate?: string
-    }) => <div>{`bundle-import:${expectedMode}:${expectedCoordinate ?? ''}`}</div>,
+      returnToSuite?: { namespace: string; slug: string; version: string }
+    }) => (
+      <div data-return-to={returnToSuite ? `${returnToSuite.namespace}/${returnToSuite.slug}@${returnToSuite.version}` : ''}>
+        {`bundle-import:${expectedMode}:${expectedCoordinate ?? ''}`}
+      </div>
+    ),
   }
 })
 vi.mock('@/shared/hooks/use-debounce', () => ({ useDebounce: (value: string) => value }))
@@ -68,6 +73,8 @@ function sourceSuite(allowedActions: SkillSuite['allowedActions']): SkillSuite {
     namespace: 'global',
     slug: 'starter',
     displayName: 'Starter suite',
+    createdBy: 'owner-1',
+    createdAt: '2026-09-15T10:00:00Z',
     summary: 'Pinned tools',
     overview: '## Use this suite',
     version: '1.0.0',
@@ -161,6 +168,86 @@ describe('SuiteEditor', () => {
     }))
   })
 
+  it('reports a missing new version number without claiming the prefilled member is missing', async () => {
+    mocks.detail = { data: sourceSuite(['CREATE_VERSION']), isLoading: false, error: null }
+
+    render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="new-version" />)
+
+    await waitFor(() => expect(screen.getByText('@global/weather@1.0.0')).not.toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'suite.saveDraft' }))
+
+    expect(mocks.toast.error).toHaveBeenCalledWith('suite.versionRequired')
+    expect(screen.getByRole('alert').textContent).toBe('suite.versionRequired')
+    expect(mocks.toast.error).not.toHaveBeenCalledWith('suite.membersRequired')
+    expect(mocks.createVersion.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('does not claim selected skills are missing when only the suite name is empty', async () => {
+    mocks.candidates = [{
+      skillId: 21,
+      skillVersionId: 210,
+      namespace: 'global',
+      slug: 'browser',
+      displayName: 'Browser',
+      version: '1.0.0',
+      visibility: 'PUBLIC',
+      recommended: true,
+    }]
+
+    render(<SuiteEditor />)
+
+    await waitFor(() => expect((screen.getByLabelText('suite.slug') as HTMLInputElement).value).toBe(''))
+    fireEvent.change(screen.getByLabelText('suite.slug'), { target: { value: 'browser-suite' } })
+    fireEvent.click(screen.getByRole('button', { name: 'suite.search' }))
+    fireEvent.click(screen.getByRole('button', { name: /Browser/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'suite.saveDraft' }))
+
+    expect(mocks.toast.error).toHaveBeenCalledWith('suite.nameRequired')
+    expect(mocks.toast.error).not.toHaveBeenCalledWith('suite.membersRequired')
+    expect(mocks.create.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('uses the first selected skill as the entry skill when creating a Suite', async () => {
+    mocks.candidates = [{
+      skillId: 21,
+      skillVersionId: 210,
+      namespace: 'global',
+      slug: 'browser',
+      displayName: 'Browser',
+      version: '1.0.0',
+      visibility: 'PUBLIC',
+      recommended: true,
+    }]
+    mocks.create.mutateAsync.mockResolvedValue({
+      ...sourceSuite(['EDIT']),
+      slug: 'browser-suite',
+      displayName: 'Browser suite',
+      version: '1.0.0',
+    })
+
+    render(<SuiteEditor />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'suite.search' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Browser/ })).not.toBeNull())
+    fireEvent.change(screen.getByLabelText('suite.slug'), { target: { value: 'browser-suite' } })
+    fireEvent.change(screen.getByLabelText('suite.name'), { target: { value: 'Browser suite' } })
+    fireEvent.click(screen.getByRole('button', { name: /Browser/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'suite.saveDraft' }))
+
+    await waitFor(() => expect(mocks.create.mutateAsync).toHaveBeenCalledWith({
+      namespace: 'global',
+      slug: 'browser-suite',
+      displayName: 'Browser suite',
+      summary: undefined,
+      overview: undefined,
+      version: '1.0.0',
+      visibility: 'PUBLIC',
+      changelog: undefined,
+      entrySkill: { skillVersionId: 210, namespace: 'global', slug: 'browser', version: '1.0.0' },
+      members: [{ skillVersionId: 210, namespace: 'global', slug: 'browser', version: '1.0.0' }],
+    }))
+  })
+
   it('requires one selected member to be the entry skill', async () => {
     const suite = sourceSuite(['EDIT'])
     suite.members[0].entry = false
@@ -190,6 +277,7 @@ describe('SuiteEditor', () => {
 
     render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="edit" />)
     await waitFor(() => expect(screen.getByText('@global/weather@1.0.0')).not.toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'suite.search' }))
     fireEvent.click(screen.getByText('suite.updatePinnedVersion').closest('button')!)
 
     expect(screen.getByRole('dialog', { name: 'suite.confirmVersionUpdateTitle' })).not.toBeNull()
@@ -209,7 +297,22 @@ describe('SuiteEditor', () => {
     render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="new-version" />)
     await waitFor(() => expect(screen.getByRole('tab', { name: 'suite.localImport' })).not.toBeNull())
     fireEvent.click(screen.getByRole('tab', { name: 'suite.localImport' }))
-    expect(screen.getByText('bundle-import:UPDATE:@global/starter')).not.toBeNull()
+    const updateImport = screen.getByText('bundle-import:UPDATE:@global/starter')
+    expect(updateImport).not.toBeNull()
+    expect(updateImport.getAttribute('data-return-to')).toBe('global/starter@1.0.0')
+  })
+
+  it('uses a deterministic Suite return target instead of browser history', async () => {
+    mocks.detail = { data: sourceSuite(['CREATE_VERSION']), isLoading: false, error: null }
+    render(<SuiteEditor namespace="global" slug="starter" version="1.0.0" mode="new-version" />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'suite.cancel' })).not.toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'suite.cancel' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/global/starter',
+      search: { version: '1.0.0' },
+    })
   })
 
   it('reopens local import after reload when a CREATE operation is stored', () => {

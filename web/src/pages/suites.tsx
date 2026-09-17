@@ -18,6 +18,7 @@ export function SuitesPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
+  const [queryInput, setQueryInput] = useState('')
   const [selectedLabel, setSelectedLabel] = useState('')
   const [page, setPage] = useState(0)
   const { data: labels, isLoading: isLoadingLabels } = useVisibleLabels()
@@ -43,15 +44,14 @@ export function SuitesPage() {
         <Button onClick={() => navigate({ to: '/dashboard/suites/new' })}>{t('suite.create')}</Button>
       </div>
 
+      <form className="flex max-w-xl gap-2" onSubmit={event => { event.preventDefault(); setQuery(queryInput.trim()); setPage(0) }}>
       <Input
-        className="max-w-xl"
-        value={query}
+        value={queryInput}
         placeholder={t('suite.searchPlaceholder')}
-        onChange={(event) => {
-          setQuery(event.target.value)
-          setPage(0)
-        }}
+        onChange={(event) => setQueryInput(event.target.value)}
       />
+      <Button type="submit" variant="outline">{t('nav.search')}</Button>
+      </form>
 
       <section className="space-y-2" aria-labelledby="suite-label-filter-title">
         <div id="suite-label-filter-title" className="text-sm font-medium text-foreground">

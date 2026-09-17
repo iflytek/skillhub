@@ -10,6 +10,9 @@ public record SkillSuiteVersionSummaryResponse(
         String version,
         String status,
         SkillVisibility visibility,
+        String changelog,
+        String createdBy,
+        String createdByName,
         Instant publishedAt,
         Instant yankedAt,
         Instant createdAt

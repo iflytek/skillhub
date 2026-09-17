@@ -17,6 +17,8 @@ const buttonVariants = cva(
           'border border-border/60 bg-background/70 text-foreground shadow-[0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-accent/80 hover:border-border hover:text-accent-foreground hover:shadow-[0_1px_2px_0_rgb(0_0_0/0.06)]',
         secondary:
           'bg-secondary text-secondary-foreground shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.04),0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-secondary/80 hover:shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.06),0_1px_2px_0_rgb(0_0_0/0.06)]',
+        soft:
+          'border border-blue-500/20 bg-blue-500/10 text-blue-700 shadow-none hover:border-blue-500/30 hover:bg-blue-500/15 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200',
         ghost:
           'hover:bg-accent/70 hover:text-accent-foreground',
         link:

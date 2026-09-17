@@ -300,7 +300,7 @@ class ReviewPortalControllerTest {
                 Instant.parse("2026-08-31T11:00:00Z"),
                 2L
         );
-        given(reviewProgressQueryRepository.findMyProgress("author-1", null, "", 0, 20))
+        given(reviewProgressQueryRepository.findMyProgress("author-1", null, null, "", 0, 20))
                 .willReturn(new ReviewProgressPageResponse(
                         List.of(item),
                         1,
@@ -317,7 +317,7 @@ class ReviewPortalControllerTest {
                 .andExpect(jsonPath("$.data.statusCounts.pending").value(0))
                 .andExpect(jsonPath("$.data.statusCounts.rejected").value(1));
 
-        verify(reviewProgressQueryRepository).findMyProgress("author-1", null, "", 0, 20);
+        verify(reviewProgressQueryRepository).findMyProgress("author-1", null, null, "", 0, 20);
     }
 
     @Test

@@ -19,6 +19,7 @@ const useSkillVersionsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillReadmeMock = vi.fn()
 const useSkillFileMock = vi.fn()
+const searchMock = vi.hoisted(() => ({ value: { returnTo: '/dashboard/skills', version: undefined as string | undefined } }))
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
   hasRole: (role: string) => boolean
@@ -31,7 +32,7 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useParams: () => ({ namespace: 'global', slug: 'demo-skill' }),
   useRouterState: () => ({ pathname: '/space/global/demo-skill', searchStr: '', hash: '' }),
-  useSearch: () => ({ returnTo: '/dashboard/skills' }),
+  useSearch: () => searchMock.value,
   Link: ({
     to,
     search,
@@ -273,6 +274,7 @@ describe('SkillDetailPage', () => {
   afterEach(() => cleanup())
 
   beforeEach(() => {
+    searchMock.value = { returnTo: '/dashboard/skills', version: undefined }
     navigateMock.mockReset()
     useSkillFilesMock.mockReset()
     useSkillReadmeMock.mockReset()
@@ -310,6 +312,39 @@ describe('SkillDetailPage', () => {
     useSkillFilesMock.mockReturnValue({ data: [] })
     useSkillReadmeMock.mockReturnValue({ data: '# Demo', error: null })
     useSkillFileMock.mockReturnValue({ data: null, isLoading: false, error: null })
+  })
+
+  it('loads the exact version requested by a Suite member link', () => {
+    searchMock.value = { returnTo: '/suite/global/care-workflow?version=1.0.0', version: '0.9.0' }
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 10,
+          version: '1.0.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: '2026-03-20T00:00:00Z',
+          downloadAvailable: true,
+        },
+        {
+          id: 9,
+          version: '0.9.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 10,
+          publishedAt: '2026-03-10T00:00:00Z',
+          downloadAvailable: true,
+        },
+      ],
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(useSkillFilesMock).toHaveBeenCalledWith('global', 'demo-skill', '0.9.0', true)
+    expect(useSkillReadmeMock).toHaveBeenCalledWith('global', 'demo-skill', '0.9.0', null, true)
   })
 
   it('shows hard delete action for the skill owner', () => {

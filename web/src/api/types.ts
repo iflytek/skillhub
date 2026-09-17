@@ -449,12 +449,21 @@ export type SkillSuiteMember = RequiredGenerated<
 >
 
 type GeneratedSuite = components['schemas']['SkillSuiteResponse']
-export type SkillSuite = Omit<RequiredGenerated<GeneratedSuite, 'summary' | 'overview'>, 'members'> & {
+export type SkillSuite = Omit<
+  RequiredGenerated<
+    GeneratedSuite,
+    'summary' | 'overview' | 'changelog' | 'createdByName' | 'publishedAt' | 'yankedAt'
+  >,
+  'members'
+> & {
   members: SkillSuiteMember[]
 }
 
 type GeneratedSuiteVersion = components['schemas']['SkillSuiteVersionSummaryResponse']
-export type SkillSuiteVersion = RequiredGenerated<GeneratedSuiteVersion, 'publishedAt' | 'yankedAt'>
+export type SkillSuiteVersion = RequiredGenerated<
+  GeneratedSuiteVersion,
+  'changelog' | 'createdByName' | 'publishedAt' | 'yankedAt'
+>
 
 export type SkillSuiteMemberCandidate = RequiredGenerated<
   components['schemas']['SkillSuiteMemberCandidateResponse']
@@ -467,6 +476,14 @@ export type MySkillSuiteSummary = RequiredGenerated<
   components['schemas']['MySkillSuiteSummaryResponse'],
   'summary'
 >
+
+export type MySkillSuiteWorkspaceItem = RequiredGenerated<
+  components['schemas']['Item'],
+  'suiteId' | 'summary' | 'suiteVersion' | 'operationId' | 'operationStatus' | 'failureCode'
+>
+export type MySkillSuiteWorkspace = Omit<
+  RequiredGenerated<components['schemas']['MySkillSuiteWorkspaceResponse']>, 'items'
+> & { items: MySkillSuiteWorkspaceItem[] }
 
 export type SkillSuiteBundlePreview = components['schemas']['SkillSuiteBundlePreviewResponse']
 export type SkillSuiteBundlePreviewMember = components['schemas']['PreviewMember']
@@ -521,11 +538,12 @@ export interface ReviewTask {
   subjectSlug?: string | null
 }
 
-export interface ReviewProgress {
+export interface ReviewProgress extends Pick<components['schemas']['ReviewProgressResponse'],
+  'subjectType' | 'subjectId' | 'subjectVersionId' | 'subjectSlug'> {
   latestReviewTaskId: number
-  skillId: number
+  skillId?: number
   namespace: string
-  skillSlug: string
+  skillSlug?: string
   skillVersion: string
   latestStatus: 'PENDING' | 'APPROVED' | 'REJECTED'
   latestReviewComment?: string

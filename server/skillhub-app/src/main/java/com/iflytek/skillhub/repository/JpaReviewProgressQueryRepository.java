@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.repository;
 
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.review.ReviewSubjectType;
 import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
 import com.iflytek.skillhub.dto.ReviewProgressResponse;
 import com.iflytek.skillhub.dto.ReviewProgressStatusCounts;
@@ -79,15 +80,20 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
                     OR LOWER(namespace.slug) LIKE :queryPattern
                   )
               AND (:status = '' OR latest.status = :status)
+              AND (:subjectType = '' OR latest.subject_type = :subjectType)
             ORDER BY latest.submitted_at DESC, latest.id DESC
             OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY
             """;
 
     private static final String MY_PROGRESS_SUMMARY_SQL = RANKED_CTE + """
-            SELECT COUNT(*) FILTER (WHERE :status = '' OR latest.status = :status) AS filtered_total,
-                   COUNT(*) FILTER (WHERE latest.status = 'PENDING') AS pending_count,
-                   COUNT(*) FILTER (WHERE latest.status = 'APPROVED') AS approved_count,
-                   COUNT(*) FILTER (WHERE latest.status = 'REJECTED') AS rejected_count
+            SELECT COUNT(*) FILTER (WHERE (:status = '' OR latest.status = :status)
+                                     AND (:subjectType = '' OR latest.subject_type = :subjectType)) AS filtered_total,
+                   COUNT(*) FILTER (WHERE latest.status = 'PENDING'
+                                     AND (:subjectType = '' OR latest.subject_type = :subjectType)) AS pending_count,
+                   COUNT(*) FILTER (WHERE latest.status = 'APPROVED'
+                                     AND (:subjectType = '' OR latest.subject_type = :subjectType)) AS approved_count,
+                   COUNT(*) FILTER (WHERE latest.status = 'REJECTED'
+                                     AND (:subjectType = '' OR latest.subject_type = :subjectType)) AS rejected_count
             FROM latest
             LEFT JOIN skill
               ON latest.subject_type = 'SKILL_VERSION' AND skill.id = latest.subject_id
@@ -109,16 +115,19 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
     @Transactional(readOnly = true)
     public ReviewProgressPageResponse findMyProgress(
             String userId,
+            ReviewSubjectType subjectType,
             ReviewTaskStatus status,
             String query,
             int page,
             int size) {
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
         String statusName = status != null ? status.name() : "";
+        String subjectTypeName = subjectType != null ? subjectType.name() : "";
         String queryPattern = "%" + normalizedQuery + "%";
         Query nativeQuery = bindFilters(
                 entityManager.createNativeQuery(MY_PROGRESS_SQL),
                 userId,
+                subjectTypeName,
                 statusName,
                 normalizedQuery,
                 queryPattern)
@@ -127,6 +136,7 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
         Query summaryQuery = bindFilters(
                 entityManager.createNativeQuery(MY_PROGRESS_SUMMARY_SQL),
                 userId,
+                subjectTypeName,
                 statusName,
                 normalizedQuery,
                 queryPattern);
@@ -147,11 +157,13 @@ public class JpaReviewProgressQueryRepository implements ReviewProgressQueryRepo
     private Query bindFilters(
             Query query,
             String userId,
+            String subjectType,
             String status,
             String normalizedQuery,
             String queryPattern) {
         return query
                 .setParameter("userId", userId)
+                .setParameter("subjectType", subjectType)
                 .setParameter("status", status)
                 .setParameter("query", normalizedQuery)
                 .setParameter("queryPattern", queryPattern);

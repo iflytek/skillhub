@@ -13,7 +13,6 @@ import { Pagination } from '@/shared/components/pagination'
 import { useArchiveSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { useMySkills, useSubmitPromotion } from '@/shared/hooks/use-user-queries'
-import { useDebounce } from '@/shared/hooks/use-debounce'
 import { useRestoreHiddenSkill } from '@/features/admin/use-admin-skills'
 import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPendingOwnerPreview } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
@@ -55,10 +54,8 @@ export function MySkillsPage() {
   const namespaceFilter = search.namespace ?? ''
   const keyword = search.q ?? ''
 
-  // Keep an instant-feedback copy of the keyword input, debounced before it is
-  // pushed to the URL so each keystroke does not create a history entry or query.
+  // Input remains local until the user explicitly submits the search.
   const [keywordInput, setKeywordInput] = useState(keyword)
-  const debouncedKeyword = useDebounce(keywordInput.trim(), 300)
 
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
@@ -73,13 +70,6 @@ export function MySkillsPage() {
       replace: options?.replace,
     })
   }, [navigate])
-
-  // Push the debounced keyword to the URL (reset page to 0 when search changes)
-  useEffect(() => {
-    if (debouncedKeyword !== keyword) {
-      updateSearch({ q: debouncedKeyword || undefined, page: 0 }, { replace: true })
-    }
-  }, [debouncedKeyword, keyword, updateSearch])
 
   // Sync keywordInput when navigating back via returnTo
   useEffect(() => {
@@ -310,6 +300,10 @@ export function MySkillsPage() {
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <form className="flex gap-2 sm:w-full sm:max-w-md" onSubmit={event => {
+            event.preventDefault()
+            updateSearch({ q: keywordInput.trim() || undefined, page: 0 }, { replace: true })
+          }}>
           <Input
             type="search"
             value={keywordInput}
@@ -318,6 +312,8 @@ export function MySkillsPage() {
             aria-label={t('mySkills.searchPlaceholder')}
             className="sm:max-w-md"
           />
+          <Button type="submit" variant="outline">{t('nav.search')}</Button>
+          </form>
           {filter === 'HIDDEN' ? null : (
             <Select
               value={namespaceFilter || ALL_NAMESPACES_VALUE}

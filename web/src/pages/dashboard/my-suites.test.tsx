@@ -1,146 +1,95 @@
 /** @vitest-environment jsdom */
-
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SkillSuiteBundleOperationPage, SkillSuiteBundleOperationSummary } from '@/api/types'
+import type { MySkillSuiteWorkspace } from '@/api/types'
 import { MySuitesPage } from './my-suites'
 
 const mocks = vi.hoisted(() => ({
-  navigate: vi.fn(),
-  search: { tab: 'publishing' as 'publishing' | undefined },
-  suiteHook: vi.fn(),
-  operationHook: vi.fn(),
-  operations: {
-    items: [], total: 0, page: 0, size: 12, hasChangingOperations: false,
-  } as SkillSuiteBundleOperationPage,
+  navigate: vi.fn(), hook: vi.fn(),
+  data: { items: [], total: 0, page: 0, size: 12, attentionCount: 0, hasChangingOperations: false } as MySkillSuiteWorkspace,
 }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'zh-CN' } }) }))
+vi.mock('@/shared/hooks/use-suite-queries', () => ({ useMySuiteWorkspace: (...args: unknown[]) => {
+  mocks.hook(...args)
+  return { data: mocks.data, isLoading: false, isError: false, isFetching: false, isPlaceholderData: false }
+} }))
 
-vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => mocks.navigate,
-  useSearch: () => mocks.search,
-}))
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'zh-CN' } }),
-}))
-vi.mock('@/shared/hooks/use-suite-queries', () => ({
-  useMySuites: (...args: unknown[]) => {
-    mocks.suiteHook(...args)
-    return { data: { items: [], total: 0, page: 0, size: 12 }, isLoading: false }
-  },
-  useMySuiteBundleOperations: (page: number, size: number, enabled: boolean) => {
-    mocks.operationHook(page, size, enabled)
-    return { data: mocks.operations, isLoading: false }
-  },
-}))
-
-function operation(
-  operationId: string,
-  status: SkillSuiteBundleOperationSummary['status'],
-): SkillSuiteBundleOperationSummary {
-  return {
-    operationId,
-    mode: 'CREATE',
-    targetCoordinate: `@global/${operationId}`,
-    targetVersion: '1.0.0',
-    status,
-    failureCode: undefined,
-    baseVersion: undefined,
-    totalMembers: 2,
-    completedMembers: status === 'SUITE_DRAFT_CREATED' ? 2 : 1,
-    waitingMembers: status === 'WAITING_FOR_MEMBERS' ? 1 : 0,
-    updatedAt: '2026-09-14T04:00:00Z',
-  }
+function row(state = 'DRAFT') {
+  return { suiteId: 7, namespace: 'global', slug: 'care-suite', displayName: 'Care', version: '1.1.0',
+    suiteVersion: '1.0.0', state, updatedAt: '2026-09-15T04:00:00Z' }
 }
-
-describe('MySuitesPage publishing tasks', () => {
-  afterEach(() => {
-    cleanup()
-    vi.clearAllMocks()
-    mocks.search = { tab: 'publishing' }
-    mocks.operations = {
-      items: [], total: 0, page: 0, size: 12, hasChangingOperations: false,
-    }
-  })
-
-  it('groups attention, in-progress, completed and cancelled tasks without a spinner', () => {
-    mocks.operations = {
-      items: [
-        operation('blocked', 'BLOCKED_RETRYABLE'),
-        operation('repreview', 'REPREVIEW_REQUIRED'),
-        operation('running', 'RUNNING'),
-        operation('waiting', 'WAITING_FOR_MEMBERS'),
-        operation('draft', 'SUITE_DRAFT_CREATED'),
-        operation('cancelled', 'CANCELLED'),
-      ],
-      total: 6,
-      page: 0,
-      size: 12,
-      hasChangingOperations: true,
-    }
-
-    const { container } = render(<MySuitesPage />)
-
-    expect(screen.getByText('suite.bundle.groups.attention')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.groups.progress')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.groups.recent')).not.toBeNull()
-    expect(screen.getByText('@global/cancelled@1.0.0')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.statusLabel.BLOCKED_RETRYABLE')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.statusLabel.REPREVIEW_REQUIRED')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.statusLabel.RUNNING')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.statusLabel.WAITING_FOR_MEMBERS')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.statusLabel.SUITE_DRAFT_CREATED')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.statusLabel.CANCELLED')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.nextStep.BLOCKED_RETRYABLE')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.nextStep.REPREVIEW_REQUIRED')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.nextStep.RUNNING')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.nextStep.WAITING_FOR_MEMBERS')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.nextStep.SUITE_DRAFT_CREATED')).not.toBeNull()
-    expect(screen.getByText('suite.bundle.nextStep.CANCELLED')).not.toBeNull()
-    expect(container.querySelector('.animate-spin')).toBeNull()
-    expect(mocks.suiteHook).toHaveBeenCalledWith('', 0, 12, false)
-    expect(mocks.operationHook).toHaveBeenCalledWith(0, 12, true)
-  })
-
-  it('opens a dedicated task detail instead of a Suite creation page', () => {
-    mocks.operations = {
-      items: [operation('waiting', 'WAITING_FOR_MEMBERS')],
-      total: 1,
-      page: 0,
-      size: 12,
-      hasChangingOperations: true,
-    }
-
+describe('MySuites owner workbench', () => {
+  afterEach(() => { cleanup(); vi.clearAllMocks(); mocks.data = { items: [], total: 0, page: 0, size: 12, attentionCount: 0, hasChangingOperations: false } })
+  it('uses one paginated workbench without a separate publishing tab or task cards', () => {
+    mocks.data.items = [row()]; mocks.data.total = 25; mocks.data.attentionCount = 3
     render(<MySuitesPage />)
-    fireEvent.click(screen.getByRole('button', { name: /@global\/waiting@1.0.0/ }))
-
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'suite.workspace.attention 3' })).not.toBeNull()
+    expect(mocks.hook).toHaveBeenCalledWith('', 'ALL', 0, 12)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.view' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/dashboard/suites/global/care-suite', search: { version: '1.0.0' } })
+  })
+  it('opens the Suite workbench for a Suite under review', () => {
+    mocks.data.items = [row('PENDING_REVIEW')]; mocks.data.total = 1
+    render(<MySuitesPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.view' }))
     expect(mocks.navigate).toHaveBeenCalledWith({
-      to: '/dashboard/suites/publishing/waiting',
+      to: '/dashboard/suites/global/care-suite',
+      search: { version: '1.0.0' },
     })
   })
-
-  it('keeps the publishing tab in the URL and returns to a valid task page', async () => {
-    mocks.operations = {
-      items: [operation('task-13', 'WAITING_FOR_MEMBERS')],
-      total: 13,
-      page: 0,
-      size: 12,
-      hasChangingOperations: true,
-    }
-    const view = render(<MySuitesPage />)
-    fireEvent.click(screen.getByRole('button', { name: 'pagination.next' }))
-    expect(mocks.operationHook).toHaveBeenCalledWith(1, 12, true)
-
-    mocks.operations = {
-      items: [], total: 12, page: 1, size: 12, hasChangingOperations: false,
-    }
-    view.rerender(<MySuitesPage />)
-    await waitFor(() => expect(mocks.operationHook).toHaveBeenLastCalledWith(0, 12, true))
-
-    fireEvent.click(screen.getByRole('tab', { name: 'suite.tabs.suites' }))
+  it('opens the Suite publishing tab when an existing Suite has a publishing task', () => {
+    mocks.data.items = [{ ...row('ATTENTION'), operationId: 'op-1', operationStatus: 'BLOCKED_RETRYABLE', failureCode: 'MEMBER_EXECUTION_FAILED' }]
+    mocks.data.total = 1
+    render(<MySuitesPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.view' }))
     expect(mocks.navigate).toHaveBeenCalledWith({
-      to: '/dashboard/suites',
-      search: { tab: undefined },
-      replace: true,
+      to: '/dashboard/suites/global/care-suite',
+      search: { version: '1.0.0', tab: 'publishing' },
     })
+  })
+  it('keeps a temporary blocked creation discoverable with a specific action and no raw error code', () => {
+    mocks.data.items = [{ ...row('ATTENTION'), suiteId: undefined, suiteVersion: undefined,
+      operationId: 'op-1', operationStatus: 'BLOCKED_RETRYABLE', failureCode: 'MEMBER_EXECUTION_FAILED' }]
+    mocks.data.total = 1
+    render(<MySuitesPage />)
+    expect(screen.queryByText('MEMBER_EXECUTION_FAILED')).toBeNull()
+    expect(screen.getByText('suite.bundle.statusLabel.BLOCKED_RETRYABLE')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.problem.memberExecutionFailed.title')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.taskHint.BLOCKED_RETRYABLE')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.taskAction.BLOCKED_RETRYABLE' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/dashboard/suites/publishing/op-1' })
+  })
+  it('flags a completed creation task without a generated Suite draft as a problem', () => {
+    mocks.data.items = [{ ...row('ATTENTION'), suiteId: undefined, suiteVersion: undefined,
+      operationId: 'op-missing', operationStatus: 'SUITE_DRAFT_CREATED' }]
+    mocks.data.total = 1
+    render(<MySuitesPage />)
+    expect(screen.getByText('suite.bundle.problem.draftMissing.title')).not.toBeNull()
+    expect(screen.getByText('suite.bundle.taskHint.SUITE_DRAFT_CREATED')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.taskAction.SUITE_DRAFT_CREATED' }))
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/dashboard/suites/publishing/op-missing' })
+  })
+  it('only applies submitted search and resets pagination in the same transition', async () => {
+    mocks.data.items = [row()]; mocks.data.total = 25; mocks.data.attentionCount = 3
+    render(<MySuitesPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'pagination.next' }))
+    await waitFor(() => expect(mocks.hook).toHaveBeenLastCalledWith('', 'ALL', 1, 12))
+    mocks.hook.mockClear()
+    const input = screen.getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'c' } }); fireEvent.change(input, { target: { value: 'care' } })
+    expect(mocks.hook.mock.calls.every(args => args[0] === '')).toBe(true)
+    expect(mocks.hook).toHaveBeenLastCalledWith('', 'ALL', 1, 12)
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => expect(mocks.hook).toHaveBeenLastCalledWith('care', 'ALL', 0, 12))
+    expect(mocks.hook.mock.calls.some(args => args[0] === 'c')).toBe(false)
+    expect(mocks.hook.mock.calls.some(args => args[0] === 'care' && args[2] === 1)).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.workspace.clearSearch' }))
+    expect(mocks.hook).toHaveBeenLastCalledWith('care', 'ALL', 0, 12)
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => expect(mocks.hook).toHaveBeenLastCalledWith('', 'ALL', 0, 12))
+    fireEvent.click(screen.getByRole('button', { name: 'suite.workspace.attention 3' }))
+    await waitFor(() => expect(mocks.hook).toHaveBeenLastCalledWith('', 'ATTENTION', 0, 12))
   })
 })

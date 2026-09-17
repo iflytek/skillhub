@@ -21,6 +21,8 @@ import com.iflytek.skillhub.domain.suite.SkillSuiteAllowedAction;
 import com.iflytek.skillhub.domain.suite.SkillSuiteMemberSelection;
 import com.iflytek.skillhub.domain.suite.SkillSuiteQueryService;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersionMember;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillSuiteCreateRequest;
 import com.iflytek.skillhub.dto.SkillSuiteMemberRequest;
 import com.iflytek.skillhub.dto.SkillSuiteMemberResponse;
@@ -36,6 +38,7 @@ import com.iflytek.skillhub.repository.SkillSuiteCandidateQueryRepository;
 import com.iflytek.skillhub.repository.SkillSuiteReferenceQueryRepository;
 import com.iflytek.skillhub.repository.MySkillSuiteQueryRepository;
 import com.iflytek.skillhub.dto.MySkillSuiteSummaryResponse;
+import com.iflytek.skillhub.dto.MySkillSuiteWorkspaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -48,11 +51,13 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Application boundary for resolving Suite inputs and invoking domain workflows. */
 @Service
@@ -72,6 +77,7 @@ public class SkillSuiteAppService {
     private final SkillSuiteCandidateQueryRepository candidateQueryRepository;
     private final MySkillSuiteQueryRepository mySkillSuiteQueryRepository;
     private final SkillSuiteReferenceQueryRepository referenceQueryRepository;
+    private final UserAccountRepository userAccountRepository;
 
     public SkillSuiteAppService(
             NamespaceRepository namespaceRepository,
@@ -85,7 +91,8 @@ public class SkillSuiteAppService {
             RequestIdAccessor requestIdAccessor,
             SkillSuiteCandidateQueryRepository candidateQueryRepository,
             MySkillSuiteQueryRepository mySkillSuiteQueryRepository,
-            SkillSuiteReferenceQueryRepository referenceQueryRepository
+            SkillSuiteReferenceQueryRepository referenceQueryRepository,
+            UserAccountRepository userAccountRepository
     ) {
         this.namespaceRepository = namespaceRepository;
         this.skillQueryService = skillQueryService;
@@ -99,6 +106,7 @@ public class SkillSuiteAppService {
         this.candidateQueryRepository = candidateQueryRepository;
         this.mySkillSuiteQueryRepository = mySkillSuiteQueryRepository;
         this.referenceQueryRepository = referenceQueryRepository;
+        this.userAccountRepository = userAccountRepository;
     }
 
     public PageResponse<MySkillSuiteSummaryResponse> listMine(
@@ -116,6 +124,21 @@ public class SkillSuiteAppService {
         return mySkillSuiteQueryRepository.findMine(
                 userId, namespaceRoles.keySet(), adminNamespaceIds, query,
                 Math.max(0, page), Math.min(Math.max(1, size), 100));
+    }
+
+    public MySkillSuiteWorkspaceResponse workspace(
+            String userId, Map<Long, NamespaceRole> namespaceRoles,
+            String query, String state, int page, int size
+    ) {
+        String filter = state == null ? "" : state;
+        if (!Set.of("", "ATTENTION", "DRAFT", "PENDING_REVIEW", "PUBLISHED", "OTHER").contains(filter)) {
+            throw new DomainBadRequestException("error.suite.workspace.invalidFilter");
+        }
+        Set<Long> adminNamespaceIds = namespaceRoles.entrySet().stream()
+                .filter(entry -> entry.getValue() == NamespaceRole.OWNER || entry.getValue() == NamespaceRole.ADMIN)
+                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return mySkillSuiteQueryRepository.findWorkspace(userId, namespaceRoles.keySet(), adminNamespaceIds,
+                query, filter, Math.max(0, page), Math.min(Math.max(1, size), 100));
     }
 
     public List<SkillSuiteMemberCandidateResponse> searchCandidates(
@@ -365,7 +388,9 @@ public class SkillSuiteAppService {
         return new SkillSuiteResponse(
                 detail.suite().getId(), detail.version().getId(), detail.namespace().getSlug(),
                 detail.suite().getSlug(), detail.version().getDisplayName(), detail.version().getSummary(),
-                detail.version().getOverview(),
+                detail.version().getOverview(), detail.version().getChangelog(), detail.version().getCreatedBy(),
+                creatorName(detail.version().getCreatedBy()),
+                detail.version().getCreatedAt(), detail.version().getPublishedAt(), detail.version().getYankedAt(),
                 detail.version().getVersion(), detail.version().getStatus().name(),
                 detail.version().getVisibility(), detail.suite().getStatus().name(),
                 detail.suite().isHidden(), allowedActions, detail.available(), members);
@@ -429,9 +454,18 @@ public class SkillSuiteAppService {
             Map<Long, NamespaceRole> namespaceRoles,
             Set<String> platformRoles
     ) {
-        return queryService.listVersions(namespace, slug, userId, namespaceRoles, platformRoles).stream()
+        List<SkillSuiteQueryService.VersionSummary> versions =
+                queryService.listVersions(namespace, slug, userId, namespaceRoles, platformRoles);
+        Map<String, String> creatorNames = userAccountRepository.findByIdIn(versions.stream()
+                        .map(SkillSuiteQueryService.VersionSummary::createdBy)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList()).stream()
+                .collect(Collectors.toMap(UserAccount::getId, UserAccount::getDisplayName));
+        return versions.stream()
                 .map(version -> new SkillSuiteVersionSummaryResponse(
                         version.id(), version.version(), version.status().name(), version.visibility(),
+                        version.changelog(), version.createdBy(), creatorNames.get(version.createdBy()),
                         version.publishedAt(), version.yankedAt(), version.createdAt()))
                 .toList();
     }
@@ -571,14 +605,13 @@ public class SkillSuiteAppService {
             Set<String> platformRoles
     ) {
         List<SkillSuiteMemberSelection> selections = new ArrayList<>(request.members().size());
-        List<String> invalidMembers = new ArrayList<>();
+        Set<String> invalidMembers = new LinkedHashSet<>();
         for (SkillSuiteMemberRequest member : request.members()) {
             try {
                 selections.add(resolve(member, userId, namespaceRoles, platformRoles));
             } catch (LocalizedDomainException exception) {
                 invalidMembers.add(String.format(
-                        "@%s/%s@%s (%s)", member.namespace(), member.slug(), member.version(),
-                        exception.messageCode()));
+                        "@%s/%s@%s", member.namespace(), member.slug(), member.version()));
             }
         }
         if (!invalidMembers.isEmpty()) {
@@ -644,10 +677,18 @@ public class SkillSuiteAppService {
         return new SkillSuiteResponse(
                 created.suite().getId(), created.version().getId(), namespace.getSlug(),
                 created.suite().getSlug(), created.version().getDisplayName(), created.version().getSummary(),
-                created.version().getOverview(),
+                created.version().getOverview(), created.version().getChangelog(), created.version().getCreatedBy(),
+                creatorName(created.version().getCreatedBy()),
+                created.version().getCreatedAt(), created.version().getPublishedAt(), created.version().getYankedAt(),
                 created.version().getVersion(), created.version().getStatus().name(),
                 created.version().getVisibility(), created.suite().getStatus().name(),
                 created.suite().isHidden(), allowedActions, false, members);
+    }
+
+    private String creatorName(String userId) {
+        return userId == null ? null : userAccountRepository.findById(userId)
+                .map(UserAccount::getDisplayName)
+                .orElse(null);
     }
 
     private SkillSuiteActionContext authorizationContext(

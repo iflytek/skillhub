@@ -296,6 +296,36 @@ describe('SuiteBundleImport', () => {
     )).toBeNull()
   })
 
+  it('preserves the Suite return target for an update publishing task', async () => {
+    mocks.preview.mutateAsync.mockResolvedValue(preview({
+      members: [],
+      target: { mode: 'UPDATE', coordinate: '@global/suite', targetVersion: '2.0.0' },
+    }))
+    mocks.confirm.mutateAsync.mockResolvedValue({ operationId: 'operation-update', status: 'RUNNING' })
+    render(
+      <SuiteBundleImport
+        expectedMode="UPDATE"
+        expectedCoordinate="@global/suite"
+        returnToSuite={{ namespace: 'global', slug: 'suite', version: '1.0.0' }}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'suite.bundle.confirm' }).hasAttribute('disabled')
+    ).toBe(false))
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.confirm' }))
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/dashboard/suites/publishing/operation-update',
+      search: {
+        suiteNamespace: 'global',
+        suiteSlug: 'suite',
+        suiteVersion: '1.0.0',
+      },
+      replace: true,
+    }))
+  })
+
   it('opens the dedicated publishing task when a stored operation is restored', async () => {
     const key = 'skillhub:suite-bundle-operation:CREATE:new'
     window.sessionStorage.setItem(key, 'operation-restored')

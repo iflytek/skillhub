@@ -13,6 +13,7 @@ import type {
   SkillSuiteBundleOperationResult,
   SkillSuiteBundleOperationPage,
   SkillSuiteBundleOperationSummary,
+  MySkillSuiteWorkspace,
 } from '@/api/types'
 import { fetchJson, getCsrfHeaders, suiteApi, WEB_API_PREFIX } from '@/api/client'
 
@@ -66,6 +67,19 @@ export function useSuiteDetail(namespace: string, slug: string, version?: string
   })
 }
 
+export function useMySuiteWorkspace(query = '', state = 'ALL', page = 0, size = 12) {
+  return useQuery({
+    queryKey: ['suites', 'workspace', query, state, page, size],
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({ q: query, state: state === 'ALL' ? '' : state, page: String(page), size: String(size) })
+      return fetchJson<MySkillSuiteWorkspace>(`${WEB_API_PREFIX}/me/suites/workspace?${params}`, { signal })
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 10_000,
+    refetchInterval: current => current.state.data?.hasChangingOperations ? 5_000 : false,
+  })
+}
+
 export function useSuiteVersions(namespace: string, slug: string, enabled = true) {
   return useQuery({
     queryKey: ['suites', namespace, slug, 'versions'],
@@ -107,6 +121,7 @@ export function useCreateSuite() {
       headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(input),
     }),
+    meta: { skipGlobalErrorHandler: true },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['suites'] }),
   })
 }
@@ -115,6 +130,7 @@ export function useCreateSuiteVersion(suiteId: number) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: SkillSuiteDraftInput) => suiteApi.createVersion(suiteId, input),
+    meta: { skipGlobalErrorHandler: true },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['suites'] }),
   })
 }
@@ -136,6 +152,7 @@ export function usePreviewSuiteBundle() {
 }
 
 export function useConfirmSuiteBundle() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ previewToken, warningDigest, idempotencyKey }: {
       previewToken: string
@@ -152,15 +169,25 @@ export function useConfirmSuiteBundle() {
         body: JSON.stringify({ warningDigest }),
       },
     ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suites', 'workspace'] })
+      queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'mine'] })
+    },
   })
 }
 
 export function useSuiteBundleOperation(operationId?: string) {
+  const queryClient = useQueryClient()
   return useQuery({
     queryKey: ['suite-bundles', 'operations', operationId],
-    queryFn: () => fetchJson<SkillSuiteBundleOperation>(
-      `${WEB_API_PREFIX}/suite-bundles/operations/${encodeURIComponent(operationId!)}`,
-    ),
+    queryFn: async () => {
+      const operation = await fetchJson<SkillSuiteBundleOperation>(
+        `${WEB_API_PREFIX}/suite-bundles/operations/${encodeURIComponent(operationId!)}`,
+      )
+      // Mark the workbench stale without polling or refetching a hidden list from the detail page.
+      void queryClient.invalidateQueries({ queryKey: ['suites', 'workspace'], refetchType: 'none' })
+      return operation
+    },
     enabled: Boolean(operationId),
     refetchInterval: (query) => {
       const status = query.state.data?.status
@@ -204,6 +231,7 @@ function useSuiteBundleCommand(command: 'cancel' | 'retry') {
         queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', operationId] }),
         queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'mine'] }),
         queryClient.invalidateQueries({ queryKey: ['suite-bundles', 'operations', 'active'] }),
+        queryClient.invalidateQueries({ queryKey: ['suites', 'workspace'] }),
       ])
     },
   })
@@ -228,6 +256,7 @@ export function useUpdateSuiteDraft(suiteId: number, versionId: number) {
         body: JSON.stringify(input),
       },
     ),
+    meta: { skipGlobalErrorHandler: true },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['suites'] }),
   })
 }

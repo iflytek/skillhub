@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.MySkillSuiteSummaryResponse;
+import com.iflytek.skillhub.dto.MySkillSuiteWorkspaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.service.SkillSuiteAppService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,5 +42,19 @@ public class MySkillSuiteController extends BaseApiController {
     ) {
         return ok("response.success.read", appService.listMine(
                 userId, roles == null ? Map.of() : roles, q, page, size));
+    }
+
+    @GetMapping("/workspace")
+    @Operation(operationId = "listMySkillSuiteWorkspace", summary = "List owner workbench with merged Suite creation progress")
+    public ApiResponse<MySkillSuiteWorkspaceResponse> workspace(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String state,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles
+    ) {
+        return ok("response.success.read", appService.workspace(
+                userId, roles == null ? Map.of() : roles, q, state, page, size));
     }
 }

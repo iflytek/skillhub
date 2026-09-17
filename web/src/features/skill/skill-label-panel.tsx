@@ -22,6 +22,7 @@ type SkillLabelPanelProps = {
   initialLabels: LabelItem[]
   canManage: boolean
   isSuperAdmin: boolean
+  compact?: boolean
 }
 
 type MutationCallbacks = {
@@ -87,6 +88,7 @@ function ResourceLabelPanel({
   attachPending,
   detachPending,
   translationPrefix,
+  compact = false,
 }: ResourceLabelPanelProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.resolvedLanguage || i18n.language || 'en'
@@ -140,18 +142,18 @@ function ResourceLabelPanel({
   }
 
   return (
-    <Card className="p-5 space-y-4">
+    <Card className={compact ? 'space-y-2.5 rounded-lg p-3' : 'space-y-4 p-5'}>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <Tag className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-semibold font-heading text-foreground">{t(`${translationPrefix}.labelsSectionTitle`)}</span>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className={compact ? 'text-xs text-muted-foreground' : 'text-sm text-muted-foreground'}>
           {isSuperAdmin ? t(`${translationPrefix}.labelsSectionDescriptionSuperAdmin`) : t(`${translationPrefix}.labelsSectionDescription`)}
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className={compact ? 'space-y-2' : 'space-y-3'}>
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t(`${translationPrefix}.currentLabelsTitle`)}</div>
         {currentLabels.length > 0 ? (
           <div className="space-y-2">
@@ -192,16 +194,16 @@ function ResourceLabelPanel({
             })}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
+          <div className={compact ? 'rounded-lg border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground' : 'rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground'}>
             {t(`${translationPrefix}.noLabelsAssigned`)}
           </div>
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className={compact ? 'space-y-2' : 'space-y-3'}>
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t(`${translationPrefix}.availableLabelsTitle`)}</div>
         {isCatalogLoading ? (
-          <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
+          <div className={compact ? 'rounded-lg border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground' : 'rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground'}>
             {t(`${translationPrefix}.loadingAvailableLabels`)}
           </div>
         ) : availableLabels.length > 0 ? (
@@ -220,7 +222,7 @@ function ResourceLabelPanel({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground">
+          <div className={compact ? 'rounded-lg border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground' : 'rounded-xl border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground'}>
             {t(`${translationPrefix}.noAvailableLabels`)}
           </div>
         )}

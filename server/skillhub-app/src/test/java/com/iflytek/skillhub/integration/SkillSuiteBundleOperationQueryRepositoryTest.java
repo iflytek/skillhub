@@ -15,6 +15,7 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.repository.SkillSuiteBundleOperationQueryRepository;
+import com.iflytek.skillhub.repository.MySkillSuiteQueryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -38,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import(SkillSuiteBundleOperationQueryRepository.class)
+@Import({SkillSuiteBundleOperationQueryRepository.class, MySkillSuiteQueryRepository.class})
 @Testcontainers
 @TestPropertySource(properties = {
         "spring.flyway.enabled=true",
@@ -68,6 +69,63 @@ class SkillSuiteBundleOperationQueryRepositoryTest {
 
     @Autowired
     private SkillSuiteBundleOperationQueryRepository repository;
+
+    @Autowired
+    private MySkillSuiteQueryRepository workspaceRepository;
+
+    @Test
+    void workspacePagesTemporaryCreationsAndCountsAttentionAcrossAllPagesWithoutMemberQueries() {
+        entityManager.persist(new UserAccount("actor", "Actor", null, null));
+        Namespace namespace = entityManager.persistFlushFind(new Namespace("team-ai", "AI Team", "actor"));
+        for (int index = 0; index < 15; index++) {
+            var operation = createOperation("operation-" + Integer.toHexString(index), "actor", namespace, "temporary-" + index);
+            if (index < 3) operation.markBlockedRetryable("MEMBER_EXECUTION_FAILED", "retry", NOW.plusSeconds(index));
+            else operation.cancel(NOW.plusSeconds(index));
+            entityManager.persist(operation);
+        }
+        entityManager.flush();
+        var statistics = entityManager.getEntityManager().getEntityManagerFactory()
+                .unwrap(org.hibernate.engine.spi.SessionFactoryImplementor.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+        var first = workspaceRepository.findWorkspace("actor", java.util.Set.of(namespace.getId()), java.util.Set.of(), "", "", 0, 12);
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+        assertThat(first.items()).hasSize(12);
+        assertThat(first.total()).isEqualTo(15);
+        assertThat(first.attentionCount()).isEqualTo(3);
+        assertThat(first.hasChangingOperations()).isFalse();
+        assertThat(first.items().getFirst().state()).isEqualTo("ATTENTION");
+        var second = workspaceRepository.findWorkspace("actor", java.util.Set.of(namespace.getId()), java.util.Set.of(), "", "", 1, 12);
+        assertThat(second.items()).hasSize(3);
+        assertThat(second.attentionCount()).isEqualTo(3);
+        assertThat(workspaceRepository.findWorkspace("actor", java.util.Set.of(namespace.getId()), java.util.Set.of(), "", "ATTENTION", 0, 12).items()).hasSize(3);
+        assertThat(workspaceRepository.findWorkspace("other", java.util.Set.of(namespace.getId()), java.util.Set.of(), "", "", 0, 12).total()).isZero();
+        assertThat(workspaceRepository.findWorkspace("actor", java.util.Set.of(), java.util.Set.of(), "", "", 0, 12).total()).isZero();
+        assertThat(workspaceRepository.findWorkspace("actor", java.util.Set.of(namespace.getId()), java.util.Set.of(), "%", "", 0, 12).total()).isZero();
+        assertThat(workspaceRepository.findWorkspace("actor", java.util.Set.of(namespace.getId()), java.util.Set.of(), "team-ai/temporary-1", "", 0, 12).total()).isEqualTo(6);
+    }
+
+    @Test
+    void workspaceMergesCreatedSuiteAndKeepsSuiteReviewWithoutABundleOperation() {
+        entityManager.persist(new UserAccount("actor", "Actor", null, null));
+        Namespace namespace = entityManager.persistFlushFind(new Namespace("team-ai", "AI Team", "actor"));
+        var operation = createOperation("operation-1", "actor", namespace, "care-suite");
+        operation.cancel(NOW.plusSeconds(1));
+        entityManager.persist(operation);
+        SkillSuite suite = entityManager.persistFlushFind(new SkillSuite(namespace.getId(), "care-suite", "Care", "actor"));
+        SkillSuiteVersion version = new SkillSuiteVersion(suite.getId(), "1.0.0", SkillVisibility.PUBLIC, "actor");
+        version.setDisplayName("Care");
+        version.setStatus(com.iflytek.skillhub.domain.suite.SkillSuiteVersionStatus.PENDING_REVIEW);
+        entityManager.persistAndFlush(version);
+        var result = workspaceRepository.findWorkspace("actor", java.util.Set.of(namespace.getId()), java.util.Set.of(), "", "", 0, 12);
+        assertThat(result.items()).singleElement().satisfies(item -> {
+            assertThat(item.suiteId()).isEqualTo(suite.getId());
+            assertThat(item.state()).isEqualTo("PENDING_REVIEW");
+            assertThat(item.operationId()).isNull();
+        });
+        assertThat(workspaceRepository.findWorkspace("admin", java.util.Set.of(namespace.getId()), java.util.Set.of(namespace.getId()), "", "PENDING_REVIEW", 0, 12).total()).isEqualTo(1);
+        assertThat(workspaceRepository.findWorkspace("other", java.util.Set.of(namespace.getId()), java.util.Set.of(), "", "", 0, 12).total()).isZero();
+    }
 
     @Test
     void pagesOnlyTheActorsActiveOperationsAndAggregatesMemberStatusesInPostgres() {

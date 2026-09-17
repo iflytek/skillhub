@@ -48,7 +48,6 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
 
   const handleClear = () => {
     handleChange('')
-    onSearch?.('')
   }
 
   return (

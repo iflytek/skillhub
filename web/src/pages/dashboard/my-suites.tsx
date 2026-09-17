@@ -1,265 +1,130 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Boxes, CheckCircle2, ChevronRight, CircleDot, Clock3, Square } from 'lucide-react'
-import type { SkillSuiteBundleOperationSummary } from '@/api/types'
-import { useMySuiteBundleOperations, useMySuites } from '@/shared/hooks/use-suite-queries'
-import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { Boxes, ChevronRight, Search, X } from 'lucide-react'
+import type { MySkillSuiteWorkspaceItem } from '@/api/types'
+import { useMySuiteWorkspace } from '@/shared/hooks/use-suite-queries'
+import { SuiteWorkspaceHeader } from '@/features/suite/suite-workspace-header'
+import { suiteStatusLabel } from '@/features/suite/suite-labels'
+import { suiteBundleProblemKind } from '@/features/suite/suite-bundle-problem'
 import { EmptyState } from '@/shared/components/empty-state'
 import { Pagination } from '@/shared/components/pagination'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
-import { Button } from '@/shared/ui/button'
-import { Card } from '@/shared/ui/card'
-import { Input } from '@/shared/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import { suiteStatusLabel } from '@/features/suite/suite-labels'
 import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
 const PAGE_SIZE = 12
-const NEEDS_ATTENTION = new Set(['BLOCKED_RETRYABLE', 'REPREVIEW_REQUIRED'])
-const IN_PROGRESS = new Set(['RUNNING', 'WAITING_FOR_MEMBERS'])
+const FILTERS = ['ALL', 'ATTENTION', 'DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'OTHER'] as const
 
 export function MySuitesPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  const search = useSearch({ from: '/dashboard/suites' })
-  const activeTab = search.tab ?? 'suites'
-  const [query, setQuery] = useState('')
-  const [page, setPage] = useState(0)
-  const [taskPage, setTaskPage] = useState(0)
-  const { data, isLoading } = useMySuites(query.trim(), page, PAGE_SIZE, activeTab === 'suites')
-  const { data: operations, isLoading: isLoadingOperations } = useMySuiteBundleOperations(
-    taskPage,
-    PAGE_SIZE,
-    activeTab === 'publishing',
-  )
-  const taskTotalPages = Math.max(1, Math.ceil((operations?.total ?? 0) / PAGE_SIZE))
+  const [filters, setFilters] = useState({ query: '', state: 'ALL', page: 0 })
+  const [queryInput, setQueryInput] = useState('')
+  const workspace = useMySuiteWorkspace(filters.query, filters.state, filters.page, PAGE_SIZE)
+  const data = workspace.data
+  const stale = workspace.isPlaceholderData
+  const update = (next: Partial<typeof filters>) => setFilters(current => ({ ...current, page: 0, ...next }))
 
   useEffect(() => {
-    if (taskPage >= taskTotalPages) setTaskPage(taskTotalPages - 1)
-  }, [taskPage, taskTotalPages])
+    if (!data || stale) return
+    const lastPage = Math.max(0, Math.ceil(data.total / PAGE_SIZE) - 1)
+    if (filters.page > lastPage) setFilters(current => ({ ...current, page: lastPage }))
+  }, [data, stale, filters.page])
 
-  const groups = {
-    attention: operations?.items.filter(operation => NEEDS_ATTENTION.has(operation.status)) ?? [],
-    progress: operations?.items.filter(operation => IN_PROGRESS.has(operation.status)) ?? [],
-    recent: operations?.items.filter(operation =>
-      !NEEDS_ATTENTION.has(operation.status) && !IN_PROGRESS.has(operation.status)) ?? [],
+  function viewSuite(item: MySkillSuiteWorkspaceItem, tab?: 'publishing') {
+    void navigate({
+      to: `/dashboard/suites/${item.namespace}/${encodeURIComponent(item.slug)}`,
+      search: tab ? { version: item.suiteVersion, tab } : { version: item.suiteVersion },
+    })
+  }
+  function open(item: MySkillSuiteWorkspaceItem) {
+    if (item.suiteId) {
+      viewSuite(item, item.operationId ? 'publishing' : undefined)
+      return
+    }
+    if (item.operationId) void navigate({ to: `/dashboard/suites/publishing/${encodeURIComponent(item.operationId)}` })
+    else viewSuite(item)
   }
 
   return (
-    <div className="space-y-8 animate-fade-up">
-      <DashboardPageHeader
-        title={t('suite.myTitle')}
-        subtitle={t('suite.myDescription')}
-        actions={<Button onClick={() => navigate({ to: '/dashboard/suites/new' })}>{t('suite.create')}</Button>}
-      />
-      <Tabs
-        value={activeTab}
-        onValueChange={(tab) => navigate({
-          to: '/dashboard/suites',
-          search: { tab: tab === 'publishing' ? 'publishing' : undefined },
-          replace: true,
-        })}
-        className="space-y-6"
-      >
-        <TabsList>
-          <TabsTrigger value="suites">{t('suite.tabs.suites')}</TabsTrigger>
-          <TabsTrigger value="publishing">{t('suite.tabs.publishing')}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="suites" className="space-y-6">
-          <Input
-            className="max-w-xl"
-            value={query}
-            placeholder={t('suite.searchPlaceholder')}
-            onChange={(event) => {
-              setQuery(event.target.value)
-              setPage(0)
-            }}
-          />
-          {isLoading ? (
-            <div className="h-40 animate-shimmer rounded-xl" />
-          ) : data?.items.length ? (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                {data.items.map((suite) => (
-                  <Card key={suite.id} className="p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="flex items-center gap-2 font-semibold"><Boxes className="h-4 w-4" />{suite.displayName}</p>
-                        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">@{suite.namespace}/{suite.slug}@{suite.version}</p>
-                      </div>
-                      <span className="rounded-full bg-secondary px-2 py-1 text-xs">{suiteStatusLabel(t, suite.versionStatus)}</span>
-                    </div>
-                    <p className="mt-3 line-clamp-2 min-h-10 text-sm text-muted-foreground">{suite.summary || t('suite.noSummary')}</p>
-                    <div className="mt-4 flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => navigate({
-                        to: `/suite/${suite.namespace}/${encodeURIComponent(suite.slug)}`,
-                        search: { version: suite.version },
-                      })}>{t('suite.view')}</Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-              <Pagination page={page} totalPages={Math.max(1, Math.ceil(data.total / data.size))} onPageChange={setPage} />
-            </>
-          ) : (
-            <EmptyState title={t('suite.myEmpty')} description={t('suite.myEmptyDescription')} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="publishing" className="space-y-7">
-          <div>
-            <h2 className="text-lg font-semibold">{t('suite.bundle.taskListTitle')}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t('suite.bundle.taskListDescription')}</p>
+    <div className="space-y-4 animate-fade-up">
+      <SuiteWorkspaceHeader title={t('suite.myTitle')} description={t('suite.workspace.description')}
+        actions={<Button size="sm" onClick={() => navigate({ to: '/dashboard/suites/new' })}>{t('suite.create')}</Button>} />
+      <div className="flex flex-wrap items-center gap-2">
+        <form className="flex w-full items-center gap-2 sm:w-auto" onSubmit={event => { event.preventDefault(); update({ query: queryInput.trim() }) }}>
+        <div className="relative min-w-0 flex-1 sm:w-72">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input className="h-8 pl-8 pr-8 text-xs" value={queryInput} maxLength={200}
+            aria-label={t('suite.workspace.searchLabel')} placeholder={t('suite.workspace.searchPlaceholder')}
+            onChange={event => setQueryInput(event.target.value)} />
+          {queryInput && <button type="button" aria-label={t('suite.workspace.clearSearch')}
+            className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setQueryInput('')}><X className="h-3.5 w-3.5" aria-hidden="true" /></button>}
+        </div>
+        <Button type="submit" size="sm" variant="outline" className="h-8 text-xs">{t('nav.search')}</Button>
+        </form>
+        <Select value={filters.state} onValueChange={state => update({ state })}>
+          <SelectTrigger className="h-8 w-32 text-xs" aria-label={t('suite.workspace.stateFilter')}><SelectValue /></SelectTrigger>
+          <SelectContent>{FILTERS.map(state => <SelectItem key={state} value={state}>{t(`suite.workspace.filter.${state}`)}</SelectItem>)}</SelectContent>
+        </Select>
+        {data && <button type="button" aria-pressed={filters.state === 'ATTENTION'}
+          onClick={() => update({ state: filters.state === 'ATTENTION' ? 'ALL' : 'ATTENTION' })}
+          className={cn('inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            data.attentionCount ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300' : 'text-muted-foreground', filters.state === 'ATTENTION' && 'ring-1 ring-amber-500/30')}>
+          {t('suite.workspace.attention')}{' '}<span className="font-medium tabular-nums">{data.attentionCount}</span>
+        </button>}
+      </div>
+      {workspace.isLoading ? <div className="h-64 animate-shimmer rounded-lg" />
+        : workspace.isError ? <div role="alert" className="rounded-lg border p-4 text-xs text-destructive">
+          {t('suite.workspace.error')}<Button variant="ghost" size="sm" onClick={() => workspace.refetch()}>{t('suite.workspace.reload')}</Button>
+        </div> : data?.items.length ? <>
+          <div className="overflow-hidden rounded-lg border" aria-busy={stale || workspace.isFetching}>
+            <div className="hidden grid-cols-[minmax(0,1fr)_5rem_10rem_9rem_8rem] gap-3 border-b bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground lg:grid">
+              {['suite', 'version', 'state', 'updated', 'action'].map(column => <span key={column} className={column === 'action' ? 'text-right' : ''}>{t(`suite.workspace.columns.${column}`)}</span>)}
+            </div>
+            <div className={cn('divide-y', stale && 'opacity-60')}>
+              {data.items.map(item => {
+                const problem = !item.suiteId && item.operationStatus === 'SUITE_DRAFT_CREATED'
+                  ? 'draftMissing'
+                  : suiteBundleProblemKind(item.operationStatus, item.failureCode)
+                return <div key={`${item.namespace}/${item.slug}`}
+                  className={cn('grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_5rem_12rem_9rem_8rem] lg:items-center lg:gap-3', !item.suiteId && 'bg-blue-500/[0.025]')}>
+                  <div className="min-w-0">
+                    <button type="button" disabled={stale} onClick={() => item.suiteId ? viewSuite(item) : open(item)}
+                      className="flex max-w-full items-center gap-2 text-left text-xs font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <Boxes className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="truncate">{item.displayName}</span>
+                    </button>
+                    <p className="mt-1 truncate pl-5 font-mono text-[11px] text-muted-foreground">@{item.namespace}/{item.slug}</p>
+                    {item.summary && <p className="mt-0.5 truncate pl-5 text-[11px] text-muted-foreground">{item.summary}</p>}
+                  </div>
+                  <span className="pl-5 font-mono text-[11px] sm:pl-0">v{item.version}</span>
+                  <div className="min-w-0 pl-5 sm:pl-0">
+                    <span className={cn('inline-flex rounded-md border px-1.5 py-0.5 text-[11px] font-medium',
+                      item.state === 'ATTENTION' || item.state === 'REJECTED' ? 'border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                        : item.state === 'PUBLISHED' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                          : item.state === 'PREPARING' || item.state === 'PENDING_REVIEW' ? 'border-blue-500/20 bg-blue-500/10 text-blue-800 dark:text-blue-300' : 'border-border bg-secondary text-muted-foreground')}>
+                      {item.operationStatus ? t(`suite.bundle.statusLabel.${item.operationStatus}`) : suiteStatusLabel(t, item.state)}
+                    </span>
+                    {problem && <p className="mt-1 truncate text-[11px] text-foreground/75">{t(`suite.bundle.problem.${problem}.title`)}</p>}
+                    {item.operationStatus && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{t(`suite.bundle.taskHint.${item.operationStatus}`)}</p>}
+                  </div>
+                  <span className="pl-5 text-[11px] text-muted-foreground sm:pl-0">{formatLocalDateTime(item.updatedAt, i18n.language)}</span>
+                  <Button variant="ghost" size="sm" disabled={stale} onClick={() => open(item)} className="h-7 justify-self-end px-2 text-[11px] sm:col-span-2 lg:col-span-1">
+                    {item.operationStatus && !item.suiteId ? t(`suite.bundle.taskAction.${item.operationStatus}`) : t('suite.view')}
+                    <ChevronRight className="ml-1 h-3 w-3" aria-hidden="true" />
+                  </Button>
+                </div>
+              })}
+            </div>
           </div>
-          {isLoadingOperations ? (
-            <div className="h-40 animate-shimmer rounded-xl" />
-          ) : operations?.total ? (
-            <>
-              <TaskSection
-                title={t('suite.bundle.groups.attention')}
-                description={t('suite.bundle.groups.attentionDescription')}
-                operations={groups.attention}
-                emptyLabel={t('suite.bundle.groups.attentionEmpty')}
-                icon={<AlertTriangle className="h-4 w-4 text-amber-600" />}
-                locale={i18n.language}
-                onOpen={(operationId) => navigate({ to: `/dashboard/suites/publishing/${operationId}` })}
-              />
-              <TaskSection
-                title={t('suite.bundle.groups.progress')}
-                description={t('suite.bundle.groups.progressDescription')}
-                operations={groups.progress}
-                emptyLabel={t('suite.bundle.groups.progressEmpty')}
-                icon={<Clock3 className="h-4 w-4 text-primary" />}
-                locale={i18n.language}
-                onOpen={(operationId) => navigate({ to: `/dashboard/suites/publishing/${operationId}` })}
-              />
-              <TaskSection
-                title={t('suite.bundle.groups.recent')}
-                description={t('suite.bundle.groups.recentDescription')}
-                operations={groups.recent}
-                emptyLabel={t('suite.bundle.groups.recentEmpty')}
-                icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-                locale={i18n.language}
-                onOpen={(operationId) => navigate({ to: `/dashboard/suites/publishing/${operationId}` })}
-              />
-              <Pagination page={taskPage} totalPages={taskTotalPages} onPageChange={setTaskPage} />
-            </>
-          ) : (
-            <EmptyState title={t('suite.bundle.taskEmpty')} description={t('suite.bundle.taskEmptyDescription')} />
-          )}
-        </TabsContent>
-      </Tabs>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] text-muted-foreground">{t('suite.workspace.total', { count: data.total, size: PAGE_SIZE })}</span>
+            <Pagination page={filters.page} totalPages={Math.max(1, Math.ceil(data.total / PAGE_SIZE))} onPageChange={page => update({ page })} />
+          </div>
+        </> : <EmptyState title={t(filters.query || filters.state !== 'ALL' ? 'suite.workspace.noMatches' : 'suite.myEmpty')} />}
     </div>
   )
-}
-
-function TaskSection({ title, description, operations, emptyLabel, icon, locale, onOpen }: {
-  title: string
-  description: string
-  operations: SkillSuiteBundleOperationSummary[]
-  emptyLabel: string
-  icon: ReactNode
-  locale: string
-  onOpen: (operationId: string) => void
-}) {
-  const { t } = useTranslation()
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        {icon}
-        <div>
-          <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      {operations.length ? (
-        <Card className="divide-y overflow-hidden">
-          {operations.map((operation) => (
-            <button
-              key={operation.operationId}
-              type="button"
-              className={cn(
-                'flex w-full flex-col gap-3 border-l px-5 py-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:flex-row sm:items-center sm:justify-between',
-                operationRowClass(operation.status),
-              )}
-              onClick={() => onOpen(operation.operationId)}
-            >
-              <div className="flex min-w-0 items-start gap-3">
-                <OperationStatusIcon status={operation.status} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <OperationStatusBadge status={operation.status} />
-                    <p className="min-w-0 max-w-full break-all font-mono text-sm font-medium">{operation.targetCoordinate}@{operation.targetVersion}</p>
-                  </div>
-                  <p className="mt-2 text-sm text-foreground/80">{t(`suite.bundle.status.${operation.status}`)}</p>
-                  <p className="mt-1 text-xs font-medium text-muted-foreground">
-                    {t(`suite.bundle.nextStep.${operation.status}`)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t('suite.bundle.memberProgress', {
-                      completed: operation.completedMembers,
-                      total: operation.totalMembers,
-                      waiting: operation.waitingMembers,
-                    })}
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-3 pl-8 text-xs text-muted-foreground sm:pl-0">
-                <span>{formatLocalDateTime(operation.updatedAt, locale)}</span>
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </div>
-            </button>
-          ))}
-        </Card>
-      ) : (
-        <p className="rounded-lg border border-dashed px-4 py-5 text-sm text-muted-foreground">{emptyLabel}</p>
-      )}
-    </section>
-  )
-}
-
-function OperationStatusIcon({ status }: { status: SkillSuiteBundleOperationSummary['status'] }) {
-  if (status === 'BLOCKED_RETRYABLE' || status === 'REPREVIEW_REQUIRED') {
-    return <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
-  }
-  if (status === 'CANCELLED') {
-    return <Square className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-  }
-  if (status === 'SUITE_DRAFT_CREATED') {
-    return <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-  }
-  return <CircleDot className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-}
-
-function OperationStatusBadge({ status }: { status: SkillSuiteBundleOperationSummary['status'] }) {
-  const { t } = useTranslation()
-  return (
-    <span className={cn(
-      'inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold',
-      status === 'BLOCKED_RETRYABLE' || status === 'REPREVIEW_REQUIRED'
-        ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300'
-        : status === 'SUITE_DRAFT_CREATED'
-          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-          : status === 'CANCELLED'
-            ? 'border-border bg-muted text-muted-foreground'
-            : 'border-primary/25 bg-primary/10 text-primary',
-    )}>
-      {t(`suite.bundle.statusLabel.${status}`)}
-    </span>
-  )
-}
-
-function operationRowClass(status: SkillSuiteBundleOperationSummary['status']) {
-  if (status === 'BLOCKED_RETRYABLE' || status === 'REPREVIEW_REQUIRED') {
-    return 'border-l-amber-500 bg-amber-500/[0.03]'
-  }
-  if (status === 'SUITE_DRAFT_CREATED') {
-    return 'border-l-emerald-500 bg-emerald-500/[0.02]'
-  }
-  if (status === 'CANCELLED') {
-    return 'border-l-muted-foreground/30 bg-muted/20'
-  }
-  return 'border-l-primary bg-primary/[0.02]'
 }

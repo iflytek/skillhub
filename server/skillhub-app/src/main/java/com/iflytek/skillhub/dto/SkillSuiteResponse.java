@@ -3,6 +3,7 @@ package com.iflytek.skillhub.dto;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.suite.SkillSuiteAllowedAction;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -15,6 +16,12 @@ public record SkillSuiteResponse(
         String displayName,
         String summary,
         String overview,
+        String changelog,
+        String createdBy,
+        String createdByName,
+        Instant createdAt,
+        Instant publishedAt,
+        Instant yankedAt,
         String version,
         String status,
         SkillVisibility visibility,

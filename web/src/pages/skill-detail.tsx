@@ -167,7 +167,10 @@ export function SkillDetailPage() {
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
-  const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
+  const requestedVersion = search.version
+  const selectedVersion = versions?.some(version => version.version === requestedVersion)
+    ? requestedVersion
+    : headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)

@@ -50,9 +50,10 @@ export function rememberSuiteBundleOperation(
   writeStoredOperation(operationStorageKey(mode, mode === 'UPDATE' ? coordinate : undefined), operationId)
 }
 
-export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
+export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSuite }: {
   expectedMode: BundleMode
   expectedCoordinate?: string
+  returnToSuite?: { namespace: string; slug: string; version: string }
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -92,8 +93,20 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
     if (restoredOperationIdRef.current === operationId && !operation && !operationQuery.error) return
     writeStoredOperation(storageKey)
     restoredOperationIdRef.current = undefined
-    void navigate({ to: `/dashboard/suites/publishing/${operationId}`, replace: true })
-  }, [navigate, operation, operationId, operationMatchesTarget, operationQuery.error, storageKey])
+    if (returnToSuite) {
+      void navigate({
+        to: `/dashboard/suites/publishing/${operationId}`,
+        search: {
+          suiteNamespace: returnToSuite.namespace,
+          suiteSlug: returnToSuite.slug,
+          suiteVersion: returnToSuite.version,
+        },
+        replace: true,
+      })
+    } else {
+      void navigate({ to: `/dashboard/suites/publishing/${operationId}`, replace: true })
+    }
+  }, [navigate, operation, operationId, operationMatchesTarget, operationQuery.error, returnToSuite, storageKey])
   useEffect(() => {
     if (!preview) return undefined
     const timer = window.setInterval(() => setNow(Date.now()), 1_000)
@@ -213,13 +226,13 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="space-y-4 p-6">
-        <div className="flex items-start gap-3">
-          <FileArchive className="mt-0.5 h-5 w-5 text-primary" aria-hidden="true" />
+    <div className="space-y-4">
+      <Card className="space-y-3 p-4">
+        <div className="flex items-start gap-2.5">
+          <FileArchive className="mt-0.5 h-4 w-4 text-primary" aria-hidden="true" />
           <div>
-            <h2 className="font-semibold">{t('suite.bundle.uploadTitle')}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t('suite.bundle.uploadDescription')}</p>
+            <h2 className="text-sm font-semibold">{t('suite.bundle.uploadTitle')}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t('suite.bundle.uploadDescription')}</p>
           </div>
         </div>
         <UploadZone
@@ -234,17 +247,17 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
       </Card>
 
       {preview ? (
-        <Card className="space-y-5 p-6">
+        <Card className="space-y-4 p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="font-semibold">{t('suite.bundle.previewTitle')}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h2 className="text-sm font-semibold">{t('suite.bundle.previewTitle')}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {preview.target?.coordinate} · v{preview.target?.targetVersion}
               </p>
             </div>
             {preview.confirmable && !targetMismatch
-              ? <CheckCircle2 className="h-5 w-5 text-success" aria-label={t('suite.bundle.confirmable')} />
-              : <XCircle className="h-5 w-5 text-destructive" aria-label={t('suite.bundle.notConfirmable')} />}
+              ? <CheckCircle2 className="h-4 w-4 text-success" aria-label={t('suite.bundle.confirmable')} />
+              : <XCircle className="h-4 w-4 text-destructive" aria-label={t('suite.bundle.notConfirmable')} />}
           </div>
 
           {targetMismatch ? (
@@ -259,10 +272,10 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
           ) : null}
 
           {preview.target ? (
-            <div className="rounded-lg border bg-muted/20 p-4">
-              <h3 className="font-medium">{preview.target.displayName}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{preview.target.summary}</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{preview.target.overview}</p>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <h3 className="text-sm font-medium">{preview.target.displayName}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{preview.target.summary}</p>
+              <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-foreground">{preview.target.overview}</p>
             </div>
           ) : null}
 
@@ -271,10 +284,10 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
           ))}
           <div className="space-y-2">
             {(preview.members ?? []).map((member) => (
-              <div key={member.coordinate} className="rounded-lg border p-4">
+              <div key={member.coordinate} className="rounded-lg border p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-mono text-sm font-medium">{member.coordinate}</span>
-                  <span className="rounded-full bg-secondary px-2 py-1 text-xs">
+                  <span className="font-mono text-xs font-medium">{member.coordinate}</span>
+                  <span className="rounded-md bg-secondary px-2 py-1 text-xs">
                     {t(`suite.bundle.relationship.${member.relationship}`)} · {t(`suite.bundle.action.${member.publishAction}`)}
                   </span>
                 </div>
@@ -320,7 +333,7 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
               </div>
             ))}
             {(preview.removedMembers ?? []).map((member) => (
-              <div key={member.coordinate} className="flex gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+              <div key={member.coordinate} className="flex gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>
                   {t('suite.bundle.removedMember', { coordinate: member.coordinate, version: member.version })}
@@ -331,7 +344,7 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
             {(preview.members ?? []).every((member) => member.relationship === 'UNCHANGED')
               && (preview.removedMembers?.length ?? 0) === 0
               && !preview.confirmable ? (
-                <p className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+                <p className="rounded-lg border p-3 text-center text-xs text-muted-foreground">
                   {t('suite.bundle.noChanges')}
                 </p>
               ) : null}
@@ -348,11 +361,11 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate }: {
             </label>
           ) : null}
 
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => { setPreview(null); setFileName('') }}>
+          <div className="flex justify-end gap-2 border-t pt-3">
+            <Button size="sm" variant="outline" onClick={() => { setPreview(null); setFileName('') }}>
               {t('suite.bundle.chooseAgain')}
             </Button>
-            <Button disabled={!canConfirm || confirmMutation.isPending} onClick={confirm}>
+            <Button size="sm" disabled={!canConfirm || confirmMutation.isPending} onClick={confirm}>
               {t('suite.bundle.confirm')}
             </Button>
           </div>

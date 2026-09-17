@@ -25,6 +25,9 @@ import com.iflytek.skillhub.domain.suite.SkillSuiteMemberState;
 import com.iflytek.skillhub.domain.suite.SkillSuiteQueryService;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersion;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersionMember;
+import com.iflytek.skillhub.domain.suite.SkillSuiteVersionStatus;
+import com.iflytek.skillhub.domain.user.UserAccount;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.repository.SkillSuiteCandidateQueryRepository;
 import com.iflytek.skillhub.repository.MySkillSuiteQueryRepository;
 import com.iflytek.skillhub.repository.SkillSuiteReferenceQueryRepository;
@@ -38,8 +41,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,6 +59,21 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class SkillSuiteAppServiceTest {
 
+    @Test
+    void workspaceBoundsPaginationAndSeparatesMemberAndAdminPermissions() {
+        service.workspace("actor", Map.of(1L, NamespaceRole.MEMBER, 2L, NamespaceRole.ADMIN),
+                "care", "ATTENTION", -1, 200);
+        verify(mySkillSuiteQueryRepository).findWorkspace("actor", Set.of(1L, 2L), Set.of(2L),
+                "care", "ATTENTION", 0, 100);
+    }
+
+    @Test
+    void workspaceRejectsUnknownStateBeforeQuerying() {
+        assertThatThrownBy(() -> service.workspace("actor", Map.of(), "", "UNKNOWN", 0, 12))
+                .isInstanceOf(DomainBadRequestException.class);
+        org.mockito.Mockito.verifyNoInteractions(mySkillSuiteQueryRepository);
+    }
+
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private SkillQueryService skillQueryService;
     @Mock private SkillSuiteDraftService draftService;
@@ -66,6 +86,7 @@ class SkillSuiteAppServiceTest {
     @Mock private SkillSuiteCandidateQueryRepository candidateQueryRepository;
     @Mock private MySkillSuiteQueryRepository mySkillSuiteQueryRepository;
     @Mock private SkillSuiteReferenceQueryRepository referenceQueryRepository;
+    @Mock private UserAccountRepository userAccountRepository;
     @Mock private HttpServletRequest request;
     private SkillSuiteAppService service;
     private Namespace namespace;
@@ -80,7 +101,8 @@ class SkillSuiteAppServiceTest {
                 namespaceRepository, skillQueryService, draftService, lifecycleService,
                 queryService, installMetricsService, installOperationRepository, auditLogService,
                 requestIdAccessor,
-                candidateQueryRepository, mySkillSuiteQueryRepository, referenceQueryRepository);
+                candidateQueryRepository, mySkillSuiteQueryRepository, referenceQueryRepository,
+                userAccountRepository);
         namespace = new Namespace("global", "Global", "admin");
         setField(namespace, "id", 1L);
         suite = new SkillSuite(1L, "starter", "Starter", "user-1");
@@ -88,6 +110,7 @@ class SkillSuiteAppServiceTest {
         version = new SkillSuiteVersion(7L, "1.0.0", SkillVisibility.PUBLIC, "user-1");
         setField(version, "id", 70L);
         version.setOverview("## Install in order");
+        version.setChangelog("Initial Suite workflow");
         firstMember = member(11L, 101L, "first", "1.0.0", "sha256:first", 0);
         secondMember = member(12L, 102L, "second", "2.0.0", "sha256:second", 1);
     }
@@ -311,6 +334,8 @@ class SkillSuiteAppServiceTest {
                 org.mockito.ArgumentMatchers.eq(suite), org.mockito.ArgumentMatchers.eq(version),
                 org.mockito.ArgumentMatchers.eq(namespace), any()))
                 .willReturn(Set.of(SkillSuiteAllowedAction.EDIT, SkillSuiteAllowedAction.CREATE_VERSION));
+        given(userAccountRepository.findById("user-1"))
+                .willReturn(Optional.of(new UserAccount("user-1", "Suite Owner", null, null)));
 
         var result = service.getDetail(
                 "global", "starter", null, "user-1", Map.of(1L, NamespaceRole.MEMBER), Set.of());
@@ -320,8 +345,35 @@ class SkillSuiteAppServiceTest {
         assertThat(result.suiteStatus()).isEqualTo("ACTIVE");
         assertThat(result.hidden()).isFalse();
         assertThat(result.overview()).isEqualTo("## Install in order");
+        assertThat(result.changelog()).isEqualTo("Initial Suite workflow");
+        assertThat(result.createdBy()).isEqualTo("user-1");
+        assertThat(result.createdByName()).isEqualTo("Suite Owner");
         assertThat(result.members()).extracting(member -> member.displayName())
                 .containsExactly("First Skill", "Second Skill");
+    }
+
+    @Test
+    void listVersions_resolvesCreatorNamesInOneBatch() {
+        var createdAt = Instant.parse("2026-09-15T10:00:00Z");
+        given(queryService.listVersions("global", "starter", "user-1", Map.of(), Set.of()))
+                .willReturn(List.of(
+                        new SkillSuiteQueryService.VersionSummary(
+                                70L, "1.0.0", SkillSuiteVersionStatus.PUBLISHED,
+                                SkillVisibility.PUBLIC, "Initial", "user-1", createdAt, null, createdAt),
+                        new SkillSuiteQueryService.VersionSummary(
+                                71L, "1.1.0", SkillSuiteVersionStatus.DRAFT,
+                                SkillVisibility.PUBLIC, "Next", "user-2", null, null, createdAt)));
+        given(userAccountRepository.findByIdIn(List.of("user-1", "user-2")))
+                .willReturn(List.of(
+                        new UserAccount("user-1", "Suite Owner", null, null),
+                        new UserAccount("user-2", "Second Owner", null, null)));
+
+        var result = service.listVersions("global", "starter", "user-1", Map.of(), Set.of());
+
+        assertThat(result).extracting(item -> item.createdByName())
+                .containsExactly("Suite Owner", "Second Owner");
+        verify(userAccountRepository).findByIdIn(List.of("user-1", "user-2"));
+        verify(userAccountRepository, never()).findById(any());
     }
 
     @Test
@@ -365,13 +417,13 @@ class SkillSuiteAppServiceTest {
                 .isInstanceOfSatisfying(DomainBadRequestException.class, exception ->
                         assertThat(exception.messageArgs()[0].toString())
                                 .contains("@global/selected@1.0.0")
-                                .contains("error.suite.members.selectionMismatch"));
+                                .doesNotContain("error.suite.members.selectionMismatch"));
 
         verify(draftService, never()).create(any(), any());
     }
 
     @Test
-    void create_reportsEveryInvalidMemberCoordinateAndReason() {
+    void create_reportsEveryInvalidMemberCoordinateWithoutInternalReasonCodes() {
         SkillSuiteMemberRequest first = new SkillSuiteMemberRequest(
                 101L, "global", "missing", "1.0.0");
         SkillSuiteMemberRequest second = new SkillSuiteMemberRequest(
@@ -391,8 +443,30 @@ class SkillSuiteAppServiceTest {
 
         assertThat(exception.messageCode()).isEqualTo("error.suite.members.invalid");
         assertThat((String) exception.messageArgs()[0])
-                .contains("@global/missing@1.0.0 (error.skill.version.notFound)")
-                .contains("@private-team/restricted@2.0.0 (error.skill.access.denied)");
+                .contains("@global/missing@1.0.0")
+                .contains("@private-team/restricted@2.0.0")
+                .doesNotContain("error.skill.version.notFound")
+                .doesNotContain("error.skill.access.denied");
+        verify(draftService, never()).create(any(), any());
+    }
+
+    @Test
+    void create_reportsADuplicateInvalidMemberOnlyOnce() {
+        SkillSuiteMemberRequest member = new SkillSuiteMemberRequest(
+                101L, "global", "unavailable", "1.0.0");
+        SkillSuiteCreateRequest createRequest = new SkillSuiteCreateRequest(
+                "global", "starter", "Starter", null, null, "1.0.0",
+                SkillVisibility.PRIVATE, null, member, List.of(member, member));
+        given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
+        given(skillQueryService.resolveVersionById(101L, "user-1", Map.of(), Set.of()))
+                .willThrow(new DomainBadRequestException("error.skill.version.notDownloadable", "1.0.0"));
+
+        DomainBadRequestException exception = catchThrowableOfType(
+                () -> service.create(createRequest, "user-1", Map.of(), Set.of(), request),
+                DomainBadRequestException.class);
+
+        assertThat(exception.messageCode()).isEqualTo("error.suite.members.invalid");
+        assertThat(exception.messageArgs()[0]).isEqualTo("@global/unavailable@1.0.0");
         verify(draftService, never()).create(any(), any());
     }
 

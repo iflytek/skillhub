@@ -3820,6 +3820,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/me/suites/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List owner workbench with merged Suite creation progress */
+        get: operations["listMySkillSuiteWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/suites/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List owner workbench with merged Suite creation progress */
+        get: operations["listMySkillSuiteWorkspace_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/me/suites": {
         parameters: {
             query?: never;
@@ -4828,6 +4862,15 @@ export interface components {
             displayName?: string;
             summary?: string;
             overview?: string;
+            changelog?: string;
+            createdBy?: string;
+            createdByName?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            publishedAt?: string;
+            /** Format: date-time */
+            yankedAt?: string;
             version?: string;
             status?: string;
             /** @enum {string} */
@@ -5798,6 +5841,9 @@ export interface components {
             status?: string;
             /** @enum {string} */
             visibility?: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+            changelog?: string;
+            createdBy?: string;
+            createdByName?: string;
             /** Format: date-time */
             publishedAt?: string;
             /** Format: date-time */
@@ -6567,6 +6613,43 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseMySkillSuiteWorkspaceResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["MySkillSuiteWorkspaceResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        Item: {
+            /** Format: int64 */
+            suiteId?: number;
+            namespace?: string;
+            slug?: string;
+            displayName?: string;
+            summary?: string;
+            version?: string;
+            suiteVersion?: string;
+            state?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            operationId?: string;
+            operationStatus?: string;
+            failureCode?: string;
+        };
+        MySkillSuiteWorkspaceResponse: {
+            items?: components["schemas"]["Item"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            attentionCount?: number;
+            hasChangingOperations?: boolean;
         };
         ApiResponsePageResponseMySkillSuiteSummaryResponse: {
             /** Format: int32 */
@@ -13723,6 +13806,7 @@ export interface operations {
     listMyProgress: {
         parameters: {
             query?: {
+                subjectType?: string;
                 status?: string;
                 q?: string;
                 page?: number;
@@ -13748,6 +13832,7 @@ export interface operations {
     listMyProgress_1: {
         parameters: {
             query?: {
+                subjectType?: string;
                 status?: string;
                 q?: string;
                 page?: number;
@@ -14050,6 +14135,56 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListNamespaceCandidateUserResponse"];
+                };
+            };
+        };
+    };
+    listMySkillSuiteWorkspace: {
+        parameters: {
+            query?: {
+                q?: string;
+                state?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMySkillSuiteWorkspaceResponse"];
+                };
+            };
+        };
+    };
+    listMySkillSuiteWorkspace_1: {
+        parameters: {
+            query?: {
+                q?: string;
+                state?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMySkillSuiteWorkspaceResponse"];
                 };
             };
         };

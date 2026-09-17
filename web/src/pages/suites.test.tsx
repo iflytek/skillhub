@@ -38,4 +38,19 @@ describe('SuitesPage', () => {
       page: 0,
     }))
   })
+
+  it('keeps typed keywords local until explicit submission', () => {
+    render(<SuitesPage />)
+    const input = screen.getByRole('textbox')
+    fireEvent.change(input, { target: { value: ' healthcare ' } })
+    expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ q: undefined }))
+    fireEvent.click(screen.getByRole('button', { name: '医疗健康' }))
+    expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ q: undefined, labels: ['healthcare'] }))
+    fireEvent.click(screen.getByRole('button', { name: 'nav.search' }))
+    expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'healthcare', page: 0 }))
+    fireEvent.change(input, { target: { value: '' } })
+    expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'healthcare' }))
+    fireEvent.submit(input.closest('form')!)
+    expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ q: undefined, page: 0 }))
+  })
 })

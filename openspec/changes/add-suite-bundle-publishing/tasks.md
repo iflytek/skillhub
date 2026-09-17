@@ -40,6 +40,8 @@
 
 ## 6. 兼容性、安全、性能与交付验证
 
+- [ ] 6.6 `[REQ-SBP-18]` 2026-09-16 方案 2：统一分页套件清单、紧凑搜索/筛选与轻量需处理提示；验证临时记录合并、取消保留、审核跳转、跨页计数、确认后搜索/取消、固定两条 SQL 和仅变化状态轮询。执行结果见本变更的 `workspace-validation.md`。
+
 - [x] 6.1 `[REQ-SBP-16, REQ-SMD-01, REQ-SMT-03, REQ-SMT-08]` 增加单 Skill 发布、Suite 草稿/审核/安装、技能与套件独立发现、单 Skill Label/Tag API 和旧客户端回归覆盖，验证现有契约保持兼容。
 - [x] 6.2 `[REQ-SBP-03, REQ-SBP-04, REQ-SBP-05, REQ-SBP-06, REQ-SBP-07, REQ-SBP-08, REQ-SBP-09, REQ-SBP-10, REQ-SBP-11, REQ-SBP-12, REQ-SBP-13, REQ-SBP-14, REQ-SBP-15, REQ-SMD-02, REQ-SMD-03, REQ-SMD-04, REQ-SMT-05, REQ-SMT-06, REQ-SMT-07, REQ-SMT-08, REQ-SMT-09, REQ-SMT-10]` 增加目录/ZIP 等价、归档限制、ZIP traversal/bomb、fingerprint 等价、100 成员批量解析、状态轮询、新 Skill 坐标冲突、重复逻辑 Skill、跨所有者引用、多阶段权限撤销、成员状态矩阵、Label 权限、Suite Label 批量读取和私有信息保护测试，并以确定性断言验证边界。
 - [x] 6.3 `[REQ-SBP-01, REQ-SBP-02, REQ-SBP-03, REQ-SBP-04, REQ-SBP-05, REQ-SBP-06, REQ-SBP-07, REQ-SBP-08, REQ-SBP-09, REQ-SBP-10, REQ-SBP-11, REQ-SBP-12, REQ-SBP-13, REQ-SBP-14, REQ-SBP-15, REQ-SBP-16, REQ-SBP-17, REQ-SBP-18, REQ-SMD-01, REQ-SMD-02, REQ-SMD-03, REQ-SMD-04, REQ-SMT-01, REQ-SMT-02, REQ-SMT-03, REQ-SMT-04, REQ-SMT-05, REQ-SMT-06, REQ-SMT-07, REQ-SMT-08, REQ-SMT-09, REQ-SMT-10]` 运行后端、前端、CLI、OpenAPI 漂移检查和 `openspec validate add-suite-bundle-publishing --strict`，按精确 feature SHA 记录结果。

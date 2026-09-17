@@ -988,8 +988,9 @@ export const reviewApi = {
     return fetchJson<ReviewTask>(`${WEB_API_PREFIX}/reviews/${id}`)
   },
 
-  async listMyProgress(params: { status?: string; q?: string; page?: number; size?: number }) {
+  async listMyProgress(params: { subjectType?: string; status?: string; q?: string; page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
+    if (params.subjectType) searchParams.set('subjectType', params.subjectType)
     if (params.status) searchParams.set('status', params.status)
     if (params.q) searchParams.set('q', params.q)
     searchParams.set('page', String(params.page ?? 0))
