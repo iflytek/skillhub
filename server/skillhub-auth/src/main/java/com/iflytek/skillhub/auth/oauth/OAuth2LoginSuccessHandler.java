@@ -1,23 +1,20 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.session.PlatformSessionService;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
-import com.iflytek.skillhub.auth.session.PlatformSessionService;
-
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 /**
  * Login success handler that copies the resolved platform principal into the
  * HTTP session and then redirects to the stored return target or default URL.
- * 
+ *
  * <p>This handler extends {@link SimpleUrlAuthenticationSuccessHandler} and only
  * uses the returnTo parameter stored in session and the default target URL for
  * redirect decisions, ignoring any saved request from Spring Security's RequestCache.

@@ -6,7 +6,7 @@ package com.iflytek.skillhub.auth.oauth;
 public final class OAuthLoginRedirectSupport {
 
     public static final String SESSION_RETURN_TO_ATTRIBUTE = "skillhub.oauth.returnTo";
-    public static final String DEFAULT_TARGET_URL = "/dashboard";
+    public static final String DEFAULT_TARGET_URL = "/";
 
     private OAuthLoginRedirectSupport() {
     }
@@ -19,7 +19,8 @@ public final class OAuthLoginRedirectSupport {
         if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
             return null;
         }
-        if (trimmed.contains("\r") || trimmed.contains("\n")) {
+        if (trimmed.indexOf('\\') >= 0
+                || trimmed.codePoints().anyMatch(Character::isISOControl)) {
             return null;
         }
         return trimmed;

@@ -112,7 +112,7 @@ class OAuth2LoginHandlersTest {
      * Regression test: when an unauthenticated client hits a protected API endpoint, Spring Security
      * caches that request. With {@code SavedRequestAwareAuthenticationSuccessHandler} the post-login
      * redirect would resolve to the cached API URL, leaving the user staring at raw JSON instead of
-     * the dashboard. The handler must ignore the saved request and fall back to the default target.
+     * the product home. The handler must ignore the saved request and fall back to the default target.
      */
     @Test
     void successHandler_ignoresSavedApiRequestAndRedirectsToDefault() throws Exception {
@@ -141,7 +141,7 @@ class OAuth2LoginHandlersTest {
 
         handler.onAuthenticationSuccess(request, response, authentication);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/dashboard");
+        assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
 
     @Test
