@@ -188,10 +188,13 @@ class SkillControllerTest {
                         null,
                         "OWNER_PREVIEW"
                 ));
-        when(skillSuiteAppService.findVisibleEntryReferences(
-                eq(1L), eq((String) null), eq(Map.of()), anySet()))
-                .thenReturn(List.of(new SkillSuiteReferenceResponse(
-                        9L, "team", "demo-suite", "Demo Suite", "2.0.0", 3)));
+        SkillSuiteReferenceResponse suiteReference = new SkillSuiteReferenceResponse(
+                9L, "team", "demo-suite", "Demo Suite", "2.0.0", 3,
+                true, List.of(), 0, 0);
+        when(skillSuiteAppService.findVisibleMemberships(
+                eq(1L), eq((String) null), eq(Map.of()), anySet(), eq(0), eq(20)))
+                .thenReturn(new com.iflytek.skillhub.dto.PageResponse<>(
+                        List.of(suiteReference), 1, 0, 20));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
@@ -204,6 +207,8 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data.entryForSuites[0].slug").value("demo-suite"))
                 .andExpect(jsonPath("$.data.entryForSuites[0].version").value("2.0.0"))
                 .andExpect(jsonPath("$.data.entryForSuites[0].memberCount").value(3))
+                .andExpect(jsonPath("$.data.memberOfSuites.total").value(1))
+                .andExpect(jsonPath("$.data.memberOfSuites.items[0].currentSkillEntry").value(true))
                 .andExpect(jsonPath("$.data.canInteract").value(false))
                 .andExpect(jsonPath("$.data.canReport").value(false));
     }

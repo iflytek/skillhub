@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Service for submitting skill versions for review and confirming private publishes.
@@ -114,13 +115,20 @@ public class SkillReviewSubmitService {
     @Transactional
     public void confirmPublish(Long skillId, Long versionId, String actorUserId,
                                Map<Long, NamespaceRole> userNamespaceRoles) {
+        confirmPublish(skillId, versionId, actorUserId, userNamespaceRoles, Set.of());
+    }
+
+    @Transactional
+    public void confirmPublish(Long skillId, Long versionId, String actorUserId,
+                               Map<Long, NamespaceRole> userNamespaceRoles,
+                               Set<String> platformRoles) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
         SkillVersion version = skillVersionRepository.findById(versionId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", versionId));
 
         // Validate ownership
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
 
         // Validate skill visibility is PRIVATE
         if (skill.getVisibility() != SkillVisibility.PRIVATE) {
@@ -153,10 +161,17 @@ public class SkillReviewSubmitService {
     }
 
     private void assertCanManageLifecycle(Skill skill, String actorUserId, Map<Long, NamespaceRole> userNamespaceRoles) {
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, Set.of());
+    }
+
+    private void assertCanManageLifecycle(Skill skill, String actorUserId,
+                                          Map<Long, NamespaceRole> userNamespaceRoles,
+                                          Set<String> platformRoles) {
         NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
         boolean canManage = skill.getOwnerId().equals(actorUserId)
                 || namespaceRole == NamespaceRole.ADMIN
-                || namespaceRole == NamespaceRole.OWNER;
+                || namespaceRole == NamespaceRole.OWNER
+                || platformRoles.contains("SUPER_ADMIN");
         if (!canManage) {
             throw new DomainForbiddenException("error.skill.lifecycle.noPermission");
         }

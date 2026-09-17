@@ -3,6 +3,7 @@ package com.iflytek.skillhub.config;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackageValidator;
+import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleManifestParser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,6 +24,11 @@ public class DomainBeanConfig {
     @Bean
     public SkillMetadataParser skillMetadataParser() {
         return new SkillMetadataParser();
+    }
+
+    @Bean
+    public SkillSuiteBundleManifestParser skillSuiteBundleManifestParser() {
+        return new SkillSuiteBundleManifestParser();
     }
 
     @Bean

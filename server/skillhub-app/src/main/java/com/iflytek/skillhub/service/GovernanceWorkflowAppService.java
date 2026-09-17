@@ -99,12 +99,13 @@ public class GovernanceWorkflowAppService {
     }
 
     public ReviewProgressPageResponse listMyReviewProgress(
+            String subjectType,
             String status,
             String query,
             int page,
             int size,
             String userId) {
-        return reviewPortalAppService.listMyProgress(status, query, page, size, userId);
+        return reviewPortalAppService.listMyProgress(subjectType, status, query, page, size, userId);
     }
 
     public List<ReviewTaskResponse> listMyReviewAttempts(Long reviewTaskId, String userId) {

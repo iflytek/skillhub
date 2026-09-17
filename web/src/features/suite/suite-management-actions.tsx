@@ -25,7 +25,7 @@ import { toast } from '@/shared/lib/toast'
 
 type ConfirmAction = 'hide' | 'restore' | 'archive' | 'unarchive' | 'delete'
 
-export function SuiteManagementActions({ suite }: { suite: SkillSuite }) {
+export function SuiteManagementActions({ suite, compact = false }: { suite: SkillSuite; compact?: boolean }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
@@ -107,7 +107,7 @@ export function SuiteManagementActions({ suite }: { suite: SkillSuite }) {
     'UNARCHIVE',
     'DELETE',
   ]
-  if (!managementActions.some((action) => allowed.has(action))) return null
+  if (!managementActions.some((action) => allowed.has(action) && !(compact && action === 'CREATE_VERSION'))) return null
 
   const confirmTitle = confirmAction ? t(`suite.${confirmAction}ConfirmTitle`) : ''
   const confirmDescription = confirmAction
@@ -115,29 +115,31 @@ export function SuiteManagementActions({ suite }: { suite: SkillSuite }) {
     : ''
 
   return (
-    <Card className="p-6">
-      <h2 className="text-lg font-semibold">{t('suite.managementTitle')}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t('suite.managementDescription')}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
+    <Card className={compact ? 'rounded-lg p-3' : 'p-6'}>
+      <h2 className={compact ? 'text-sm font-semibold' : 'text-lg font-semibold'}>{t('suite.managementTitle')}</h2>
+      <p className={compact ? 'mt-1 text-xs text-muted-foreground' : 'mt-1 text-sm text-muted-foreground'}>{t('suite.managementDescription')}</p>
+      <div className={compact ? 'mt-2.5 flex flex-wrap gap-1.5' : 'mt-4 flex flex-wrap gap-2'}>
         {allowed.has('REOPEN') ? (
-          <Button variant="outline" disabled={reopenMutation.isPending} onClick={reopen}>
+          <Button variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} disabled={reopenMutation.isPending} onClick={reopen}>
             {t('suite.reopenDraft')}
           </Button>
         ) : null}
-        {allowed.has('CREATE_VERSION') ? (
-          <Button variant="outline" onClick={() => navigateToEditor(true)}>{t('suite.createVersion')}</Button>
+        {allowed.has('CREATE_VERSION') && !compact ? (
+          <Button variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => navigateToEditor(true)}>{t('suite.createVersion')}</Button>
         ) : null}
         {allowed.has('YANK') ? (
-          <Button variant="destructive" onClick={() => setYankOpen(true)}>{t('suite.yankVersion')}</Button>
+          <Button variant="destructive" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => setYankOpen(true)}>{t('suite.yankVersion')}</Button>
         ) : null}
         {allowed.has('HIDE') || allowed.has('RESTORE') ? (
-          <Button variant="outline" onClick={() => setConfirmAction(suite.hidden ? 'restore' : 'hide')}>
+          <Button variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => setConfirmAction(suite.hidden ? 'restore' : 'hide')}>
             {t(suite.hidden ? 'suite.restore' : 'suite.hide')}
           </Button>
         ) : null}
         {allowed.has('ARCHIVE') || allowed.has('UNARCHIVE') ? (
           <Button
             variant="outline"
+            size={compact ? 'sm' : 'default'}
+            className={compact ? 'h-6 px-2 text-[11px]' : undefined}
             onClick={() => setConfirmAction(suite.suiteStatus === 'ARCHIVED' ? 'unarchive' : 'archive')}
           >
             {t(suite.suiteStatus === 'ARCHIVED' ? 'suite.unarchive' : 'suite.archive')}
@@ -146,6 +148,8 @@ export function SuiteManagementActions({ suite }: { suite: SkillSuite }) {
         {allowed.has('DELETE') ? (
           <Button
             variant="destructive"
+            size={compact ? 'sm' : 'default'}
+            className={compact ? 'h-6 px-2 text-[11px]' : undefined}
             onClick={() => setConfirmAction('delete')}
           >
             {t('suite.delete')}

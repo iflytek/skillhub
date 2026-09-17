@@ -25,6 +25,12 @@ describe('buttonVariants', () => {
     expect(classes).toContain('bg-secondary')
   })
 
+  it('applies soft blue variant classes', () => {
+    const classes = buttonVariants({ variant: 'soft' })
+    expect(classes).toContain('bg-blue-500/10')
+    expect(classes).toContain('text-blue-700')
+  })
+
   it('applies ghost variant classes', () => {
     const classes = buttonVariants({ variant: 'ghost' })
     expect(classes).toContain('hover:bg-accent/70')

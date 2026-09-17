@@ -19,6 +19,7 @@ const useSkillVersionsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillReadmeMock = vi.fn()
 const useSkillFileMock = vi.fn()
+const searchMock = vi.hoisted(() => ({ value: { returnTo: '/dashboard/skills', version: undefined as string | undefined } }))
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
   hasRole: (role: string) => boolean
@@ -31,7 +32,7 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useParams: () => ({ namespace: 'global', slug: 'demo-skill' }),
   useRouterState: () => ({ pathname: '/space/global/demo-skill', searchStr: '', hash: '' }),
-  useSearch: () => ({ returnTo: '/dashboard/skills' }),
+  useSearch: () => searchMock.value,
   Link: ({
     to,
     search,
@@ -273,6 +274,7 @@ describe('SkillDetailPage', () => {
   afterEach(() => cleanup())
 
   beforeEach(() => {
+    searchMock.value = { returnTo: '/dashboard/skills', version: undefined }
     navigateMock.mockReset()
     useSkillFilesMock.mockReset()
     useSkillReadmeMock.mockReset()
@@ -310,6 +312,39 @@ describe('SkillDetailPage', () => {
     useSkillFilesMock.mockReturnValue({ data: [] })
     useSkillReadmeMock.mockReturnValue({ data: '# Demo', error: null })
     useSkillFileMock.mockReturnValue({ data: null, isLoading: false, error: null })
+  })
+
+  it('loads the exact version requested by a Suite member link', () => {
+    searchMock.value = { returnTo: '/suite/global/care-workflow?version=1.0.0', version: '0.9.0' }
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 10,
+          version: '1.0.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: '2026-03-20T00:00:00Z',
+          downloadAvailable: true,
+        },
+        {
+          id: 9,
+          version: '0.9.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 10,
+          publishedAt: '2026-03-10T00:00:00Z',
+          downloadAvailable: true,
+        },
+      ],
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(useSkillFilesMock).toHaveBeenCalledWith('global', 'demo-skill', '0.9.0', true)
+    expect(useSkillReadmeMock).toHaveBeenCalledWith('global', 'demo-skill', '0.9.0', null, true)
   })
 
   it('shows hard delete action for the skill owner', () => {
@@ -355,7 +390,7 @@ describe('SkillDetailPage', () => {
     expect(html).not.toContain('skillDetail.deleteSkill')
   })
 
-  it('recommends visible suites that use this skill as their entry', () => {
+  it('shows a visible suite that uses this skill as its entry', () => {
     useSkillDetailMock.mockReturnValue({
       data: createSkill({
         entryForSuites: [{
@@ -365,6 +400,10 @@ describe('SkillDetailPage', () => {
           displayName: 'Research Workflow',
           version: '2.0.0',
           memberCount: 4,
+          currentSkillEntry: true,
+          visibleSiblingMembers: [],
+          restrictedMemberCount: 0,
+          omittedVisibleMemberCount: 0,
         }],
       }),
       isLoading: false,
@@ -374,16 +413,151 @@ describe('SkillDetailPage', () => {
 
     const html = renderToStaticMarkup(<SkillDetailPage />)
 
-    expect(html).toContain('skillDetail.suiteEntryTitle')
+    expect(html).toContain('skillDetail.suiteMembershipTitle')
+    expect(html).toContain('skillDetail.suiteMembershipEntryRole')
     expect(html).toContain('Research Workflow')
     expect(html).toContain('@team-ai/research-workflow@2.0.0')
     expect(html).toContain('skillDetail.suiteEntryMemberCount')
   })
 
-  it('does not show a suite recommendation for an ordinary member skill', () => {
+  it('shows the empty membership state when the skill is in no visible suite', () => {
     const html = renderToStaticMarkup(<SkillDetailPage />)
 
-    expect(html).not.toContain('skillDetail.suiteEntryTitle')
+    expect(html).toContain('skillDetail.suiteMembershipTitle')
+    expect(html).toContain('skillDetail.suiteMembershipEmpty')
+  })
+
+  it('shows ordinary membership, visible siblings, protected counts, and remaining pages', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        memberOfSuites: {
+          items: [{
+            suiteId: 8,
+            namespace: 'team-ai',
+            slug: 'analysis-pack',
+            displayName: 'Analysis Pack',
+            version: '3.0.0',
+            memberCount: 12,
+            currentSkillEntry: false,
+            visibleSiblingMembers: [{
+              skillId: 22,
+              namespace: 'team-ai',
+              slug: 'entry-skill',
+              displayName: 'Entry Skill',
+              version: '1.0.0',
+              entry: true,
+              available: true,
+            }],
+            restrictedMemberCount: 2,
+            omittedVisibleMemberCount: 1,
+          }],
+          total: 21,
+          page: 0,
+          size: 20,
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Analysis Pack')
+    expect(html).toContain('skillDetail.suiteMembershipMemberRole')
+    expect(html).toContain('Entry Skill')
+    expect(html).toContain('skillDetail.suiteMembershipRestricted')
+    expect(html).toContain('skillDetail.suiteMembershipOmitted')
+    expect(html).toContain('skillDetail.suiteMembershipMore')
+  })
+
+  it('renders every visible suite when a skill belongs to multiple suites', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        memberOfSuites: {
+          items: [
+            {
+              suiteId: 8,
+              namespace: 'team-ai',
+              slug: 'analysis-pack',
+              displayName: 'Analysis Pack',
+              version: '3.0.0',
+              memberCount: 2,
+              currentSkillEntry: false,
+              visibleSiblingMembers: [],
+              restrictedMemberCount: 0,
+              omittedVisibleMemberCount: 0,
+            },
+            {
+              suiteId: 9,
+              namespace: 'global',
+              slug: 'research-starter',
+              displayName: 'Research Starter',
+              version: '1.0.0',
+              memberCount: 3,
+              currentSkillEntry: true,
+              visibleSiblingMembers: [],
+              restrictedMemberCount: 0,
+              omittedVisibleMemberCount: 0,
+            },
+          ],
+          total: 2,
+          page: 0,
+          size: 20,
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Analysis Pack')
+    expect(html).toContain('Research Starter')
+    expect(html).toContain('@team-ai/analysis-pack@3.0.0')
+    expect(html).toContain('@global/research-starter@1.0.0')
+  })
+
+  it('renders an unavailable sibling as text instead of a skill link', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        memberOfSuites: {
+          items: [{
+            suiteId: 8,
+            namespace: 'team-ai',
+            slug: 'analysis-pack',
+            displayName: 'Analysis Pack',
+            version: '3.0.0',
+            memberCount: 2,
+            currentSkillEntry: false,
+            visibleSiblingMembers: [{
+              skillId: 22,
+              namespace: 'team-ai',
+              slug: 'paused-skill',
+              displayName: 'Paused Skill',
+              version: '1.0.0',
+              entry: true,
+              available: false,
+            }],
+            restrictedMemberCount: 0,
+            omittedVisibleMemberCount: 0,
+          }],
+          total: 1,
+          page: 0,
+          size: 20,
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Paused Skill')
+    expect(html).toContain('title="skillDetail.suiteMembershipUnavailable"')
+    expect(html).not.toContain('/space/team-ai/paused-skill')
   })
 
   it('wraps a long skill name instead of widening the mobile page', () => {

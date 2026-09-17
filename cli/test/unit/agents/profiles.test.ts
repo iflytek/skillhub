@@ -5,8 +5,8 @@ import { describe, expect, test } from 'bun:test'
 import { allProfiles, profileMap } from '../../../src/agents/detector'
 
 describe('agent profiles', () => {
-  test('has 15 tier 1 profiles', () => {
-    expect(allProfiles).toHaveLength(15)
+  test('has 16 tier 1 profiles', () => {
+    expect(allProfiles).toHaveLength(16)
   })
 
   test('all profiles have unique ids', () => {
@@ -15,12 +15,13 @@ describe('agent profiles', () => {
   })
 
   test('profileMap contains all profiles', () => {
-    expect(profileMap.size).toBe(15)
+    expect(profileMap.size).toBe(16)
     expect(profileMap.has('astudio')).toBe(true)
     expect(profileMap.has('claude-code')).toBe(true)
     expect(profileMap.has('codex')).toBe(true)
     expect(profileMap.has('cursor')).toBe(true)
     expect(profileMap.has('kilo')).toBe(true)
+    expect(profileMap.has('pi')).toBe(true)
   })
 
   test('claude-code profile returns correct roots', () => {
@@ -38,6 +39,53 @@ describe('agent profiles', () => {
   test('cursor profile returns correct roots', () => {
     const profile = profileMap.get('cursor')!
     expect(profile.projectRoots('/repo')).toEqual(['/repo/.cursor/skills'])
+  })
+
+  test('Pi exposes and detects its project and user skills directories', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'skillhub-pi-profile-'))
+    const cwd = join(base, 'repo')
+    const home = join(base, 'home')
+    const projectRoot = `${cwd}/.pi/skills`
+    const userRoot = `${home}/.pi/agent/skills`
+    const profile = profileMap.get('pi')!
+
+    try {
+      await mkdir(cwd, { recursive: true })
+      await mkdir(home, { recursive: true })
+
+      expect(profile.displayName).toBe('Pi')
+      expect(profile.projectRoots(cwd)).toEqual([projectRoot])
+      expect(profile.userRoots(home)).toEqual([userRoot])
+      expect(await profile.detectInstalled(cwd, home)).toEqual([])
+
+      await mkdir(join(cwd, '.pi'), { recursive: true })
+      await mkdir(join(home, '.pi', 'agent'), { recursive: true })
+      await writeFile(projectRoot, 'not a directory')
+      await writeFile(userRoot, 'not a directory')
+      expect(await profile.detectInstalled(cwd, home)).toEqual([])
+
+      await rm(projectRoot)
+      await rm(userRoot)
+      await mkdir(projectRoot, { recursive: true })
+      await mkdir(userRoot, { recursive: true })
+
+      expect(await profile.detectInstalled(cwd, home)).toEqual([
+        {
+          agent: 'pi',
+          rootDir: projectRoot,
+          scope: 'project',
+          source: 'detected'
+        },
+        {
+          agent: 'pi',
+          rootDir: userRoot,
+          scope: 'user',
+          source: 'detected'
+        }
+      ])
+    } finally {
+      await rm(base, { recursive: true, force: true })
+    }
   })
 
   test('AStudio exposes only its fixed user-level directory on Linux, macOS, and Windows', () => {

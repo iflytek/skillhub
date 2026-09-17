@@ -1,11 +1,11 @@
 import type { TFunction } from 'i18next'
 
 const STATUS_KEYS: Record<string, string> = {
-  DRAFT: 'skillDetail.versionStatusDraft',
-  PENDING_REVIEW: 'skillDetail.versionStatusPendingReview',
-  PUBLISHED: 'skillDetail.versionStatusPublished',
-  REJECTED: 'skillDetail.versionStatusRejected',
-  YANKED: 'skillDetail.versionStatusYanked',
+  DRAFT: 'suite.statusLabel.DRAFT',
+  PENDING_REVIEW: 'suite.statusLabel.PENDING_REVIEW',
+  PUBLISHED: 'suite.statusLabel.PUBLISHED',
+  REJECTED: 'suite.statusLabel.REJECTED',
+  YANKED: 'suite.statusLabel.YANKED',
 }
 
 const VISIBILITY_KEYS: Record<string, string> = {

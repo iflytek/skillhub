@@ -49,7 +49,7 @@ class SkillSuiteQueryServiceTest {
     }
 
     @Test
-    void anonymousUserReadsPublishedPublicSuiteWithOrderedAvailability() {
+    void anonymousUserReadsHistoricalPublishedSuiteWithoutDisplayMetadata() {
         Namespace namespace = new Namespace("global", "Global", "system");
         SkillSuite suite = new SkillSuite(1L, "writers", "Writers", "author");
         SkillSuiteVersion version = new SkillSuiteVersion(10L, "1.0.0", SkillVisibility.PUBLIC, "author");
@@ -80,6 +80,8 @@ class SkillSuiteQueryServiceTest {
 
         assertThat(result.available()).isTrue();
         assertThat(result.version().getVersion()).isEqualTo("1.0.0");
+        assertThat(result.version().getSummary()).isNull();
+        assertThat(result.version().getOverview()).isNull();
         assertThat(result.members()).singleElement().satisfies(item -> {
             assertThat(item.snapshot().getSkillVersionId()).isEqualTo(40L);
             assertThat(item.availability().available()).isTrue();
@@ -242,6 +244,29 @@ class SkillSuiteQueryServiceTest {
                 "team", "pending-suite", "1.0.0", "suite-author",
                 Map.of(1L, NamespaceRole.MEMBER), Set.of()))
                 .isInstanceOf(DomainForbiddenException.class);
+    }
+
+    @Test
+    void versionHistoryIncludesReleaseNotesAndCreatorForVisibleVersions() {
+        Namespace namespace = new Namespace("global", "Global", "system");
+        SkillSuite suite = new SkillSuite(1L, "workflow", "Workflow", "suite-author");
+        SkillSuiteVersion version = new SkillSuiteVersion(
+                10L, "1.2.0", SkillVisibility.PUBLIC, "version-author");
+        setId(namespace, 1L);
+        setId(suite, 10L);
+        setId(version, 20L);
+        version.setChangelog("Upgrade the extraction member");
+        version.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(suiteRepository.findByNamespaceIdAndSlug(1L, "workflow")).thenReturn(Optional.of(suite));
+        when(versionRepository.findBySuiteId(10L)).thenReturn(List.of(version));
+
+        SkillSuiteQueryService.VersionSummary result = service.listVersions(
+                "global", "workflow", null, Map.of(), Set.of()).getFirst();
+
+        assertThat(result.changelog()).isEqualTo("Upgrade the extraction member");
+        assertThat(result.createdBy()).isEqualTo("version-author");
     }
 
     private void setId(Object target, Long id) {

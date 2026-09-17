@@ -71,10 +71,26 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(version.getStatus()).isEqualTo(SkillSuiteVersionStatus.PUBLISHED);
         assertThat(version.getPublishedAt()).isEqualTo(Instant.parse("2026-09-07T08:00:00Z"));
         assertThat(suite.getLatestVersionId()).isEqualTo(20L);
-        verify(publicationValidator).validate(suite, version);
+        verify(publicationValidator).validateForPublication(suite, version);
         verify(auditLogService).record(
                 "author", "PUBLISH_SKILL_SUITE_VERSION", "SKILL_SUITE_VERSION", 20L,
                 "request-1", "127.0.0.1", "test", null);
+    }
+
+    @Test
+    void incompletePrivateDraftStaysDraftWhenPublicationMetadataIsRejected() {
+        stubLoaded();
+        doThrow(new DomainBadRequestException("error.suite.overview.required"))
+                .when(publicationValidator).validateForPublication(suite, version);
+
+        assertThatThrownBy(() -> service.confirmPrivatePublish(10L, 20L, context()))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.suite.overview.required");
+
+        assertThat(version.getStatus()).isEqualTo(SkillSuiteVersionStatus.DRAFT);
+        assertThat(suite.getLatestVersionId()).isNull();
+        verify(versionRepository, never()).save(any());
+        verify(suiteRepository, never()).save(any());
     }
 
     @Test
@@ -90,7 +106,23 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(task.getSubjectType()).isEqualTo(ReviewSubjectType.SUITE_VERSION);
         assertThat(task.getSubjectId()).isEqualTo(10L);
         assertThat(task.getSubjectVersionId()).isEqualTo(20L);
-        verify(publicationValidator).validate(suite, version);
+        verify(publicationValidator).validateForPublication(suite, version);
+    }
+
+    @Test
+    void incompletePublicDraftStaysDraftAndCreatesNoReviewTask() {
+        version.setVisibility(SkillVisibility.PUBLIC);
+        stubLoaded();
+        doThrow(new DomainBadRequestException("error.suite.summary.required"))
+                .when(publicationValidator).validateForPublication(suite, version);
+
+        assertThatThrownBy(() -> service.submitForReview(10L, 20L, context()))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.suite.summary.required");
+
+        assertThat(version.getStatus()).isEqualTo(SkillSuiteVersionStatus.DRAFT);
+        verify(reviewTaskRepository, never()).save(any());
+        verify(versionRepository, never()).save(any());
     }
 
     @Test
@@ -118,8 +150,8 @@ class SkillSuiteLifecycleServiceTest {
         ReviewTask task = pendingReview("author");
         stubLoaded();
         when(reviewTaskRepository.findById(30L)).thenReturn(Optional.of(task));
-        doThrow(new DomainBadRequestException("error.suite.member.unavailable"))
-                .when(publicationValidator).validate(suite, version);
+        doThrow(new DomainBadRequestException("error.suite.overview.required"))
+                .when(publicationValidator).validateForPublication(suite, version);
 
         assertThatThrownBy(() -> service.approveReview(30L, "Looks good", adminContext()))
                 .isInstanceOf(DomainBadRequestException.class);

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
@@ -6,7 +7,7 @@ import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import {
   Star, Heart, Package, Boxes, Key, Shield, Flag, Globe,
-  UserCog, Lock, Bell, Clock, ChevronRight,
+  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight,
 } from 'lucide-react'
 
 /**
@@ -160,9 +161,47 @@ export function DashboardSidebar({
   t: ReturnType<typeof useTranslation>['t']
   pathname: string
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const activeItem = groups.flatMap(group => group.items)
+    .find(item => pathname === item.to || pathname.startsWith(item.to))
+
   return (
     <aside className="w-full lg:w-56 flex-shrink-0">
-      <div className="lg:sticky lg:top-[68px]">
+      <div className="rounded-lg border bg-background lg:hidden">
+        <button
+          type="button"
+          className="flex h-10 w-full items-center justify-between gap-3 px-3 text-sm font-medium"
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen(open => !open)}
+        >
+          <span>{t('dashboard.navigation')}</span>
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            {activeItem ? t(activeItem.label) : null}
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${mobileOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+          </span>
+        </button>
+        {mobileOpen ? (
+          <div className="grid grid-cols-2 gap-1 border-t p-2">
+            {groups.flatMap(group => group.items).map(item => {
+              const Icon = item.icon
+              const isActive = pathname === item.to || pathname.startsWith(item.to)
+              return (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-medium ${isActive ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent'}`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{t(item.label)}</span>
+                </Link>
+              )
+            })}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden lg:sticky lg:top-[68px] lg:block">
       {/* User summary */}
       <div className="flex items-center gap-3 px-3 py-2 mb-4">
         {user?.avatarUrl ? (

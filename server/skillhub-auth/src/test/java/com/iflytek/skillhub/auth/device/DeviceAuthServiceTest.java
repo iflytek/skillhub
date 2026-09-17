@@ -44,7 +44,7 @@ class DeviceAuthServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        service = new DeviceAuthService(redisTemplate, apiTokenService, new ObjectMapper(), "/cli/auth");
+        service = new DeviceAuthService(redisTemplate, apiTokenService, new ObjectMapper(), "/device");
     }
 
     /**

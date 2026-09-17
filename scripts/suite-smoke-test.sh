@@ -216,6 +216,7 @@ print(json.dumps({
     "slug": sys.argv[1],
     "displayName": "Suite smoke test",
     "summary": "Temporary private Suite",
+    "overview": "## Smoke test\n\nValidates exact member publication and installation.",
     "version": "1.0.0",
     "visibility": "PRIVATE",
     "changelog": "Initial smoke version",
@@ -233,6 +234,15 @@ payload.pop("entrySkill")
 print(json.dumps(payload))
 PY
 )"
+INCOMPLETE_METADATA_PAYLOAD="$(JSON_INPUT="$SUITE_PAYLOAD" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["JSON_INPUT"])
+payload.pop("overview")
+print(json.dumps(payload))
+PY
+)"
 MISSING_ENTRY_STATUS="$(curl -sS -o "$WORK_DIR/missing-entry.json" -w '%{http_code}' \
   -b "$COOKIE_FILE" -c "$COOKIE_FILE" "${AUTH_HEADERS[@]}" \
   -H "X-XSRF-TOKEN: $CSRF_TOKEN" -H "Content-Type: application/json" \
@@ -246,10 +256,31 @@ echo "PASS: creating a Suite without an Entry Skill is rejected"
 CREATE_RESPONSE="$(curl -sS -b "$COOKIE_FILE" -c "$COOKIE_FILE" \
   "${AUTH_HEADERS[@]}" -H "X-XSRF-TOKEN: $CSRF_TOKEN" \
   -H "Content-Type: application/json" -X POST "$BASE_URL/api/web/suites" \
-  -d "$SUITE_PAYLOAD")"
-assert_code "create a Suite draft with one exact member" "$CREATE_RESPONSE" 0
+  -d "$INCOMPLETE_METADATA_PAYLOAD")"
+assert_code "save an incomplete Suite draft with one exact member" "$CREATE_RESPONSE" 0
 SUITE_ID="$(json_field "$CREATE_RESPONSE" data.id)"
 SUITE_VERSION_ID="$(json_field "$CREATE_RESPONSE" data.versionId)"
+
+INCOMPLETE_PUBLISH_RESPONSE="$(curl -sS -b "$COOKIE_FILE" -c "$COOKIE_FILE" \
+  "${AUTH_HEADERS[@]}" -H "X-XSRF-TOKEN: $CSRF_TOKEN" \
+  -X POST "$BASE_URL/api/web/suites/$SUITE_ID/versions/$SUITE_VERSION_ID/publish")"
+assert_code "reject publishing a Suite draft without an overview" "$INCOMPLETE_PUBLISH_RESPONSE" 400
+
+INCOMPLETE_DETAIL="$(curl -sS -b "$COOKIE_FILE" -c "$COOKIE_FILE" \
+  "${AUTH_HEADERS[@]}" "$BASE_URL/api/web/suites/global/$SUITE_SLUG?version=1.0.0")"
+assert_code "reload the incomplete Suite draft" "$INCOMPLETE_DETAIL" 0
+if [[ "$(json_field "$INCOMPLETE_DETAIL" data.status)" != "DRAFT" ]]; then
+  echo "FAIL: incomplete Suite should remain DRAFT"
+  exit 1
+fi
+echo "PASS: incomplete Suite remains DRAFT"
+
+UPDATE_RESPONSE="$(curl -sS -b "$COOKIE_FILE" -c "$COOKIE_FILE" \
+  "${AUTH_HEADERS[@]}" -H "X-XSRF-TOKEN: $CSRF_TOKEN" \
+  -H "Content-Type: application/json" -X PUT \
+  "$BASE_URL/api/web/suites/$SUITE_ID/versions/$SUITE_VERSION_ID" \
+  -d "$SUITE_PAYLOAD")"
+assert_code "complete the Suite draft metadata" "$UPDATE_RESPONSE" 0
 
 PUBLISH_SUITE_RESPONSE="$(curl -sS -b "$COOKIE_FILE" -c "$COOKIE_FILE" \
   "${AUTH_HEADERS[@]}" -H "X-XSRF-TOKEN: $CSRF_TOKEN" \

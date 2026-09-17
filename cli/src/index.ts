@@ -232,12 +232,16 @@ cli
   })
 
 cli
-  .command('login', 'Save registry and token')
+  .command('login', 'Log in with OAuth Device Flow or an API token')
   .option('--registry <url>', 'Registry URL')
   .option('--token <token>', 'API token')
+  .option('--no-open', 'Do not open the verification URL in a browser')
   .option('--json', 'Output JSON')
-  .action((options: { registry?: string; token?: string; json?: boolean }) => {
-    return runCommand(() => loginCommand(options), Boolean(options.json))
+  .action((options: { registry?: string; token?: string; open?: boolean; json?: boolean }) => {
+    return runCommand(
+      () => loginCommand({ ...options, noOpen: options.open === false }),
+      Boolean(options.json)
+    )
   })
 
 cli

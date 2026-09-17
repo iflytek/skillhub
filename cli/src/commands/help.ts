@@ -14,9 +14,13 @@ export const commands = {
     examples: ['skillhub version', 'skillhub version --json', 'skillhub --version', 'skillhub -v']
   },
   login: {
-    summary: 'Save registry and token',
-    usage: 'skillhub login [--token <token>] [--registry <url>] [--json]',
-    examples: ['skillhub login --token sk_xxx', 'skillhub login --registry https://skillhub.example.com']
+    summary: 'Log in with OAuth Device Flow or an API token',
+    usage: 'skillhub login [--token <token>] [--no-open] [--registry <url>] [--json]',
+    examples: [
+      'skillhub login --registry https://skillhub.example.com',
+      'skillhub login --registry https://skillhub.example.com --no-open',
+      'skillhub login --token sk_xxx'
+    ]
   },
   logout: {
     summary: 'Remove local token',

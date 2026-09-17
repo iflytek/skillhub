@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.review.ReviewTask;
+import com.iflytek.skillhub.domain.review.ReviewSubjectType;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.suite.SkillSuite;
 import com.iflytek.skillhub.domain.suite.SkillSuiteVersion;
@@ -103,7 +104,7 @@ class JpaReviewProgressQueryRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        var firstPage = repository.findMyProgress("author-1", null, "", 0, 1);
+        var firstPage = repository.findMyProgress("author-1", null, null, "", 0, 1);
 
         assertThat(firstPage.items()).hasSize(1);
         assertThat(firstPage.total()).isEqualTo(3);
@@ -116,23 +117,23 @@ class JpaReviewProgressQueryRepositoryTest {
         assertThat(firstPage.statusCounts().approved()).isEqualTo(1);
         assertThat(firstPage.statusCounts().rejected()).isEqualTo(1);
 
-        var emptyPage = repository.findMyProgress("author-1", null, "", 8, 1);
+        var emptyPage = repository.findMyProgress("author-1", null, null, "", 8, 1);
         assertThat(emptyPage.items()).isEmpty();
         assertThat(emptyPage.total()).isEqualTo(3);
 
         var maximumPage = repository.findMyProgress(
-                "author-1", null, "", Integer.MAX_VALUE, 100);
+                "author-1", null, null, "", Integer.MAX_VALUE, 100);
         assertThat(maximumPage.items()).isEmpty();
         assertThat(maximumPage.total()).isEqualTo(3);
 
         var searchedAndFiltered = repository.findMyProgress(
-                "author-1", ReviewTaskStatus.APPROVED, "BETA", 0, 20);
+                "author-1", null, ReviewTaskStatus.APPROVED, "BETA", 0, 20);
         assertThat(searchedAndFiltered.items()).singleElement()
                 .satisfies(item -> assertThat(item.skillSlug()).isEqualTo("beta-skill"));
         assertThat(searchedAndFiltered.total()).isEqualTo(1);
         assertThat(searchedAndFiltered.statusCounts().approved()).isEqualTo(1);
 
-        var searchMiss = repository.findMyProgress("author-1", null, "missing", 0, 20);
+        var searchMiss = repository.findMyProgress("author-1", null, null, "missing", 0, 20);
         assertThat(searchMiss.items()).isEmpty();
         assertThat(searchMiss.total()).isZero();
         assertThat(searchMiss.statusCounts().pending()).isZero();
@@ -145,6 +146,8 @@ class JpaReviewProgressQueryRepositoryTest {
         persistUsers("owner", "author-1");
         Namespace namespace = entityManager.persistFlushFind(
                 new Namespace("team-suite-review", "Suite Review Team", "owner"));
+        Skill skill = entityManager.persistFlushFind(
+                new Skill(namespace.getId(), "starter-skill", "author-1", SkillVisibility.PUBLIC));
         SkillSuite suite = entityManager.persistFlushFind(
                 new SkillSuite(namespace.getId(), "starter-pack", "Starter Pack", "author-1"));
         SkillSuiteVersion suiteVersion = entityManager.persistFlushFind(
@@ -152,12 +155,20 @@ class JpaReviewProgressQueryRepositoryTest {
         ReviewTask task = ReviewTask.forSuiteVersion(
                 suiteVersion.getId(), suite.getId(), namespace.getId(), suiteVersion.getVersion(), "author-1");
         entityManager.persist(task);
+        persistAttempt(
+                skill,
+                namespace,
+                "author-1",
+                "1.0.0",
+                ReviewTaskStatus.APPROVED,
+                Instant.parse("2026-08-30T10:00:00Z"));
         entityManager.flush();
         entityManager.clear();
 
-        var progress = repository.findMyProgress("author-1", null, "STARTER", 0, 20);
+        var progress = repository.findMyProgress("author-1", null, null, "STARTER", 0, 20);
 
-        assertThat(progress.items()).singleElement().satisfies(item -> {
+        assertThat(progress.items()).hasSize(2);
+        assertThat(progress.items()).anySatisfy(item -> {
             assertThat(item.skillId()).isNull();
             assertThat(item.skillSlug()).isNull();
             assertThat(item.subjectType()).isEqualTo("SUITE_VERSION");
@@ -166,6 +177,23 @@ class JpaReviewProgressQueryRepositoryTest {
             assertThat(item.subjectSlug()).isEqualTo("starter-pack");
         });
         assertThat(progress.statusCounts().pending()).isEqualTo(1);
+        assertThat(progress.statusCounts().approved()).isEqualTo(1);
+
+        var suitesOnly = repository.findMyProgress(
+                "author-1", ReviewSubjectType.SUITE_VERSION, null, "STARTER", 0, 20);
+        assertThat(suitesOnly.items()).singleElement()
+                .satisfies(item -> assertThat(item.subjectType()).isEqualTo("SUITE_VERSION"));
+        assertThat(suitesOnly.total()).isEqualTo(1);
+        assertThat(suitesOnly.statusCounts().pending()).isEqualTo(1);
+        assertThat(suitesOnly.statusCounts().approved()).isZero();
+
+        var skillsOnly = repository.findMyProgress(
+                "author-1", ReviewSubjectType.SKILL_VERSION, null, "STARTER", 0, 20);
+        assertThat(skillsOnly.items()).singleElement()
+                .satisfies(item -> assertThat(item.subjectType()).isEqualTo("SKILL_VERSION"));
+        assertThat(skillsOnly.total()).isEqualTo(1);
+        assertThat(skillsOnly.statusCounts().pending()).isZero();
+        assertThat(skillsOnly.statusCounts().approved()).isEqualTo(1);
     }
 
     @Test

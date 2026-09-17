@@ -13,5 +13,6 @@ import java.util.List;
 @Repository
 public interface SkillFileJpaRepository extends JpaRepository<SkillFile, Long>, SkillFileRepository {
     List<SkillFile> findByVersionId(Long versionId);
+    List<SkillFile> findByVersionIdIn(List<Long> versionIds);
     void deleteByVersionId(Long versionId);
 }
