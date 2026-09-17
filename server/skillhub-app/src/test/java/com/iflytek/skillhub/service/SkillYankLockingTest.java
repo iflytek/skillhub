@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.event.SkillVersionYankedEvent;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
@@ -163,7 +164,7 @@ class SkillYankLockingTest {
                         .orElseThrow().getStatus());
         assertThat(finalStatus).isEqualTo(SkillVersionStatus.YANKED);
         verify(auditLogService, times(1)).record(any(), any(), any(), any(), any(), any(), any(), any());
-        verify(eventPublisher, times(1)).publishEvent(any());
+        verify(eventPublisher, times(1)).publishEvent(any(SkillVersionYankedEvent.class));
     }
 
     private Fixture persistPublishedVersion() {
