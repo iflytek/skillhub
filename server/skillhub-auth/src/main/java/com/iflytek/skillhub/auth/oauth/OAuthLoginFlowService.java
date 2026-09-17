@@ -1,5 +1,8 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import com.iflytek.skillhub.auth.federation.adapter.RemoteIdentityIoExecutor;
+import com.iflytek.skillhub.auth.federation.core.IdentityCoreMode;
+import com.iflytek.skillhub.auth.federation.core.IdentityLoginResolution;
 import com.iflytek.skillhub.auth.identity.IdentityBindingService;
 import com.iflytek.skillhub.auth.policy.AccessDecision;
 import com.iflytek.skillhub.auth.policy.AccessPolicy;
@@ -11,11 +14,14 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -29,40 +35,90 @@ import org.springframework.stereotype.Service;
 @Service
 public class OAuthLoginFlowService {
 
-    private final DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
     private final Map<String, OAuthClaimsExtractor> extractors;
     private final AccessPolicy accessPolicy;
     private final IdentityBindingService identityBindingService;
+    private final LegacyPlatformIdentityCore identityCore;
+    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate;
+    private final RemoteIdentityIoExecutor remoteIdentityIo;
 
+    @Autowired
     public OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
                                  AccessPolicy accessPolicy,
-                                 IdentityBindingService identityBindingService) {
+                                 IdentityBindingService identityBindingService,
+                                 LegacyPlatformIdentityCore identityCore,
+                                 RemoteIdentityIoExecutor remoteIdentityIo) {
+        this(
+                extractorList,
+                accessPolicy,
+                identityBindingService,
+                identityCore,
+                new DefaultOAuth2UserService(),
+                remoteIdentityIo
+        );
+    }
+
+    OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                          AccessPolicy accessPolicy,
+                          IdentityBindingService identityBindingService,
+                          LegacyPlatformIdentityCore identityCore,
+                          OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate,
+                          RemoteIdentityIoExecutor remoteIdentityIo) {
         this.extractors = extractorList.stream()
                 .collect(Collectors.toMap(OAuthClaimsExtractor::getProvider, Function.identity()));
         this.accessPolicy = accessPolicy;
         this.identityBindingService = identityBindingService;
+        this.identityCore = identityCore;
+        this.delegate = delegate;
+        this.remoteIdentityIo = remoteIdentityIo;
+    }
+
+    OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                          AccessPolicy accessPolicy,
+                          IdentityBindingService identityBindingService,
+                          LegacyPlatformIdentityCore identityCore) {
+        this(
+                extractorList,
+                accessPolicy,
+                identityBindingService,
+                identityCore,
+                new DefaultOAuth2UserService(),
+                directRemoteIdentityIo()
+        );
+    }
+
+    OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                          AccessPolicy accessPolicy,
+                          IdentityBindingService identityBindingService) {
+        this(extractorList, accessPolicy, identityBindingService, ignored -> LegacyPlatformIdentityDecision.legacy());
     }
 
     public AuthenticatedLoginContext loadLoginContext(OAuth2UserRequest request) {
-        OAuth2User upstreamUser = delegate.loadUser(request);
-        String registrationId = request.getClientRegistration().getRegistrationId();
-
-        OAuthClaimsExtractor extractor = extractors.get(registrationId);
-        if (extractor == null) {
-            throw new OAuth2AuthenticationException(
-                    new OAuth2Error("unsupported_provider", "Unsupported: " + registrationId, null)
+        LoadedProviderIdentity loadedIdentity = remoteIdentityIo.execute(() -> {
+            OAuth2User upstreamUser = delegate.loadUser(request);
+            String registrationId = request.getClientRegistration().getRegistrationId();
+            OAuthClaimsExtractor extractor = extractors.get(registrationId);
+            if (extractor == null) {
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("unsupported_provider", "Unsupported: " + registrationId, null)
+                );
+            }
+            return new LoadedProviderIdentity(
+                    upstreamUser,
+                    extractor.extract(request, upstreamUser)
             );
-        }
+        });
 
-        OAuthClaims claims = extractor.extract(request, upstreamUser);
-        PlatformPrincipal principal = authenticate(claims);
-        return new AuthenticatedLoginContext(upstreamUser, principal);
+        PlatformPrincipal principal = authenticate(loadedIdentity.claims());
+        return new AuthenticatedLoginContext(loadedIdentity.upstreamUser(), principal);
     }
 
     public PlatformPrincipal authenticate(OAuthClaims claims) {
         AccessDecision decision = accessPolicy.evaluate(claims);
 
         if (decision == AccessDecision.PENDING_APPROVAL) {
+            LegacyPlatformIdentityDecision identityDecision = identityCore.evaluate(claims);
+            ensureActiveCoreAllowsPlatformLogin(identityDecision);
             identityBindingService.createPendingUserIfAbsent(claims);
             throw new AccountPendingException();
         }
@@ -72,7 +128,30 @@ public class OAuthLoginFlowService {
             );
         }
 
+        LegacyPlatformIdentityDecision identityDecision = identityCore.evaluate(claims);
+        ensureActiveCoreAllowsPlatformLogin(identityDecision);
         return identityBindingService.bindOrCreate(claims, UserStatus.ACTIVE);
+    }
+
+    private static void ensureActiveCoreAllowsPlatformLogin(LegacyPlatformIdentityDecision decision) {
+        Objects.requireNonNull(decision, "identity decision must not be null");
+        if (decision.mode() != IdentityCoreMode.ACTIVE) {
+            return;
+        }
+        IdentityLoginResolution resolution = decision.resolution()
+                .orElseThrow(() -> new OAuthIdentityCoreException(
+                        new IllegalStateException("ACTIVE mode requires a unified identity resolution")
+                ));
+        if (resolution instanceof IdentityLoginResolution.Matched matched
+                && matched.target().userId().isPresent()) {
+            return;
+        }
+        if (resolution instanceof IdentityLoginResolution.ProvisionNew) {
+            return;
+        }
+        throw new OAuthIdentityCoreException(
+                new IllegalStateException("Unified identity denied platform OAuth login")
+        );
     }
 
     public void rememberReturnTo(HttpServletRequest request) {
@@ -114,5 +193,17 @@ public class OAuthLoginFlowService {
     }
 
     public record AuthenticatedLoginContext(OAuth2User upstreamUser, PlatformPrincipal principal) {
+    }
+
+    private record LoadedProviderIdentity(OAuth2User upstreamUser, OAuthClaims claims) {
+    }
+
+    private static RemoteIdentityIoExecutor directRemoteIdentityIo() {
+        return new RemoteIdentityIoExecutor() {
+            @Override
+            public <T> T execute(java.util.function.Supplier<T> remoteIo) {
+                return remoteIo.get();
+            }
+        };
     }
 }
