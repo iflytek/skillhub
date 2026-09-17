@@ -168,7 +168,7 @@ export function SuiteDetailPage() {
                 <section>
                   <h2 className="text-sm font-semibold">{t('suite.startWithEntry')}</h2>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">{t('suite.entrySnapshotDescription')}</p>
-                  <div className="mt-3 border-y border-border/70 py-3">
+                  <div className="mt-3 border-y py-3">
                     <p className="truncate text-sm font-medium">
                       {entryMember.displayName || `@${entryMember.namespace}/${entryMember.slug}`}
                     </p>

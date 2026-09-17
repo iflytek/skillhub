@@ -506,7 +506,7 @@
 .hljs-symbol,
 .hljs-bullet,
 .hljs-addition {
-  color: hsl(var(--accent) / 0.9);
+  color: hsl(var(--primary) / 0.85);
 }
 
 .hljs-number,
