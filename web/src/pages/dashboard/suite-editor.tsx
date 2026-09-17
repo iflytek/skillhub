@@ -641,8 +641,8 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
                 <div key={member.skillVersionId} className={cn('rounded-lg border p-2.5', isEntry && 'border-amber-300 bg-amber-50/60 dark:bg-amber-950/20')}>
                   <div className="flex flex-wrap items-center gap-2">
                     <button type="button" className="min-w-[220px] flex-1 text-left" onClick={() => setEntrySkillVersionId(member.skillVersionId)}>
-                      <span className="block truncate text-sm font-medium">{member.displayName}</span>
-                      <span className="text-xs text-muted-foreground">@{member.namespace}/{member.slug}@{member.version}</span>
+                      <span className="block truncate text-sm font-medium" title={member.displayName}>{member.displayName}</span>
+                      <span className="truncate text-xs text-muted-foreground" title={`@${member.namespace}/${member.slug}@${member.version}`}>@{member.namespace}/{member.slug}@{member.version}</span>
                     </button>
                     {isEntry ? <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-xs text-amber-900">{t('suite.entrySkill')}</span> : null}
                     <Button className="h-7 w-7 p-0" aria-label={t('suite.moveMemberUp', { name: member.displayName })} variant="outline" size="sm" disabled={index === 0} onClick={() => moveMember(index, -1)}><ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /></Button>

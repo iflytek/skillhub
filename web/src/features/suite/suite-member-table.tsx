@@ -48,14 +48,14 @@ export function SuiteMemberTable({ suite, returnTo, management = false, onEdit }
           const identity = (
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={cn('truncate font-medium', navigable && 'text-blue-700 dark:text-blue-300')}>{memberName}</span>
+                <span className={cn('truncate font-medium', navigable && 'text-blue-700 dark:text-blue-300')} title={memberName}>{memberName}</span>
                 {member.entry ? (
                   <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300">
                     {t('suite.entrySkill')}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{coordinate}</p>
+              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={coordinate}>{coordinate}</p>
               {member.summary ? (
                 <p className="mt-1 line-clamp-1 text-xs text-muted-foreground md:hidden">{member.summary}</p>
               ) : null}

@@ -134,7 +134,7 @@ function MarkdownRendererComponent({ content, className, onLinkClick }: Markdown
             }
 
             return (
-              <code className={codeClassName} {...props}>
+              <code className={cn(codeClassName, 'text-foreground/90')} {...props}>
                 {children}
               </code>
             )
