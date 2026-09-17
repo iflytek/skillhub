@@ -124,4 +124,57 @@ class SkillLifecycleAppServiceTest {
                 "global"
         );
     }
+
+    @Test
+    void yankVersion_locksAllSkillVersionsBeforeDelegatingLifecycleMutation() {
+        Namespace namespace = new Namespace("global", "Global", "owner-1");
+        ReflectionTestUtils.setField(namespace, "id", 7L);
+        Skill skill = new Skill(7L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        ReflectionTestUtils.setField(skill, "id", 11L);
+        SkillVersion version = new SkillVersion(11L, "1.0.0", "owner-1");
+        ReflectionTestUtils.setField(version, "id", 13L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillSlugResolutionService.resolve(
+                7L,
+                "demo-skill",
+                "owner-1",
+                SkillSlugResolutionService.Preference.CURRENT_USER
+        )).thenReturn(skill);
+        when(skillVersionRepository.findBySkillIdForUpdate(11L))
+                .thenReturn(java.util.List.of(version));
+        when(skillGovernanceService.yankVersion(
+                eq(skill),
+                eq(version),
+                eq("owner-1"),
+                anyMap(),
+                nullable(String.class),
+                nullable(String.class),
+                eq("broken")
+        )).thenReturn(version);
+
+        var response = service.yankVersion(
+                "global",
+                "demo-skill",
+                "1.0.0",
+                new AdminSkillActionRequest("broken"),
+                "owner-1",
+                Map.of(7L, NamespaceRole.OWNER),
+                new AuditRequestContext("127.0.0.1", "JUnit")
+        );
+
+        assertThat(response.versionId()).isEqualTo(13L);
+        assertThat(response.action()).isEqualTo("YANK");
+        verify(skillVersionRepository).findBySkillIdForUpdate(11L);
+        verify(skillGovernanceService).yankVersion(
+                skill,
+                version,
+                "owner-1",
+                Map.of(7L, NamespaceRole.OWNER),
+                "127.0.0.1",
+                "JUnit",
+                "broken"
+        );
+    }
 }

@@ -150,7 +150,7 @@ class SkillGovernanceServiceTest {
         SkillVersion version = new SkillVersion(2L, "1.0.0", "owner");
         setField(version, "id", 22L);
         version.setStatus(SkillVersionStatus.PUBLISHED);
-        given(skillVersionRepository.findById(22L)).willReturn(Optional.of(version));
+        given(skillVersionRepository.findByIdForUpdate(22L)).willReturn(Optional.of(version));
         given(skillVersionRepository.save(version)).willReturn(version);
         given(skillRepository.findById(2L)).willReturn(Optional.empty());
 
@@ -159,6 +159,7 @@ class SkillGovernanceServiceTest {
         assertThat(result.getStatus()).isEqualTo(SkillVersionStatus.YANKED);
         assertThat(result.getYankedBy()).isEqualTo("admin");
         assertThat(result.getYankedAt()).isEqualTo(Instant.now(CLOCK));
+        verify(skillVersionRepository).findByIdForUpdate(22L);
         verify(auditLogService).record("admin", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
     }
 
@@ -212,6 +213,7 @@ class SkillGovernanceServiceTest {
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
         verify(skillVersionRepository, never()).save(any());
         verify(auditLogService, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -226,6 +228,8 @@ class SkillGovernanceServiceTest {
                 () -> service.yankVersion(skill, version, "owner", Map.of(), "127.0.0.1", "JUnit", null));
 
         verify(skillVersionRepository, never()).save(any());
+        verify(auditLogService, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -262,7 +266,7 @@ class SkillGovernanceServiceTest {
         setField(skill, "id", 2L);
         skill.setLatestVersionId(22L);
 
-        given(skillVersionRepository.findById(22L)).willReturn(Optional.of(yanked));
+        given(skillVersionRepository.findByIdForUpdate(22L)).willReturn(Optional.of(yanked));
         given(skillVersionRepository.save(yanked)).willReturn(yanked);
         given(skillRepository.findById(2L)).willReturn(Optional.of(skill));
         given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(java.util.List.of(fallback));

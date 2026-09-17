@@ -266,7 +266,7 @@ public class SkillGovernanceService {
      */
     @Transactional
     public SkillVersion yankVersion(Long versionId, String actorUserId, String clientIp, String userAgent, String reason) {
-        SkillVersion version = skillVersionRepository.findById(versionId)
+        SkillVersion version = skillVersionRepository.findByIdForUpdate(versionId)
             .orElseThrow(() -> new DomainNotFoundException("error.skill.version.notFound", versionId));
         return yankVersionInternal(version, actorUserId, clientIp, userAgent, reason);
     }

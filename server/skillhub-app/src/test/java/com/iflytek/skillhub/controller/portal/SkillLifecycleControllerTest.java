@@ -177,7 +177,7 @@ class SkillLifecycleControllerTest {
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
         given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .willReturn(skill);
-        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(version));
+        given(skillVersionRepository.findBySkillIdForUpdate(1L)).willReturn(java.util.List.of(version));
         given(skillGovernanceService.yankVersion(
                 eq(skill), eq(version), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), eq("broken")))
                 .willReturn(yanked);
@@ -216,7 +216,7 @@ class SkillLifecycleControllerTest {
         given(namespaceRepository.findBySlug("global")).willReturn(java.util.Optional.of(namespace));
         given(skillSlugResolutionService.resolve(1L, "demo-skill", "usr_1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .willReturn(skill);
-        given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(version));
+        given(skillVersionRepository.findBySkillIdForUpdate(1L)).willReturn(java.util.List.of(version));
         given(skillGovernanceService.yankVersion(
                 eq(skill), eq(version), eq("usr_1"), anyMap(), nullable(String.class), nullable(String.class), isNull()))
                 .willReturn(yanked);

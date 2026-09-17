@@ -121,7 +121,7 @@ public class SkillLifecycleAppService {
                                                       Map<Long, NamespaceRole> userNamespaceRoles,
                                                       AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
-        SkillVersion skillVersion = findVersion(skill.getId(), version);
+        SkillVersion skillVersion = findVersionForUpdate(skill.getId(), version);
         SkillVersion yanked = skillGovernanceService.yankVersion(
                 skill,
                 skillVersion,
