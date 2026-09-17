@@ -16,5 +16,8 @@ describe('use-label-queries exports', () => {
     expect(typeof mod.useAdminLabelDefinitions).toBe('function')
     expect(typeof mod.useAttachSkillLabel).toBe('function')
     expect(typeof mod.useDetachSkillLabel).toBe('function')
+    expect(typeof mod.useSuiteLabels).toBe('function')
+    expect(typeof mod.useAttachSuiteLabel).toBe('function')
+    expect(typeof mod.useDetachSuiteLabel).toBe('function')
   })
 })

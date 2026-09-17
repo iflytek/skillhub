@@ -241,11 +241,15 @@ public class ReviewPortalAppService {
     }
 
     public ReviewProgressPageResponse listMyProgress(
+            String subjectType,
             String status,
             String query,
             int page,
             int size,
             String userId) {
+        ReviewSubjectType reviewSubjectType = subjectType == null || subjectType.isBlank()
+                ? null
+                : ReviewSubjectType.valueOf(subjectType.toUpperCase(java.util.Locale.ROOT));
         ReviewTaskStatus reviewStatus = status == null || status.isBlank()
                 ? null
                 : ReviewTaskStatus.valueOf(status.toUpperCase(java.util.Locale.ROOT));
@@ -253,6 +257,7 @@ public class ReviewPortalAppService {
         int safeSize = Math.min(Math.max(size, 1), 100);
         return reviewProgressQueryRepository.findMyProgress(
                 userId,
+                reviewSubjectType,
                 reviewStatus,
                 query != null ? query : "",
                 safePage,

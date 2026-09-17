@@ -15,6 +15,7 @@ import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
 type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+type ReviewSubjectFilter = 'SKILL_VERSION' | 'SUITE_VERSION'
 const PAGE_SIZE = 20
 
 const statusClassNames: Record<ReviewStatus, string> = {
@@ -30,6 +31,7 @@ export function ReviewProgressPage() {
   const [queryInput, setQueryInput] = useState(search.q ?? '')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const progressQuery = useMyReviewProgress({
+    subjectType: search.type,
     status: search.status,
     q: search.q,
     page: search.page ?? 0,
@@ -41,10 +43,16 @@ export function ReviewProgressPage() {
     ? Math.ceil(progressQuery.data.total / progressQuery.data.size)
     : 0
 
-  function updateSearch(next: { status?: ReviewStatus | null; q?: string; page?: number }) {
+  function updateSearch(next: {
+    subjectType?: ReviewSubjectFilter | null
+    status?: ReviewStatus | null
+    q?: string
+    page?: number
+  }) {
     void navigate({
       to: '/dashboard/review-progress',
       search: {
+        type: next.subjectType === null ? undefined : next.subjectType ?? search.type,
         status: next.status === null ? undefined : next.status ?? search.status,
         q: next.q ?? search.q,
         page: next.page ?? 0,
@@ -81,6 +89,24 @@ export function ReviewProgressPage() {
               </div>
               <Button type="submit" variant="outline">{t('reviewProgress.searchAction')}</Button>
             </form>
+            <div className="w-full md:w-44">
+              <Select
+                value={search.type ?? 'ALL'}
+                onValueChange={(value) => updateSearch({
+                  subjectType: value === 'ALL' ? null : value as ReviewSubjectFilter,
+                  page: 0,
+                })}
+              >
+                <SelectTrigger aria-label={t('reviewProgress.typeFilter')}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t('reviewProgress.typeAll')}</SelectItem>
+                  <SelectItem value="SKILL_VERSION">{t('reviewProgress.typeSkill')}</SelectItem>
+                  <SelectItem value="SUITE_VERSION">{t('reviewProgress.typeSuite')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="w-full md:w-48">
               <Select
                 value={search.status ?? 'ALL'}
@@ -145,7 +171,7 @@ export function ReviewProgressPage() {
             <div className="space-y-3">
               {progressQuery.data.items.map((item) => (
                 <ProgressItem
-                  key={`${item.skillId}:${item.skillVersion}`}
+                  key={`${item.subjectType ?? 'SKILL_VERSION'}:${item.subjectId ?? item.skillId}:${item.skillVersion}`}
                   item={item}
                   expanded={expandedId === item.latestReviewTaskId}
                   onToggle={() => setExpandedId((current) => (
@@ -190,20 +216,27 @@ function ProgressItem({
   const { t } = useTranslation()
   const attemptsQuery = useMyReviewAttempts(expanded ? item.latestReviewTaskId : null)
   const status = item.latestStatus
+  const isSuite = item.subjectType === 'SUITE_VERSION'
+  const slug = item.subjectSlug || item.skillSlug || ''
 
   return (
     <article className="overflow-hidden rounded-xl border border-border/70 bg-card text-card-foreground">
       <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:p-5">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Link
+            {isSuite ? <Link
+              to="/dashboard/suites/$namespace/$slug"
+              params={{ namespace: item.namespace, slug }} search={{ version: item.skillVersion }}
+              className="truncate font-semibold text-foreground underline-offset-4 hover:underline"
+            >@{item.namespace}/{slug}</Link> : <Link
               to="/space/$namespace/$slug"
-              params={{ namespace: item.namespace, slug: item.skillSlug }}
+              params={{ namespace: item.namespace, slug }}
               search={{ returnTo: '/dashboard/review-progress' }}
               className="truncate font-semibold text-foreground underline-offset-4 hover:underline"
             >
-              @{item.namespace}/{item.skillSlug}
-            </Link>
+              @{item.namespace}/{slug}
+            </Link>}
+            <span className="text-xs text-muted-foreground">{t(isSuite ? 'suite.workspace.resourceSuite' : 'suite.workspace.resourceSkill')}</span>
             <span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">
               v{item.skillVersion}
             </span>
@@ -224,12 +257,12 @@ function ProgressItem({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
-          {status === 'REJECTED' ? (
+          {status === 'REJECTED' && !isSuite ? (
             <Link
               to="/dashboard/publish"
               search={{
                 namespace: item.namespace,
-                resubmitSkill: item.skillSlug,
+                resubmitSkill: slug,
                 resubmitVersion: item.skillVersion,
               }}
               className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-2')}
@@ -238,6 +271,10 @@ function ProgressItem({
               {t('reviewProgress.resubmit')}
             </Link>
           ) : null}
+          {status === 'REJECTED' && isSuite ? <Link
+            to="/dashboard/suites/$namespace/$slug" params={{ namespace: item.namespace, slug }}
+            search={{ version: item.skillVersion }} className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >{t('suite.view')}</Link> : null}
           <Button
             type="button"
             variant="ghost"

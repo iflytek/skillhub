@@ -14,5 +14,6 @@ describe('skill-label-panel module exports', () => {
   it('exports the SkillLabelPanel component', () => {
     expect(mod.SkillLabelPanel).toBeDefined()
     expect(typeof mod.SkillLabelPanel).toBe('function')
+    expect(typeof mod.SuiteLabelPanel).toBe('function')
   })
 })

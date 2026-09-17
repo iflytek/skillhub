@@ -49,10 +49,27 @@ SkillHub 提供了类似 npm 的发布体验，但增加了企业级的权限控
 
 1. **准备技能包**
 
-确保技能包符合 SkillHub 规范：
-- 包含 `skill.md`（技能描述）
-- 包含 `package.json` 或 `SKILL.md`（元数据）
-- 文件结构清晰，无敏感信息
+准备一个根目录包含 `SKILL.md` 的技能目录：
+
+- 在 `SKILL.md` 中同时编写 YAML frontmatter 和技能指令。
+- frontmatter 必须包含 `name` 和 `description`；需要指定版本时，在其中设置 `version`。
+- `package.json` 不会提供或替代这些技能元数据。
+- 保持文件结构清晰，不包含敏感信息。
+
+例如，将以下内容保存为 `my-skill/SKILL.md`：
+
+```markdown
+---
+name: my-skill
+description: Summarize a short text as numbered steps.
+version: 1.0.0
+---
+
+Summarize the supplied text as numbered steps.
+```
+
+打包已有技能时，应一并保留其所需的脚本、参考文件、`agents/` 元数据和许可证文件。
+下一步发布命令的路径应指向该技能目录（本例为 `./my-skill`）。
 
 2. **使用 CLI 发布（推荐）**
 

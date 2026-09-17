@@ -135,7 +135,8 @@ public class SkillSuiteQueryService {
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(version -> new VersionSummary(
                         version.getId(), version.getVersion(), version.getStatus(),
-                        version.getVisibility(), version.getPublishedAt(),
+                        version.getVisibility(), version.getChangelog(), version.getCreatedBy(),
+                        version.getPublishedAt(),
                         version.getYankedAt(), version.getCreatedAt()))
                 .toList();
     }
@@ -228,6 +229,8 @@ public class SkillSuiteQueryService {
             String version,
             SkillSuiteVersionStatus status,
             SkillVisibility visibility,
+            String changelog,
+            String createdBy,
             java.time.Instant publishedAt,
             java.time.Instant yankedAt,
             java.time.Instant createdAt

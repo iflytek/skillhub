@@ -201,7 +201,8 @@ class ReviewPortalControllerTest {
                                 new SkillLifecycleVersionResponse(100L, "1.2.0", "PENDING_REVIEW"),
                                 null,
                                 "REVIEW_TASK",
-                                List.of()
+                                List.of(),
+                                new com.iflytek.skillhub.dto.PageResponse<>(List.of(), 0, 0, 20)
                         ),
                         List.of(new SkillVersionResponse(100L, "1.2.0", "PENDING_REVIEW", null, 1, 10L, null, true, null)),
                         List.of(new SkillFileResponse(1L, "README.md", 123L, "text/markdown", "sha")),
@@ -299,7 +300,7 @@ class ReviewPortalControllerTest {
                 Instant.parse("2026-08-31T11:00:00Z"),
                 2L
         );
-        given(reviewProgressQueryRepository.findMyProgress("author-1", null, "", 0, 20))
+        given(reviewProgressQueryRepository.findMyProgress("author-1", null, null, "", 0, 20))
                 .willReturn(new ReviewProgressPageResponse(
                         List.of(item),
                         1,
@@ -316,7 +317,7 @@ class ReviewPortalControllerTest {
                 .andExpect(jsonPath("$.data.statusCounts.pending").value(0))
                 .andExpect(jsonPath("$.data.statusCounts.rejected").value(1));
 
-        verify(reviewProgressQueryRepository).findMyProgress("author-1", null, "", 0, 20);
+        verify(reviewProgressQueryRepository).findMyProgress("author-1", null, null, "", 0, 20);
     }
 
     @Test

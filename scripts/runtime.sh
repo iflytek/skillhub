@@ -23,6 +23,7 @@ POSTGRES_IMAGE_VALUE="${POSTGRES_IMAGE:-}"
 REDIS_IMAGE_VALUE="${REDIS_IMAGE:-}"
 DISABLE_SCANNER=false
 USE_ALIYUN=false
+EXPLICIT_REF=false
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -53,6 +54,7 @@ while [ "$#" -gt 0 ]; do
     --ref)
       [ "$#" -ge 2 ] || { echo "Missing value for --ref" >&2; exit 1; }
       SKILLHUB_REF="$2"
+      EXPLICIT_REF=true
       shift 2
       ;;
     --server-image)
@@ -119,12 +121,10 @@ done
 if [ "$USE_ALIYUN" = "true" ]; then
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://imageless.oss-cn-beijing.aliyuncs.com}"
   RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/runtime.sh"
-  RUNTIME_SOURCE_ARG=" --aliyun"
   echo "Using Aliyun OSS for runtime files: $SKILLHUB_RAW_BASE"
 else
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF}"
   RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/scripts/runtime.sh"
-  RUNTIME_SOURCE_ARG=""
   echo "Using GitHub raw for runtime files: $SKILLHUB_RAW_BASE"
 fi
 COMPOSE_FILE="$SKILLHUB_HOME/compose.release.yml"
@@ -376,6 +376,85 @@ run_compose() {
   $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
+shell_quote() {
+  case "$1" in
+    *[!A-Za-z0-9_./:=@%+-]*)
+      printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+      ;;
+    *)
+      printf '%s' "$1"
+      ;;
+  esac
+}
+
+append_runtime_flag() {
+  RUNTIME_LIFECYCLE_ARGS="$RUNTIME_LIFECYCLE_ARGS $1"
+}
+
+append_runtime_option() {
+  RUNTIME_LIFECYCLE_ARGS="$RUNTIME_LIFECYCLE_ARGS $1 $(shell_quote "$2")"
+}
+
+build_runtime_lifecycle_args() {
+  RUNTIME_LIFECYCLE_ARGS=""
+
+  if [ "$USE_ALIYUN" = "true" ]; then
+    append_runtime_flag "--aliyun"
+  elif [ "$EXPLICIT_REF" = "true" ] || [ "$SKILLHUB_REF" != "main" ]; then
+    append_runtime_option "--ref" "$SKILLHUB_REF"
+  fi
+
+  if [ -n "$SKILLHUB_VERSION_VALUE" ]; then
+    append_runtime_option "--version" "$SKILLHUB_VERSION_VALUE"
+  fi
+
+  if [ "$SKILLHUB_HOME" != "$SKILLHUB_HOME_DEFAULT" ]; then
+    append_runtime_option "--home" "$SKILLHUB_HOME"
+  fi
+
+  if [ -n "$SKILLHUB_PUBLIC_BASE_URL_VALUE" ]; then
+    append_runtime_option "--public-url" "$SKILLHUB_PUBLIC_BASE_URL_VALUE"
+  fi
+
+  if [ -n "$SKILLHUB_MIRROR_REGISTRY_VALUE" ] && [ "$USE_ALIYUN" != "true" ]; then
+    append_runtime_option "--mirror-registry" "$SKILLHUB_MIRROR_REGISTRY_VALUE"
+  fi
+
+  if [ -n "$SKILLHUB_SERVER_IMAGE_VALUE" ]; then
+    append_runtime_option "--server-image" "$SKILLHUB_SERVER_IMAGE_VALUE"
+  fi
+
+  if [ -n "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
+    append_runtime_option "--web-image" "$SKILLHUB_WEB_IMAGE_VALUE"
+  fi
+
+  if [ -n "$SKILLHUB_SCANNER_IMAGE_VALUE" ]; then
+    append_runtime_option "--scanner-image" "$SKILLHUB_SCANNER_IMAGE_VALUE"
+  fi
+
+  if [ -n "$POSTGRES_IMAGE_VALUE" ]; then
+    append_runtime_option "--postgres-image" "$POSTGRES_IMAGE_VALUE"
+  fi
+
+  if [ -n "$REDIS_IMAGE_VALUE" ]; then
+    append_runtime_option "--redis-image" "$REDIS_IMAGE_VALUE"
+  fi
+
+  if [ "$DISABLE_SCANNER" = "true" ]; then
+    append_runtime_flag "--no-scanner"
+  fi
+}
+
+print_runtime_command() {
+  lifecycle_command="$1"
+  printf '  curl -fsSL %s | sh -s -- %s%s\n' \
+    "$RUNTIME_SCRIPT_URL" \
+    "$lifecycle_command" \
+    "$RUNTIME_LIFECYCLE_ARGS"
+}
+
+build_runtime_lifecycle_args
+
 prepare_runtime_files
 
 case "$COMMAND" in
@@ -390,17 +469,17 @@ case "$COMMAND" in
       run_compose up -d
     fi
     PUBLIC_URL="${SKILLHUB_PUBLIC_BASE_URL_VALUE:-http://localhost}"
-    HOME_ARG=""
-    if [ "$SKILLHUB_HOME" != "$SKILLHUB_HOME_DEFAULT" ]; then
-      HOME_ARG=" --home $SKILLHUB_HOME"
-    fi
     cat <<EOF
 SkillHub runtime started.
 Web UI: $PUBLIC_URL
 Backend API: http://localhost:8080
 Runtime dir: $SKILLHUB_HOME
-Stop with:
-  curl -fsSL $RUNTIME_SCRIPT_URL | sh -s -- down$RUNTIME_SOURCE_ARG$HOME_ARG
+Lifecycle commands:
+$(print_runtime_command up)
+$(print_runtime_command down)
+$(print_runtime_command ps)
+$(print_runtime_command logs)
+$(print_runtime_command pull)
 EOF
     ;;
   down)

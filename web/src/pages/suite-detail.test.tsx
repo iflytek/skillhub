@@ -1,15 +1,18 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SkillSuite } from '@/api/types'
+import type { SkillSuite, SkillSuiteVersion } from '@/api/types'
 import { SuiteDetailPage } from './suite-detail'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   detail: { data: undefined as SkillSuite | undefined, isLoading: false, error: null as Error | null },
+  versions: [] as SkillSuiteVersion[],
   submit: { mutateAsync: vi.fn(), isPending: false },
+  suiteLabels: [] as Array<{ slug: string; type: string; displayName: string }>,
+  entryGuideCalls: vi.fn(),
 }))
 const originalRuntimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
 
@@ -20,28 +23,34 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, params, search, ...props }: {
     children: ReactNode
     params: { namespace: string; slug: string }
-    search?: { returnTo?: string }
+    search?: { returnTo?: string; version?: string }
     className?: string
-    'aria-label'?: string
   }) => (
     <a
-      href={`/space/${params.namespace}/${params.slug}?returnTo=${encodeURIComponent(search?.returnTo ?? '')}`}
+      href={`/space/${params.namespace}/${params.slug}?version=${encodeURIComponent(search?.version ?? '')}&returnTo=${encodeURIComponent(search?.returnTo ?? '')}`}
       className={props.className}
-      aria-label={props['aria-label']}
     >
       {children}
     </a>
   ),
 }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+}))
 vi.mock('@/features/skill/markdown-renderer', () => ({
   MarkdownRenderer: ({ content }: { content: string }) => <div data-testid="suite-overview">{content}</div>,
 }))
-vi.mock('@/features/suite/suite-management-actions', () => ({ SuiteManagementActions: () => null }))
+vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ user: null, hasRole: () => false }) }))
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSuiteLabels: () => ({ data: mocks.suiteLabels }),
+}))
 vi.mock('@/shared/hooks/use-suite-queries', () => ({
   useSuiteDetail: () => mocks.detail,
-  useSuiteVersions: () => ({ data: [] }),
+  useSuiteVersions: () => ({ data: mocks.versions }),
   useSubmitSuite: () => mocks.submit,
+}))
+vi.mock('@/shared/hooks/use-skill-queries', () => ({
+  useSkillFile: (...args: unknown[]) => mocks.entryGuideCalls(...args),
 }))
 
 function suite(): SkillSuite {
@@ -51,6 +60,10 @@ function suite(): SkillSuite {
     namespace: 'global',
     slug: 'care-workflow',
     displayName: 'Care Workflow',
+    createdBy: 'owner-1',
+    createdAt: '2026-09-15T10:00:00Z',
+    publishedAt: '2026-09-15T11:00:00Z',
+    changelog: 'Initial workflow release',
     summary: 'A short description for discovery.',
     overview: '## Workflow\n\nRun the entry skill first.',
     version: '1.0.0',
@@ -88,60 +101,67 @@ function suite(): SkillSuite {
   }
 }
 
+function versions(): SkillSuiteVersion[] {
+  return [{
+    id: 10,
+    version: '1.0.0',
+    status: 'PUBLISHED',
+    visibility: 'PUBLIC',
+    createdBy: 'owner-1',
+    createdByName: 'Suite Owner',
+    createdAt: '2026-09-15T10:00:00Z',
+    publishedAt: '2026-09-15T11:00:00Z',
+    changelog: 'Initial workflow release',
+  }]
+}
+
 describe('SuiteDetailPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    mocks.suiteLabels = []
+    mocks.versions = []
     window.__SKILLHUB_RUNTIME_CONFIG__ = originalRuntimeConfig
   })
 
-  it('adds entry skill guidance to the overview and keeps the full member grid separate', () => {
+  it('shows Suite labels and separates overview, members, and versions', () => {
     mocks.detail = { data: suite(), isLoading: false, error: null }
+    mocks.versions = versions()
+    mocks.suiteLabels = [{ slug: 'healthcare', type: 'RECOMMENDED', displayName: '医疗健康' }]
 
     render(<SuiteDetailPage />)
 
+    expect(screen.getByText('医疗健康')).not.toBeNull()
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
     expect(screen.getByTestId('suite-overview').textContent).toContain('Run the entry skill first.')
-    expect(screen.getByText('suite.startWithEntry')).not.toBeNull()
-    expect(screen.getByText('suite.startWithEntryDescription')).not.toBeNull()
-    expect(screen.getByText('Medical Records')).not.toBeNull()
-    expect(screen.getByText('@global/medical-records@1.0.0')).not.toBeNull()
-    expect(screen.getByRole('link', { name: 'suite.viewEntrySkill' }).getAttribute('href'))
-      .toContain('/space/global/medical-records')
-    expect(screen.queryByText('@global/deleted-helper')).toBeNull()
-
-    fireEvent.click(screen.getByRole('tab', { name: 'suite.membersTab' }))
-
-    expect(screen.getByText('Medical Records')).not.toBeNull()
-    expect(screen.getByText('Structures medical records.')).not.toBeNull()
-    expect(screen.getByRole('link', { name: 'suite.viewMember' }).getAttribute('href'))
-      .toContain('/space/global/medical-records')
+    expect(screen.queryByText('Structures medical records.')).toBeNull()
   })
 
-  it('keeps a deleted member as a non-navigable historical card', () => {
+  it('does not fetch or embed the Entry Skill SKILL.md in the Suite overview', () => {
     mocks.detail = { data: suite(), isLoading: false, error: null }
 
     render(<SuiteDetailPage />)
-    fireEvent.click(screen.getByRole('tab', { name: 'suite.membersTab' }))
 
-    const deletedLabels = screen.getAllByText('@global/deleted-helper')
-    expect(deletedLabels.every((label) => label.closest('a') === null)).toBe(true)
-    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(mocks.entryGuideCalls).not.toHaveBeenCalled()
+    expect(screen.getByText('suite.startWithEntry')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'suite.viewPinnedVersion' }))
+    expect(mocks.navigate).toHaveBeenCalledWith(expect.objectContaining({
+      to: '/space/$namespace/$slug',
+      search: expect.objectContaining({ version: '1.0.0' }),
+    }))
   })
 
-  it('keeps an unavailable entry skill visible but non-navigable in the overview', () => {
-    const blockedEntrySuite = suite()
-    blockedEntrySuite.members[0] = {
-      ...blockedEntrySuite.members[0],
-      browsable: false,
-      blockingReason: 'SKILL_HIDDEN',
-    }
-    mocks.detail = { data: blockedEntrySuite, isLoading: false, error: null }
+  it('links a browsable member to its exact pinned version and keeps a deleted member as text', () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
 
     render(<SuiteDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.membersTabShort' }))
 
-    expect(screen.getByText('@global/medical-records@1.0.0')).not.toBeNull()
-    expect(screen.getByText('suite.blockingReasons.SKILL_HIDDEN')).not.toBeNull()
-    expect(screen.queryByRole('link', { name: 'suite.viewEntrySkill' })).toBeNull()
+    const pinnedLinks = screen.getAllByRole('link').filter(link => link.getAttribute('href')?.includes('medical-records'))
+    expect(pinnedLinks.length).toBeGreaterThan(0)
+    expect(pinnedLinks.every(link => link.getAttribute('href')?.includes('version=1.0.0'))).toBe(true)
+    expect(screen.getAllByText('@global/deleted-helper').every(label => label.closest('a') === null)).toBe(true)
+    expect(screen.getByText('suite.blockingReasons.DELETED')).not.toBeNull()
   })
 
   it.each([
@@ -167,39 +187,37 @@ describe('SuiteDetailPage', () => {
     mocks.detail = { data: blockedSuite, isLoading: false, error: null }
 
     render(<SuiteDetailPage />)
-    fireEvent.click(screen.getByRole('tab', { name: 'suite.membersTab' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.membersTabShort' }))
 
     expect(screen.getByText(`suite.blockingReasons.${blockingReason}`)).not.toBeNull()
-    expect(screen.queryByRole('link', { name: 'suite.viewMember' })).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
-  it('places Suite metadata and installation in the detail sidebar', () => {
-    window.__SKILLHUB_RUNTIME_CONFIG__ = {
-      appBaseUrl: 'https://registry.internal.example/skillhub',
-    }
+  it('shows release metadata and the member snapshot in version history', () => {
     mocks.detail = { data: suite(), isLoading: false, error: null }
+    mocks.versions = versions()
 
     render(<SuiteDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'suite.versionsTab' }))
 
-    const sidebar = screen.getByRole('complementary', { name: 'suite.detailsSidebar' })
-    expect(within(sidebar).getByText('v1.0.0')).not.toBeNull()
-    expect(within(sidebar).getByText('suite.installCommand')).not.toBeNull()
-    expect(within(sidebar).getByText(
-      'skillhub suite install @global/care-workflow --version 1.0.0 --registry https://registry.internal.example/skillhub',
-    )).not.toBeNull()
-    expect(within(sidebar).getByLabelText('suite.copyInstallCommand')).not.toBeNull()
+    expect(screen.getAllByText('Initial workflow release')).toHaveLength(1)
+    expect(screen.getAllByText('Suite Owner')).toHaveLength(1)
+    expect(screen.queryByText('suite.versionDetails')).toBeNull()
+    expect(screen.getByText('suite.memberInformation')).not.toBeNull()
+    expect(screen.getAllByText('@global/medical-records').length).toBeGreaterThan(0)
   })
 
-  it('does not expose a copyable shell command for an unsafe legacy version', () => {
-    const unsafeSuite = suite()
-    unsafeSuite.version = '1.0.0; touch pwned'
-    mocks.detail = { data: unsafeSuite, isLoading: false, error: null }
+  it('shows installation actions only for a shell-safe version', () => {
+    const safeSuite = suite()
+    mocks.detail = { data: safeSuite, isLoading: false, error: null }
+    const { rerender } = render(<SuiteDetailPage />)
+    expect(screen.getByRole('button', { name: 'suite.installSuite' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'suite.copyInstallCommand' })).not.toBeNull()
 
-    render(<SuiteDetailPage />)
-
-    const sidebar = screen.getByRole('complementary', { name: 'suite.detailsSidebar' })
-    expect(within(sidebar).getByRole('alert').textContent)
-      .toBe('skillDetail.installCommandUnsafeVersion')
-    expect(within(sidebar).queryByLabelText('suite.copyInstallCommand')).toBeNull()
+    safeSuite.version = '1.0.0; touch pwned'
+    mocks.detail = { data: safeSuite, isLoading: false, error: null }
+    rerender(<SuiteDetailPage />)
+    expect(screen.queryByRole('button', { name: 'suite.installSuite' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'suite.copyInstallCommand' })).toBeNull()
   })
 })

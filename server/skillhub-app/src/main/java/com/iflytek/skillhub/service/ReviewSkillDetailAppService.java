@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.dto.ReviewSkillDetailResponse;
+import com.iflytek.skillhub.dto.PageResponse;
 import com.iflytek.skillhub.dto.SkillDetailResponse;
 import com.iflytek.skillhub.dto.SkillFileResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
@@ -85,7 +86,8 @@ public class ReviewSkillDetailAppService {
                 toLifecycleVersion(snapshot.activeVersion()),
                 null,
                 "REVIEW_TASK",
-                List.of()
+                List.of(),
+                new PageResponse<>(List.of(), 0, 0, 20)
         );
 
         List<SkillVersionResponse> versions = snapshot.versions().stream()
