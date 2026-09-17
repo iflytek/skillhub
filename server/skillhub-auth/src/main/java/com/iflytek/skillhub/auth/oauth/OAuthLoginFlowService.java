@@ -182,6 +182,9 @@ public class OAuthLoginFlowService {
                 || exception instanceof SystemAccountLoginException) {
             return "/access-denied";
         }
+        if (exception instanceof OAuthIdentityCoreException) {
+            return "/access-denied";
+        }
         if (exception instanceof OAuth2AuthenticationException oauth2Exception
                 && "access_denied".equals(oauth2Exception.getError().getErrorCode())) {
             return "/access-denied";
