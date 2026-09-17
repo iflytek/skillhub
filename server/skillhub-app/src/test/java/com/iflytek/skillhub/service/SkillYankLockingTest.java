@@ -32,6 +32,7 @@ import java.time.Clock;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -168,9 +169,10 @@ class SkillYankLockingTest {
     private Fixture persistPublishedVersion() {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         return transaction.execute(status -> {
-            UserAccount user = new UserAccount("yank-lock-user", "Yank Lock User", null, null);
+            String suffix = UUID.randomUUID().toString().substring(0, 8);
+            UserAccount user = new UserAccount("yank-lock-user-" + suffix, "Yank Lock User", null, null);
             entityManager.persist(user);
-            Namespace namespace = new Namespace("yank-lock", "Yank Lock", user.getId());
+            Namespace namespace = new Namespace("yank-lock-" + suffix, "Yank Lock", user.getId());
             entityManager.persist(namespace);
             entityManager.flush();
             Skill skill = new Skill(namespace.getId(), "yank-lock", user.getId(), SkillVisibility.PUBLIC);
