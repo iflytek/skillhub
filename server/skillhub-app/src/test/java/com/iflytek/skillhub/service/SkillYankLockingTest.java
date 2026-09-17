@@ -1,16 +1,34 @@
 package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillFileRepository;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
+import com.iflytek.skillhub.domain.skill.service.SkillStorageDeletionCompensationService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.infra.jpa.SkillVersionJpaRepository;
+import com.iflytek.skillhub.storage.ObjectStorageService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.time.Clock;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -89,6 +108,61 @@ class SkillYankLockingTest {
         } finally {
             releaseFirst.countDown();
         }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void concurrentAdminYanksRecordOneAuditAndOneEvent() throws Exception {
+        Fixture fixture = persistPublishedVersion();
+        SkillRepository skillRepository = mock(SkillRepository.class);
+        AuditLogService auditLogService = mock(AuditLogService.class);
+        ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+        when(skillRepository.findById(fixture.skillId())).thenReturn(java.util.Optional.empty());
+        SkillGovernanceService service = new SkillGovernanceService(
+                skillRepository,
+                skillVersionRepository,
+                mock(SkillFileRepository.class),
+                mock(ReviewTaskRepository.class),
+                mock(ObjectStorageService.class),
+                auditLogService,
+                eventPublisher,
+                mock(SecurityScanService.class),
+                mock(SkillStorageDeletionCompensationService.class),
+                Clock.systemUTC());
+        CountDownLatch firstAudited = new CountDownLatch(1);
+        CountDownLatch secondReady = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            firstAudited.countDown();
+            await(releaseFirst);
+            return null;
+        }).when(auditLogService).record(any(), any(), any(), any(), any(), any(), any(), any());
+        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var first = executor.submit(() -> transactions.executeWithoutResult(status ->
+                    service.yankVersion(fixture.versionId(), "admin-one", "127.0.0.1", "JUnit", "broken")));
+            assertThat(firstAudited.await(10, TimeUnit.SECONDS)).isTrue();
+            var second = executor.submit(() -> {
+                secondReady.countDown();
+                return transactions.execute(status ->
+                        service.yankVersion(fixture.versionId(), "admin-two", "127.0.0.1", "JUnit", "broken"));
+            });
+            assertThat(secondReady.await(10, TimeUnit.SECONDS)).isTrue();
+            releaseFirst.countDown();
+            first.get(10, TimeUnit.SECONDS);
+            assertThatThrownBy(() -> second.get(10, TimeUnit.SECONDS))
+                    .hasCauseInstanceOf(DomainBadRequestException.class);
+        } finally {
+            releaseFirst.countDown();
+        }
+
+        SkillVersionStatus finalStatus = new TransactionTemplate(transactionManager).execute(status ->
+                ((SkillVersionRepository) skillVersionRepository).findById(fixture.versionId())
+                        .orElseThrow().getStatus());
+        assertThat(finalStatus).isEqualTo(SkillVersionStatus.YANKED);
+        verify(auditLogService, times(1)).record(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(eventPublisher, times(1)).publishEvent(any());
     }
 
     private Fixture persistPublishedVersion() {
