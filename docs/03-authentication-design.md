@@ -271,18 +271,37 @@ spring:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET}
             scope: read:user,user:email
-          # 二期扩展示例:
-          # gitlab:
-          #   client-id: ...
-          #   authorization-grant-type: authorization_code
-          # google:
-          #   client-id: ...
+          gitlab:
+            client-id: ${OAUTH2_GITLAB_CLIENT_ID}
+            client-secret: ${OAUTH2_GITLAB_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+          feishu:
+            client-id: ${OAUTH2_FEISHU_CLIENT_ID}
+            client-secret: ${OAUTH2_FEISHU_CLIENT_SECRET}
+            # 飞书的 scope 配在开放平台应用上，不在这里传
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
 ```
 
 Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 只需：
-1. `application.yml` 添加 registration 配置
-2. `CustomOAuth2UserService` 中按 `registrationId` 分支处理用户属性映射
-3. 前端登录页增加对应按钮（通过 `/api/v1/auth/providers` 自动发现）
+1. `application.yml` 添加 registration 与 provider 配置
+2. 实现一个 `OAuthClaimsExtractor`，把该 Provider 的属性映射成统一的 `OAuthClaims`
+3. 登录页无需改代码：`/api/v1/auth/methods` 只返回配置了真实 client id 的注册，
+   图标按 provider 名解析为 `/{provider}-logo.svg`
+
+第 2 步是按 Provider 注册一个 Bean，而不是在某个类里按 `registrationId` 分支。
+账号匹配、建号、资料权威和账号守卫都在 `OAuthClaims` 之后共享，Provider 自己不做这些决策。
+
+如果该 Provider 的 userinfo 响应不是标准的扁平结构（例如飞书用
+`{code, msg, data}` 信封，且以 HTTP 200 返回错误），再额外实现一个
+`ProviderOAuth2UserService`：它声明自己负责哪个 `registrationId`，
+接管 userinfo 的加载步骤，其余流程不变。该覆盖运行在
+`RemoteIdentityIoExecutor` 边界内，因此 Provider 的 HTTP 调用不会持有数据库事务。
+
+Provider 侧还需遵守：subject 必须稳定（不要用可能在两次登录间变化的字段做
+fallback，否则同一个人会被拆成两个平台账号）、只有在 Provider 真正证明了邮箱
+所有权时才置 `emailVerified=true`、远程调用要有超时与响应大小上限、
+claims 提取过程不记录 subject/email/token。
 
 ## 4. 核心接口设计
 

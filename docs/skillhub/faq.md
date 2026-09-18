@@ -190,9 +190,17 @@ A: skill name 一般使用英文，目前不支持中文名（在 OpenClaw 中�
 
 A: 只要拥有可查看的权限，一般都可以下载。
 
-## Q: 如何隐藏或删除登录页的 GitHub / GitLab SSO 登录方式？
+## Q: 如何隐藏或删除登录页的第三方 SSO 登录方式？
 
-A: 修改 `application.yml`，注释或删除 `spring.security.oauth2.client.registration` 下的 `github` 和 `gitlab` 两块，并删除对应的 `provider` 段。Spring Boot 启动时便不会创建这两个注册，登录页也不会再显示对应入口。
+A: 登录入口是配置驱动的：`/api/v1/auth/methods` 只返回配置了真实 client id 的
+注册，client id 为空或包含 `placeholder` 时该入口不会出现在登录页。
+
+所以隐藏某个入口有两种方式：
+
+- 留空对应的环境变量即可（例如不设置 `OAUTH2_FEISHU_CLIENT_ID`），无需改动配置文件。
+- 或修改 `application.yml`，注释/删除 `spring.security.oauth2.client.registration`
+  下对应的注册块（`github`、`gitlab`、`feishu`）以及对应的 `provider` 段，
+  Spring Boot 启动时便不会创建该注册。
 
 ## Q: SkillHub 的安全扫描（Skill Scanner）是讯飞自研的吗？使用什么协议？
 

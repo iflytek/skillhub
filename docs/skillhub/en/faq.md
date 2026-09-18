@@ -190,9 +190,14 @@ A: Skill names are generally in English; Chinese names are not currently support
 
 A: As long as you have permission to view it, it can generally be downloaded.
 
-## Q: How do I hide or remove the GitHub / GitLab SSO login options on the login page?
+## Q: How do I hide or remove third-party SSO login options on the login page?
 
-A: Edit `application.yml` and comment out or delete the `github` and `gitlab` blocks under `spring.security.oauth2.client.registration`, along with their corresponding `provider` sections. Spring Boot then won't create these registrations at startup, and the login page won't show those entries.
+A: Login entries are config-driven: `/api/v1/auth/methods` only returns registrations that have a real client id. When a client id is empty or contains `placeholder`, that entry never reaches the login page.
+
+So there are two ways to hide one:
+
+- Leave the matching environment variable unset (for example, omit `OAUTH2_FEISHU_CLIENT_ID`). No config file change needed.
+- Or edit `application.yml` and comment out or delete the relevant registration block (`github`, `gitlab`, `feishu`) under `spring.security.oauth2.client.registration`, along with its `provider` section. Spring Boot then won't create that registration at startup.
 
 ## Q: Is SkillHub's security scanning (Skill Scanner) developed in-house by iFLYTEK? What license does it use?
 
