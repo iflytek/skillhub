@@ -41,12 +41,12 @@ public class FeishuClaimsExtractor implements OAuthClaimsExtractor {
         // in real time, so they carry no verification signal; keep emailVerified false.
         boolean emailVerified = false;
 
+        // name -> en_name and stop, matching the GitHub and GitLab extractors. Falling back to the
+        // subject would write it into UserAccount.displayName and into UserActivatedEvent, pushing
+        // the external subject somewhere event consumers may log it.
         String username = (String) attrs.get("name");
         if (username == null || username.isBlank()) {
             username = (String) attrs.get("en_name");
-        }
-        if (username == null || username.isBlank()) {
-            username = "feishu-" + subject;
         }
 
         return new OAuthClaims(

@@ -40,7 +40,7 @@ class FeishuClaimsExtractorTest {
     }
 
     @Test
-    void extract_allowsNullEmailAndFallsBackUsername() {
+    void extract_allowsNullEmailAndLeavesDisplayNameUnsetWhenFeishuSendsNoName() {
         Map<String, Object> attrs = new HashMap<>(Map.of("open_id", "ou_456"));
 
         OAuthClaims claims = extractor.extract(userRequest(), user(attrs));
@@ -48,7 +48,9 @@ class FeishuClaimsExtractorTest {
         assertThat(claims.subject()).isEqualTo("ou_456");
         assertThat(claims.email()).isNull();
         assertThat(claims.emailVerified()).isFalse();
-        assertThat(claims.providerLogin()).isEqualTo("feishu-ou_456");
+        // Must not synthesize "feishu-<open_id>": providerLogin is written to displayName and into
+        // UserActivatedEvent, so a synthesized value would carry the subject into event consumers.
+        assertThat(claims.providerLogin()).isNull();
     }
 
     @Test
@@ -70,16 +72,6 @@ class FeishuClaimsExtractorTest {
         // directly instead of relying on that upstream guard.
         Map<String, Object> attrs = new HashMap<>();
         attrs.put("open_id", "   ");
-        attrs.put("name", "张三");
-
-        assertThatThrownBy(() -> extractor.extract(userRequest(), permissiveUser(attrs)))
-                .isInstanceOf(OAuth2AuthenticationException.class)
-                .hasMessageContaining("open_id");
-    }
-
-    @Test
-    void extract_rejectsMissingOpenIdWithoutFabricatingASubject() {
-        Map<String, Object> attrs = new HashMap<>();
         attrs.put("name", "张三");
 
         assertThatThrownBy(() -> extractor.extract(userRequest(), permissiveUser(attrs)))
